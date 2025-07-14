@@ -107,7 +107,9 @@ OneWalletNodeAndRpc = tuple[WalletRpcClient, Any, FullNodeSimulator, int, BlockT
 
 @pytest.fixture(scope="function")
 async def one_wallet_node_and_rpc(
-    trusted: bool, self_hostname: str, blockchain_constants: ConsensusConstants
+    trusted: bool,
+    self_hostname: str,
+    blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[OneWalletNodeAndRpc]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as nodes:
@@ -119,7 +121,7 @@ async def one_wallet_node_and_rpc(
 
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
             }
         else:
             wallet_node.config["trusted_peers"] = {}
@@ -129,7 +131,10 @@ async def one_wallet_node_and_rpc(
         balance = await full_node_api.farm_rewards_to_wallet(amount=8_000_000_000_000, wallet=wallet)
         assert wallet_service.rpc_server is not None
         client = await WalletRpcClient.create(
-            self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
+            self_hostname,
+            wallet_service.rpc_server.listen_port,
+            wallet_service.root_path,
+            wallet_service.config,
         )
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -160,12 +165,15 @@ async def setup(
     assert wallet_server is not None
 
     client = await WalletRpcClient.create(
-        self_hostname, wallet_server.listen_port, wallet_service.root_path, wallet_service.config
+        self_hostname,
+        wallet_server.listen_port,
+        wallet_service.root_path,
+        wallet_service.config,
     )
 
     if trusted:
         wallet_node.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
     else:
         wallet_node.config["trusted_peers"] = {}
@@ -197,7 +205,9 @@ async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_sta
 
 
 async def process_plotnft_create(
-    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState, second_nft: bool = False
+    wallet_test_framework: WalletTestFramework,
+    expected_state: PoolSingletonState,
+    second_nft: bool = False,
 ) -> int:
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
@@ -209,7 +219,7 @@ async def process_plotnft_create(
             "<=#max_send_amount": 1,
             ">=#pending_change": 1,  # any amount increase
             "pending_coin_removal_count": 1,
-        }
+        },
     }
 
     post_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
@@ -238,8 +248,8 @@ async def process_plotnft_create(
             WalletStateTransition(
                 pre_block_balance_updates=pre_block_balance_updates,
                 post_block_balance_updates=post_block,
-            )
-        ]
+            ),
+        ],
     )
 
     summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
@@ -251,7 +261,9 @@ async def process_plotnft_create(
 
 
 async def create_new_plotnft(
-    wallet_test_framework: WalletTestFramework, self_pool: bool = False, second_nft: bool = False
+    wallet_test_framework: WalletTestFramework,
+    self_pool: bool = False,
+    second_nft: bool = False,
 ) -> int:
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
@@ -292,7 +304,13 @@ class TestPoolWalletRpc:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
+            our_ph,
+            "",
+            uint32(0),
+            f"{self_hostname}:5000",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
         await full_node_api.process_transaction_records(records=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
@@ -306,8 +324,8 @@ class TestPoolWalletRpc:
         assert status.target is None
         assert status.current.owner_pubkey == G1Element.from_bytes(
             bytes.fromhex(
-                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
-            )
+                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54",
+            ),
         )
         assert status.current.pool_url == ""
         assert status.current.relative_lock_height == 0
@@ -346,7 +364,13 @@ class TestPoolWalletRpc:
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "http://pool.example.com", uint32(10), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
+            our_ph,
+            "http://pool.example.com",
+            uint32(10),
+            f"{self_hostname}:5000",
+            "new",
+            "FARMING_TO_POOL",
+            fee,
         )
         await full_node_api.process_transaction_records(records=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -360,8 +384,8 @@ class TestPoolWalletRpc:
         assert status.target is None
         assert status.current.owner_pubkey == G1Element.from_bytes(
             bytes.fromhex(
-                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54"
-            )
+                "880afd6f9e123005655376e389015877e60060b768592809d2c746325d256edeb0017e1b406cba0832aa983e5c4bbf54",
+            ),
         )
         assert status.current.pool_url == "http://pool.example.com"
         assert status.current.relative_lock_height == 10
@@ -403,11 +427,23 @@ class TestPoolWalletRpc:
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph_1, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
+            our_ph_1,
+            "",
+            uint32(0),
+            f"{self_hostname}:5000",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph_1, self_hostname, uint32(12), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
+            our_ph_1,
+            self_hostname,
+            uint32(12),
+            f"{self_hostname}:5000",
+            "new",
+            "FARMING_TO_POOL",
+            fee,
         )
 
         await full_node_api.process_transaction_records(records=[creation_tx, creation_tx_2])
@@ -474,7 +510,13 @@ class TestPoolWalletRpc:
             for i in range(22):
                 await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
                 creation_tx_3: TransactionRecord = await client.create_new_pool_wallet(
-                    our_ph_1, self_hostname, uint32(5), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
+                    our_ph_1,
+                    self_hostname,
+                    uint32(5),
+                    f"{self_hostname}:5000",
+                    "new",
+                    "FARMING_TO_POOL",
+                    fee,
                 )
                 await full_node_api.process_transaction_records(records=[creation_tx_3])
                 await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -487,18 +529,23 @@ class TestPoolWalletRpc:
                         if some_wallet.type() == WalletType.POOLING_WALLET:
                             status: PoolWalletInfo = (await client.pw_status(PWStatus(some_wallet.id()))).state
                             auth_sk = find_authentication_sk(
-                                [some_wallet.wallet_state_manager.get_master_private_key()], status.current.owner_pubkey
+                                [some_wallet.wallet_state_manager.get_master_private_key()],
+                                status.current.owner_pubkey,
                             )
                             assert auth_sk is not None
                             owner_sk = find_owner_sk(
-                                [some_wallet.wallet_state_manager.get_master_private_key()], status.current.owner_pubkey
+                                [some_wallet.wallet_state_manager.get_master_private_key()],
+                                status.current.owner_pubkey,
                             )
                             assert owner_sk is not None
                             assert owner_sk[0] != auth_sk
 
     @pytest.mark.anyio
     async def test_absorb_self(
-        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
+        self,
+        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
+        fee: uint64,
+        self_hostname: str,
     ) -> None:
         client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
@@ -511,7 +558,13 @@ class TestPoolWalletRpc:
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
+            our_ph,
+            "",
+            uint32(0),
+            f"{self_hostname}:5000",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
         await full_node_api.process_transaction_records(records=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -537,7 +590,8 @@ class TestPoolWalletRpc:
             # Claim 2 * 1.75, and farm a new 1.75
             absorb_txs = (
                 await client.pw_absorb_rewards(
-                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True),
+                    DEFAULT_TX_CONFIG,
                 )
             ).transactions
             await full_node_api.wait_transaction_records_entered_mempool(records=absorb_txs)
@@ -550,7 +604,7 @@ class TestPoolWalletRpc:
                         tx
                         for tx in await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
                         if TransactionType(tx.type) is TransactionType.INCOMING_TX and tx.amount == 1_750_000_000_000
-                    ]
+                    ],
                 )
                 == 2
             )
@@ -563,7 +617,8 @@ class TestPoolWalletRpc:
             # Claim another 1.75
             absorb_txs1 = (
                 await client.pw_absorb_rewards(
-                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True),
+                    DEFAULT_TX_CONFIG,
                 )
             ).transactions
 
@@ -578,7 +633,10 @@ class TestPoolWalletRpc:
 
             tr: TransactionRecord = (
                 await client.send_transaction(
-                    1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
+                    1,
+                    uint64(100),
+                    encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"),
+                    DEFAULT_TX_CONFIG,
                 )
             ).transaction
 
@@ -591,7 +649,8 @@ class TestPoolWalletRpc:
 
             with pytest.raises(ValueError):
                 await client.pw_absorb_rewards(
-                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                    PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True),
+                    DEFAULT_TX_CONFIG,
                 )
 
             tx1 = await client.get_transactions(1)
@@ -599,7 +658,10 @@ class TestPoolWalletRpc:
 
     @pytest.mark.anyio
     async def test_absorb_self_multiple_coins(
-        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
+        self,
+        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
+        fee: uint64,
+        self_hostname: str,
     ) -> None:
         client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
@@ -613,7 +675,13 @@ class TestPoolWalletRpc:
 
         main_expected_confirmed_balance = total_block_rewards
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
+            our_ph,
+            "",
+            uint32(0),
+            f"{self_hostname}:5000",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
         await full_node_api.process_transaction_records(records=[creation_tx])
         main_expected_confirmed_balance -= fee
@@ -673,7 +741,10 @@ class TestPoolWalletRpc:
 
     @pytest.mark.anyio
     async def test_absorb_pooling(
-        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
+        self,
+        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
+        fee: uint64,
+        self_hostname: str,
     ) -> None:
         client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
@@ -687,7 +758,13 @@ class TestPoolWalletRpc:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "http://123.45.67.89", uint32(10), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
+            our_ph,
+            "http://123.45.67.89",
+            uint32(10),
+            f"{self_hostname}:5000",
+            "new",
+            "FARMING_TO_POOL",
+            fee,
         )
         await full_node_api.process_transaction_records(records=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -725,7 +802,8 @@ class TestPoolWalletRpc:
 
             # Claim block_count * 1.75
             ret = await client.pw_absorb_rewards(
-                PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True),
+                DEFAULT_TX_CONFIG,
             )
             absorb_txs = ret.transactions
             if fee == 0:
@@ -782,7 +860,8 @@ class TestPoolWalletRpc:
 
                     # Absorb the farmed reward
                     ret = await client.pw_absorb_rewards(
-                        PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+                        PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True),
+                        DEFAULT_TX_CONFIG,
                     )
                     absorb_tx = ret.transaction
                     await full_node_api.process_transaction_records(records=[absorb_tx])
@@ -813,11 +892,23 @@ class TestPoolWalletRpc:
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
+            our_ph,
+            "",
+            uint32(0),
+            f"{self_hostname}:5000",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
         await full_node_api.wait_transaction_records_entered_mempool(records=[creation_tx])
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", uint32(0), f"{self_hostname}:5001", "new", "SELF_POOLING", fee
+            our_ph,
+            "",
+            uint32(0),
+            f"{self_hostname}:5001",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
 
         for r in creation_tx.removals:
@@ -904,7 +995,13 @@ class TestPoolWalletRpc:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
+            our_ph,
+            "",
+            uint32(0),
+            f"{self_hostname}:5000",
+            "new",
+            "SELF_POOLING",
+            fee,
         )
 
         await full_node_api.wait_transaction_records_entered_mempool(records=[creation_tx])
@@ -958,7 +1055,8 @@ class TestPoolWalletRpc:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         leave_pool_tx = await client.pw_self_pool(
-            PWSelfPool(wallet_id=uint32(wallet_id), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
+            PWSelfPool(wallet_id=uint32(wallet_id), fee=uint64(fee), push=True),
+            DEFAULT_TX_CONFIG,
         )
         assert leave_pool_tx.transaction.wallet_id == wallet_id
         assert leave_pool_tx.transaction.amount == 1
@@ -1001,7 +1099,7 @@ class TestPoolWalletRpc:
             {
                 "num_environments": 1,
                 "blocks_needed": [10],
-            }
+            },
         ],
         indirect=True,
     )
@@ -1039,10 +1137,12 @@ class TestPoolWalletRpc:
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-            count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+            count=LOCK_HEIGHT + 2,
+            guarantee_transaction_blocks=True,
         )
         await wallet_environments.full_node.wait_for_wallet_synced(
-            wallet_node=wallet_environments.environments[0].node, timeout=20
+            wallet_node=wallet_environments.environments[0].node,
+            timeout=20,
         )
 
         async def farm_blocks_until_state(
@@ -1092,7 +1192,13 @@ class TestPoolWalletRpc:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            pool_a_ph, "https://pool-a.org", uint32(5), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", uint64(fee)
+            pool_a_ph,
+            "https://pool-a.org",
+            uint32(5),
+            f"{self_hostname}:5000",
+            "new",
+            "FARMING_TO_POOL",
+            uint64(fee),
         )
 
         await full_node_api.wait_transaction_records_entered_mempool(records=[creation_tx])
@@ -1173,7 +1279,7 @@ class TestPoolWalletRpc:
             {
                 "num_environments": 1,
                 "blocks_needed": [10],
-            }
+            },
         ],
         indirect=True,
     )
@@ -1215,7 +1321,7 @@ class TestPoolWalletRpc:
                 "blocks_needed": [10],
                 "trusted": True,
                 "reuse_puzhash": False,
-            }
+            },
         ],
         indirect=True,
     )

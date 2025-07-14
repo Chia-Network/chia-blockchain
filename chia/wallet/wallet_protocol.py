@@ -31,7 +31,11 @@ class WalletProtocol(Protocol[T_contra]):
     def id(self) -> uint32: ...
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[T_contra]
+        self,
+        coin: Coin,
+        height: uint32,
+        peer: WSChiaConnection,
+        coin_data: Optional[T_contra],
     ) -> None: ...
 
     async def select_coins(

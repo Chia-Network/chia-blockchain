@@ -56,7 +56,9 @@ class MerkleTree:
         return self._root(self.nodes)
 
     def _proof(
-        self, puzzle_hashes: list[bytes32], searching_for: bytes32
+        self,
+        puzzle_hashes: list[bytes32],
+        searching_for: bytes32,
     ) -> tuple[Optional[int], Optional[list[bytes32]], bytes32, Optional[int]]:
         if len(puzzle_hashes) == 1:
             atom_hash = hash_an_atom(puzzle_hashes[0])

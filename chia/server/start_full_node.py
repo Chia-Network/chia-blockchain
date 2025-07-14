@@ -98,11 +98,12 @@ def main() -> int:
     root_path = resolve_root_path(override=None)
 
     with maybe_manage_task_instrumentation(
-        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None,
     ):
         service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
         target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
-            "target_outbound_peer_count", 8
+            "target_outbound_peer_count",
+            8,
         )
         if target_peer_count < 0:
             target_peer_count = None

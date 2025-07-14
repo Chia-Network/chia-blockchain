@@ -42,7 +42,8 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_blocks(self, start: int, end: int, exclude_reorged: bool = False) -> list[FullBlock]:
         response = await self.fetch(
-            "get_blocks", {"start": start, "end": end, "exclude_header_hash": True, "exclude_reorged": exclude_reorged}
+            "get_blocks",
+            {"start": start, "end": end, "exclude_header_hash": True, "exclude_reorged": exclude_reorged},
         )
         return [FullBlock.from_json_dict(block) for block in response["blocks"]]
 
@@ -248,7 +249,8 @@ class FullNodeRpcClient(RpcClient):
     ) -> Optional[dict[str, Any]]:
         try:
             response = await self.fetch(
-                "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
+                "get_mempool_item_by_tx_id",
+                {"tx_id": tx_id.hex(), "include_pending": include_pending},
             )
             return cast(dict[str, Any], response["mempool_item"])
         except Exception:
@@ -263,7 +265,9 @@ class FullNodeRpcClient(RpcClient):
         return response
 
     async def get_recent_signage_point_or_eos(
-        self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
+        self,
+        sp_hash: Optional[bytes32],
+        challenge_hash: Optional[bytes32],
     ) -> Optional[Any]:
         try:
             if sp_hash is not None:

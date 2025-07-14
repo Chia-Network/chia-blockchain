@@ -25,7 +25,8 @@ SAVE_MASTER_PASSPHRASE_WARNING = (
 
 
 def verify_passphrase_meets_requirements(
-    new_passphrase: str, confirmation_passphrase: str
+    new_passphrase: str,
+    confirmation_passphrase: str,
 ) -> tuple[bool, Optional[str]]:
     match = new_passphrase == confirmation_passphrase
     min_length = Keychain.minimum_passphrase_length()
@@ -62,7 +63,7 @@ def prompt_to_save_passphrase() -> bool:
             print(
                 "\n"
                 "Your passphrase can be stored in your system's secure credential store. "
-                "Other Chia processes will be able to access your keys without prompting for your passphrase."
+                "Other Chia processes will be able to access your keys without prompting for your passphrase.",
             )
             if warning is not None:
                 colorama.init()

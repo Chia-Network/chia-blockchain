@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 quantized = int(percent // 2)
                 print(
                     ("%05d: " + color + "%3.0f%% CPU " + Back.WHITE + "%s" + Style.RESET_ALL + "%s|")
-                    % (counter, percent, " " * quantized, " " * (50 - quantized))
+                    % (counter, percent, " " * quantized, " " * (50 - quantized)),
                 )
 
                 counter += 1
@@ -158,7 +158,7 @@ profiler.py <profile-directory>
 profiler.py <profile-directory> <slot>
 profiler.py <profile-directory> <first-slot> <last-slot>
     Analyze a single slot, or a range of time slots, from the profile directory
-"""
+""",
         )
 
 

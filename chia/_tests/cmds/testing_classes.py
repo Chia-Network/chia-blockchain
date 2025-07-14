@@ -43,7 +43,10 @@ def hash_to_height(int_bytes: bytes32) -> int:
 
 
 def create_test_block_record(
-    *, height: uint32 = uint32(11), timestamp: uint64 = uint64(10040), header_hash: Optional[bytes32] = None
+    *,
+    height: uint32 = uint32(11),
+    timestamp: uint64 = uint64(10040),
+    header_hash: Optional[bytes32] = None,
 ) -> TestBlockRecord:
     if header_hash is None:
         header_hash = height_hash(height)

@@ -105,7 +105,7 @@ def compute_assert_height(
 
         if spend.before_height_relative is not None:
             h = uint32(
-                removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.before_height_relative
+                removal_coin_records[bytes32(spend.coin_id)].confirmed_block_index + spend.before_height_relative,
             )
             if ret.assert_before_height is not None:
                 ret.assert_before_height = min(ret.assert_before_height, h)
@@ -276,7 +276,7 @@ def check_removals(
             # if the spend we're adding is DEDUP but the existing spend has a
             # different solution, we cannot merge them, so that's a conflict
             elif coin_bcs.eligible_for_dedup and bytes(coin_bcs.coin_spend.solution) != bytes(
-                conflict_bcs.coin_spend.solution
+                conflict_bcs.coin_spend.solution,
             ):
                 conflicts.add(item)
 
@@ -426,7 +426,10 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self, spend_bundle: SpendBundle, spend_bundle_id: Optional[bytes32] = None, bls_cache: Optional[BLSCache] = None
+        self,
+        spend_bundle: SpendBundle,
+        spend_bundle_id: Optional[bytes32] = None,
+        bls_cache: Optional[BLSCache] = None,
     ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
@@ -693,7 +696,9 @@ class MempoolManager:
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = check_removals(
-            removal_record_dict, bundle_coin_spends, get_items_by_coin_ids=self.mempool.get_items_by_coin_ids
+            removal_record_dict,
+            bundle_coin_spends,
+            get_items_by_coin_ids=self.mempool.get_items_by_coin_ids,
         )
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
@@ -792,7 +797,9 @@ class MempoolManager:
         return item
 
     async def new_peak(
-        self, new_peak: Optional[BlockRecordProtocol], spent_coins: Optional[list[bytes32]]
+        self,
+        new_peak: Optional[BlockRecordProtocol],
+        spent_coins: Optional[list[bytes32]],
     ) -> NewPeakInfo:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
@@ -895,7 +902,7 @@ class MempoolManager:
                     # it up
                     log.warning(
                         f"MempoolItem indexed as spending coin: {spend}, "
-                        f"but spend is not found in item: {item_name}. Evicting mempool item"
+                        f"but spend is not found in item: {item_name}. Evicting mempool item",
                     )
                     # we don't expect this to happen, so evict the
                     # item as a precaution
@@ -905,14 +912,14 @@ class MempoolManager:
                 self.mempool.update_spend_index(spends_to_update)
 
             mempool_item_removals.append(
-                self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+                self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION),
             )
         else:
             log.warning(
                 "updating the mempool using the slow-path. "
                 f"peak: {self.peak.header_hash.hex()} "
                 f"new-peak-prev: {new_peak.prev_transaction_block_hash} "
-                f"coins: {'not set' if spent_coins is None else 'set'}"
+                f"coins: {'not set' if spent_coins is None else 'set'}",
             )
             old_pool = self.mempool
             self.mempool = Mempool(old_pool.mempool_info, old_pool.fee_estimator)
@@ -976,7 +983,7 @@ class MempoolManager:
         log.info(
             f"Size of mempool: {self.mempool.size()} spends, "
             f"cost: {self.mempool.total_mempool_cost()} "
-            f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
+            f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}",
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         duration = time.monotonic() - new_peak_start
@@ -1062,7 +1069,7 @@ def can_replace(
     if new_item.fee_per_cost <= conflicting_fees_per_cost:
         log.debug(
             f"Rejecting conflicting tx due to not increasing fees per cost "
-            f"({new_item.fee_per_cost} <= {conflicting_fees_per_cost})"
+            f"({new_item.fee_per_cost} <= {conflicting_fees_per_cost})",
         )
         return False
 

@@ -189,7 +189,10 @@ async def test_sync_no_farmer(
 @pytest.mark.anyio
 @pytest.mark.parametrize("tx_size", [3_000_000_000_000])
 async def test_block_compression(
-    setup_two_nodes_and_wallet: OldSimulatorsAndWallets, empty_blockchain: Blockchain, tx_size: int, self_hostname: str
+    setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
+    empty_blockchain: Blockchain,
+    tx_size: int,
+    self_hostname: str,
 ) -> None:
     nodes, wallets, bt = setup_two_nodes_and_wallet
     server_1 = nodes[0].full_node.server
@@ -378,7 +381,7 @@ async def test_block_compression(
                 next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
                 Program.to(1),
                 Program.to([[51, ph, 30000]]),
-            )
+            ),
         ],
         G2Element(),
     )
@@ -428,7 +431,7 @@ async def test_block_compression(
                 next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
                 Program.to(1),
                 Program.to([[51, ph, 30000]]),
-            )
+            ),
         ],
         G2Element(),
     )
@@ -489,7 +492,7 @@ async def test_block_compression(
                             blockchain.pool,
                             None,
                             vs,
-                        )
+                        ),
                     )
                 results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 for result in results:
@@ -505,7 +508,7 @@ async def test_block_compression(
                 futures = []
                 for block in all_blocks[:i]:
                     futures.append(
-                        await pre_validate_block(blockchain.constants, chain, block, blockchain.pool, None, vs)
+                        await pre_validate_block(blockchain.constants, chain, block, blockchain.pool, None, vs),
                     )
                 results = list(await asyncio.gather(*futures))
                 for result in results:
@@ -535,7 +538,13 @@ async def test_inbound_connection_limit(setup_four_nodes: OldSimulatorsAndWallet
 @pytest.mark.anyio
 async def test_request_peers(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -568,7 +577,13 @@ async def test_request_peers(
 @pytest.mark.anyio
 async def test_basic_chain(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -602,7 +617,13 @@ async def test_basic_chain(
 @pytest.mark.anyio
 async def test_respond_end_of_sub_slot(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -666,7 +687,13 @@ async def test_respond_end_of_sub_slot(
 @pytest.mark.anyio
 async def test_respond_end_of_sub_slot_no_reorg(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -709,7 +736,13 @@ async def test_respond_end_of_sub_slot_no_reorg(
 @pytest.mark.anyio
 async def test_respond_end_of_sub_slot_race(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -745,7 +778,13 @@ async def test_respond_end_of_sub_slot_race(
 @pytest.mark.anyio
 async def test_respond_unfinished(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -835,7 +874,8 @@ async def test_respond_unfinished(
     assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
     assert unf.foliage.foliage_transaction_block_hash is not None
     entry = full_node_1.full_node.full_node_store.get_unfinished_block_result(
-        unf.partial_hash, unf.foliage.foliage_transaction_block_hash
+        unf.partial_hash,
+        unf.foliage.foliage_transaction_block_hash,
     )
     assert entry is not None
     result = entry.result
@@ -855,7 +895,13 @@ async def test_respond_unfinished(
 @pytest.mark.anyio
 async def test_new_peak(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -921,7 +967,13 @@ async def test_new_peak(
 @pytest.mark.anyio
 async def test_new_transaction_and_mempool(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
     seeded_random: random.Random,
@@ -1011,7 +1063,12 @@ async def test_new_transaction_and_mempool(
             wallet_receiver.generate_signed_transaction(uint64(500), receiver_puzzlehash, coin_record.coin, fee=0)
             for coin_record in coin_records[1:]
         ] + [
-            wallet_receiver.generate_signed_transaction(uint64(500), receiver_puzzlehash, coin_records[0].coin, fee=fee)
+            wallet_receiver.generate_signed_transaction(
+                uint64(500),
+                receiver_puzzlehash,
+                coin_records[0].coin,
+                fee=fee,
+            ),
         ]
         spend_bundle = WalletSpendBundle.aggregate(spend_bundles)
         assert estimate_fees(spend_bundle) == fee
@@ -1055,14 +1112,20 @@ async def test_new_transaction_and_mempool(
     await full_node_1.new_transaction(new_transaction, fake_peer)
     assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
     await time_out_assert(
-        30, full_node_2.full_node.mempool_manager.mempool.at_full_capacity, True, 10000000 * group_size
+        30,
+        full_node_2.full_node.mempool_manager.mempool.at_full_capacity,
+        True,
+        10000000 * group_size,
     )
 
     await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
     # Idempotence in resubmission
     status, err = await full_node_1.full_node.add_transaction(
-        successful_bundle, successful_bundle.name(), peer, test=True
+        successful_bundle,
+        successful_bundle.name(),
+        peer,
+        test=True,
     )
     assert status == MempoolInclusionStatus.SUCCESS
     assert err is None
@@ -1081,7 +1144,10 @@ async def test_new_transaction_and_mempool(
 
     # Cannot resubmit transaction, but not because of ALREADY_INCLUDING
     status, err = await full_node_1.full_node.add_transaction(
-        successful_bundle, successful_bundle.name(), peer, test=True
+        successful_bundle,
+        successful_bundle.name(),
+        peer,
+        test=True,
     )
     assert status == MempoolInclusionStatus.FAILED
     assert err != Err.ALREADY_INCLUDING_TRANSACTION
@@ -1098,7 +1164,10 @@ async def test_new_transaction_and_mempool(
     await add_blocks_in_batches(blocks[-2:], full_node_1.full_node)
     # Can now resubmit a transaction after the reorg
     status, err = await full_node_1.full_node.add_transaction(
-        successful_bundle, successful_bundle.name(), peer, test=True
+        successful_bundle,
+        successful_bundle.name(),
+        peer,
+        test=True,
     )
     assert err is None
     assert status == MempoolInclusionStatus.SUCCESS
@@ -1107,7 +1176,13 @@ async def test_new_transaction_and_mempool(
 @pytest.mark.anyio
 async def test_request_respond_transaction(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
     seeded_random: random.Random,
@@ -1143,7 +1218,9 @@ async def test_request_respond_transaction(
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
     spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(100), receiver_puzzlehash, blocks[-1].get_included_reward_coins()[0]
+        uint64(100),
+        receiver_puzzlehash,
+        blocks[-1].get_included_reward_coins()[0],
     )
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -1162,7 +1239,13 @@ async def test_request_respond_transaction(
 @pytest.mark.anyio
 async def test_respond_transaction_fail(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
     seeded_random: random.Random,
@@ -1216,7 +1299,13 @@ async def test_respond_transaction_fail(
 @pytest.mark.anyio
 async def test_request_block(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
 ) -> None:
     full_node_1, _full_node_2, _server_1, _server_2, wallet_a, wallet_receiver, bt = wallet_nodes
@@ -1235,7 +1324,10 @@ async def test_request_block(
         blocks[-1].get_included_reward_coins()[0],
     )
     blocks = bt.get_consecutive_blocks(
-        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
+        1,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=spend_bundle,
     )
 
     for block in blocks:
@@ -1267,7 +1359,13 @@ async def test_request_block(
 @pytest.mark.anyio
 async def test_request_blocks(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
 ) -> None:
     full_node_1, _full_node_2, _server_1, _server_2, wallet_a, wallet_receiver, bt = wallet_nodes
@@ -1288,7 +1386,10 @@ async def test_request_blocks(
         blocks[-1].get_included_reward_coins()[0],
     )
     blocks_t = bt.get_consecutive_blocks(
-        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
+        1,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=spend_bundle,
     )
 
     for block in blocks_t:
@@ -1337,7 +1438,13 @@ async def test_request_blocks(
 @pytest.mark.parametrize("requesting", [0, 1, 2])
 async def test_new_unfinished_block(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     peer_version: str,
     requesting: int,
@@ -1360,7 +1467,8 @@ async def test_new_unfinished_block(
         assert res is None
     elif requesting == 2:
         full_node_1.full_node.full_node_store.mark_requesting_unfinished_block(
-            unf.partial_hash, unf.foliage.foliage_transaction_block_hash
+            unf.partial_hash,
+            unf.foliage.foliage_transaction_block_hash,
         )
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is None
@@ -1399,7 +1507,13 @@ async def test_new_unfinished_block(
 @pytest.mark.parametrize("requesting", [0, 1, 2])
 async def test_new_unfinished_block2(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     requesting: int,
     self_hostname: str,
@@ -1419,25 +1533,26 @@ async def test_new_unfinished_block2(
 
     if requesting == 2:
         full_node_1.full_node.full_node_store.mark_requesting_unfinished_block(
-            unf.partial_hash, unf.foliage.foliage_transaction_block_hash
+            unf.partial_hash,
+            unf.foliage.foliage_transaction_block_hash,
         )
         res = await full_node_1.new_unfinished_block2(
-            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
         )
         assert res is None
     else:
         res = await full_node_1.new_unfinished_block2(
-            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
         )
         assert res is not None and res.data == bytes(
-            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
         )
 
     await full_node_1.full_node.add_unfinished_block(unf, peer)
 
     # Have
     res = await full_node_1.new_unfinished_block2(
-        fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+        fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
     )
     assert res is None
 
@@ -1445,7 +1560,13 @@ async def test_new_unfinished_block2(
 @pytest.mark.anyio
 async def test_new_unfinished_block2_forward_limit(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -1475,7 +1596,10 @@ async def test_new_unfinished_block2_forward_limit(
 
         # note that we use the same chain to build the new block on top of every time
         block = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )[-1]
         unf = make_unfinished_block(block, bt.constants)
         unf_blocks.append(unf)
@@ -1494,13 +1618,13 @@ async def test_new_unfinished_block2_forward_limit(
 
     for idx, unf in enumerate(unf_blocks):
         res = await full_node_1.new_unfinished_block2(
-            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            fnp.NewUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
         )
         # 3 is the default number of different unfinished blocks we forward
         if idx < 3:
             # Don't have
             assert res is not None and res.data == bytes(
-                fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+                fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
             )
         else:
             # too many UnfinishedBlocks with the same reward hash
@@ -1524,7 +1648,13 @@ async def test_new_unfinished_block2_forward_limit(
 )
 async def test_unfinished_block_with_replaced_generator(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
     committment: int,
@@ -1676,7 +1806,13 @@ async def test_unfinished_block_with_replaced_generator(
 @pytest.mark.anyio
 async def test_double_blocks_same_pospace(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -1696,7 +1832,10 @@ async def test_double_blocks_same_pospace(
     tx = wallet_a.generate_signed_transaction(uint64(10_000), wallet_receiver.get_new_puzzlehash(), coin)
 
     blocks = bt.get_consecutive_blocks(
-        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        1,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=tx,
     )
 
     block: FullBlock = blocks[-1]
@@ -1706,7 +1845,9 @@ async def test_double_blocks_same_pospace(
 
     assert unf.foliage_transaction_block is not None
     block_2 = recursive_replace(
-        blocks[-1], "foliage_transaction_block.timestamp", unf.foliage_transaction_block.timestamp + 1
+        blocks[-1],
+        "foliage_transaction_block.timestamp",
+        unf.foliage_transaction_block.timestamp + 1,
     )
     new_m = block_2.foliage.foliage_transaction_block_hash
     new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
@@ -1722,7 +1863,13 @@ async def test_double_blocks_same_pospace(
 @pytest.mark.anyio
 async def test_request_unfinished_block(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -1747,7 +1894,13 @@ async def test_request_unfinished_block(
 @pytest.mark.anyio
 async def test_request_unfinished_block2(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -1772,7 +1925,10 @@ async def test_request_unfinished_block2(
 
         # note that we use the same chain to build the new block on top of every time
         block = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )[-1]
         unf = make_unfinished_block(block, bt.constants)
         assert unf.foliage.foliage_transaction_block_hash is not None
@@ -1787,14 +1943,14 @@ async def test_request_unfinished_block2(
 
         # Don't have
         res = await full_node_1.request_unfinished_block2(
-            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
         )
         assert res is None
 
         await full_node_1.full_node.add_unfinished_block(unf, peer)
         # Have
         res = await full_node_1.request_unfinished_block2(
-            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash)
+            fnp.RequestUnfinishedBlock2(unf.partial_hash, unf.foliage.foliage_transaction_block_hash),
         )
         assert res is not None
         assert res.data == bytes(fnp.RespondUnfinishedBlock(unf))
@@ -1811,7 +1967,13 @@ async def test_request_unfinished_block2(
 @pytest.mark.anyio
 async def test_new_signage_point_or_end_of_sub_slot(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     self_hostname: str,
 ) -> None:
@@ -1840,7 +2002,8 @@ async def test_new_signage_point_or_end_of_sub_slot(
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
     res = await full_node_1.new_signage_point_or_end_of_sub_slot(
-        fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge), peer
+        fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge),
+        peer,
     )
     assert res is not None
     assert res.type == ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot.value
@@ -1875,7 +2038,13 @@ async def test_new_signage_point_or_end_of_sub_slot(
 @pytest.mark.anyio
 async def test_new_signage_point_caching(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
     empty_blockchain: Blockchain,
     self_hostname: str,
@@ -1924,16 +2093,20 @@ async def test_new_signage_point_caching(
     assert sp.rc_proof is not None
     # Submits the signage point, cannot add because don't have block
     await full_node_1.respond_signage_point(
-        fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
+        fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof),
+        peer,
     )
     # Should not add duplicates to cache though
     await full_node_1.respond_signage_point(
-        fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
+        fnp.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof),
+        peer,
     )
     assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is None
     assert (
         full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
-            sp.cc_vdf.output.get_hash(), sp.cc_vdf.challenge, uint8(4)
+            sp.cc_vdf.output.get_hash(),
+            sp.cc_vdf.challenge,
+            uint8(4),
         )
         is None
     )
@@ -1946,13 +2119,17 @@ async def test_new_signage_point_caching(
     assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
     assert (
         full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
-            sp.cc_vdf.output.get_hash(), sp.cc_vdf.challenge, uint8(4)
+            sp.cc_vdf.output.get_hash(),
+            sp.cc_vdf.challenge,
+            uint8(4),
         )
         is not None
     )
 
     assert full_node_1.full_node.full_node_store.get_signage_point_by_index_and_cc_output(
-        full_node_1.full_node.constants.GENESIS_CHALLENGE, bytes32.zeros, uint8(0)
+        full_node_1.full_node.constants.GENESIS_CHALLENGE,
+        bytes32.zeros,
+        uint8(0),
     ) == SignagePoint(None, None, None, None)
 
 
@@ -2020,7 +2197,7 @@ async def test_compact_protocol(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.CC_EOS_VDF),
-            )
+            ),
         )
     blocks_2 = bt.get_consecutive_blocks(num_blocks=10, block_list_input=blocks, skip_slots=3)
     block = blocks_2[-10]
@@ -2044,7 +2221,7 @@ async def test_compact_protocol(
                     block.header_hash,
                     block.height,
                     uint8(CompressibleVDFField.ICC_EOS_VDF),
-                )
+                ),
             )
     assert block.reward_chain_block.challenge_chain_sp_vdf is not None
     vdf_info, vdf_proof = get_vdf_info_and_proof(
@@ -2061,7 +2238,7 @@ async def test_compact_protocol(
             block.header_hash,
             block.height,
             uint8(CompressibleVDFField.CC_SP_VDF),
-        )
+        ),
     )
     vdf_info, vdf_proof = get_vdf_info_and_proof(
         bt.constants,
@@ -2077,7 +2254,7 @@ async def test_compact_protocol(
             block.header_hash,
             block.height,
             uint8(CompressibleVDFField.CC_IP_VDF),
-        )
+        ),
     )
 
     # Note: the below numbers depend on the block cache, so might need to be updated
@@ -2157,7 +2334,7 @@ async def test_compact_protocol_invalid_messages(
                     block.header_hash,
                     block.height,
                     uint8(CompressibleVDFField.CC_EOS_VDF),
-                )
+                ),
             )
             full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
@@ -2166,7 +2343,7 @@ async def test_compact_protocol_invalid_messages(
                     uint8(CompressibleVDFField.CC_EOS_VDF),
                     vdf_info,
                     wrong_vdf_proof,
-                )
+                ),
             )
             if sub_slot.infused_challenge_chain is not None:
                 vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
@@ -2184,7 +2361,7 @@ async def test_compact_protocol_invalid_messages(
                         block.header_hash,
                         block.height,
                         uint8(CompressibleVDFField.ICC_EOS_VDF),
-                    )
+                    ),
                 )
                 full_node_protocol_invalid_messages.append(
                     fnp.RespondCompactVDF(
@@ -2193,7 +2370,7 @@ async def test_compact_protocol_invalid_messages(
                         uint8(CompressibleVDFField.ICC_EOS_VDF),
                         vdf_info,
                         wrong_vdf_proof,
-                    )
+                    ),
                 )
 
         if block.reward_chain_block.challenge_chain_sp_vdf is not None:
@@ -2215,7 +2392,7 @@ async def test_compact_protocol_invalid_messages(
                     block.header_hash,
                     block.height,
                     uint8(CompressibleVDFField.CC_SP_VDF),
-                )
+                ),
             )
             full_node_protocol_invalid_messages.append(
                 fnp.RespondCompactVDF(
@@ -2224,7 +2401,7 @@ async def test_compact_protocol_invalid_messages(
                     uint8(CompressibleVDFField.CC_SP_VDF),
                     vdf_info,
                     sp_vdf_proof,
-                )
+                ),
             )
 
         vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
@@ -2245,7 +2422,7 @@ async def test_compact_protocol_invalid_messages(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.CC_IP_VDF),
-            )
+            ),
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
@@ -2254,7 +2431,7 @@ async def test_compact_protocol_invalid_messages(
                 uint8(CompressibleVDFField.CC_IP_VDF),
                 vdf_info,
                 ip_vdf_proof,
-            )
+            ),
         )
 
         timelord_protocol_invalid_messages.append(
@@ -2264,7 +2441,7 @@ async def test_compact_protocol_invalid_messages(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.CC_EOS_VDF),
-            )
+            ),
         )
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
@@ -2273,7 +2450,7 @@ async def test_compact_protocol_invalid_messages(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.ICC_EOS_VDF),
-            )
+            ),
         )
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
@@ -2282,7 +2459,7 @@ async def test_compact_protocol_invalid_messages(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.CC_SP_VDF),
-            )
+            ),
         )
         timelord_protocol_invalid_messages.append(
             timelord_protocol.RespondCompactProofOfTime(
@@ -2291,7 +2468,7 @@ async def test_compact_protocol_invalid_messages(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.CC_IP_VDF),
-            )
+            ),
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
@@ -2300,7 +2477,7 @@ async def test_compact_protocol_invalid_messages(
                 uint8(CompressibleVDFField.CC_EOS_VDF),
                 wrong_vdf_info,
                 wrong_vdf_proof,
-            )
+            ),
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
@@ -2309,7 +2486,7 @@ async def test_compact_protocol_invalid_messages(
                 uint8(CompressibleVDFField.ICC_EOS_VDF),
                 wrong_vdf_info,
                 wrong_vdf_proof,
-            )
+            ),
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
@@ -2318,7 +2495,7 @@ async def test_compact_protocol_invalid_messages(
                 uint8(CompressibleVDFField.CC_SP_VDF),
                 wrong_vdf_info,
                 wrong_vdf_proof,
-            )
+            ),
         )
         full_node_protocol_invalid_messages.append(
             fnp.RespondCompactVDF(
@@ -2327,7 +2504,7 @@ async def test_compact_protocol_invalid_messages(
                 uint8(CompressibleVDFField.CC_IP_VDF),
                 wrong_vdf_info,
                 wrong_vdf_proof,
-            )
+            ),
         )
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
@@ -2376,7 +2553,7 @@ async def test_respond_compact_proof_message_limit(
                 block.header_hash,
                 block.height,
                 uint8(CompressibleVDFField.CC_IP_VDF),
-            )
+            ),
         )
 
     async def coro(full_node: FullNodeSimulator, compact_proof: timelord_protocol.RespondCompactProofOfTime) -> None:
@@ -2384,7 +2561,7 @@ async def test_respond_compact_proof_message_limit(
 
     full_node_1.full_node._compact_vdf_sem = LimitedSemaphore.create(active_limit=1, waiting_limit=2)
     tasks = asyncio.gather(
-        *[coro(full_node_1, respond_compact_proof) for respond_compact_proof in finished_compact_proofs]
+        *[coro(full_node_1, respond_compact_proof) for respond_compact_proof in finished_compact_proofs],
     )
     await tasks
     stored_blocks = await full_node_1.get_all_full_blocks()
@@ -2475,7 +2652,8 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
 
 @pytest.mark.anyio
 async def test_wallet_sync_task_failure(
-    one_node: SimulatorsAndWalletsServices, caplog: pytest.LogCaptureFixture
+    one_node: SimulatorsAndWalletsServices,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
     full_node = full_node_service._node
@@ -2898,7 +3076,10 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
     """
     full_node_1, _, bt = one_node_one_block
     blocks = bt.get_consecutive_blocks(
-        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+        3,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+        pool_reward_puzzle_hash=bt.pool_ph,
     )
     await add_blocks_in_batches(blocks, full_node_1.full_node)
     wt = bt.get_pool_wallet_tool()
@@ -2910,7 +3091,10 @@ async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulat
     await full_node_1.full_node.add_transaction(tx, tx.name(), None, test=True)
     assert len(full_node_1.full_node._bls_cache.items()) == 2
     blocks = bt.get_consecutive_blocks(
-        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        1,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=tx,
     )
     # Farming a block with this tx evicts those pk msg pairs from the BLS cache
     await full_node_1.full_node.add_block(blocks[-1], None, full_node_1.full_node._bls_cache)
@@ -2926,7 +3110,10 @@ async def test_declare_proof_of_space_no_overflow(
     block_creation: int,
 ) -> None:
     async with setup_simulators_and_wallets(
-        1, 1, blockchain_constants, config_overrides={"full_node.block_creation": block_creation}
+        1,
+        1,
+        blockchain_constants,
+        config_overrides={"full_node.block_creation": block_creation},
     ) as new:
         full_node_api = new.simulators[0].peer_api
         server_1 = full_node_api.full_node.server
@@ -2947,7 +3134,12 @@ async def test_declare_proof_of_space_no_overflow(
         assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
         for i in range(10, 100):
             sb = await add_tx_to_mempool(
-                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+                full_node_api,
+                wallet,
+                blocks[-8],
+                coinbase_puzzlehash,
+                bytes32(i.to_bytes(32, "big")),
+                uint64(i),
             )
             blocks = bt.get_consecutive_blocks(
                 block_list_input=blocks,
@@ -2972,7 +3164,10 @@ async def test_declare_proof_of_space_overflow(
     block_creation: int,
 ) -> None:
     async with setup_simulators_and_wallets(
-        1, 1, blockchain_constants, config_overrides={"full_node.block_creation": block_creation}
+        1,
+        1,
+        blockchain_constants,
+        config_overrides={"full_node.block_creation": block_creation},
     ) as new:
         full_node_api = new.simulators[0].peer_api
         server_1 = full_node_api.full_node.server
@@ -2991,7 +3186,12 @@ async def test_declare_proof_of_space_overflow(
         assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
         for i in range(10, 100):
             sb = await add_tx_to_mempool(
-                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+                full_node_api,
+                wallet,
+                blocks[-8],
+                coinbase_puzzlehash,
+                bytes32(i.to_bytes(32, "big")),
+                uint64(i),
             )
 
             blocks = bt.get_consecutive_blocks(
@@ -3014,7 +3214,13 @@ async def test_declare_proof_of_space_overflow(
 @pytest.mark.anyio
 async def test_add_unfinished_block_with_generator_refs(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
 ) -> None:
     """
@@ -3024,7 +3230,10 @@ async def test_add_unfinished_block_with_generator_refs(
     full_node_1, _, _, _, wallet, wallet_receiver, bt = wallet_nodes
     coinbase_puzzlehash = wallet.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
-        5, block_list_input=[], guarantee_transaction_block=True, farmer_reward_puzzle_hash=coinbase_puzzlehash
+        5,
+        block_list_input=[],
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=coinbase_puzzlehash,
     )
     for i in range(3):
         blocks = bt.get_consecutive_blocks(

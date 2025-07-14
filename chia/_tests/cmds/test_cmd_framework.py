@@ -97,7 +97,7 @@ def test_cmd_bases() -> None:
         Commands:
           temp_cmd        blah
           temp_cmd_async  blah
-        """
+        """,
     )
     result = runner.invoke(
         cmd,
@@ -361,7 +361,7 @@ def test_typing() -> None:
             "blocks_needed": [1],
             "trusted": True,
             "reuse_puzhash": False,
-        }
+        },
     ],
     indirect=True,
 )
@@ -443,7 +443,7 @@ def test_tx_config_helper() -> None:
             max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
             amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
             coins_to_exclude=(bytes32([0] * 32),),
-        )
+        ),
     )
 
     check_click_parsing(
@@ -481,7 +481,7 @@ def test_tx_config_helper() -> None:
             amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
             coins_to_exclude=(bytes32([0] * 32),),
             reuse=False,
-        )
+        ),
     )
 
     check_click_parsing(
@@ -543,7 +543,7 @@ async def test_transaction_endpoint_mixin() -> None:
                 valid_at=10,
                 expires_at=20,
             ),
-        }
+        },
     )
     check_click_parsing(
         example_tx_cmd,

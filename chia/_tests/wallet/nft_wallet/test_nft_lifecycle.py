@@ -35,7 +35,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                     b"lu": ["You have no permissions grr"],
                     b"mu": ["This but off chain"],
                     b"foo": ["Can't update this"],
-                }
+                },
             )
             METADATA_UPDATER: Program = NFT_METADATA_UPDATER
         else:
@@ -44,7 +44,9 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
         METADATA_UPDATER_PUZZLE_HASH: bytes32 = METADATA_UPDATER.get_tree_hash()
 
         state_layer_puzzle: Program = create_nft_layer_puzzle_with_curry_params(
-            METADATA, METADATA_UPDATER_PUZZLE_HASH, ACS
+            METADATA,
+            METADATA_UPDATER_PUZZLE_HASH,
+            ACS,
         )
         state_layer_ph: bytes32 = state_layer_puzzle.get_tree_hash()
         await sim.farm_block(state_layer_ph)
@@ -58,7 +60,8 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
             Program.to([[[51, ACS_PH, 1]]]),
         )
         generic_bundle = cost_logger.add_cost(
-            "State layer only coin - one child created", WalletSpendBundle([generic_spend], G2Element())
+            "State layer only coin - one child created",
+            WalletSpendBundle([generic_spend], G2Element()),
         )
 
         result = await sim_client.push_tx(generic_bundle)
@@ -79,7 +82,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                         b"lu": ["You have no permissions grr"],
                         b"mu": ["This but off chain"],
                         b"foo": ["Can't update this"],
-                    }
+                    },
                 ),
                 metadata_to_program(
                     {
@@ -87,7 +90,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                         b"lu": ["update", "You have no permissions grr"],
                         b"mu": ["This but off chain"],
                         b"foo": ["Can't update this"],
-                    }
+                    },
                 ),
                 metadata_to_program(
                     {
@@ -95,7 +98,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                         b"lu": ["update", "You have no permissions grr"],
                         b"mu": ["update", "This but off chain"],
                         b"foo": ["Can't update this"],
-                    }
+                    },
                 ),
                 metadata_to_program(
                     {  # no change
@@ -103,7 +106,7 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                         b"lu": ["update", "You have no permissions grr"],
                         b"mu": ["update", "This but off chain"],
                         b"foo": ["Can't update this"],
-                    }
+                    },
                 ),
             ]
         else:
@@ -121,8 +124,8 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
                         [
                             [51, ACS_PH, 1],
                             [-24, METADATA_UPDATER, solution],
-                        ]
-                    ]
+                        ],
+                    ],
                 ),
             )
             update_bundle = cost_logger.add_cost(
@@ -161,7 +164,8 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
             Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
         )
         generic_bundle = cost_logger.add_cost(
-            "Ownership only coin - one child created", WalletSpendBundle([generic_spend], G2Element())
+            "Ownership only coin - one child created",
+            WalletSpendBundle([generic_spend], G2Element()),
         )
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -191,8 +195,8 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                         [51, ACS_PH, 1],
                         [-10, TARGET_OWNER, TARGET_TP],
                         [62, b"\xad\x4c" + bytes32.zeros],
-                    ]
-                ]
+                    ],
+                ],
             ),
         )
         make_bad_announcement_bundle = WalletSpendBundle([make_bad_announcement_spend], G2Element())
@@ -201,7 +205,8 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
         with pytest.raises(ValueError, match="clvm raise"):
             run(
-                make_bad_announcement_spend.puzzle_reveal, Program.from_serialized(make_bad_announcement_spend.solution)
+                make_bad_announcement_spend.puzzle_reveal,
+                Program.from_serialized(make_bad_announcement_spend.solution),
             )
 
         expected_announcement = AssertPuzzleAnnouncement(
@@ -224,8 +229,8 @@ async def test_ownership_layer(cost_logger: CostLogger) -> None:
                         # create and assert a harmless puzzle announcement
                         harmless_announcement.corresponding_creation().to_program(),
                         harmless_announcement.to_program(),
-                    ]
-                ]
+                    ],
+                ],
             ),
         )
         update_everything_bundle = cost_logger.add_cost(
@@ -283,7 +288,8 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             Program.to([[[51, ACS_PH, 1]]]),
         )
         generic_bundle = cost_logger.add_cost(
-            "Ownership only coin (default NFT1 TP) - one child created", WalletSpendBundle([generic_spend], G2Element())
+            "Ownership only coin (default NFT1 TP) - one child created",
+            WalletSpendBundle([generic_spend], G2Element()),
         )
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -307,7 +313,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
             ownership_coin,
             ownership_puzzle,
             Program.to(
-                [[[51, ACS_PH, 1], [-10, FAKE_LAUNCHER_ID, [[100, ACS_PH], [100, FAKE_CAT.get_tree_hash()]], ACS_PH]]]
+                [[[51, ACS_PH, 1], [-10, FAKE_LAUNCHER_ID, [[100, ACS_PH], [100, FAKE_CAT.get_tree_hash()]], ACS_PH]]],
             ),
         )
 
@@ -318,7 +324,7 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         )
 
         expected_announcement_data = Program.to(
-            (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
+            (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]]),
         ).get_tree_hash()
         xch_announcement_spend = make_spend(
             xch_coin,
@@ -331,10 +337,11 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         # Make sure every combo except all of them fail
         for i in range(1, 3):
             for announcement_combo in itertools.combinations(
-                [did_announcement_spend, xch_announcement_spend, cat_announcement_spend], i
+                [did_announcement_spend, xch_announcement_spend, cat_announcement_spend],
+                i,
             ):
                 result = await sim_client.push_tx(
-                    WalletSpendBundle([ownership_spend, *announcement_combo], G2Element())
+                    WalletSpendBundle([ownership_spend, *announcement_combo], G2Element()),
                 )
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -342,7 +349,8 @@ async def test_default_transfer_program(cost_logger: CostLogger) -> None:
         full_bundle = cost_logger.add_cost(
             "Ownership only coin (default NFT1 TP) - one child created + update DID + offer CATs + offer XCH",
             WalletSpendBundle(
-                [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend], G2Element()
+                [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend],
+                G2Element(),
             ),
         )
         result = await sim_client.push_tx(full_bundle)

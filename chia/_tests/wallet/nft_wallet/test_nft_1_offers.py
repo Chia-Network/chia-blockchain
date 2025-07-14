@@ -47,15 +47,20 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     }
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager,
+            wallet_maker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -80,7 +85,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet_maker.get_my_DID()
@@ -90,17 +95,21 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager,
+        wallet_maker,
+        name="NFT WALLET DID 1",
+        did_id=did_id,
     )
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
@@ -139,12 +148,14 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     # TAKER SETUP -  NO DID
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        name="NFT WALLET TAKER",
     )
 
     # maker create offer: NFT for xch
@@ -164,10 +175,14 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch,
+            action_scope,
+            {},
+            fee=maker_fee,
         )
     assert success is True
     assert error is None
@@ -177,13 +192,18 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
     peer = env_taker.node.get_full_node_peer()
 
     [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
+            Offer.from_bytes(trade_make.offer),
+            peer,
+            action_scope,
+            fee=uint64(taker_fee),
         )
 
     assert trade_take is not None
@@ -245,7 +265,7 @@ async def test_nft_offer_sell_nft(wallet_environments: WalletTestFramework, zero
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
@@ -273,15 +293,20 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
     }
 
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
 
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
+            env_taker.wallet_state_manager,
+            wallet_taker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -306,7 +331,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                     },
                 },
             ),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet_taker.get_my_DID()
@@ -316,17 +341,21 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        name="NFT WALLET DID TAKER",
+        did_id=did_id,
     )
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
 
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
@@ -365,14 +394,16 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
+        env_maker.wallet_state_manager,
+        wallet_maker,
+        name="NFT WALLET MAKER",
     )
 
     # maker create offer: NFT for xch
@@ -396,10 +427,14 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
     offer_dict: OfferSummary = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_dict, action_scope, driver_dict, fee=maker_fee
+            offer_dict,
+            action_scope,
+            driver_dict,
+            fee=maker_fee,
         )
     assert success is True
     assert error is None
@@ -409,13 +444,18 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
 
     peer = env_taker.node.get_full_node_peer()
     [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
+            Offer.from_bytes(trade_make.offer),
+            peer,
+            action_scope,
+            fee=uint64(taker_fee),
         )
     assert trade_take is not None
 
@@ -478,7 +518,7 @@ async def test_nft_offer_request_nft(wallet_environments: WalletTestFramework, z
                     },
                 },
             ),
-        ]
+        ],
     )
 
 
@@ -505,15 +545,20 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     }
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager,
+            wallet_maker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -538,7 +583,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet_maker.get_my_DID()
@@ -548,17 +593,21 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager,
+        wallet_maker,
+        name="NFT WALLET DID 1",
+        did_id=did_id,
     )
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
@@ -597,15 +646,19 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     # TAKER SETUP -  WITH DID
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
+            env_taker.wallet_state_manager,
+            wallet_taker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -630,14 +683,17 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     hex_did_id_taker = did_wallet_taker.get_my_DID()
     did_id_taker = bytes32.fromhex(hex_did_id_taker)
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER", did_id=did_id_taker
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        name="NFT WALLET TAKER",
+        did_id=did_id_taker,
     )
 
     await wallet_environments.process_pending_states(
@@ -668,7 +724,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # maker create offer: NFT for xch
@@ -686,10 +742,14 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
     offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch,
+            action_scope,
+            {},
+            fee=maker_fee,
         )
     assert success is True
     assert error is None
@@ -699,13 +759,18 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
 
     peer = env_taker.node.get_full_node_peer()
     [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
+            Offer.from_bytes(trade_make.offer),
+            peer,
+            action_scope,
+            fee=uint64(taker_fee),
         )
     assert trade_take is not None
 
@@ -764,7 +829,7 @@ async def test_nft_offer_sell_did_to_did(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     nft_0_wallet_taker = env_taker.wallet_state_manager.wallets[uint32(4)]
@@ -797,15 +862,20 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     }
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager,
+            wallet_maker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -830,7 +900,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet_maker.get_my_DID()
@@ -840,17 +910,21 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager,
+        wallet_maker,
+        name="NFT WALLET DID 1",
+        did_id=did_id,
     )
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
@@ -889,12 +963,14 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     # TAKER SETUP -  NO DID
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        name="NFT WALLET TAKER",
     )
 
     await env_taker.change_balances({"nft": {"init": True}})
@@ -913,7 +989,8 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     cats_to_mint = 100000
     cats_to_trade = uint64(10000)
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -945,25 +1022,30 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cat_wallet_taker: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
-        env_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        cat_wallet_maker.get_asset_id(),
     )
 
     await env_taker.change_balances({"cat": {"init": True}})
 
     with wallet_environments.new_puzzle_hashes_allowed():
         async with wallet_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
             ph_taker_cat_2 = await action_scope.get_puzzle_hash(
-                wallet_taker.wallet_state_manager, override_reuse_puzhash_with=False
+                wallet_taker.wallet_state_manager,
+                override_reuse_puzhash_with=False,
             )
     async with cat_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await cat_wallet_maker.generate_signed_transaction(
             [cats_to_trade, cats_to_trade],
@@ -994,7 +1076,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                     },
                 },
             ),
-        ]
+        ],
     )
 
     maker_cat_balance = cats_to_mint - (2 * cats_to_trade)
@@ -1010,10 +1092,14 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
     offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch,
+            action_scope,
+            {},
+            fee=maker_fee,
         )
 
     assert success is True
@@ -1024,13 +1110,18 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
 
     peer = env_taker.node.get_full_node_peer()
     [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
+            Offer.from_bytes(trade_make.offer),
+            peer,
+            action_scope,
+            fee=uint64(taker_fee),
         )
     assert trade_take is not None
 
@@ -1113,7 +1204,7 @@ async def test_nft_offer_sell_nft_for_cat(wallet_environments: WalletTestFramewo
                     },
                 },
             ),
-        ]
+        ],
     )
 
 
@@ -1140,15 +1231,20 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     }
 
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
 
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_taker.wallet_state_manager, wallet_taker, uint64(1), action_scope
+            env_taker.wallet_state_manager,
+            wallet_taker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -1173,7 +1269,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                     },
                 },
             ),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet_taker.get_my_DID()
@@ -1183,17 +1279,21 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     royalty_basis_pts = uint16(5000)  # 50%
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        env_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        name="NFT WALLET DID TAKER",
+        did_id=did_id,
     )
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
 
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
@@ -1232,14 +1332,16 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
+        env_maker.wallet_state_manager,
+        wallet_maker,
+        name="NFT WALLET MAKER",
     )
 
     await env_maker.change_balances({"nft": {"init": True}})
@@ -1258,7 +1360,8 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     cats_to_mint = 100000
     cats_to_trade = uint64(20000)
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -1290,11 +1393,13 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     await CATWallet.get_or_create_wallet_for_cat(
-        env_taker.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+        env_taker.wallet_state_manager,
+        wallet_taker,
+        cat_wallet_maker.get_asset_id(),
     )
 
     await env_taker.change_balances({"cat": {"init": True}})
@@ -1302,25 +1407,30 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     with wallet_environments.new_puzzle_hashes_allowed():
         if test_change:
             async with wallet_maker.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True
+                wallet_environments.tx_config,
+                push=True,
             ) as action_scope:
                 cat_1 = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
                 cat_2 = await action_scope.get_puzzle_hash(
-                    wallet_maker.wallet_state_manager, override_reuse_puzhash_with=False
+                    wallet_maker.wallet_state_manager,
+                    override_reuse_puzhash_with=False,
                 )
         else:
             async with wallet_taker.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True
+                wallet_environments.tx_config,
+                push=True,
             ) as action_scope:
                 cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
                 cat_2 = await action_scope.get_puzzle_hash(
-                    wallet_taker.wallet_state_manager, override_reuse_puzhash_with=False
+                    wallet_taker.wallet_state_manager,
+                    override_reuse_puzhash_with=False,
                 )
     puzzle_hashes = [cat_1, cat_2]
     amounts = [cats_to_trade, cats_to_trade]
     if test_change:
         async with wallet_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             ph_taker_cat_1 = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
         extra_change = cats_to_mint - (2 * cats_to_trade)
@@ -1330,7 +1440,8 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
         extra_change = 0  # for mypy sake, not useful
 
     async with cat_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes, action_scope)
 
@@ -1371,7 +1482,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                     },
                 },
             ),
-        ]
+        ],
     )
 
     nft_to_request = coins_taker[0]
@@ -1386,10 +1497,14 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
     offer_dict: OfferSummary = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_dict, action_scope, driver_dict, fee=maker_fee
+            offer_dict,
+            action_scope,
+            driver_dict,
+            fee=maker_fee,
         )
     assert success is True
     assert error is None
@@ -1399,13 +1514,18 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
 
     peer = env_taker.node.get_full_node_peer()
     [_maker_offer], signing_response = await env_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), peer, action_scope, fee=uint64(taker_fee)
+            Offer.from_bytes(trade_make.offer),
+            peer,
+            action_scope,
+            fee=uint64(taker_fee),
         )
     assert trade_take is not None
 
@@ -1459,7 +1579,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                     },
                     "cat": {
                         # Normally taker is not royalty holder so this is an edge case
-                        "unconfirmed_wallet_balance": cats_requested  # + expected_royalty,
+                        "unconfirmed_wallet_balance": cats_requested,  # + expected_royalty,
                     },
                     "did": {},
                     "nft": {
@@ -1488,7 +1608,7 @@ async def test_nft_offer_request_nft_for_cat(wallet_environments: WalletTestFram
                     },
                 },
             ),
-        ]
+        ],
     )
 
     assert len(await nft_wallet_maker.get_current_nfts()) == 1
@@ -1509,15 +1629,20 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
     }
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_maker.wallet_state_manager, wallet_maker, uint64(1), action_scope
+            env_maker.wallet_state_manager,
+            wallet_maker,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -1540,8 +1665,8 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
                         "set_remainder": True,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     hex_did_id = did_wallet_maker.get_my_DID()
@@ -1551,19 +1676,23 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
     royalty_basis_pts = uint16(200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        env_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+        env_maker.wallet_state_manager,
+        wallet_maker,
+        name="NFT WALLET DID 1",
+        did_id=did_id,
     )
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
 
     await env_maker.change_balances({"nft": {"init": True}})
 
     async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_maker.generate_new_nft(
             metadata,
@@ -1599,8 +1728,8 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
                         "set_remainder": True,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
@@ -1622,16 +1751,21 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
     offer_did_nft_for_xch: OfferSummary = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         _success, trade_make, _error = await trade_manager_maker.create_offer_for_ids(
-            offer_did_nft_for_xch, action_scope, {}, fee=maker_fee
+            offer_did_nft_for_xch,
+            action_scope,
+            {},
+            fee=maker_fee,
         )
     assert trade_make is not None
 
     FEE = uint64(2000000000000)
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=FEE, secure=True)
 
@@ -1667,8 +1801,8 @@ async def test_nft_offer_sell_cancel(wallet_environments: WalletTestFramework) -
                         "pending_coin_removal_count": -1,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -1720,26 +1854,38 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     }
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_maker = await action_scope.get_puzzle_hash(wallet_maker.wallet_state_manager)
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         ph_taker = await action_scope.get_puzzle_hash(wallet_taker.wallet_state_manager)
 
     CAT_AMOUNT = uint64(100000000)
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            wsm_maker, wallet_maker, {"identifier": "genesis_by_id"}, CAT_AMOUNT, action_scope
+            wsm_maker,
+            wallet_maker,
+            {"identifier": "genesis_by_id"},
+            CAT_AMOUNT,
+            action_scope,
         )
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_wallet_taker = await CATWallet.create_new_cat_wallet(
-            wsm_taker, wallet_taker, {"identifier": "genesis_by_id"}, CAT_AMOUNT, action_scope
+            wsm_taker,
+            wallet_taker,
+            {"identifier": "genesis_by_id"},
+            CAT_AMOUNT,
+            action_scope,
         )
     await env_maker.change_balances({"cat_maker": {"init": True}})
     await env_taker.change_balances({"cat_taker": {"init": True}})
@@ -1751,16 +1897,24 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     await env_taker.change_balances({"nft0": {"init": True}})
 
     async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wsm_maker, wallet_maker, uint64(1), action_scope
+            wsm_maker,
+            wallet_maker,
+            uint64(1),
+            action_scope,
         )
     async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wsm_taker, wallet_taker, uint64(1), action_scope
+            wsm_taker,
+            wallet_taker,
+            uint64(1),
+            action_scope,
         )
     await env_maker.change_balances({"did": {"init": True}})
     await env_taker.change_balances({"did": {"init": True}})
@@ -1819,7 +1973,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                     },
                 },
             ),
-        ]
+        ],
     )
 
     did_id_maker = bytes32.fromhex(did_wallet_maker.get_my_DID())
@@ -1835,10 +1989,16 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     )
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
-        wsm_maker, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
+        wsm_maker,
+        wallet_maker,
+        name="NFT WALLET DID 1",
+        did_id=did_id_maker,
     )
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wsm_taker, wallet_taker, name="NFT WALLET DID 1", did_id=did_id_taker
+        wsm_taker,
+        wallet_taker,
+        name="NFT WALLET DID 1",
+        did_id=did_id_taker,
     )
     await env_maker.change_balances({"nft1": {"init": True}})
     await env_taker.change_balances({"nft1": {"init": True}})
@@ -1847,12 +2007,13 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
     if royalty_basis_pts_maker > 65535:
         with pytest.raises(ValueError):
             async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=False
+                wallet_environments.tx_config,
+                push=False,
             ) as action_scope:
                 await nft_wallet_maker.generate_new_nft(
                     metadata,
@@ -1865,7 +2026,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         return
     else:
         async with nft_wallet_maker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             await nft_wallet_maker.generate_new_nft(
                 metadata,
@@ -1877,7 +2039,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
             )
 
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
@@ -1938,7 +2101,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(30, get_nft_count, 1, nft_wallet_maker)
@@ -1946,7 +2109,8 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
 
     # MAke one more NFT for the taker
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await nft_wallet_taker.generate_new_nft(
             metadata,
@@ -1984,7 +2148,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(30, get_nft_count, 2, nft_wallet_taker)
@@ -2025,15 +2189,19 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
             {
                 "type": "CAT",
                 "tail": "0x" + cat_wallet_taker.get_asset_id(),
-            }
+            },
         ),
     }
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            complex_nft_offer, action_scope, driver_dict=driver_dict, fee=FEE
+            complex_nft_offer,
+            action_scope,
+            driver_dict=driver_dict,
+            fee=FEE,
         )
     assert error is None
     assert success
@@ -2043,7 +2211,9 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
     if royalty_basis_pts_maker == 10000:
         with pytest.raises(ValueError):
             async with trade_manager_taker.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+                wallet_environments.tx_config,
+                push=True,
+                additional_signing_responses=signing_response,
             ) as action_scope:
                 trade_take = await trade_manager_taker.respond_to_offer(
                     Offer.from_bytes(trade_make.offer),
@@ -2055,7 +2225,9 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
         return
     else:
         async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+            wallet_environments.tx_config,
+            push=True,
+            additional_signing_responses=signing_response,
         ) as action_scope:
             trade_take = await trade_manager_taker.respond_to_offer(
                 maker_offer,
@@ -2204,7 +2376,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                     },
                 },
             ),
-        ]
+        ],
     )
 
     maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
@@ -2233,15 +2405,19 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
             {
                 "type": "CAT",
                 "tail": "0x" + cat_wallet_taker.get_asset_id(),
-            }
+            },
         ),
     }
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            complex_nft_offer, action_scope, driver_dict=driver_dict, fee=uint64(0)
+            complex_nft_offer,
+            action_scope,
+            driver_dict=driver_dict,
+            fee=uint64(0),
         )
     assert error is None
     assert success
@@ -2249,7 +2425,9 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
 
     [maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(trade_make.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
@@ -2352,7 +2530,7 @@ async def test_complex_nft_offer(wallet_environments: WalletTestFramework, royal
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # Now let's make sure the final wallet state is correct

@@ -237,7 +237,10 @@ class DataLayerRpcApi:
             keys_values = await self.service.get_keys_values(store_id, resolved_root_hash)
         else:
             keys_values_paginated = await self.service.get_keys_values_paginated(
-                store_id, resolved_root_hash, page, max_page_size
+                store_id,
+                resolved_root_hash,
+                page,
+                max_page_size,
             )
             keys_values = keys_values_paginated.keys_values
 
@@ -487,7 +490,11 @@ class DataLayerRpcApi:
             records = list(records_dict)
         else:
             kv_diff_paginated = await self.service.get_kv_diff_paginated(
-                id_bytes, hash_1_bytes, hash_2_bytes, page, max_page_size
+                id_bytes,
+                hash_1_bytes,
+                hash_2_bytes,
+                page,
+                max_page_size,
             )
             records = kv_diff_paginated.kv_diff
 
@@ -583,7 +590,7 @@ class DataLayerRpcApi:
                 "generation": sync_status.generation,
                 "target_root_hash": sync_status.target_root_hash.hex(),
                 "target_generation": sync_status.target_generation,
-            }
+            },
         }
 
     async def check_plugins(self, request: dict[str, Any]) -> EndpointResult:
@@ -609,7 +616,9 @@ class DataLayerRpcApi:
         for key in request.keys:
             node = await self.service.data_store.get_node_by_key(store_id=request.store_id, key=key)
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                store_id=request.store_id, node_hash=node.hash, use_optimized=True
+                store_id=request.store_id,
+                node_hash=node.hash,
+                use_optimized=True,
             )
 
             proof = HashOnlyProof.from_key_value(

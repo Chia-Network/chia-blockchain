@@ -46,7 +46,10 @@ def get_future_reward_coins(block: FullBlock) -> tuple[Coin, Coin]:
         assert block.transactions_info is not None
         farmer_amount = uint64(farmer_amount + block.transactions_info.fees)
     pool_coin: Coin = create_pool_coin(
-        block.height, block.foliage.foliage_block_data.pool_target.puzzle_hash, pool_amount, constants.GENESIS_CHALLENGE
+        block.height,
+        block.foliage.foliage_block_data.pool_target.puzzle_hash,
+        pool_amount,
+        constants.GENESIS_CHALLENGE,
     )
     farmer_coin: Coin = create_farmer_coin(
         block.height,
@@ -104,7 +107,10 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 assert block.transactions_info is not None
                 flags = get_flags_for_height_and_constants(block.height, bt.constants)
                 additions, removals = additions_and_removals(
-                    bytes(block.transactions_generator), [], flags, bt.constants
+                    bytes(block.transactions_generator),
+                    [],
+                    flags,
+                    bt.constants,
                 )
                 tx_removals = [name for name, _ in removals]
                 tx_additions = [(addition.name(), addition, False) for addition, _ in additions]
@@ -156,7 +162,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 all_records.add(record)
 
             db_records = await coin_store.get_coin_records(
-                [c.name() for c in should_be_included_prev] + [coin_id for coin_id, _, _ in tx_additions] + tx_removals
+                [c.name() for c in should_be_included_prev] + [coin_id for coin_id, _, _ in tx_additions] + tx_removals,
             )
             assert len(db_records) == len(should_be_included_prev) + len(tx_removals) + len(tx_additions)
             assert len(db_records) == len(all_records)
@@ -181,7 +187,11 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
                 continue
             assert block.foliage_transaction_block is not None
             await coin_store.new_block(
-                block.height, block.foliage_transaction_block.timestamp, block.get_included_reward_coins(), [], []
+                block.height,
+                block.foliage_transaction_block.timestamp,
+                block.get_included_reward_coins(),
+                [],
+                [],
             )
             coins = block.get_included_reward_coins()
             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -344,15 +354,24 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
             for reorg_block in blocks_reorg_chain:
                 if reorg_block.height < initial_block_count - 10:
                     await _validate_and_add_block(
-                        b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                        b,
+                        reorg_block,
+                        expected_result=AddBlockResult.ALREADY_HAVE_BLOCK,
+                        fork_info=fork_info,
                     )
                 elif reorg_block.height < initial_block_count:
                     await _validate_and_add_block(
-                        b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                        b,
+                        reorg_block,
+                        expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                        fork_info=fork_info,
                     )
                 elif reorg_block.height >= initial_block_count:
                     await _validate_and_add_block(
-                        b, reorg_block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info
+                        b,
+                        reorg_block,
+                        expected_result=AddBlockResult.NEW_PEAK,
+                        fork_info=fork_info,
                     )
                     if reorg_block.is_transaction_block():
                         coins = reorg_block.get_included_reward_coins()
@@ -438,8 +457,11 @@ async def test_get_coin_states(db_version: int) -> None:
             assert (
                 len(
                     await coin_store.get_coin_states_by_puzzle_hashes(
-                        True, {std_hash(b"2")}, uint32(0), max_items=limit
-                    )
+                        True,
+                        {std_hash(b"2")},
+                        uint32(0),
+                        max_items=limit,
+                    ),
                 )
                 == limit
             )
@@ -525,7 +547,7 @@ def random_coin_records() -> RandomCoinRecords:
                 spent_block_index=spent_height if is_spent else uint32(0),
                 coinbase=False,
                 timestamp=uint64(0),
-            )
+            ),
         )
 
     coin_records.sort(key=lambda cr: max(cr.confirmed_block_index, cr.spent_block_index))
@@ -538,7 +560,8 @@ def random_coin_records() -> RandomCoinRecords:
 @pytest.mark.parametrize("include_unspent", [True, False])
 @pytest.mark.parametrize("include_hinted", [True, False])
 @pytest.mark.parametrize(
-    "min_amount", [uint64(0), uint64(30000), uint64(0xFFFF), uint64(0x7FFF), uint64(0x8000), uint64(0x8000000000000000)]
+    "min_amount",
+    [uint64(0), uint64(30000), uint64(0xFFFF), uint64(0x7FFF), uint64(0x8000), uint64(0x8000000000000000)],
 )
 async def test_coin_state_batches(
     db_version: int,
@@ -640,7 +663,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
                     spent_block_index=uint32(0),
                     coinbase=False,
                     timestamp=uint64(0),
-                )
+                ),
             )
 
         # Initialize coin and hint stores.
@@ -671,7 +694,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
                     spent_block_index=uint32(0),
                     coinbase=False,
                     timestamp=uint64(0),
-                )
+                ),
             ],
         )
 
@@ -798,7 +821,11 @@ class UnspentLineageInfoCase:
             UnspentLineageInfoTestItem(b"2" * 32, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
             UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
             UnspentLineageInfoTestItem(
-                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, spent_index=1
+                TEST_PARENT_ID,
+                TEST_PUZZLEHASH,
+                TEST_AMOUNT,
+                TEST_PARENT_PARENT_ID,
+                spent_index=1,
             ),
         ],
         expected_success=False,
@@ -810,7 +837,11 @@ class UnspentLineageInfoCase:
             UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
             UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
             UnspentLineageInfoTestItem(
-                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, spent_index=1
+                TEST_PARENT_ID,
+                TEST_PUZZLEHASH,
+                TEST_AMOUNT,
+                TEST_PARENT_PARENT_ID,
+                spent_index=1,
             ),
         ],
         expected_success=True,
@@ -841,7 +872,7 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
                     item.parent_id,
                     int_to_bytes(item.amount),
                     0,
-                )
+                ),
             )
         return test_data
 

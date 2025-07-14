@@ -48,7 +48,7 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
             log.error(
                 f"[pid:{os.getpid()}] error: didn't get expected passphrase: "
                 f"get_passphrase: {found_passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
-                f", expected: {passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
+                f", expected: {passphrase}",  # lgtm [py/clear-text-logging-sensitive-data]
             )
 
         # Write out a file indicating this process has completed its work
@@ -95,7 +95,7 @@ class TestFileKeyringSynchronization:
 
             # Collect results
             res.get(
-                timeout=adjusted_timeout(timeout=10)
+                timeout=adjusted_timeout(timeout=10),
             )  # 10 second timeout to prevent a bad test from spoiling the fun
 
         # Expect: parent process should be able to find all passphrases that were set by the child processes

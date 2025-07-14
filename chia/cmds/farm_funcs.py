@@ -71,7 +71,7 @@ async def challenges(root_path: Path, farmer_rpc_port: Optional[int], limit: int
     for signage_point in signage_points:
         print(
             f"Hash: {signage_point['signage_point']['challenge_hash']} "
-            f"Index: {signage_point['signage_point']['signage_point_index']}"
+            f"Index: {signage_point['signage_point']['signage_point_index']}",
         )
 
 
@@ -154,7 +154,7 @@ async def summary(
                     PlotStats.total_plots += plot_count_harvester
                     print(
                         f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)} on-disk, "
-                        f"{format_bytes(total_effective_plot_size_harvester)}e (effective)"
+                        f"{format_bytes(total_effective_plot_size_harvester)}e (effective)",
                     )
 
         if len(harvesters_local) > 0:
@@ -168,7 +168,7 @@ async def summary(
 
         print(
             f"Total size of plots: {format_bytes(PlotStats.total_plot_size)}, "
-            f"{format_bytes(PlotStats.total_effective_plot_size)}e (effective)"
+            f"{format_bytes(PlotStats.total_effective_plot_size)}e (effective)",
         )
     else:
         print("Plot count: Unknown")

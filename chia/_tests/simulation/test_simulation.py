@@ -163,7 +163,8 @@ class TestSimulation:
 
         # Connect node_1 up to the daemon
         full_system.node_1.rpc_server.connect_to_daemon(
-            self_hostname=self_hostname, daemon_port=full_system.daemon.daemon_port
+            self_hostname=self_hostname,
+            daemon_port=full_system.daemon.daemon_port,
         )
 
         async def verify_daemon_connection(daemon: WebSocketServer, service: str) -> bool:
@@ -446,7 +447,8 @@ class TestSimulation:
         # generate some coins for repetitive testing
         await full_node_api.farm_rewards_to_wallet(amount=tx_amount * repeats * tx_per_repeat, wallet=wallet)
         all_coins = await full_node_api.create_coins_with_amounts(
-            amounts=[tx_amount] * repeats * tx_per_repeat, wallet=wallet
+            amounts=[tx_amount] * repeats * tx_per_repeat,
+            wallet=wallet,
         )
         assert len(all_coins) == repeats * tx_per_repeat
 
@@ -455,7 +457,9 @@ class TestSimulation:
         for repeat in range(repeats):
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
             async with wallet.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=True, merge_spends=False
+                DEFAULT_TX_CONFIG,
+                push=True,
+                merge_spends=False,
             ) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
@@ -474,7 +478,7 @@ class TestSimulation:
                 await full_node_api.process_transaction_records(records=transactions)
             elif records_or_bundles_or_coins == "bundles":
                 await full_node_api.process_spend_bundles(
-                    bundles=[tx.spend_bundle for tx in transactions if tx.spend_bundle is not None]
+                    bundles=[tx.spend_bundle for tx in transactions if tx.spend_bundle is not None],
                 )
             elif records_or_bundles_or_coins == "coins":
                 await full_node_api.process_coin_spends(
@@ -483,7 +487,7 @@ class TestSimulation:
                         for tx in transactions
                         if tx.spend_bundle is not None
                         for coin in tx.spend_bundle.additions()
-                    ]
+                    ],
                 )
             else:
                 raise Exception("unexpected parametrization")

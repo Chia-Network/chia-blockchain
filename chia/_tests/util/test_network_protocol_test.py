@@ -62,7 +62,7 @@ def test_message_ids() -> None:
             if message_id in message_ids:  # pragma: no cover
                 raise AssertionError(
                     f'protocol message ID clash between "{message_name}" and "{message_ids[message_id]}". '
-                    f"Value {message_id}"
+                    f"Value {message_id}",
                 )
             message_ids[message_id] = message_name
             if message_id < 0 or message_id > 255:  # pragma: no cover

@@ -232,7 +232,11 @@ class FeeStat:  # TxConfirmStats
 
     # See TxConfirmStats::EstimateMedianVal in https://github.com/bitcoin/bitcoin/blob/master/src/policy/fees.cpp
     def estimate_median_val(
-        self, conf_target: int, sufficient_tx_val: float, success_break_point: float, block_height: uint32
+        self,
+        conf_target: int,
+        sufficient_tx_val: float,
+        success_break_point: float,
+        block_height: uint32,
     ) -> EstimateResult:
         """
         conf_target is the number of blocks within which we hope to get our SpendBundle confirmed
@@ -473,7 +477,10 @@ class FeeTracker:
         long = self.long_horizon.create_backup()
         stats = [short, medium, long]
         backup = FeeTrackerBackup(
-            uint8(FEE_ESTIMATOR_VERSION), self.first_recorded_height, self.latest_seen_height, stats
+            uint8(FEE_ESTIMATOR_VERSION),
+            self.first_recorded_height,
+            self.latest_seen_height,
+            stats,
         )
         self.fee_store.store_fee_data(backup)
 

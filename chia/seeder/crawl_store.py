@@ -42,7 +42,7 @@ class CrawlStore:
             " best_timestamp bigint,"
             " version text,"
             " handshake_time text"
-            " tls_version text)"
+            " tls_version text)",
         )
         await self.crawl_db.execute(
             "CREATE TABLE IF NOT EXISTS peer_reliability("
@@ -53,7 +53,7 @@ class CrawlStore:
             " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
             " stat_1w_w real, stat_1w_c real, stat_1w_r real,"
             " stat_1m_w real, stat_1m_c real, stat_1m_r real,"
-            " tries int, successes int)"
+            " tries int, successes int)",
         )
 
         try:
@@ -309,7 +309,18 @@ class CrawlStore:
         await cursor.close()
         for row in rows:
             peer = PeerRecord(
-                row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11]
+                row[0],
+                row[1],
+                row[2],
+                row[3],
+                row[4],
+                row[5],
+                row[6],
+                row[7],
+                row[8],
+                row[9],
+                row[10],
+                row[11],
             )
             self.host_to_records[peer.peer_id] = peer
         log.warning("  - Done loading peer records...")
@@ -393,7 +404,7 @@ class CrawlStore:
                 from peer_records
                 where peer_records.peer_id = peer_reliability.peer_id
             )
-            """
+            """,
         )
         await self.crawl_db.execute(
             """
@@ -403,7 +414,7 @@ class CrawlStore:
                 from peer_records
                 where peer_records.ip_address = good_peers.ip
             )
-            """
+            """,
         )
         await self.crawl_db.commit()
         await self.crawl_db.execute("VACUUM")

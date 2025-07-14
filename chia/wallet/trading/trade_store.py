@@ -41,7 +41,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     end_time = perf_counter()
     log.info(
         f"Completed coin_of_interest lookup table migration of {len(inserts)} "
-        f"records in {end_time - start_time} seconds"
+        f"records in {end_time - start_time} seconds",
     )
 
 
@@ -84,7 +84,10 @@ class TradeStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
+        cls,
+        db_wrapper: DBWrapper2,
+        cache_size: uint32 = uint32(600000),
+        name: Optional[str] = None,
     ) -> TradeStore:
         self = cls()
 
@@ -105,14 +108,14 @@ class TradeStore:
                 " confirmed_at_index int,"
                 " created_at_time bigint,"
                 " sent int,"
-                " is_my_offer tinyint)"
+                " is_my_offer tinyint)",
             )
 
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)"
+                "CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)",
             )
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on coin_of_interest_to_trade_record(trade_id)"
+                "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on coin_of_interest_to_trade_record(trade_id)",
             )
 
             # coin of interest migration check
@@ -218,11 +221,16 @@ class TradeStore:
             for coin in record.coins_of_interest:
                 inserts.append((coin.name(), record.trade_id))
             await conn.executemany(
-                "INSERT INTO coin_of_interest_to_trade_record (coin_id, trade_id) VALUES(?, ?)", inserts
+                "INSERT INTO coin_of_interest_to_trade_record (coin_id, trade_id) VALUES(?, ?)",
+                inserts,
             )
 
     async def set_status(
-        self, trade_id: bytes32, status: TradeStatus, offer_name: bytes32 = None, index: uint32 = uint32(0)
+        self,
+        trade_id: bytes32,
+        status: TradeStatus,
+        offer_name: bytes32 = None,
+        index: uint32 = uint32(0),
     ) -> None:
         """
         Updates the status of the trade
@@ -255,7 +263,11 @@ class TradeStore:
         await self.add_trade_record(tx, offer_name, replace=True)
 
     async def increment_sent(
-        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
+        self,
+        id: bytes32,
+        name: str,
+        send_status: MempoolInclusionStatus,
+        err: Optional[Err],
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).

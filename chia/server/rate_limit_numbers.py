@@ -75,7 +75,9 @@ rate_limits = {
             ProtocolMessageTypes.new_transaction: RLSettings(5000, 100, 5000 * 100),
             ProtocolMessageTypes.request_transaction: RLSettings(5000, 100, 5000 * 100),
             ProtocolMessageTypes.respond_transaction: RLSettings(
-                5000, 1 * 1024 * 1024, 20 * 1024 * 1024
+                5000,
+                1 * 1024 * 1024,
+                20 * 1024 * 1024,
             ),  # TODO: check this
             ProtocolMessageTypes.send_transaction: RLSettings(5000, 1024 * 1024),
             ProtocolMessageTypes.transaction_ack: RLSettings(5000, 2048),

@@ -87,10 +87,10 @@ def b32(key: str) -> bytes32:
         pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
         plot_size=uint8(42),
         pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
         ),
         plot_public_key=g1(
-            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96",
         ),
         height=uint32(5495999),
         expected_error="Did not pass the plot filter",
@@ -100,10 +100,10 @@ def b32(key: str) -> bytes32:
         pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
         plot_size=uint8(42),
         pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
         ),
         plot_public_key=g1(
-            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
+            "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96",
         ),
         height=uint32(5496000),
     ),
@@ -128,10 +128,10 @@ def b32(key: str) -> bytes32:
         pos_challenge=b32("3d29ea79d19b3f7e99ebf764ae53697cbe143603909873946af6ab1ece606861"),
         plot_size=uint8(0x80 | 32),
         pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
         ),
         plot_public_key=g1(
-            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
+            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc",
         ),
         expected_error="Did not pass the plot filter",
     ),
@@ -162,10 +162,10 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         plot_size=uint8(0x80 | 30),
         pos_challenge=b32("47deb938e145d25d7b3b3c85ca9e3972b76c01aeeb78a02fe5d3b040d282317e"),
         plot_public_key=g1(
-            "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
+            "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868",
         ),
         pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
+            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
         ),
         expected_error="NotImplementedError",
     ),

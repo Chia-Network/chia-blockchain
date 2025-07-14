@@ -94,7 +94,7 @@ def calculate_synthetic_offset(public_key: G1Element, hidden_puzzle_hash: bytes3
 @lru_cache(maxsize=1000)
 def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: bytes32) -> G1Element:
     synthetic_offset: PrivateKey = PrivateKey.from_bytes(
-        calculate_synthetic_offset(public_key, hidden_puzzle_hash).to_bytes(32, "big")
+        calculate_synthetic_offset(public_key, hidden_puzzle_hash).to_bytes(32, "big"),
     )
     return public_key + synthetic_offset.get_g1()
 

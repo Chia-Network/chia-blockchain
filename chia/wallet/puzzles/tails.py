@@ -53,7 +53,11 @@ class LimitationsProgram:
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, cat_tail_info: dict, amount: uint64, action_scope: WalletActionScope
+        cls,
+        wallet,
+        cat_tail_info: dict,
+        amount: uint64,
+        action_scope: WalletActionScope,
     ) -> WalletSpendBundle:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
@@ -98,17 +102,24 @@ class GenesisById(LimitationsProgram):
         tail: Program = cls.construct([Program.to(origin_id)])
 
         wallet.lineage_store = await CATLineageStore.create(
-            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+            wallet.wallet_state_manager.db_wrapper,
+            tail.get_tree_hash().hex(),
         )
         await wallet.add_lineage(origin_id, LineageProof())
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         async with wallet.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config,
+            push=False,
         ) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
-                [amount], [minted_cat_puzzle_hash], inner_action_scope, fee, coins, origin_id=origin_id
+                [amount],
+                [minted_cat_puzzle_hash],
+                inner_action_scope,
+                fee,
+                coins,
+                origin_id=origin_id,
             )
 
         async with action_scope.use() as interface:
@@ -127,13 +138,13 @@ class GenesisById(LimitationsProgram):
                         filter(
                             lambda a: a.amount == amount,
                             [add for tx in inner_action_scope.side_effects.transactions for add in tx.additions],
-                        )
+                        ),
                     ),
                     tail.get_tree_hash(),
                     cat_inner,
                     inner_solution,
                     limitations_program_reveal=tail,
-                )
+                ),
             ],
         )
 
@@ -215,7 +226,7 @@ class DelegatedLimitations(LimitationsProgram):
             [
                 signed_program.construct(inner_program_args),
                 signed_program.solve(inner_program_args, inner_solution_dict),
-            ]
+            ],
         )
 
 

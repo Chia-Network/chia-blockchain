@@ -54,7 +54,9 @@ async def run_plotter(root_path, plotter, args, progress_dict):
     orig_sigint_handler = signal.getsignal(signal.SIGINT)
     installed_sigint_handler = False
     process = await asyncio.create_subprocess_exec(
-        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
 
     def sigint_handler(signum, frame):
@@ -88,15 +90,15 @@ async def run_plotter(root_path, plotter, args, progress_dict):
                         _read_stream(
                             process.stdout,
                             process_stdout_line,
-                        )
+                        ),
                     ),
                     create_referenced_task(
                         _read_stream(
                             process.stderr,
                             process_stderr_line,
-                        )
+                        ),
                     ),
-                ]
+                ],
             )
 
             await process.wait()

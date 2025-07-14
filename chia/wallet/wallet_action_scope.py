@@ -76,7 +76,8 @@ class WalletActionConfig:
 
 class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
     async def _get_unused_derivation_path(
-        self, wallet_state_manager: WalletStateManager
+        self,
+        wallet_state_manager: WalletStateManager,
     ) -> GetUnusedDerivationRecordResult:
         async with self.use() as interface:
             result = await wallet_state_manager._get_unused_derivation_record(
@@ -98,13 +99,15 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
         return (await self._get_unused_derivation_path(wallet_state_manager)).record.puzzle_hash
 
     async def get_puzzle(
-        self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
+        self,
+        wallet_state_manager: WalletStateManager,
+        override_reuse_puzhash_with: Optional[bool] = None,
     ) -> Program:
         if (
             self.config.tx_config.reuse_puzhash or override_reuse_puzhash_with is True
         ) and override_reuse_puzhash_with is not False:
             record: Optional[DerivationRecord] = await wallet_state_manager.get_current_derivation_record_for_wallet(
-                wallet_state_manager.main_wallet.id()
+                wallet_state_manager.main_wallet.id(),
             )
             if record is None:
                 return await self._get_new_puzzle(wallet_state_manager)  # pragma: no cover
@@ -114,13 +117,15 @@ class WalletActionScope(ActionScope[WalletSideEffects, WalletActionConfig]):
             return await self._get_new_puzzle(wallet_state_manager)
 
     async def get_puzzle_hash(
-        self, wallet_state_manager: WalletStateManager, override_reuse_puzhash_with: Optional[bool] = None
+        self,
+        wallet_state_manager: WalletStateManager,
+        override_reuse_puzhash_with: Optional[bool] = None,
     ) -> bytes32:
         if (
             self.config.tx_config.reuse_puzhash or override_reuse_puzhash_with is True
         ) and override_reuse_puzhash_with is not False:
             record: Optional[DerivationRecord] = await wallet_state_manager.get_current_derivation_record_for_wallet(
-                wallet_state_manager.main_wallet.id()
+                wallet_state_manager.main_wallet.id(),
             )
             if record is None:
                 return await self._get_new_puzzle_hash(wallet_state_manager)  # pragma: no cover
@@ -146,7 +151,13 @@ async def new_wallet_action_scope(
     async with WalletActionScope.new_scope(
         WalletSideEffects,
         WalletActionConfig(
-            push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config, puzzle_for_pk
+            push,
+            merge_spends,
+            sign,
+            additional_signing_responses,
+            extra_spends,
+            tx_config,
+            puzzle_for_pk,
         ),
     ) as self:
         self = cast(WalletActionScope, self)

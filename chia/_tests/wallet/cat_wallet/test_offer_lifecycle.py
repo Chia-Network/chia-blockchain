@@ -43,7 +43,9 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
 
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
 async def generate_coins(
-    sim: SpendSim, sim_client: SimClient, requested_coins: dict[Optional[str], list[int]]
+    sim: SpendSim,
+    sim_client: SimClient,
+    requested_coins: dict[Optional[str], list[int]],
 ) -> dict[Optional[str], list[Coin]]:
     await sim.farm_block(acs_ph)
     parent_coin = next(cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph))
@@ -68,16 +70,17 @@ async def generate_coins(
                                 tail_hash,
                                 acs,
                                 Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
-                            )
+                            ),
                         ],
-                    )
+                    ),
                 )
             else:
                 payments.append(CreateCoin(acs_ph, uint64(amount)))
 
     # This bundle creates all of the initial coins
     parent_bundle = WalletSpendBundle(
-        [make_spend(parent_coin, acs, Program.to([[51, p.puzzle_hash, p.amount] for p in payments]))], G2Element()
+        [make_spend(parent_coin, acs, Program.to([[51, p.puzzle_hash, p.amount] for p in payments]))],
+        G2Element(),
     )
 
     # Then we aggregate it with all of the eve spends
@@ -101,7 +104,7 @@ async def generate_coins(
                         cr.coin
                         for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False)
                     ],
-                )
+                ),
             )
 
     return coin_dict
@@ -146,7 +149,7 @@ def generate_secure_bundle(
                     [
                         [51, 0, -113, str_to_tail(tail_str), Program.to([])],  # Use the TAIL rather than lineage
                         *(inner_solution if c == selected_coins[0] else []),
-                    ]
+                    ],
                 ),
             )
             for c in selected_coins
@@ -167,10 +170,10 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
 
         driver_dict = {
             str_to_tail_hash("red"): PuzzleInfo(
-                {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("red").hex()}
+                {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("red").hex()},
             ),
             str_to_tail_hash("blue"): PuzzleInfo(
-                {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("blue").hex()}
+                {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("blue").hex()},
             ),
         }
         driver_dict_as_infos = {key.hex(): value.info for key, value in driver_dict.items()}
@@ -180,7 +183,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
             str_to_tail_hash("red"): [
                 CreateCoin(acs_ph, uint64(100), [b"memo"]),
                 CreateCoin(acs_ph, uint64(200), [b"memo"]),
-            ]
+            ],
         }
         chia_notarized_payments = Offer.notarize_payments(chia_requested_payments, chia_coins)
         chia_announcements = Offer.calculate_announcements(chia_notarized_payments, driver_dict)
@@ -192,23 +195,29 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         red_coins_1 = red_coins[0:1]
         red_coins_2 = red_coins[1:]
         red_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
-            None: [CreateCoin(acs_ph, uint64(300), [b"red memo"]), CreateCoin(acs_ph, uint64(350), [b"red memo"])]
+            None: [CreateCoin(acs_ph, uint64(300), [b"red memo"]), CreateCoin(acs_ph, uint64(350), [b"red memo"])],
         }
         red_notarized_payments = Offer.notarize_payments(red_requested_payments, red_coins_1)
         red_announcements = Offer.calculate_announcements(red_notarized_payments, driver_dict)
         red_secured_bundle = generate_secure_bundle(
-            red_coins_1, red_announcements, uint64(sum(c.amount for c in red_coins_1)), tail_str="red"
+            red_coins_1,
+            red_announcements,
+            uint64(sum(c.amount for c in red_coins_1)),
+            tail_str="red",
         )
         red_offer = Offer(red_notarized_payments, red_secured_bundle, driver_dict)
         assert not red_offer.is_valid()
 
         red_requested_payments_2: dict[Optional[bytes32], list[CreateCoin]] = {
-            None: [CreateCoin(acs_ph, uint64(50), [b"red memo"])]
+            None: [CreateCoin(acs_ph, uint64(50), [b"red memo"])],
         }
         red_notarized_payments_2 = Offer.notarize_payments(red_requested_payments_2, red_coins_2)
         red_announcements_2 = Offer.calculate_announcements(red_notarized_payments_2, driver_dict)
         red_secured_bundle_2 = generate_secure_bundle(
-            red_coins_2, red_announcements_2, uint64(sum(c.amount for c in red_coins_2)), tail_str="red"
+            red_coins_2,
+            red_announcements_2,
+            uint64(sum(c.amount for c in red_coins_2)),
+            tail_str="red",
         )
         red_offer_2 = Offer(red_notarized_payments_2, red_secured_bundle_2, driver_dict)
         assert not red_offer_2.is_valid()

@@ -41,11 +41,20 @@ from chia.util.network import is_trusted_peer
     ],
 )
 def test_is_trusted_peer(
-    host: str, node_id: bytes32, trusted_peers: dict[str, Any], trusted_cidrs: list[str], testing: bool, result: bool
+    host: str,
+    node_id: bytes32,
+    trusted_peers: dict[str, Any],
+    trusted_cidrs: list[str],
+    testing: bool,
+    result: bool,
 ) -> None:
     assert (
         is_trusted_peer(
-            host=host, node_id=node_id, trusted_peers=trusted_peers, testing=testing, trusted_cidrs=trusted_cidrs
+            host=host,
+            node_id=node_id,
+            trusted_peers=trusted_peers,
+            testing=testing,
+            trusted_cidrs=trusted_cidrs,
         )
         == result
     )

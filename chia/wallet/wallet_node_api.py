@@ -119,7 +119,7 @@ class WalletNodeAPI:
 
             if status == MempoolInclusionStatus.SUCCESS:
                 self.wallet_node.log.info(
-                    f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
+                    f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}",
                 )
             elif status == MempoolInclusionStatus.PENDING:
                 self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
@@ -136,7 +136,9 @@ class WalletNodeAPI:
 
     @metadata.request(peer_required=True)
     async def respond_peers_introducer(
-        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
+        self,
+        request: introducer_protocol.RespondPeersIntroducer,
+        peer: WSChiaConnection,
     ):
         if self.wallet_node.wallet_peers is not None:
             await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), False)

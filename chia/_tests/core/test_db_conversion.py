@@ -110,10 +110,10 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     assert await block_store1.get_full_block(hh) == await block_store2.get_full_block(hh)
                     assert await block_store1.get_full_block_bytes(hh) == await block_store2.get_full_block_bytes(hh)
                     assert await block_store1.get_full_blocks_at([height]) == await block_store2.get_full_blocks_at(
-                        [height]
+                        [height],
                     )
                     assert await block_store1.get_block_records_by_hash(
-                        [hh]
+                        [hh],
                     ) == await block_store2.get_block_records_by_hash([hh])
                     assert await block_store1.get_block_record(hh) == await block_store2.get_block_record(hh)
                     assert await block_store1.is_fully_compactified(hh) == await block_store2.is_fully_compactified(hh)
@@ -125,7 +125,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     assert len(coins) == len(coins2)
                     assert set(coins) == set(coins2)
                     assert await coin_store1.get_coins_removed_at_height(
-                        block.height
+                        block.height,
                     ) == await coin_store2.get_coins_removed_at_height(block.height)
                     for c in coins:
                         n = c.coin.name()

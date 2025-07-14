@@ -35,7 +35,10 @@ def not_localhost(host: str) -> bool:
 
 class FakeRateLimiter:
     def process_msg_and_check(
-        self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
+        self,
+        message: Message,
+        our_capabilities: list[Capability],
+        peer_capabilities: list[Capability],
     ) -> Optional[str]:
         return None
 
@@ -62,7 +65,11 @@ class TestDos:
         ssl_context = server_2.ssl_client_context
         with pytest.raises(WSServerHandshakeError):
             await session.ws_connect(
-                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+                url,
+                autoclose=True,
+                autoping=True,
+                ssl=ssl_context,
+                max_msg_size=100 * 1024 * 1024,
             )
 
     @pytest.mark.anyio
@@ -83,7 +90,11 @@ class TestDos:
 
         ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url,
+            autoclose=True,
+            autoping=True,
+            ssl=ssl_context,
+            max_msg_size=100 * 1024 * 1024,
         )
         assert not ws.closed
 
@@ -119,7 +130,11 @@ class TestDos:
 
         ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url,
+            autoclose=True,
+            autoping=True,
+            ssl=ssl_context,
+            max_msg_size=100 * 1024 * 1024,
         )
         with monkeypatch.context() as monkey_patch_context:
             monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
@@ -151,7 +166,11 @@ class TestDos:
 
         ssl_context = server_2.ssl_client_context
         ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            url,
+            autoclose=True,
+            autoping=True,
+            ssl=ssl_context,
+            max_msg_size=100 * 1024 * 1024,
         )
 
         # Construct an otherwise valid handshake message

@@ -68,7 +68,7 @@ def summary_cmd(
             harvester_rpc_port,
             farmer_rpc_port,
             root_path=ChiaCliContext.set_default(ctx).root_path,
-        )
+        ),
     )
 
 

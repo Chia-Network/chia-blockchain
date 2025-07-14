@@ -28,11 +28,20 @@ from chia.cmds.show_funcs import show_async
 @click.option("-f", "--fee", help="Show the fee information", is_flag=True, type=bool, default=False)
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
-    "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=False
+    "-c",
+    "--connections",
+    help="List nodes connected to this Full Node",
+    is_flag=True,
+    type=bool,
+    default=False,
 )
 @click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
 @click.option(
-    "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
+    "-r",
+    "--remove-connection",
+    help="Remove a Node by the first 8 characters of NodeID",
+    type=str,
+    default="",
 )
 @click.option("-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=int)
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
@@ -67,5 +76,5 @@ def show_cmd(
             state,
             block_header_hash_by_height,
             block_by_header_hash,
-        )
+        ),
     )

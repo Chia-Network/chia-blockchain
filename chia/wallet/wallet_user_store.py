@@ -28,7 +28,7 @@ class WalletUserStore:
                 "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 " name text,"
                 " wallet_type int,"
-                " data text)"
+                " data text)",
             )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS name on users_wallets(name)")
@@ -96,7 +96,8 @@ class WalletUserStore:
                 rows = await conn.execute_fetchall("SELECT * from users_wallets")
             else:
                 rows = await conn.execute_fetchall(
-                    "SELECT * from users_wallets WHERE wallet_type=?", (wallet_type.value,)
+                    "SELECT * from users_wallets WHERE wallet_type=?",
+                    (wallet_type.value,),
                 )
             return [WalletInfo(row[0], row[1], row[2], row[3]) for row in rows]
 

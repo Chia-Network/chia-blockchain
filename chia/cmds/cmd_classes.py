@@ -210,7 +210,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                         ):
                             raise TypeError(
                                 f"Default {option_args['default']} is not a tuple "
-                                f"or all of its elements are not of type {type_arg}"
+                                f"or all of its elements are not of type {type_arg}",
                             )
                 elif option_args["multiple"]:
                     raise TypeError("Options with multiple=True must be Sequence[T]")
@@ -241,7 +241,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                     field_name,
                     type=type_arg,
                     **{k: v for k, v in option_args.items() if k not in {"param_decls", "type"}},
-                )
+                ),
             )
 
     return _CommandParsingStage(
@@ -286,7 +286,7 @@ def chia_command(
                 name=name,
                 short_help=short_help,
                 help=help,
-            )(_convert_class_to_function(wrapped_cls))
+            )(_convert_class_to_function(wrapped_cls)),
         )
 
         setattr(wrapped_cls, _chia_command_metadata_attribute, metadata)

@@ -54,7 +54,8 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
 
 @pytest.fixture(scope="function")
 async def empty_blockchain_with_original_constants(
-    db_version: int, blockchain_constants: ConsensusConstants
+    db_version: int,
+    blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[Blockchain]:
     async with create_blockchain(blockchain_constants, db_version) as (bc1, _):
         yield bc1
@@ -188,7 +189,7 @@ async def test_basic_store(
                 block.transactions_info,
                 block.transactions_generator,
                 [],
-            )
+            ),
         )
 
     # Add/get candidate block
@@ -217,11 +218,14 @@ async def test_basic_store(
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
         store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, uint32(0))
+            uint32(height),
+            unf_block,
+            PreValidationResult(None, uint64(123532), None, uint32(0)),
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         assert store.get_unfinished_block2(
-            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+            unf_block.partial_hash,
+            unf_block.foliage.foliage_transaction_block_hash,
         ) == (unf_block, 1, False)
 
         foliage_hash = unf_block.foliage.foliage_transaction_block_hash
@@ -236,13 +240,15 @@ async def test_basic_store(
         # so get_unfinished_block_result requires the foliage hash
         if unf_block.foliage.foliage_transaction_block_hash is not None:
             entry = store.get_unfinished_block_result(
-                unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+                unf_block.partial_hash,
+                unf_block.foliage.foliage_transaction_block_hash,
             )
             assert entry is not None
             ublock = entry.result
             assert ublock is not None and ublock.required_iters == uint64(123532)
             entry = store.get_unfinished_block_result(
-                unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+                unf_block.partial_hash,
+                unf_block.foliage.foliage_transaction_block_hash,
             )
             assert entry is not None
             ublock = entry.result
@@ -252,7 +258,8 @@ async def test_basic_store(
         store.remove_unfinished_block(unf_block.partial_hash)
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(
-            unf_block.partial_hash, unf_block.foliage.foliage_transaction_block_hash
+            unf_block.partial_hash,
+            unf_block.foliage.foliage_transaction_block_hash,
         ) == (None, 0, False)
 
     # Multiple unfinished blocks with colliding partial hashes
@@ -390,7 +397,10 @@ async def test_basic_store(
     peak_full_block = await blockchain.get_full_peak()
     assert peak_full_block is not None
     next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-        blockchain.constants, False, peak, blockchain
+        blockchain.constants,
+        False,
+        peak,
+        blockchain,
     )
 
     if peak.overflow:
@@ -406,7 +416,14 @@ async def test_basic_store(
         )
     else:
         store.new_peak(
-            peak, peak_full_block, None, sub_slots[-1], None, blockchain, next_sub_slot_iters, next_difficulty
+            peak,
+            peak_full_block,
+            None,
+            sub_slots[-1],
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
 
     assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
@@ -455,13 +472,23 @@ async def test_basic_store(
         await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
         sb = blockchain.block_record(block.header_hash)
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, False, sb, blockchain
+            blockchain.constants,
+            False,
+            sb,
+            blockchain,
         )
         result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
         assert result is not None
         sp_sub_slot, ip_sub_slot = result
         res = store.new_peak(
-            sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            sb,
+            block,
+            sp_sub_slot,
+            ip_sub_slot,
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
         assert res.added_eos is None
 
@@ -494,10 +521,20 @@ async def test_basic_store(
             assert result is not None
             sp_sub_slot, ip_sub_slot = result
             next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-                blockchain.constants, False, sb, blockchain
+                blockchain.constants,
+                False,
+                sb,
+                blockchain,
             )
             res = store.new_peak(
-                sb, block, sp_sub_slot, ip_sub_slot, fork_block, blockchain, next_sub_slot_iters, next_difficulty
+                sb,
+                block,
+                sp_sub_slot,
+                ip_sub_slot,
+                fork_block,
+                blockchain,
+                next_sub_slot_iters,
+                next_difficulty,
             )
             assert res.added_eos is None
 
@@ -514,7 +551,10 @@ async def test_basic_store(
     peak = blockchain.get_peak()
     for slot in blocks_2[-1].finished_sub_slots:
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, True, peak, blockchain
+            blockchain.constants,
+            True,
+            peak,
+            blockchain,
         )
 
         store.new_finished_sub_slot(
@@ -534,7 +574,8 @@ async def test_basic_store(
     assert peak is not None
     ss_start_iters = peak.ip_sub_slot_total_iters(custom_block_tools.constants)
     for i in range(
-        1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
+        1,
+        custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
     ):
         sp = get_signage_point(
             custom_block_tools.constants,
@@ -572,7 +613,10 @@ async def test_basic_store(
             sp_sub_slot, ip_sub_slot = result
 
             next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-                blockchain.constants, False, sb, blockchain
+                blockchain.constants,
+                False,
+                sb,
+                blockchain,
             )
             res = store.new_peak(
                 sb,
@@ -607,7 +651,10 @@ async def test_basic_store(
     )
     for slot in blocks_2[-1].finished_sub_slots[:-1]:
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, True, peak, blockchain
+            blockchain.constants,
+            True,
+            peak,
+            blockchain,
         )
 
         store.new_finished_sub_slot(
@@ -642,7 +689,8 @@ async def test_basic_store(
 
     # Test adding signage points for overflow blocks (ip_sub_slot)
     for i in range(
-        1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
+        1,
+        custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
     ):
         sp = get_signage_point(
             custom_block_tools.constants,
@@ -679,7 +727,8 @@ async def test_basic_store(
 
     # Test adding future signage point (bad)
     for i in range(
-        1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
+        1,
+        custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
     ):
         sp = get_signage_point(
             custom_block_tools.constants,
@@ -687,7 +736,7 @@ async def test_basic_store(
             peak,
             uint128(
                 peak.ip_sub_slot_total_iters(custom_block_tools.constants)
-                + len(finished_sub_slots) * peak.sub_slot_iters
+                + len(finished_sub_slots) * peak.sub_slot_iters,
             ),
             uint8(i),
             finished_sub_slots[: len(finished_sub_slots)],
@@ -737,7 +786,8 @@ async def test_basic_store(
     store.initialize_genesis_sub_slot()
     assert len(store.finished_sub_slots) == 1
     for i in range(
-        1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
+        1,
+        custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
     ):
         sp = get_signage_point(
             custom_block_tools.constants,
@@ -762,7 +812,10 @@ async def test_basic_store(
     assert peak is not None
     for slot in blocks_3[-1].finished_sub_slots:
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, True, peak, blockchain
+            blockchain.constants,
+            True,
+            peak,
+            blockchain,
         )
 
         store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
@@ -812,7 +865,10 @@ async def test_basic_store(
 
     sb = blockchain.block_record(blocks_4[-1].header_hash)
     next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-        blockchain.constants, False, sb, blockchain
+        blockchain.constants,
+        False,
+        sb,
+        blockchain,
     )
 
     store.new_peak(sb, blocks_4[-1], None, None, None, blockchain, next_sub_slot_iters, next_difficulty)
@@ -873,21 +929,39 @@ async def test_basic_store(
         peak = sb
         peak_full_block = block
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, False, peak, blockchain
+            blockchain.constants,
+            False,
+            peak,
+            blockchain,
         )
 
         res = store.new_peak(
-            sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            sb,
+            block,
+            sp_sub_slot,
+            ip_sub_slot,
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
         assert res.added_eos is None
 
     next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-        blockchain.constants, True, peak, blockchain
+        blockchain.constants,
+        True,
+        peak,
+        blockchain,
     )
 
     assert (
         store.new_finished_sub_slot(
-            dependant_sub_slots[0], blockchain, peak, next_sub_slot_iters, next_difficulty, peak_full_block
+            dependant_sub_slots[0],
+            blockchain,
+            peak,
+            next_sub_slot_iters,
+            next_difficulty,
+            peak_full_block,
         )
         is None
     )
@@ -897,7 +971,10 @@ async def test_basic_store(
     assert result is not None
     sp_sub_slot, ip_sub_slot = result
     next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-        blockchain.constants, False, sb, blockchain
+        blockchain.constants,
+        False,
+        sb,
+        blockchain,
     )
 
     res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty)
@@ -923,11 +1000,21 @@ async def test_basic_store(
         assert result is not None
         sp_sub_slot, ip_sub_slot = result
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, False, sb, blockchain
+            blockchain.constants,
+            False,
+            sb,
+            blockchain,
         )
 
         res = store.new_peak(
-            sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            sb,
+            block,
+            sp_sub_slot,
+            ip_sub_slot,
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
         assert res.added_eos is None
 
@@ -952,11 +1039,21 @@ async def test_basic_store(
         sp_sub_slot, ip_sub_slot = result
         sb = blockchain.block_record(prev_block.header_hash)
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, False, sb, blockchain
+            blockchain.constants,
+            False,
+            sb,
+            blockchain,
         )
 
         res = store.new_peak(
-            sb, prev_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            sb,
+            prev_block,
+            sp_sub_slot,
+            ip_sub_slot,
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
         if len(block.finished_sub_slots) == 0:
             case_0 = True
@@ -969,11 +1066,19 @@ async def test_basic_store(
 
             for ss in block.finished_sub_slots:
                 next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-                    blockchain.constants, True, peak, blockchain
+                    blockchain.constants,
+                    True,
+                    peak,
+                    blockchain,
                 )
 
                 ipvdf = store.new_finished_sub_slot(
-                    ss, blockchain, sb, next_sub_slot_iters, next_difficulty, prev_block
+                    ss,
+                    blockchain,
+                    sb,
+                    next_sub_slot_iters,
+                    next_difficulty,
+                    prev_block,
                 )
                 assert ipvdf is not None
                 found_ips += ipvdf
@@ -1002,11 +1107,21 @@ async def test_basic_store(
         assert result is not None
         sp_sub_slot, ip_sub_slot = result
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, False, peak, blockchain
+            blockchain.constants,
+            False,
+            peak,
+            blockchain,
         )
 
         store.new_peak(
-            peak, blocks[-1], sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            peak,
+            blocks[-1],
+            sp_sub_slot,
+            ip_sub_slot,
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
 
         blocks = custom_block_tools.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
@@ -1030,7 +1145,9 @@ async def test_basic_store(
                 assert sp_to_check.cc_vdf is not None
                 fetched = store.get_signage_point(sp_to_check.cc_vdf.output.get_hash())
                 fetched_new = store.get_signage_point_by_index_and_cc_output(
-                    sp_to_check.cc_vdf.output.get_hash(), sp_to_check.cc_vdf.challenge, uint8(sp_index)
+                    sp_to_check.cc_vdf.output.get_hash(),
+                    sp_to_check.cc_vdf.challenge,
+                    uint8(sp_index),
                 )
                 assert fetched_new == fetched
                 assert (fetched is None) == is_none
@@ -1059,11 +1176,21 @@ async def test_basic_store(
             assert result is not None
             sp_sub_slot, ip_sub_slot = result
             next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-                blockchain.constants, False, peak, blockchain
+                blockchain.constants,
+                False,
+                peak,
+                blockchain,
             )
 
             store.new_peak(
-                peak, blocks[-2], sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+                peak,
+                blocks[-2],
+                sp_sub_slot,
+                ip_sub_slot,
+                None,
+                blockchain,
+                next_sub_slot_iters,
+                next_difficulty,
             )
 
             assert_sp_none(i2, False)
@@ -1077,7 +1204,9 @@ async def test_basic_store(
             for i in range(i2, custom_block_tools.constants.NUM_SPS_SUB_SLOT):
                 if is_overflow_block(custom_block_tools.constants, uint8(i)):
                     blocks_alt = custom_block_tools.get_consecutive_blocks(
-                        1, block_list_input=blocks[:-1], skip_slots=1
+                        1,
+                        block_list_input=blocks[:-1],
+                        skip_slots=1,
                     )
                     finished_sub_slots = blocks_alt[-1].finished_sub_slots
                 else:
@@ -1107,7 +1236,10 @@ async def test_basic_store(
             assert result is not None
             sp_sub_slot, ip_sub_slot = result
             next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-                blockchain.constants, False, peak, blockchain
+                blockchain.constants,
+                False,
+                peak,
+                blockchain,
             )
 
             # Do a reorg, which should remove everything after B2
@@ -1145,13 +1277,21 @@ async def test_long_chain_slots(
     peak_full_block = None
     for block in default_1000_blocks:
         next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
-            blockchain.constants, True, peak, blockchain
+            blockchain.constants,
+            True,
+            peak,
+            blockchain,
         )
 
         for sub_slot in block.finished_sub_slots:
             assert (
                 store.new_finished_sub_slot(
-                    sub_slot, blockchain, peak, next_sub_slot_iters, next_difficulty, peak_full_block
+                    sub_slot,
+                    blockchain,
+                    peak,
+                    next_sub_slot_iters,
+                    next_difficulty,
+                    peak_full_block,
                 )
                 is not None
             )
@@ -1164,7 +1304,14 @@ async def test_long_chain_slots(
         assert result is not None
         sp_sub_slot, ip_sub_slot = result
         store.new_peak(
-            peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            peak,
+            peak_full_block,
+            sp_sub_slot,
+            ip_sub_slot,
+            None,
+            blockchain,
+            next_sub_slot_iters,
+            next_difficulty,
         )
 
 

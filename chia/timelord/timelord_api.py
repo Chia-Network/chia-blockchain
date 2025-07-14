@@ -64,7 +64,7 @@ class TimelordAPI:
                     f"current peak:{self.timelord.last_state.total_iters} new peak "
                     f"{new_peak.reward_chain_block.total_iters}"
                     f"current rh: {self.timelord.last_state.peak.reward_chain_block.get_hash()}"
-                    f"new peak rh: {new_peak.reward_chain_block.get_hash()}"
+                    f"new peak rh: {new_peak.reward_chain_block.get_hash()}",
                 )
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
@@ -84,7 +84,7 @@ class TimelordAPI:
                 log.info(
                     "Not skipping peak, don't have. Maybe we are not the fastest timelord "
                     f"height: {new_peak.reward_chain_block.height} weight:"
-                    f"{new_peak.reward_chain_block.weight} rh {new_peak.reward_chain_block.get_hash()}"
+                    f"{new_peak.reward_chain_block.weight} rh {new_peak.reward_chain_block.get_hash()}",
                 )
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
@@ -95,7 +95,7 @@ class TimelordAPI:
             else:
                 log.info(
                     f"Skipping peak height {new_peak.reward_chain_block.height} "
-                    f"weight {new_peak.reward_chain_block.weight}"
+                    f"weight {new_peak.reward_chain_block.weight}",
                 )
 
             self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})

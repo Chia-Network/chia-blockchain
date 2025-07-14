@@ -53,12 +53,16 @@ def make_block_table(conn: sqlite3.Connection) -> None:
         "is_fully_compactified tinyint,"
         "in_main_chain tinyint,"
         "block blob,"
-        "block_record blob)"
+        "block_record blob)",
     )
 
 
 def add_block(
-    conn: sqlite3.Connection, header_hash: bytes32, prev_hash: bytes32, height: int, in_main_chain: bool
+    conn: sqlite3.Connection,
+    header_hash: bytes32,
+    prev_hash: bytes32,
+    height: int,
+    in_main_chain: bool,
 ) -> None:
     conn.execute(
         "INSERT INTO full_blocks VALUES(?, ?, ?, NULL, 0, ?, NULL, NULL)",
@@ -160,7 +164,8 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
 
 @pytest.mark.anyio
 async def test_db_validate_default_1000_blocks(
-    default_1000_blocks: list[FullBlock], default_config: dict[str, Any]
+    default_1000_blocks: list[FullBlock],
+    default_config: dict[str, Any],
 ) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)

@@ -30,7 +30,10 @@ async def add_blocks_in_batches(
         block_record = await full_node.blockchain.get_block_record_from_db(peak_hash)
         assert block_record is not None
         ssi, diff = get_next_sub_slot_iters_and_difficulty(
-            full_node.constants, True, block_record, full_node.blockchain
+            full_node.constants,
+            True,
+            block_record,
+            full_node.blockchain,
         )
         fork_height = block_record.height
     fork_info = ForkInfo(fork_height, blocks[0].height - 1, peak_hash)
@@ -43,14 +46,20 @@ async def add_blocks_in_batches(
             print(f"main chain: {b.height:4} weight: {b.weight}")
         # vs is updated by the call to add_block_batch()
         success, state_change_summary = await full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 0), fork_info, vs, blockchain
+            block_batch.entries,
+            PeerInfo("0.0.0.0", 0),
+            fork_info,
+            vs,
+            blockchain,
         )
         assert success is True
         if state_change_summary is not None:
             peak_fb: Optional[FullBlock] = await full_node.blockchain.get_full_peak()
             assert peak_fb is not None
             ppp_result: PeakPostProcessingResult = await full_node.peak_post_processing(
-                peak_fb, state_change_summary, None
+                peak_fb,
+                state_change_summary,
+                None,
             )
             await full_node.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
     await full_node._finish_sync(uint32(max(0, fork_height)))

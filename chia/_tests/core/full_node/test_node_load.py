@@ -16,7 +16,8 @@ async def test_blocks_load(two_nodes, self_hostname, benchmark_runner: Benchmark
     await full_node_1.full_node.add_block(blocks[0])
     await time_out_assert(10, node_height_at_least, True, full_node_1, 0)
     await server_2.start_client(
-        PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
+        PeerInfo(self_hostname, server_1.get_port()),
+        on_connect=full_node_2.full_node.on_connect,
     )
 
     async def num_connections():

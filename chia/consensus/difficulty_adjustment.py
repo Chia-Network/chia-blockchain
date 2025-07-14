@@ -231,7 +231,12 @@ def _get_next_sub_slot_iters(
     # If we are in the same epoch, return same ssi
     if not skip_epoch_check:
         _, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, blocks, height, prev_header_hash, deficit, block_at_height_included_ses
+            constants,
+            blocks,
+            height,
+            prev_header_hash,
+            deficit,
+            block_at_height_included_ses,
         )
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
@@ -252,7 +257,7 @@ def _get_next_sub_slot_iters(
     new_ssi_precise: uint64 = uint64(
         constants.SUB_SLOT_TIME_TARGET
         * (last_block_curr.total_iters - last_block_prev.total_iters)
-        // (last_block_curr.timestamp - last_block_prev.timestamp)
+        // (last_block_curr.timestamp - last_block_prev.timestamp),
     )
 
     # Only change by a max factor as a sanity check
@@ -310,7 +315,12 @@ def _get_next_difficulty(
     # If we are in the same slot as previous block, return same difficulty
     if not skip_epoch_check:
         _, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, blocks, height, prev_header_hash, deficit, block_at_height_included_ses
+            constants,
+            blocks,
+            height,
+            prev_header_hash,
+            deficit,
+            block_at_height_included_ses,
         )
         if not new_slot or not can_finish_epoch:
             return current_difficulty
@@ -336,7 +346,7 @@ def _get_next_difficulty(
     new_difficulty_precise = uint64(
         (last_block_curr.weight - last_block_prev.weight)
         * constants.SUB_SLOT_TIME_TARGET
-        // (constants.SLOT_BLOCKS_TARGET * actual_epoch_time)
+        // (constants.SLOT_BLOCKS_TARGET * actual_epoch_time),
     )
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1

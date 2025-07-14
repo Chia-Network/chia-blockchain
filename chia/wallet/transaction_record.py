@@ -86,7 +86,8 @@ class TransactionRecordOld(Streamable):
 
     @classmethod
     def from_json_dict_convenience(
-        cls: builtins.type[_T_TransactionRecord], modified_tx_input: dict
+        cls: builtins.type[_T_TransactionRecord],
+        modified_tx_input: dict,
     ) -> _T_TransactionRecord:
         modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:

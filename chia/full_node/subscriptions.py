@@ -212,7 +212,9 @@ class PeerSubscriptions:
 
 
 def peers_for_spend_bundle(
-    peer_subscriptions: PeerSubscriptions, conds: SpendBundleConditions, hints_for_removals: set[bytes32]
+    peer_subscriptions: PeerSubscriptions,
+    conds: SpendBundleConditions,
+    hints_for_removals: set[bytes32],
 ) -> set[bytes32]:
     """
     Returns a list of peer ids that are subscribed to any of the created or

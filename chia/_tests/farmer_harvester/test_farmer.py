@@ -74,7 +74,7 @@ class IncrementPoolStatsCase:
                 "xxx_since_start": 1,
                 "xxx_24h": [(1689491043, 1)],
                 "current_difficulty": 1,
-            }
+            },
         }
         self.p2_singleton_puzzle_hash = p2_singleton_puzzle_hash
         self.name = name
@@ -101,12 +101,12 @@ class DummyHarvesterPeer:
             return 0
 
         local_sk: PrivateKey = PrivateKey.from_bytes(
-            bytes.fromhex("185c61579e152bbd3b2face3245951e7c67f67f8d2fb2aa4a56e178186c1e5fa")
+            bytes.fromhex("185c61579e152bbd3b2face3245951e7c67f67f8d2fb2aa4a56e178186c1e5fa"),
         )
         farmer_public_key = G1Element.from_bytes(
             bytes.fromhex(
-                "af59ca047f2f34a4db6e4fa313764f6e71d4c53bc316517e0fa486b8e3d3f36f112ee078e3226854b97791452e3a9fd4"
-            )
+                "af59ca047f2f34a4db6e4fa313764f6e71d4c53bc316517e0fa486b8e3d3f36f112ee078e3226854b97791452e3a9fd4",
+            ),
         )
         agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, True)
         message = request.messages[0]
@@ -170,8 +170,8 @@ class NewProofOfSpaceCase:
             p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
             owner_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "8348455278ecec68325b6754b1f3218cde1511ca9393197e7876d7ae04af1c4dd86b0c50601cf5daeb034e8f7c226537"
-                )
+                    "8348455278ecec68325b6754b1f3218cde1511ca9393197e7876d7ae04af1c4dd86b0c50601cf5daeb034e8f7c226537",
+                ),
             ),
         )
 
@@ -191,8 +191,8 @@ class NewProofOfSpaceCase:
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
-                )
+                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2",
+                ),
             ),
             pool_public_key=None,
             pool_contract_puzzle_hash=p2_singleton_puzzle_hash,
@@ -205,18 +205,20 @@ class NewProofOfSpaceCase:
                 "36522c84a85fd16a3ff501b44024e371bbf7a3ee9d4ded6e05c82e95083ea5ea"
                 "d2d64e4a46e0550e98fc56b30760b4bcf439ac0ee675e157fcfecd4b294c6d14"
                 "987883e3659777c68d6a6962c770a66817f4dc641b5823b077093df10da031c1"
-                "4b32005bf38eb53944bf3bc5a1d19c21e3b96759b7f557b4668687b7a8a36344"
+                "4b32005bf38eb53944bf3bc5a1d19c21e3b96759b7f557b4668687b7a8a36344",
             ),
             pool_config=pool_config,
             pool_difficulty=pool_difficulty,
             authentication_token_timeout=authentication_token_timeout,
             farmer_private_keys=[
-                PrivateKey.from_bytes(bytes.fromhex("3cb188d8b2469bb8414a3ec68857959e231a8bec836df199a896ff523b9d2f7d"))
+                PrivateKey.from_bytes(
+                    bytes.fromhex("3cb188d8b2469bb8414a3ec68857959e231a8bec836df199a896ff523b9d2f7d"),
+                ),
             ],
             authentication_keys=(
                 {
                     p2_singleton_puzzle_hash: PrivateKey.from_bytes(
-                        bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
+                        bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786"),
                     ),
                 }
                 if has_valid_authentication_keys
@@ -324,7 +326,12 @@ def test_strip_old_entries(case: StripOldEntriesCase) -> None:
 )
 def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
     increment_pool_stats(
-        case.pool_states, case.p2_singleton_puzzle_hash, case.name, case.current_time, case.count, case.value
+        case.pool_states,
+        case.p2_singleton_puzzle_hash,
+        case.name,
+        case.current_time,
+        case.count,
+        case.value,
     )
     if case.expected_result is None:
         assert case.p2_singleton_puzzle_hash not in case.pool_states
@@ -641,7 +648,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
 
     def assert_pool_errors_24h() -> None:
         assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"]) == len(
-            case.expected_pool_state["pool_errors_24h"]
+            case.expected_pool_state["pool_errors_24h"],
         )
         for i, stat in enumerate(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"]):
             assert stat[1]["error_code"] == case.expected_pool_state["pool_errors_24h"][i]["error_code"]
@@ -810,7 +817,7 @@ class PoolStateCase:
                 "points_acknowledged_24h": [123],
                 "valid_partials_since_start": 1,
                 "valid_partials_24h": [1],
-            }
+            },
         ),
     ),
     PoolStateCase(
@@ -822,7 +829,7 @@ class PoolStateCase:
                 "points_found_24h": [1],
                 "invalid_partials_since_start": 1,
                 "invalid_partials_24h": [1],
-            }
+            },
         ),
     ),
     PoolStateCase(
@@ -835,7 +842,7 @@ class PoolStateCase:
                 "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.TOO_LATE.value)}],
                 "stale_partials_since_start": 1,
                 "stale_partials_24h": [1],
-            }
+            },
         ),
     ),
     PoolStateCase(
@@ -848,7 +855,7 @@ class PoolStateCase:
                 "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)}],
                 "insufficient_partials_since_start": 1,
                 "insufficient_partials_24h": [1],
-            }
+            },
         ),
     ),
     PoolStateCase(
@@ -861,7 +868,7 @@ class PoolStateCase:
                 "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.SERVER_EXCEPTION.value)}],
                 "invalid_partials_since_start": 1,
                 "invalid_partials_24h": [1],
-            }
+            },
         ),
     ),
 )
@@ -881,7 +888,11 @@ async def test_farmer_pool_response(
 
     assert (
         verify_and_get_quality_string(
-            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+            pos,
+            DEFAULT_CONSTANTS,
+            sp.challenge_hash,
+            sp.challenge_chain_sp,
+            height=uint32(1),
         )
         is not None
     )
@@ -906,7 +917,7 @@ async def test_farmer_pool_response(
 
     def assert_pool_errors_24h() -> None:
         assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"]) == len(
-            expected_pool_state["pool_errors_24h"]
+            expected_pool_state["pool_errors_24h"],
         )
         for i, stat in enumerate(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash]["pool_errors_24h"]):
             assert stat[1]["error_code"] == expected_pool_state["pool_errors_24h"][i]["error_code"]
@@ -1179,7 +1190,7 @@ async def test_farmer_pool_info_config_update(
     p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
     farmer_service._node.authentication_keys = {
         p2_singleton_puzzle_hash: PrivateKey.from_bytes(
-            bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786")
+            bytes.fromhex("11ed596eb95b31364a9185e948f6b66be30415f816819449d5d40751dc70e786"),
         ),
     }
     farmer_service._node.pool_state[p2_singleton_puzzle_hash] = make_pool_state(
@@ -1194,8 +1205,8 @@ async def test_farmer_pool_info_config_update(
             overrides={
                 "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
                 "pool_url": case.initial_pool_url_in_config,
-            }
-        )
+            },
+        ),
     ]
     save_config(farmer_service.root_path, "config.yaml", config)
     mock_http_get = mocker.patch("aiohttp.ClientSession.get", return_value=case.pool_response)
@@ -1249,7 +1260,11 @@ async def test_farmer_additional_headers_on_partial_submit(
 
     assert (
         verify_and_get_quality_string(
-            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+            pos,
+            DEFAULT_CONSTANTS,
+            sp.challenge_hash,
+            sp.challenge_chain_sp,
+            height=uint32(1),
         )
         is not None
     )

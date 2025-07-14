@@ -107,12 +107,17 @@ class BlockchainMock:
         self._block_records[block.header_hash] = block
 
     async def get_header_blocks_in_range(
-        self, start: int, stop: int, tx_filter: bool = True
+        self,
+        start: int,
+        stop: int,
+        tx_filter: bool = True,
     ) -> dict[bytes32, HeaderBlock]:
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_hash: bytes32, segments: list[SubEpochChallengeSegment]
+        self,
+        sub_epoch_summary_hash: bytes32,
+        segments: list[SubEpochChallengeSegment],
     ) -> None:
         self._sub_epoch_segments[sub_epoch_summary_hash] = SubEpochSegments(segments)
 

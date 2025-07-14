@@ -128,7 +128,7 @@ class SPIn(_SPTranslation):
                         translation_layer=(
                             ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
                         ),
-                    )
+                    ),
                 )
 
         return final_list
@@ -162,7 +162,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
                 return
             elif len(self.output_file) != len(outputs):
                 print(
-                    f"Incorrect number of file outputs specified, expected: {len(outputs)} got {len(self.output_file)}"
+                    f"Incorrect number of file outputs specified, expected: {len(outputs)} got {len(self.output_file)}",
                 )
                 return
             else:
@@ -171,7 +171,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
                         file.write(byte_serialize_clvm_streamable(output, translation_layer=translation_layer))
         if self.output_format == "qr":
             self.display_qr_codes(
-                [byte_serialize_clvm_streamable(output, translation_layer=translation_layer) for output in outputs]
+                [byte_serialize_clvm_streamable(output, translation_layer=translation_layer) for output in outputs],
             )
 
 
@@ -223,7 +223,7 @@ class ApplySignaturesCMD:
             ]
             signed_transactions: list[SignedTransaction] = (
                 await wallet_rpc.client.apply_signatures(
-                    ApplySignatures(spends=spends, signing_responses=signing_responses)
+                    ApplySignatures(spends=spends, signing_responses=signing_responses),
                 )
             ).signed_transactions
             signed_spends: list[Spend] = [spend for tx in signed_transactions for spend in tx.transaction_info.spends]
@@ -236,7 +236,9 @@ class ApplySignaturesCMD:
             new_spend_bundle = WalletSpendBundle([spend.as_coin_spend() for spend in signed_spends], final_signature)
             new_transactions: list[TransactionRecord] = [
                 replace(
-                    self.txs_in.transaction_bundle.txs[0], spend_bundle=new_spend_bundle, name=new_spend_bundle.name()
+                    self.txs_in.transaction_bundle.txs[0],
+                    spend_bundle=new_spend_bundle,
+                    name=new_spend_bundle.name(),
                 ),
                 *(replace(tx, spend_bundle=None) for tx in self.txs_in.transaction_bundle.txs[1:]),
             ]
@@ -263,10 +265,10 @@ class ExecuteSigningInstructionsCMD:
                     for instruction_set in signing_instructions
                     for signing_response in (
                         await wallet_rpc.client.execute_signing_instructions(
-                            ExecuteSigningInstructions(signing_instructions=instruction_set, partial_allowed=True)
+                            ExecuteSigningInstructions(signing_instructions=instruction_set, partial_allowed=True),
                         )
                     ).signing_responses
-                ]
+                ],
             )
 
 
@@ -283,7 +285,8 @@ class PushTransactionsCMD:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
             # TODO: provide access to additional parameters instead of filling with the defaults constant
             await wallet_rpc.client.push_transactions(
-                PushTransactions(transactions=self.txs_in.transaction_bundle.txs), DEFAULT_TX_CONFIG
+                PushTransactions(transactions=self.txs_in.transaction_bundle.txs),
+                DEFAULT_TX_CONFIG,
             )
 
 

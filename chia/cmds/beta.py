@@ -53,7 +53,7 @@ def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) 
         # Adjust the metrics log interval
         if interval is None:
             metrics_log_interval = prompt_for_metrics_log_interval(
-                int(config["beta"].get("metrics_log_interval", metrics_log_interval_default))
+                int(config["beta"].get("metrics_log_interval", metrics_log_interval_default)),
             )
         else:
             metrics_log_interval = interval

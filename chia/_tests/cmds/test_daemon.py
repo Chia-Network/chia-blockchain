@@ -17,7 +17,10 @@ from chia.cmds.start_funcs import create_start_daemon_connection, launch_start_d
 @pytest.mark.parametrize("skip_keyring", [False, True])
 @pytest.mark.parametrize("unlock_keyring", [False, True])
 async def test_daemon(
-    skip_keyring: bool, unlock_keyring: bool, mocker: MockerFixture, capsys: CaptureFixture[str]
+    skip_keyring: bool,
+    unlock_keyring: bool,
+    mocker: MockerFixture,
+    capsys: CaptureFixture[str],
 ) -> None:
     class DummyConnection:
         @staticmethod
@@ -74,12 +77,16 @@ def test_start_daemon(tmp_path: Path, empty_keyring: Any, mocker: MockerFixture)
             return None
 
     async def create_start_daemon_connection_dummy(
-        root_path: Path, config: dict[str, Any], *, skip_keyring: bool
+        root_path: Path,
+        config: dict[str, Any],
+        *,
+        skip_keyring: bool,
     ) -> DummyDaemon:
         return DummyDaemon()
 
     mocker.patch(
-        "chia.cmds.start_funcs.create_start_daemon_connection", side_effect=create_start_daemon_connection_dummy
+        "chia.cmds.start_funcs.create_start_daemon_connection",
+        side_effect=create_start_daemon_connection_dummy,
     )
 
     runner = CliRunner()

@@ -100,7 +100,7 @@ class RuntimeResults:
             {self.entry_line}
                 run time: {self.duration}
                 overhead: {self.overhead if self.overhead is not None else "not measured"}
-            """
+            """,
         )
 
 
@@ -118,7 +118,12 @@ class AssertRuntimeResults:
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: Optional[float]
+        cls,
+        results: RuntimeResults,
+        limit: float,
+        entry_file: str,
+        entry_line: int,
+        overhead: Optional[float],
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -143,7 +148,7 @@ class AssertRuntimeResults:
                 overhead: {self.overhead if self.overhead is not None else "not measured"}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
-            """
+            """,
         )
 
     def message(self) -> str:
@@ -161,7 +166,8 @@ class AssertRuntimeResults:
 
 def measure_overhead(
     manager_maker: Callable[
-        [], contextlib.AbstractContextManager[Union[Future[RuntimeResults], Future[AssertRuntimeResults]]]
+        [],
+        contextlib.AbstractContextManager[Union[Future[RuntimeResults], Future[AssertRuntimeResults]]],
     ],
     cycles: int = 10,
 ) -> float:
@@ -190,7 +196,7 @@ def measure_runtime(
         relative_to=(
             pathlib.Path(chia.__file__).parent.parent,
             pathlib.Path(chia._tests.__file__).parent.parent,
-        )
+        ),
     )
 
     results_future: Future[RuntimeResults] = Future()
@@ -302,11 +308,14 @@ class _AssertRuntime:
             relative_to=(
                 pathlib.Path(chia.__file__).parent.parent,
                 pathlib.Path(chia._tests.__file__).parent.parent,
-            )
+            ),
         )
 
         self.runtime_manager = measure_runtime(
-            clock=self.clock, gc_mode=self.gc_mode, overhead=self.overhead, print_results=False
+            clock=self.clock,
+            gc_mode=self.gc_mode,
+            overhead=self.overhead,
+            print_results=False,
         )
         self.runtime_results_callable = self.runtime_manager.__enter__()
         self.results_callable: Future[AssertRuntimeResults] = Future()

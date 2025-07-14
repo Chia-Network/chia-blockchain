@@ -19,7 +19,9 @@ def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Pr
 
 
 def puzzle_for_ownership_layer(
-    current_owner: Union[Program, bytes], transfer_program: Program, inner_puzzle: Program
+    current_owner: Union[Program, bytes],
+    transfer_program: Program,
+    inner_puzzle: Program,
 ) -> Program:
     return NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), current_owner, transfer_program, inner_puzzle)
 
@@ -69,7 +71,10 @@ class OwnershipOuterPuzzle:
         return puzzle_for_ownership_layer(constructor["owner"], transfer_program, inner_puzzle)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = None,
     ) -> Optional[Program]:
         matched, curried_args = match_ownership_layer_puzzle(puzzle_reveal)
         if matched:

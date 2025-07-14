@@ -65,11 +65,16 @@ class TransferProgramPuzzle:
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
         return puzzle_for_transfer_program(
-            constructor["launcher_id"], constructor["royalty_address"], constructor["royalty_percentage"]
+            constructor["launcher_id"],
+            constructor["royalty_address"],
+            constructor["royalty_percentage"],
         )
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = None,
     ) -> Optional[Program]:
         return None
 

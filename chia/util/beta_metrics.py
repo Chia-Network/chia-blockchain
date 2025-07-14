@@ -35,7 +35,7 @@ def log_cpu_metrics() -> None:
         f"CPU - percent: {psutil.cpu_percent(percpu=True)}, "
         f"freq: {psutil.cpu_times(percpu=True)}, "
         f"freq: {psutil.cpu_freq(percpu=True)}, "
-        f"load_avg: {psutil.getloadavg()}"
+        f"load_avg: {psutil.getloadavg()}",
     )
 
 

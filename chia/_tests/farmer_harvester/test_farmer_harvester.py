@@ -94,13 +94,14 @@ async def test_harvester_handshake(
     assert farmer.harvester_handshake_task is None
     assert harvester.plot_manager._refresh_thread is None
     async with split_async_manager(
-        manager=harvester_service.manage(), object=harvester_service
+        manager=harvester_service.manage(),
+        object=harvester_service,
     ) as split_harvester_manager:
         # Start both services and wait a bit
         async with farmer_service.manage():
             async with harvester_service.manage():
                 harvester_service.add_peer(
-                    UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+                    UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()),
                 )
                 # Handshake task should be started but the handshake should not be done
                 await time_out_assert(5, handshake_task_active, True)
@@ -117,7 +118,7 @@ async def test_harvester_handshake(
             # the handshake still doesn't go through
             await split_harvester_manager.enter()
             harvester_service.add_peer(
-                UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+                UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()),
             )
             await time_out_assert(5, handshake_task_active, True)
             assert not await handshake_done()
@@ -135,7 +136,8 @@ async def test_harvester_handshake(
 
 @pytest.mark.anyio
 async def test_farmer_respond_signatures(
-    caplog: pytest.LogCaptureFixture, harvester_farmer_environment: HarvesterFarmerEnvironment
+    caplog: pytest.LogCaptureFixture,
+    harvester_farmer_environment: HarvesterFarmerEnvironment,
 ) -> None:
     # This test ensures that the farmer correctly rejects invalid RespondSignatures
     # messages from the harvester.
@@ -271,7 +273,7 @@ async def test_missing_signage_point(
     ret_time, ret_skipped_sps = ret
     assert ret_time == time_new_cc3
     assert ret_skipped_sps == uint32(
-        floor(601 / (farmer.constants.SUB_SLOT_TIME_TARGET / farmer.constants.NUM_SPS_SUB_SLOT))
+        floor(601 / (farmer.constants.SUB_SLOT_TIME_TARGET / farmer.constants.NUM_SPS_SUB_SLOT)),
     )
 
     original_state_changed_callback = farmer.state_changed_callback

@@ -437,7 +437,7 @@ class MessageParticipant(Streamable):
                 ):
                     raise ValueError(
                         "Cannot commit to coin_id and only specify some of the other arguments. "
-                        "You must specify all or none of them."
+                        "You must specify all or none of them.",
                     )
             else:
                 assert (
@@ -476,7 +476,7 @@ class MessageParticipant(Streamable):
         return uint8(
             (convert_noneness_to_bit(self.parent_id_committed) << 2)
             | (convert_noneness_to_bit(self.puzzle_hash_committed) << 1)
-            | convert_noneness_to_bit(self.amount_committed)
+            | convert_noneness_to_bit(self.amount_committed),
         )
 
     @property
@@ -498,7 +498,10 @@ class MessageParticipant(Streamable):
 
     @classmethod
     def from_mode_and_maybe_args(
-        cls, sender: bool, full_mode: uint8, args: Optional[Iterable[Program]] = None
+        cls,
+        sender: bool,
+        full_mode: uint8,
+        args: Optional[Iterable[Program]] = None,
     ) -> MessageParticipant:
         if sender:
             mode = full_mode >> 3
@@ -573,7 +576,7 @@ class SendMessage(Condition):
 
         if self.var_args is None and self._other_party is None:
             raise ValueError(
-                f"Must specify either var_args or {'receiver' if self._other_party_is_receiver else 'sender'}"
+                f"Must specify either var_args or {'receiver' if self._other_party_is_receiver else 'sender'}",
             )
 
         if self.var_args is not None and self._other_party is not None and not self._other_party._nothing_committed:
@@ -610,10 +613,14 @@ class SendMessage(Condition):
             var_args,
             full_mode,
             MessageParticipant.from_mode_and_maybe_args(
-                True, full_mode, var_args if not cls._other_party_is_receiver else None
+                True,
+                full_mode,
+                var_args if not cls._other_party_is_receiver else None,
             ),
             MessageParticipant.from_mode_and_maybe_args(
-                False, full_mode, var_args if cls._other_party_is_receiver else None
+                False,
+                full_mode,
+                var_args if cls._other_party_is_receiver else None,
             ),
         )
 
@@ -967,7 +974,8 @@ class UnknownCondition(Condition):
     @classmethod
     def from_program(cls, program: Program) -> UnknownCondition:
         return cls(
-            program.at("f"), [] if program.at("r") == Program.to(None) else [p for p in program.at("r").as_iter()]
+            program.at("f"),
+            [] if program.at("r") == Program.to(None) else [p for p in program.at("r").as_iter()],
         )
 
 
@@ -1027,7 +1035,8 @@ class CreateAnnouncement(Condition):
         if program.at("f").as_atom() == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[CreateCoinAnnouncement, CreatePuzzleAnnouncement] = CreateCoinAnnouncement.from_program(
-                program, **kwargs
+                program,
+                **kwargs,
             )
             assert isinstance(condition, CreateCoinAnnouncement)
             origin_id: Optional[bytes32] = condition.coin_id
@@ -1081,7 +1090,8 @@ class AssertAnnouncement(Condition):
         if program.at("f").as_atom() == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[AssertCoinAnnouncement, AssertPuzzleAnnouncement] = AssertCoinAnnouncement.from_program(
-                program, **kwargs
+                program,
+                **kwargs,
             )
             assert isinstance(condition, AssertCoinAnnouncement)
             asserted_origin_id: Optional[bytes32] = condition.asserted_id

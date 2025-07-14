@@ -80,7 +80,7 @@ def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcCl
         async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
             self.add_to_log("get_notifications", (request,))
             return GetNotificationsResponse(
-                [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
+                [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))],
             )
 
     inst_rpc_client = NotificationsGetRpcClient()

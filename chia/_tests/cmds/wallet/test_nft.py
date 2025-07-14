@@ -181,7 +181,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 ),
                 test_condition_valid_times,
                 (),
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -251,7 +251,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 True,
                 test_condition_valid_times,
                 (),
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -325,7 +325,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 True,
                 test_condition_valid_times,
                 (),
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -363,7 +363,7 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                         mint_height=uint32(1),
                         supports_did=True,
                         p2_address=get_bytes32(8),
-                    )
+                    ),
                 )
             return NFTGetNFTsResponse(request.wallet_id, nft_list)
 
@@ -462,7 +462,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 True,
                 test_condition_valid_times,
                 (),
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

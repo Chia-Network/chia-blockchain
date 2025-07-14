@@ -107,7 +107,9 @@ async def test_all_endpoints():
         assert len(coin_records) == 4
 
         coin_records = await sim_client.get_coin_records_by_puzzle_hashes(
-            [bytes32.zeros, bytes32([1] * 32)], start_height=0, end_height=2
+            [bytes32.zeros, bytes32([1] * 32)],
+            start_height=0,
+            end_height=2,
         )
         assert len(coin_records) == 0
 
@@ -146,7 +148,7 @@ async def test_all_endpoints():
                     spendable_coin,
                     Program.to(1),
                     Program.to([[51, puzzle_hash, 1]]),
-                )
+                ),
             ],
             G2Element(),
         )

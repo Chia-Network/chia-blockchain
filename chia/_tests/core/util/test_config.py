@@ -74,7 +74,11 @@ def write_config(
 
 
 def read_and_compare_config(
-    root_path: Path, default_config: dict, do_sleep: bool, iterations: int, error_queue: Optional[Queue] = None
+    root_path: Path,
+    default_config: dict,
+    do_sleep: bool,
+    iterations: int,
+    error_queue: Optional[Queue] = None,
 ):
     """
     Wait for a random amount of time, read the config and compare with the
@@ -298,14 +302,27 @@ class TestConfig:
             for i in range(10):
                 all_tasks.append(
                     asyncio.get_running_loop().run_in_executor(
-                        pool, read_and_compare_config, root_path, default_config_dict, False, 100, None
-                    )
+                        pool,
+                        read_and_compare_config,
+                        root_path,
+                        default_config_dict,
+                        False,
+                        100,
+                        None,
+                    ),
                 )
                 if i % 2 == 0:
                     all_tasks.append(
                         asyncio.get_running_loop().run_in_executor(
-                            pool, write_config, root_path, default_config_dict, False, False, 100, None
-                        )
+                            pool,
+                            write_config,
+                            root_path,
+                            default_config_dict,
+                            False,
+                            False,
+                            100,
+                            None,
+                        ),
                     )
             await asyncio.gather(*all_tasks)
 

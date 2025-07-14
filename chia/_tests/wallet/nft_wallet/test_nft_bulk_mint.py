@@ -44,14 +44,20 @@ async def test_nft_mint(wallet_environments: WalletTestFramework, with_did: bool
     async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_0 = await action_scope.get_puzzle_hash(env_0.wallet_state_manager)
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
+            env_0.wallet_state_manager,
+            wallet_0,
+            uint64(1),
+            action_scope,
         )
 
     hex_did_id = did_wallet.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
 
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
-        env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
+        env_0.wallet_state_manager,
+        wallet_0,
+        name="NFT WALLET 1",
+        did_id=did_id,
     )
 
     nft_wallet_1 = await NFTWallet.create_new_nft_wallet(env_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
@@ -84,11 +90,11 @@ async def test_nft_mint(wallet_environments: WalletTestFramework, with_did: bool
                 pre_block_balance_updates={
                     "nft": {
                         "init": True,
-                    }
+                    },
                 },
                 post_block_balance_updates={},
             ),
-        ]
+        ],
     )
 
     royalty_pc = uint16(300)
@@ -99,7 +105,7 @@ async def test_nft_mint(wallet_environments: WalletTestFramework, with_did: bool
     metadata_list = [
         {
             "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.zeros.hex())]
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.zeros.hex())],
             ),
             "royalty_pc": royalty_pc,
             "royalty_ph": royalty_addr,
@@ -111,7 +117,8 @@ async def test_nft_mint(wallet_environments: WalletTestFramework, with_did: bool
         target_list = [await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager) for x in range(mint_total)]
 
     async with nft_wallet_0.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         if with_did:
             await nft_wallet_0.mint_from_did(
@@ -181,10 +188,10 @@ async def test_nft_mint(wallet_environments: WalletTestFramework, with_did: bool
                 post_block_balance_updates={
                     "nft": {
                         "unspent_coin_count": mint_total,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )
 
     nfts = await nft_wallet_1.get_current_nfts()
@@ -232,7 +239,10 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
 
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
+            env_0.wallet_state_manager,
+            wallet_0,
+            uint64(1),
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -257,7 +267,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet_maker.get_my_DID()
@@ -409,10 +419,10 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
                 post_block_balance_updates={
                     "nft": {
                         "unspent_coin_count": n,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )
 
     # check NFT edition numbers
@@ -453,7 +463,10 @@ async def test_nft_mint_multiple_xch(wallet_environments: WalletTestFramework, w
     async with env_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_0 = await action_scope.get_puzzle_hash(env_0.wallet_state_manager)
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_0.wallet_state_manager, wallet_0, uint64(1), action_scope
+            env_0.wallet_state_manager,
+            wallet_0,
+            uint64(1),
+            action_scope,
         )
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_1 = await action_scope.get_puzzle_hash(env_1.wallet_state_manager)
@@ -480,7 +493,7 @@ async def test_nft_mint_multiple_xch(wallet_environments: WalletTestFramework, w
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     hex_did_id = did_wallet.get_my_DID()
@@ -489,7 +502,10 @@ async def test_nft_mint_multiple_xch(wallet_environments: WalletTestFramework, w
     await time_out_assert(5, did_wallet.get_confirmed_balance, 1)
 
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
-        env_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
+        env_0.wallet_state_manager,
+        wallet_0,
+        name="NFT WALLET 1",
+        did_id=did_id,
     )
 
     await NFTWallet.create_new_nft_wallet(wallet_1.wallet_state_manager, wallet_1, name="NFT WALLET 2")
@@ -502,7 +518,7 @@ async def test_nft_mint_multiple_xch(wallet_environments: WalletTestFramework, w
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
+        ],
     )
     royalty_pc = uint16(300)
     royalty_addr = ph_0
@@ -596,8 +612,8 @@ async def test_nft_mint_multiple_xch(wallet_environments: WalletTestFramework, w
                 post_block_balance_updates={
                     "nft": {
                         "unspent_coin_count": mint_total,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )

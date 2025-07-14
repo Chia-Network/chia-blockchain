@@ -161,10 +161,13 @@ class Receiver:
         return self._harvesting_mode
 
     async def _process(
-        self, method: Callable[[T_PlotSyncMessage], Any], message_type: ProtocolMessageTypes, message: T_PlotSyncMessage
+        self,
+        method: Callable[[T_PlotSyncMessage], Any],
+        message_type: ProtocolMessageTypes,
+        message: T_PlotSyncMessage,
     ) -> None:
         log.debug(
-            f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}"
+            f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}",
         )
 
         async def send_response(plot_sync_error: Optional[PlotSyncError] = None) -> None:
@@ -173,7 +176,7 @@ class Receiver:
                     make_msg(
                         ProtocolMessageTypes.plot_sync_response,
                         PlotSyncResponse(message.identifier, int16(message_type.value), plot_sync_error),
-                    )
+                    ),
                 )
 
         try:
@@ -195,7 +198,9 @@ class Receiver:
         identifier_match = sync_id_match and message_id_match
         if (start and not message_id_match) or (not start and not identifier_match):
             expected: PlotSyncIdentifier = PlotSyncIdentifier(
-                identifier.timestamp, self._current_sync.sync_id, self._current_sync.next_message_id
+                identifier.timestamp,
+                self._current_sync.sync_id,
+                self._current_sync.next_message_id,
             )
             raise InvalidIdentifierError(
                 identifier,
@@ -324,17 +329,21 @@ class Receiver:
         # First create the update delta (i.e. transform invalid/keys_missing into additions/removals) which we will
         # send to the callback receiver below
         delta_invalid: PathListDelta = PathListDelta.from_lists(
-            self._invalid, self._current_sync.delta.invalid.additions
+            self._invalid,
+            self._current_sync.delta.invalid.additions,
         )
         delta_keys_missing: PathListDelta = PathListDelta.from_lists(
-            self._keys_missing, self._current_sync.delta.keys_missing.additions
+            self._keys_missing,
+            self._current_sync.delta.keys_missing.additions,
         )
         delta_duplicates: PathListDelta = PathListDelta.from_lists(
-            self._duplicates, self._current_sync.delta.duplicates.additions
+            self._duplicates,
+            self._current_sync.delta.duplicates.additions,
         )
         update = Delta(
             PlotListDelta(
-                self._current_sync.delta.valid.additions.copy(), self._current_sync.delta.valid.removals.copy()
+                self._current_sync.delta.valid.additions.copy(),
+                self._current_sync.delta.valid.removals.copy(),
             ),
             delta_invalid,
             delta_keys_missing,
@@ -349,7 +358,7 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
         self._total_effective_plot_size = int(
-            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in self._plots.values())
+            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in self._plots.values()),
         )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync

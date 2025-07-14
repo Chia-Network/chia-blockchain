@@ -16,7 +16,8 @@ try:
     import miniupnpc
 except ImportError:
     log.info(
-        "importing miniupnpc failed. This is not required to run chia, it allows incoming connections from other peers."
+        "importing miniupnpc failed. This is not required to run chia, "
+        "it allows incoming connections from other peers.",
     )
     miniupnpc = None
 
@@ -76,7 +77,7 @@ class UPnP:
                     self._upnp.addportmapping(port, "TCP", self._upnp.lanaddr, port, "chia", "")
                     log.info(
                         f"Port {port} opened with UPnP. lanaddr {self._upnp.lanaddr} "
-                        f"external: {self._upnp.externalipaddress()}"
+                        f"external: {self._upnp.externalipaddress()}",
                     )
                 elif msg[0] == "release":
                     port = msg[1]

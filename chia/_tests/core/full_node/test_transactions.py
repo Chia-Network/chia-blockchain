@@ -160,7 +160,10 @@ async def test_mempool_tx_sync(three_nodes_two_wallets, self_hostname, seeded_ra
 
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            [10], [bytes32.random(seeded_random)], action_scope, 0
+            [10],
+            [bytes32.random(seeded_random)],
+            action_scope,
+            0,
         )
     [tx] = action_scope.side_effects.transactions
 

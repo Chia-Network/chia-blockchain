@@ -43,7 +43,8 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
 
 @contextlib.asynccontextmanager
 async def start_harvester_service(
-    harvester_service: HarvesterService, farmer_service: FarmerService
+    harvester_service: HarvesterService,
+    farmer_service: FarmerService,
 ) -> AsyncIterator[SplitAsyncManager[Harvester]]:
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node
@@ -52,7 +53,7 @@ async def start_harvester_service(
     async with split_async_manager(manager=harvester_service.manage(), object=harvester) as split_manager:
         await split_manager.enter()
         harvester_service.add_peer(
-            UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+            UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()),
         )
         harvester.plot_manager.stop_refreshing()
 

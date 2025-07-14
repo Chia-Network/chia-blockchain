@@ -69,7 +69,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     fee = uint64(1_999_999_999_999)
 
     async with dl_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_maker = await dl_wallet_maker.generate_new_reporter(maker_root, action_scope, fee=fee)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
@@ -95,13 +96,14 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
 
     async with dl_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_taker = await dl_wallet_taker.generate_new_reporter(taker_root, action_scope, fee=fee)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
@@ -127,7 +129,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
@@ -155,7 +157,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     fee = uint64(2_000_000_000_000)
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
             {launcher_id_maker: -1, launcher_id_taker: 1},
@@ -170,8 +173,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                                 "values_to_prove": ["0x" + taker_branch.hex()],
                             },
                         ],
-                    }
-                }
+                    },
+                },
             ),
             fee=fee,
         )
@@ -188,15 +191,17 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                     {
                         "launcher_id": launcher_id_taker.hex(),
                         "values_to_prove": [taker_branch.hex()],
-                    }
+                    },
                 ],
-            }
-        ]
+            },
+        ],
     }
 
     [_maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(offer_maker.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         offer_taker = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(offer_maker.offer),
@@ -225,7 +230,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                             ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
                         ],
                     ],
-                }
+                },
             ),
             fee=fee,
         )
@@ -240,7 +245,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                     {
                         "launcher_id": launcher_id_taker.hex(),
                         "values_to_prove": [taker_branch.hex()],
-                    }
+                    },
                 ],
             },
             {
@@ -250,10 +255,10 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                     {
                         "launcher_id": launcher_id_maker.hex(),
                         "values_to_prove": [maker_branch.hex()],
-                    }
+                    },
                 ],
             },
-        ]
+        ],
     }
 
     await wallet_environments.process_pending_states(
@@ -304,7 +309,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
@@ -322,7 +327,8 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
 
     async with dl_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32), action_scope)
 
@@ -347,7 +353,7 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
 
@@ -368,7 +374,8 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
     root, _ = build_merkle_tree(ROWS)
 
     async with dl_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id = await dl_wallet.generate_new_reporter(root, action_scope)
     assert await dl_wallet.get_latest_singleton(launcher_id) is not None
@@ -393,12 +400,13 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
     async with dl_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_2 = await dl_wallet.generate_new_reporter(root, action_scope)
 
@@ -422,7 +430,7 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
                     },
                 },
             ),
-        ]
+        ],
     )
 
     trade_manager = env_maker.wallet_state_manager.trade_manager
@@ -434,7 +442,8 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
     FEE = uint64(2_000_000_000_000)
 
     async with trade_manager.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, offer, error = await trade_manager.create_offer_for_ids(
             {launcher_id: -1, launcher_id_2: 1},
@@ -449,8 +458,8 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
                                 "values_to_prove": ["0x" + addition.hex()],
                             },
                         ],
-                    }
-                }
+                    },
+                },
             ),
             fee=FEE,
         )
@@ -468,12 +477,13 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
             "dl": {
                 "pending_coin_removal_count": 1,
             },
-        }
+        },
     )
     await env_maker.check_balances()
 
     async with trade_manager.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await trade_manager.cancel_pending_offers([offer.trade_id], action_scope, fee=FEE, secure=True)
 
@@ -505,8 +515,8 @@ async def test_dl_offer_cancellation(wallet_environments: WalletTestFramework) -
                         "pending_coin_removal_count": -1,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
@@ -543,13 +553,15 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
     fee = uint64(1_999_999_999_999)
 
     async with dl_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(maker_root, action_scope, fee=fee)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_1) is not None
 
     async with dl_wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(maker_root, action_scope, fee=fee)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_2) is not None
@@ -575,20 +587,22 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_1, maker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_2, maker_root)
 
     async with dl_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(taker_root, action_scope, fee=fee)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_1) is not None
 
     async with dl_wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(taker_root, action_scope, fee=fee)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_2) is not None
@@ -614,7 +628,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_1, taker_root)
@@ -647,7 +661,8 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
     fee = uint64(2_000_000_000_000)
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
             {launcher_id_maker_1: -1, launcher_id_taker_1: 1, launcher_id_maker_2: -1, launcher_id_taker_2: 1},
@@ -660,7 +675,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                             {
                                 "launcher_id": "0x" + launcher_id_taker_1.hex(),
                                 "values_to_prove": ["0x" + taker_branch.hex(), "0x" + taker_branch.hex()],
-                            }
+                            },
                         ],
                     },
                     launcher_id_maker_2.hex(): {
@@ -676,7 +691,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                             },
                         ],
                     },
-                }
+                },
             ),
             fee=fee,
         )
@@ -686,7 +701,9 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
 
     [_maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(offer_maker.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         offer_taker = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(offer_maker.offer),
@@ -700,7 +717,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                             {
                                 "launcher_id": "0x" + launcher_id_maker_1.hex(),
                                 "values_to_prove": ["0x" + maker_branch.hex(), "0x" + maker_branch.hex()],
-                            }
+                            },
                         ],
                     },
                     launcher_id_taker_2.hex(): {
@@ -728,7 +745,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                             ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
                         ],
                     ],
-                }
+                },
             ),
             fee=fee,
         )
@@ -782,7 +799,7 @@ async def test_multiple_dl_offers(wallet_environments: WalletTestFramework) -> N
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker_1, taker_root)

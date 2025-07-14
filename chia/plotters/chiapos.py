@@ -39,7 +39,7 @@ def plot_chia(args: Namespace, root_path: Path) -> None:
             root_path,
             log,
             args.connect_to_daemon,
-        )
+        ),
     )
     params = Params(
         size=args.size,

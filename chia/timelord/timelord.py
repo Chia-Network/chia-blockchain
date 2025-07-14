@@ -170,7 +170,7 @@ class Timelord:
                     thread_name_prefix="blue-box-",
                 )
                 self.main_loop = create_referenced_task(
-                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
+                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers),
                 )
             else:
                 self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
@@ -279,14 +279,14 @@ class Timelord:
             if self.last_state.reward_challenge_cache[found_index + 1][1] < block_sp_total_iters:
                 log.warning(
                     f"Will not infuse unfinished block {block.rc_prev} sp total iters {block_sp_total_iters}, "
-                    f"because there is another infusion before its SP"
+                    f"because there is another infusion before its SP",
                 )
                 return None
             if self.last_state.reward_challenge_cache[found_index][1] > block_sp_total_iters:
                 if not is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
                     log.error(
                         f"Will not infuse unfinished block {block.rc_prev}, sp total iters: {block_sp_total_iters}, "
-                        f"because its iters are too low"
+                        f"because its iters are too low",
                     )
                 return None
 
@@ -394,7 +394,7 @@ class Timelord:
             log.info(
                 f"Total unfinished blocks: {self.total_unfinished}. "
                 f"Total infused blocks: {self.total_infused}. "
-                f"Infusion rate: {infusion_rate}%."
+                f"Infusion rate: {infusion_rate}%.",
             )
 
         self.new_peak = None
@@ -427,9 +427,15 @@ class Timelord:
             self.process_communication_tasks.append(
                 create_referenced_task(
                     self._do_process_communication(
-                        picked_chain, challenge, initial_form, ip, reader, writer, proof_label=self.num_resets
-                    )
-                )
+                        picked_chain,
+                        challenge,
+                        initial_form,
+                        ip,
+                        reader,
+                        writer,
+                        proof_label=self.num_resets,
+                    ),
+                ),
             )
 
     async def _submit_iterations(self) -> None:
@@ -594,7 +600,7 @@ class Timelord:
                         assert rc_challenge is not None
                         log.warning(
                             f"Do not have correct challenge {rc_challenge.hex()} "
-                            f"has {rc_info.challenge.hex()}, partial hash {block.reward_chain_block.get_hash()}"
+                            f"has {rc_info.challenge.hex()}, partial hash {block.reward_chain_block.get_hash()}",
                         )
                         # This proof is on an outdated challenge, so don't use it
                         continue
@@ -837,7 +843,7 @@ class Timelord:
 
             log.info(
                 f"Built end of subslot bundle. cc hash: {eos_bundle.challenge_chain.get_hash()}. New_difficulty: "
-                f"{eos_bundle.challenge_chain.new_difficulty} New ssi: {eos_bundle.challenge_chain.new_sub_slot_iters}"
+                f"{eos_bundle.challenge_chain.new_difficulty} New ssi: {eos_bundle.challenge_chain.new_sub_slot_iters}",
             )
 
             if next_ses is None or next_ses.new_difficulty is None:
@@ -862,7 +868,7 @@ class Timelord:
             failed_chain, proof_label = self.vdf_failures[0]
             log.error(
                 f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}, "
-                f"label {proof_label}, current: {self.num_resets}"
+                f"label {proof_label}, current: {self.num_resets}",
             )
             if proof_label == self.num_resets:
                 await self._reset_chains(only_eos=True)
@@ -1047,7 +1053,7 @@ class Timelord:
                     log.info(
                         f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
                         f" iters, "
-                        f"Estimated IPS: {ips}, Chain: {chain}"
+                        f"Estimated IPS: {ips}, Chain: {chain}",
                     )
 
                 vdf_info: VDFInfo = VDFInfo(
@@ -1085,13 +1091,18 @@ class Timelord:
                     assert field_vdf is not None
                     assert height is not None
                     response = timelord_protocol.RespondCompactProofOfTime(
-                        vdf_info, vdf_proof, header_hash, height, field_vdf
+                        vdf_info,
+                        vdf_proof,
+                        header_hash,
+                        height,
+                        field_vdf,
                     )
                     if self._server is not None:
                         message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                         await self.server.send_to_all([message], NodeType.FULL_NODE)
                     self.state_changed(
-                        "new_compact_proof", {"header_hash": header_hash, "height": height, "field_vdf": field_vdf}
+                        "new_compact_proof",
+                        {"header_hash": header_hash, "height": height, "field_vdf": field_vdf},
                     )
 
         except ConnectionResetError as e:
@@ -1129,8 +1140,8 @@ class Timelord:
                                     info[1].header_hash,
                                     info[1].height,
                                     info[1].field_vdf,
-                                )
-                            )
+                                ),
+                            ),
                         )
                         self.pending_bluebox_info.remove(info)
                         self.free_clients = self.free_clients[1:]
@@ -1173,7 +1184,7 @@ class Timelord:
                     log.info(
                         f"Working on compact proof for height: {picked_info.height}. "
                         f"VDF: {picked_info.field_vdf}. "
-                        f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
+                        f"Iters: {picked_info.new_proof_of_time.number_of_iterations}.",
                     )
                     bluebox_process_data = BlueboxProcessData(
                         picked_info.new_proof_of_time.challenge,

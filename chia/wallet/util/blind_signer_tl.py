@@ -142,7 +142,10 @@ class BSTLSigningResponse(Streamable):
 BLIND_SIGNER_TRANSLATION = TranslationLayer(
     [
         TranslationLayerMapping(
-            SigningTarget, BSTLSigningTarget, BSTLSigningTarget.from_wallet_api, BSTLSigningTarget.to_wallet_api
+            SigningTarget,
+            BSTLSigningTarget,
+            BSTLSigningTarget.from_wallet_api,
+            BSTLSigningTarget.to_wallet_api,
         ),
         TranslationLayerMapping(SumHint, BSTLSumHint, BSTLSumHint.from_wallet_api, BSTLSumHint.to_wallet_api),
         TranslationLayerMapping(PathHint, BSTLPathHint, BSTLPathHint.from_wallet_api, BSTLPathHint.to_wallet_api),
@@ -153,7 +156,10 @@ BLIND_SIGNER_TRANSLATION = TranslationLayer(
             BSTLSigningInstructions.to_wallet_api,
         ),
         TranslationLayerMapping(
-            SigningResponse, BSTLSigningResponse, BSTLSigningResponse.from_wallet_api, BSTLSigningResponse.to_wallet_api
+            SigningResponse,
+            BSTLSigningResponse,
+            BSTLSigningResponse.from_wallet_api,
+            BSTLSigningResponse.to_wallet_api,
         ),
         TranslationLayerMapping(
             UnsignedTransaction,
@@ -161,5 +167,5 @@ BLIND_SIGNER_TRANSLATION = TranslationLayer(
             BSTLUnsignedTransaction.from_wallet_api,
             BSTLUnsignedTransaction.to_wallet_api,
         ),
-    ]
+    ],
 )

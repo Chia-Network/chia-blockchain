@@ -141,7 +141,8 @@ def main(
             test_id_property = case.find("properties/property[@name='test_id']")
             test_id = TestId.unmarshal(json.loads(test_id_property.attrib["value"]))
             test_id = dataclasses.replace(
-                test_id, ids=tuple(id for id in test_id.ids if not id.startswith(f"{data_type.tag}_repeat"))
+                test_id,
+                ids=tuple(id for id in test_id.ids if not id.startswith(f"{data_type.tag}_repeat")),
             )
             cases_by_test_id[test_id].append(case)
 
@@ -166,7 +167,7 @@ def main(
                 durations=tuple(data.duration for data in datas),
                 limit=limit,
                 label=event_id.label,
-            )
+            ),
         )
 
     if result_count_limit is not None:
@@ -262,7 +263,7 @@ def output_benchmark(
                 + f" | {three_sigma_str}"
                 + f" | {limit_str}"
                 + f" | {percent_str}"
-                + " |\n"
+                + " |\n",
             )
 
 
@@ -340,7 +341,7 @@ def output_time_out_assert(
                 + f" | {three_sigma_str}"
                 + f" | {limit_str}"
                 + f" | {percent_str}"
-                + " |\n"
+                + " |\n",
             )
 
 

@@ -175,7 +175,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     # up to date.
                     try:
                         resolved_new = PeerInfo(
-                            await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
+                            await resolve(unresolved.host, prefer_ipv6=prefer_ipv6),
+                            unresolved.port,
                         )
                     except Exception as e:
                         self._log.warning(f"Failed to resolve after connection failure {unresolved.host}: {e}")
@@ -224,7 +225,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
 
                     self._log.info(
                         f"Started {self._service_name} service on network_id: {self._network_id} "
-                        f"at port {self._advertised_port}"
+                        f"at port {self._advertised_port}",
                     )
 
                     if self._rpc_info:

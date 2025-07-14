@@ -141,7 +141,13 @@ async def test_coin_ids_multi(db_version: int) -> None:
 @pytest.mark.anyio
 async def test_hints_in_blockchain(
     wallet_nodes: tuple[
-        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        FullNodeSimulator,
+        FullNodeSimulator,
+        ChiaServer,
+        ChiaServer,
+        WalletTool,
+        WalletTool,
+        BlockTools,
     ],
 ) -> None:
     full_node_1, _full_node_2, _server_1, _server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
@@ -162,7 +168,7 @@ async def test_hints_in_blockchain(
     hint = bytes32(32 * b"\5")
     coin_spent = blocks[-1].get_included_reward_coins()[0]
     condition_dict = {
-        ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
+        ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])],
     }
     tx = wt.generate_signed_transaction(
         uint64(10),
@@ -172,7 +178,10 @@ async def test_hints_in_blockchain(
     )
 
     blocks = bt.get_consecutive_blocks(
-        10, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        10,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=tx,
     )
 
     for block in blocks[-10:]:

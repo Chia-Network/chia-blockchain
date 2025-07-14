@@ -120,7 +120,7 @@ class PlotKeysResolver:
         sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
         if sk is None:
             raise RuntimeError(
-                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f"
+                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f",
             )
         return master_sk_to_farmer_sk(sk).get_g1()
 
@@ -128,7 +128,7 @@ class PlotKeysResolver:
         sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
         if sk is None:
             raise RuntimeError(
-                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p"
+                "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p",
             )
         return master_sk_to_pool_sk(sk).get_g1()
 
@@ -143,7 +143,13 @@ async def resolve_plot_keys(
     connect_to_daemon: bool = False,
 ) -> PlotKeys:
     return await PlotKeysResolver(
-        farmer_public_key, alt_fingerprint, pool_public_key, pool_contract_address, root_path, log, connect_to_daemon
+        farmer_public_key,
+        alt_fingerprint,
+        pool_public_key,
+        pool_contract_address,
+        root_path,
+        log,
+        connect_to_daemon,
     ).resolve()
 
 
@@ -161,13 +167,13 @@ async def create_plots(
     if keys.pool_public_key is not None:
         log.info(
             f"Creating {num} plots of size {args.size}, pool public key:  "
-            f"{bytes(keys.pool_public_key).hex()} farmer public key: {bytes(keys.farmer_public_key).hex()}"
+            f"{bytes(keys.pool_public_key).hex()} farmer public key: {bytes(keys.farmer_public_key).hex()}",
         )
     else:
         assert keys.pool_contract_puzzle_hash is not None
         log.info(
             f"Creating {num} plots of size {args.size}, pool contract address:  "
-            f"{keys.pool_contract_address} farmer public key: {bytes(keys.farmer_public_key).hex()}"
+            f"{keys.pool_contract_address} farmer public key: {bytes(keys.farmer_public_key).hex()}",
         )
 
     tmp_dir_created = False
@@ -196,7 +202,9 @@ async def create_plots(
         # New plots will also include a taproot of the keys, for extensibility
         include_taproot: bool = keys.pool_contract_puzzle_hash is not None
         plot_public_key = generate_plot_public_key(
-            master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, include_taproot
+            master_sk_to_local_sk(sk).get_g1(),
+            keys.farmer_public_key,
+            include_taproot,
         )
 
         # The plot id is based on the harvester, farmer, and pool keys

@@ -56,7 +56,7 @@ async def wait_for_coins_in_wallet(coins: set[Coin], wallet: Wallet, timeout: Op
     with anyio.fail_after(delay=adjusted_timeout(timeout)):
         for backoff in backoff_times():
             spendable_wallet_coin_records = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(
-                wallet_id=wallet.id()
+                wallet_id=wallet.id(),
             )
             spendable_wallet_coins = {record.coin for record in spendable_wallet_coin_records}
 
@@ -190,7 +190,9 @@ class FullNodeSimulator(FullNodeAPI):
         return ph_total_amount
 
     async def farm_new_transaction_block(
-        self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
+        self,
+        request: FarmNewBlockProtocol,
+        force_wait_for_timestamp: bool = False,
     ) -> FullBlock:
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         diff = self.full_node.constants.DIFFICULTY_STARTING
@@ -418,7 +420,10 @@ class FullNodeSimulator(FullNodeAPI):
                     )
                 else:
                     await self.farm_blocks_to_puzzlehash(
-                        count=1, guarantee_transaction_blocks=tx_block, timeout=None, _wait_for_synced=False
+                        count=1,
+                        guarantee_transaction_blocks=tx_block,
+                        timeout=None,
+                        _wait_for_synced=False,
                     )
 
                 expected_peak_height += 1
@@ -432,7 +437,7 @@ class FullNodeSimulator(FullNodeAPI):
 
             if len(block_reward_coins) != expected_reward_coin_count:
                 raise RuntimeError(
-                    f"Expected {expected_reward_coin_count} reward coins, got: {len(block_reward_coins)}"
+                    f"Expected {expected_reward_coin_count} reward coins, got: {len(block_reward_coins)}",
                 )
 
             await wait_for_coins_in_wallet(coins=block_reward_coins, wallet=wallet, timeout=None)
@@ -714,7 +719,8 @@ class FullNodeSimulator(FullNodeAPI):
                 # seen that amount sent to that puzzle hash
                 async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                     puzzle_hash = await action_scope.get_puzzle_hash(
-                        wallet.wallet_state_manager, override_reuse_puzhash_with=amount not in amounts_seen
+                        wallet.wallet_state_manager,
+                        override_reuse_puzhash_with=amount not in amounts_seen,
                     )
                 outputs.append(CreateCoin(puzzle_hash, amount))
                 amounts_seen.add(amount)
@@ -728,7 +734,8 @@ class FullNodeSimulator(FullNodeAPI):
 
                 if len(outputs_group) > 0:
                     async with wallet.wallet_state_manager.new_action_scope(
-                        DEFAULT_TX_CONFIG, push=True
+                        DEFAULT_TX_CONFIG,
+                        push=True,
                     ) as action_scope:
                         await wallet.generate_signed_transaction(
                             amounts=[output.amount for output in outputs_group],
@@ -790,7 +797,7 @@ class FullNodeSimulator(FullNodeAPI):
             [
                 await self.wallet_is_synced(wallet_node=wallet_node, peak_height=peak_height)
                 for wallet_node in wallet_nodes
-            ]
+            ],
         )
 
     async def wait_for_wallets_synced(

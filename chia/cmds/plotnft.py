@@ -34,7 +34,12 @@ class ShowPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
     id: Optional[int] = option(
-        "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
+        "-i",
+        "--id",
+        help="ID of the wallet to use",
+        default=None,
+        show_default=True,
+        required=False,
     )
 
     async def run(self) -> None:
@@ -57,7 +62,11 @@ class ShowPlotNFTCMD:
 class GetLoginLinkCMD:
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
     launcher_id: bytes32 = option(
-        "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
+        "-l",
+        "--launcher_id",
+        help="Launcher ID of the plotnft",
+        type=Bytes32ParamType(),
+        required=True,
     )
 
     async def run(self) -> None:
@@ -136,7 +145,12 @@ class JoinPlotNFTCMD:
     )
     dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
     id: Optional[int] = option(
-        "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
+        "-i",
+        "--id",
+        help="ID of the wallet to use",
+        default=None,
+        show_default=True,
+        required=False,
     )
 
     async def run(self) -> None:
@@ -172,7 +186,12 @@ class LeavePlotNFTCMD:
         required=True,
     )
     id: Optional[int] = option(
-        "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
+        "-i",
+        "--id",
+        help="ID of the wallet to use",
+        default=None,
+        show_default=True,
+        required=False,
     )
 
     async def run(self) -> None:
@@ -196,7 +215,12 @@ class LeavePlotNFTCMD:
 class InspectPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     id: Optional[int] = option(
-        "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
+        "-i",
+        "--id",
+        help="ID of the wallet to use",
+        default=None,
+        show_default=True,
+        required=False,
     )
 
     async def run(self) -> None:
@@ -216,7 +240,12 @@ class InspectPlotNFTCMD:
 class ClaimPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     id: Optional[int] = option(
-        "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
+        "-i",
+        "--id",
+        help="ID of the wallet to use",
+        default=None,
+        show_default=True,
+        required=False,
     )
     fee: uint64 = option(
         "-m",
@@ -248,10 +277,18 @@ class ClaimPlotNFTCMD:
 class ChangePayoutInstructionsPlotNFTCMD:
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
     launcher_id: bytes32 = option(
-        "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
+        "-l",
+        "--launcher_id",
+        help="Launcher ID of the plotnft",
+        type=Bytes32ParamType(),
+        required=True,
     )
     address: CliAddress = option(
-        "-a", "--address", help="New address for payout instructions", type=AddressParamType(), required=True
+        "-a",
+        "--address",
+        help="New address for payout instructions",
+        type=AddressParamType(),
+        required=True,
     )
 
     async def run(self) -> None:

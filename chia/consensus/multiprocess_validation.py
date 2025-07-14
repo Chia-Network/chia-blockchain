@@ -60,7 +60,9 @@ class PreValidationResult(Streamable):
 
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
-    block: FullBlock, prev_generators: list[bytes], constants: ConsensusConstants
+    block: FullBlock,
+    prev_generators: list[bytes],
+    constants: ConsensusConstants,
 ) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
     assert block.transactions_generator is not None
     assert block.transactions_info is not None
@@ -113,7 +115,10 @@ def _pre_validate_block(
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
                 validation_time = time.monotonic() - validation_start
                 return PreValidationResult(
-                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, uint32(validation_time * 1000)
+                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value),
+                    None,
+                    None,
+                    uint32(validation_time * 1000),
                 )
 
             err, conds = _run_block(block, prev_generators, constants)

@@ -254,7 +254,7 @@ class GetTransactionMemoResponse(Streamable):
         return {
             self.transaction_id.hex(): {
                 cwm.coin_id.hex(): [memo.hex() for memo in cwm.memos] for cwm in self.coins_with_memos
-            }
+            },
         }
 
     @classmethod
@@ -596,7 +596,7 @@ class NFTCalculateRoyaltiesResponse(Streamable):
                     "asset": info.fungible_asset,
                     "address": info.royalty_address,
                     "amount": info.royalty_amount,
-                }
+                },
             )
 
         return summary_dict
@@ -621,7 +621,7 @@ class NFTCalculateRoyaltiesResponse(Streamable):
                 for royalty_asset, summaries in json_dict.items()
                 if royalty_asset != "success"
                 for summary in summaries
-            ]
+            ],
         )
 
 
@@ -891,13 +891,16 @@ class TransactionEndpointRequest(Streamable):
     def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
         if not _avoid_ban:
             raise NotImplementedError(
-                "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
+                "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport",
             )
         else:
             return super().to_json_dict()
 
     def json_serialize_for_transport(
-        self, tx_config: TXConfig, extra_conditions: tuple[Condition, ...], timelock_info: ConditionValidTimes
+        self,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...],
+        timelock_info: ConditionValidTimes,
     ) -> dict[str, Any]:
         return {
             **tx_config.to_json_dict(),
@@ -1156,7 +1159,7 @@ class DLUpdateMultipleUpdates(Streamable):
                     bytes32.from_hexstr(value),
                 )
                 for key, value in json_dict.items()
-            ]
+            ],
         )
 
 
@@ -1398,7 +1401,8 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         tx_endpoint: TransactionEndpointResponse = json_deserialize_with_clvm_streamable(
-            json_dict, TransactionEndpointResponse
+            json_dict,
+            TransactionEndpointResponse,
         )
         offer: Offer = Offer.from_bech32(json_dict["offer"])
 

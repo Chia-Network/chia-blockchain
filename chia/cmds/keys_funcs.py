@@ -250,7 +250,9 @@ def delete(fingerprint: int) -> None:
 
 
 def derive_pk_and_sk_from_hd_path(
-    master_pk: G1Element, hd_path_root: str, master_sk: Optional[PrivateKey] = None
+    master_pk: G1Element,
+    hd_path_root: str,
+    master_sk: Optional[PrivateKey] = None,
 ) -> tuple[G1Element, Optional[PrivateKey], str]:
     """
     Derive a private key from the provided HD path. Takes a master key and HD path as input,
@@ -285,7 +287,7 @@ def derive_pk_and_sk_from_hd_path(
         current_index: int = int(current_index_str[:-1]) if non_observer else int(current_index_str)
 
         index_and_derivation_types.append(
-            (current_index, DerivationType.NONOBSERVER if non_observer else DerivationType.OBSERVER)
+            (current_index, DerivationType.NONOBSERVER if non_observer else DerivationType.OBSERVER),
         )
 
     # Derive keys along the path
@@ -326,8 +328,8 @@ def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, js
                     "pubkey": pubkey_hex,
                     "signature": signature_hex,
                     "signing_mode": signing_mode.value,
-                }
-            )
+                },
+            ),
         )
     else:
         print(f"Message: {message}")
@@ -452,7 +454,7 @@ def _search_derived(
             found_search_terms.append(term)
 
             print(
-                f"Found {found_item_type.value}: {found_item} (HD path: {current_path})"
+                f"Found {found_item_type.value}: {found_item} (HD path: {current_path})",
             )  # lgtm [py/clear-text-logging-sensitive-data]
 
             printed_match = True
@@ -537,7 +539,9 @@ def search_derive(
         # Derive from the provided HD path
         if derive_from_hd_path is not None:
             derivation_root_pk, derivation_root_sk, hd_path_root = derive_pk_and_sk_from_hd_path(
-                pk, derive_from_hd_path, master_sk=sk
+                pk,
+                derive_from_hd_path,
+                master_sk=sk,
             )
 
             if show_progress:
@@ -686,7 +690,7 @@ def derive_wallet_address(
         if show_hd_path:
             print(
                 f"Wallet address {i} "
-                f"({wallet_hd_path_root + str(i) + ('n' if non_observer_derivation else '')}): {address}"
+                f"({wallet_hd_path_root + str(i) + ('n' if non_observer_derivation else '')}): {address}",
             )
         else:
             print(f"Wallet address {i}: {address}")
@@ -737,7 +741,7 @@ def derive_child_key(
                 "backup": 4,
                 "singleton": 5,
                 "pool_auth": 6,
-            }[key_type]
+            }[key_type],
         )
 
         if non_observer_derivation:
@@ -757,7 +761,9 @@ def derive_child_key(
     # Arbitrary HD path was specified
     elif derive_from_hd_path is not None:
         derivation_root_pk, derivation_root_sk, hd_path_root = derive_pk_and_sk_from_hd_path(
-            current_pk, derive_from_hd_path, master_sk=current_sk
+            current_pk,
+            derive_from_hd_path,
+            master_sk=current_sk,
         )
     else:
         raise Exception("Neither key type nor HD path was specified")

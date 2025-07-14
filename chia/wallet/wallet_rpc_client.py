@@ -241,13 +241,14 @@ class WalletRpcClient(RpcClient):
     ) -> PushTransactionsResponse:
         return PushTransactionsResponse.from_json_dict(
             await self.fetch(
-                "push_transactions", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "push_transactions",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
         return GetTimestampForHeightResponse.from_json_dict(
-            await self.fetch("get_timestamp_for_height", request.to_json_dict())
+            await self.fetch("get_timestamp_for_height", request.to_json_dict()),
         )
 
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
@@ -318,7 +319,10 @@ class WalletRpcClient(RpcClient):
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
 
     async def get_transaction_count(
-        self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None
+        self,
+        wallet_id: int,
+        confirmed: Optional[bool] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> int:
         request: dict[str, Any] = {"wallet_id": wallet_id}
         if type_filter is not None:
@@ -476,7 +480,9 @@ class WalletRpcClient(RpcClient):
         return await self.fetch("get_coin_records", request.to_json_dict())
 
     async def get_spendable_coins(
-        self, wallet_id: int, coin_selection_config: CoinSelectionConfig
+        self,
+        wallet_id: int,
+        coin_selection_config: CoinSelectionConfig,
     ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
@@ -545,7 +551,7 @@ class WalletRpcClient(RpcClient):
 
     async def create_did_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
         return DIDCreateBackupFileResponse.from_json_dict(
-            await self.fetch("did_create_backup_file", request.to_json_dict())
+            await self.fetch("did_create_backup_file", request.to_json_dict()),
         )
 
     async def update_did_recovery_list(
@@ -559,12 +565,12 @@ class WalletRpcClient(RpcClient):
             await self.fetch(
                 "did_update_recovery_ids",
                 request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
-            )
+            ),
         )
 
     async def get_did_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
         return DIDGetRecoveryListResponse.from_json_dict(
-            await self.fetch("did_get_recovery_list", request.to_json_dict())
+            await self.fetch("did_get_recovery_list", request.to_json_dict()),
         )
 
     async def did_message_spend(
@@ -578,7 +584,7 @@ class WalletRpcClient(RpcClient):
             await self.fetch(
                 "did_message_spend",
                 request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
-            )
+            ),
         )
 
     async def update_did_metadata(
@@ -592,7 +598,7 @@ class WalletRpcClient(RpcClient):
             await self.fetch(
                 "did_update_metadata",
                 request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
-            )
+            ),
         )
 
     async def get_did_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
@@ -633,12 +639,12 @@ class WalletRpcClient(RpcClient):
 
     async def did_get_recovery_info(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
         return DIDGetRecoveryInfoResponse.from_json_dict(
-            await self.fetch("did_get_information_needed_for_recovery", request.to_json_dict())
+            await self.fetch("did_get_information_needed_for_recovery", request.to_json_dict()),
         )
 
     async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
         return DIDGetCurrentCoinInfoResponse.from_json_dict(
-            await self.fetch("did_get_current_coin_info", request.to_json_dict())
+            await self.fetch("did_get_current_coin_info", request.to_json_dict()),
         )
 
     async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> dict[str, Any]:
@@ -657,7 +663,7 @@ class WalletRpcClient(RpcClient):
             await self.fetch(
                 "did_transfer_did",
                 request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
-            )
+            ),
         )
 
     async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
@@ -710,8 +716,9 @@ class WalletRpcClient(RpcClient):
     ) -> PWSelfPoolResponse:
         return PWSelfPoolResponse.from_json_dict(
             await self.fetch(
-                "pw_self_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "pw_self_pool",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def pw_join_pool(
@@ -723,8 +730,9 @@ class WalletRpcClient(RpcClient):
     ) -> PWJoinPoolResponse:
         return PWJoinPoolResponse.from_json_dict(
             await self.fetch(
-                "pw_join_pool", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "pw_join_pool",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def pw_absorb_rewards(
@@ -736,8 +744,9 @@ class WalletRpcClient(RpcClient):
     ) -> PWAbsorbRewardsResponse:
         return PWAbsorbRewardsResponse.from_json_dict(
             await self.fetch(
-                "pw_absorb_rewards", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "pw_absorb_rewards",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def pw_status(self, request: PWStatus) -> PWStatusResponse:
@@ -745,7 +754,10 @@ class WalletRpcClient(RpcClient):
 
     # CATS
     async def create_new_cat_and_wallet(
-        self, amount: uint64, fee: uint64 = uint64(0), test: bool = False
+        self,
+        amount: uint64,
+        fee: uint64 = uint64(0),
+        test: bool = False,
     ) -> dict[str, Any]:
         request = {"wallet_type": "cat_wallet", "mode": "new", "amount": amount, "fee": fee, "test": test}
         return await self.fetch("create_new_wallet", request)
@@ -861,7 +873,9 @@ class WalletRpcClient(RpcClient):
         return json_deserialize_with_clvm_streamable(res, CreateOfferForIDsResponse)
 
     async def get_offer_summary(
-        self, offer: Offer, advanced: bool = False
+        self,
+        offer: Offer,
+        advanced: bool = False,
     ) -> tuple[bytes32, dict[str, dict[str, int]]]:
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
         return bytes32.from_hexstr(res["id"]), res["summary"]
@@ -1008,8 +1022,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTMintNFTResponse:
         return NFTMintNFTResponse.from_json_dict(
             await self.fetch(
-                "nft_mint_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_mint_nft",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def add_uri_to_nft(
@@ -1021,8 +1036,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTAddURIResponse:
         return NFTAddURIResponse.from_json_dict(
             await self.fetch(
-                "nft_add_uri", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_add_uri",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def nft_calculate_royalties(
@@ -1030,7 +1046,7 @@ class WalletRpcClient(RpcClient):
         request: NFTCalculateRoyalties,
     ) -> NFTCalculateRoyaltiesResponse:
         return NFTCalculateRoyaltiesResponse.from_json_dict(
-            await self.fetch("nft_calculate_royalties", request.to_json_dict())
+            await self.fetch("nft_calculate_royalties", request.to_json_dict()),
         )
 
     async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
@@ -1045,8 +1061,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTTransferNFTResponse:
         return NFTTransferNFTResponse.from_json_dict(
             await self.fetch(
-                "nft_transfer_nft", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_transfer_nft",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
@@ -1067,8 +1084,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTSetNFTDIDResponse:
         return NFTSetNFTDIDResponse.from_json_dict(
             await self.fetch(
-                "nft_set_nft_did", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_set_nft_did",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def set_nft_status(self, request: NFTSetNFTStatus) -> None:
@@ -1089,8 +1107,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTMintBulkResponse:
         return NFTMintBulkResponse.from_json_dict(
             await self.fetch(
-                "nft_mint_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_mint_bulk",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def set_nft_did_bulk(
@@ -1102,8 +1121,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTSetDIDBulkResponse:
         return NFTSetDIDBulkResponse.from_json_dict(
             await self.fetch(
-                "nft_set_did_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_set_did_bulk",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def transfer_nft_bulk(
@@ -1115,8 +1135,9 @@ class WalletRpcClient(RpcClient):
     ) -> NFTTransferBulkResponse:
         return NFTTransferBulkResponse.from_json_dict(
             await self.fetch(
-                "nft_transfer_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "nft_transfer_bulk",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     # DataLayer
@@ -1129,8 +1150,9 @@ class WalletRpcClient(RpcClient):
     ) -> CreateNewDLResponse:
         return CreateNewDLResponse.from_json_dict(
             await self.fetch(
-                "create_new_dl", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "create_new_dl",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def dl_track_new(self, request: DLTrackNew) -> None:
@@ -1144,7 +1166,7 @@ class WalletRpcClient(RpcClient):
 
     async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
         return DLSingletonsByRootResponse.from_json_dict(
-            await self.fetch("dl_singletons_by_root", request.to_json_dict())
+            await self.fetch("dl_singletons_by_root", request.to_json_dict()),
         )
 
     async def dl_update_root(
@@ -1156,8 +1178,9 @@ class WalletRpcClient(RpcClient):
     ) -> DLUpdateRootResponse:
         return DLUpdateRootResponse.from_json_dict(
             await self.fetch(
-                "dl_update_root", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "dl_update_root",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def dl_update_multiple(
@@ -1169,8 +1192,9 @@ class WalletRpcClient(RpcClient):
     ) -> DLUpdateMultipleResponse:
         return DLUpdateMultipleResponse.from_json_dict(
             await self.fetch(
-                "dl_update_multiple", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "dl_update_multiple",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
@@ -1191,8 +1215,9 @@ class WalletRpcClient(RpcClient):
     ) -> DLNewMirrorResponse:
         return DLNewMirrorResponse.from_json_dict(
             await self.fetch(
-                "dl_new_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "dl_new_mirror",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def dl_delete_mirror(
@@ -1204,8 +1229,9 @@ class WalletRpcClient(RpcClient):
     ) -> DLDeleteMirrorResponse:
         return DLDeleteMirrorResponse.from_json_dict(
             await self.fetch(
-                "dl_delete_mirror", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "dl_delete_mirror",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def dl_verify_proof(self, request: DLProof) -> VerifyProofResponse:
@@ -1253,10 +1279,15 @@ class WalletRpcClient(RpcClient):
         return response["pubkey"], response["signature"], response["signing_mode"]
 
     async def sign_message_by_id(
-        self, id: str, message: str, is_hex: bool = False, safe_mode: bool = True
+        self,
+        id: str,
+        message: str,
+        is_hex: bool = False,
+        safe_mode: bool = True,
     ) -> tuple[str, str, str]:
         response = await self.fetch(
-            "sign_message_by_id", {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode}
+            "sign_message_by_id",
+            {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode},
         )
         return response["pubkey"], response["signature"], response["signing_mode"]
 
@@ -1265,7 +1296,7 @@ class WalletRpcClient(RpcClient):
 
     async def get_transaction_memo(self, request: GetTransactionMemo) -> GetTransactionMemoResponse:
         return GetTransactionMemoResponse.from_json_dict(
-            await self.fetch("get_transaction_memo", {**request.to_json_dict()})
+            await self.fetch("get_transaction_memo", {**request.to_json_dict()}),
         )
 
     async def vc_mint(
@@ -1277,8 +1308,9 @@ class WalletRpcClient(RpcClient):
     ) -> VCMintResponse:
         return VCMintResponse.from_json_dict(
             await self.fetch(
-                "vc_mint", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "vc_mint",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def vc_get(self, request: VCGet) -> VCGetResponse:
@@ -1296,8 +1328,9 @@ class WalletRpcClient(RpcClient):
     ) -> VCSpendResponse:
         return VCSpendResponse.from_json_dict(
             await self.fetch(
-                "vc_spend", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "vc_spend",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def vc_add_proofs(self, request: VCAddProofs) -> None:
@@ -1305,7 +1338,7 @@ class WalletRpcClient(RpcClient):
 
     async def vc_get_proofs_for_root(self, request: VCGetProofsForRoot) -> VCGetProofsForRootResponse:
         return VCGetProofsForRootResponse.from_json_dict(
-            await self.fetch("vc_get_proofs_for_root", request.to_json_dict())
+            await self.fetch("vc_get_proofs_for_root", request.to_json_dict()),
         )
 
     async def vc_revoke(
@@ -1317,8 +1350,9 @@ class WalletRpcClient(RpcClient):
     ) -> VCRevokeResponse:
         return VCRevokeResponse.from_json_dict(
             await self.fetch(
-                "vc_revoke", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "vc_revoke",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def crcat_approve_pending(
@@ -1384,7 +1418,7 @@ class WalletRpcClient(RpcClient):
         args: ExecuteSigningInstructions,
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse.from_json_dict(
-            await self.fetch("execute_signing_instructions", args.to_json_dict())
+            await self.fetch("execute_signing_instructions", args.to_json_dict()),
         )
 
     async def split_coins(
@@ -1396,8 +1430,9 @@ class WalletRpcClient(RpcClient):
     ) -> SplitCoinsResponse:
         return SplitCoinsResponse.from_json_dict(
             await self.fetch(
-                "split_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "split_coins",
+                args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )
 
     async def combine_coins(
@@ -1409,6 +1444,7 @@ class WalletRpcClient(RpcClient):
     ) -> CombineCoinsResponse:
         return CombineCoinsResponse.from_json_dict(
             await self.fetch(
-                "combine_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
-            )
+                "combine_coins",
+                args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            ),
         )

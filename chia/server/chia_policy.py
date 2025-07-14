@@ -274,7 +274,9 @@ if sys.platform == "win32":
             ov.AcceptEx(listener.fileno(), conn.fileno())
 
             def finish_accept(
-                trans: object, key: socket.socket, ov: _overlapped.Overlapped
+                trans: object,
+                key: socket.socket,
+                ov: _overlapped.Overlapped,
             ) -> tuple[socket.socket, object]:
                 ov.getresult()
                 # Use SO_UPDATE_ACCEPT_CONTEXT so getsockname() etc work.

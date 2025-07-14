@@ -60,7 +60,11 @@ def create_innerpuz(
         backup_ids_hash = recovery_list_hash
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
     return DID_INNERPUZ_MOD.curry(
-        p2_puzzle_or_hash, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata
+        p2_puzzle_or_hash,
+        backup_ids_hash,
+        num_of_backup_ids_needed,
+        singleton_struct,
+        metadata,
     )
 
 
@@ -150,13 +154,16 @@ def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32,
                 [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, recovering_coin_id],
                 [ConditionOpcode.AGG_SIG_UNSAFE, bytes(pubkey), newpuz],
             ],
-        )
+        ),
     )
     return puzzle
 
 
 def create_spend_for_message(
-    parent_of_message: bytes32, recovering_coin: bytes32, newpuz: bytes32, pubkey: G1Element
+    parent_of_message: bytes32,
+    recovering_coin: bytes32,
+    newpuz: bytes32,
+    pubkey: G1Element,
 ) -> CoinSpend:
     """
     Create a CoinSpend for a atestment

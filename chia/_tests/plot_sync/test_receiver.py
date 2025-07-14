@@ -57,7 +57,11 @@ class SyncStepData:
     args: Any
 
     def __init__(
-        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: type[_T_Streamable], *args: Any
+        self,
+        state: State,
+        function: Callable[[_T_Streamable], Any],
+        payload_type: type[_T_Streamable],
+        *args: Any,
     ) -> None:
         self.state = state
         self.function = function
@@ -142,7 +146,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
             invoke_data = step_data[indexes[i] : indexes[i + 1]]
             pre_function_validate(receiver, invoke_data, sync_step.state)
             await sync_step.function(
-                create_payload(sync_step.payload_type, False, invoke_data, i == (len(indexes) - 2))
+                create_payload(sync_step.payload_type, False, invoke_data, i == (len(indexes) - 2)),
             )
             post_function_validate(receiver, invoke_data, sync_step.state)
             if sync_step.state == State.removed:
@@ -186,7 +190,9 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
     receiver._total_effective_plot_size = int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+        sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values()
+        ),
     )
     sync_steps: list[SyncStepData] = [
         SyncStepData(
@@ -217,7 +223,7 @@ def test_default_values(seeded_random: random.Random) -> None:
                 bytes32.random(seeded_random),
             ),  # type:ignore[arg-type]
             dummy_callback,  # type:ignore[arg-type]
-        )
+        ),
     )
 
 
@@ -266,7 +272,9 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_1["total_effective_plot_size"] == int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+        sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values()
+        ),
     )
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
@@ -313,7 +321,9 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_3["total_effective_plot_size"] == int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+        sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values()
+        ),
     )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None
@@ -327,7 +337,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
             receiver.last_sync().sync_id,
             uint32(1),
             uint8(HarvestingMode.CPU),
-        )
+        ),
     )
     assert receiver.to_dict()["syncing"] == {
         "initial": False,
@@ -389,13 +399,21 @@ async def test_invalid_ids(seeded_random: random.Random) -> None:
             receiver._last_sync.sync_id = uint64(1)
             # Test "sync_started last doesn't match"
             invalid_last_sync_id_param = PlotSyncStart(
-                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), uint8(HarvestingMode.CPU)
+                plot_sync_identifier(uint64(0), uint64(0)),
+                False,
+                uint64(2),
+                uint32(0),
+                uint8(HarvestingMode.CPU),
             )
             await current_step.function(invalid_last_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_last_sync_id)
             # Test "last_sync_id == new_sync_id"
             invalid_sync_id_match_param = PlotSyncStart(
-                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), uint8(HarvestingMode.CPU)
+                plot_sync_identifier(uint64(1), uint64(0)),
+                False,
+                uint64(1),
+                uint32(0),
+                uint8(HarvestingMode.CPU),
             )
             await current_step.function(invalid_sync_id_match_param)
             assert_error_response(receiver, ErrorCodes.sync_ids_match)
@@ -404,14 +422,16 @@ async def test_invalid_ids(seeded_random: random.Random) -> None:
         else:
             # Test invalid sync_id
             invalid_sync_id_param = current_step.payload_type(
-                plot_sync_identifier(uint64(10), uint64(receiver.current_sync().next_message_id)), *current_step.args
+                plot_sync_identifier(uint64(10), uint64(receiver.current_sync().next_message_id)),
+                *current_step.args,
             )
             await current_step.function(invalid_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_identifier)
             # Test invalid message_id
             invalid_message_id_param = current_step.payload_type(
                 plot_sync_identifier(
-                    receiver.current_sync().sync_id, uint64(receiver.current_sync().next_message_id + 1)
+                    receiver.current_sync().sync_id,
+                    uint64(receiver.current_sync().next_message_id + 1),
                 ),
                 *current_step.args,
             )
@@ -446,6 +466,6 @@ async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes
                 return
         else:
             await current_step.function(
-                create_payload(current_step.payload_type, state == State.idle, *current_step.args)
+                create_payload(current_step.payload_type, state == State.idle, *current_step.args),
             )
     assert False, "Didn't fail in the expected state"

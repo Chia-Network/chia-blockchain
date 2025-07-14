@@ -31,7 +31,7 @@ async def test_notification_store_backwards_compat() -> None:
         ) as db_wrapper:
             async with db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
+                    "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)",
                 )
                 cursor = await conn.execute(
                     "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
@@ -53,7 +53,10 @@ async def test_notification_store_backwards_compat() -> None:
 )
 @pytest.mark.anyio
 async def test_notifications(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+    self_hostname: str,
+    two_wallet_nodes: Any,
+    trusted: Any,
+    seeded_random: random.Random,
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -73,10 +76,10 @@ async def test_notifications(
 
     if trusted:
         wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
         wallet_node_2.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
     else:
         wallet_node_1.config["trusted_peers"] = {}
@@ -143,7 +146,8 @@ async def test_notifications(
         if case == "allow_larger":
             allow_larger_height = peak.height + 1
         async with notification_manager_1.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=True
+            DEFAULT_TX_CONFIG,
+            push=True,
         ) as action_scope:
             await notification_manager_1.send_new_notification(ph_2, msg, AMOUNT, action_scope, fee=FEE)
         [tx] = action_scope.side_effects.transactions

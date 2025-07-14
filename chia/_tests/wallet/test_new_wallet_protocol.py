@@ -41,7 +41,9 @@ ALL_FILTER = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
 
 
 async def connect_to_simulator(
-    one_node: OneNode, self_hostname: str, mempool_updates: bool = True
+    one_node: OneNode,
+    self_hostname: str,
+    mempool_updates: bool = True,
 ) -> tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]:
     [full_node_service], _, _ = one_node
 
@@ -112,7 +114,8 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
     # Remove puzzle subscriptions
     # Ignore duplicates or missing subscriptions
     resp = await simulator.request_remove_puzzle_subscriptions(
-        wallet_protocol.RequestRemovePuzzleSubscriptions([ph1, ph1, ph2]), peer
+        wallet_protocol.RequestRemovePuzzleSubscriptions([ph1, ph1, ph2]),
+        peer,
     )
     assert resp is not None
 
@@ -123,7 +126,8 @@ async def test_puzzle_subscriptions(one_node: OneNode, self_hostname: str) -> No
 
     # Clear all puzzle subscriptions.
     resp = await simulator.request_remove_puzzle_subscriptions(
-        wallet_protocol.RequestRemovePuzzleSubscriptions(None), peer
+        wallet_protocol.RequestRemovePuzzleSubscriptions(None),
+        peer,
     )
     assert resp is not None
 
@@ -148,7 +152,8 @@ async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None
     # Add coin subscriptions, ignore duplicates
     # Response can be in any order
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState([coin1, coin2, coin2], None, genesis_challenge, True), peer
+        wallet_protocol.RequestCoinState([coin1, coin2, coin2], None, genesis_challenge, True),
+        peer,
     )
     assert resp is not None
 
@@ -159,7 +164,8 @@ async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None
 
     # Add another puzzle hash and existing ones
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState([coin1, coin2, coin3], None, genesis_challenge, True), peer
+        wallet_protocol.RequestCoinState([coin1, coin2, coin3], None, genesis_challenge, True),
+        peer,
     )
     assert resp is not None
 
@@ -171,7 +177,8 @@ async def test_coin_subscriptions(one_node: OneNode, self_hostname: str) -> None
     # Remove coin subscriptions
     # Ignore duplicates or missing subscriptions
     resp = await simulator.request_remove_coin_subscriptions(
-        wallet_protocol.RequestRemoveCoinSubscriptions([coin1, coin1, coin2]), peer
+        wallet_protocol.RequestRemoveCoinSubscriptions([coin1, coin1, coin2]),
+        peer,
     )
     assert resp is not None
 
@@ -210,7 +217,11 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
 
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            first_batch, None, genesis_challenge, wallet_protocol.CoinStateFilters(False, False, False, uint64(0)), True
+            first_batch,
+            None,
+            genesis_challenge,
+            wallet_protocol.CoinStateFilters(False, False, False, uint64(0)),
+            True,
         ),
         peer,
     )
@@ -236,20 +247,21 @@ async def test_subscription_limits(one_node: OneNode, self_hostname: str) -> Non
 
     overflow_ph_response = wallet_protocol.RejectPuzzleState.from_bytes(resp.data)
     assert overflow_ph_response == wallet_protocol.RejectPuzzleState(
-        uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+        uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT),
     )
 
     assert subs.puzzle_subscriptions(peer.peer_node_id) == first_batch_set
 
     # Try to overflow with coin subscriptions
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState([bytes32(b"coin" * 8)], None, genesis_challenge, True), peer
+        wallet_protocol.RequestCoinState([bytes32(b"coin" * 8)], None, genesis_challenge, True),
+        peer,
     )
     assert resp is not None
 
     overflow_coin_response = wallet_protocol.RejectCoinState.from_bytes(resp.data)
     assert overflow_coin_response == wallet_protocol.RejectCoinState(
-        uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+        uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT),
     )
 
 
@@ -315,7 +327,8 @@ async def test_request_coin_state_and_subscribe(one_node: OneNode, self_hostname
 
     # Request initial state (empty in this case) and subscribe
     resp = await simulator.request_coin_state(
-        wallet_protocol.RequestCoinState([c1, c2, c3, c3, c4], None, genesis, True), peer
+        wallet_protocol.RequestCoinState([c1, c2, c3, c3, c4], None, genesis, True),
+        peer,
     )
     assert resp is not None
 
@@ -340,7 +353,7 @@ async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -
 
     # Reorg
     await simulator.reorg_from_index_to_new_index(
-        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32.zeros)
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32.zeros),
     )
 
     # Request coin state, should reject due to reorg
@@ -348,7 +361,7 @@ async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -
     assert resp is not None
 
     assert wallet_protocol.RejectCoinState.from_bytes(resp.data) == wallet_protocol.RejectCoinState(
-        uint8(wallet_protocol.RejectStateReason.REORG)
+        uint8(wallet_protocol.RejectStateReason.REORG),
     )
 
 
@@ -430,7 +443,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
                     spent_block_index=uint32(1 if i % 2 == 0 else 0),
                     coinbase=False,
                     timestamp=uint64(0),
-                )
+                ),
             )
 
     ignored_coin = CoinRecord(
@@ -449,7 +462,8 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
 
     # Request no coin states
     resp = await simulator.request_puzzle_state(
-        wallet_protocol.RequestPuzzleState([], None, genesis, filters, False), peer
+        wallet_protocol.RequestPuzzleState([], None, genesis, filters, False),
+        peer,
     )
     assert resp is not None
 
@@ -460,7 +474,8 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
 
     # Request coin state
     resp = await simulator.request_puzzle_state(
-        wallet_protocol.RequestPuzzleState(puzzle_hashes, None, genesis, filters, False), peer
+        wallet_protocol.RequestPuzzleState(puzzle_hashes, None, genesis, filters, False),
+        peer,
     )
     assert resp is not None
 
@@ -525,20 +540,24 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
 
     # Reorg
     await simulator.reorg_from_index_to_new_index(
-        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32.zeros)
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32.zeros),
     )
 
     # Request coin state, should reject due to reorg
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            [], uint32(5), header_hash, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
+            [],
+            uint32(5),
+            header_hash,
+            wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+            False,
         ),
         peer,
     )
     assert resp is not None
 
     assert wallet_protocol.RejectPuzzleState.from_bytes(resp.data) == wallet_protocol.RejectPuzzleState(
-        uint8(wallet_protocol.RejectStateReason.REORG)
+        uint8(wallet_protocol.RejectStateReason.REORG),
     )
 
 
@@ -576,7 +595,11 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
     # only after height 10000, so that the limit of 100000 isn't exceeded
     resp = await simulator.request_puzzle_state(
         wallet_protocol.RequestPuzzleState(
-            [ph], uint32(1), h1, wallet_protocol.CoinStateFilters(True, True, True, uint64(0)), False
+            [ph],
+            uint32(1),
+            h1,
+            wallet_protocol.CoinStateFilters(True, True, True, uint64(0)),
+            False,
         ),
         peer,
     )
@@ -684,7 +707,10 @@ async def sync_puzzle_hashes(
 @pytest.mark.anyio
 @pytest.mark.parametrize("puzzle_hash_count,coins_per_block", [(0, 0), (5, 100), (3000, 3), (25000, 1)])
 async def test_sync_puzzle_state(
-    one_node: OneNode, self_hostname: str, puzzle_hash_count: int, coins_per_block: int
+    one_node: OneNode,
+    self_hostname: str,
+    puzzle_hash_count: int,
+    coins_per_block: int,
 ) -> None:
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
@@ -828,7 +854,11 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     reward_1 = Coin(std_hash(b"reward 1"), std_hash(b"reward puzzle hash"), uint64(1000))
     reward_2 = Coin(std_hash(b"reward 2"), std_hash(b"reward puzzle hash"), uint64(2000))
     await simulator.full_node.coin_store.new_block(
-        uint32(2), uint64(10000), [reward_1, reward_2], [(coin.name(), coin, False) for coin, _ in new_coins], []
+        uint32(2),
+        uint64(10000),
+        [reward_1, reward_2],
+        [(coin.name(), coin, False) for coin, _ in new_coins],
+        [],
     )
     await simulator.full_node.hint_store.add_hints([(coin.name(), hint) for coin, hint in new_coins])
 
@@ -856,7 +886,11 @@ async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
     reward_1 = Coin(std_hash(b"reward 1"), std_hash(b"reward puzzle hash"), uint64(3000))
     reward_2 = Coin(std_hash(b"reward 2"), std_hash(b"reward puzzle hash"), uint64(4000))
     await full_node.coin_store.new_block(
-        uint32(height + 1), uint64(200000), [reward_1, reward_2], [(coin.name(), coin, False)], []
+        uint32(height + 1),
+        uint64(200000),
+        [reward_1, reward_2],
+        [(coin.name(), coin, False)],
+        [],
     )
     await full_node.hint_store.add_hints([(coin.name(), hint)])
 
@@ -864,7 +898,11 @@ async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
 
 
 async def subscribe_coin(
-    simulator: FullNodeSimulator, coin_id: bytes32, peer: WSChiaConnection, *, existing_coin_states: int = 1
+    simulator: FullNodeSimulator,
+    coin_id: bytes32,
+    peer: WSChiaConnection,
+    *,
+    existing_coin_states: int = 1,
 ) -> None:
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
@@ -878,13 +916,18 @@ async def subscribe_coin(
 
 
 async def subscribe_puzzle(
-    simulator: FullNodeSimulator, puzzle_hash: bytes32, peer: WSChiaConnection, *, existing_coin_states: int = 1
+    simulator: FullNodeSimulator,
+    puzzle_hash: bytes32,
+    peer: WSChiaConnection,
+    *,
+    existing_coin_states: int = 1,
 ) -> None:
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
 
     msg = await simulator.request_puzzle_state(
-        wallet_protocol.RequestPuzzleState([puzzle_hash], None, genesis, ALL_FILTER, True), peer
+        wallet_protocol.RequestPuzzleState([puzzle_hash], None, genesis, ALL_FILTER, True),
+        peer,
     )
     assert msg is not None
 
@@ -895,7 +938,8 @@ async def subscribe_puzzle(
 
 async def spend_coin(simulator: FullNodeSimulator, coin: Coin, solution: Optional[Program] = None) -> bytes32:
     bundle = SpendBundle(
-        [CoinSpend(coin, IDENTITY_PUZZLE, Program.to([]) if solution is None else solution)], AugSchemeMPL.aggregate([])
+        [CoinSpend(coin, IDENTITY_PUZZLE, Program.to([]) if solution is None else solution)],
+        AugSchemeMPL.aggregate([]),
     )
     tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
     assert tx_resp is not None
@@ -933,7 +977,8 @@ async def test_spent_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     # Farm a block and listen for the mempool removal event
     await simulator.farm_blocks_to_puzzlehash(1)
     await assert_mempool_removed(
-        queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+        queue,
+        {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))},
     )
 
 
@@ -960,7 +1005,8 @@ async def test_spent_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     # Farm a block and listen for the mempool removal event
     await simulator.farm_blocks_to_puzzlehash(1)
     await assert_mempool_removed(
-        queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+        queue,
+        {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))},
     )
 
 
@@ -987,7 +1033,8 @@ async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
     # Farm a block and listen for the mempool removal event
     await simulator.farm_blocks_to_puzzlehash(1)
     await assert_mempool_removed(
-        queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+        queue,
+        {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))},
     )
 
 
@@ -1000,7 +1047,9 @@ async def test_created_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
     await subscribe_coin(simulator, child_coin.name(), peer, existing_coin_states=0)
     transaction_id = await spend_coin(
-        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
+        simulator,
+        coin,
+        solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]]),
     )
 
     # We should have gotten a mempool update for this transaction
@@ -1017,7 +1066,8 @@ async def test_created_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     # Farm a block and listen for the mempool removal event
     await simulator.farm_blocks_to_puzzlehash(1)
     await assert_mempool_removed(
-        queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+        queue,
+        {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))},
     )
 
 
@@ -1030,7 +1080,9 @@ async def test_created_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
     await subscribe_puzzle(simulator, child_coin.puzzle_hash, peer, existing_coin_states=0)
     transaction_id = await spend_coin(
-        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
+        simulator,
+        coin,
+        solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]]),
     )
 
     # We should have gotten a mempool update for this transaction
@@ -1047,7 +1099,8 @@ async def test_created_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     # Farm a block and listen for the mempool removal event
     await simulator.farm_blocks_to_puzzlehash(1)
     await assert_mempool_removed(
-        queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+        queue,
+        {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))},
     )
 
 
@@ -1061,7 +1114,9 @@ async def test_created_hint_mempool_update(mpu_setup: Mpu) -> None:
     hint = std_hash(b"new hint")
     await subscribe_puzzle(simulator, hint, peer, existing_coin_states=0)
     transaction_id = await spend_coin(
-        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount, [hint]]])
+        simulator,
+        coin,
+        solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount, [hint]]]),
     )
 
     # We should have gotten a mempool update for this transaction
@@ -1078,7 +1133,8 @@ async def test_created_hint_mempool_update(mpu_setup: Mpu) -> None:
     # Farm a block and listen for the mempool removal event
     await simulator.farm_blocks_to_puzzlehash(1)
     await assert_mempool_removed(
-        queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+        queue,
+        {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))},
     )
 
 

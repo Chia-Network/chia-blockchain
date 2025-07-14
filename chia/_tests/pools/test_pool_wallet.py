@@ -95,7 +95,8 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
 
     # Mock pool_config.update_pool_config to capture the updated configs
     async def mock_pool_config_update_pool_config(
-        root_path: Path, pool_config_list: list[MockPoolWalletConfig]
+        root_path: Path,
+        pool_config_list: list[MockPoolWalletConfig],
     ) -> None:
         nonlocal updated_configs
         updated_configs = pool_config_list
@@ -178,7 +179,8 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
 
     # Mock pool_config.update_pool_config to capture the updated configs
     async def mock_pool_config_update_pool_config(
-        root_path: Path, pool_config_list: list[MockPoolWalletConfig]
+        root_path: Path,
+        pool_config_list: list[MockPoolWalletConfig],
     ) -> None:
         nonlocal updated_configs
         updated_configs = pool_config_list

@@ -39,16 +39,16 @@ def test_compute_spend_hints_and_additions() -> None:
 
     not_hinted_coin = HintedCoin(Coin(parent_coin.coin.name(), bytes32.zeros, uint64(0)), None)
     assert compute_spend_hints_and_additions(
-        make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0, [["not", "a"], "hint"]]]))
+        make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0, [["not", "a"], "hint"]]])),
     )[0] == {not_hinted_coin.coin.name(): not_hinted_coin}
 
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0] for _ in range(10000)]))
+            make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0] for _ in range(10000)])),
         )
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(parent_coin.coin, Program.to(1), Program.to([[50, bytes48.zeros, b""] for _ in range(10000)]))
+            make_spend(parent_coin.coin, Program.to(1), Program.to([[50, bytes48.zeros, b""] for _ in range(10000)])),
         )
 
 
@@ -68,7 +68,7 @@ def test_cs_config() -> None:
         {
             "excluded_coins": [coin_to_exclude.to_json_dict()],
             "excluded_coin_ids": [coin_id_to_exclude.hex()],
-        }
+        },
     ).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex(), "0x" + coin_id_to_exclude.hex()],
@@ -76,7 +76,7 @@ def test_cs_config() -> None:
     assert CoinSelectionConfigLoader.from_json_dict(
         {
             "excluded_coins": [coin_to_exclude.to_json_dict()],
-        }
+        },
     ).override(max_coin_amount=100).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex()],
@@ -89,7 +89,9 @@ def test_tx_config() -> None:
     assert TXConfigLoader.from_json_dict({}).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == default_tx_config
     assert DEFAULT_TX_CONFIG.override(reuse_puzhash=True).to_json_dict() == {**default_tx_config, "reuse_puzhash": True}
     assert TXConfigLoader.from_json_dict({}).autofill(
-        constants=DEFAULT_CONSTANTS, config={"reuse_public_key_for_change": {"1": True}}, logged_in_fingerprint=1
+        constants=DEFAULT_CONSTANTS,
+        config={"reuse_public_key_for_change": {"1": True}},
+        logged_in_fingerprint=1,
     ).to_json_dict() == {**default_tx_config, "reuse_puzhash": True}
 
 

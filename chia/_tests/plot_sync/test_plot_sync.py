@@ -240,7 +240,12 @@ class Environment:
             await time_out_assert(20, plot_manager.needs_refresh, value=False)
             harvester_index = self.harvesters.index(harvester)
             await time_out_assert(
-                10, synced, True, harvester.plot_sync_sender, receiver, last_sync_ids[harvester_index]
+                10,
+                synced,
+                True,
+                harvester.plot_sync_sender,
+                receiver,
+                last_sync_ids[harvester_index],
             )
             expected = self.expected[harvester_index]
             assert plot_manager.plot_count() == len(receiver.plots()) == expected.valid_count
@@ -323,7 +328,8 @@ async def environment(
                     config["harvester"]["plot_directories"] = []
                     save_config(harvester.root_path, "config.yaml", config)
                 harvester.plot_manager.set_public_keys(
-                    bt.plot_manager.farmer_public_keys.copy(), bt.plot_manager.pool_public_keys.copy()
+                    bt.plot_manager.farmer_public_keys.copy(),
+                    bt.plot_manager.pool_public_keys.copy(),
                 )
 
             assert len(farmer.plot_sync_receivers) == 2
@@ -408,7 +414,8 @@ async def test_sync_invalid(environment: Environment) -> None:
         env.expected[i].add_valid([env.dir_invalid.plot_info_list()[0]])
         env.expected[i].remove_invalid([env.dir_invalid.path_list()[0]])
         env.harvesters[i].plot_manager.refresh_parameter = replace(
-            env.harvesters[i].plot_manager.refresh_parameter, retry_invalid_seconds=uint32(0)
+            env.harvesters[i].plot_manager.refresh_parameter,
+            retry_invalid_seconds=uint32(0),
         )
     await env.run_sync_test()
     for i in [0, 1]:
@@ -582,7 +589,10 @@ async def test_sync_start_and_disconnect_while_sync_is_active(
         return harvester.server.node_id in farmer.plot_sync_receivers
 
     async def disconnecting_process(
-        self: Receiver, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
+        self: Receiver,
+        method: Callable[[_T_Streamable], Any],
+        message_type: ProtocolMessageTypes,
+        message: Any,
     ) -> None:
         if self.current_sync().state == State.loaded:
             harvester.plot_manager.trigger_refresh()

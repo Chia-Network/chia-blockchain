@@ -146,7 +146,7 @@ async def test_services_terminate(
                 closing_chia_root_popen(
                     chia_root=chia_root,
                     args=[sys.executable, "-m", module_path],
-                )
+                ),
             )
 
             if create_service is None:
@@ -158,7 +158,7 @@ async def test_services_terminate(
                         port=uint16(rpc_port),
                         root_path=chia_root.path,
                         net_config=config,
-                    )
+                    ),
                 )
 
                 start = time.monotonic()

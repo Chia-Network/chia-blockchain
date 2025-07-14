@@ -117,7 +117,9 @@ def find_authentication_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Op
 
 
 def match_address_to_sk(
-    sk: PrivateKey, addresses_to_search: list[bytes32], max_ph_to_search: int = 500
+    sk: PrivateKey,
+    addresses_to_search: list[bytes32],
+    max_ph_to_search: int = 500,
 ) -> set[bytes32]:
     """
     Checks the list of given address is a derivation of the given sk within the given number of derivations

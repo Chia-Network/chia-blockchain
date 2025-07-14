@@ -50,7 +50,7 @@ class CoinStore:
                 " puzzle_hash blob,"
                 " coin_parent blob,"
                 " amount blob,"  # we use a blob of 8 bytes to store uint64
-                " timestamp bigint)"
+                " timestamp bigint)",
             )
 
             # Useful for reorg lookups
@@ -80,7 +80,7 @@ class CoinStore:
                     CREATE INDEX IF NOT EXISTS coin_record_ph_ff_unspent_idx
                         ON coin_record(puzzle_hash, spent_index)
                         WHERE spent_index = -1
-                    """
+                    """,
                 )
 
         return self
@@ -124,7 +124,7 @@ class CoinStore:
                     coin.parent_coin_info,
                     coin.amount.stream_to_bytes(),
                     timestamp,
-                )
+                ),
             )
 
         if height == 0:
@@ -146,7 +146,7 @@ class CoinStore:
                     coin.parent_coin_info,
                     coin.amount.stream_to_bytes(),
                     timestamp,
-                )
+                ),
             )
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -192,7 +192,7 @@ class CoinStore:
                         f"coin_parent, amount, timestamp FROM coin_record "
                         f"WHERE coin_name in ({','.join(['?'] * len(names_db))}) ",
                         names_db,
-                    )
+                    ),
                 )
 
             for cursor in cursors:
@@ -628,7 +628,7 @@ class CoinStore:
                 rows_updated += ret.rowcount
             if rows_updated != len(coin_names):
                 raise ValueError(
-                    f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
+                    f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}",
                 )
 
     # Lookup the most recent unspent lineage that matches a puzzle hash
@@ -653,7 +653,9 @@ class CoinStore:
                     return None
                 coin_id, parent_id, parent_parent_id = rows[0]
                 return UnspentLineageInfo(
-                    coin_id=bytes32(coin_id), parent_id=bytes32(parent_id), parent_parent_id=bytes32(parent_parent_id)
+                    coin_id=bytes32(coin_id),
+                    parent_id=bytes32(parent_id),
+                    parent_parent_id=bytes32(parent_parent_id),
                 )
 
     async def is_empty(self) -> bool:

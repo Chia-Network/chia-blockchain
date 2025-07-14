@@ -2381,7 +2381,7 @@ LARGE_BLOCK: FullBlock = FullBlock.from_bytes_unchecked(
             "d016a2a1d0ce048976c4a0d08e0c8976469068470685766490686782443b32bb"
             "823b3228ba9d0a04da2a41a21d1914da2243a29d0912ed8841a1bdd410c138e0"
             "05a37d07968c178cf60e2cee4eafeaadc4150f8f764270684f0a88362348b483"
-            "6986473b21380289b502"
-        )
-    )
+            "6986473b21380289b502",
+        ),
+    ),
 )

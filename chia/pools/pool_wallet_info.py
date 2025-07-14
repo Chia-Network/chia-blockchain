@@ -95,7 +95,12 @@ def create_pool_state(
     if state not in {s.value for s in PoolSingletonState}:
         raise AssertionError(f"state {state} is not a valid PoolSingletonState,")
     ps = PoolState(
-        POOL_PROTOCOL_VERSION, uint8(state), target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
+        POOL_PROTOCOL_VERSION,
+        uint8(state),
+        target_puzzle_hash,
+        owner_pubkey,
+        pool_url,
+        relative_lock_height,
     )
     # TODO Move verify here
     return ps

@@ -17,7 +17,9 @@ from chia.util.default_root import resolve_root_path
 
 @contextlib.asynccontextmanager
 async def get_client(
-    rpc_port: Optional[int], fingerprint: Optional[int] = None, root_path: Optional[Path] = None
+    rpc_port: Optional[int],
+    fingerprint: Optional[int] = None,
+    root_path: Optional[Path] = None,
 ) -> AsyncIterator[tuple[DataLayerRpcClient, dict[str, Any]]]:
     root_path = resolve_root_path(override=root_path)
 
@@ -171,7 +173,10 @@ async def get_keys_values_cmd(
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         res = await client.get_keys_values(
-            store_id=store_id, root_hash=root_hash, page=page, max_page_size=max_page_size
+            store_id=store_id,
+            root_hash=root_hash,
+            page=page,
+            max_page_size=max_page_size,
         )
         print(json.dumps(res, indent=2, sort_keys=True))
 
@@ -234,7 +239,11 @@ async def get_kv_diff_cmd(
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
         res = await client.get_kv_diff(
-            store_id=store_id, hash_1=hash_1, hash_2=hash_2, page=page, max_page_size=max_page_size
+            store_id=store_id,
+            hash_1=hash_1,
+            hash_2=hash_2,
+            page=page,
+            max_page_size=max_page_size,
         )
         print(json.dumps(res, indent=2, sort_keys=True))
 

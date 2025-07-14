@@ -36,20 +36,21 @@ async def netstorge_async(root_path: Path, rpc_port: Optional[int], delta_block_
             older_block_header = await client.get_block_record_by_height(older_block_height)
             assert newer_block_header is not None and older_block_header is not None
             network_space_bytes_estimate = await client.get_network_space(
-                newer_block_header.header_hash, older_block_header.header_hash
+                newer_block_header.header_hash,
+                older_block_header.header_hash,
             )
             print(
                 "Older Block\n"
                 f"Block Height: {older_block_header.height}\n"
                 f"Weight:           {older_block_header.weight}\n"
                 f"VDF Iterations:   {older_block_header.total_iters}\n"
-                f"Header Hash:      0x{older_block_header.header_hash}\n"
+                f"Header Hash:      0x{older_block_header.header_hash}\n",
             )
             print(
                 "Newer Block\n"
                 f"Block Height: {newer_block_header.height}\n"
                 f"Weight:           {newer_block_header.weight}\n"
                 f"VDF Iterations:   {newer_block_header.total_iters}\n"
-                f"Header Hash:      0x{newer_block_header.header_hash}\n"
+                f"Header Hash:      0x{newer_block_header.header_hash}\n",
             )
             print(format_bytes(network_space_bytes_estimate))

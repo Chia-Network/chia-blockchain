@@ -23,7 +23,9 @@ class BlockRecordsProtocol(Protocol):
 
 class BlocksProtocol(BlockRecordsProtocol, Protocol):
     async def lookup_block_generators(
-        self, header_hash: bytes32, generator_refs: set[uint32]
+        self,
+        header_hash: bytes32,
+        generator_refs: set[uint32],
     ) -> dict[uint32, bytes]: ...
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]: ...
     def add_block_record(self, block_record: BlockRecord) -> None: ...
@@ -38,13 +40,18 @@ class BlockchainInterface(BlocksProtocol, Protocol):
     async def get_block_records_in_range(self, start: int, stop: int) -> dict[bytes32, BlockRecord]: ...
 
     async def get_header_blocks_in_range(
-        self, start: int, stop: int, tx_filter: bool = True
+        self,
+        start: int,
+        stop: int,
+        tx_filter: bool = True,
     ) -> dict[bytes32, HeaderBlock]: ...
 
     async def get_block_records_at(self, heights: list[uint32]) -> list[BlockRecord]: ...
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_hash: bytes32, segments: list[SubEpochChallengeSegment]
+        self,
+        sub_epoch_summary_hash: bytes32,
+        segments: list[SubEpochChallengeSegment],
     ) -> None: ...
 
     async def get_sub_epoch_challenge_segments(

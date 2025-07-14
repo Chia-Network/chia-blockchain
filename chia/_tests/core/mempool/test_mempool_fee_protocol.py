@@ -21,7 +21,9 @@ from chia.wallet.wallet import Wallet
 @pytest.mark.anyio
 async def test_protocol_messages(
     simulator_and_wallet: tuple[
-        list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools
+        list[Union[FullNodeAPI, FullNodeSimulator]],
+        list[tuple[Wallet, ChiaServer]],
+        BlockTools,
     ],
 ) -> None:
     full_nodes, _wallets, bt = simulator_and_wallet

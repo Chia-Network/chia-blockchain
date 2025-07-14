@@ -97,7 +97,10 @@ def generate_example_submission_data(beta_root_path: Path, versions: int, logs: 
 
 
 def generate_beta_config(
-    root_path: Path, enabled: bool, beta_path: Path, interval: int = metrics_log_interval_default
+    root_path: Path,
+    enabled: bool,
+    beta_path: Path,
+    interval: int = metrics_log_interval_default,
 ) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
         config["beta"] = {
@@ -142,7 +145,9 @@ def test_configure_no_beta_config(root_path_populated_with_config: Path) -> None
 @pytest.mark.parametrize("accept_existing_interval", [True, False])
 @pytest.mark.parametrize("accept_existing_path", [True, False])
 def test_beta_configure_interactive(
-    root_path_populated_with_config: Path, accept_existing_path: bool, accept_existing_interval: bool
+    root_path_populated_with_config: Path,
+    accept_existing_path: bool,
+    accept_existing_interval: bool,
 ) -> None:
     assert metrics_log_interval_default != metrics_log_interval_min
     root_path = root_path_populated_with_config
@@ -242,7 +247,9 @@ def test_beta_enable_interactive_decline_warning(root_path_populated_with_config
 @pytest.mark.parametrize("write_test", [True, False])
 @pytest.mark.parametrize("command", [configure, enable])
 def test_beta_invalid_directories(
-    root_path_populated_with_config: Path, write_test: bool, command: Callable[[Path, str, str], Result]
+    root_path_populated_with_config: Path,
+    write_test: bool,
+    command: Callable[[Path, str, str], Result],
 ) -> None:
     root_path = root_path_populated_with_config
     beta_path = root_path / "beta"
@@ -273,7 +280,10 @@ def test_beta_invalid_directories(
     ],
 )
 def test_beta_configure_interval(
-    root_path_populated_with_config: Path, interval: int, valid: bool, option: str
+    root_path_populated_with_config: Path,
+    interval: int,
+    valid: bool,
+    option: str,
 ) -> None:
     root_path = root_path_populated_with_config
     beta_path = root_path / "beta"
@@ -327,7 +337,12 @@ def test_beta_disable(root_path_populated_with_config: Path, enabled: bool) -> N
     ],
 )
 def test_prepare_submission(
-    root_path_populated_with_config: Path, versions: int, logs: int, choice: int, exit_code: int, output: str
+    root_path_populated_with_config: Path,
+    versions: int,
+    logs: int,
+    choice: int,
+    exit_code: int,
+    output: str,
 ) -> None:
     root_path = root_path_populated_with_config
     beta_path = root_path / "beta"

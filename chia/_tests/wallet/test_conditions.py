@@ -93,28 +93,52 @@ def test_completeness() -> None:
     "serializations",
     [
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_PARENT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_PARENT,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_PUZZLE, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_AMOUNT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_UNSAFE, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
-            ConditionOpcode.AGG_SIG_ME, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+            ConditionOpcode.AGG_SIG_ME,
+            Program.to([PK, MSG]),
+            ["pubkey", "msg"],
+            [PK_HEX, MSG_HEX],
         ),
         ConditionSerializations(
             ConditionOpcode.CREATE_COIN,
@@ -129,7 +153,10 @@ def test_completeness() -> None:
         ConditionSerializations(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, Program.to([HASH]), ["msg"], [HASH_HEX]),
         ConditionSerializations(ConditionOpcode.ASSERT_CONCURRENT_SPEND, Program.to([HASH]), ["coin_id"], [HASH_HEX]),
         ConditionSerializations(
-            ConditionOpcode.ASSERT_CONCURRENT_PUZZLE, Program.to([HASH]), ["puzzle_hash"], [HASH_HEX]
+            ConditionOpcode.ASSERT_CONCURRENT_PUZZLE,
+            Program.to([HASH]),
+            ["puzzle_hash"],
+            [HASH_HEX],
         ),
         ConditionSerializations(ConditionOpcode.ASSERT_MY_COIN_ID, Program.to([HASH]), ["coin_id"], [HASH_HEX]),
         ConditionSerializations(ConditionOpcode.ASSERT_MY_PARENT_ID, Program.to([HASH]), ["coin_id"], [HASH_HEX]),
@@ -286,7 +313,7 @@ class TimelockInfo:
 )
 def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
     assert timelock_info.parsed_info == parse_timelock_info(
-        [UnknownCondition(Program.to(None), []), *timelock_info.drivers]
+        [UnknownCondition(Program.to(None), []), *timelock_info.drivers],
     )
     assert timelock_info.parsed_info.to_conditions() == (
         timelock_info.conditions_after if timelock_info.conditions_after is not None else timelock_info.drivers

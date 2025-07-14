@@ -458,7 +458,7 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
                     PRIMARY KEY (id),
                     FOREIGN KEY (friend) REFERENCES people
                 )
-                """
+                """,
             ):
                 pass
 
@@ -517,7 +517,7 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
                     PRIMARY KEY (id),
                     FOREIGN KEY (friend) REFERENCES people
                 )
-                """
+                """,
             ):
                 pass
 

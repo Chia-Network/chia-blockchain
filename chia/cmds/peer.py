@@ -21,11 +21,20 @@ from chia.cmds.peer_funcs import peer_async
     default=None,
 )
 @click.option(
-    "-c", "--connections", help="List connections to the specified service", is_flag=True, type=bool, default=False
+    "-c",
+    "--connections",
+    help="List connections to the specified service",
+    is_flag=True,
+    type=bool,
+    default=False,
 )
 @click.option("-a", "--add-connection", help="Connect specified Chia service to ip:port", type=str, default="")
 @click.option(
-    "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
+    "-r",
+    "--remove-connection",
+    help="Remove a Node by the first 8 characters of NodeID",
+    type=str,
+    default="",
 )
 @click.argument("node_type", type=click.Choice(list(NODE_TYPES.keys())), nargs=1, required=True)
 @click.pass_context
@@ -47,5 +56,5 @@ def peer_cmd(
             connections,
             add_connection,
             remove_connection,
-        )
+        ),
     )

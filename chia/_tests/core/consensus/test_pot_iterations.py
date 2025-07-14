@@ -18,7 +18,9 @@ from chia.consensus.pot_iterations import (
 from chia.util.hash import std_hash
 
 test_constants = DEFAULT_CONSTANTS.replace(
-    NUM_SPS_SUB_SLOT=uint8(32), SUB_SLOT_TIME_TARGET=uint16(300), HARD_FORK2_HEIGHT=uint32(100000000)
+    NUM_SPS_SUB_SLOT=uint8(32),
+    SUB_SLOT_TIME_TARGET=uint16(300),
+    HARD_FORK2_HEIGHT=uint32(100000000),
 )
 
 
@@ -114,7 +116,13 @@ class TestPotIterations:
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
                         # TODO: todo_v2_plots
                         required_iters = calculate_iterations_quality(
-                            constants, quality, PlotSize.make_v1(k), difficulty, sp_hash, uint64(100000000), uint32(0)
+                            constants,
+                            quality,
+                            PlotSize.make_v1(k),
+                            difficulty,
+                            sp_hash,
+                            uint64(100000000),
+                            uint32(0),
                         )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1

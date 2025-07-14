@@ -125,7 +125,7 @@ async def create(
                 return None
     except Exception as e:
         raise CliRpcConnectionError(
-            f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with: chia start -r farmer"
+            f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with: chia start -r farmer",
         )
 
 
@@ -146,14 +146,14 @@ async def pprint_pool_wallet_state(
     print(f"Launcher ID: {pool_wallet_info.launcher_id}")
     print(
         "Target address (not for plotting): "
-        f"{encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}"
+        f"{encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}",
     )
     print(f"Number of plots: {0 if pool_state_dict is None else pool_state_dict['plot_count']}")
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
 
     print(
         f"Pool contract address (use ONLY for plotting - do not send money to this address): "
-        f"{encode_puzzle_hash(pool_wallet_info.p2_singleton_puzzle_hash, address_prefix)}"
+        f"{encode_puzzle_hash(pool_wallet_info.p2_singleton_puzzle_hash, address_prefix)}",
     )
     if pool_wallet_info.target is not None:
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
@@ -247,7 +247,10 @@ async def show(
                 )
             else:
                 await pprint_all_pool_wallet_state(
-                    wallet_info.client, summaries_response, address_prefix, pool_state_dict
+                    wallet_info.client,
+                    summaries_response,
+                    address_prefix,
+                    pool_state_dict,
                 )
     except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
         await pprint_all_pool_wallet_state(wallet_info.client, summaries_response, address_prefix, pool_state_dict)
@@ -301,7 +304,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
     if wallet_id is None:
         if len(pool_wallets) == 0:
             raise CliRpcConnectionError(
-                "No pool wallet found. Use 'chia plotnft create' to create a new pooling wallet."
+                "No pool wallet found. Use 'chia plotnft create' to create a new pooling wallet.",
             )
         if len(pool_wallets) > 1:
             raise CliRpcConnectionError("More than one pool wallet found. Use -i to specify pool wallet id.")
@@ -355,7 +358,7 @@ async def join_pool(
 
     if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
         raise CliRpcConnectionError(
-            f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}"
+            f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}",
         )
 
     pprint(json_dict)
@@ -395,7 +398,12 @@ async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Op
         DEFAULT_TX_CONFIG,
     )
     await submit_tx_with_confirmation(
-        msg, prompt, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
+        msg,
+        prompt,
+        func,
+        wallet_info.client,
+        wallet_info.fingerprint,
+        selected_wallet_id,
     )
 
 
@@ -409,8 +417,8 @@ async def inspect_cmd(wallet_info: WalletClientInfo, wallet_id: Optional[int]) -
                 "unconfirmed_transactions": [
                     {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in res.unconfirmed_transactions
                 ],
-            }
-        )
+            },
+        ),
     )
 
 

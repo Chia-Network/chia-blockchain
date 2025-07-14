@@ -42,7 +42,10 @@ class ClawbackPuzzleDecorator:
         )
 
     def solve(
-        self, inner_puzzle: Program, primaries: list[CreateCoin], inner_solution: Program
+        self,
+        inner_puzzle: Program,
+        primaries: list[CreateCoin],
+        inner_solution: Program,
     ) -> tuple[Program, Program]:
         # Append REMARK condition [1, "CLAWBACK", TIME_LOCK, SENDER_PUZHSAH, RECIPIENT_PUZHSAH]
         if len(primaries) == 1:
@@ -53,7 +56,7 @@ class ClawbackPuzzleDecorator:
                     ConditionOpcode.REMARK.value,
                     RemarkDataType.CLAWBACK,
                     bytes(VersionedBlob(ClawbackVersion.V1.value, bytes(metadata))),
-                ]
+                ],
             )
             # Insert the REMARK condition into the condition list
             conditions = remark_condition.cons(inner_solution.rest().first().rest())
@@ -62,7 +65,10 @@ class ClawbackPuzzleDecorator:
         return self.decorate(inner_puzzle), inner_solution
 
     def decorate_memos(
-        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: list[bytes]
+        self,
+        inner_puzzle: Program,
+        target_puzzle_hash: bytes32,
+        memos: list[bytes],
     ) -> tuple[Program, list[bytes]]:
         memos.insert(0, target_puzzle_hash)
         return self.decorate(inner_puzzle), memos

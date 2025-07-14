@@ -50,13 +50,13 @@ _24keyinfo = KeyInfo(
     ),
     entropy=bytes.fromhex("b1fc1a7717343572077f7aecb25ded77c4a3d93b9e040a5f8649f2aa1e1e5632"),
     private_key=PrivateKey.from_bytes(
-        bytes.fromhex("6c6bb4cc3dae03b8d0b327dd6765834464a883f7ca7df134970842055efe8afc")
+        bytes.fromhex("6c6bb4cc3dae03b8d0b327dd6765834464a883f7ca7df134970842055efe8afc"),
     ),
     fingerprint=uint32(1310648153),
     public_key=G1Element.from_bytes(
         bytes.fromhex(
-            "b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4"
-        )
+            "b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4",
+        ),
     ),
     bech32="bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7",
 )
@@ -64,13 +64,13 @@ _12keyinfo = KeyInfo(
     mnemonic=("steak rely trumpet cake banner easy consider cream marriage harvest truly shrimp"),
     entropy=bytes.fromhex("d516afa61021248b8bd197884d2fa5e3"),
     private_key=PrivateKey.from_bytes(
-        bytes.fromhex("3aaec6598281320c4918a2d6ebf4c2bacabad5f85a45569fc3ba5159e13f94bf")
+        bytes.fromhex("3aaec6598281320c4918a2d6ebf4c2bacabad5f85a45569fc3ba5159e13f94bf"),
     ),
     fingerprint=uint32(688295223),
     public_key=G1Element.from_bytes(
         bytes.fromhex(
-            "a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1"
-        )
+            "a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1",
+        ),
     ),
     bech32="bls12381148n99j64r4vh320wfda222jwsfs83f2tpz3ajq7rscguhz5qf2dznjfxunu9fyc55pu7qnkduyxvzqskawt",
 )
@@ -79,7 +79,10 @@ _12keyinfo = KeyInfo(
 class TestKeychain:
     @pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
     def test_basic_add_delete(
-        self, key_info: KeyInfo, empty_temp_file_keyring: TempKeyring, seeded_random: random.Random
+        self,
+        key_info: KeyInfo,
+        empty_temp_file_keyring: TempKeyring,
+        seeded_random: random.Random,
     ):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
@@ -257,11 +260,14 @@ def test_key_data_secrets_generate() -> None:
 
 
 @pytest.mark.parametrize(
-    "get_item, from_method", [("mnemonic", KeyDataSecrets.from_mnemonic), ("entropy", KeyDataSecrets.from_entropy)]
+    "get_item, from_method",
+    [("mnemonic", KeyDataSecrets.from_mnemonic), ("entropy", KeyDataSecrets.from_entropy)],
 )
 @pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
 def test_key_data_secrets_creation(
-    key_info: KeyInfo, get_item: str, from_method: Callable[..., KeyDataSecrets]
+    key_info: KeyInfo,
+    get_item: str,
+    from_method: Callable[..., KeyDataSecrets],
 ) -> None:
     secrets = from_method(getattr(key_info, get_item))
     assert secrets.mnemonic == key_info.mnemonic.split()
@@ -282,7 +288,8 @@ def test_key_data_generate(label: Optional[str]) -> None:
 
 @pytest.mark.parametrize("label", [None, "key"])
 @pytest.mark.parametrize(
-    "get_item, from_method", [("mnemonic", KeyData.from_mnemonic), ("entropy", KeyData.from_entropy)]
+    "get_item, from_method",
+    [("mnemonic", KeyData.from_mnemonic), ("entropy", KeyData.from_entropy)],
 )
 @pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
 def test_key_data_creation(label: str, key_info: KeyInfo, get_item: str, from_method: Callable[..., KeyData]) -> None:
@@ -343,7 +350,8 @@ def test_key_data_secrets_post_init(input_data: tuple[list[str], bytes, PrivateK
     ],
 )
 def test_key_data_post_init(
-    input_data: tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]],
+    data_type: str,
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)

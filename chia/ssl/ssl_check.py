@@ -79,7 +79,7 @@ def get_all_ssl_file_paths(root_path: Path) -> tuple[list[Path], list[Path]]:
                     parsed_list.append(file)
                 except Exception as e:
                     print(
-                        f"Failed to lookup config value for {path}: {e}"
+                        f"Failed to lookup config value for {path}: {e}",
                     )  # lgtm [py/clear-text-logging-sensitive-data]
 
         # Check the Mozilla Root CAs as well
@@ -99,7 +99,9 @@ def get_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int) -> st
 
 
 def verify_ssl_certs_and_keys(
-    cert_paths: list[Path], key_paths: list[Path], log: Optional[Logger] = None
+    cert_paths: list[Path],
+    key_paths: list[Path],
+    log: Optional[Logger] = None,
 ) -> list[tuple[Path, int, int]]:
     """Check that file permissions are properly set for the provided SSL cert and key files"""
     if sys.platform == "win32" or sys.platform == "cygwin":
@@ -173,7 +175,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
             valid = False
             print(
                 f"Attempting to set permissions {octal_mode_string(updated_mode)} on "
-                f"{file}"  # lgtm [py/clear-text-logging-sensitive-data]
+                f"{file}",  # lgtm [py/clear-text-logging-sensitive-data]
             )
             os.chmod(str(file), updated_mode)
             updated = True

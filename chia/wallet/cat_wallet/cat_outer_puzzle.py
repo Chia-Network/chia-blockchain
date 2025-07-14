@@ -44,7 +44,10 @@ class CATOuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = None,
     ) -> Optional[Program]:
         args = match_cat_puzzle(puzzle_reveal)
         if args is None:
@@ -53,7 +56,9 @@ class CATOuterPuzzle:
         also = constructor.also()
         if also is not None:
             deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(
-                also, uncurry_puzzle(inner_puzzle), solution.first() if solution is not None else None
+                also,
+                uncurry_puzzle(inner_puzzle),
+                solution.first() if solution is not None else None,
             )
             return deep_inner_puzzle
         else:
@@ -117,9 +122,11 @@ class CATOuterPuzzle:
                     puzzle,
                     solution,
                     lineage_proof=LineageProof(
-                        parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)
+                        parent_coin.parent_coin_info,
+                        parent_inner_puzzle.get_tree_hash(),
+                        uint64(parent_coin.amount),
                     ),
-                )
+                ),
             )
         bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
         return next(Program.from_serialized(cs.solution) for cs in bundle.coin_spends if cs.coin == target_coin)

@@ -27,10 +27,10 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     SIGNIFICANT_BITS=uint8(8),  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS=uint16(1024),  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(
-        9
+        9,
     ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
     NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
-        5
+        5,
     ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
     MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE_V1=uint8(50),
@@ -54,10 +54,10 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
     AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
-        "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
+        "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc",
     ),
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bytes32.fromhex(
-        "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+        "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af",
     ),
     MAX_VDF_WITNESS_SIZE=uint8(64),
     # Size of mempool = 10x the size of block

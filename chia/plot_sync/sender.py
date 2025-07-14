@@ -48,7 +48,7 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(int(plot_info.time_modified)),
                 compression_level=plot_info.prover.get_compression_level(),
-            )
+            ),
         )
     return converted
 
@@ -155,7 +155,8 @@ class Sender:
         if self._task is not None:
             self.sync_start(self._plot_manager.plot_count(), True)
             for batch in to_batches(
-                list(self._plot_manager.plots.values()), self._plot_manager.refresh_parameter.batch_size
+                list(self._plot_manager.plots.values()),
+                self._plot_manager.refresh_parameter.batch_size,
             ):
                 self.process_batch(batch.entries, batch.remaining)
             self.sync_done([], 0)
@@ -177,18 +178,18 @@ class Sender:
             return False
         if response.identifier.sync_id != self._response.identifier.sync_id:
             log.warning(
-                "set_response unexpected sync-id: {response.identifier.sync_id}/{self._response.identifier.sync_id}"
+                "set_response unexpected sync-id: {response.identifier.sync_id}/{self._response.identifier.sync_id}",
             )
             return False
         if response.identifier.message_id != self._response.identifier.message_id:
             log.warning(
                 "set_response unexpected message-id: "
-                f"{response.identifier.message_id}/{self._response.identifier.message_id}"
+                f"{response.identifier.message_id}/{self._response.identifier.message_id}",
             )
             return False
         if response.message_type != int16(self._response.message_type.value):
             log.warning(
-                "set_response unexpected message-type: {response.message_type}/{self._response.message_type.value}"
+                "set_response unexpected message-type: {response.message_type}/{self._response.message_type.value}",
             )
             return False
         log.debug(f"set_response valid {response}")
@@ -216,7 +217,7 @@ class Sender:
         self._response = ExpectedResponse(message_generator.message_type, identifier)
         log.debug(f"_send_next_message send {message_generator.message_type.name}: {payload}")
         if self._connection is None or not await self._connection.send_message(
-            make_msg(message_generator.message_type, payload)
+            make_msg(message_generator.message_type, payload),
         ):
             return failed(f"Send failed {self._connection}")
         if not await self._wait_for_response():

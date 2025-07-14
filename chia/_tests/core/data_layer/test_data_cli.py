@@ -34,7 +34,7 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         changelist: list[dict[str, str]] = [{"action": "insert", "key": key, "value": value}]
         print(json.dumps(changelist))
         update = chia_root.run(
-            args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)]
+            args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)],
         )
         dic = json.loads(create.stdout)
         assert dic["success"]
@@ -47,7 +47,7 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         print(f"get_keys_values: {get_keys_values}")
         changelist = [{"action": "delete", "key": key}]
         update = chia_root.run(
-            args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)]
+            args=["data", "update_data_store", "--id", store_id, "--changelist", json.dumps(changelist)],
         )
         print(f"update_data_store: {update}")
         completed_process = chia_root.run(args=["data", "get_value", "--id", store_id, "--key", key])

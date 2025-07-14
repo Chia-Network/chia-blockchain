@@ -121,9 +121,9 @@ if __name__ == "__main__":
         solution = wallet_tool.make_solution(
             {
                 ConditionOpcode.ASSERT_MY_COIN_ID: [
-                    ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [bytes32.random(seeded_random)])
-                ]
-            }
+                    ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [bytes32.random(seeded_random)]),
+                ],
+            },
         )
         puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)

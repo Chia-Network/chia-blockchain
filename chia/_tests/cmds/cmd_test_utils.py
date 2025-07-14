@@ -198,7 +198,7 @@ class TestWalletRpcClient(TestRpcClient):
             NFTWallet.royalty_calculation(
                 {asset.asset: (asset.royalty_address, asset.royalty_percentage) for asset in request.royalty_assets},
                 {asset.asset: asset.amount for asset in request.fungible_assets},
-            )
+            ),
         )
 
     async def get_spendable_coins(
@@ -236,7 +236,7 @@ class TestWalletRpcClient(TestRpcClient):
                 uint32(0),
                 True,
                 uint64(0),
-            )
+            ),
         ]
         unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
         return confirmed_records, unconfirmed_removals, unconfirmed_additions
@@ -357,7 +357,7 @@ class TestRpcClients:
     full_node_rpc_client: TestFullNodeRpcClient = field(default_factory=TestFullNodeRpcClient)
     data_layer_rpc_client: TestDataLayerRpcClient = field(default_factory=TestDataLayerRpcClient)
     simulator_full_node_rpc_client: TestSimulatorFullNodeRpcClient = field(
-        default_factory=TestSimulatorFullNodeRpcClient
+        default_factory=TestSimulatorFullNodeRpcClient,
     )
 
     def get_client(self, client_type: type[_T_RpcClient]) -> _T_RpcClient:
@@ -465,7 +465,10 @@ def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
 
 
 def run_cli_command_and_assert(
-    capsys: object, chia_root: Path, command_list: list[str], strings_to_assert: Iterable[str]
+    capsys: object,
+    chia_root: Path,
+    command_list: list[str],
+    strings_to_assert: Iterable[str],
 ) -> None:
     """
     Runs the command and asserts that all the strings in strings_to_assert are in the output

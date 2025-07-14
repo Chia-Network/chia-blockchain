@@ -27,7 +27,7 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 #   (recurse solution ())
 # )
 ACS = Program.fromhex(
-    "ff02ffff01ff02ff02ffff04ff02ffff04ff03ffff01ff8080808080ffff04ffff01ff02ffff03ff05ffff01ff02ff02ffff04ff02ffff04ff0dffff04ff09ff8080808080ffff010b80ff0180ff018080"
+    "ff02ffff01ff02ff02ffff04ff02ffff04ff03ffff01ff8080808080ffff04ffff01ff02ffff03ff05ffff01ff02ff02ffff04ff02ffff04ff0dffff04ff09ff8080808080ffff010b80ff0180ff018080",
 )
 ACS_PH = ACS.get_tree_hash()
 
@@ -104,7 +104,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                         [NIL_PH, NIL_PH],
                         [NIL_PH, NIL_PH],
                         [],
-                    ]
+                    ],
                 ),
             )
 
@@ -126,7 +126,8 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
 
                 # try with a bad merkle root announcement
                 fake_puzzle_bad_announcement = ACS.curry(
-                    fake_struct, ACS.curry(ACS_PH, (bytes32.zeros, None), None, None)
+                    fake_struct,
+                    ACS.curry(ACS_PH, (bytes32.zeros, None), None, None),
                 )
                 await sim.farm_block(fake_puzzle_bad_announcement.get_tree_hash())
                 fake_coin_bad_announcement: Coin = (

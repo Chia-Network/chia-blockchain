@@ -348,8 +348,8 @@ async def test_delete_coin_record() -> None:
                         coin_5.name(),
                         coin_6.name(),
                         coin_7.name(),
-                    ]
-                )
+                    ],
+                ),
             )
         ).records == [record_1, record_2, record_3, record_4, record_5, record_6, record_7]
 
@@ -361,8 +361,8 @@ async def test_delete_coin_record() -> None:
         assert (
             await store.get_coin_records(
                 coin_id_filter=HashFilter.include(
-                    [coin_2.name(), coin_3.name(), coin_4.name(), coin_5.name(), coin_6.name(), coin_7.name()]
-                )
+                    [coin_2.name(), coin_3.name(), coin_4.name(), coin_5.name(), coin_6.name(), coin_7.name()],
+                ),
             )
         ).records == [record_2, record_3, record_4, record_5, record_6, record_7]
 
@@ -426,7 +426,8 @@ get_coin_records_puzzle_hash_filter_tests: list[tuple[GetCoinRecords, list[Walle
     (GetCoinRecords(puzzle_hash_filter=HashFilter.include([coin_7.puzzle_hash])), [record_7]),
     (
         GetCoinRecords(
-            wallet_type=uint8(WalletType.STANDARD_WALLET), puzzle_hash_filter=HashFilter.include([coin_7.puzzle_hash])
+            wallet_type=uint8(WalletType.STANDARD_WALLET),
+            puzzle_hash_filter=HashFilter.include([coin_7.puzzle_hash]),
         ),
         [],
     ),
@@ -538,7 +539,8 @@ get_coin_records_order_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]
     (GetCoinRecords(wallet_id=uint32(1), order=uint8(CoinRecordOrder.spent_height)), [record_5, record_8]),
     (
         GetCoinRecords(
-            confirmed_range=UInt32Range(start=uint32(4), stop=uint32(5)), order=uint8(CoinRecordOrder.spent_height)
+            confirmed_range=UInt32Range(start=uint32(4), stop=uint32(5)),
+            order=uint8(CoinRecordOrder.spent_height),
         ),
         [record_1, record_2, record_5, record_7, record_3, record_4, record_6],
     ),
@@ -614,7 +616,7 @@ get_coin_records_mixed_tests: list[tuple[GetCoinRecords, int, list[WalletCoinRec
             coin_type=uint8(CoinType.NORMAL),
             coin_id_filter=HashFilter.exclude([coin_1.puzzle_hash]),
             puzzle_hash_filter=HashFilter.include(
-                [coin_1.puzzle_hash, coin_2.puzzle_hash, coin_3.puzzle_hash, coin_4.puzzle_hash]
+                [coin_1.puzzle_hash, coin_2.puzzle_hash, coin_3.puzzle_hash, coin_4.puzzle_hash],
             ),
             parent_coin_id_filter=HashFilter.exclude([coin_7.parent_coin_info]),
             amount_filter=AmountFilter.exclude([uint64(10)]),
@@ -632,7 +634,9 @@ get_coin_records_mixed_tests: list[tuple[GetCoinRecords, int, list[WalletCoinRec
 
 
 async def run_get_coin_records_test(
-    request: GetCoinRecords, total_count: Optional[int], coin_records: list[WalletCoinRecord]
+    request: GetCoinRecords,
+    total_count: Optional[int],
+    coin_records: list[WalletCoinRecord],
 ) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -696,7 +700,8 @@ async def test_get_coin_records_coin_id_filter(coins_request: GetCoinRecords, re
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_puzzle_hash_filter_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_puzzle_hash_filter(
-    coins_request: GetCoinRecords, records: list[WalletCoinRecord]
+    coins_request: GetCoinRecords,
+    records: list[WalletCoinRecord],
 ) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
@@ -704,7 +709,8 @@ async def test_get_coin_records_puzzle_hash_filter(
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_parent_coin_id_filter_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_parent_coin_id_filter(
-    coins_request: GetCoinRecords, records: list[WalletCoinRecord]
+    coins_request: GetCoinRecords,
+    records: list[WalletCoinRecord],
 ) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
@@ -748,7 +754,9 @@ async def test_get_coin_records_reverse(coins_request: GetCoinRecords, records: 
 @pytest.mark.parametrize("coins_request, total_count, records", [*get_coin_records_include_total_count_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_total_count(
-    coins_request: GetCoinRecords, total_count: int, records: list[WalletCoinRecord]
+    coins_request: GetCoinRecords,
+    total_count: int,
+    records: list[WalletCoinRecord],
 ) -> None:
     await run_get_coin_records_test(coins_request, total_count, records)
 
@@ -756,7 +764,9 @@ async def test_get_coin_records_total_count(
 @pytest.mark.parametrize("coins_request, total_count, records", [*get_coin_records_mixed_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_mixed(
-    coins_request: GetCoinRecords, total_count: int, records: list[WalletCoinRecord]
+    coins_request: GetCoinRecords,
+    total_count: int,
+    records: list[WalletCoinRecord],
 ) -> None:
     await run_get_coin_records_test(coins_request, total_count, records)
 
@@ -808,7 +818,8 @@ async def test_get_coin_records_total_count_cache_reset() -> None:
             # with every new request.
             for _ in range(5):
                 result = await store.get_coin_records(
-                    coin_id_filter=HashFilter.include([record_1.name()]), include_total_count=True
+                    coin_id_filter=HashFilter.include([record_1.name()]),
+                    include_total_count=True,
                 )
                 assert_result(result, expected_total_count=1, expected_cache_size=1)
             for _ in range(5):
@@ -816,12 +827,14 @@ async def test_get_coin_records_total_count_cache_reset() -> None:
                 assert_result(result, expected_total_count=2, expected_cache_size=2)
             for _ in range(5):
                 result = await store.get_coin_records(
-                    coin_id_filter=HashFilter.include([record_2.name()]), include_total_count=True
+                    coin_id_filter=HashFilter.include([record_2.name()]),
+                    include_total_count=True,
                 )
                 assert_result(result, expected_total_count=1, expected_cache_size=3)
             for _ in range(5):
                 result = await store.get_coin_records(
-                    coin_id_filter=HashFilter.include([record_1.name(), record_2.name()]), include_total_count=True
+                    coin_id_filter=HashFilter.include([record_1.name(), record_2.name()]),
+                    include_total_count=True,
                 )
                 assert_result(result, expected_total_count=2, expected_cache_size=4)
 
@@ -892,8 +905,8 @@ async def test_rollback_to_block() -> None:
                         coin_3.name(),
                         coin_4.name(),
                         coin_5.name(),
-                    ]
-                )
+                    ],
+                ),
             )
         ).records == [
             r1,

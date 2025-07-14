@@ -121,7 +121,7 @@ class FarmerRpcApi:
                     data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
             payloads.append(
                 create_payload_dict(
@@ -129,7 +129,7 @@ class FarmerRpcApi:
                     data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
         elif change == "new_farming_info":
             payloads.append(
@@ -138,7 +138,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
             payloads.append(
                 create_payload_dict(
@@ -146,7 +146,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
         elif change == "harvester_update":
             payloads.append(
@@ -155,7 +155,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
             payloads.append(
                 create_payload_dict(
@@ -163,7 +163,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
         elif change == "harvester_removed":
             payloads.append(
@@ -172,7 +172,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
             payloads.append(
                 create_payload_dict(
@@ -180,7 +180,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
         elif change == "submitted_partial":
             payloads.append(
@@ -189,7 +189,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
             payloads.append(
                 create_payload_dict(
@@ -197,7 +197,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
         elif change == "failed_partial":
             payloads.append(
@@ -206,7 +206,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
         elif change == "proof":
             payloads.append(
@@ -215,7 +215,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
         elif change == "add_connection":
             payloads.append(
@@ -224,7 +224,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
         elif change == "close_connection":
             payloads.append(
@@ -233,7 +233,7 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
 
         return payloads
@@ -274,7 +274,7 @@ class FarmerRpcApi:
                             "signage_point_index": sp.signage_point_index,
                         },
                         "proofs": pospaces,
-                    }
+                    },
                 )
         return {"signage_points": result}
 
@@ -337,7 +337,9 @@ class FarmerRpcApi:
         return paginated_plot_request(plot_list, request)
 
     def paginated_plot_path_request(
-        self, source_func: Callable[[Receiver], list[str]], request_dict: dict[str, object]
+        self,
+        source_func: Callable[[Receiver], list[str]],
+        request_dict: dict[str, object],
     ) -> dict[str, object]:
         request: PlotPathRequestData = PlotPathRequestData.from_json_dict(request_dict)
         receiver = self.service.get_receiver(request.node_id)

@@ -69,7 +69,9 @@ class CacheEntry:
         local_sk = master_sk_to_local_sk(local_master_sk)
 
         plot_public_key: G1Element = generate_plot_public_key(
-            local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
+            local_sk.get_g1(),
+            farmer_public_key,
+            pool_contract_puzzle_hash is not None,
         )
 
         return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time())
@@ -118,7 +120,7 @@ class Cache:
                 for path, cache_entry in self.items()
             }
             cache_data: CacheDataV1 = CacheDataV1(
-                [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
+                [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()],
             )
             disk_cache: VersionedBlob = VersionedBlob(uint16(CURRENT_VERSION), bytes(cache_data))
             serialized: bytes = bytes(disk_cache)
@@ -180,7 +182,7 @@ class Cache:
                     if prover_size > check_size:
                         log.warning(
                             "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
-                            f"{self._path}, restart. Entry: size {prover_size}, path {path}"
+                            f"{self._path}, restart. Entry: size {prover_size}, path {path}",
                         )
                     else:
                         self._data[Path(path)] = new_entry

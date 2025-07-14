@@ -89,8 +89,8 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
             in_db.execute(
                 f"SELECT header_hash, prev_hash, height, in_main_chain"
                 f"{', block, block_record' if validate_blocks else ''} "
-                "FROM full_blocks ORDER BY height DESC"
-            )
+                "FROM full_blocks ORDER BY height DESC",
+            ),
         ) as cursor:
             for row in cursor:
                 hh = row[0]
@@ -110,26 +110,26 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
                     actual_prev_hash = block.prev_header_hash
                     if actual_header_hash != hh:
                         raise RuntimeError(
-                            f"Block {hh.hex()} has a blob with mismatching hash: {actual_header_hash.hex()}"
+                            f"Block {hh.hex()} has a blob with mismatching hash: {actual_header_hash.hex()}",
                         )
                     if block_record.header_hash != hh:
                         raise RuntimeError(
                             f"Block {hh.hex()} has a block record with mismatching "
-                            f"hash: {block_record.header_hash.hex()}"
+                            f"hash: {block_record.header_hash.hex()}",
                         )
                     if block_record.total_iters != block.total_iters:
                         raise RuntimeError(
                             f"Block {hh.hex()} has a block record with mismatching total "
-                            f"iters: {block_record.total_iters} expected {block.total_iters}"
+                            f"iters: {block_record.total_iters} expected {block.total_iters}",
                         )
                     if block_record.prev_hash != actual_prev_hash:
                         raise RuntimeError(
                             f"Block {hh.hex()} has a block record with mismatching "
-                            f"prev_hash: {block_record.prev_hash} expected {actual_prev_hash.hex()}"
+                            f"prev_hash: {block_record.prev_hash} expected {actual_prev_hash.hex()}",
                         )
                     if block.height != height:
                         raise RuntimeError(
-                            f"Block {hh.hex()} has a mismatching height: {block.height} expected {height}"
+                            f"Block {hh.hex()} has a mismatching height: {block.height} expected {height}",
                         )
 
                 if height != current_height:
@@ -137,7 +137,7 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
                     # we were looking for at the previous level
                     if next_hash is None:
                         raise RuntimeError(
-                            f"Database is missing the block with hash {expect_hash} at height {current_height}"
+                            f"Database is missing the block with hash {expect_hash} at height {current_height}",
                         )
                     expect_hash = next_hash
                     next_hash = None
@@ -149,14 +149,14 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
                     if not in_main_chain:
                         raise RuntimeError(
                             f"block {hh.hex()} (height: {height}) is part of the main chain, "
-                            f"but in_main_chain is not set"
+                            f"but in_main_chain is not set",
                         )
 
                     if validate_blocks:
                         if actual_prev_hash != prev:
                             raise RuntimeError(
                                 f"Block {hh.hex()} has a blob with mismatching "
-                                f"prev-hash: {actual_prev_hash}, expected {prev}"
+                                f"prev-hash: {actual_prev_hash}, expected {prev}",
                             )
 
                     next_hash = prev
@@ -183,7 +183,7 @@ def validate_v2(in_path: Path, *, config: dict[str, Any], validate_blocks: bool)
         if next_hash != updated_constants.AGG_SIG_ME_ADDITIONAL_DATA:
             raise RuntimeError(
                 f"Blockchain has invalid genesis challenge {next_hash}, expected "
-                f"{updated_constants.AGG_SIG_ME_ADDITIONAL_DATA.hex()}"
+                f"{updated_constants.AGG_SIG_ME_ADDITIONAL_DATA.hex()}",
             )
 
         if num_orphans > 0:

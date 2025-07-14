@@ -78,7 +78,8 @@ class WalletStateTransition:
 class WalletEnvironment:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ServiceEnvironment[WalletNode, WalletRpcApi, WalletNodeAPI]] = cast(
-            "WalletEnvironment", None
+            "WalletEnvironment",
+            None,
         )
 
     __match_args__: ClassVar[tuple[str, ...]] = ()
@@ -177,7 +178,7 @@ class WalletEnvironment:
                         wallet_errors.append(f"{key} not in balance response")
                     elif value != balance_response[key]:
                         wallet_errors.append(
-                            f"{key} has different value {value} compared to balance response {balance_response[key]}"
+                            f"{key} has different value {value} compared to balance response {balance_response[key]}",
                         )
 
             if wallet_errors != []:
@@ -221,7 +222,7 @@ class WalletEnvironment:
             elif wallet_id not in self.wallet_states:
                 raise ValueError(
                     f"Wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)}) does not have a current state. "
-                    "Please use 'init': True if you intended to initialize its state."
+                    "Please use 'init': True if you intended to initialize its state.",
                 )
             else:
                 for key, change in kwargs.items():
@@ -239,7 +240,7 @@ class WalletEnvironment:
                             raise ValueError(
                                 f"Setting {key_str} on {self.alias_wallet_id(wallet_id)} failed because "
                                 f"{getattr(existing_values, key_str)} is not {opp} "
-                                f"{getattr(self.wallet_states[wallet_id].balance, key_str)} + {change}"
+                                f"{getattr(self.wallet_states[wallet_id].balance, key_str)} + {change}",
                             )
                     else:
                         new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
@@ -257,14 +258,16 @@ class WalletEnvironment:
                                     else ({} if kwargs.get("init") else asdict(self.wallet_states[wallet_id].balance))
                                 ),
                                 **new_values,
-                            }
+                            },
                         ),
-                    }
+                    },
                 ),
             }
 
     async def wait_for_transactions_to_settle(
-        self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: list[bytes32] = []
+        self,
+        full_node_api: FullNodeSimulator,
+        _exclude_from_mempool_check: list[bytes32] = [],
     ) -> list[LightTransactionRecord]:
         # Gather all pending transactions
         pending_txs: list[LightTransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
@@ -313,7 +316,7 @@ class WalletTestFramework:
                     env.rpc_client,
                     env.wallet_state_manager.root_pubkey.get_fingerprint(),
                     env.wallet_state_manager.config,
-                )
+                ),
             ),
             "tx_config_loader": NeedsTXConfig(
                 min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
@@ -336,7 +339,9 @@ class WalletTestFramework:
             yield
 
     async def process_pending_states(
-        self, state_transitions: list[WalletStateTransition], invalid_transactions: list[bytes32] = []
+        self,
+        state_transitions: list[WalletStateTransition],
+        invalid_transactions: list[bytes32] = [],
     ) -> None:
         """
         This is the main entry point for processing state in wallet tests. It does the following things:
@@ -368,8 +373,9 @@ class WalletTestFramework:
                 try:
                     pending_txs.append(
                         await env.wait_for_transactions_to_settle(
-                            self.full_node, _exclude_from_mempool_check=invalid_transactions
-                        )
+                            self.full_node,
+                            _exclude_from_mempool_check=invalid_transactions,
+                        ),
                     )
                 except TimeoutError:  # pragma: no cover
                     raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
@@ -390,7 +396,9 @@ class WalletTestFramework:
         try:
             for i, (env, local_pending_txs) in enumerate(zip(self.environments, pending_txs)):
                 await self.full_node.wait_for_wallet_synced(
-                    wallet_node=env.node, timeout=20, peak_height=uint32(peak + 1)
+                    wallet_node=env.node,
+                    timeout=20,
+                    peak_height=uint32(peak + 1),
                 )
                 try:
                     await env.wait_for_transactions_to_settle(
@@ -418,7 +426,7 @@ class WalletTestFramework:
                     LightTransactionRecord
                 ] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
                 raise TimeoutError(
-                    f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
+                    f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}",
                 )
 
         # Finally, check that the number of puzzle hashes did or did not increase by the specified amount

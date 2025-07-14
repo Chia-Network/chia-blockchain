@@ -207,7 +207,7 @@ def launch_conditions_and_coinsol(
             curried_singleton.get_tree_hash(),
             amount,
             comment,
-        ]
+        ],
     )
     create_launcher = Program.to(
         [
@@ -258,7 +258,9 @@ def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
 
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
 def puzzle_for_singleton(
-    launcher_id: bytes32, inner_puz: Program, launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
+    launcher_id: bytes32,
+    inner_puz: Program,
+    launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
 ) -> Program:
     return SINGLETON_MOD.curry(
         (SINGLETON_MOD_HASH, (launcher_id, launcher_hash)),

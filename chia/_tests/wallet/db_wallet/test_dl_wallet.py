@@ -38,7 +38,7 @@ class TestDLWallet:
             {
                 "num_environments": 1,
                 "blocks_needed": [2],
-            }
+            },
         ],
         indirect=True,
     )
@@ -61,7 +61,8 @@ class TestDLWallet:
 
         for i in range(2):
             async with dl_wallet.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True
+                wallet_environments.tx_config,
+                push=True,
             ) as action_scope:
                 launcher_id = await dl_wallet.generate_new_reporter(
                     current_root,
@@ -96,7 +97,7 @@ class TestDLWallet:
                             },
                         },
                     ),
-                ]
+                ],
             )
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -110,7 +111,7 @@ class TestDLWallet:
             {
                 "num_environments": 1,
                 "blocks_needed": [2],
-            }
+            },
         ],
         indirect=True,
     )
@@ -135,7 +136,8 @@ class TestDLWallet:
 
         for i in range(2):
             async with dl_wallet.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True
+                wallet_environments.tx_config,
+                push=True,
             ) as action_scope:
                 launcher_id = await dl_wallet.generate_new_reporter(current_root, action_scope, fee=fee)
             expected_launcher_ids.add(launcher_id)
@@ -167,7 +169,7 @@ class TestDLWallet:
                             },
                         },
                     ),
-                ]
+                ],
             )
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -182,7 +184,7 @@ class TestDLWallet:
             {
                 "num_environments": 2,
                 "blocks_needed": [1, 1],
-            }
+            },
         ],
         indirect=True,
     )
@@ -214,7 +216,8 @@ class TestDLWallet:
         current_root = current_tree.calculate_root()
 
         async with dl_wallet_0.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             launcher_id = await dl_wallet_0.generate_new_reporter(current_root, action_scope)
 
@@ -248,7 +251,7 @@ class TestDLWallet:
                         },
                     },
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
@@ -259,7 +262,8 @@ class TestDLWallet:
         for _ in range(5):
             new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
             async with dl_wallet_0.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True
+                wallet_environments.tx_config,
+                push=True,
             ) as action_scope:
                 await dl_wallet_0.create_update_state_spend(launcher_id, new_root, action_scope)
 
@@ -277,7 +281,7 @@ class TestDLWallet:
                             },
                         },
                     ),
-                ]
+                ],
             )
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
@@ -301,7 +305,7 @@ class TestDLWallet:
             {
                 "num_environments": 2,
                 "blocks_needed": [1, 1],
-            }
+            },
         ],
         indirect=True,
     )
@@ -321,7 +325,8 @@ class TestDLWallet:
         current_root = current_tree.calculate_root()
 
         async with dl_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             launcher_id = await dl_wallet.generate_new_reporter(current_root, action_scope)
 
@@ -355,7 +360,7 @@ class TestDLWallet:
                         },
                     },
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -369,7 +374,8 @@ class TestDLWallet:
         fee = uint64(1_999_999_999_999)
 
         async with dl_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
@@ -382,7 +388,8 @@ class TestDLWallet:
         assert action_scope.side_effects.transactions[0].spend_bundle is not None
         with pytest.raises(ValueError, match="is currently pending"):
             async with dl_wallet.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=False
+                wallet_environments.tx_config,
+                push=False,
             ) as failed_action_scope:
                 await dl_wallet.generate_signed_transaction(
                     [previous_record.lineage_proof.amount],
@@ -393,7 +400,7 @@ class TestDLWallet:
                             rem
                             for rem in action_scope.side_effects.transactions[0].spend_bundle.removals()
                             if rem.amount == 1
-                        )
+                        ),
                     },
                     fee=fee,
                 )
@@ -431,7 +438,7 @@ class TestDLWallet:
                         },
                     },
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -444,7 +451,8 @@ class TestDLWallet:
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
         async with dl_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             await dl_wallet.create_update_state_spend(launcher_id, new_root, action_scope)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
@@ -466,7 +474,7 @@ class TestDLWallet:
                         },
                     },
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -488,7 +496,7 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
         {
             "num_environments": 2,
             "blocks_needed": [3, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -510,12 +518,14 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
     dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(env_2.wallet_state_manager)
 
     async with dl_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32.zeros, action_scope)
 
     async with dl_wallet_2.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32.zeros, action_scope)
 
@@ -551,7 +561,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
         ]
-        * 2
+        * 2,
     )
 
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32.zeros)
@@ -570,7 +580,8 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
     mirror_amount = uint64(3)
 
     async with dl_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await dl_wallet_1.create_new_mirror(launcher_id_2, mirror_amount, [b"foo", b"bar"], action_scope, fee=fee)
 
@@ -607,7 +618,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
     mirror_coin: Coin = next(c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash())
@@ -621,13 +632,17 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
     )
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror], launcher_id_2)
     await time_out_assert(
-        15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
+        15,
+        dl_wallet_2.get_mirrors_for_launcher,
+        [dataclasses.replace(mirror, ours=False)],
+        launcher_id_2,
     )
 
     fee = uint64(2_000_000_000_000)
 
     async with dl_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, action_scope, fee=fee)
 
@@ -661,7 +676,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [], launcher_id_2)
@@ -675,7 +690,7 @@ async def test_mirrors(wallet_environments: WalletTestFramework) -> None:
             "num_environments": 1,
             "blocks_needed": [1],
             "reuse_puzhash": True,
-        }
+        },
     ],
     indirect=True,
 )
@@ -722,15 +737,15 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
                     },
                     "dl": {"unspent_coin_count": 1},
                 },
-            )
-        ]
+            ),
+        ],
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32.zeros)
 
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None),
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
@@ -759,8 +774,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
                     },
                     "dl": {"unspent_coin_count": 1},
                 },
-            )
-        ]
+            ),
+        ],
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32.zeros)
 
@@ -778,15 +793,15 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
                     "xch": {},
                     "dl": {"pending_coin_removal_count": -1},
                 },
-            )
-        ]
+            ),
+        ],
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([2] * 32))
 
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None),
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
@@ -803,8 +818,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
                     "xch": {},
                     "dl": {"pending_coin_removal_count": -1},
                 },
-            )
-        ]
+            ),
+        ],
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([2] * 32))
 
@@ -831,15 +846,15 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
                     },
                     "dl": {"unspent_coin_count": 1},
                 },
-            )
-        ]
+            ),
+        ],
     )
     assert len(await dl_wallet.get_mirrors_for_launcher(launcher_id)) == 1
 
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None),
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
@@ -866,7 +881,7 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
                     },
                     "dl": {"unspent_coin_count": 1},
                 },
-            )
-        ]
+            ),
+        ],
     )
     assert len(await dl_wallet.get_mirrors_for_launcher(launcher_id)) == 1

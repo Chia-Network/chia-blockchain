@@ -43,7 +43,10 @@ class TestWalletRpc:
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_make_transaction(
-        self, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+        self,
+        two_wallet_nodes_services: SimulatorsAndWalletsServices,
+        trusted: bool,
+        self_hostname: str,
     ) -> None:
         num_blocks = 5
         [full_node_service], wallet_services, _bt = two_wallet_nodes_services
@@ -87,7 +90,7 @@ class TestWalletRpc:
                     wallet_services[0].rpc_server.listen_port,
                     wallet_services[0].root_path,
                     wallet_services[0].config,
-                )
+                ),
             )
             await validate_get_routes(client, wallet_services[0].rpc_server.rpc_api)
             client_2 = await exit_stack.enter_async_context(
@@ -96,7 +99,7 @@ class TestWalletRpc:
                     wallet_services[1].rpc_server.listen_port,
                     wallet_services[1].root_path,
                     wallet_services[1].config,
-                )
+                ),
             )
             await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
@@ -122,7 +125,8 @@ class TestWalletRpc:
 
             new_root: bytes32 = bytes32([1] * 32)
             await client.dl_update_root(
-                DLUpdateRoot(launcher_id=launcher_id, new_root=new_root, fee=uint64(100), push=True), DEFAULT_TX_CONFIG
+                DLUpdateRoot(launcher_id=launcher_id, new_root=new_root, fee=uint64(100), push=True),
+                DEFAULT_TX_CONFIG,
             )
 
             for i in range(5):
@@ -159,13 +163,13 @@ class TestWalletRpc:
             ]
 
             assert (await client.dl_history(DLHistory(launcher_id, min_generation=uint32(1)))).history == [
-                new_singleton_record
+                new_singleton_record,
             ]
             assert (await client.dl_history(DLHistory(launcher_id, max_generation=uint32(0)))).history == [
-                singleton_record
+                singleton_record,
             ]
             assert (await client.dl_history(DLHistory(launcher_id, num_results=uint32(1)))).history == [
-                new_singleton_record
+                new_singleton_record,
             ]
             assert (await client.dl_history(DLHistory(launcher_id, num_results=uint32(2)))).history == [
                 new_singleton_record,
@@ -177,7 +181,7 @@ class TestWalletRpc:
                         launcher_id,
                         min_generation=uint32(1),
                         max_generation=uint32(1),
-                    )
+                    ),
                 )
             ).history == [new_singleton_record]
             assert (
@@ -186,7 +190,7 @@ class TestWalletRpc:
                         launcher_id,
                         max_generation=uint32(0),
                         num_results=uint32(1),
-                    )
+                    ),
                 )
             ).history == [singleton_record]
             assert (
@@ -195,7 +199,7 @@ class TestWalletRpc:
                         launcher_id,
                         min_generation=uint32(1),
                         num_results=uint32(1),
-                    )
+                    ),
                 )
             ).history == [new_singleton_record]
             assert (
@@ -205,12 +209,12 @@ class TestWalletRpc:
                         min_generation=uint32(1),
                         max_generation=uint32(1),
                         num_results=uint32(1),
-                    )
+                    ),
                 )
             ).history == [new_singleton_record]
 
             assert (await client.dl_singletons_by_root(DLSingletonsByRoot(launcher_id, new_root))).singletons == [
-                new_singleton_record
+                new_singleton_record,
             ]
 
             launcher_id_2 = (
@@ -235,7 +239,7 @@ class TestWalletRpc:
                             LauncherRootPair(launcher_id, next_root),
                             LauncherRootPair(launcher_id_2, next_root),
                             LauncherRootPair(launcher_id_3, next_root),
-                        ]
+                        ],
                     ),
                     fee=uint64(0),
                 ),
@@ -295,7 +299,8 @@ class TestWalletRpc:
             )
             await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([mirror]), DLGetMirrors(launcher_id))
             await client.dl_delete_mirror(
-                DLDeleteMirror(coin_id=mirror_coin.name(), fee=uint64(2000000000000), push=True), DEFAULT_TX_CONFIG
+                DLDeleteMirror(coin_id=mirror_coin.name(), fee=uint64(2000000000000), push=True),
+                DEFAULT_TX_CONFIG,
             )
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
@@ -305,7 +310,10 @@ class TestWalletRpc:
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
     async def test_wallet_dl_verify_proof(
-        self, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+        self,
+        one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+        trusted: bool,
+        self_hostname: str,
     ) -> None:
         [full_node_service], [wallet_service], _bt = one_wallet_and_one_simulator_services
         full_node_api = full_node_service._api

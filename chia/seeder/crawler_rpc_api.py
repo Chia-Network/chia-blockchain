@@ -55,7 +55,7 @@ class CrawlerRpcApi:
                 "ipv4_last_5_days": len(self.service.best_timestamp_per_peer) - ipv6_addresses_count,
                 "ipv6_last_5_days": ipv6_addresses_count,
                 "versions": self.service.versions,
-            }
+            },
         }
         return data
 

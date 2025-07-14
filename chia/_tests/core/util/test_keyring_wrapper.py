@@ -138,7 +138,8 @@ class TestKeyringWrapper:
         """
         # When: setting the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "testing one two three"
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
+            "testing one two three",
         )
 
         # Expect: the master passphrase is cached and can be validated
@@ -182,7 +183,8 @@ class TestKeyringWrapper:
         """
         # When: the master passphrase is set
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, "It's dangerous to go alone, take this!"
+            DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
+            "It's dangerous to go alone, take this!",
         )
 
         # When: removing the master passphrase
@@ -212,12 +214,15 @@ class TestKeyringWrapper:
 
         # When: setting a key
         KeyringWrapper.get_shared_instance().keyring.set_key(
-            "service-abc", "user-xyz", Key(b"super secret key", {"foo": "bar"})
+            "service-abc",
+            "user-xyz",
+            Key(b"super secret key", {"foo": "bar"}),
         )
 
         # Expect: key lookup should succeed
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") == Key(
-            b"super secret key", {"foo": "bar"}
+            b"super secret key",
+            {"foo": "bar"},
         )
 
         # Expect: non-existent key lookup should fail
@@ -253,7 +258,7 @@ class TestKeyringWrapper:
 
         # Expect: key retrieval should succeed
         assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") == Key(
-            b"500p3r 53cr37"
+            b"500p3r 53cr37",
         )
 
         # When: deleting the key
@@ -310,7 +315,9 @@ class TestKeyringWrapper:
         """
         # When: setting the master passphrase with a hint
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            None, "new master passphrase", passphrase_hint="some passphrase hint"
+            None,
+            "new master passphrase",
+            passphrase_hint="some passphrase hint",
         )
 
         # Expect: hint can be retrieved
@@ -325,7 +332,9 @@ class TestKeyringWrapper:
 
         # When: setting the passphrase hint while setting the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            None, "passphrase", passphrase_hint="rhymes with bassphrase"
+            None,
+            "passphrase",
+            passphrase_hint="rhymes with bassphrase",
         )
 
         # Expect: to retrieve the passphrase hint that was just set
@@ -343,7 +352,9 @@ class TestKeyringWrapper:
         """
         # When: setting the passphrase hint while setting the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            None, "12345", passphrase_hint="President Skroob's luggage combination"
+            None,
+            "12345",
+            passphrase_hint="President Skroob's luggage combination",
         )
 
         # Expect: to retrieve the passphrase hint that was just set
@@ -364,7 +375,9 @@ class TestKeyringWrapper:
         """
         # When: setting the passphrase hint while setting the master passphrase
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            None, "i like turtles", passphrase_hint="My deepest darkest secret"
+            None,
+            "i like turtles",
+            passphrase_hint="My deepest darkest secret",
         )
 
         # Expect: to retrieve the passphrase hint that was just set
@@ -372,7 +385,9 @@ class TestKeyringWrapper:
 
         # When: updating the passphrase hint
         KeyringWrapper.get_shared_instance().set_master_passphrase(
-            "i like turtles", "i like turtles", passphrase_hint="Something you wouldn't expect The Shredder to say"
+            "i like turtles",
+            "i like turtles",
+            passphrase_hint="Something you wouldn't expect The Shredder to say",
         )
 
         # Expect: to retrieve the passphrase hint that was just set
@@ -458,7 +473,11 @@ class TestKeyringWrapper:
         ],
     )
     def test_set_label_failures(
-        self, label: str, exception: type[KeychainLabelError], message: str, empty_temp_file_keyring: TempKeyring
+        self,
+        label: str,
+        exception: type[KeychainLabelError],
+        message: str,
+        empty_temp_file_keyring: TempKeyring,
     ) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         keyring_wrapper.keyring.set_label(1, "one")

@@ -80,7 +80,9 @@ async def test_set_confirmed() -> None:
         await store.set_confirmed(tr1.name, uint32(100))
 
         assert await store.get_transaction_record(tr1.name) == dataclasses.replace(
-            tr1, confirmed=True, confirmed_at_height=uint32(100)
+            tr1,
+            confirmed=True,
+            confirmed_at_height=uint32(100),
         )
 
 
@@ -91,7 +93,10 @@ async def test_increment_sent_noop(seeded_random: random.Random) -> None:
 
         assert (
             await store.increment_sent(
-                bytes32(bytes32.random(seeded_random)), "peer1", MempoolInclusionStatus.PENDING, None
+                bytes32(bytes32.random(seeded_random)),
+                "peer1",
+                MempoolInclusionStatus.PENDING,
+                None,
             )
             is False
         )
@@ -144,11 +149,11 @@ def test_filter_ok_mempool_status() -> None:
     assert filter_ok_mempool_status([("peer1", uint8(2), None)]) == []
     assert filter_ok_mempool_status([("peer1", uint8(3), None)]) == [("peer1", uint8(3), None)]
     assert filter_ok_mempool_status(
-        [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer1", uint8(3), None)]
+        [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer1", uint8(3), None)],
     ) == [("peer1", uint8(3), None)]
 
     assert filter_ok_mempool_status([("peer1", uint8(3), "message does not matter")]) == [
-        ("peer1", uint8(3), "message does not matter")
+        ("peer1", uint8(3), "message does not matter"),
     ]
     assert filter_ok_mempool_status([("peer1", uint8(2), "message does not matter")]) == []
 
@@ -233,7 +238,7 @@ async def test_get_farming_rewards(seeded_random: random.Random) -> None:
                         confirmed=conf,
                         confirmed_at_height=uint32(100 if conf else 0),
                         type=uint32(type.value),
-                    )
+                    ),
                 )
 
         for tr in test_trs:
@@ -252,7 +257,10 @@ async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(100)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(100),
         )
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
@@ -266,7 +274,10 @@ async def test_get_unconfirmed_for_wallet(seeded_random: random.Random) -> None:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(100)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(100),
         )
         tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=uint32(2))
         tr4 = dataclasses.replace(tr2, name=bytes32.random(seeded_random), wallet_id=uint32(2))
@@ -301,19 +312,25 @@ async def test_transaction_count_for_wallet(seeded_random: random.Random) -> Non
         assert await store.get_transaction_count_for_wallet(2) == 2
         assert (
             await store.get_transaction_count_for_wallet(
-                1, True, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+                1,
+                True,
+                type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX]),
             )
             == 0
         )
         assert (
             await store.get_transaction_count_for_wallet(
-                1, False, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+                1,
+                False,
+                type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK]),
             )
             == 0
         )
         assert (
             await store.get_transaction_count_for_wallet(
-                1, False, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+                1,
+                False,
+                type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX]),
             )
             == 5
         )
@@ -340,7 +357,7 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
                         name=bytes32.random(seeded_random),
                         wallet_id=uint32(wallet_id),
                         type=uint32(type.value),
-                    )
+                    ),
                 )
 
         for tr in test_trs:
@@ -396,7 +413,7 @@ async def test_get_transaction_above(seeded_random: random.Random) -> None:
         assert await store.get_transaction_above(uint32(0)) == []
         for height in range(10):
             test_trs.append(
-                dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height))
+                dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height)),
             )
 
         for tr in test_trs:
@@ -447,7 +464,7 @@ async def test_rollback_to_block(seeded_random: random.Random) -> None:
         test_trs: list[TransactionRecord] = []
         for height in range(10):
             test_trs.append(
-                dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height))
+                dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height)),
             )
 
         for tr in test_trs:
@@ -496,16 +513,28 @@ async def test_get_transactions_between_confirmed(seeded_random: random.Random) 
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(1),
         )
         tr3 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(2)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(2),
         )
         tr4 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(3)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(3),
         )
         tr5 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(4)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(4),
         )
         tr6 = dataclasses.replace(
             tr1,
@@ -554,17 +583,29 @@ async def test_get_transactions_between_confirmed(seeded_random: random.Random) 
         # test type filter (coinbase reward)
         await store.add_transaction_record(tr6)
         assert await store.get_transactions_between(
-            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+            1,
+            0,
+            1,
+            reverse=True,
+            type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD]),
         ) == [tr6]
         assert await store.get_transactions_between(
-            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.exclude([TransactionType.COINBASE_REWARD])
+            1,
+            0,
+            1,
+            reverse=True,
+            type_filter=TransactionTypeFilter.exclude([TransactionType.COINBASE_REWARD]),
         ) == [tr5]
         assert (
             await store.get_transactions_between(1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.include([]))
             == []
         )
         assert await store.get_transactions_between(
-            1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.exclude([])
+            1,
+            0,
+            100,
+            reverse=True,
+            type_filter=TransactionTypeFilter.exclude([]),
         ) == [
             tr6,
             tr5,
@@ -722,16 +763,28 @@ async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Ran
         ph2 = bytes32.random(seeded_random)
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(1), to_puzzle_hash=ph1
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed_at_height=uint32(1),
+            to_puzzle_hash=ph1,
         )
         tr3 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(2), to_puzzle_hash=ph1
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed_at_height=uint32(2),
+            to_puzzle_hash=ph1,
         )
         tr4 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(3), to_puzzle_hash=ph2
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed_at_height=uint32(3),
+            to_puzzle_hash=ph2,
         )
         tr5 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(4), to_puzzle_hash=ph2
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed_at_height=uint32(4),
+            to_puzzle_hash=ph2,
         )
 
         await store.add_transaction_record(tr1)
@@ -765,7 +818,10 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=True,
+            confirmed_at_height=uint32(1),
         )
         tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
         tr4 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
@@ -840,7 +896,7 @@ async def test_valid_times_migration() -> None:
                 " sent int,"
                 " wallet_id bigint,"
                 " trade_id text,"
-                " type int)"
+                " type int)",
             )
 
         old_record = TransactionRecordOld(
@@ -926,15 +982,17 @@ async def test_large_tx_record_query() -> None:
                     record.wallet_id,
                     record.trade_id,
                     record.type,
-                )
+                ),
             )
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.executemany(
-                "INSERT INTO transaction_record VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tx_records_to_insert
+                "INSERT INTO transaction_record VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                tx_records_to_insert,
             )
             # Insert a specific tx_times item for the last transaction_record item
             await conn.execute(
-                "INSERT INTO tx_times VALUES (?, ?)", (name, bytes(ConditionValidTimes(min_height=uint32(42))))
+                "INSERT INTO tx_times VALUES (?, ?)",
+                (name, bytes(ConditionValidTimes(min_height=uint32(42)))),
             )
 
         all_transactions = await store.get_all_transactions_for_wallet(1)

@@ -187,7 +187,11 @@ class TransactionEndpoint:
         required=True,
     )
     push: bool = option(
-        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+        "--push/--no-push",
+        help="Push the transaction to the network",
+        type=bool,
+        is_flag=True,
+        default=True,
     )
     valid_at: Optional[int] = option(
         "--valid-at",

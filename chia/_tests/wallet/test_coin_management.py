@@ -68,7 +68,7 @@ def test_list_parsing(id: ValueAndArgs, show_unconfirmed: ValueAndArgs, paginate
             "blocks_needed": [3],  # 6 coins to test pagination
             "reuse_puzhash": True,  # irrelevent
             "trusted": True,  # irrelevent
-        }
+        },
     ],
     indirect=True,
 )
@@ -118,7 +118,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         0 unconfirmed additions.
         0 unconfirmed removals.
         Confirmed coins:
-        """
+        """,
         )
         in output
     )
@@ -139,7 +139,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         0 unconfirmed additions.
         0 unconfirmed removals.
         Confirmed coins:
-        """
+        """,
         )
         in output
     )
@@ -158,7 +158,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         0 unconfirmed additions.
         0 unconfirmed removals.
         Confirmed coins:
-        """
+        """,
         )
         in output
     )
@@ -202,7 +202,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         1 unconfirmed additions.
         1 unconfirmed removals.
         Confirmed coins:
-        """
+        """,
         )
         in output
     )
@@ -221,8 +221,8 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
                     "xch": {"set_remainder": True},
                     "cat": {"set_remainder": True},
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     # Test CAT display
@@ -245,7 +245,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         0 unconfirmed additions.
         0 unconfirmed removals.
         Confirmed coins:
-        """
+        """,
         )
         in output
     )

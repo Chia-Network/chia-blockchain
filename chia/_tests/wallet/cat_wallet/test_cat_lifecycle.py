@@ -54,7 +54,11 @@ async def do_spend(
 
     spendable_cat_list: list[SpendableCAT] = []
     for coin, innersol, proof, limitations_solution, extra_delta in zip(
-        coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
+        coins,
+        inner_solutions,
+        lineage_proofs,
+        limitations_solutions,
+        extra_deltas,
     ):
         spendable_cat_list.append(
             SpendableCAT(
@@ -66,13 +70,13 @@ async def do_spend(
                 lineage_proof=proof,
                 extra_delta=extra_delta,
                 limitations_program_reveal=tail if reveal_limitations_program else Program.to([]),
-            )
+            ),
         )
 
     spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
     agg_sig = AugSchemeMPL.aggregate(signatures)
     final_bundle = WalletSpendBundle.aggregate(
-        [*additional_spends, spend_bundle, WalletSpendBundle([], agg_sig)]  # "Signing" the spend bundle
+        [*additional_spends, spend_bundle, WalletSpendBundle([], agg_sig)],  # "Signing" the spend bundle
     )
     if cost_logger is not None:
         final_bundle = cost_logger.add_cost(cost_log_msg, final_bundle)
@@ -107,8 +111,8 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
                         [51, acs_ph, 1],
                         [51, acs_ph, 2],
                         [51, 0, -113, tail, checker_solution],
-                    ]
-                )
+                    ],
+                ),
             ],
             (MempoolInclusionStatus.SUCCESS, None),
             limitations_solutions=[checker_solution],
@@ -168,7 +172,9 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
         _, curried_args = cat_puzzle.uncurry()
         _, _, innerpuzzle = curried_args.as_iter()
         lineage_proof = LineageProof(
-            parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), uint64(parent_coin.amount)
+            parent_coin.parent_coin_info,
+            innerpuzzle.get_tree_hash(),
+            uint64(parent_coin.amount),
         )
         await do_spend(
             sim,
@@ -209,7 +215,7 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             [(await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))[0].coin],
             [NO_LINEAGE_PROOF],
             [
-                Program.to([[51, acs_ph, total_amount], [51, 0, -113, tail, checker_solution]])
+                Program.to([[51, acs_ph, total_amount], [51, 0, -113, tail, checker_solution]]),
             ],  # We subtracted 1 last time so it's normal now
             (MempoolInclusionStatus.SUCCESS, None),
             extra_deltas=[1],
@@ -298,8 +304,9 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
 
         await sim_client.push_tx(
             WalletSpendBundle(
-                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
-            )
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
+                G2Element(),
+            ),
         )
         await sim.farm_block()
 
@@ -330,8 +337,9 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
 
         await sim_client.push_tx(
             WalletSpendBundle(
-                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
-            )
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
+                G2Element(),
+            ),
         )
         await sim.farm_block()
 
@@ -436,8 +444,9 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
 
         await sim_client.push_tx(
             WalletSpendBundle(
-                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
-            )
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))],
+                G2Element(),
+            ),
         )
         await sim.farm_block()
 

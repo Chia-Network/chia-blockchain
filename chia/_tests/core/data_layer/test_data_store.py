@@ -81,7 +81,9 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: list[str]
+    database_uri: str,
+    table_name: str,
+    expected_columns: list[str],
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
@@ -171,7 +173,11 @@ async def test_insert_over_empty(data_store: DataStore, store_id: bytes32) -> No
     value = b"abc"
 
     insert_result = await data_store.insert(
-        key=key, value=value, store_id=store_id, reference_node_hash=None, side=None
+        key=key,
+        value=value,
+        store_id=store_id,
+        reference_node_hash=None,
+        side=None,
     )
     assert insert_result.node_hash == leaf_hash(key=key, value=value)
 
@@ -363,7 +369,9 @@ async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32)
 
     for generation, node_hash, expected_ancestors in ancestors:
         current_ancestors = await data_store.get_ancestors_optimized(
-            node_hash=node_hash, store_id=store_id, generation=generation
+            node_hash=node_hash,
+            store_id=store_id,
+            generation=generation,
         )
         assert current_ancestors == expected_ancestors
 
@@ -1081,7 +1089,12 @@ async def test_root_state(data_store: DataStore, store_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
     await data_store.insert(
-        key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.PENDING
+        key=key,
+        value=value,
+        store_id=store_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.PENDING,
     )
     is_empty = await data_store.table_is_empty(store_id=store_id)
     assert is_empty
@@ -1242,8 +1255,9 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 
     await data_store.subscribe(
         Subscription(
-            store_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
-        )
+            store_id,
+            [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)],
+        ),
     )
     subscriptions = await data_store.get_subscriptions()
     assert subscriptions == [
@@ -1256,21 +1270,25 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 
     await data_store.subscribe(
         Subscription(
-            store_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
-        )
+            store_id,
+            [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)],
+        ),
     )
     await data_store.subscribe(
         Subscription(
-            store_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
-        )
+            store_id2,
+            [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)],
+        ),
     )
     subscriptions = await data_store.get_subscriptions()
     assert subscriptions == [
         Subscription(
-            store_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
+            store_id,
+            [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)],
         ),
         Subscription(
-            store_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
+            store_id2,
+            [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)],
         ),
     ]
 
@@ -1279,7 +1297,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 async def test_server_selection(data_store: DataStore, store_id: bytes32) -> None:
     start_timestamp = 1000
     await data_store.subscribe(
-        Subscription(store_id, [ServerInfo(f"http://127.0.0.1/{port}", 0, 0) for port in range(8000, 8010)])
+        Subscription(store_id, [ServerInfo(f"http://127.0.0.1/{port}", 0, 0) for port in range(8000, 8010)]),
     )
 
     free_servers = {f"http://127.0.0.1/{port}" for port in range(8000, 8010)}
@@ -1316,7 +1334,9 @@ async def test_server_selection(data_store: DataStore, store_id: bytes32) -> Non
         assert servers_info != []
         if servers_info[0].url != "http://127.0.0.1/8000":
             await data_store.received_incorrect_file(
-                store_id=store_id, server_info=servers_info[0], timestamp=current_timestamp
+                store_id=store_id,
+                server_info=servers_info[0],
+                timestamp=current_timestamp,
             )
 
     servers_info = await data_store.get_available_servers_for_store(store_id=store_id, timestamp=current_timestamp)
@@ -1452,7 +1472,12 @@ async def test_data_server_files(
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
             await write_files_for_root(
-                data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
+                data_store_server,
+                store_id,
+                root,
+                tmp_path,
+                0,
+                group_by_store=group_files_by_store,
             )
             roots.append(root)
 
@@ -1508,7 +1533,9 @@ async def test_pending_roots(data_store: DataStore, store_id: bytes32, pending_s
 @pytest.mark.anyio
 @pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
 async def test_clear_pending_roots_returns_root(
-    data_store: DataStore, store_id: bytes32, pending_status: Status
+    data_store: DataStore,
+    store_id: bytes32,
+    pending_status: Status,
 ) -> None:
     key = b"\x01\x02"
     value = b"abc"
@@ -2000,7 +2027,10 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
 @pytest.mark.anyio
 @boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file_correct_file_exists(
-    data_store: DataStore, store_id: bytes32, tmp_path: Path, group_files_by_store: bool
+    data_store: DataStore,
+    store_id: bytes32,
+    tmp_path: Path,
+    group_files_by_store: bool,
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
@@ -2065,7 +2095,10 @@ async def test_insert_from_delta_file_correct_file_exists(
 @pytest.mark.anyio
 @boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file_incorrect_file_exists(
-    data_store: DataStore, store_id: bytes32, tmp_path: Path, group_files_by_store: bool
+    data_store: DataStore,
+    store_id: bytes32,
+    tmp_path: Path,
+    group_files_by_store: bool,
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     root = await data_store.get_tree_root(store_id=store_id)
@@ -2128,7 +2161,12 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
     key = b"foo"
     value = b"bar"
     await data_store.insert(
-        key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
+        key=key,
+        value=value,
+        store_id=store_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.COMMITTED,
     )
     with pytest.raises(Exception, match=f"Key already present: {key.hex()}"):
         await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
@@ -2201,7 +2239,9 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
 
 
 async def _check_ancestors(
-    data_store: DataStore, store_id: bytes32, root_hash: bytes32
+    data_store: DataStore,
+    store_id: bytes32,
+    root_hash: bytes32,
 ) -> dict[bytes32, Optional[bytes32]]:
     ancestors: dict[bytes32, Optional[bytes32]] = {}
     root_node: Node = await data_store.get_node(root_hash)

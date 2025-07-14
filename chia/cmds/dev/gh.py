@@ -121,7 +121,10 @@ class TestCMD:
     )
     per: Per = option("-p", "--per", help="Per", type=click.Choice(["directory", "file"]), default="directory")
     only: Optional[Path] = option(
-        "-o", "--only", help="Only run this item, a file or directory depending on --per", type=Path
+        "-o",
+        "--only",
+        help="Only run this item, a file or directory depending on --per",
+        type=Path,
     )
     duplicates: int = option("-d", "--duplicates", help="Number of duplicates", type=int, default=1)
     oses: Sequence[Oses] = option(
@@ -132,7 +135,9 @@ class TestCMD:
         default=all_oses,
     )
     full_python_matrix: bool = option(
-        "--full-python-matrix/--default-python-matrix", help="Run on all Python versions", default=False
+        "--full-python-matrix/--default-python-matrix",
+        help="Run on all Python versions",
+        default=False,
     )
     remote: str = option("-r", "--remote", help="Name of git remote", type=str, default="origin")
     open_browser: bool = option("--open-browser/--no-open-browser", help="Open browser", default=True)
@@ -149,7 +154,7 @@ class TestCMD:
                     "event=workflow_dispatch",
                     f"branch={self.ref}",
                     f"actor={username}",
-                ]
+                ],
             )
             run_url = f"https://github.com/Chia-Network/chia-blockchain/actions/workflows/test.yml?query={urllib.parse.quote(query)}"
             report(f"waiting a few seconds to load: {run_url}")
@@ -164,7 +169,10 @@ class TestCMD:
             temp_branch_name = f"tmp/{username}/{commit_sha}/{uuid.uuid4()}"
 
             process = await anyio.run_process(
-                command=["git", "push", self.remote, f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
+                command=["git", "push", self.remote, f"HEAD:{temp_branch_name}"],
+                check=False,
+                stdout=None,
+                stderr=None,
             )
             if process.returncode != 0:
                 raise click.ClickException("Failed to push temporary branch")
@@ -189,7 +197,10 @@ class TestCMD:
             finally:
                 report(f"deleting temporary branch: {temp_branch_name}")
                 process = await anyio.run_process(
-                    command=["git", "push", self.remote, "-d", temp_branch_name], check=False, stdout=None, stderr=None
+                    command=["git", "push", self.remote, "-d", temp_branch_name],
+                    check=False,
+                    stdout=None,
+                    stderr=None,
                 )
                 if process.returncode != 0:
                     raise click.ClickException("Failed to dispatch workflow")

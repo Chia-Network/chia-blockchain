@@ -25,7 +25,7 @@ class WalletPoolStore:
                 " wallet_id integer,"
                 " height bigint,"
                 " coin_spend blob,"
-                " PRIMARY KEY(transition_index, wallet_id))"
+                " PRIMARY KEY(transition_index, wallet_id))",
             )
 
         return self
@@ -52,7 +52,7 @@ class WalletPoolStore:
                     "ORDER BY transition_index DESC "
                     "LIMIT 1",
                     (wallet_id,),
-                )
+                ),
             )
             serialized_spend = bytes(spend)
             if len(rows) == 0:
@@ -62,7 +62,7 @@ class WalletPoolStore:
                     await conn.execute_fetchall(
                         "SELECT COUNT(*) FROM pool_state_transitions WHERE wallet_id=? AND height=? AND coin_spend=?",
                         (wallet_id, height, serialized_spend),
-                    )
+                    ),
                 )
                 if existing[0][0] != 0:
                     # we already have this transition in the DB
@@ -108,7 +108,8 @@ class WalletPoolStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
+                "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?",
+                (height, wallet_id_arg),
             )
             await cursor.close()
 

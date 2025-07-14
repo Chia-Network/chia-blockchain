@@ -40,7 +40,10 @@ def create_full_node_crawler_service(
     crawler_config = service_config["crawler"]
 
     crawler = Crawler(
-        service_config, root_path=root_path, constants=consensus_constants, start_crawler_loop=start_crawler_loop
+        service_config,
+        root_path=root_path,
+        constants=consensus_constants,
+        start_crawler_loop=start_crawler_loop,
     )
     api = CrawlerAPI(crawler)
 

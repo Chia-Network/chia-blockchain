@@ -25,7 +25,10 @@ log = logging.getLogger(__name__)
 
 
 def get_puzzle_and_solution_for_coin(
-    generator: BlockGenerator, coin: Coin, height: int, constants: ConsensusConstants
+    generator: BlockGenerator,
+    coin: Coin,
+    height: int,
+    constants: ConsensusConstants,
 ) -> SpendInfo:
     try:
         puzzle, solution = get_puzzle_and_solution_for_coin_rust(
@@ -69,7 +72,9 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
 
 
 def get_spends_for_block_with_conditions(
-    generator: BlockGenerator, height: int, constants: ConsensusConstants
+    generator: BlockGenerator,
+    height: int,
+    constants: ConsensusConstants,
 ) -> list[CoinSpendWithConditions]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)

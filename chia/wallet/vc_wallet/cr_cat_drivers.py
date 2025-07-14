@@ -72,7 +72,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
             ),
             (
                 Program.to(
-                    int_to_bytes(2) + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
+                    int_to_bytes(2) + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH),
                 ),
                 Program.to(
                     (
@@ -82,7 +82,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
                             [4, (1, create_did_tp()), 1],
                         ],
                         None,
-                    )
+                    ),
                 ).get_tree_hash(),
             ),
         ),
@@ -157,7 +157,7 @@ def solve_cr_layer(
             vc_inner_puzhash,
             my_coin_id,
             inner_solution,
-        ]
+        ],
     )
     return solution
 
@@ -204,7 +204,7 @@ class CRCAT:
             payment.puzzle_hash,  # type: ignore
         ).get_tree_hash_precalc(payment.puzzle_hash)
         new_cat_puzhash = construct_cat_puzzle(CAT_MOD, tail_hash, new_cr_layer_hash).get_tree_hash_precalc(
-            new_cr_layer_hash
+            new_cr_layer_hash,
         )
 
         eve_innerpuz: Program = Program.to(
@@ -216,7 +216,7 @@ class CRCAT:
                     [60, None],
                     [1, payment.puzzle_hash, authorized_providers, proofs_checker],
                 ],
-            )
+            ),
         )
         eve_cat_puzzle: Program = construct_cat_puzzle(
             CAT_MOD,
@@ -233,7 +233,7 @@ class CRCAT:
                     [51, eve_cat_puzzle_hash, payment.amount],
                     [61, std_hash(eve_coin.name())],
                 ],
-            )
+            ),
         )
 
         eve_proof: LineageProof = LineageProof(
@@ -256,7 +256,7 @@ class CRCAT:
                         eve_proof.to_program(),
                         0,
                         0,
-                    ]
+                    ],
                 ),
             ),
             CRCAT(
@@ -357,7 +357,7 @@ class CRCAT:
                     break
             else:
                 raise ValueError(
-                    "Previous spend was not a CR-CAT, nor did it properly remark the CR params"
+                    "Previous spend was not a CR-CAT, nor did it properly remark the CR params",
                 )  # pragma: no cover
             authorized_providers = [bytes32(p.as_atom()) for p in authorized_providers_as_prog.as_iter()]
             lineage_inner_puzhash: bytes32 = potential_cr_layer.get_tree_hash()
@@ -408,7 +408,7 @@ class CRCAT:
                 coin=Coin(
                     crcat.coin.parent_coin_info,
                     crcat.construct_puzzle(crcat.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
-                        crcat.inner_puzzle_hash
+                        crcat.inner_puzzle_hash,
                     ),
                     crcat.coin.amount,
                 ),
@@ -458,7 +458,7 @@ class CRCAT:
                     AssertCoinAnnouncement(
                         asserted_id=self.coin.name(),
                         asserted_msg=b"\xcd" + std_hash(new_inner_puzzle_hash + int_to_bytes(new_amount)),
-                    )
+                    ),
                 )
                 new_inner_puzzle_hashes_and_amounts.append((new_inner_puzzle_hash, new_amount))
 
@@ -484,7 +484,7 @@ class CRCAT:
                         next_coin_proof.to_program(),
                         previous_subtotal,
                         extra_delta,
-                    ]
+                    ],
                 ),
             ),
             [
@@ -492,7 +492,7 @@ class CRCAT:
                     Coin(
                         self.coin.name(),
                         self.construct_puzzle(new_inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
-                            new_inner_puzzle_hash
+                            new_inner_puzzle_hash,
                         ),
                         new_amount,
                     ),
@@ -500,7 +500,7 @@ class CRCAT:
                     LineageProof(
                         self.coin.parent_coin_info,
                         self.construct_cr_layer(self.inner_puzzle_hash).get_tree_hash_precalc(  # type: ignore
-                            self.inner_puzzle_hash
+                            self.inner_puzzle_hash,
                         ),
                         uint64(self.coin.amount),
                     ),
@@ -637,7 +637,7 @@ class ProofsChecker(Streamable):
                     self.flags,
                     key=functools.cmp_to_key(byte_sort_flags),
                 )
-            ]
+            ],
         )
 
     @classmethod

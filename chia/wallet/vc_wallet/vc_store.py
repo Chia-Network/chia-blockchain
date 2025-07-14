@@ -32,9 +32,9 @@ class VCProofs:
                     sorted(
                         self.key_value_pairs.items(),
                         key=cmp_to_key(byte_sort_pairs),
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
         )
         return prog
 
@@ -73,8 +73,9 @@ class VCProofs:
             if first_tree.atom is not None and rest_tree.atom is not None:
                 tree_hash_as_atom = Program.to(
                     Program.to((first_tree, rest_tree)).get_tree_hash_precalc(
-                        bytes32(first_tree.atom), bytes32(rest_tree.atom)
-                    )
+                        bytes32(first_tree.atom),
+                        bytes32(rest_tree.atom),
+                    ),
                 )
                 return tree_hash_as_atom
             else:
@@ -138,7 +139,7 @@ class VCStore:
                 # VerifiedCredential.proof_hash
                 " proof_hash text,"
                 # VCRecord.confirmed_height
-                " confirmed_height int)"
+                " confirmed_height int)",
             )
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_id_index ON vc_records(coin_id)")
@@ -247,7 +248,8 @@ class VCStore:
     async def add_vc_proofs(self, vc_proofs: VCProofs) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
+                "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)",
+                (vc_proofs.root().hex(), bytes(vc_proofs.as_program())),
             )
 
     async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:

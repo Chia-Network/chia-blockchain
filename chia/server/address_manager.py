@@ -168,8 +168,8 @@ class ExtendedPeerInfo:
                     key.to_bytes(32, byteorder="big")
                     + ch.encode()
                     + nBucket.to_bytes(3, byteorder="big")
-                    + self.peer_info.get_key()
-                )[:8]
+                    + self.peer_info.get_key(),
+                )[:8],
             ),
             byteorder="big",
         )

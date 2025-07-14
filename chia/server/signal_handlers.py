@@ -116,5 +116,5 @@ class SignalHandlers:
         # compatibility.
 
         self.setup_sync_signal_handler(
-            handler=functools.partial(self.threadsafe_sync_signal_handler_for_async, handler=handler)
+            handler=functools.partial(self.threadsafe_sync_signal_handler_for_async, handler=handler),
         )

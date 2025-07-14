@@ -58,7 +58,10 @@ class BlockHeightMap(BlockHeightMapProtocol):
 
     @classmethod
     async def create(
-        cls, blockchain_dir: Path, db: DBWrapper2, selected_network: Optional[str] = None
+        cls,
+        blockchain_dir: Path,
+        db: DBWrapper2,
+        selected_network: Optional[str] = None,
     ) -> BlockHeightMap:
         if db.db_version != 2:
             raise RuntimeError(f"BlockHeightMap does not support database schema v{db.db_version}")
@@ -126,7 +129,7 @@ class BlockHeightMap(BlockHeightMapProtocol):
 
         log.info(
             f"Loaded sub-epoch-summaries: {len(self.__sub_epoch_summaries)} "
-            f"height-to-hash: {len(self.__height_to_hash) // 32}"
+            f"height-to-hash: {len(self.__height_to_hash) // 32}",
         )
 
         # prepopulate the height -> hash mapping
@@ -204,7 +207,7 @@ class BlockHeightMap(BlockHeightMapProtocol):
             while height > window_end:
                 if prev_hash not in ordered:
                     raise ValueError(
-                        f"block with header hash is missing from your blockchain database: {prev_hash.hex()}"
+                        f"block with header hash is missing from your blockchain database: {prev_hash.hex()}",
                     )
                 entry = ordered[prev_hash]
                 assert height == entry[0] + 1

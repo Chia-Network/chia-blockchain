@@ -84,10 +84,10 @@ async def test_harvester_receive_source_signing_data(
 
     # Connect peers to each other
     farmer_service.add_peer(
-        UnresolvedPeerInfo(str(full_node_service_2.self_hostname), full_node_service_2._server.get_port())
+        UnresolvedPeerInfo(str(full_node_service_2.self_hostname), full_node_service_2._server.get_port()),
     )
     full_node_service_2.add_peer(
-        UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
+        UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port()),
     )
 
     await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
@@ -119,20 +119,23 @@ async def test_harvester_receive_source_signing_data(
     farmer_reward_address = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
     async def intercept_harvester_request_signatures(
-        self: HarvesterAPI, request: harvester_protocol.RequestSignatures
+        self: HarvesterAPI,
+        request: harvester_protocol.RequestSignatures,
     ) -> Optional[Message]:
         nonlocal harvester
         nonlocal farmer_reward_address
 
         validate_harvester_request_signatures(request)
         result_msg: Optional[Message] = await HarvesterAPI.request_signatures(
-            cast(HarvesterAPI, harvester.server.api), request
+            cast(HarvesterAPI, harvester.server.api),
+            request,
         )
         assert result_msg is not None
 
         # Inject overridden farmer reward address
         response: RespondSignatures = dataclasses.replace(
-            RespondSignatures.from_bytes(result_msg.data), farmer_reward_address_override=farmer_reward_address
+            RespondSignatures.from_bytes(result_msg.data),
+            farmer_reward_address_override=farmer_reward_address,
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
@@ -215,7 +218,9 @@ async def test_harvester_receive_source_signing_data(
             assert data_hash == hash
 
     async def intercept_farmer_new_proof_of_space(
-        self: HarvesterAPI, request: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
+        self: HarvesterAPI,
+        request: harvester_protocol.NewProofOfSpace,
+        peer: WSChiaConnection,
     ) -> None:
         nonlocal farmer
         nonlocal farmer_reward_address
@@ -225,7 +230,8 @@ async def test_harvester_receive_source_signing_data(
         await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
 
     async def intercept_farmer_request_signed_values(
-        self: FarmerAPI, request: farmer_protocol.RequestSignedValues
+        self: FarmerAPI,
+        request: farmer_protocol.RequestSignedValues,
     ) -> Optional[Message]:
         nonlocal farmer
         nonlocal farmer_reward_address
@@ -251,21 +257,21 @@ async def test_harvester_receive_source_signing_data(
                 api=farmer.server.api,
                 handler=intercept_farmer_request_signed_values,
                 request_type=ProtocolMessageTypes.request_signed_values,
-            )
+            ),
         )
         exit_stack.enter_context(
             patch_request_handler(
                 api=farmer.server.api,
                 handler=intercept_farmer_new_proof_of_space,
                 request_type=ProtocolMessageTypes.new_proof_of_space,
-            )
+            ),
         )
         exit_stack.enter_context(
             patch_request_handler(
                 api=harvester.server.api,
                 handler=intercept_harvester_request_signatures,
                 request_type=ProtocolMessageTypes.request_signatures,
-            )
+            ),
         )
 
         # Start injecting signage points
@@ -351,8 +357,8 @@ def prepare_sp_and_pos_for_fee_test(
 
     pubkey = G1Element.from_bytes(
         bytes.fromhex(
-            "80a836a74b077cabaca7a76d1c3c9f269f7f3a8f2fa196a65ee8953eb81274eb8b7328d474982617af5a0fe71b47e9b8"
-        )
+            "80a836a74b077cabaca7a76d1c3c9f269f7f3a8f2fa196a65ee8953eb81274eb8b7328d474982617af5a0fe71b47e9b8",
+        ),
     )
 
     # Send some fake data to the framer
@@ -382,11 +388,11 @@ def prepare_sp_and_pos_for_fee_test(
         signage_point_index=uint8(0),
         include_source_signature_data=False,
         farmer_reward_address_override=decode_puzzle_hash(
-            "txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej"
+            "txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej",
         ),
         fee_info=ProofOfSpaceFeeInfo(
             # Apply threshold offset to make the fee either pass or fail
-            applied_fee_threshold=uint32(fee_quality + fee_threshold_offset)
+            applied_fee_threshold=uint32(fee_quality + fee_threshold_offset),
         ),
     )
 
@@ -436,7 +442,8 @@ async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType
 
 
 def decode_sp(
-    is_sub_slot: bool, sp64: str
+    is_sub_slot: bool,
+    sp64: str,
 ) -> Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]:
     sp_bytes = base64.b64decode(sp64)
     if is_sub_slot:
@@ -472,7 +479,7 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
                 full_node.blockchain.pool,
                 None,
                 ValidationState(ssi, diff, prev_ses_block),
-            )
+            ),
         )
     pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
@@ -483,7 +490,10 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
                 ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
         r, _, _ = await full_node.blockchain.add_block(
-            blocks[i], pre_validation_results[i], sub_slot_iters=ssi, fork_info=fork_info
+            blocks[i],
+            pre_validation_results[i],
+            sub_slot_iters=ssi,
+            fork_info=fork_info,
         )
         assert r == AddBlockResult.NEW_PEAK
 

@@ -40,7 +40,8 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
         if connection_type != NodeType.FARMER:
             with pytest.raises(InvalidConnectionTypeError):
                 dummy_connection: WSChiaConnection = get_dummy_connection(
-                    connection_type, farmer_connection.peer_node_id
+                    connection_type,
+                    farmer_connection.peer_node_id,
                 )  # type: ignore[assignment]
                 sender.set_connection(dummy_connection)
     # Test setting a valid connection works
@@ -75,7 +76,9 @@ def test_set_response(bt: BlockTools) -> None:
 
     def new_response_message(sync_id: int, message_id: int, message_type: ProtocolMessageTypes) -> PlotSyncResponse:
         return PlotSyncResponse(
-            plot_sync_identifier(uint64(sync_id), uint64(message_id)), int16(int(message_type.value)), None
+            plot_sync_identifier(uint64(sync_id), uint64(message_id)),
+            int16(int(message_type.value)),
+            None,
         )
 
     response_message = new_response_message(0, 1, ProtocolMessageTypes.plot_sync_start)

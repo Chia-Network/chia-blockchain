@@ -66,7 +66,11 @@ async def call_rpc_service_endpoint(
 
 
 async def call_daemon_command(
-    command: str, request: dict[str, Any], config: dict[str, Any], root_path: Path, quiet: bool = False
+    command: str,
+    request: dict[str, Any],
+    config: dict[str, Any],
+    root_path: Path,
+    quiet: bool = False,
 ) -> dict[str, Any]:
     from chia.daemon.client import connect_to_daemon_and_validate
 
@@ -182,7 +186,7 @@ def create_commands() -> None:
             config = load_config(root_path, "config.yaml")
             if request is not None and json_file is not None:
                 sys.exit(
-                    "Can only use one request source: REQUEST argument OR -j/--json-file option. See the help with -h"
+                    "Can only use one request source: REQUEST argument OR -j/--json-file option. See the help with -h",
                 )
 
             request_json: dict[str, Any] = {}

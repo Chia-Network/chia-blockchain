@@ -112,7 +112,7 @@ class Crawler:
         if self.minimum_version_count < 1:
             self.log.warning(
                 f"Crawler configuration minimum_version_count expected to be greater than zero: "
-                f"{self.minimum_version_count!r}"
+                f"{self.minimum_version_count!r}",
             )
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
@@ -122,7 +122,9 @@ class Crawler:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def create_client(
-        self, peer_info: PeerInfo, on_connect: Callable[[WSChiaConnection], Awaitable[None]]
+        self,
+        peer_info: PeerInfo,
+        on_connect: Callable[[WSChiaConnection], Awaitable[None]],
     ) -> bool:
         return await self.server.start_client(peer_info, on_connect)
 
@@ -233,7 +235,8 @@ class Crawler:
                         if response_peer.host not in self.best_timestamp_per_peer:
                             self.best_timestamp_per_peer[response_peer.host] = response_peer.timestamp
                         self.best_timestamp_per_peer[response_peer.host] = max(
-                            self.best_timestamp_per_peer[response_peer.host], response_peer.timestamp
+                            self.best_timestamp_per_peer[response_peer.host],
+                            response_peer.timestamp,
                         )
                         if (
                             response_peer.host not in self.seen_nodes
@@ -382,11 +385,11 @@ class Crawler:
                 continue
         self.log.warning(
             "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
-            f"{addresses_count - ipv6_addresses_count}."
+            f"{addresses_count - ipv6_addresses_count}.",
         )
         self.log.warning(
             "IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
-            f"{ipv6_addresses_count}."
+            f"{ipv6_addresses_count}.",
         )
         ipv6_available_peers = 0
         for host in self.host_to_version.keys():
@@ -405,6 +408,6 @@ class Crawler:
         self.log.warning(f"Temporary ignored addresses in the DB: {ignored_peers}")
         self.log.warning(
             "Peers to crawl from in the next batch (total IPs - ignored - banned): "
-            f"{total_records - banned_peers - ignored_peers}"
+            f"{total_records - banned_peers - ignored_peers}",
         )
         self.log.warning("***")

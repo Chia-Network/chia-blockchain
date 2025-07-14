@@ -14,7 +14,10 @@ class DriverProtocol(Protocol):
     def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]: ...
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = ...
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = ...,
     ) -> Optional[Program]: ...
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]: ...
@@ -24,5 +27,9 @@ class DriverProtocol(Protocol):
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program: ...
 
     def solve(
-        self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program
+        self,
+        constructor: PuzzleInfo,
+        solver: Solver,
+        inner_puzzle: Program,
+        inner_solution: Program,
     ) -> Program: ...

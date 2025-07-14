@@ -81,7 +81,10 @@ def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
 
     generate_file_func = get_delta_filename if file_type == "delta" else get_full_tree_filename
     reformatted = generate_file_func(
-        store_id=store_id, node_hash=node_hash, generation=generation, group_by_store=False
+        store_id=store_id,
+        node_hash=node_hash,
+        generation=generation,
+        group_by_store=False,
     )
 
     return reformatted == filename
@@ -166,7 +169,9 @@ async def write_files_for_root(
 
     try:
         last_seen_generation = await data_store.get_last_tree_root_by_hash(
-            store_id, root.node_hash, max_generation=root.generation
+            store_id,
+            root.node_hash,
+            max_generation=root.generation,
         )
         if last_seen_generation is None:
             with open(filename_diff_tree, mode) as writer:
@@ -208,7 +213,7 @@ async def download_file(
             new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
             log.info(
                 f"Failed to download {filename} from {new_server_info.url}."
-                f"Miss {new_server_info.num_consecutive_failures}."
+                f"Miss {new_server_info.num_consecutive_failures}.",
             )
             log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
             return False
@@ -254,7 +259,11 @@ async def insert_from_delta_file(
         timestamp = int(time.time())
         existing_generation += 1
         target_filename_path = get_delta_filename_path(
-            client_foldername, store_id, root_hash, existing_generation, group_files_by_store
+            client_foldername,
+            store_id,
+            root_hash,
+            existing_generation,
+            group_files_by_store,
         )
         filename_exists = target_filename_path.exists()
         for grouped_by_store in (False, True):
@@ -296,7 +305,7 @@ async def insert_from_delta_file(
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
-                f"Generation: {existing_generation}. Store id: {store_id}. Nodes inserted: {num_inserted}."
+                f"Generation: {existing_generation}. Store id: {store_id}. Nodes inserted: {num_inserted}.",
             )
 
             if target_generation - existing_generation <= maximum_full_file_count - 1:
@@ -341,7 +350,11 @@ def delete_full_file_if_exists(foldername: Path, store_id: bytes32, root: Root) 
     not_found = 0
     for group_by_store in (True, False):
         filename_full_tree = get_full_tree_filename_path(
-            foldername, store_id, node_hash, root.generation, group_by_store
+            foldername,
+            store_id,
+            node_hash,
+            root.generation,
+            group_by_store,
         )
         try:
             filename_full_tree.unlink()

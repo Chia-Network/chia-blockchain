@@ -29,10 +29,13 @@ from chia.util.keychain import Keychain
 # this test
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 @pytest.mark.parametrize(
-    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)]
+    argnames=["filter_prefix_bits", "should_pass"],
+    argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)],
 )
 def test_filter_prefix_bits_on_blocks(
-    default_10000_blocks: list[FullBlock], filter_prefix_bits: uint8, should_pass: int
+    default_10000_blocks: list[FullBlock],
+    filter_prefix_bits: uint8,
+    should_pass: int,
 ) -> None:
     passed = 0
     for block in default_10000_blocks:
@@ -50,23 +53,33 @@ def test_filter_prefix_bits_on_blocks(
 
 @pytest.fixture(scope="function")
 async def farmer_harvester_with_filter_size_9(
-    get_temp_keyring: Keychain, tmp_path: Path, self_hostname: str
+    get_temp_keyring: Keychain,
+    tmp_path: Path,
+    self_hostname: str,
 ) -> AsyncIterator[tuple[HarvesterService, FarmerAPI]]:
     async def have_connections() -> bool:
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     local_b_tools = await create_block_tools_async(
-        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(9)), keychain=get_temp_keyring
+        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(9)),
+        keychain=get_temp_keyring,
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
     async with setup_farmer_multi_harvester(
-        local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
+        local_b_tools,
+        1,
+        tmp_path,
+        local_b_tools.constants,
+        start_services=True,
     ) as (harvesters, farmer_service, _):
         harvester_service = harvesters[0]
         assert farmer_service.rpc_server is not None
         farmer_rpc_cl = await FarmerRpcClient.create(
-            self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
+            self_hostname,
+            farmer_service.rpc_server.listen_port,
+            farmer_service.root_path,
+            farmer_service.config,
         )
         assert harvester_service.rpc_server is not None
         harvester_rpc_cl = await HarvesterRpcClient.create(

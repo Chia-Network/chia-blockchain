@@ -94,18 +94,19 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
 
                 all_targets.append(
                     encode_puzzle_hash(
-                        puzzle_hash_for_pk(_derive_path_unhardened(intermediate_o, [i]).get_g1()), prefix
-                    )
+                        puzzle_hash_for_pk(_derive_path_unhardened(intermediate_o, [i]).get_g1()),
+                        prefix,
+                    ),
                 )
                 all_targets.append(
-                    encode_puzzle_hash(puzzle_hash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix)
+                    encode_puzzle_hash(puzzle_hash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix),
                 )
                 if all_targets[-1] == config["farmer"].get("xch_target_address") or all_targets[-2] == config[
                     "farmer"
                 ].get("xch_target_address"):
                     stop_searching_for_farmer = True
                 if all_targets[-1] == config["pool"].get("xch_target_address") or all_targets[-2] == config["pool"].get(
-                    "xch_target_address"
+                    "xch_target_address",
                 ):
                     stop_searching_for_pool = True
 
@@ -114,7 +115,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         if "xch_target_address" not in config["farmer"]:
             print(
                 f"Setting the xch destination for the farmer reward (1/8 plus fees, solo and pooling)"
-                f" to {all_targets[0]}"
+                f" to {all_targets[0]}",
             )
             config["farmer"]["xch_target_address"] = all_targets[0]
             updated_target = True
@@ -122,7 +123,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             print(
                 f"WARNING: using a farmer address which we might not have the private"
                 f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-                f"{config['farmer']['xch_target_address']} with {all_targets[0]}"
+                f"{config['farmer']['xch_target_address']} with {all_targets[0]}",
             )
 
         if "pool" not in config:
@@ -135,12 +136,12 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             print(
                 f"WARNING: using a pool address which we might not have the private"
                 f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-                f"{config['pool']['xch_target_address']} with {all_targets[0]}"
+                f"{config['pool']['xch_target_address']} with {all_targets[0]}",
             )
         if updated_target:
             print(
                 f"To change the XCH destination addresses, edit the `xch_target_address` entries in"
-                f" {(new_root / 'config' / 'config.yaml').absolute()}."
+                f" {(new_root / 'config' / 'config.yaml').absolute()}.",
             )
 
         # Set the pool pks in the farmer

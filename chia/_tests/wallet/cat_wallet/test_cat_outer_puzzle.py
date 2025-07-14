@@ -57,7 +57,7 @@ def test_cat_outer_puzzle() -> None:
                 "sibling_spends": "(" + parent_spend_as_hex + ")",
                 "sibling_puzzles": "(" + disassemble(ACS) + ")",
                 "sibling_solutions": "(" + disassemble(inner_solution) + ")",
-            }
+            },
         ),
         ACS,
         inner_solution,

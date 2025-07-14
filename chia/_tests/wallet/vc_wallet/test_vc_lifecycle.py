@@ -92,7 +92,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                     ],
                     G2Element(),
                 ),
-            )
+            ),
         )
         await sim.farm_block()
 
@@ -123,7 +123,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                     ),
                 ],
                 G2Element(),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_PARENT_ID_FAILED)
 
@@ -146,7 +146,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                         ],
                         G2Element(),
                     ),
-                )
+                ),
             )
             if parent == fake_acs_coin:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_PARENT_ID_FAILED)
@@ -180,7 +180,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                     ],
                     G2Element(),
                 ),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -193,7 +193,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # (mod (METADATA TP solution) (a (q . (c (c (q . 1) (c 2 (c 5 ()))) 11)) (a TP (list METADATA () solution))))
         # (a (q 4 (c (q . 1) (c 2 (c 5 ()))) 11) (a 5 (c 2 (c () (c 11 ())))))
         MOCK_OWNERSHIP_LAYER: Program = Program.fromhex(
-            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"
+            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080",
         )
         # Create it with mock singleton info
         transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
@@ -226,13 +226,13 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                                     my_coin_id,
                                     new_metadata,
                                     new_tp_hash,
-                                )
-                            ]
+                                ),
+                            ],
                         ),
-                    )
+                    ),
                 ],
                 G2Element(),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -261,14 +261,14 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                                     bad_data,
                                     new_metadata,
                                     new_tp_hash,
-                                )
-                            ]
+                                ),
+                            ],
                         ),
                     ),
                     did_authorization_spend,
                 ],
                 G2Element(),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
 
@@ -287,8 +287,8 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
                                     my_coin_id,
                                     new_metadata,
                                     new_tp_hash,
-                                )
-                            ]
+                                ),
+                            ],
                         ),
                     ),
                     did_authorization_spend,
@@ -322,7 +322,8 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
         await sim.farm_block(p2_either_puzzle.get_tree_hash())
         p2_either_coin: Coin = (
             await client.get_coin_records_by_puzzle_hashes(
-                [p2_either_puzzle.get_tree_hash()], include_spent_coins=False
+                [p2_either_puzzle.get_tree_hash()],
+                include_spent_coins=False,
             )
         )[0].coin
 
@@ -338,10 +339,10 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                             Program.to(None),
                             hidden=True,
                         ),
-                    )
+                    ),
                 ],
                 G2Element(),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
@@ -357,10 +358,10 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                             Program.to(bytes32.zeros),
                             hidden=True,
                         ),
-                    )
+                    ),
                 ],
                 G2Element(),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -382,11 +383,11 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                                 ACS,
                                 Program.to([[51, brick_hash, 0]]),
                             ),
-                        )
+                        ),
                     ],
                     G2Element(),
                 ),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
@@ -404,12 +405,13 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
 
         # (mod (PROOFS_CHECKER proofs) (if (a PROOFS_CHECKER (list proofs)) () (x)))
         proofs_checker_runner: Program = Program.fromhex(
-            "ff02ffff03ffff02ff02ffff04ff05ff808080ff80ffff01ff088080ff0180"
+            "ff02ffff03ffff02ff02ffff04ff05ff808080ff80ffff01ff088080ff0180",
         ).curry(proofs_checker.as_program())
         await sim.farm_block(proofs_checker_runner.get_tree_hash())
         proof_checker_coin: Coin = (
             await client.get_coin_records_by_puzzle_hashes(
-                [proofs_checker_runner.get_tree_hash()], include_spent_coins=False
+                [proofs_checker_runner.get_tree_hash()],
+                include_spent_coins=False,
             )
         )[0].coin
 
@@ -424,11 +426,11 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
                                 proof_checker_coin,
                                 proofs_checker_runner,
                                 Program.to([[Program.to((flag, "1")) for flag in proof_list]]),
-                            )
+                            ),
                         ],
                         G2Element(),
                     ),
-                )
+                ),
             )
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
@@ -478,7 +480,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         launcher_spend,
                     ],
                     G2Element(),
-                )
+                ),
             )
             await sim.farm_block()
             if fund_coin == did_fund_coin:
@@ -520,7 +522,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                     ],
                     G2Element(),
                 ),
-            )
+            ),
         )
         await sim.farm_block()
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -561,10 +563,10 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                                 [
                                                     [51, ACS_PH, did.amount if correct_did else other_did.amount],
                                                     expected_announcement.to_program(),
-                                                ]
+                                                ],
                                             ),
                                         ),
-                                    )
+                                    ),
                                 ]
                                 if use_did
                                 else []
@@ -573,7 +575,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         ],
                         G2Element(),
                     ),
-                )
+                ),
             )
             if use_did:
                 if correct_did:
@@ -646,7 +648,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         launch_crcat_spend_2,
                     ],
                     G2Element(),
-                )
+                ),
             )
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
@@ -681,7 +683,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                     cr_1.coin.amount if error != "use_malicious_cats" else malicious_cr_1.coin.amount,
                                 ],
                                 *([[60, b"\xcd" + bytes(32)]] if error == "make_banned_announcement" else []),
-                            ]
+                            ],
                         ),
                     ),
                     (
@@ -694,8 +696,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                                     51,
                                     ACS_PH,
                                     cr_2.coin.amount if error != "use_malicious_cats" else malicious_cr_2.coin.amount,
-                                ]
-                            ]
+                                ],
+                            ],
                         ),
                     ),
                 ],
@@ -730,7 +732,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         ],
                         *(a.to_program() for a in expected_announcements),
                         vc.standard_magic_condition(),
-                    ]
+                    ],
                 ),
             )
 
@@ -744,7 +746,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         ],
                         G2Element(),
                     ),
-                )
+                ),
             )
             if error is None:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -798,7 +800,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         ],
                         G2Element(),
                     ),
-                )
+                ),
             )
             if correct_did:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -822,16 +824,18 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         assert (
             len(
                 await client.get_coin_records_by_puzzle_hashes(
-                    [new_singletons_puzzle_reveal.get_tree_hash()], include_spent_coins=False
-                )
+                    [new_singletons_puzzle_reveal.get_tree_hash()],
+                    include_spent_coins=False,
+                ),
             )
             > 0
         )
         assert (
             len(
                 await client.get_coin_records_by_names(
-                    [crcat.coin.name() for crcat in new_crcats], include_spent_coins=False
-                )
+                    [crcat.coin.name() for crcat in new_crcats],
+                    include_spent_coins=False,
+                ),
             )
             == 2
         )
@@ -845,7 +849,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 [
                     [51, ACS_PH, vc.coin.amount],
                     vc.magic_condition_for_self_revoke(),
-                ]
+                ],
             ),
         )
         result = await client.push_tx(
@@ -855,7 +859,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                     [clear_spend],
                     G2Element(),
                 ),
-            )
+            ),
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -876,8 +880,9 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         assert (
             len(
                 await client.get_coin_records_by_puzzle_hashes(
-                    [cleared_singletons_puzzle_reveal.get_tree_hash()], include_spent_coins=False
-                )
+                    [cleared_singletons_puzzle_reveal.get_tree_hash()],
+                    include_spent_coins=False,
+                ),
             )
             > 0
         )

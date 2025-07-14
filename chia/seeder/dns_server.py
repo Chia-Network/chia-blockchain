@@ -195,7 +195,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
             if self.expected_length != 0:  # Incomplete requests
                 log.warning(
                     f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
-                    f"closing connection after dns replies are sent."
+                    f"closing connection after dns replies are sent.",
                 )
             create_referenced_task(self.wait_for_futures(), known_unreferenced=True)
             return True  # Keep connection open, until the futures are done.
@@ -347,7 +347,8 @@ class DNSServer:
 
         # One protocol instance will be created for each udp transport, so that we can accept ipv4 and ipv6
         self.udp_transport_ipv6, self.udp_protocol_ipv6 = await loop.create_datagram_endpoint(
-            lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.udp_dns_port)
+            lambda: UDPDNSServerProtocol(self.dns_response),
+            local_addr=("::0", self.udp_dns_port),
         )
         self.udp_protocol_ipv6.start()  # start ipv6 udp transmit task
 
@@ -357,13 +358,16 @@ class DNSServer:
         if sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
             # Windows does not support dual stack sockets, so we need to create a new socket for ipv4.
             self.udp_transport_ipv4, self.udp_protocol_ipv4 = await loop.create_datagram_endpoint(
-                lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("0.0.0.0", self.udp_dns_port)
+                lambda: UDPDNSServerProtocol(self.dns_response),
+                local_addr=("0.0.0.0", self.udp_dns_port),
             )
             self.udp_protocol_ipv4.start()  # start ipv4 udp transmit task
 
         # One tcp server will handle both ipv4 and ipv6 on both linux and windows.
         self.tcp_server = await loop.create_server(
-            lambda: TCPDNSServerProtocol(self.dns_response), ["::0", "0.0.0.0"], self.tcp_dns_port
+            lambda: TCPDNSServerProtocol(self.dns_response),
+            ["::0", "0.0.0.0"],
+            self.tcp_dns_port,
         )
 
         log.warning("DNS server started.")
@@ -471,7 +475,7 @@ class DNSServer:
             log.warning(
                 f"Number of reliable peers discovered in dns server:"
                 f" IPv4 count - {len(self.reliable_peers_v4)}"
-                f" IPv6 count - {len(self.reliable_peers_v6)}"
+                f" IPv6 count - {len(self.reliable_peers_v6)}",
             )
 
     async def get_peers_to_respond(self, ipv4_count: int, ipv6_count: int) -> PeerList:

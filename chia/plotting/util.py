@@ -177,10 +177,12 @@ def get_harvester_config(root_path: Path) -> dict[str, Any]:
         "enforce_gpu_index": config["harvester"].get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX),
         "disable_cpu_affinity": config["harvester"].get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY),
         "parallel_decompressor_count": config["harvester"].get(
-            "parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT
+            "parallel_decompressor_count",
+            DEFAULT_PARALLEL_DECOMPRESSOR_COUNT,
         ),
         "decompressor_thread_count": config["harvester"].get(
-            "decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT
+            "decompressor_thread_count",
+            DEFAULT_DECOMPRESSOR_THREAD_COUNT,
         ),
         "recursive_plot_scan": config["harvester"].get("recursive_plot_scan", DEFAULT_RECURSIVE_PLOT_SCAN),
         "plots_refresh_parameter": plots_refresh_parameter,
@@ -330,7 +332,7 @@ def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
     if k < min_k and not override_k:
         raise ValueError(
             f"k={min_k} is the minimum size for farming.\n"
-            "If you are testing and you want to use smaller size please add the --override-k flag."
+            "If you are testing and you want to use smaller size please add the --override-k flag.",
         )
     elif k < 25 and override_k:
         raise ValueError("Error: The minimum k size allowed from the cli is k=25.")

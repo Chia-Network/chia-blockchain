@@ -21,7 +21,8 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 
 @contextlib.asynccontextmanager
 async def create_blockchain(
-    constants: ConsensusConstants, db_version: int
+    constants: ConsensusConstants,
+    db_version: int,
 ) -> AsyncIterator[tuple[Blockchain, DBWrapper2]]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:

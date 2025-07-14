@@ -83,7 +83,9 @@ async def ignore_block_validation(
         return new_create
 
     def run_block(
-        block: FullBlock, prev_generators: list[bytes], constants: ConsensusConstants
+        block: FullBlock,
+        prev_generators: list[bytes],
+        constants: ConsensusConstants,
     ) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
@@ -111,16 +113,20 @@ async def ignore_block_validation(
     monkeypatch.setattr("chia.consensus.blockchain.validate_block_body", validate_block_body)
     monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", run_block)
     monkeypatch.setattr(
-        "chia.consensus.block_header_validation.validate_unfinished_header_block", lambda *_, **__: (uint64(1), None)
+        "chia.consensus.block_header_validation.validate_unfinished_header_block",
+        lambda *_, **__: (uint64(1), None),
     )
     monkeypatch.setattr(
-        "chia.wallet.wallet_blockchain.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
+        "chia.wallet.wallet_blockchain.validate_finished_header_block",
+        lambda *_, **__: (uint64(1), None),
     )
     monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
+        "chia.consensus.multiprocess_validation.validate_finished_header_block",
+        lambda *_, **__: (uint64(1), None),
     )
     monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.validate_pospace_and_get_required_iters", lambda *_, **__: uint64(0)
+        "chia.consensus.multiprocess_validation.validate_pospace_and_get_required_iters",
+        lambda *_, **__: uint64(0),
     )
     monkeypatch.setattr("chia_rs.BlockRecord.sp_total_iters", lambda *_: uint128(0))
     monkeypatch.setattr("chia_rs.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))
@@ -161,7 +167,7 @@ def new_action_scope_wrapper(func: Any) -> Any:
             for wallet_id, ph_index in zip(self.wallets, ph_indexes):
                 if not ph_indexes[wallet_id] == (await self.puzzle_store.get_used_count(wallet_id)):
                     raise NewPuzzleHashError(
-                        f"wallet ID {wallet_id} generated new puzzle hashes while reuse_puzhash was False"
+                        f"wallet ID {wallet_id} generated new puzzle hashes while reuse_puzhash was False",
                     )
 
     return wrapped_new_action_scope
@@ -199,7 +205,8 @@ async def wallet_environments(
 
         new_action_scope_wrapped = new_action_scope_wrapper(WalletStateManager.new_action_scope)
         with unittest.mock.patch(
-            "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope", new=new_action_scope_wrapped
+            "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope",
+            new=new_action_scope_wrapped,
         ):
             wallet_rpc_clients: list[WalletRpcClient] = []
             async with AsyncExitStack() as astack:
@@ -217,7 +224,8 @@ async def wallet_environments(
                     # Shorten the 10 seconds default value
                     service._node.coin_state_retry_seconds = 2
                     await service._node.server.start_client(
-                        PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
+                        PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()),
+                        None,
                     )
                     wallet_rpc_clients.append(
                         await astack.enter_async_context(
@@ -227,15 +235,16 @@ async def wallet_environments(
                                 service.rpc_server.listen_port,  # type: ignore[union-attr]
                                 service.root_path,
                                 service.config,
-                            )
-                        )
+                            ),
+                        ),
                     )
 
                 wallet_states: list[WalletState] = []
                 for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
                     if blocks_needed > 0:
                         await full_node[0]._api.farm_blocks_to_wallet(
-                            count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                            count=blocks_needed,
+                            wallet=service._node.wallet_state_manager.main_wallet,
                         )
                         await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
                     wallet_states.append(
@@ -249,7 +258,7 @@ async def wallet_environments(
                                 unspent_coin_count=uint32(2 * blocks_needed),
                                 pending_coin_removal_count=uint32(0),
                             ),
-                        )
+                        ),
                     )
 
                 assert full_node[0].rpc_server is not None
@@ -259,7 +268,7 @@ async def wallet_environments(
                         full_node[0].rpc_server.listen_port,
                         full_node[0].root_path,
                         full_node[0].config,
-                    )
+                    ),
                 )
                 yield WalletTestFramework(
                     full_node[0]._api,

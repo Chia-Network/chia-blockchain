@@ -35,13 +35,17 @@ class CrawlerAPI:
 
     @metadata.request(peer_required=True)
     async def request_peers(
-        self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
+        self,
+        _request: full_node_protocol.RequestPeers,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         pass
 
     @metadata.request(peer_required=True)
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
+        self,
+        request: full_node_protocol.RespondPeers,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         pass
 
@@ -56,25 +60,31 @@ class CrawlerAPI:
 
     @metadata.request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
-        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
+        self,
+        new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         pass
 
     @metadata.request()
     async def new_unfinished_block(
-        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock
+        self,
+        new_unfinished_block: full_node_protocol.NewUnfinishedBlock,
     ) -> Optional[Message]:
         pass
 
     @metadata.request()
     async def new_unfinished_block2(
-        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
+        self,
+        new_unfinished_block: full_node_protocol.NewUnfinishedBlock2,
     ) -> Optional[Message]:
         pass
 
     @metadata.request(peer_required=True)
     async def new_compact_vdf(
-        self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection
+        self,
+        request: full_node_protocol.NewCompactVDF,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         pass
 
@@ -96,13 +106,15 @@ class CrawlerAPI:
 
     @metadata.request()
     async def request_unfinished_block(
-        self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
+        self,
+        request_unfinished_block: full_node_protocol.RequestUnfinishedBlock,
     ) -> Optional[Message]:
         pass
 
     @metadata.request()
     async def request_signage_point_or_end_of_sub_slot(
-        self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
+        self,
+        request: full_node_protocol.RequestSignagePointOrEndOfSubSlot,
     ) -> Optional[Message]:
         pass
 

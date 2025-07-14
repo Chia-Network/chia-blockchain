@@ -72,7 +72,8 @@ def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             if backup_ids is None:
                 backup_ids = []
             self.add_to_log(
-                "create_new_did_wallet", (amount, tx_config, fee, name, backup_ids, required_num, push, timelock_info)
+                "create_new_did_wallet",
+                (amount, tx_config, fee, name, backup_ids, required_num, push, timelock_info),
             )
             return {"wallet_id": 3, "my_did": "did:chia:testdid123456"}
 
@@ -99,7 +100,7 @@ def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "create_new_did_wallet": [
-            (3, DEFAULT_TX_CONFIG, 100000000000, "test", [], 0, True, test_condition_valid_times)
+            (3, DEFAULT_TX_CONFIG, 100000000000, "test", [], 0, True, test_condition_valid_times),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -243,7 +244,10 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
                 (request.wallet_id, request.metadata, tx_config, request.push, extra_conditions, timelock_info),
             )
             return DIDUpdateMetadataResponse(
-                [STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(request.wallet_id)
+                [STD_UTX],
+                [STD_TX],
+                WalletSpendBundle([], G2Element()),
+                uint32(request.wallet_id),
             )
 
     inst_rpc_client = DidUpdateMetadataRpcClient()
@@ -270,7 +274,14 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "update_did_metadata": [
-            (w_id, {"foo": "bar"}, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), True, (), test_condition_valid_times)
+            (
+                w_id,
+                {"foo": "bar"},
+                DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
+                True,
+                (),
+                test_condition_valid_times,
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -324,7 +335,8 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcCl
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDMessageSpendResponse:
             self.add_to_log(
-                "did_message_spend", (request.wallet_id, tx_config, extra_conditions, request.push, timelock_info)
+                "did_message_spend",
+                (request.wallet_id, tx_config, extra_conditions, request.push, timelock_info),
             )
             return DIDMessageSpendResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()))
 
@@ -363,7 +375,7 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcCl
                 ),
                 True,
                 test_condition_valid_times,
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -442,7 +454,7 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 True,
                 (),
                 test_condition_valid_times,
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

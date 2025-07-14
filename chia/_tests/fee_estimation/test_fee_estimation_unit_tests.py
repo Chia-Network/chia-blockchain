@@ -45,7 +45,11 @@ def test_single_estimate() -> None:
 
 
 def make_block(
-    height: uint32, num_tx: int, cost: uint64, fee: uint64, num_blocks_wait_in_mempool: int
+    height: uint32,
+    num_tx: int,
+    cost: uint64,
+    fee: uint64,
+    num_blocks_wait_in_mempool: int,
 ) -> list[MempoolItemInfo]:
     block_included = uint32(height - num_blocks_wait_in_mempool)
     return [MempoolItemInfo(cost, fee, block_included)] * num_tx

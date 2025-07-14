@@ -142,14 +142,14 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                 [coin_name, *_.vars] for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
             )
             asserted_coin_announcements.extend(
-                [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
+                [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])],
             )
             created_puzzle_announcements.extend(
                 [puzzle_reveal.get_tree_hash(), *_.vars]
                 for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
             )
             asserted_puzzle_announcements.extend(
-                [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])]
+                [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])],
             )
             print()
         else:
@@ -200,7 +200,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             print(f"  {as_hex} =>\n      {hashed}")
 
     eor_puzzle_announcements = sorted(
-        {_[-1] for _ in created_puzzle_announcement_pairs} ^ set(asserted_puzzle_announcements)
+        {_[-1] for _ in created_puzzle_announcement_pairs} ^ set(asserted_puzzle_announcements),
     )
 
     print()

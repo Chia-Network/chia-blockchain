@@ -54,7 +54,7 @@ def test_protocol_json() -> None:
         == new_signage_point_or_end_of_subslot
     )
     assert str(request_signage_point_or_end_of_subslot_json) == str(
-        request_signage_point_or_end_of_subslot.to_json_dict()
+        request_signage_point_or_end_of_subslot.to_json_dict(),
     )
     assert (
         type(request_signage_point_or_end_of_subslot).from_json_dict(request_signage_point_or_end_of_subslot_json)

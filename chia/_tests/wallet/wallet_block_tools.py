@@ -103,7 +103,8 @@ class WalletBlockTools(BlockTools):
                 removals = transaction_data.removals()
                 block_generator = simple_solution_generator(transaction_data)
             pool_target = PoolTarget(
-                pool_reward_puzzle_hash if pool_reward_puzzle_hash is not None else self.pool_ph, uint32(0)
+                pool_reward_puzzle_hash if pool_reward_puzzle_hash is not None else self.pool_ph,
+                uint32(0),
             )
 
             (
@@ -138,7 +139,8 @@ class WalletBlockTools(BlockTools):
 
 
 def load_block_list(
-    block_list: list[FullBlock], constants: ConsensusConstants
+    block_list: list[FullBlock],
+    constants: ConsensusConstants,
 ) -> tuple[dict[uint32, bytes32], uint64, dict[bytes32, BlockRecord]]:
     height_to_hash: dict[uint32, bytes32] = {}
     blocks: dict[bytes32, BlockRecord] = {}
@@ -234,7 +236,7 @@ def get_full_block_and_block_record(
                 prev_block.pool_puzzle_hash,
                 calculate_pool_reward(prev_block.height),
                 constants.GENESIS_CHALLENGE,
-            )
+            ),
         )
         additions.append(
             create_farmer_coin(
@@ -243,10 +245,10 @@ def get_full_block_and_block_record(
                 uint64(
                     calculate_base_farmer_reward(prev_block.height) + prev_block.fees
                     if prev_block.fees is not None
-                    else 0
+                    else 0,
                 ),
                 constants.GENESIS_CHALLENGE,
-            )
+            ),
         )
 
     byte_array_tx: list[bytearray] = []

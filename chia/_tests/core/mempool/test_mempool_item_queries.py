@@ -43,7 +43,11 @@ def make_item(coin_spends: list[CoinSpend]) -> MempoolItem:
     spend_bundle = SpendBundle(coin_spends, EMPTY_SIGNATURE)
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
-        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
+        generator=generator,
+        max_cost=INFINITE_COST,
+        mempool_mode=True,
+        height=uint32(0),
+        constants=DEFAULT_CONSTANTS,
     )
     assert npc_result.conds is not None
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result.conds)
@@ -73,7 +77,7 @@ def test_by_spent_coin_ids() -> None:
         [
             CoinSpend(IDENTITY_COIN_1, IDENTITY_PUZZLE, Program.to([])),
             CoinSpend(IDENTITY_COIN_2, IDENTITY_PUZZLE, Program.to([])),
-        ]
+        ],
     )
     mempool.add_to_pool(item_1)
 
@@ -81,7 +85,7 @@ def test_by_spent_coin_ids() -> None:
     other = make_item(
         [
             CoinSpend(IDENTITY_COIN_3, IDENTITY_PUZZLE, Program.to([])),
-        ]
+        ],
     )
     mempool.add_to_pool(other)
 
@@ -104,7 +108,7 @@ def test_by_spend_puzzle_hashes() -> None:
         [
             CoinSpend(IDENTITY_COIN_1, IDENTITY_PUZZLE, Program.to([])),
             CoinSpend(IDENTITY_COIN_2, IDENTITY_PUZZLE, Program.to([])),
-        ]
+        ],
     )
     mempool.add_to_pool(item_1)
 
@@ -112,7 +116,7 @@ def test_by_spend_puzzle_hashes() -> None:
     item_2 = make_item(
         [
             CoinSpend(IDENTITY_COIN_3, IDENTITY_PUZZLE, Program.to([])),
-        ]
+        ],
     )
     mempool.add_to_pool(item_2)
 
@@ -143,13 +147,13 @@ def test_by_created_coin_id() -> None:
     item = make_item(
         [
             CoinSpend(IDENTITY_COIN_1, IDENTITY_PUZZLE, Program.to([[51, IDENTITY_PUZZLE_HASH, 1000]])),
-        ]
+        ],
     )
     mempool.add_to_pool(item)
 
     # Test that the transaction is found.
     assert mempool.items_with_coin_ids({Coin(IDENTITY_COIN_1.name(), IDENTITY_PUZZLE_HASH, uint64(1000)).name()}) == [
-        item.spend_bundle_name
+        item.spend_bundle_name,
     ]
 
 
@@ -165,7 +169,7 @@ def test_by_created_puzzle_hash() -> None:
                 IDENTITY_PUZZLE,
                 Program.to([[51, OTHER_PUZZLE_HASH, 400], [51, OTHER_PUZZLE_HASH, 600]]),
             ),
-        ]
+        ],
     )
     mempool.add_to_pool(item_1)
 
@@ -177,7 +181,7 @@ def test_by_created_puzzle_hash() -> None:
                 IDENTITY_PUZZLE,
                 Program.to([[51, IDENTITY_PUZZLE_HASH, 1000, [OTHER_PUZZLE_HASH]]]),
             ),
-        ]
+        ],
     )
     mempool.add_to_pool(item_2)
 

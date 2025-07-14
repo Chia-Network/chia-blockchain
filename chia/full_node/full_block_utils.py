@@ -266,7 +266,10 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
 
 
 def header_block_from_block(
-    buf: memoryview, request_filter: bool = True, tx_addition_coins: list[Coin] = [], removal_names: list[bytes32] = []
+    buf: memoryview,
+    request_filter: bool = True,
+    tx_addition_coins: list[Coin] = [],
+    removal_names: list[bytes32] = [],
 ) -> bytes:
     buf2 = buf[:]
     buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots

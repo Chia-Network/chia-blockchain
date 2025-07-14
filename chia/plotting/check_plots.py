@@ -176,7 +176,7 @@ def check_plots(
                         if quality_spent_time > 8000:
                             log.warning(
                                 f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
-                                f"to minimize risk of losing rewards. Filepath: {plot_path}"
+                                f"to minimize risk of losing rewards. Filepath: {plot_path}",
                             )
                         else:
                             log.info(f"\tLooking up qualities took: {quality_spent_time} ms. Filepath: {plot_path}")
@@ -189,7 +189,7 @@ def check_plots(
                             if proof_spent_time > 15000:
                                 log.warning(
                                     f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
-                                    f"to minimize risk of losing rewards. Filepath: {plot_path}"
+                                    f"to minimize risk of losing rewards. Filepath: {plot_path}",
                                 )
                             else:
                                 log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
@@ -200,11 +200,12 @@ def check_plots(
                             else:
                                 log.warning(
                                     f"\tQuality doesn't match with proof. Filepath: {plot_path} "
-                                    "This can occasionally happen with a compressed plot."
+                                    "This can occasionally happen with a compressed plot.",
                                 )
                         except AssertionError as e:
                             log.error(
-                                f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
+                                f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. "
+                                f"Filepath: {plot_path}",
                             )
                             caught_exception = True
                         quality_start_time = int(round(time() * 1000))
@@ -230,19 +231,20 @@ def check_plots(
             if total_proofs > 0 and caught_exception is False:
                 log.info(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
-                    f"Filepath: {plot_path}"
+                    f"Filepath: {plot_path}",
                 )
                 total_good_plots[pr.get_size()] += 1
                 total_size += plot_path.stat().st_size
             else:
                 log.error(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
-                    f"Filepath: {plot_path}"
+                    f"Filepath: {plot_path}",
                 )
                 bad_plots_list.append(plot_path)
 
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=max(1, context_count), thread_name_prefix="check-plots-"
+            max_workers=max(1, context_count),
+            thread_name_prefix="check-plots-",
         ) as executor:
             logger_lock = Lock()
             futures = []
@@ -274,7 +276,7 @@ def check_plots(
         log.warning(
             f"There are {len(plot_manager.no_key_filenames)} plots with a farmer or pool public key that "
             f"is not on this machine. The farmer private key must be in the keychain in order to "
-            f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
+            f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml",
         )
 
     if debug_show_memo:

@@ -162,7 +162,10 @@ class TestRunner:
     test_data: list[TestData]
 
     def __init__(
-        self, harvesters: list[Harvester], farmer: Farmer, event_loop: asyncio.events.AbstractEventLoop
+        self,
+        harvesters: list[Harvester],
+        farmer: Farmer,
+        event_loop: asyncio.events.AbstractEventLoop,
     ) -> None:
         self.test_data = []
         for harvester in harvesters:
@@ -173,7 +176,7 @@ class TestRunner:
                     harvester.plot_sync_sender,
                     farmer.plot_sync_receivers[harvester.server.node_id],
                     event_loop,
-                )
+                ),
             )
 
     async def run(
@@ -216,16 +219,18 @@ async def skip_processing(self: Any, _: WSChiaConnection, message_type: Protocol
             make_msg(
                 ProtocolMessageTypes.plot_sync_response,
                 PlotSyncResponse(message.identifier, int16(message_type.value), None),
-            )
+            ),
         )
     if self.simulate_error == ErrorSimulation.NonRecoverableError and self.message_counter > 1:
         await self.connection().send_message(
             make_msg(
                 ProtocolMessageTypes.plot_sync_response,
                 PlotSyncResponse(
-                    message.identifier, int16(message_type.value), PlotSyncError(int16(0), "non recoverable", None)
+                    message.identifier,
+                    int16(message_type.value),
+                    PlotSyncError(int16(0), "non recoverable", None),
                 ),
-            )
+            ),
         )
         self.simulate_error = 0
         return True
@@ -233,7 +238,10 @@ async def skip_processing(self: Any, _: WSChiaConnection, message_type: Protocol
 
 
 async def _testable_process(
-    self: Any, peer: WSChiaConnection, message_type: ProtocolMessageTypes, message: Any
+    self: Any,
+    peer: WSChiaConnection,
+    message_type: ProtocolMessageTypes,
+    message: Any,
 ) -> None:
     if await skip_processing(self, peer, message_type, message):
         return
@@ -307,7 +315,13 @@ async def test_sync_simulated(
         plots = create_example_plots(31000, seeded_random=seeded_random)
 
         await test_runner.run(
-            0, loaded=plots[0:10000], removed=[], invalid=[], keys_missing=[], duplicates=plots[0:1000], initial=True
+            0,
+            loaded=plots[0:10000],
+            removed=[],
+            invalid=[],
+            keys_missing=[],
+            duplicates=plots[0:1000],
+            initial=True,
         )
         await test_runner.run(
             1,
@@ -338,16 +352,40 @@ async def test_sync_simulated(
         )
         await test_runner.run(0, loaded=[], removed=[], invalid=[], keys_missing=[], duplicates=[], initial=False)
         await test_runner.run(
-            0, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
+            0,
+            loaded=[],
+            removed=plots[5000:10000],
+            invalid=[],
+            keys_missing=[],
+            duplicates=[],
+            initial=False,
         )
         await test_runner.run(
-            1, loaded=[], removed=plots[10000:20000], invalid=[], keys_missing=[], duplicates=[], initial=False
+            1,
+            loaded=[],
+            removed=plots[10000:20000],
+            invalid=[],
+            keys_missing=[],
+            duplicates=[],
+            initial=False,
         )
         await test_runner.run(
-            2, loaded=[], removed=plots[20000:29000], invalid=[], keys_missing=[], duplicates=[], initial=False
+            2,
+            loaded=[],
+            removed=plots[20000:29000],
+            invalid=[],
+            keys_missing=[],
+            duplicates=[],
+            initial=False,
         )
         await test_runner.run(
-            0, loaded=[], removed=plots[0:5000], invalid=[], keys_missing=[], duplicates=[], initial=False
+            0,
+            loaded=[],
+            removed=plots[0:5000],
+            invalid=[],
+            keys_missing=[],
+            duplicates=[],
+            initial=False,
         )
         await test_runner.run(
             2,
@@ -359,7 +397,13 @@ async def test_sync_simulated(
             initial=False,
         )
         await test_runner.run(
-            2, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
+            2,
+            loaded=[],
+            removed=plots[5000:10000],
+            invalid=[],
+            keys_missing=[],
+            duplicates=[],
+            initial=False,
         )
         assert len(farmer.plot_sync_receivers) == 3
         for plot_sync in farmer.plot_sync_receivers.values():

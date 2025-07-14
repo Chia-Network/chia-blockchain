@@ -80,7 +80,7 @@ def create_clawback_merkle_tree(timelock: uint64, sender_ph: bytes32, recipient_
         [
             augmented_cond_puz_hash,
             curry_and_treehash(P2_CURRIED_PUZZLE_MOD_HASH_QUOTED, Program.to(sender_ph).get_tree_hash()),
-        ]
+        ],
     )
     return merkle_tree
 
@@ -174,29 +174,38 @@ def match_clawback_puzzle(
     if metadata is None:
         return metadata
     puzzle: Program = create_merkle_puzzle(
-        metadata.time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash
+        metadata.time_lock,
+        metadata.sender_puzzle_hash,
+        metadata.recipient_puzzle_hash,
     )
     if puzzle.get_tree_hash() not in new_puzhash:
         # The metadata doesn't match the inner puzzle, ignore it
         log.error(
-            f"Clawback metadata {metadata} doesn't match inner puzzle {inner_puzzle.get_tree_hash().hex()}"
+            f"Clawback metadata {metadata} doesn't match inner puzzle {inner_puzzle.get_tree_hash().hex()}",
         )  # pragma: no cover
         return None  # pragma: no cover
     return metadata
 
 
 def generate_clawback_spend_bundle(
-    coin: Coin, metadata: ClawbackMetadata, inner_puzzle: Program, inner_solution: Program
+    coin: Coin,
+    metadata: ClawbackMetadata,
+    inner_puzzle: Program,
+    inner_solution: Program,
 ) -> CoinSpend:
     time_lock: uint64 = metadata.time_lock
     puzzle: Program = create_merkle_puzzle(time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash)
     if puzzle.get_tree_hash() != coin.puzzle_hash:
         raise ValueError(
             f"Cannot spend merkle coin {coin.name()}, "
-            f"recreate puzzle hash {puzzle.get_tree_hash().hex()}, actual puzzle hash {coin.puzzle_hash.hex()}"
+            f"recreate puzzle hash {puzzle.get_tree_hash().hex()}, actual puzzle hash {coin.puzzle_hash.hex()}",
         )
 
     solution: Program = create_merkle_solution(
-        time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash, inner_puzzle, inner_solution
+        time_lock,
+        metadata.sender_puzzle_hash,
+        metadata.recipient_puzzle_hash,
+        inner_puzzle,
+        inner_solution,
     )
     return make_spend(coin, puzzle, solution)

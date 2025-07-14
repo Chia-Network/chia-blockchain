@@ -37,7 +37,8 @@ def clvm_streamable(cls: type[Streamable]) -> type[Streamable]:
 
 
 def program_serialize_clvm_streamable(
-    clvm_streamable: Streamable, translation_layer: Optional[TranslationLayer] = None
+    clvm_streamable: Streamable,
+    translation_layer: Optional[TranslationLayer] = None,
 ) -> Program:
     if translation_layer is not None:
         mapping = translation_layer.get_mapping(clvm_streamable.__class__)
@@ -48,7 +49,8 @@ def program_serialize_clvm_streamable(
 
 
 def byte_serialize_clvm_streamable(
-    clvm_streamable: Streamable, translation_layer: Optional[TranslationLayer] = None
+    clvm_streamable: Streamable,
+    translation_layer: Optional[TranslationLayer] = None,
 ) -> bytes:
     return bytes(program_serialize_clvm_streamable(clvm_streamable, translation_layer=translation_layer))
 
@@ -66,12 +68,17 @@ def json_serialize_with_clvm_streamable(
         return byte_serialize_clvm_streamable(streamable, translation_layer=translation_layer).hex()
     else:
         return next_recursion_step(
-            streamable, json_serialize_with_clvm_streamable, translation_layer=translation_layer, **next_recursion_env
+            streamable,
+            json_serialize_with_clvm_streamable,
+            translation_layer=translation_layer,
+            **next_recursion_env,
         )
 
 
 def program_deserialize_clvm_streamable(
-    program: Program, clvm_streamable_type: type[_T_Streamable], translation_layer: Optional[TranslationLayer] = None
+    program: Program,
+    clvm_streamable_type: type[_T_Streamable],
+    translation_layer: Optional[TranslationLayer] = None,
 ) -> _T_Streamable:
     type_to_deserialize_from: type[Streamable] = clvm_streamable_type
     if translation_layer is not None:
@@ -87,10 +94,14 @@ def program_deserialize_clvm_streamable(
 
 
 def byte_deserialize_clvm_streamable(
-    blob: bytes, clvm_streamable_type: type[_T_Streamable], translation_layer: Optional[TranslationLayer] = None
+    blob: bytes,
+    clvm_streamable_type: type[_T_Streamable],
+    translation_layer: Optional[TranslationLayer] = None,
 ) -> _T_Streamable:
     return program_deserialize_clvm_streamable(
-        Program.from_bytes(blob), clvm_streamable_type, translation_layer=translation_layer
+        Program.from_bytes(blob),
+        clvm_streamable_type,
+        translation_layer=translation_layer,
     )
 
 
@@ -117,7 +128,9 @@ def json_deserialize_with_clvm_streamable(
 ) -> _T_Streamable:
     if isinstance(json_dict, str):
         return byte_deserialize_clvm_streamable(
-            bytes.fromhex(json_dict), streamable_type, translation_layer=translation_layer
+            bytes.fromhex(json_dict),
+            streamable_type,
+            translation_layer=translation_layer,
         )
     else:
         old_streamable_fields = streamable_type.streamable_fields()
@@ -137,7 +150,7 @@ def json_deserialize_with_clvm_streamable(
                                     translation_layer=translation_layer,
                                 ),
                             ),
-                        )
+                        ),
                     )
                 else:
                     new_streamable_fields.append(old_field)
@@ -150,7 +163,7 @@ def json_deserialize_with_clvm_streamable(
                             streamable_type=old_field.type,
                             translation_layer=translation_layer,
                         ),
-                    )
+                    ),
                 )
             else:
                 new_streamable_fields.append(old_field)
@@ -176,7 +189,8 @@ class TranslationLayer:
     type_mappings: list[TranslationLayerMapping[Any, Any]]
 
     def get_mapping(
-        self, _type: type[_T_ClvmStreamable]
+        self,
+        _type: type[_T_ClvmStreamable],
     ) -> Optional[TranslationLayerMapping[_T_ClvmStreamable, Streamable]]:
         mappings = [m for m in self.type_mappings if m.from_type == _type]
         if len(mappings) == 1:
@@ -187,7 +201,9 @@ class TranslationLayer:
             raise RuntimeError("Malformed TranslationLayer")
 
     def serialize_for_translation(
-        self, instance: _T_ClvmStreamable, mapping: TranslationLayerMapping[_T_ClvmStreamable, _T_TLClvmStreamable]
+        self,
+        instance: _T_ClvmStreamable,
+        mapping: TranslationLayerMapping[_T_ClvmStreamable, _T_TLClvmStreamable],
     ) -> _T_TLClvmStreamable:
         if mapping is None:
             return instance
@@ -195,7 +211,9 @@ class TranslationLayer:
             return mapping.serialize_function(instance)
 
     def deserialize_from_translation(
-        self, instance: _T_TLClvmStreamable, mapping: TranslationLayerMapping[_T_ClvmStreamable, _T_TLClvmStreamable]
+        self,
+        instance: _T_TLClvmStreamable,
+        mapping: TranslationLayerMapping[_T_ClvmStreamable, _T_TLClvmStreamable],
     ) -> _T_ClvmStreamable:
         if mapping is None:
             return instance

@@ -65,7 +65,9 @@ class FeeMempoolInfo:
 
 
 EmptyMempoolInfo = MempoolInfo(
-    CLVMCost(uint64(0)), FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))), CLVMCost(uint64(0))
+    CLVMCost(uint64(0)),
+    FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))),
+    CLVMCost(uint64(0)),
 )
 
 

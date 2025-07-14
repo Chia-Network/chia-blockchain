@@ -75,7 +75,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
             x509.NameAttribute(NameOID.COMMON_NAME, "Chia"),
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
-        ]
+        ],
     )
 
     cert = (
@@ -110,7 +110,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
             x509.NameAttribute(NameOID.COMMON_NAME, "Chia CA"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
-        ]
+        ],
     )
     root_cert = (
         x509.CertificateBuilder()

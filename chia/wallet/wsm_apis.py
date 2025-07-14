@@ -58,7 +58,7 @@ class CreateMorePuzzleHashesResult:
                     record.puzzle_hash
                     for record in self.derivation_paths
                     if record.wallet_id == wallet_state_manager.main_wallet.id()
-                ]
+                ],
             )
         if self.new_unhardened_keys:
             wallet_state_manager.state_changed("new_derivation_index", data_object={"index": self.last_index - 1})

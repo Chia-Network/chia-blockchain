@@ -231,7 +231,8 @@ async def test_mm_calls_new_block_height() -> None:
 
     # Replace new_block_height with test function
     mempool_manager.fee_estimator.new_block_height = types.MethodType(  # type: ignore[method-assign]
-        test_new_block_height_called, mempool_manager.fee_estimator
+        test_new_block_height_called,
+        mempool_manager.fee_estimator,
     )
     block2 = create_test_block_record(height=uint32(2))
     await mempool_manager.new_peak(block2, None)

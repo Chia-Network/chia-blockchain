@@ -284,7 +284,7 @@ def plot_bladebit(args, chia_root_path, root_path):
             chia_root_path,
             log,
             args.connect_to_daemon,
-        )
+        ),
     )
     if args.plot_type in {"ramplot", "diskplot", "cudaplot"}:
         plot_type = args.plot_type

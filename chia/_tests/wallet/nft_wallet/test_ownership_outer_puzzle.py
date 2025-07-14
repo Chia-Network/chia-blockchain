@@ -24,7 +24,7 @@ def test_ownership_outer_puzzle() -> None:
     transfer_program = assemble(
         """
         (c 2 (c () (c 5 ())))
-        """
+        """,
     )
     transfer_program_default: Program = puzzle_for_transfer_program(bytes32([1] * 32), bytes32([2] * 32), uint16(5000))
     ownership_puzzle: Program = puzzle_for_ownership_layer(owner, Program.to(transfer_program), ACS)
@@ -58,7 +58,7 @@ def test_ownership_outer_puzzle() -> None:
         [
             [51, ACS.get_tree_hash(), 1],
             [-10],
-        ]
+        ],
     )
     solution: Program = solve_puzzle(
         ownership_driver,

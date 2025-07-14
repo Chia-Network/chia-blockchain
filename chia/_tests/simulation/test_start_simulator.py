@@ -28,14 +28,17 @@ class TestStartSimulator:
 
     @pytest.fixture(scope="function")
     async def get_chia_simulator(
-        self, tmp_path: Path, empty_keyring: Keychain
+        self,
+        tmp_path: Path,
+        empty_keyring: Keychain,
     ) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
         async for simulator_args in get_full_chia_simulator(chia_root=tmp_path, keychain=empty_keyring):
             yield simulator_args
 
     @pytest.mark.anyio
     async def test_start_simulator(
-        self, get_chia_simulator: tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain]
+        self,
+        get_chia_simulator: tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain],
     ) -> None:
         simulator, root_path, config, _mnemonic, fingerprint, keychain = get_chia_simulator
         ph_1: bytes32 = get_puzzle_hash_from_key(keychain=keychain, fingerprint=fingerprint, key_id=1)
@@ -45,7 +48,10 @@ class TestStartSimulator:
         # connect to rpc
         rpc_port = config["full_node"]["rpc_port"]
         simulator_rpc_client = await SimulatorFullNodeRpcClient.create(
-            config["self_hostname"], uint16(rpc_port), root_path, config
+            config["self_hostname"],
+            uint16(rpc_port),
+            root_path,
+            config,
         )
         # test auto_farm logic
         assert await simulator_rpc_client.get_auto_farming()

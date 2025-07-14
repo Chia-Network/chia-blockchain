@@ -95,7 +95,11 @@ def database_peers() -> dict[str, PeerReliability]:
 
 
 async def make_dns_query(
-    use_tcp: bool, target_address: str, port: int, dns_message: dns.message.Message, d_timeout: float = timeout
+    use_tcp: bool,
+    target_address: str,
+    port: int,
+    dns_message: dns.message.Message,
+    d_timeout: float = timeout,
 ) -> dns.message.Message:
     """
     Makes a DNS query for the given domain name using the given protocol type.
@@ -117,7 +121,9 @@ def get_addresses(num_subnets: int = 10) -> tuple[list[IPv4Address], list[IPv6Ad
 
 
 def assert_standard_results(
-    std_query_answer: list[dns.rrset.RRset], request_type: dns.rdatatype.RdataType, num_ns: int
+    std_query_answer: list[dns.rrset.RRset],
+    request_type: dns.rdatatype.RdataType,
+    num_ns: int,
 ) -> None:
     if request_type == dns.rdatatype.A:
         assert len(std_query_answer) == 1  # only 1 kind of answer
@@ -156,7 +162,10 @@ def assert_standard_results(
 @pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_error_conditions(
-    seeder_service: DNSServer, use_tcp: bool, target_address: str, request_type: dns.rdatatype.RdataType
+    seeder_service: DNSServer,
+    use_tcp: bool,
+    target_address: str,
+    request_type: dns.rdatatype.RdataType,
 ) -> None:
     """
     We check having no peers, an invalid packet, an early EOF, and a packet then an EOF halfway through (tcp only).
@@ -206,7 +215,12 @@ async def test_error_conditions(
     if use_tcp:
         backend = dns.asyncbackend.get_default_backend()
         tcp_socket = await backend.make_socket(  # type: ignore[no-untyped-call]
-            proto, SOCK_STREAM, 0, (source_addr, 0), (target_address, port), timeout=timeout
+            proto,
+            SOCK_STREAM,
+            0,
+            (source_addr, 0),
+            (target_address, port),
+            timeout=timeout,
         )
         async with tcp_socket as socket:
             await socket.close()
@@ -217,7 +231,12 @@ async def test_error_conditions(
     if use_tcp:
         backend = dns.asyncbackend.get_default_backend()
         tcp_socket = await backend.make_socket(  # type: ignore[no-untyped-call]
-            proto, SOCK_STREAM, 0, (source_addr, 0), (target_address, port), timeout=timeout
+            proto,
+            SOCK_STREAM,
+            0,
+            (source_addr, 0),
+            (target_address, port),
+            timeout=timeout,
         )
         async with tcp_socket as socket:  # send packet then length then eof
             r = await dns.asyncquery.tcp(q=no_peers, where=target_address, timeout=timeout, sock=socket)
@@ -247,7 +266,10 @@ async def test_error_conditions(
 @pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_dns_queries(
-    seeder_service: DNSServer, use_tcp: bool, target_address: str, request_type: dns.rdatatype.RdataType
+    seeder_service: DNSServer,
+    use_tcp: bool,
+    target_address: str,
+    request_type: dns.rdatatype.RdataType,
 ) -> None:
     """
     We add 5000 peers directly, then try every kind of query many times over both the TCP and UDP protocols.

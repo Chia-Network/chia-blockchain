@@ -27,7 +27,12 @@ def gen_ses(height: int) -> SubEpochSummary:
 
 
 async def new_block(
-    db: DBWrapper2, block_hash: bytes32, parent: bytes32, height: int, is_peak: bool, ses: Optional[SubEpochSummary]
+    db: DBWrapper2,
+    block_hash: bytes32,
+    parent: bytes32,
+    height: int,
+    is_peak: bool,
+    ses: Optional[SubEpochSummary],
 ) -> None:
     async with db.writer_maybe_transaction() as conn:
         cursor = await conn.execute(
@@ -55,7 +60,7 @@ async def setup_db(db: DBWrapper2) -> None:
             "prev_hash blob,"
             "height bigint,"
             "in_main_chain tinyint,"
-            "sub_epoch_summary blob)"
+            "sub_epoch_summary blob)",
         )
         await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
@@ -67,7 +72,12 @@ async def setup_db(db: DBWrapper2) -> None:
 # and the chain_id will be mixed in to the hashes, to form a separate chain at
 # the same heights as the main chain
 async def setup_chain(
-    db: DBWrapper2, length: int, *, chain_id: int = 0, ses_every: Optional[int] = None, start_height: int = 0
+    db: DBWrapper2,
+    length: int,
+    *,
+    chain_id: int = 0,
+    ses_every: Optional[int] = None,
+    start_height: int = 0,
 ) -> None:
     height = start_height
     peak_hash = gen_block_hash(height + chain_id * 65536)
@@ -543,7 +553,8 @@ async def test_peak_only_chain(tmp_dir: Path, db_version: int) -> None:
 
         async with db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)",
+                (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
             )
             await cursor.close()
 

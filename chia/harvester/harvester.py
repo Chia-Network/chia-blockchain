@@ -80,10 +80,11 @@ class Harvester:
         if "plot_loading_frequency_seconds" in config:
             self.log.info(
                 "`harvester.plot_loading_frequency_seconds` is deprecated. Consider replacing it with the new section "
-                "`harvester.plots_refresh_parameter`. See `initial-config.yaml`."
+                "`harvester.plots_refresh_parameter`. See `initial-config.yaml`.",
             )
             refresh_parameter = dataclasses.replace(
-                refresh_parameter, interval_seconds=config["plot_loading_frequency_seconds"]
+                refresh_parameter,
+                interval_seconds=config["plot_loading_frequency_seconds"],
             )
         if "plots_refresh_parameter" in config:
             refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
@@ -91,11 +92,14 @@ class Harvester:
         self.log.info(f"Using plots_refresh_parameter: {refresh_parameter}")
 
         self.plot_manager = PlotManager(
-            root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
+            root_path,
+            refresh_parameter=refresh_parameter,
+            refresh_callback=self._plot_refresh_callback,
         )
         self._shut_down = False
         self.executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=config["num_threads"], thread_name_prefix="harvester-"
+            max_workers=config["num_threads"],
+            thread_name_prefix="harvester-",
         )
         self._server = None
         self.constants = constants
@@ -109,7 +113,8 @@ class Harvester:
             thread_count = cpu_count // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY)
         max_compression_level_allowed = config.get(
-            "max_compression_level_allowed", DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED
+            "max_compression_level_allowed",
+            DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED,
         )
         use_gpu_harvesting = config.get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING)
         gpu_index = config.get("gpu_index", DEFAULT_GPU_INDEX)
@@ -168,7 +173,7 @@ class Harvester:
             f"removed {len(update_result.removed)}, processed {update_result.processed}, "
             f"remaining {update_result.remaining}, "
             f"duration: {update_result.duration:.2f} seconds, "
-            f"total plots: {len(self.plot_manager.plots)}"
+            f"total plots: {len(self.plot_manager.plots)}",
         )
         if event == PlotRefreshEvents.started:
             self.plot_sync_sender.sync_start(update_result.remaining, self.plot_manager.initial_refresh())
@@ -201,12 +206,12 @@ class Harvester:
                         "file_size": plot_info.file_size,
                         "time_modified": int(plot_info.time_modified),
                         "compression_level": prover.get_compression_level(),
-                    }
+                    },
                 )
             self.log.debug(
                 f"get_plots response: plots: {len(response_plots)}, "
                 f"failed_to_open_filenames: {len(self.plot_manager.failed_to_open_filenames)}, "
-                f"no_key_filenames: {len(self.plot_manager.no_key_filenames)}"
+                f"no_key_filenames: {len(self.plot_manager.no_key_filenames)}",
             )
             return (
                 response_plots,

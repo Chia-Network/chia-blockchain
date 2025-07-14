@@ -55,7 +55,12 @@ wallet_cmd.add_command(get_chia_command_metadata(PushTransactionsCMD).command)
 @click.option("--verbose", "-v", count=True, type=int)
 @click.pass_context
 def get_transaction_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    tx_id: str,
+    verbose: int,
 ) -> None:
     from chia.cmds.wallet_funcs import get_transaction
 
@@ -66,7 +71,7 @@ def get_transaction_cmd(
             fingerprint=fingerprint,
             tx_id=tx_id,
             verbose=verbose,
-        )
+        ),
     )
 
 
@@ -160,7 +165,7 @@ def get_transactions_cmd(
             sort_key=sort_key,
             reverse=reverse,
             clawback=clawback,
-        )
+        ),
     )
 
 
@@ -175,14 +180,22 @@ def get_transactions_cmd(
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
-    "-a", "--amount", help="How much chia to send, in XCH or CAT units", type=AmountParamType(), required=True
+    "-a",
+    "--amount",
+    help="How much chia to send, in XCH or CAT units",
+    type=AmountParamType(),
+    required=True,
 )
 @click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
 @options.create_fee()
 # TODO: Fix RPC as this should take a puzzle_hash not an address.
 @click.option("-t", "--address", help="Address to send the XCH", type=AddressParamType(), required=True)
 @click.option(
-    "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
+    "-o",
+    "--override",
+    help="Submits transaction without checking for unusual values",
+    is_flag=True,
+    default=False,
 )
 @click.option(
     "-ma",
@@ -260,7 +273,7 @@ def send_cmd(
             clawback_time_lock=clawback_time,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -290,7 +303,7 @@ def show_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: in
             wallet_rpc_port,
             fingerprint,
             WalletType[wallet_type.upper()] if wallet_type else None,
-        )
+        ),
     )
 
 
@@ -316,7 +329,11 @@ def show_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: in
 )
 @click.pass_context
 def get_address_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], id: int, fingerprint: int, new_address: bool
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    id: int,
+    fingerprint: int,
+    new_address: bool,
 ) -> None:
     from chia.cmds.wallet_funcs import get_address
 
@@ -378,7 +395,7 @@ def clawback(
             force=force,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -394,12 +411,15 @@ def clawback(
 @options.create_fingerprint()
 @click.pass_context
 def delete_unconfirmed_transactions_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], id: int, fingerprint: int
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    id: int,
+    fingerprint: int,
 ) -> None:
     from chia.cmds.wallet_funcs import delete_unconfirmed_transactions
 
     asyncio.run(
-        delete_unconfirmed_transactions(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id)
+        delete_unconfirmed_transactions(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id),
     )
 
 
@@ -433,7 +453,11 @@ def get_derivation_index_cmd(ctx: click.Context, wallet_rpc_port: Optional[int],
 @click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
 @click.pass_context
 def address_sign_message(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, address: CliAddress, hex_message: str
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    address: CliAddress,
+    hex_message: str,
 ) -> None:
     from chia.cmds.wallet_funcs import sign_message
 
@@ -445,12 +469,13 @@ def address_sign_message(
             addr_type=AddressType.XCH,
             message=hex_message,
             address=address,
-        )
+        ),
     )
 
 
 @wallet_cmd.command(
-    "update_derivation_index", help="Generate additional derived puzzle hashes starting at the provided index"
+    "update_derivation_index",
+    help="Generate additional derived puzzle hashes starting at the provided index",
 )
 @click.option(
     "-wp",
@@ -461,11 +486,18 @@ def address_sign_message(
 )
 @options.create_fingerprint()
 @click.option(
-    "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
+    "-i",
+    "--index",
+    help="Index to set. Must be greater than the current derivation index",
+    type=int,
+    required=True,
 )
 @click.pass_context
 def update_derivation_index_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, index: int
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    index: int,
 ) -> None:
     from chia.cmds.wallet_funcs import update_derivation_index
 
@@ -495,12 +527,16 @@ def update_derivation_index_cmd(
 @options.create_fingerprint()
 @click.pass_context
 def add_token_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], asset_id: bytes32, token_name: str, fingerprint: int
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    asset_id: bytes32,
+    token_name: str,
+    fingerprint: int,
 ) -> None:
     from chia.cmds.wallet_funcs import add_token
 
     asyncio.run(
-        add_token(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, asset_id, token_name)
+        add_token(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, asset_id, token_name),
     )
 
 
@@ -574,12 +610,13 @@ def make_offer_cmd(
             filepath=filepath,
             reuse_puzhash=True if reuse else None,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
 @wallet_cmd.command(
-    "get_offers", help="Get the status of existing offers. Displays only active/pending offers by default."
+    "get_offers",
+    help="Get the status of existing offers. Displays only active/pending offers by default.",
 )
 @click.option(
     "-wp",
@@ -594,7 +631,10 @@ def make_offer_cmd(
 @click.option("-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True)
 @click.option("-et", "--exclude-taken-offers", help="Exclude offers that you've accepted from the output", is_flag=True)
 @click.option(
-    "-ic", "--include-completed", help="Include offers that have been confirmed/cancelled or failed", is_flag=True
+    "-ic",
+    "--include-completed",
+    help="Include offers that have been confirmed/cancelled or failed",
+    is_flag=True,
 )
 @click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
 @click.option("--sort-by-relevance/--sort-by-confirmed-height", help="Sort the offers one of two ways", is_flag=True)
@@ -628,7 +668,7 @@ def get_offers_cmd(
             summaries=summaries,
             reverse=reverse,
             sort_by_relevance=sort_by_relevance,
-        )
+        ),
     )
 
 
@@ -676,7 +716,7 @@ def take_offer_cmd(
             examine_only,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -716,7 +756,7 @@ def cancel_offer_cmd(
             not insecure,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -782,7 +822,7 @@ def did_create_wallet_cmd(
             amount,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -799,7 +839,11 @@ def did_create_wallet_cmd(
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 @click.pass_context
 def did_sign_message(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, did_id: CliAddress, hex_message: str
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    did_id: CliAddress,
+    hex_message: str,
 ) -> None:
     from chia.cmds.wallet_funcs import sign_message
 
@@ -811,7 +855,7 @@ def did_sign_message(
             addr_type=AddressType.DID,
             message=hex_message,
             did_id=did_id,
-        )
+        ),
     )
 
 
@@ -828,7 +872,11 @@ def did_sign_message(
 @click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
 @click.pass_context
 def did_wallet_name_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    name: str,
 ) -> None:
     from chia.cmds.wallet_funcs import did_set_wallet_name
 
@@ -865,7 +913,11 @@ def did_get_did_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerpr
 @click.option("-l", "--latest", help="Return latest DID information", is_flag=True, default=True)
 @click.pass_context
 def did_get_details_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, coin_id: str, latest: bool
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    coin_id: str,
+    latest: bool,
 ) -> None:
     from chia.cmds.wallet_funcs import get_did_info
 
@@ -913,7 +965,7 @@ def did_update_metadata_cmd(
             reuse,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -964,7 +1016,7 @@ def did_find_lost_cmd(
             metadata=metadata,
             recovery_list_hash=recovery_list_hash,
             num_verification=num_verification,
-        )
+        ),
     )
 
 
@@ -1037,7 +1089,7 @@ def did_message_spend_cmd(
             coin_list,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1054,7 +1106,11 @@ def did_message_spend_cmd(
 # TODO: Change RPC to use puzzlehash instead of address
 @click.option("-ta", "--target-address", help="Target recipient wallet address", type=AddressParamType(), required=True)
 @click.option(
-    "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
+    "-rr",
+    "--reset_recovery",
+    help="If you want to reset the recovery DID settings.",
+    is_flag=True,
+    default=False,
 )
 @options.create_fee()
 @click.option(
@@ -1091,7 +1147,7 @@ def did_transfer_did(
             True if reuse else None,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1123,7 +1179,7 @@ def nft_wallet_create_cmd(
     from chia.cmds.wallet_funcs import create_nft_wallet
 
     asyncio.run(
-        create_nft_wallet(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, did_id, name)
+        create_nft_wallet(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, did_id, name),
     )
 
 
@@ -1140,7 +1196,11 @@ def nft_wallet_create_cmd(
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 @click.pass_context
 def nft_sign_message(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, nft_id: CliAddress, hex_message: str
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    nft_id: CliAddress,
+    hex_message: str,
 ) -> None:
     from chia.cmds.wallet_funcs import sign_message
 
@@ -1152,7 +1212,7 @@ def nft_sign_message(
             addr_type=AddressType.NFT,
             message=hex_message,
             nft_id=nft_id,
-        )
+        ),
     )
 
 
@@ -1250,7 +1310,7 @@ def nft_mint_cmd(
             reuse_puzhash=True if reuse else None,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1308,7 +1368,7 @@ def nft_add_uri_cmd(
             reuse_puzhash=True if reuse else None,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1360,7 +1420,7 @@ def nft_transfer_cmd(
             reuse_puzhash=True if reuse else None,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1378,12 +1438,17 @@ def nft_transfer_cmd(
 @click.option("--start-index", help="Which starting index to start listing NFTs from", type=int, default=0)
 @click.pass_context
 def nft_list_cmd(
-    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int, num: int, start_index: int
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    num: int,
+    start_index: int,
 ) -> None:
     from chia.cmds.wallet_funcs import list_nfts
 
     asyncio.run(
-        list_nfts(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, num, start_index)
+        list_nfts(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, num, start_index),
     )
 
 
@@ -1435,7 +1500,7 @@ def nft_set_did_cmd(
             reuse_puzhash=True if reuse else None,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1481,7 +1546,11 @@ def notification_cmd() -> None:
 )
 @options.create_fingerprint()
 @click.option(
-    "-t", "--to-address", help="The address to send the notification to", type=AddressParamType(), required=True
+    "-t",
+    "--to-address",
+    help="The address to send the notification to",
+    type=AddressParamType(),
+    required=True,
 )
 @click.option(
     "-a",
@@ -1521,7 +1590,7 @@ def send_notification_cmd(
             amount,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1549,7 +1618,7 @@ def get_notifications_cmd(
     from chia.cmds.wallet_funcs import get_notifications
 
     asyncio.run(
-        get_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, start, end)
+        get_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, start, end),
     )
 
 
@@ -1624,7 +1693,7 @@ def mint_vc_cmd(
             target_address,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1638,10 +1707,22 @@ def mint_vc_cmd(
 )
 @options.create_fingerprint()
 @click.option(
-    "-s", "--start", help="The index to start the list at", type=int, required=False, default=0, show_default=True
+    "-s",
+    "--start",
+    help="The index to start the list at",
+    type=int,
+    required=False,
+    default=0,
+    show_default=True,
 )
 @click.option(
-    "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
+    "-c",
+    "--count",
+    help="How many results to return",
+    type=int,
+    required=False,
+    default=50,
+    show_default=True,
 )
 @click.pass_context
 def get_vcs_cmd(
@@ -1715,7 +1796,7 @@ def spend_vc_cmd(
             reuse_puzhash=reuse_puzhash,
             push=push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1741,7 +1822,7 @@ def add_proof_reveal_cmd(
     from chia.cmds.wallet_funcs import add_proof_reveal
 
     asyncio.run(
-        add_proof_reveal(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof, root_only)
+        add_proof_reveal(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof, root_only),
     )
 
 
@@ -1765,7 +1846,7 @@ def get_proofs_for_root_cmd(
     from chia.cmds.wallet_funcs import get_proofs_for_root
 
     asyncio.run(
-        get_proofs_for_root(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof_hash)
+        get_proofs_for_root(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof_hash),
     )
 
 
@@ -1825,7 +1906,7 @@ def revoke_vc_cmd(
             reuse_puzhash,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )
 
 
@@ -1897,5 +1978,5 @@ def approve_r_cats_cmd(
             reuse,
             push,
             condition_valid_times=condition_valid_times,
-        )
+        ),
     )

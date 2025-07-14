@@ -30,7 +30,7 @@ def test_coin_selection_args() -> None:
                 list(coins_to_exclude),
             )
             .to_coin_selection_config(1)
-            .to_json_dict()
+            .to_json_dict(),
         )
 
     runner = CliRunner()
@@ -113,7 +113,7 @@ def test_tx_config_args() -> None:
                     reuse,
                 )
                 .to_tx_config(1, config, 1234567890)
-                .to_json_dict()
+                .to_json_dict(),
             )
 
         result = runner.invoke(

@@ -96,7 +96,7 @@ def test_check_addresses_used_contiguous() -> None:
         dp_list = used_list_to_dp_list(used_list, 1)
         assert [dp.used for dp in dp_list] == used_list
         assert ["Wallet 1: Used address after unused address at derivation index 1"] == check_addresses_used_contiguous(
-            dp_list
+            dp_list,
         )
 
 

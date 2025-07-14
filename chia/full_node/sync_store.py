@@ -58,7 +58,12 @@ class SyncStore:
         return header_hash in self.peak_to_peer
 
     def peer_has_block(
-        self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool
+        self,
+        header_hash: bytes32,
+        peer_id: bytes32,
+        weight: uint128,
+        height: uint32,
+        new_peak: bool,
     ) -> None:
         """
         Adds a record that a certain peer has a block.

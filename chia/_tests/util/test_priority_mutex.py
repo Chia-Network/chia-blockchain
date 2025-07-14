@@ -190,7 +190,8 @@ class ComparisonCase:
 )
 @pytest.mark.parametrize(argnames="method", argvalues=[Request.__lt__, Request.before])
 def test_comparisons_fail_for_incomplete_requests(
-    case: ComparisonCase, method: Callable[[Request, Request], bool]
+    case: ComparisonCase,
+    method: Callable[[Request, Request], bool],
 ) -> None:
     with pytest.raises(RequestNotCompleteError):
         method(case.self, case.other)

@@ -71,7 +71,7 @@ class DataLayerStore:
                 " confirmed_at_height int,"
                 " proof blob,"
                 " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
-                " timestamp int)"
+                " timestamp int)",
             )
 
             await conn.execute(
@@ -80,23 +80,23 @@ class DataLayerStore:
                 "launcher_id blob,"
                 "amount blob,"
                 "urls blob,"
-                "ours tinyint)"
+                "ours tinyint)",
             )
 
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS mirror_confirmations(coin_id blob PRIMARY KEY,confirmed_at_height int)"
+                "CREATE TABLE IF NOT EXISTS mirror_confirmations(coin_id blob PRIMARY KEY,confirmed_at_height int)",
             )
 
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS singleton_records_launcher_id_index ON singleton_records(launcher_id)"
+                "CREATE INDEX IF NOT EXISTS singleton_records_launcher_id_index ON singleton_records(launcher_id)",
             )
             await conn.execute("CREATE INDEX IF NOT EXISTS singleton_records_root_index ON singleton_records(root)")
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS singleton_records_confirmed_at_height_index "
-                "ON singleton_records(confirmed_at_height)"
+                "ON singleton_records(confirmed_at_height)",
             )
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS singleton_records_generation_index ON singleton_records(generation)"
+                "CREATE INDEX IF NOT EXISTS singleton_records_generation_index ON singleton_records(generation)",
             )
 
             await conn.execute("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)")
@@ -179,7 +179,9 @@ class DataLayerStore:
         return None
 
     async def get_latest_singleton(
-        self, launcher_id: bytes32, only_confirmed: bool = False
+        self,
+        launcher_id: bytes32,
+        only_confirmed: bool = False,
     ) -> Optional[SingletonRecord]:
         """
         Checks DB for SingletonRecords with launcher_id: launcher_id and returns the most recent.
@@ -211,7 +213,8 @@ class DataLayerStore:
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT * from singleton_records WHERE launcher_id=? AND confirmed=0", (launcher_id,)
+                "SELECT * from singleton_records WHERE launcher_id=? AND confirmed=0",
+                (launcher_id,),
             )
             rows = await cursor.fetchall()
             await cursor.close()
@@ -243,7 +246,7 @@ class DataLayerStore:
             return
 
         await self.add_singleton_record(
-            dataclasses.replace(current, confirmed=True, confirmed_at_height=height, timestamp=timestamp)
+            dataclasses.replace(current, confirmed=True, confirmed_at_height=height, timestamp=timestamp),
         )
 
     async def delete_singleton_record(self, coin_id: bytes32) -> None:
@@ -321,7 +324,7 @@ class DataLayerStore:
                     mirror.launcher_id,
                     mirror.amount.stream_to_bytes(),
                     b"".join(
-                        [uint16(len(url)).stream_to_bytes() + url for url in Mirror.encode_urls(mirror.urls)]
+                        [uint16(len(url)).stream_to_bytes() + url for url in Mirror.encode_urls(mirror.urls)],
                     ),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),
@@ -346,10 +349,12 @@ class DataLayerStore:
 
             for row in rows:
                 confirmation_height = await execute_fetchone(
-                    conn, "SELECT * FROM mirror_confirmations WHERE coin_id=?", (row[0],)
+                    conn,
+                    "SELECT * FROM mirror_confirmations WHERE coin_id=?",
+                    (row[0],),
                 )
                 mirrors.append(
-                    _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1]))
+                    _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1])),
                 )
 
         return mirrors
@@ -364,7 +369,9 @@ class DataLayerStore:
             await cursor.close()
             assert row is not None
             confirmation_height = await execute_fetchone(
-                conn, "SELECT * FROM mirror_confirmations WHERE coin_id=?", (row[0],)
+                conn,
+                "SELECT * FROM mirror_confirmations WHERE coin_id=?",
+                (row[0],),
             )
 
         return _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1]))

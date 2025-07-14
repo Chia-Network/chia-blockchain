@@ -56,7 +56,7 @@ class WalletNftStore:
                 " lineage_proof text,"
                 " mint_height bigint,"
                 " status text,"
-                " full_puzzle blob)"
+                " full_puzzle blob)",
             )
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_coin_id on users_nfts(nft_coin_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_wallet_id on users_nfts(wallet_id)")
@@ -82,7 +82,8 @@ class WalletNftStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove NFT in the users_nfts table
             cursor = await conn.execute(
-                "UPDATE users_nfts SET removed_height=? WHERE nft_id=?", (int(height), nft_id.hex())
+                "UPDATE users_nfts SET removed_height=? WHERE nft_id=?",
+                (int(height), nft_id.hex()),
             )
             return cursor.rowcount > 0
 
@@ -94,7 +95,8 @@ class WalletNftStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove NFT in the users_nfts table
             cursor = await conn.execute(
-                "UPDATE users_nfts SET removed_height=? WHERE nft_coin_id=?", (int(height), coin_id.hex())
+                "UPDATE users_nfts SET removed_height=? WHERE nft_coin_id=?",
+                (int(height), coin_id.hex()),
             )
             if cursor.rowcount > 0:
                 log.info("Deleted NFT with coin id: %s", coin_id.hex())

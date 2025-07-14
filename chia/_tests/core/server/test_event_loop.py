@@ -79,7 +79,11 @@ def test_base_event_loop_has_methods() -> None:
                 loop = asyncio.get_event_loop()
                 nonlocal pausable_server
                 pausable_server = await loop.create_server(
-                    EchoProtocol, host="127.0.0.1", port=8000, ssl_handshake_timeout=None, start_serving=False
+                    EchoProtocol,
+                    host="127.0.0.1",
+                    port=8000,
+                    ssl_handshake_timeout=None,
+                    start_serving=False,
                 )
 
             set_chia_policy(connection_limit=0)

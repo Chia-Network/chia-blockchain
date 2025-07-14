@@ -68,7 +68,8 @@ async def mint_cat(
     tail = Program.to([5, (1, (None, tail_nonce))])
     tail_hash = tail.get_tree_hash()
     async with environment.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         inner_puzzle_hash = await action_scope.get_puzzle_hash(environment.wallet_state_manager)
         if wallet_type is RCATWallet:
@@ -84,7 +85,7 @@ async def mint_cat(
                     CreateCoin(wrapped_inner_puzzle_hash, amount, memos=[inner_puzzle_hash]).to_program(),
                     UnknownCondition(opcode=Program.to(51), args=[NIL, Program.to(-113), tail, NIL]).to_program(),
                 ],
-            )
+            ),
         )
         eve_cat_puzzle = construct_cat_puzzle(
             CAT_MOD,
@@ -113,13 +114,16 @@ async def mint_cat(
                             tail_hash,
                             eve_inner_puzzle,
                             NIL,
-                        )
+                        ),
                     ],
-                )
+                ),
             )
 
     cat_wallet = await wallet_type.get_or_create_wallet_for_cat(
-        environment.wallet_state_manager, environment.xch_wallet, tail_hash.hex(), *extra_args
+        environment.wallet_state_manager,
+        environment.xch_wallet,
+        tail_hash.hex(),
+        *extra_args,
     )
 
     await wallet_environments.process_pending_states(
@@ -159,7 +163,7 @@ async def mint_cat(
                 },
             )
             for env in wallet_environments.environments
-        ]
+        ],
     )
 
     return cat_wallet
@@ -171,7 +175,7 @@ async def mint_cat(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -209,8 +213,10 @@ async def test_cat_creation(wallet_environments: WalletTestFramework, wallet_typ
         current_info = cat_wallet.wallet_info
         data_str = bytes(
             LegacyCATInfo(
-                cat_wallet.cat_info.limitations_program_hash, cat_wallet.cat_info.my_tail, list(all_lineage.items())
-            )
+                cat_wallet.cat_info.limitations_program_hash,
+                cat_wallet.cat_info.my_tail,
+                list(all_lineage.items()),
+            ),
         ).hex()
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         new_cat_wallet = await wallet_type.create(wsm, wallet, wallet_info)
@@ -221,7 +227,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework, wallet_typ
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None)
+            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None),
         )
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, peak_height=uint32(height + 1))
         # The "set_remainder" sections here are due to a peculiarity with how the creation method creates an incoming TX
@@ -264,7 +270,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework, wallet_typ
                         },
                     },
                 ),
-            ]
+            ],
         )
 
 
@@ -276,7 +282,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework, wallet_typ
             "blocks_needed": [1],
             "reuse_puzhash": True,  # irrelevant
             "trusted": True,  # irrelevant
-        }
+        },
     ],
     indirect=True,
 )
@@ -284,7 +290,8 @@ async def test_cat_creation(wallet_environments: WalletTestFramework, wallet_typ
 @pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
 async def test_cat_creation_unique_lineage_store(
-    wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]
+    wallet_environments: WalletTestFramework,
+    wallet_type: type[CATWallet],
 ) -> None:
     wallet_environments.environments[0].wallet_aliases = {
         "xch": 1,
@@ -325,7 +332,7 @@ async def test_cat_creation_unique_lineage_store(
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -359,13 +366,17 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
     else:
         extra_args = tuple()
     cat_wallet_2 = await wallet_type.get_or_create_wallet_for_cat(
-        wallet_node_2.wallet_state_manager, wallet2, asset_id, *extra_args
+        wallet_node_2.wallet_state_manager,
+        wallet2,
+        asset_id,
+        *extra_args,
     )
 
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_2_hash = await action_scope.get_puzzle_hash(cat_wallet_2.wallet_state_manager)
     async with cat_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -446,7 +457,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
                     },
                 },
             ),
-        ]
+        ],
     )
 
     async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
@@ -458,7 +469,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
     assert len(memos.coins_with_memos) == 2
     assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_hash = await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager)
     async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -502,13 +514,13 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
                     },
                 },
             ),
-        ]
+        ],
     )
 
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None),
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, peak_height=uint32(height + 1))
     await env_1.change_balances(
@@ -522,7 +534,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
                 "pending_change": 0,
                 "unspent_coin_count": -1,
             },
-        }
+        },
     )
     await env_1.check_balances()
 
@@ -536,7 +548,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
             "blocks_needed": [1],
             "reuse_puzhash": True,  # irrelevant
             "trusted": True,  # irrelevant
-        }
+        },
     ],
     indirect=True,
 )
@@ -552,7 +564,13 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework,
     }
 
     cat_wallet = await mint_cat(
-        wallet_environments, wallet_environments.environments[0], "xch", "cat", uint64(100), wallet_type, "cat wallet"
+        wallet_environments,
+        wallet_environments.environments[0],
+        "xch",
+        "cat",
+        uint64(100),
+        wallet_type,
+        "cat wallet",
     )
 
     await wallet_environments.process_pending_states(
@@ -567,7 +585,7 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework,
                     "cat": {"set_remainder": True},
                 },
             ),
-        ]
+        ],
     )
 
     asset_id = cat_wallet.get_asset_id()
@@ -594,7 +612,7 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework,
             "num_environments": 2,
             "blocks_needed": [1, 1],
             "reuse_puzhash": True,
-        }
+        },
     ],
     indirect=True,
 )
@@ -627,17 +645,22 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework, wall
     else:
         extra_args = tuple()
     cat_wallet_2 = await wallet_type.get_or_create_wallet_for_cat(
-        wallet_node_2.wallet_state_manager, wallet2, asset_id, *extra_args
+        wallet_node_2.wallet_state_manager,
+        wallet2,
+        asset_id,
+        *extra_args,
     )
 
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_2_hash = await action_scope.get_puzzle_hash(cat_wallet_2.wallet_state_manager)
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, fee=uint64(1))
 
@@ -706,7 +729,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework, wall
                     },
                 },
             ),
-        ]
+        ],
     )
 
     cc2_ph = await cat_wallet_2.get_cat_puzzle_hash(new=False)
@@ -742,7 +765,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework, wall
                 pre_block_balance_updates={},
                 post_block_balance_updates={},
             ),
-        ]
+        ],
     )
 
     id = cat_wallet_2.id()
@@ -762,7 +785,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework, wall
         {
             "num_environments": 3,
             "blocks_needed": [1, 1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -802,22 +825,30 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
         extra_args = tuple()
 
     cat_wallet_1 = await wallet_type.get_or_create_wallet_for_cat(
-        wallet_node_1.wallet_state_manager, wallet_1, asset_id, *extra_args
+        wallet_node_1.wallet_state_manager,
+        wallet_1,
+        asset_id,
+        *extra_args,
     )
 
     cat_wallet_2 = await wallet_type.get_or_create_wallet_for_cat(
-        wallet_node_2.wallet_state_manager, wallet_2, asset_id, *extra_args
+        wallet_node_2.wallet_state_manager,
+        wallet_2,
+        asset_id,
+        *extra_args,
     )
 
     assert cat_wallet_0.cat_info.limitations_program_hash == cat_wallet_1.cat_info.limitations_program_hash
     assert cat_wallet_0.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     async with cat_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_1_hash = await action_scope.get_puzzle_hash(cat_wallet_1.wallet_state_manager)
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_2_hash = await action_scope.get_puzzle_hash(cat_wallet_2.wallet_state_manager)
     async with cat_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -897,11 +928,12 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
                     },
                 },
             ),
-        ]
+        ],
     )
 
     async with cat_wallet_0.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_hash = await action_scope.get_puzzle_hash(cat_wallet_0.wallet_state_manager)
     async with cat_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -972,19 +1004,24 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # Test with Memo
     async with cat_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await cat_wallet_1.generate_signed_transaction(
-            [uint64(30)], [cat_hash], action_scope, memos=[[b"Markus Walburg"]]
+            [uint64(30)],
+            [cat_hash],
+            action_scope,
+            memos=[[b"Markus Walburg"]],
         )
     with pytest.raises(ValueError):
         async with cat_wallet_1.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=False
+            DEFAULT_TX_CONFIG,
+            push=False,
         ) as failed_action_scope:
             await cat_wallet_1.generate_signed_transaction(
                 [uint64(30)],
@@ -1037,7 +1074,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
                 pre_block_balance_updates={},
                 post_block_balance_updates={},
             ),
-        ]
+        ],
     )
 
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
@@ -1059,7 +1096,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
             "blocks_needed": [1],
             "reuse_puzhash": True,  # irrelevant
             "trusted": True,  # irrelevant
-        }
+        },
     ],
     indirect=True,
 )
@@ -1079,7 +1116,8 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
     assert cat_wallet.cat_info.limitations_program_hash is not None
 
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_2 = await action_scope.get_puzzle(cat_wallet.wallet_state_manager)
         cat_2_hash = cat_2.get_tree_hash()
@@ -1114,8 +1152,8 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
                         "unspent_coin_count": 49,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     async def check_all_there() -> bool:
@@ -1128,7 +1166,9 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
         else:
             inner_puzzle = cat_2
         puzzle_hash = construct_cat_puzzle(
-            CAT_MOD, cat_wallet.cat_info.limitations_program_hash, inner_puzzle
+            CAT_MOD,
+            cat_wallet.cat_info.limitations_program_hash,
+            inner_puzzle,
         ).get_tree_hash()
         for i in range(1, 50):
             coin = Coin(spent_coin.name(), puzzle_hash, uint64(i))
@@ -1141,14 +1181,16 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
 
     # 1) Generate transaction that is under the limit
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(max_sent_amount - 1)], [bytes32.zeros], action_scope)
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount - 1)
 
     # 2) Generate transaction that is equal to limit
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(max_sent_amount)], [bytes32.zeros], action_scope)
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
@@ -1156,7 +1198,8 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
     # 3) Generate transaction that is greater than limit
     with pytest.raises(ValueError, match="Can't select amount higher than our spendable balance."):
         async with cat_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             await cat_wallet.generate_signed_transaction([uint64(max_sent_amount + 1)], [bytes32.zeros], action_scope)
 
@@ -1252,7 +1295,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
                     else {}
                 ),
             ),
-        ]
+        ],
     )
 
     # Then we update the wallet's default CATs
@@ -1261,7 +1304,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
             "asset_id": cat_wallet.cat_info.limitations_program_hash.hex(),
             "name": "Test",
             "symbol": "TST",
-        }
+        },
     }
 
     # Then we send another transaction
@@ -1317,22 +1360,24 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
                             "pending_change": 0,
                             "unspent_coin_count": 2,
                             "pending_coin_removal_count": 0,
-                        }
+                        },
                     }
                 ),
             ),
-        ]
+        ],
     )
 
     cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[uint32(2)]
     assert isinstance(cat_wallet_2, CATWallet)
 
     async with cat_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_hash = await action_scope.get_puzzle_hash(cat_wallet.wallet_state_manager)
     async with cat_wallet_2.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], action_scope)
 
@@ -1376,7 +1421,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework, wallet_type: t
                     },
                 },
             ),
-        ]
+        ],
     )
 
 
@@ -1412,10 +1457,17 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
     if wallet_type is RCATWallet:
         inner_puzhash = create_revocation_layer(bytes32.zeros, inner_puzhash).get_tree_hash()
     puzzlehash_unhardened = construct_cat_puzzle(
-        CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
+        CAT_MOD,
+        Program.to(None).get_tree_hash(),
+        inner_puzhash,
     ).get_tree_hash_precalc(inner_puzhash)
     change_derivation = DerivationRecord(
-        uint32(0), puzzlehash_unhardened, pubkey_unhardened, WalletType.CAT, uint32(2), False
+        uint32(0),
+        puzzlehash_unhardened,
+        pubkey_unhardened,
+        WalletType.CAT,
+        uint32(2),
+        False,
     )
     # Insert the derivation record before the wallet exists so that it is not subscribed to
     await wsm.puzzle_store.add_derivation_paths([change_derivation])
@@ -1439,8 +1491,8 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
             WalletStateTransition(
                 pre_block_balance_updates={"xch": {"set_remainder": True}},
                 post_block_balance_updates={"xch": {"set_remainder": True}},
-            )
-        ]
+            ),
+        ],
     )
 
     # Do the eve spend back to our wallet and add the CR layer
@@ -1461,7 +1513,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
                             [
                                 [51, our_puzzle.get_tree_hash(), cat_amount_0, [our_puzzle.get_tree_hash()]],
                                 [51, None, -113, None, None],
-                            ]
+                            ],
                         ),
                         None,
                         cat_coin.name(),
@@ -1469,7 +1521,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
                         [cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_coin.amount],
                         0,
                         0,
-                    ]
+                    ],
                 ),
             ),
             make_spend(
@@ -1489,14 +1541,16 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
                             None,
                         ],
                         LineageProof(
-                            cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_amount_0
+                            cat_coin.parent_coin_info,
+                            Program.to(1).get_tree_hash(),
+                            cat_amount_0,
                         ).to_program(),
                         next_coin.name(),
                         coin_as_list(next_coin),
                         [next_coin.parent_coin_info, our_puzzle.get_tree_hash(), next_coin.amount],
                         0,
                         0,
-                    ]
+                    ],
                 ),
             ),
         ],
@@ -1515,10 +1569,10 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
                         "spendable_balance": 5,
                         "max_send_amount": 5,
                         "unspent_coin_count": 1,
-                    }
+                    },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     assert not full_node_api.full_node.subscriptions.has_puzzle_subscription(puzzlehash_unhardened)
@@ -1561,7 +1615,7 @@ async def test_unacknowledged_cat_table() -> None:
             "blocks_needed": [1],
             "reuse_puzhash": True,  # Parameter doesn't matter for this test
             "config_overrides": {"automatically_add_unknown_cats": True},
-        }
+        },
     ],
     indirect=True,
 )
@@ -1609,10 +1663,10 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                     limitations_program_hash=ACS_TAIL_HASH,
                     inner_puzzle=ACS,
                     inner_solution=Program.to(
-                        [[51, wallet_ph, tx_amount, [wallet_ph]], [51, None, -113, ACS_TAIL, None]]
+                        [[51, wallet_ph, tx_amount, [wallet_ph]], [51, None, -113, ACS_TAIL, None]],
                     ),
                     extra_delta=tx_amount - cat_coin.amount,
-                )
+                ),
             ],
         )
     await env.rpc_client.push_tx(PushTX(spend_to_wallet))
@@ -1633,8 +1687,8 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                         "unspent_coin_count": 1,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     cat_wallet = env.wallet_state_manager.wallets[uint32(2)]
@@ -1661,7 +1715,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                         ),
                     ),
                     extra_delta=-1,
-                )
+                ),
             ],
         )
         signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
@@ -1681,8 +1735,8 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                             "max_send_amount": -1,
                         },
                     },
-                )
-            ]
+                ),
+            ],
         )
 
 
@@ -1694,7 +1748,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
             "blocks_needed": [1],
             "trusted": True,  # Parameter doesn't matter for this test
             "reuse_puzhash": True,  # Important to test this is ignored in the duplicate change scenario
-        }
+        },
     ],
     indirect=True,
 )
@@ -1722,12 +1776,12 @@ async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework, walle
 
     # Test new puzzle hash getting
     current_derivation_index = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-        uint32(env.wallet_aliases["cat"])
+        uint32(env.wallet_aliases["cat"]),
     )
     assert current_derivation_index is not None
     await cat_wallet.get_cat_puzzle_hash(new=True)
     next_derivation_index = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-        uint32(env.wallet_aliases["cat"])
+        uint32(env.wallet_aliases["cat"]),
     )
     assert next_derivation_index is not None
     assert current_derivation_index.index < next_derivation_index.index

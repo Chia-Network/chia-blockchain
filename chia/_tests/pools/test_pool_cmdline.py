@@ -69,7 +69,7 @@ class StateUrlCase:
         {
             "num_environments": 1,
             "blocks_needed": [1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -149,8 +149,8 @@ async def test_plotnft_cli_create(
                     },
                     2: {"init": True, "unspent_coin_count": 1},
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
@@ -198,7 +198,7 @@ async def test_plotnft_cli_create_errors(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -276,7 +276,7 @@ async def test_plotnft_cli_show(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -346,7 +346,7 @@ async def test_plotnft_cli_show_with_farmer(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-        }
+        },
     ],
     indirect=True,
 )
@@ -416,14 +416,15 @@ async def test_plotnft_cli_leave(
                     },
                     2: {"pending_coin_removal_count": -1},
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
 
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+        count=LOCK_HEIGHT + 2,
+        guarantee_transaction_blocks=True,
     )
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
@@ -435,7 +436,7 @@ async def test_plotnft_cli_leave(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-        }
+        },
     ],
     indirect=True,
 )
@@ -589,11 +590,13 @@ async def test_plotnft_cli_join(
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+        count=LOCK_HEIGHT + 2,
+        guarantee_transaction_blocks=True,
     )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
     await wallet_environments.full_node.wait_for_wallet_synced(
-        wallet_node=wallet_environments.environments[0].node, timeout=20
+        wallet_node=wallet_environments.environments[0].node,
+        timeout=20,
     )
 
     # Create a second farming plotnft to url http://pool.example.com
@@ -627,7 +630,8 @@ async def test_plotnft_cli_join(
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+        count=LOCK_HEIGHT + 2,
+        guarantee_transaction_blocks=True,
     )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
 
@@ -638,7 +642,7 @@ async def test_plotnft_cli_join(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-        }
+        },
     ],
     indirect=True,
 )
@@ -698,7 +702,8 @@ async def test_plotnft_cli_claim(
         await wallet_environments.full_node.full_node.add_block(block)
 
     await wallet_environments.full_node.wait_for_wallet_synced(
-        wallet_node=wallet_environments.environments[0].node, timeout=20
+        wallet_node=wallet_environments.environments[0].node,
+        timeout=20,
     )
     await ClaimPlotNFTCMD(
         rpc_info=NeedsWalletRPC(
@@ -750,8 +755,8 @@ async def test_plotnft_cli_claim(
                         "pending_coin_removal_count": -3,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
 
@@ -761,7 +766,7 @@ async def test_plotnft_cli_claim(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-        }
+        },
     ],
     indirect=True,
 )
@@ -848,7 +853,7 @@ async def test_plotnft_cli_inspect(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-        }
+        },
     ],
     indirect=True,
 )
@@ -924,7 +929,7 @@ async def test_plotnft_cli_change_payout(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-        }
+        },
     ],
     indirect=True,
 )
@@ -992,7 +997,10 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
 
     # Test fall-through raise in create
     mocker.patch.object(
-        test_rpc_client, "create_new_pool_wallet", create=True, side_effect=ValueError("Injected error")
+        test_rpc_client,
+        "create_new_pool_wallet",
+        create=True,
+        side_effect=ValueError("Injected error"),
     )
     with pytest.raises(CliRpcConnectionError, match="Error creating plot NFT: Injected error"):
         await create(

@@ -14,9 +14,13 @@ from chia.simulator.block_tools import BlockTools
 
 
 async def load_blocks_dont_validate(
-    blocks: list[FullBlock], constants: ConsensusConstants
+    blocks: list[FullBlock],
+    constants: ConsensusConstants,
 ) -> tuple[
-    dict[bytes32, HeaderBlock], dict[uint32, bytes32], dict[bytes32, BlockRecord], dict[uint32, SubEpochSummary]
+    dict[bytes32, HeaderBlock],
+    dict[uint32, bytes32],
+    dict[bytes32, BlockRecord],
+    dict[uint32, SubEpochSummary],
 ]:
     header_cache: dict[bytes32, HeaderBlock] = {}
     height_to_hash: dict[uint32, bytes32] = {}
@@ -101,36 +105,56 @@ async def _test_map_summaries(
 class TestWeightProof:
     @pytest.mark.anyio
     async def test_weight_proof_map_summaries_1(
-        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_400_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            default_400_blocks, blockchain_constants
+            default_400_blocks,
+            blockchain_constants,
         )
         await _test_map_summaries(
-            default_400_blocks, header_cache, height_to_hash, sub_blocks, summaries, blockchain_constants
+            default_400_blocks,
+            header_cache,
+            height_to_hash,
+            sub_blocks,
+            summaries,
+            blockchain_constants,
         )
 
     @pytest.mark.anyio
     async def test_weight_proof_map_summaries_2(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            default_1000_blocks, blockchain_constants
+            default_1000_blocks,
+            blockchain_constants,
         )
         await _test_map_summaries(
-            default_1000_blocks, header_cache, height_to_hash, sub_blocks, summaries, blockchain_constants
+            default_1000_blocks,
+            header_cache,
+            height_to_hash,
+            sub_blocks,
+            summaries,
+            blockchain_constants,
         )
 
     @pytest.mark.anyio
     async def test_weight_proof_summaries_1000_blocks(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -145,14 +169,18 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_bad_peak_hash(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(bytes32(b"a" * 32))
         assert wp is None
@@ -160,14 +188,18 @@ class TestWeightProof:
     @pytest.mark.anyio
     @pytest.mark.skip(reason="broken")
     async def test_weight_proof_from_genesis(
-        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_400_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_400_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -179,17 +211,29 @@ class TestWeightProof:
         blocks = default_400_blocks
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=2,
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=1
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=1,
         )
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True)
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=2,
         )
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True)
@@ -243,7 +287,11 @@ class TestWeightProof:
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=4,
         )
 
         blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True)
@@ -262,14 +310,18 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof1000(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -281,15 +333,19 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof1000_pre_genesis_empty_slots(
-        self, pre_genesis_empty_slots_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        pre_genesis_empty_slots_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = pre_genesis_empty_slots_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
 
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -301,14 +357,18 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof10000__blocks_compact(
-        self, default_10000_blocks_compact: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_10000_blocks_compact: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_10000_blocks_compact
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -320,7 +380,9 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof1000_partial_blocks_compact(
-        self, bt: BlockTools, default_10000_blocks_compact: list[FullBlock]
+        self,
+        bt: BlockTools,
+        default_10000_blocks_compact: list[FullBlock],
     ) -> None:
         blocks = bt.get_consecutive_blocks(
             100,
@@ -342,14 +404,18 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof10000(
-        self, default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_10000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
 
@@ -362,14 +428,18 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_check_num_of_samples(
-        self, default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_10000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -383,21 +453,26 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_extend_no_ses(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         last_ses_height = sorted(summaries.keys())[-1]
         wpf_synced = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height].header_hash)
         assert wp is not None
         # todo for each sampled sub epoch, validate number of segments
         wpf_not_synced = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, {}),
         )
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(wp)
         assert valid
@@ -411,30 +486,36 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_extend_new_ses(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         # delete last summary
         last_ses_height = sorted(summaries.keys())[-1]
         last_ses = summaries[last_ses_height]
         del summaries[last_ses_height]
         wpf_synced = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height - 10].header_hash)
         assert wp is not None
         wpf_not_synced = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, {}),
         )
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(wp)
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         summaries[last_ses_height] = last_ses
         wpf_synced.blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
@@ -455,21 +536,26 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_extend_multiple_ses(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            blocks, blockchain_constants
+            blocks,
+            blockchain_constants,
         )
         last_ses_height = sorted(summaries.keys())[-1]
         last_ses = summaries[last_ses_height]
         before_last_ses_height = sorted(summaries.keys())[-2]
         before_last_ses = summaries[before_last_ses_height]
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         wpf_verify = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, {}),
         )
         for x in range(10, -1, -1):
             wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - x].header_hash)
@@ -481,7 +567,8 @@ class TestWeightProof:
         summaries[last_ses_height] = last_ses
         summaries[before_last_ses_height] = before_last_ses
         wpf = WeightProofHandler(
-            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants,
+            BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries),
         )
         new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
         assert new_wp is not None

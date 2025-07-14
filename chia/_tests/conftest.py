@@ -628,7 +628,8 @@ async def two_nodes(db_version: int, self_hostname, blockchain_constants: Consen
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes_fixture(
-    db_version: int, blockchain_constants: ConsensusConstants
+    db_version: int,
+    blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]]:
     async with setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
@@ -714,10 +715,16 @@ async def two_wallet_nodes_services(
 
 @pytest.fixture(scope="function")
 async def two_wallet_nodes_custom_spam_filtering(
-    spam_filter_after_n_txs, xch_spam_amount, blockchain_constants: ConsensusConstants
+    spam_filter_after_n_txs,
+    xch_spam_amount,
+    blockchain_constants: ConsensusConstants,
 ):
     async with setup_simulators_and_wallets(
-        1, 2, blockchain_constants, spam_filter_after_n_txs, xch_spam_amount
+        1,
+        2,
+        blockchain_constants,
+        spam_filter_after_n_txs,
+        xch_spam_amount,
     ) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
 
@@ -737,7 +744,11 @@ async def setup_two_nodes_and_wallet(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def setup_two_nodes_and_wallet_fast_retry(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
-        1, 1, blockchain_constants, config_overrides={"wallet.tx_resend_timeout_secs": 1}, db_version=2
+        1,
+        1,
+        blockchain_constants,
+        config_overrides={"wallet.tx_resend_timeout_secs": 1},
+        db_version=2,
     ) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
 
@@ -771,7 +782,10 @@ async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[OldSimulator
 @pytest.fixture
 async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
-        1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
+        1,
+        1,
+        blockchain_constants,
+        config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000},
     ) as new:
         (nodes, _wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -886,7 +900,8 @@ async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> Async
 
 @pytest.fixture(scope="function")
 async def farmer_one_harvester_not_started(
-    tmp_path: Path, get_b_tools: BlockTools
+    tmp_path: Path,
+    get_b_tools: BlockTools,
 ) -> AsyncIterator[tuple[list[Service], Service]]:
     async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
@@ -894,7 +909,8 @@ async def farmer_one_harvester_not_started(
 
 @pytest.fixture(scope="function")
 async def farmer_two_harvester_not_started(
-    tmp_path: Path, get_b_tools: BlockTools
+    tmp_path: Path,
+    get_b_tools: BlockTools,
 ) -> AsyncIterator[tuple[list[Service], Service]]:
     async with setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
@@ -902,7 +918,8 @@ async def farmer_two_harvester_not_started(
 
 @pytest.fixture(scope="function")
 async def farmer_three_harvester_not_started(
-    tmp_path: Path, get_b_tools: BlockTools
+    tmp_path: Path,
+    get_b_tools: BlockTools,
 ) -> AsyncIterator[tuple[list[Service], Service]]:
     async with setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
@@ -1103,7 +1120,8 @@ async def crawler_service(root_path_populated_with_config: Path, database_uri: s
 
 @pytest.fixture(scope="function")
 async def crawler_service_no_loop(
-    root_path_populated_with_config: Path, database_uri: str
+    root_path_populated_with_config: Path,
+    database_uri: str,
 ) -> AsyncIterator[CrawlerService]:
     async with setup_crawler(root_path_populated_with_config, database_uri, start_crawler_loop=False) as service:
         yield service
@@ -1196,11 +1214,17 @@ async def harvester_farmer_environment(
 
     assert farmer_service.rpc_server is not None
     farmer_rpc_cl = await FarmerRpcClient.create(
-        self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
+        self_hostname,
+        farmer_service.rpc_server.listen_port,
+        farmer_service.root_path,
+        farmer_service.config,
     )
     assert harvester_service.rpc_server is not None
     harvester_rpc_cl = await HarvesterRpcClient.create(
-        self_hostname, harvester_service.rpc_server.listen_port, harvester_service.root_path, harvester_service.config
+        self_hostname,
+        harvester_service.rpc_server.listen_port,
+        harvester_service.root_path,
+        harvester_service.config,
     )
 
     async def have_connections() -> bool:
@@ -1236,7 +1260,8 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 
 @pytest.fixture(scope="function")
 async def farmer_harvester_2_simulators_zero_bits_plot_filter(
-    tmp_path: Path, get_temp_keyring: Keychain
+    tmp_path: Path,
+    get_temp_keyring: Keychain,
 ) -> AsyncIterator[
     tuple[
         FarmerService,
@@ -1281,13 +1306,13 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                     local_bt=bts[index],
                     simulator=True,
                     db_version=2,
-                )
+                ),
             )
             for index in range(len(bts))
         ]
 
         [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
-            setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
+            setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True),
         )
 
         yield farmer_service, harvester_service, simulators[0], simulators[1], bt
@@ -1371,7 +1396,8 @@ async def wallet_environments(
                 # Shorten the 10 seconds default value
                 service._node.coin_state_retry_seconds = 2
                 await service._node.server.start_client(
-                    PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
+                    PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()),
+                    None,
                 )
                 wallet_rpc_clients.append(
                     await astack.enter_async_context(
@@ -1381,15 +1407,16 @@ async def wallet_environments(
                             service.rpc_server.listen_port,  # type: ignore[union-attr]
                             service.root_path,
                             service.config,
-                        )
-                    )
+                        ),
+                    ),
                 )
 
             wallet_states: list[WalletState] = []
             for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
                 if blocks_needed > 0:
                     await full_node[0]._api.farm_blocks_to_wallet(
-                        count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                        count=blocks_needed,
+                        wallet=service._node.wallet_state_manager.main_wallet,
                     )
                     await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
                 wallet_states.append(
@@ -1403,7 +1430,7 @@ async def wallet_environments(
                             unspent_coin_count=uint32(2 * blocks_needed),
                             pending_coin_removal_count=uint32(0),
                         ),
-                    )
+                    ),
                 )
 
             assert full_node[0].rpc_server is not None
@@ -1413,7 +1440,7 @@ async def wallet_environments(
                     full_node[0].rpc_server.listen_port,
                     full_node[0].root_path,
                     full_node[0].config,
-                )
+                ),
             )
             yield WalletTestFramework(
                 full_node[0]._api,

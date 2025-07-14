@@ -78,7 +78,7 @@ class PeerRequestCache:
         return std_hash(
             bytes(block.reward_chain_block.proof_of_space.plot_public_key)
             + bytes(block.foliage.foliage_block_data)
-            + bytes(block.foliage.foliage_block_data_signature)
+            + bytes(block.foliage.foliage_block_data_signature),
         )
 
     def in_block_signatures_validated(self, block: HeaderBlock) -> bool:
@@ -158,7 +158,9 @@ class PeerRequestCache:
 
 
 def can_use_peer_request_cache(
-    coin_state: CoinState, peer_request_cache: PeerRequestCache, fork_height: Optional[uint32]
+    coin_state: CoinState,
+    peer_request_cache: PeerRequestCache,
+    fork_height: Optional[uint32],
 ) -> bool:
     if not peer_request_cache.in_states_validated(coin_state.get_hash()):
         return False

@@ -119,11 +119,11 @@ async def get_any_service_client(
         # select node client type based on string
         if use_ssl:
             node_client = await exit_stack.enter_async_context(
-                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config)
+                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config),
             )
         else:
             node_client = await exit_stack.enter_async_context(
-                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=None, net_config=None)
+                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=None, net_config=None),
             )
 
         try:
@@ -204,7 +204,7 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                     print(
                         f"{key_index_str:<{max_key_index_width}} "
                         f"{key.fingerprint:<{max_fingerprint_width}}"
-                        f"{(indent + key.label) if key.label else ''}"
+                        f"{(indent + key.label) if key.label else ''}",
                     )
                 val = None
                 prompt: str = (
@@ -302,9 +302,9 @@ def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:
                     multiple=True,
                     type=AmountParamType(),
                     help="Exclude any coins with this XCH or CAT amount from being included.",
-                )(func)
-            )
-        )
+                )(func),
+            ),
+        ),
     )
 
 
@@ -345,7 +345,7 @@ def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None
                 required=False,
                 default=None,
                 hidden=not enable,
-            )(_convert_timelock_args_to_cvt)
+            )(_convert_timelock_args_to_cvt),
         )
 
     return _timelock_args
@@ -370,7 +370,11 @@ def tx_out_cmd(
                     file.write(bytes(TransactionBundle(txs)))
 
         return click.option(
-            "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+            "--push/--no-push",
+            help="Push the transaction to the network",
+            type=bool,
+            is_flag=True,
+            default=True,
         )(
             click.option(
                 "--transaction-file-out",
@@ -378,7 +382,7 @@ def tx_out_cmd(
                 type=str,
                 required=False,
                 default=None,
-            )(original_cmd)
+            )(original_cmd),
         )
 
     return _tx_out_cmd

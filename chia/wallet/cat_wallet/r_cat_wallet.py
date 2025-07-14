@@ -116,7 +116,7 @@ class RCATWallet(CATWallet):
 
         delete: bool = False
         for state in await self.wallet_state_manager.interested_store.get_unacknowledged_states_for_asset_id(
-            limitations_program_hash
+            limitations_program_hash,
         ):
             new_peer = self.wallet_state_manager.wallet_node.get_full_node_peer()
             if new_peer is not None:
@@ -126,7 +126,7 @@ class RCATWallet(CATWallet):
 
         if delete:
             await self.wallet_state_manager.interested_store.delete_unacknowledged_states_for_asset_id(
-                limitations_program_hash
+                limitations_program_hash,
             )
 
         return self
@@ -175,12 +175,17 @@ class RCATWallet(CATWallet):
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
         replace_self.lineage_store = cat_wallet.lineage_store
         replace_self.cat_info = cls.wallet_info_type(
-            cat_wallet.cat_info.limitations_program_hash, None, hidden_puzzle_hash
+            cat_wallet.cat_info.limitations_program_hash,
+            None,
+            hidden_puzzle_hash,
         )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
             WalletInfo(
-                cat_wallet.id(), cat_wallet.get_name(), uint8(cls.wallet_type.value), bytes(replace_self.cat_info).hex()
-            )
+                cat_wallet.id(),
+                cat_wallet.get_name(),
+                uint8(cls.wallet_type.value),
+                bytes(replace_self.cat_info).hex(),
+            ),
         )
         updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
         assert updated_wallet_info is not None
@@ -193,23 +198,29 @@ class RCATWallet(CATWallet):
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         inner_puzzle = create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
+            self.cat_info.hidden_puzzle_hash,
+            self.standard_wallet.puzzle_hash_for_pk(pubkey),
         )
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
         return cat_puzzle
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash, self.standard_wallet.puzzle_hash_for_pk(pubkey)
+            self.cat_info.hidden_puzzle_hash,
+            self.standard_wallet.puzzle_hash_for_pk(pubkey),
         ).get_tree_hash()
         limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
         return curry_and_treehash(
-            QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
+            QUOTED_CAT_MOD_HASH,
+            CAT_MOD_HASH_HASH,
+            limitations_program_hash_hash,
+            inner_puzzle_hash,
         )
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
         return create_revocation_layer(
-            self.cat_info.hidden_puzzle_hash, (await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash()
+            self.cat_info.hidden_puzzle_hash,
+            (await super().inner_puzzle_for_cat_puzhash(cat_hash)).get_tree_hash(),
         )
 
     async def make_inner_solution(
@@ -251,7 +262,7 @@ class RCATWallet(CATWallet):
                     "type": AssetType.REVOCATION_LAYER.value,
                     "hidden_puzzle_hash": "0x" + self.cat_info.hidden_puzzle_hash.hex(),
                 },
-            }
+            },
         )
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:

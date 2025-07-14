@@ -92,7 +92,9 @@ class CliAmount:
     amount: Union[uint64, Decimal, None]  # uint64 if mojos, Decimal if not, None if default value is none
 
     def convert_amount_with_default(
-        self, mojo_per_unit: int, default_value: Optional[uint64] = uint64(0)
+        self,
+        mojo_per_unit: int,
+        default_value: Optional[uint64] = uint64(0),
     ) -> Optional[uint64]:
         if self.amount is None:  # if the value is set to none, return the default value
             return default_value
@@ -110,7 +112,7 @@ class CliAmount:
         if uint64_amount != converted_amount:
             raise ValueError(
                 "Too much decimal precision specified."
-                "Please use the units of the balance numbers from `chia wallet show`"
+                "Please use the units of the balance numbers from `chia wallet show`",
             )
         return uint64_amount
 

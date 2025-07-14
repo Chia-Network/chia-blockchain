@@ -35,7 +35,9 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 @pytest.mark.anyio
 async def test1(
-    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices, self_hostname: str, consensus_mode: ConsensusMode
+    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices,
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
 ) -> None:
     num_blocks = 5
     nodes, _, bt = two_nodes_sim_and_wallets_services
@@ -160,7 +162,7 @@ async def test1(
         assert len(await client.get_all_mempool_tx_ids()) == 1
         assert (
             WalletSpendBundle.from_json_dict(
-                next(iter((await client.get_all_mempool_items()).values()))["spend_bundle"]
+                next(iter((await client.get_all_mempool_items()).values()))["spend_bundle"],
             )
             == spend_bundle
         )
@@ -215,12 +217,17 @@ async def test1(
         # Spend 3 coins using standard transaction
         for i in range(3):
             spend_bundle = wallet.generate_signed_transaction(
-                coin_records[i].coin.amount, ph_receiver, coin_records[i].coin
+                coin_records[i].coin.amount,
+                ph_receiver,
+                coin_records[i].coin,
             )
             await client.push_tx(spend_bundle)
             coin_spends += spend_bundle.coin_spends
             await time_out_assert(
-                5, full_node_api_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
+                5,
+                full_node_api_1.full_node.mempool_manager.get_spendbundle,
+                spend_bundle,
+                spend_bundle.name(),
             )
 
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
@@ -249,17 +256,17 @@ async def test1(
             uint64(1_750_000_000_000),
         )
         assert coin_spend_with_conditions.coin_spend.puzzle_reveal == SerializedProgram.fromhex(
-            "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
+            "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080",
         )
         assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
-            "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa0a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee54798080ff8080"
+            "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa0a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee54798080ff8080",
         )
         assert coin_spend_with_conditions.conditions == [
             ConditionWithArgs(
                 ConditionOpcode(b"2"),
                 [
                     bytes.fromhex(
-                        "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
+                        "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a",
                     ),
                     bytes.fromhex("49b6f533000b967f049bb6e7b29d0b6f465ebccd5733bc75340f98dae782aa08"),
                 ],
@@ -287,17 +294,17 @@ async def test1(
             uint64(1_750_000_000_000),
         )
         assert coin_spend_with_conditions.coin_spend.puzzle_reveal == SerializedProgram.fromhex(
-            "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
+            "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080",
         )
         assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
-            "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa04f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f8080ff8080"
+            "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa04f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f8080ff8080",
         )
         assert coin_spend_with_conditions.conditions == [
             ConditionWithArgs(
                 ConditionOpcode(b"2"),
                 [
                     bytes.fromhex(
-                        "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
+                        "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a",
                     ),
                     bytes.fromhex("95df50b31bb746a37df6ab448f10436fb98bb659990c61ee6933a196f6a06465"),
                 ],
@@ -325,17 +332,17 @@ async def test1(
             uint64(250_000_000_000),
         )
         assert coin_spend_with_conditions.coin_spend.puzzle_reveal == SerializedProgram.fromhex(
-            "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
+            "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080",
         )
         assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
-            "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff853a3529440080ffff3cffa0617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f8080ff8080"
+            "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff853a3529440080ffff3cffa0617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f8080ff8080",
         )
         assert coin_spend_with_conditions.conditions == [
             ConditionWithArgs(
                 ConditionOpcode(b"2"),
                 [
                     bytes.fromhex(
-                        "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
+                        "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a",
                     ),
                     bytes.fromhex("f3dd65f1ca4b030a726182e0194174fe95ff7a66f54381cad3aab168b8e75ee7"),
                 ],
@@ -390,7 +397,9 @@ async def test1(
 
         # Get coin records by hint
         coin_records = await client.get_coin_records_by_hint(
-            memo, start_height=state["peak"].height - 1, end_height=state["peak"].height
+            memo,
+            start_height=state["peak"].height - 1,
+            end_height=state["peak"].height,
         )
 
         assert len(coin_records) == 1
@@ -415,7 +424,7 @@ async def test1(
         assert len(blocks) == 5
 
         await full_node_api_1.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(2), uint32(55), bytes32([0x2] * 32), None)
+            ReorgProtocol(uint32(2), uint32(55), bytes32([0x2] * 32), None),
         )
         new_blocks_0: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(new_blocks_0) == 7
@@ -430,7 +439,8 @@ async def test1(
 
 @pytest.mark.anyio
 async def test_signage_points(
-    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices, empty_blockchain: Blockchain
+    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices,
+    empty_blockchain: Blockchain,
 ) -> None:
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
@@ -497,7 +507,8 @@ async def test_signage_points(
         # Add the last block
         await full_node_api_1.full_node.add_block(blocks[-1])
         await full_node_api_1.respond_signage_point(
-            full_node_protocol.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
+            full_node_protocol.RespondSignagePoint(uint8(4), sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof),
+            peer,
         )
 
         assert full_node_api_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
@@ -559,7 +570,8 @@ async def test_signage_points(
 
 @pytest.mark.anyio
 async def test_get_network_info(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    self_hostname: str,
 ) -> None:
     nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
@@ -582,7 +594,8 @@ async def test_get_network_info(
 
 @pytest.mark.anyio
 async def test_get_version(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    self_hostname: str,
 ) -> None:
     nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
@@ -602,7 +615,8 @@ async def test_get_version(
 
 @pytest.mark.anyio
 async def test_get_blockchain_state(
-    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    self_hostname: str,
 ) -> None:
     num_blocks = 5
     nodes, _, bt = one_wallet_and_one_simulator_services
@@ -667,12 +681,14 @@ async def test_get_blockchain_state(
         assert len(transaction_blocks) > 0
         assert len(non_transaction_block) > 0
         assert transaction_blocks[0] == await get_nearest_transaction_block(
-            full_node_api_1.full_node.blockchain, transaction_blocks[0]
+            full_node_api_1.full_node.blockchain,
+            transaction_blocks[0],
         )
 
         nearest_transaction_block = block_records[first_non_transaction_block_index - 1]
         expected_nearest_transaction_block = await get_nearest_transaction_block(
-            full_node_api_1.full_node.blockchain, block_records[first_non_transaction_block_index]
+            full_node_api_1.full_node.blockchain,
+            block_records[first_non_transaction_block_index],
         )
         assert expected_nearest_transaction_block == nearest_transaction_block
         # When supplying genesis block, there are no older blocks so `None` should be returned

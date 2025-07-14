@@ -118,7 +118,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
                 asset_id=bytes(asset_id).hex()[2:],
                 memo=memo,
                 npc=NPC(coin.name(), puzzle_hash, [(op, cond) for op, cond in conds.items()]),
-            )
+            ),
         )
 
     return cat_list

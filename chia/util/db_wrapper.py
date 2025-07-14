@@ -67,7 +67,9 @@ def generate_in_memory_db_uri() -> str:
 
 
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
+    c: aiosqlite.Connection,
+    sql: str,
+    parameters: Optional[Iterable[Any]] = None,
 ) -> Optional[sqlite3.Row]:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:

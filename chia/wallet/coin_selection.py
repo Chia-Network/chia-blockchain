@@ -57,11 +57,11 @@ async def select_coins(
     if sum_spendable_coins < amount:
         raise ValueError(
             f"Transaction for {amount} is greater than max spendable balance in a block of {sum_spendable_coins}. "
-            "There may be other transactions pending or our minimum coin amount is too high."
+            "There may be other transactions pending or our minimum coin amount is too high.",
         )
     if amount == 0 and len(spendable_coins) == 0:
         raise ValueError(
-            "No coins available to spend, you can not create a coin with an amount of 0, without already having coins."
+            "No coins available to spend, you can not create a coin with an amount of 0, without already having coins.",
         )
 
     # Sort the coins by amount
@@ -91,7 +91,10 @@ async def select_coins(
         return {smallest_coin}
     elif smaller_coin_sum > amount:
         coin_set: Optional[set[Coin]] = knapsack_coin_algorithm(
-            smaller_coins, amount, coin_selection_config.max_coin_amount, max_num_coins
+            smaller_coins,
+            amount,
+            coin_selection_config.max_coin_amount,
+            max_num_coins,
         )
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
         if coin_set is None:
@@ -101,7 +104,7 @@ async def select_coins(
                 if greater_coin is None:
                     raise ValueError(
                         f"Transaction of {amount} mojo would use more than "
-                        f"{max_num_coins} coins. Try sending a smaller amount"
+                        f"{max_num_coins} coins. Try sending a smaller amount",
                     )
                 coin_set = {greater_coin}
         return coin_set
@@ -140,7 +143,11 @@ def select_smallest_coin_over_target(target: uint128, sorted_coin_list: list[Coi
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
 # IMPORTANT: The coins have to be sorted in descending order or else this function will not work.
 def knapsack_coin_algorithm(
-    smaller_coins: list[Coin], target: uint128, max_coin_amount: int, max_num_coins: int, seed: bytes = b"knapsack seed"
+    smaller_coins: list[Coin],
+    target: uint128,
+    max_coin_amount: int,
+    max_num_coins: int,
+    seed: bytes = b"knapsack seed",
 ) -> Optional[set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[set[Coin]] = None

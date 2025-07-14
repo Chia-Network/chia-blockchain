@@ -234,7 +234,7 @@ class WSChiaConnection:
                     f"protocol version mismatch: "
                     f"local_type={local_type} "
                     f"incoming={inbound_handshake.protocol_version} "
-                    f"our={protocol_version[local_type]}"
+                    f"our={protocol_version[local_type]}",
                 )
 
             self.version = inbound_handshake.software_version
@@ -275,7 +275,7 @@ class WSChiaConnection:
                     f"protocol version mismatch: "
                     f"remote_type={remote_node_type} "
                     f"incoming={inbound_handshake.protocol_version} "
-                    f"our={protocol_version[remote_node_type]}"
+                    f"our={protocol_version[remote_node_type]}",
                 )
 
             outbound_handshake = make_msg(
@@ -402,7 +402,8 @@ class WSChiaConnection:
             if self.received_message_callback is not None:
                 await self.received_message_callback(self)
             self.log.debug(
-                f"<- {ProtocolMessageTypes(full_message.type).name} from peer {self.peer_node_id} {self.peer_info.host}"
+                f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
+                f"{self.peer_node_id} {self.peer_info.host}",
             )
 
             if full_message.type == ProtocolMessageTypes.error.value:
@@ -463,7 +464,7 @@ class WSChiaConnection:
 
             response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
             self.log.debug(
-                f"Time taken to process {message_type} from {self.peer_node_id} is {time.time() - start_time} seconds"
+                f"Time taken to process {message_type} from {self.peer_node_id} is {time.time() - start_time} seconds",
             )
 
             if response is not None:
@@ -548,7 +549,7 @@ class WSChiaConnection:
             not in self.class_for_type[self.connection_type].metadata.message_type_to_request
         ):
             raise AttributeError(
-                f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}"
+                f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}",
             )
 
         request = Message(uint8(request_metadata.request_type.value), None, bytes(message))
@@ -556,7 +557,7 @@ class WSChiaConnection:
         response = await self.send_request(request, timeout)
         self.log.debug(
             f"Time for request {request_metadata.request_type.name}: {self.get_peer_logging()} = "
-            f"{time.time() - request_start_t}, None? {response is None}"
+            f"{time.time() - request_start_t}, None? {response is None}",
         )
         # todo or response.type == ProtocolMessageTypes.none_response.value when enabling none response
         if response is None or response.data == b"":
@@ -609,7 +610,7 @@ class WSChiaConnection:
             result = self.request_results[message.id]
             assert result is not None
             self.log.debug(
-                f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_info.host}:{self.peer_info.port}"
+                f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_info.host}:{self.peer_info.port}",
             )
             self.request_results.pop(message.id)
 
@@ -628,7 +629,9 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
-            message, self.local_capabilities, self.peer_capabilities
+            message,
+            self.local_capabilities,
+            self.peer_capabilities,
         )
         if limiter_msg is not None:
             if not is_localhost(self.peer_info.host):
@@ -643,7 +646,7 @@ class WSChiaConnection:
                             f"sz: {len(message.data) / 1000:0.2f} kB",
                             f"peer: {self.peer_info.host}",
                             f"{limiter_msg}",
-                        ]
+                        ],
                     )
                     self.log.info(f"Rate limiting ourselves. Dropping outbound message: {details}")
 
@@ -655,12 +658,12 @@ class WSChiaConnection:
             else:
                 self.log.debug(
                     f"Not rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
-                    f"peer: {self.peer_info.host}"
+                    f"peer: {self.peer_info.host}",
                 )
 
         await self.ws.send_bytes(encoded)
         self.log.debug(
-            f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_info.host} {self.peer_node_id}"
+            f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_info.host} {self.peer_node_id}",
         )
         self.bytes_written += size
 
@@ -675,7 +678,7 @@ class WSChiaConnection:
             self.log.debug(
                 f"Closing connection to {connection_type_str} {self.peer_info.host}:"
                 f"{self.peer_server_port}/"
-                f"{self.peer_info.port}"
+                f"{self.peer_info.port}",
             )
             create_referenced_task(self.close(), known_unreferenced=True)
             await asyncio.sleep(3)
@@ -683,7 +686,7 @@ class WSChiaConnection:
             self.log.debug(
                 f"Peer closed connection {connection_type_str} {self.peer_info.host}:"
                 f"{self.peer_server_port}/"
-                f"{self.peer_info.port}"
+                f"{self.peer_info.port}",
             )
             create_referenced_task(self.close(), known_unreferenced=True)
             await asyncio.sleep(3)
@@ -702,7 +705,9 @@ class WSChiaConnection:
             except Exception:
                 message_type = "Unknown"
             limiter_msg = self.inbound_rate_limiter.process_msg_and_check(
-                full_message_loaded, self.local_capabilities, self.peer_capabilities
+                full_message_loaded,
+                self.local_capabilities,
+                self.peer_capabilities,
             )
             if limiter_msg is not None:
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_info.host):
@@ -715,7 +720,7 @@ class WSChiaConnection:
                 else:
                     self.log.debug(
                         f"Peer surpassed rate limit {self.peer_info.host}, message: {message_type}, "
-                        f"port {self.peer_info.port} but not disconnecting"
+                        f"port {self.peer_info.port} but not disconnecting",
                     )
                     return full_message_loaded
             return full_message_loaded

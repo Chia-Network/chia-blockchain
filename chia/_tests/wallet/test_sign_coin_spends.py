@@ -48,10 +48,10 @@ additional_data: bytes32 = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
 coin: Coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 puzzle = SerializedProgram.from_bytes(b"\x01")
 solution_h = Program.to(
-    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h_synth, msg2]]
+    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h_synth, msg2]],
 )
 solution_u = Program.to(
-    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u_synth, msg2]]
+    [[ConditionOpcode.AGG_SIG_UNSAFE, pk1_u, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_u_synth, msg2]],
 )
 spend_h: CoinSpend = make_spend(
     coin,
@@ -82,7 +82,8 @@ async def test_wsm_sign_transaction() -> None:
             wsm.main_wallet = await Wallet.create(wsm, wallet_info)
 
             with pytest.raises(
-                ValueError, match=re.escape(f"Pubkey {pk1_h.get_fingerprint()} not found (or path/sum hinted to)")
+                ValueError,
+                match=re.escape(f"Pubkey {pk1_h.get_fingerprint()} not found (or path/sum hinted to)"),
             ):
                 await wsm.sign_bundle([spend_h])
 
@@ -95,8 +96,8 @@ async def test_wsm_sign_transaction() -> None:
                         WalletType.STANDARD_WALLET,
                         uint32(1),
                         True,
-                    )
-                ]
+                    ),
+                ],
             )
 
             await wsm.puzzle_store.add_derivation_paths(
@@ -108,8 +109,8 @@ async def test_wsm_sign_transaction() -> None:
                         WalletType.STANDARD_WALLET,
                         uint32(1),
                         True,
-                    )
-                ]
+                    ),
+                ],
             )
 
             signature: G2Element = ((await wsm.sign_bundle([spend_h]))[0]).aggregated_signature
@@ -117,11 +118,12 @@ async def test_wsm_sign_transaction() -> None:
                 [
                     AugSchemeMPL.sign(sk1_h, msg1),
                     AugSchemeMPL.sign(sk2_h_synth, msg2 + coin.name() + additional_data),
-                ]
+                ],
             )
 
             with pytest.raises(
-                ValueError, match=re.escape(f"Pubkey {pk1_u.get_fingerprint()} not found (or path/sum hinted to)")
+                ValueError,
+                match=re.escape(f"Pubkey {pk1_u.get_fingerprint()} not found (or path/sum hinted to)"),
             ):
                 await wsm.sign_bundle([spend_u])
 
@@ -134,8 +136,8 @@ async def test_wsm_sign_transaction() -> None:
                         WalletType.STANDARD_WALLET,
                         uint32(1),
                         False,
-                    )
-                ]
+                    ),
+                ],
             )
 
             await wsm.puzzle_store.add_derivation_paths(
@@ -147,13 +149,13 @@ async def test_wsm_sign_transaction() -> None:
                         WalletType.STANDARD_WALLET,
                         uint32(1),
                         False,
-                    )
-                ]
+                    ),
+                ],
             )
             signature2: G2Element = ((await wsm.sign_bundle([spend_u]))[0]).aggregated_signature
             assert signature2 == AugSchemeMPL.aggregate(
                 [
                     AugSchemeMPL.sign(sk1_u, msg1),
                     AugSchemeMPL.sign(sk2_u_synth, msg2 + coin.name() + additional_data),
-                ]
+                ],
             )

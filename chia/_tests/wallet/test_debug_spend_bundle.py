@@ -39,7 +39,7 @@ def test_debug_spend_bundle(capsys: pytest.CaptureFixture[str]) -> None:
             [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, bytes32.zeros],
             [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, std_hash(coin.puzzle_hash)],
             [ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, b"hey"],
-        ]
+        ],
     )
 
     capsys.readouterr()
@@ -64,7 +64,7 @@ def test_debug_spend_bundle(capsys: pytest.CaptureFixture[str]) -> None:
                 ),
             ],
             sig,
-        )
+        ),
     )
 
     stdout, _ = capsys.readouterr()

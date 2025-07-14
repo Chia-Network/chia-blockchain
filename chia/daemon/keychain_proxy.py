@@ -185,11 +185,17 @@ class KeychainProxy(DaemonProxy):
 
     @overload
     async def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str], private: bool
+        self,
+        mnemonic_or_pk: str,
+        label: Optional[str],
+        private: bool,
     ) -> Union[PrivateKey, G1Element]: ...
 
     async def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+        self,
+        mnemonic_or_pk: str,
+        label: Optional[str] = None,
+        private: bool = True,
     ) -> Union[PrivateKey, G1Element]:
         """
         Forwards to Keychain.add_key()
@@ -199,7 +205,8 @@ class KeychainProxy(DaemonProxy):
             key = self.keychain.add_key(mnemonic_or_pk, label, private)
         else:
             response, success = await self.get_response_for_request(
-                "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
+                "add_key",
+                {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private},
             )
             if success:
                 if private:
@@ -248,7 +255,8 @@ class KeychainProxy(DaemonProxy):
             self.keychain.delete_key_by_fingerprint(fingerprint)
         else:
             response, success = await self.get_response_for_request(
-                "delete_key_by_fingerprint", {"fingerprint": fingerprint}
+                "delete_key_by_fingerprint",
+                {"fingerprint": fingerprint},
             )
             if not success:
                 self.handle_error(response)
@@ -333,21 +341,29 @@ class KeychainProxy(DaemonProxy):
 
     @overload
     async def get_key_for_fingerprint(
-        self, fingerprint: Optional[int], private: Literal[True]
+        self,
+        fingerprint: Optional[int],
+        private: Literal[True],
     ) -> Optional[PrivateKey]: ...
 
     @overload
     async def get_key_for_fingerprint(
-        self, fingerprint: Optional[int], private: Literal[False]
+        self,
+        fingerprint: Optional[int],
+        private: Literal[False],
     ) -> Optional[G1Element]: ...
 
     @overload
     async def get_key_for_fingerprint(
-        self, fingerprint: Optional[int], private: bool
+        self,
+        fingerprint: Optional[int],
+        private: bool,
     ) -> Optional[Union[PrivateKey, G1Element]]: ...
 
     async def get_key_for_fingerprint(
-        self, fingerprint: Optional[int], private: bool = True
+        self,
+        fingerprint: Optional[int],
+        private: bool = True,
     ) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Locates and returns a private key matching the provided fingerprint
@@ -374,7 +390,8 @@ class KeychainProxy(DaemonProxy):
                     return None
         else:
             response, success = await self.get_response_for_request(
-                "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}
+                "get_key_for_fingerprint",
+                {"fingerprint": fingerprint, "private": private},
             )
             if success:
                 pk = response["data"].get("pk", None)
@@ -408,7 +425,8 @@ class KeychainProxy(DaemonProxy):
             key_data = self.keychain.get_key(fingerprint, include_secrets)
         else:
             response, success = await self.get_response_for_request(
-                "get_key", {"fingerprint": fingerprint, "include_secrets": include_secrets}
+                "get_key",
+                {"fingerprint": fingerprint, "include_secrets": include_secrets},
             )
             if success:
                 key_data = KeyData.from_json_dict(response["data"]["key"])
@@ -486,7 +504,13 @@ async def connect_to_keychain_and_validate(
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path, log=log)
         daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         connection = await connect_to_keychain(
-            net_config["self_hostname"], net_config["daemon_port"], daemon_heartbeat, ssl_context, log, user, service
+            net_config["self_hostname"],
+            net_config["daemon_port"],
+            daemon_heartbeat,
+            ssl_context,
+            log,
+            user,
+            service,
         )
 
         # If proxying to a local keychain, don't attempt to ping

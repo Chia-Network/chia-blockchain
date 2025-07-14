@@ -25,7 +25,7 @@ def serialized_atom_overflow(size):
                 (size >> 16) & 0xFF,
                 (size >> 8) & 0xFF,
                 (size >> 0) & 0xFF,
-            ]
+            ],
         )
     elif size < 0x400000000:
         size_blob = bytes(
@@ -35,7 +35,7 @@ def serialized_atom_overflow(size):
                 (size >> 16) & 0xFF,
                 (size >> 8) & 0xFF,
                 (size >> 0) & 0xFF,
-            ]
+            ],
         )
     else:
         size_blob = bytes(
@@ -46,7 +46,7 @@ def serialized_atom_overflow(size):
                 (size >> 16) & 0xFF,
                 (size >> 8) & 0xFF,
                 (size >> 0) & 0xFF,
-            ]
+            ],
         )
     extra_str = "01" * 1000
     return size_blob.hex() + extra_str
@@ -64,7 +64,7 @@ def test_deserialization_simple_list():
 def test_deserialization_password_coin():
     # (i (= (sha256 2) (q 0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824)) (c (q 51) (c 5 (c (q 100) (q ())))) (q "wrong password"))  # noqa
     b = hexstr_to_bytes(
-        "ff04ffff0affff0bff0280ffff01ffa02cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b98248080ffff05ffff01ff3380ffff05ff05ffff05ffff01ff6480ffff01ff8080808080ffff01ff8e77726f6e672070617373776f72648080"
+        "ff04ffff0affff0bff0280ffff01ffa02cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b98248080ffff05ffff01ff3380ffff05ff05ffff05ffff01ff6480ffff01ff8080808080ffff01ff8e77726f6e672070617373776f72648080",
     )
     cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
     print(cost, output)
@@ -75,7 +75,7 @@ def test_deserialization_password_coin():
 def test_deserialization_large_numbers():
     # '(99999999999999999999999999999999999999999999999999999999999999999 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -99999999999999999999999999999999999999999999999999999999999999999999999999999)'  # noqa
     b = hexstr_to_bytes(
-        "ff9c00f316271c7fc3908a8bef464e3945ef7a253609ffffffffffffffffffb00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1ff22ea0179500526edb610f148ec0c614155678491902d6000000000000000000180"
+        "ff9c00f316271c7fc3908a8bef464e3945ef7a253609ffffffffffffffffffb00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1ff22ea0179500526edb610f148ec0c614155678491902d6000000000000000000180",
     )
     cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
     print(cost, output)

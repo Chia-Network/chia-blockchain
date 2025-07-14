@@ -50,7 +50,9 @@ async def test_mempool_update_performance(
     [big_transaction] = action_scope.side_effects.transactions
     assert big_transaction.spend_bundle is not None
     status, err = await full_node.add_transaction(
-        big_transaction.spend_bundle, big_transaction.spend_bundle.name(), test=True
+        big_transaction.spend_bundle,
+        big_transaction.spend_bundle.name(),
+        test=True,
     )
     assert err is None
     assert status == MempoolInclusionStatus.SUCCESS

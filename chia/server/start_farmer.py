@@ -46,7 +46,11 @@ def create_farmer_service(
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     node = Farmer(
-        root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
+        root_path,
+        service_config,
+        config_pool,
+        consensus_constants=updated_constants,
+        local_keychain=keychain,
     )
     peer_api = FarmerAPI(node)
 
@@ -92,7 +96,7 @@ def main() -> int:
     root_path = resolve_root_path(override=None)
 
     with maybe_manage_task_instrumentation(
-        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None,
     ):
         return async_run(coro=async_main(root_path=root_path))
 

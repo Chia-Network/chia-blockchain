@@ -91,7 +91,9 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert block == await store.get_full_block(block.header_hash)
             assert bytes(block) == await store.get_full_block_bytes(block.header_hash)
             assert GeneratorBlockInfo(
-                block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
+                block.foliage.prev_block_hash,
+                block.transactions_generator,
+                block.transactions_generator_ref_list,
             ) == await store.get_block_info(block.header_hash)
             assert maybe_serialize(block.transactions_generator) == await store.get_generator(block.header_hash)
             assert block_record == (await store.get_block_record(block_record_hh))
@@ -107,7 +109,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert await store.get_full_blocks_at([block.height]) == [block]
             if block.transactions_generator is not None:
                 assert await store.get_generators_at({block.height}) == {
-                    block.height: bytes(block.transactions_generator)
+                    block.height: bytes(block.transactions_generator),
                 }
             else:
                 with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
@@ -140,7 +142,11 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_get_full_blocks_at(
-    tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool, default_400_blocks: list[FullBlock]
+    tmp_dir: Path,
+    db_version: int,
+    bt: BlockTools,
+    use_cache: bool,
+    default_400_blocks: list[FullBlock],
 ) -> None:
     blocks = bt.get_consecutive_blocks(10)
     alt_blocks = default_400_blocks[:10]
@@ -168,7 +174,10 @@ async def test_get_full_blocks_at(
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_get_block_records_in_range(
-    bt: BlockTools, tmp_dir: Path, use_cache: bool, default_400_blocks: list[FullBlock]
+    bt: BlockTools,
+    tmp_dir: Path,
+    use_cache: bool,
+    default_400_blocks: list[FullBlock],
 ) -> None:
     blocks = bt.get_consecutive_blocks(10)
     alt_blocks = default_400_blocks[:10]
@@ -198,7 +207,10 @@ async def test_get_block_records_in_range(
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_get_block_bytes_in_range_in_main_chain(
-    bt: BlockTools, tmp_dir: Path, use_cache: bool, default_400_blocks: list[FullBlock]
+    bt: BlockTools,
+    tmp_dir: Path,
+    use_cache: bool,
+    default_400_blocks: list[FullBlock],
 ) -> None:
     blocks = bt.get_consecutive_blocks(10)
     alt_blocks = default_400_blocks[:10]
@@ -249,8 +261,8 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
             if random.random() < 0.5:
                 tasks.append(
                     create_referenced_task(
-                        store.add_full_block(blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i])
-                    )
+                        store.add_full_block(blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i]),
+                    ),
                 )
             if random.random() < 0.5:
                 tasks.append(create_referenced_task(store.get_full_block(blocks[rand_i].header_hash)))
@@ -285,14 +297,16 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
         async with db_wrapper.reader_no_transaction() as conn:
             for block in blocks:
                 async with conn.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?",
+                    (block.header_hash,),
                 ) as cursor:
                     rows = list(await cursor.fetchall())
                     assert len(rows) == 1
                     assert rows[0][0]
             for block in alt_blocks:
                 async with conn.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
+                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?",
+                    (block.header_hash,),
                 ) as cursor:
                     rows = list(await cursor.fetchall())
                     assert len(rows) == 1
@@ -427,7 +441,14 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
         for i, block in enumerate(blocks):
             block = block.replace(transactions_generator=generator(i))
             block_record = header_block_to_sub_block_record(
-                DEFAULT_CONSTANTS, uint64(0), block, uint64(0), False, uint8(0), uint32(max(0, block.height - 1)), None
+                DEFAULT_CONSTANTS,
+                uint64(0),
+                block,
+                uint64(0),
+                False,
+                uint8(0),
+                uint32(max(0, block.height - 1)),
+                None,
             )
             await store.add_full_block(block.header_hash, block, block_record)
             await store.set_in_chain([(block_record.header_hash,)])
@@ -542,7 +563,8 @@ async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None
 
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)",
+                (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
             )
 
         assert await store.get_peak() is None

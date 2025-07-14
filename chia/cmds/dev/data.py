@@ -126,12 +126,12 @@ class SyncTimeCommand:
                             launcher_id=self.store_id,
                             min_generation=uint32(1),
                             max_generation=uint32(self.generation_limit + 1),
-                        )
+                        ),
                     )
                 ).history
 
                 print_date(
-                    f"found generations to download: {to_download[-1].generation} -> {to_download[0].generation}"
+                    f"found generations to download: {to_download[-1].generation} -> {to_download[0].generation}",
                 )
 
                 root_hashes = [record.root for record in reversed(to_download)]
@@ -164,7 +164,7 @@ class SyncTimeCommand:
                         proxy_url=None,
                         downloader=None,
                         maximum_full_file_count=0,
-                    )
+                    ),
                 )
                 try:
                     while not task.done():

@@ -142,7 +142,7 @@ def validate_chain(
             print(
                 f"Block {i} in the block cache on disk differs "
                 "from what BlockTools generated. Please make sure "
-                "your test blocks are up-to-date"
+                "your test blocks are up-to-date",
             )
             print(f"disk:\n{blocks[i]}")
             print(f"block-tools:\n{expected_blocks[i]}")
@@ -202,7 +202,9 @@ def test_validate_default_10000_compact(bt: BlockTools, default_10000_blocks_com
 
 
 def test_validate_long_reorg_blocks(
-    bt: BlockTools, test_long_reorg_blocks: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_blocks: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
 ) -> None:
     validate_chain(
         bt,
@@ -216,7 +218,9 @@ def test_validate_long_reorg_blocks(
 
 
 def test_validate_long_reorg_blocks_light(
-    bt: BlockTools, test_long_reorg_blocks_light: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_blocks_light: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
 ) -> None:
     validate_chain(
         bt,
@@ -229,7 +233,9 @@ def test_validate_long_reorg_blocks_light(
 
 
 def test_validate_long_reorg_1500_blocks(
-    bt: BlockTools, test_long_reorg_1500_blocks: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_1500_blocks: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
 ) -> None:
     validate_chain(
         bt,
@@ -243,7 +249,9 @@ def test_validate_long_reorg_1500_blocks(
 
 
 def test_validate_long_reorg_1500_blocks_light(
-    bt: BlockTools, test_long_reorg_1500_blocks_light: list[FullBlock], default_10000_blocks: list[FullBlock]
+    bt: BlockTools,
+    test_long_reorg_1500_blocks_light: list[FullBlock],
+    default_10000_blocks: list[FullBlock],
 ) -> None:
     validate_chain(
         bt,

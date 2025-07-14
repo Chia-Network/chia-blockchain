@@ -42,10 +42,10 @@ test_constants = ConsensusConstants(
     AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
     AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
-        "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
+        "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc",
     ),
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bytes32.fromhex(
-        "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
+        "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af",
     ),
     MAX_VDF_WITNESS_SIZE=uint8(64),
     MEMPOOL_BLOCK_BUFFER=uint8(10),
@@ -81,11 +81,11 @@ def test_replace_str_to_bytes() -> None:
     )
     assert test2 == test_constants.replace(
         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bytes32.fromhex(
-            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-        )
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        ),
     )
     assert test2.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH == bytes32.fromhex(
-        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     )
 
 
@@ -125,7 +125,8 @@ def test_replace_str_to_bytes_uint8() -> None:
 def test_replace_str_to_bytes_invalid_field(caplog: pytest.LogCaptureFixture) -> None:
     # invalid field
     test2 = replace_str_to_bytes(
-        test_constants, FOOBAR="0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        test_constants,
+        FOOBAR="0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
     )
     assert test2 == test_constants
     assert 'invalid key in network configuration (config.yaml) "FOOBAR". Ignoring' in caplog.text

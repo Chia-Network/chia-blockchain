@@ -92,7 +92,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -101,15 +101,16 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,
                             "<=#pending_change": 1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
-                )
-            ]
+                ),
+            ],
         )
 
         # Test match_hinted_coin
         async with wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             selected_coin = next(iter(await wallet.select_coins(uint64(0), action_scope)))
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
@@ -128,7 +129,8 @@ class TestWalletSimulator:
         tx_amount = 10
 
         async with wallet.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True
+            DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
+            push=True,
         ) as action_scope:
             await wallet.generate_signed_transaction(
                 [uint64(tx_amount)],
@@ -153,7 +155,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -162,10 +164,10 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,
                             "<=#pending_change": 1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
-                )
-            ]
+                ),
+            ],
         )
 
     @pytest.mark.parametrize(
@@ -177,7 +179,9 @@ class TestWalletSimulator:
     @pytest.mark.limit_consensus_modes(reason="irrelevant")
     @pytest.mark.anyio
     async def test_wallet_clawback_claim_auto(
-        self, wallet_environments: WalletTestFramework, number_of_coins: int
+        self,
+        wallet_environments: WalletTestFramework,
+        number_of_coins: int,
     ) -> None:
         env = wallet_environments.environments[0]
         env_1 = wallet_environments.environments[1]
@@ -211,7 +215,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount * number_of_coins,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": number_of_coins,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -220,19 +224,23 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -number_of_coins,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, number_of_coins, tx_amount * 2, CoinType.CLAWBACK)
         await time_out_assert(
-            20, wsm_1.coin_store.count_small_unspent, number_of_coins, tx_amount * 2, CoinType.CLAWBACK
+            20,
+            wsm_1.coin_store.count_small_unspent,
+            number_of_coins,
+            tx_amount * 2,
+            CoinType.CLAWBACK,
         )
 
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -255,7 +263,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -264,14 +272,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Change one coin to test missing metadata case
@@ -294,10 +302,10 @@ class TestWalletSimulator:
                             "pending_change": tx_amount
                             * number_of_coins,  # This is a little weird but I think intentional and correct
                             "pending_coin_removal_count": number_of_coins,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
         await wallet_environments.process_pending_states(
             [
@@ -312,10 +320,10 @@ class TestWalletSimulator:
                             "unspent_coin_count": number_of_coins,
                             "pending_change": -tx_amount * number_of_coins,
                             "pending_coin_removal_count": -1 * number_of_coins,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, tx_amount * 2, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 1, tx_amount * 2, CoinType.CLAWBACK)
@@ -362,7 +370,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -371,21 +379,21 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         txs = await api_0.get_transactions(
-            dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND], "mode": 1}, wallet_id=1)
+            dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND], "mode": 1}, wallet_id=1),
         )
         # clawback merkle coin
         [tx] = action_scope.side_effects.transactions
@@ -405,7 +413,7 @@ class TestWalletSimulator:
                 "coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()],
                 "fee": test_fee,
                 **wallet_environments.tx_config.to_json_dict(),
-            }
+            },
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -420,7 +428,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1,
                             ">=#pending_change": 1,
                             "pending_coin_removal_count": 2,  # 1 for fee, one for clawback
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -430,14 +438,14 @@ class TestWalletSimulator:
                             "<=#pending_change": -1,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -2,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -449,7 +457,7 @@ class TestWalletSimulator:
                     "mode": 1,
                 },
                 wallet_id=1,
-            )
+            ),
         )
         assert len(txs["transactions"]) == 2
         assert txs["transactions"][0]["confirmed"]
@@ -465,7 +473,7 @@ class TestWalletSimulator:
                     "mode": 1,
                 },
                 wallet_id=1,
-            )
+            ),
         )
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["confirmed"]
@@ -508,7 +516,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -517,14 +525,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
@@ -538,7 +546,7 @@ class TestWalletSimulator:
                 "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
                 "fee": test_fee,
                 **wallet_environments.tx_config.to_json_dict(),
-            }
+            },
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -553,7 +561,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1,
                             ">=#pending_change": 1,
                             "pending_coin_removal_count": 2,  # 1 for fee, one for clawback
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -563,14 +571,14 @@ class TestWalletSimulator:
                             "<=#pending_change": -1,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -2,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
 
@@ -581,7 +589,7 @@ class TestWalletSimulator:
                     "mode": 1,
                 },
                 wallet_id=1,
-            )
+            ),
         )
         assert len(txs["transactions"]) == 2
         assert txs["transactions"][0]["confirmed"]
@@ -629,7 +637,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -638,14 +646,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
@@ -663,7 +671,7 @@ class TestWalletSimulator:
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Claim merkle coin
@@ -675,7 +683,7 @@ class TestWalletSimulator:
                 "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
                 "fee": test_fee,
                 **wallet_environments.tx_config.to_json_dict(),
-            }
+            },
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -694,7 +702,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 2,  # 1 for fee, 1 for clawback
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -704,10 +712,10 @@ class TestWalletSimulator:
                             "<=#pending_change": -1,  # any amount decrease
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -2,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -722,7 +730,7 @@ class TestWalletSimulator:
                     "mode": 1,
                 },
                 wallet_id=1,
-            )
+            ),
         )
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["confirmed"]
@@ -766,7 +774,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -775,14 +783,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
@@ -793,7 +801,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32.zeros, None)
+            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32.zeros, None),
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -810,7 +818,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -819,14 +827,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
@@ -846,10 +854,10 @@ class TestWalletSimulator:
                             "unconfirmed_wallet_balance": tx_amount,
                             "pending_change": tx_amount,  # This is a little weird but I think intentional and correct
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
         await wallet_environments.process_pending_states(
             [
@@ -864,10 +872,10 @@ class TestWalletSimulator:
                             "unspent_coin_count": 1,
                             "pending_change": -1 * tx_amount,
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -875,7 +883,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None),
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
@@ -896,7 +904,7 @@ class TestWalletSimulator:
                             "unspent_coin_count": -1,
                             "pending_change": tx_amount,
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -906,10 +914,10 @@ class TestWalletSimulator:
                             "unspent_coin_count": 1,
                             "pending_change": -1 * tx_amount,
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -948,7 +956,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -957,14 +965,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
@@ -1023,7 +1031,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1032,14 +1040,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
@@ -1069,7 +1077,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount2,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1078,14 +1086,14 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         # Check merkle coins
@@ -1107,7 +1115,7 @@ class TestWalletSimulator:
                             "unconfirmed_wallet_balance": tx_amount + tx_amount2,
                             "pending_change": tx_amount + tx_amount2,
                             "pending_coin_removal_count": 2,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1117,14 +1125,14 @@ class TestWalletSimulator:
                             "pending_change": -1 * (tx_amount + tx_amount2),
                             "unspent_coin_count": 2,
                             "pending_coin_removal_count": -2,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
                     pre_block_balance_updates={},
                     post_block_balance_updates={},
                 ),
-            ]
+            ],
         )
 
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -1134,24 +1142,30 @@ class TestWalletSimulator:
         before_txs["sender"][
             TransactionType.INCOMING_CLAWBACK_SEND
         ] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]),
         )
         before_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK]),
         )
         before_txs["sender"][TransactionType.OUTGOING_TX] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX]),
         )
         before_txs["sender"][TransactionType.INCOMING_TX] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX]),
         )
         before_txs["sender"][TransactionType.COINBASE_REWARD] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD]),
         )
         before_txs["recipient"][
             TransactionType.INCOMING_CLAWBACK_RECEIVE
         ] = await wsm_2.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE]),
         )
         # Resync start
         env_1.node._close()
@@ -1171,7 +1185,7 @@ class TestWalletSimulator:
             [
                 WalletStateTransition(),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
         wsm_1 = env_1.node.wallet_state_manager
@@ -1181,24 +1195,30 @@ class TestWalletSimulator:
         after_txs["sender"][
             TransactionType.INCOMING_CLAWBACK_SEND
         ] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]),
         )
         after_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK]),
         )
         after_txs["sender"][TransactionType.OUTGOING_TX] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX]),
         )
         after_txs["sender"][TransactionType.INCOMING_TX] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_TX]),
         )
         after_txs["sender"][TransactionType.COINBASE_REWARD] = await wsm_1.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD]),
         )
         after_txs["recipient"][
             TransactionType.INCOMING_CLAWBACK_RECEIVE
         ] = await wsm_2.tx_store.get_transaction_count_for_wallet(
-            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
+            1,
+            type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE]),
         )
         # Check clawback
         clawback_tx_1 = await wsm_1.tx_store.get_transaction_record(clawback_coin_id_1)
@@ -1208,7 +1228,10 @@ class TestWalletSimulator:
         assert clawback_tx_2 is not None
         assert clawback_tx_2.confirmed
         outgoing_clawback_txs = await wsm_1.tx_store.get_transactions_between(
-            1, 0, 100, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            1,
+            0,
+            100,
+            type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK]),
         )
         assert len(outgoing_clawback_txs) == 2
         assert outgoing_clawback_txs[0].confirmed
@@ -1250,14 +1273,17 @@ class TestWalletSimulator:
                     "max_send_amount": 2_000_000_000_000 * extra_blocks,
                     "spendable_balance": 2_000_000_000_000 * extra_blocks,
                     "unspent_coin_count": 4,
-                }
-            }
+                },
+            },
         )
 
         await full_node_api.reorg_from_index_to_new_index(
             ReorgProtocol(
-                uint32(permanent_height), uint32(permanent_height + extra_blocks + 6), bytes32(32 * b"0"), None
-            )
+                uint32(permanent_height),
+                uint32(permanent_height + extra_blocks + 6),
+                bytes32(32 * b"0"),
+                None,
+            ),
         )
 
         await full_node_api.wait_for_wallet_synced(wallet_node=env.node, timeout=5)
@@ -1270,8 +1296,8 @@ class TestWalletSimulator:
                     "max_send_amount": -2_000_000_000_000 * extra_blocks,
                     "spendable_balance": -2_000_000_000_000 * extra_blocks,
                     "unspent_coin_count": -4,
-                }
-            }
+                },
+            },
         )
 
     @pytest.mark.parametrize("trusted", [True, False])
@@ -1352,7 +1378,8 @@ class TestWalletSimulator:
 
         tx_amount = 10
         async with wallet_1.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1373,7 +1400,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1382,7 +1409,7 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
@@ -1394,15 +1421,16 @@ class TestWalletSimulator:
                             "spendable_balance": tx_amount,
                             "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         tx_amount = 5
         async with wallet_0.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             wallet_0_ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
         async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1419,7 +1447,7 @@ class TestWalletSimulator:
                             "spendable_balance": tx_amount,
                             "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
@@ -1430,7 +1458,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1439,10 +1467,10 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
     @pytest.mark.parametrize(
@@ -1461,7 +1489,8 @@ class TestWalletSimulator:
         tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
         async with wallet_1.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1487,7 +1516,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount - tx_fee,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 2,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1497,7 +1526,7 @@ class TestWalletSimulator:
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -2,
                             "unspent_coin_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
@@ -1509,10 +1538,10 @@ class TestWalletSimulator:
                             "spendable_balance": tx_amount,
                             "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
     @pytest.mark.parametrize(
@@ -1534,7 +1563,11 @@ class TestWalletSimulator:
             ph_2 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
-                [uint64(tx_amount)], [ph_2], action_scope, uint64(tx_fee), memos=[[ph_2]]
+                [uint64(tx_amount)],
+                [ph_2],
+                action_scope,
+                uint64(tx_fee),
+                memos=[[ph_2]],
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
@@ -1556,7 +1589,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount - tx_fee,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 2,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1566,7 +1599,7 @@ class TestWalletSimulator:
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -2,
                             "unspent_coin_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
@@ -1578,10 +1611,10 @@ class TestWalletSimulator:
                             "spendable_balance": tx_amount,
                             "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         tx_id = None
@@ -1594,7 +1627,7 @@ class TestWalletSimulator:
         assert memos.coins_with_memos[0].memos[0] == ph_2
         # test json serialization
         assert memos.to_json_dict() == {
-            tx_id.hex(): {memos.coins_with_memos[0].coin_id.hex(): [memos.coins_with_memos[0].memos[0].hex()]}
+            tx_id.hex(): {memos.coins_with_memos[0].coin_id.hex(): [memos.coins_with_memos[0].memos[0].hex()]},
         }
 
     @pytest.mark.parametrize(
@@ -1628,7 +1661,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": 0,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1638,10 +1671,10 @@ class TestWalletSimulator:
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
                             "unspent_coin_count": wallet.max_send_quantity + 2,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         max_sent_amount = await wallet.get_max_send_amount()
@@ -1763,7 +1796,8 @@ class TestWalletSimulator:
         # Ensure that we use a coin that we will not reorg out
         tx_amount = 1000
         async with wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             coins = await wallet.select_coins(amount=uint64(tx_amount), action_scope=action_scope)
         coin = next(iter(coins))
@@ -1773,7 +1807,8 @@ class TestWalletSimulator:
         await full_node_api.farm_blocks_to_puzzlehash(count=3)
 
         async with wallet_2.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             wallet_2_ph = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1789,7 +1824,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1 * tx_amount,
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1798,7 +1833,7 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
@@ -1810,10 +1845,10 @@ class TestWalletSimulator:
                             "spendable_balance": tx_amount,
                             "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         peak = full_node_api.full_node.blockchain.get_peak()
@@ -1824,7 +1859,7 @@ class TestWalletSimulator:
         target_height_after_reorg = peak_height + 3
         # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(reorg_height - 1), uint32(target_height_after_reorg), bytes32(32 * b"0"), None)
+            ReorgProtocol(uint32(reorg_height - 1), uint32(target_height_after_reorg), bytes32(32 * b"0"), None),
         )
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
@@ -1840,7 +1875,7 @@ class TestWalletSimulator:
                             "<=#max_send_amount": -1,  # any amount decrease
                             ">=#pending_change": 1,  # any amount increase
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1849,7 +1884,7 @@ class TestWalletSimulator:
                             ">=#max_send_amount": -1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(
@@ -1860,7 +1895,7 @@ class TestWalletSimulator:
                             "spendable_balance": -1 * tx_amount,
                             "max_send_amount": -1 * tx_amount,
                             "unspent_coin_count": -1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -1869,10 +1904,10 @@ class TestWalletSimulator:
                             "spendable_balance": tx_amount,
                             "max_send_amount": tx_amount,
                             "unspent_coin_count": 1,
-                        }
+                        },
                     },
                 ),
-            ]
+            ],
         )
 
         unconfirmed = await wsm.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
@@ -1906,7 +1941,7 @@ class TestWalletSimulator:
                 "trusted": True,
                 "reuse_puzhash": False,
                 "config_overrides": {"initial_num_public_keys": 100},
-            }
+            },
         ],
         indirect=True,
     )
@@ -1943,8 +1978,8 @@ class TestWalletSimulator:
                     "spendable_balance": 2_000_000_000_000,
                     "max_send_amount": 2_000_000_000_000,
                     "unspent_coin_count": 2,
-                }
-            }
+                },
+            },
         )
 
         await full_node_api.farm_blocks_to_puzzlehash(
@@ -1966,8 +2001,8 @@ class TestWalletSimulator:
                     "spendable_balance": 6_000_000_000_000,
                     "max_send_amount": 6_000_000_000_000,
                     "unspent_coin_count": 6,
-                }
-            }
+                },
+            },
         )
 
         await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
@@ -1987,8 +2022,8 @@ class TestWalletSimulator:
                     "spendable_balance": 4_000_000_000_000,
                     "max_send_amount": 4_000_000_000_000,
                     "unspent_coin_count": 4,
-                }
-            }
+                },
+            },
         )
 
     @pytest.mark.parametrize(
@@ -2018,7 +2053,7 @@ class TestWalletSimulator:
         # Test hex string
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True}
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True},
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
@@ -2030,7 +2065,7 @@ class TestWalletSimulator:
         # Test informal input
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true", "safe_mode": "true"}
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true", "safe_mode": "true"},
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
@@ -2042,7 +2077,7 @@ class TestWalletSimulator:
         # Test BLS sign string
         message = "Hello World"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": False, "safe_mode": False}
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": False, "safe_mode": False},
         )
 
         assert AugSchemeMPL.verify(
@@ -2053,7 +2088,7 @@ class TestWalletSimulator:
         # Test BLS sign hex
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True, "safe_mode": False}
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True, "safe_mode": False},
         )
 
         assert AugSchemeMPL.verify(
@@ -2101,7 +2136,7 @@ class TestWalletSimulator:
                             "max_send_amount": -1 * AMOUNT_TO_SEND,  # used exact amount
                             "pending_change": 0,  # used exact amount
                             "pending_coin_removal_count": len(coins),
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -2111,10 +2146,10 @@ class TestWalletSimulator:
                             "pending_change": 0,  # used exact amount
                             "unspent_coin_count": -len(coins),
                             "pending_coin_removal_count": -len(coins),
-                        }
+                        },
                     },
-                )
-            ]
+                ),
+            ],
         )
 
     @pytest.mark.parametrize(
@@ -2130,7 +2165,8 @@ class TestWalletSimulator:
 
         with wallet_environments.new_puzzle_hashes_allowed():
             async with wallet.wallet_state_manager.new_action_scope(
-                wallet_environments.tx_config, push=True
+                wallet_environments.tx_config,
+                push=True,
             ) as action_scope:
                 coins = await wallet.select_coins(uint64(1), action_scope)
                 coin_list = list(coins)

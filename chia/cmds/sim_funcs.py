@@ -185,7 +185,9 @@ def generate_and_return_fingerprint(mnemonic: Optional[str] = None) -> int:
 
 
 def select_fingerprint(
-    fingerprint: Optional[int] = None, mnemonic_string: Optional[str] = None, auto_generate_key: bool = False
+    fingerprint: Optional[int] = None,
+    mnemonic_string: Optional[str] = None,
+    auto_generate_key: bool = False,
 ) -> Optional[int]:
     """
     Either select an existing fingerprint or create one and return it.
@@ -213,7 +215,7 @@ def select_fingerprint(
         print("Fingerprints:")
         print(
             "If you already used one of these keys, select that fingerprint to skip the plotting process."
-            " Otherwise, select any key below."
+            " Otherwise, select any key below.",
         )
         for i, fp in enumerate(fingerprints):
             row: str = f"{i + 1}) "
@@ -263,7 +265,11 @@ async def generate_plots(config: dict[str, Any], root_path: Path, fingerprint: i
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
     existing_plots = await bt.setup_plots(
-        num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE, bitfield=bitfield
+        num_og_plots=PLOTS,
+        num_pool_plots=0,
+        num_non_keychain_plots=0,
+        plot_size=PLOT_SIZE,
+        bitfield=bitfield,
     )
     print(f"{'New plots generated.' if existing_plots else 'Using Existing Plots'}\n")
 
@@ -413,12 +419,13 @@ async def print_status(
                 fingerprint = config["simulator"]["key_fingerprint"]
             if fingerprint is not None:
                 display_key_info(
-                    fingerprint, config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+                    fingerprint,
+                    config["network_overrides"]["config"][config["selected_network"]]["address_prefix"],
                 )
             else:
                 print(
                     "No fingerprint in config, either rerun 'cdv sim create' "
-                    "or use --fingerprint to specify one, skipping key information."
+                    "or use --fingerprint to specify one, skipping key information.",
                 )
         # chain status ( basically chia show -s)
         await print_blockchain_state(node_client, config)
@@ -430,7 +437,7 @@ async def print_status(
         print(
             f"Current Farming address: {encode_puzzle_hash(target_ph, prefix)}, "
             f"with a balance of: "
-            f"{sum(coin_records.coin.amount for coin_records in farming_coin_records) / units['chia']} TXCH."
+            f"{sum(coin_records.coin.amount for coin_records in farming_coin_records) / units['chia']} TXCH.",
         )
         if show_addresses:
             print("All Addresses: ")
@@ -458,7 +465,7 @@ async def revert_block_height(
             new_height: int = await node_client.revert_blocks(num_blocks, reset_chain_to_genesis)
             print(
                 f"All transactions in Block: {new_height + num_blocks} and above were successfully deleted, "
-                "you should now delete & restart all wallets."
+                "you should now delete & restart all wallets.",
             )
         else:
             # However, in this case num_blocks is the fork height.
@@ -484,7 +491,7 @@ async def farm_blocks(
         if target_address is None:
             print(
                 "No target address in config, falling back to the temporary address currently in use. "
-                "You can use 'cdv sim create' or use --target-address to specify a different address."
+                "You can use 'cdv sim create' or use --target-address to specify a different address.",
             )
             target_ph: bytes32 = await node_client.get_farming_ph()
         else:

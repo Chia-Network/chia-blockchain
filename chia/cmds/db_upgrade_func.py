@@ -64,7 +64,7 @@ def db_upgrade_func(
         print(f"   {out_db_path}")
         print(
             f"free space: {free / 1024 / 1024 / 1024:0.2f} GiB expected about "
-            f"{in_db_size / 1024 / 1024 / 1024:0.2f} GiB"
+            f"{in_db_size / 1024 / 1024 / 1024:0.2f} GiB",
         )
         if no_free and not force:
             print("to override this check and convert anyway, pass --force")
@@ -91,8 +91,8 @@ def db_upgrade_func(
             The target v2 database is left in place (possibly in an incomplete state)
               {out_db_path}
             If the failure was caused by a full disk, ensure the volumes of your
-            temporary- and target directory have sufficient free space."""
-            )
+            temporary- and target directory have sufficient free space.""",
+            ),
         )
         if platform.system() == "Windows":
             temp_dir = None
@@ -177,7 +177,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                 block blob,
                 block_record blob
             )
-            """
+            """,
         )
         conn.commit()
         parameter_limit = get_host_parameter_limit()
@@ -198,7 +198,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                     conn.execute(
                         "SELECT rowid, prev_hash FROM block_records WHERE header_hash = ? AND height = ? LIMIT 1",
                         (current_header_hash, current_height),
-                    )
+                    ),
                 ) as cursor:
                     row = cursor.fetchone()
                 if row is None:
@@ -241,7 +241,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [1/4] Converting full_blocks SUCCEEDED in "
-            f"{end_time - block_start_time:.2f} seconds                             "
+            f"{end_time - block_start_time:.2f} seconds                             ",
         )
         print("-- [1/4] Creating full_blocks height index")
         height_index_start_time = monotonic()
@@ -250,7 +250,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [1/4] Creating full_blocks height index SUCCEEDED in "
-            f"{end_time - height_index_start_time:.2f} seconds                             "
+            f"{end_time - height_index_start_time:.2f} seconds                             ",
         )
         print("-- [1/4] Creating full_blocks is_fully_compactified index")
         ifc_index_start_time = monotonic()
@@ -259,13 +259,13 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             CREATE INDEX out_db.is_fully_compactified
                 ON full_blocks(is_fully_compactified, in_main_chain)
                 WHERE in_main_chain=1
-            """
+            """,
         )
         conn.commit()
         end_time = monotonic()
         print(
             "\r-- [1/4] Creating full_blocks is_fully_compactified index SUCCEEDED in "
-            f"{end_time - ifc_index_start_time:.2f} seconds                             "
+            f"{end_time - ifc_index_start_time:.2f} seconds                             ",
         )
         print("-- [1/4] Creating full_blocks main_chain index")
         main_chain_index_start_time = monotonic()
@@ -274,13 +274,13 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             CREATE INDEX out_db.main_chain
                 ON full_blocks(height, in_main_chain)
                 WHERE in_main_chain=1
-            """
+            """,
         )
         conn.commit()
         end_time = monotonic()
         print(
             "\r-- [1/4] Creating full_blocks main_chain index SUCCEEDED in "
-            f"{end_time - main_chain_index_start_time:.2f} seconds                             "
+            f"{end_time - main_chain_index_start_time:.2f} seconds                             ",
         )
         print("-- [2/4] Converting sub_epoch_segments_v3")
         conn.execute(
@@ -289,7 +289,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                 ses_block_hash blob PRIMARY KEY,
                 challenge_segments blob
             )
-            """
+            """,
         )
         conn.commit()
         ses_start_time = monotonic()
@@ -300,13 +300,13 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                     unhex(ses_block_hash),
                     challenge_segments
                 FROM sub_epoch_segments_v3
-            """
+            """,
         )
         conn.commit()
         end_time = monotonic()
         print(
             "\r-- [2/4] Converting sub_epoch_segments_v3 SUCCEEDED in "
-            f"{end_time - ses_start_time:.2f} seconds                             "
+            f"{end_time - ses_start_time:.2f} seconds                             ",
         )
         print("-- [3/4] Converting hints")
         conn.execute("CREATE TABLE out_db.hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
@@ -318,7 +318,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         range_start = 1
         while True:
             with closing(
-                conn.execute("SELECT id FROM hints WHERE id >= ? LIMIT ?", (range_start, parameter_limit))
+                conn.execute("SELECT id FROM hints WHERE id >= ? LIMIT ?", (range_start, parameter_limit)),
             ) as cursor:
                 rows = cursor.fetchall()
             if len(rows) == 0:
@@ -345,7 +345,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [3/4] Converting hints SUCCEEDED in "
-            f"{end_time - hint_start_time:.2f} seconds                             "
+            f"{end_time - hint_start_time:.2f} seconds                             ",
         )
         print("-- [3/4] Creating hints hint_index index")
         hint_index_start_time = monotonic()
@@ -354,7 +354,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [3/4] Creating hints hint_index index SUCCEEDED in "
-            f"{end_time - hint_index_start_time:.2f} seconds                             "
+            f"{end_time - hint_index_start_time:.2f} seconds                             ",
         )
         print("-- [4/4] Converting coin_record")
         conn.execute(
@@ -369,7 +369,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                 amount blob,
                 timestamp bigint
             )
-            """
+            """,
         )
         conn.commit()
         start_time = monotonic()
@@ -411,7 +411,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [4/4] Converting coin_record SUCCEEDED in "
-            f"{end_time - coin_start_time:.2f} seconds                             "
+            f"{end_time - coin_start_time:.2f} seconds                             ",
         )
         print("-- [4/4] Creating coin_record coin_confirmed_index index")
         coin_confirmed_index_start_time = monotonic()
@@ -420,7 +420,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [4/4] Creating coin_record coin_confirmed_index index SUCCEEDED in "
-            f"{end_time - coin_confirmed_index_start_time:.2f} seconds                             "
+            f"{end_time - coin_confirmed_index_start_time:.2f} seconds                             ",
         )
         print("-- [4/4] Creating coin_record coin_spent_index index")
         coin_spent_index_start_time = monotonic()
@@ -429,7 +429,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [4/4] Creating coin_record coin_spent_index index SUCCEEDED in "
-            f"{end_time - coin_spent_index_start_time:.2f} seconds                             "
+            f"{end_time - coin_spent_index_start_time:.2f} seconds                             ",
         )
         print("-- [4/4] Creating coin_record coin_puzzle_hash index")
         coin_puzzle_hash_index_start_time = monotonic()
@@ -438,7 +438,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [4/4] Creating coin_record coin_puzzle_hash index SUCCEEDED in "
-            f"{end_time - coin_puzzle_hash_index_start_time:.2f} seconds                             "
+            f"{end_time - coin_puzzle_hash_index_start_time:.2f} seconds                             ",
         )
         print("-- [4/4] Creating coin_record coin_parent_index index")
         coin_parent_index_start_time = monotonic()
@@ -447,6 +447,6 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         end_time = monotonic()
         print(
             "\r-- [4/4] Creating coin_record coin_parent_index index SUCCEEDED in "
-            f"{end_time - coin_parent_index_start_time:.2f} seconds                             "
+            f"{end_time - coin_parent_index_start_time:.2f} seconds                             ",
         )
         conn.execute("DETACH DATABASE out_db")

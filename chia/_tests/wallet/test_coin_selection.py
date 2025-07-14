@@ -49,7 +49,11 @@ class TestCoinSelection:
         coin_list: list[Coin] = [Coin(a_hash, a_hash, uint64(100000000 * a)) for a in amounts]
         for i in range(tries):
             knapsack = knapsack_coin_algorithm(
-                coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 999999, seed=bytes([i])
+                coin_list,
+                uint128(30000000000000),
+                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                999999,
+                seed=bytes([i]),
             )
             assert knapsack is not None
             assert sum(coin.amount for coin in knapsack) >= 310000000
@@ -61,7 +65,11 @@ class TestCoinSelection:
         # coin_list = set([coin for a in coin_amounts])
         for i in range(100):
             knapsack = knapsack_coin_algorithm(
-                coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 99999, seed=bytes([i])
+                coin_list,
+                uint128(265),
+                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                99999,
+                seed=bytes([i]),
             )
             assert knapsack is not None
             selected_sum = sum(coin.amount for coin in list(knapsack))
@@ -120,8 +128,14 @@ class TestCoinSelection:
         spendable_amount = uint128(5000000000000 + 10000)
         coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(
-                Coin(a_hash, a_hash, uint64(5000000000000)), uint32(1), uint32(1), False, True, WalletType(0), 1
-            )
+                Coin(a_hash, a_hash, uint64(5000000000000)),
+                uint32(1),
+                uint32(1),
+                False,
+                True,
+                WalletType(0),
+                1,
+            ),
         ]
         for i in range(10000):
             coin_list.append(
@@ -133,7 +147,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         # make sure coins are not identical.
         for target_amount in [10000, 9999]:
@@ -160,7 +174,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         spendable_amount = uint128(spendable_amount + 2000 * 100)
         for target_amount in [50000, 25000, 15000, 10000, 9000, 3000]:  # select the first 100 values
@@ -191,7 +205,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
 
         for i in range(10000):
@@ -204,7 +218,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
             dusty_below_target: set[Coin] = await select_coins(
@@ -227,8 +241,14 @@ class TestCoinSelection:
         spendable_amount = uint128(50000 + 10000)
         new_coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(
-                Coin(a_hash, std_hash(b"123"), uint64(50000)), uint32(1), uint32(1), False, True, WalletType(0), 1
-            )
+                Coin(a_hash, std_hash(b"123"), uint64(50000)),
+                uint32(1),
+                uint32(1),
+                False,
+                True,
+                WalletType(0),
+                1,
+            ),
         ]
 
         for i in range(10000):
@@ -241,7 +261,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         for target_amount in [50000, 10001, 10000, 9999]:
             dusty_below_target: set[Coin] = await select_coins(
@@ -270,7 +290,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         # make sure coins are not identical.
         # test for failure
@@ -382,7 +402,7 @@ class TestCoinSelection:
 
         # test smallest greater than target with only 1 large coin.
         single_greater_coin_list: list[WalletCoinRecord] = [
-            WalletCoinRecord(Coin(a_hash, a_hash, uint64(70000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(70000)), uint32(1), uint32(1), False, True, WalletType(0), 1),
         ]
         single_greater_spendable_amount = uint128(70000)
         target_amount = uint128(50000)
@@ -464,7 +484,7 @@ class TestCoinSelection:
     @pytest.mark.anyio
     async def test_sum_largest_coins(self, a_hash: bytes32) -> None:
         coin_list: list[Coin] = list(
-            reversed([Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)])
+            reversed([Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)]),
         )
         assert sum_largest_coins(uint128(40), coin_list) == {coin_list[0]}
         assert sum_largest_coins(uint128(79), coin_list) == {coin_list[0], coin_list[1]}
@@ -485,7 +505,15 @@ class TestCoinSelection:
     async def test_coin_selection_min_coin(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000 + 500 + 40050)
         coin_list: list[WalletCoinRecord] = [
-            WalletCoinRecord(Coin(a_hash, a_hash, uint64(5000000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            WalletCoinRecord(
+                Coin(a_hash, a_hash, uint64(5000000)),
+                uint32(1),
+                uint32(1),
+                False,
+                True,
+                WalletType(0),
+                1,
+            ),
         ]
         for i in range(500):
             coin_list.append(
@@ -497,7 +525,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         for i in range(1, 90):
             coin_list.append(
@@ -509,7 +537,7 @@ class TestCoinSelection:
                     True,
                     WalletType(0),
                     1,
-                )
+                ),
             )
         # make sure coins are not identical.
         for target_amount in [500, 1000, 50000, 500000]:

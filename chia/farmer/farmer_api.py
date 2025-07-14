@@ -64,7 +64,9 @@ class FarmerAPI:
 
     @metadata.request(peer_required=True)
     async def new_proof_of_space(
-        self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
+        self,
+        new_proof_of_space: harvester_protocol.NewProofOfSpace,
+        peer: WSChiaConnection,
     ) -> None:
         """
         This is a response from the harvester, for a NewSignagePointHarvester.
@@ -82,13 +84,13 @@ class FarmerAPI:
             if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
                 self.farmer.log.info(
                     f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
-                    f"{new_proof_of_space.sp_hash}"
+                    f"{new_proof_of_space.sp_hash}",
                 )
                 return None
 
         if new_proof_of_space.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
-                f"Received response for a signage point that we do not have {new_proof_of_space.sp_hash}"
+                f"Received response for a signage point that we do not have {new_proof_of_space.sp_hash}",
             )
             return None
 
@@ -134,10 +136,12 @@ class FarmerAPI:
                     rc_data: SignatureRequestSourceData
                     if sp.sp_source_data.vdf_data is not None:
                         cc_data = SignatureRequestSourceData(
-                            uint8(SigningDataKind.CHALLENGE_CHAIN_VDF), bytes(sp.sp_source_data.vdf_data.cc_vdf)
+                            uint8(SigningDataKind.CHALLENGE_CHAIN_VDF),
+                            bytes(sp.sp_source_data.vdf_data.cc_vdf),
                         )
                         rc_data = SignatureRequestSourceData(
-                            uint8(SigningDataKind.REWARD_CHAIN_VDF), bytes(sp.sp_source_data.vdf_data.rc_vdf)
+                            uint8(SigningDataKind.REWARD_CHAIN_VDF),
+                            bytes(sp.sp_source_data.vdf_data.rc_vdf),
                         )
                     else:
                         assert sp.sp_source_data.sub_slot_data is not None
@@ -168,7 +172,7 @@ class FarmerAPI:
                     (
                         new_proof_of_space.plot_identifier,
                         new_proof_of_space.proof,
-                    )
+                    ),
                 )
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
@@ -203,7 +207,7 @@ class FarmerAPI:
                 if pool_state_dict["current_difficulty"] is None:
                     self.farmer.log.warning(
                         f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
-                        f"check communication with the pool, skipping this partial to {pool_url}."
+                        f"check communication with the pool, skipping this partial to {pool_url}.",
                     )
                     increment_pool_stats(
                         self.farmer.pool_state,
@@ -227,10 +231,11 @@ class FarmerAPI:
                     sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
-                    self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
+                    self.farmer.constants,
+                    self.farmer.constants.POOL_SUB_SLOT_ITERS,
                 ):
                     self.farmer.log.info(
-                        f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}"
+                        f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}",
                     )
                     increment_pool_stats(
                         self.farmer.pool_state,
@@ -248,7 +253,7 @@ class FarmerAPI:
                 if authentication_token_timeout is None:
                     self.farmer.log.warning(
                         f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
-                        f", check communication with the pool."
+                        f", check communication with the pool.",
                     )
                     increment_pool_stats(
                         self.farmer.pool_state,
@@ -320,12 +325,12 @@ class FarmerAPI:
                         taproot_sig: G2Element = AugSchemeMPL.sign(taproot_sk, m_to_sign, agg_pk)
 
                         plot_signature = AugSchemeMPL.aggregate(
-                            [sig_farmer, response.message_signatures[0][1], taproot_sig]
+                            [sig_farmer, response.message_signatures[0][1], taproot_sig],
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
 
                 authentication_sk: Optional[PrivateKey] = self.farmer.get_authentication_sk(
-                    pool_state_dict["pool_config"]
+                    pool_state_dict["pool_config"],
                 )
                 if authentication_sk is None:
                     self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
@@ -349,7 +354,7 @@ class FarmerAPI:
 
                 post_partial_request: PostPartialRequest = PostPartialRequest(payload, agg_sig)
                 self.farmer.log.info(
-                    f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
+                    f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}",
                 )
                 increment_pool_stats(
                     self.farmer.pool_state,
@@ -386,7 +391,7 @@ class FarmerAPI:
                             self.farmer.log.info(f"Pool response: {pool_response}")
                             if "error_code" in pool_response:
                                 self.farmer.log.error(
-                                    f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
+                                    f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}",
                                 )
 
                                 increment_pool_stats(
@@ -407,7 +412,7 @@ class FarmerAPI:
                                 elif pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
                                     self.farmer.log.error(
                                         "Partial not good enough, forcing pool farmer update to "
-                                        "get our current difficulty."
+                                        "get our current difficulty.",
                                     )
                                     increment_pool_stats(
                                         self.farmer.pool_state,
@@ -518,7 +523,7 @@ class FarmerAPI:
                     self.farmer.log.warning(
                         f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
                         f"check communication with the pool, skipping this signage point, pool: "
-                        f"{pool_dict['pool_config'].pool_url} "
+                        f"{pool_dict['pool_config'].pool_url} ",
                     )
                     continue
                 pool_difficulties.append(
@@ -526,7 +531,7 @@ class FarmerAPI:
                         pool_dict["current_difficulty"],
                         self.farmer.constants.POOL_SUB_SLOT_ITERS,
                         p2_singleton_puzzle_hash,
-                    )
+                    ),
                 )
             message = harvester_protocol.NewSignagePointHarvester(
                 new_signage_point.challenge_hash,
@@ -581,7 +586,8 @@ class FarmerAPI:
         if full_node_request.foliage_block_data is not None:
             message_data = [
                 SignatureRequestSourceData(
-                    uint8(SigningDataKind.FOLIAGE_BLOCK_DATA), bytes(full_node_request.foliage_block_data)
+                    uint8(SigningDataKind.FOLIAGE_BLOCK_DATA),
+                    bytes(full_node_request.foliage_block_data),
                 ),
                 (
                     None
@@ -629,7 +635,7 @@ class FarmerAPI:
                     "timestamp": request.timestamp,
                     "node_id": peer.peer_node_id,
                     "lookup_time": request.lookup_time,
-                }
+                },
             },
         )
 
@@ -666,7 +672,8 @@ class FarmerAPI:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
 
     def _process_respond_signatures(
-        self, response: harvester_protocol.RespondSignatures
+        self,
+        response: harvester_protocol.RespondSignatures,
     ) -> Optional[Union[DeclareProofOfSpace, SignedValues]]:
         """
         Processing the responded signatures happens when receiving an unsolicited request for an SP or when receiving
@@ -696,7 +703,11 @@ class FarmerAPI:
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = verify_and_get_quality_string(
-            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, height=peak_height
+            pospace,
+            self.farmer.constants,
+            response.challenge_hash,
+            response.sp_hash,
+            height=peak_height,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
@@ -722,14 +733,14 @@ class FarmerAPI:
                         taproot_share_rc_sp = G2Element()
                     farmer_share_cc_sp = AugSchemeMPL.sign(sk, challenge_chain_sp, agg_pk)
                     agg_sig_cc_sp = AugSchemeMPL.aggregate(
-                        [challenge_chain_sp_harv_sig, farmer_share_cc_sp, taproot_share_cc_sp]
+                        [challenge_chain_sp_harv_sig, farmer_share_cc_sp, taproot_share_cc_sp],
                     )
                     assert AugSchemeMPL.verify(agg_pk, challenge_chain_sp, agg_sig_cc_sp)
 
                     # This means it passes the sp filter
                     farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_sp, agg_pk)
                     agg_sig_rc_sp = AugSchemeMPL.aggregate(
-                        [reward_chain_sp_harv_sig, farmer_share_rc_sp, taproot_share_rc_sp]
+                        [reward_chain_sp_harv_sig, farmer_share_rc_sp, taproot_share_rc_sp],
                     )
                     assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
 
@@ -738,14 +749,15 @@ class FarmerAPI:
                         pool_pk = bytes(pospace.pool_public_key)
                         if pool_pk not in self.farmer.pool_sks_map:
                             self.farmer.log.error(
-                                f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
+                                f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}",
                             )
                             return None
 
                         pool_target: Optional[PoolTarget] = PoolTarget(self.farmer.pool_target, uint32(0))
                         assert pool_target is not None
                         pool_target_signature: Optional[G2Element] = AugSchemeMPL.sign(
-                            self.farmer.pool_sks_map[pool_pk], bytes(pool_target)
+                            self.farmer.pool_sks_map[pool_pk],
+                            bytes(pool_target),
                         )
                     else:
                         assert pospace.pool_contract_puzzle_hash is not None
@@ -791,7 +803,9 @@ class FarmerAPI:
                         taproot_sk = generate_taproot_sk(response.local_pk, pk)
                         foliage_sig_taproot: G2Element = AugSchemeMPL.sign(taproot_sk, foliage_block_data_hash, agg_pk)
                         foliage_transaction_block_sig_taproot: G2Element = AugSchemeMPL.sign(
-                            taproot_sk, foliage_transaction_block_hash, agg_pk
+                            taproot_sk,
+                            foliage_transaction_block_hash,
+                            agg_pk,
                         )
                     else:
                         foliage_sig_taproot = G2Element()
@@ -801,14 +815,14 @@ class FarmerAPI:
                     foliage_transaction_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_transaction_block_hash, agg_pk)
 
                     foliage_agg_sig = AugSchemeMPL.aggregate(
-                        [foliage_sig_harvester, foliage_sig_farmer, foliage_sig_taproot]
+                        [foliage_sig_harvester, foliage_sig_farmer, foliage_sig_taproot],
                     )
                     foliage_block_agg_sig = AugSchemeMPL.aggregate(
                         [
                             foliage_transaction_block_sig_harvester,
                             foliage_transaction_block_sig_farmer,
                             foliage_transaction_block_sig_taproot,
-                        ]
+                        ],
                     )
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
                     assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)

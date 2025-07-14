@@ -47,8 +47,8 @@ FIRST_GENERATOR = Program.to(
         """
         ((0x0000000000000000000000000000000000000000000000000000000000000000 1 50000
         ((51 0x0000000000000000000000000000000000000000000000000000000000000001 500))
-        "extra" "data" "for" "coin" ))"""
-    )
+        "extra" "data" "for" "coin" ))""",
+    ),
 ).as_bin()
 
 SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()
@@ -122,7 +122,11 @@ class TestROM:
         print(r)
 
         npc_result = get_name_puzzle_conditions(
-            gen, max_cost=MAX_COST, mempool_mode=False, height=uint32(softfork_height), constants=DEFAULT_CONSTANTS
+            gen,
+            max_cost=MAX_COST,
+            mempool_mode=False,
+            height=uint32(softfork_height),
+            constants=DEFAULT_CONSTANTS,
         )
         if softfork_height >= DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
             cost = EXPECTED_COST2

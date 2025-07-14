@@ -47,7 +47,11 @@ async def add_dummy_connection(
     additional_capabilities: list[tuple[uint16, str]] = [],
 ) -> tuple[asyncio.Queue, bytes32]:
     wsc, peer_id = await add_dummy_connection_wsc(
-        server, self_hostname, dummy_port, type, additional_capabilities=additional_capabilities
+        server,
+        self_hostname,
+        dummy_port,
+        type,
+        additional_capabilities=additional_capabilities,
     )
 
     return wsc.incoming_queue, peer_id

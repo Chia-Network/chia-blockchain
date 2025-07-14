@@ -78,11 +78,22 @@ async def make_did_wallet(
         with pytest.MonkeyPatch.context() as m:
             m.setattr("chia.wallet.did_wallet.did_wallet_puzzles.create_innerpuz", alt_create_innerpuz)
             did_wallet = await DIDWallet.create_new_did_wallet(
-                wallet_state_manager, wallet, uint64(101), action_scope, metadata=metadata, fee=fee
+                wallet_state_manager,
+                wallet,
+                uint64(101),
+                action_scope,
+                metadata=metadata,
+                fee=fee,
             )
     else:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_state_manager, wallet, amount, action_scope, backups_ids=recovery_list, metadata=metadata, fee=fee
+            wallet_state_manager,
+            wallet,
+            amount,
+            action_scope,
+            backups_ids=recovery_list,
+            metadata=metadata,
+            fee=fee,
         )
 
     return did_wallet
@@ -129,10 +140,10 @@ async def test_creation_from_coin_spend(
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
         wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
 
     else:
@@ -183,7 +194,7 @@ async def test_creation_from_coin_spend(
         {
             "num_environments": 3,
             "blocks_needed": [1, 1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -194,7 +205,8 @@ async def test_creation_from_coin_spend(
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_creation_from_backup_file(
-    wallet_environments: WalletTestFramework, use_alternate_recovery: bool
+    wallet_environments: WalletTestFramework,
+    use_alternate_recovery: bool,
 ) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
@@ -267,7 +279,7 @@ async def test_creation_from_backup_file(
                 pre_block_balance_updates={},
                 post_block_balance_updates={},
             ),
-        ]
+        ],
     )
 
     # Wallet1 sets up DIDWallet_1 with DIDWallet_0 as backup
@@ -275,7 +287,11 @@ async def test_creation_from_backup_file(
 
     async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-            env_1.wallet_state_manager, env_1.xch_wallet, uint64(201), action_scope, backup_ids
+            env_1.wallet_state_manager,
+            env_1.xch_wallet,
+            uint64(201),
+            action_scope,
+            backup_ids,
         )
 
     await wallet_environments.process_pending_states(
@@ -322,7 +338,7 @@ async def test_creation_from_backup_file(
                 pre_block_balance_updates={},
                 post_block_balance_updates={},
             ),
-        ]
+        ],
     )
 
     backup_data = did_wallet_1.create_backup()
@@ -336,12 +352,12 @@ async def test_creation_from_backup_file(
     )
     did_wallet_2 = env_2.wallet_state_manager.get_wallet(id=uint32(2), required_type=DIDWallet)
     recovery_info = await env_2.rpc_client.did_get_recovery_info(
-        DIDGetRecoveryInfo(uint32(env_2.wallet_aliases["did"]))
+        DIDGetRecoveryInfo(uint32(env_2.wallet_aliases["did"])),
     )
     assert recovery_info.wallet_id == env_2.wallet_aliases["did"]
     assert recovery_info.backup_dids == backup_ids
     current_coin_info_response = await env_0.rpc_client.did_get_current_coin_info(
-        DIDGetCurrentCoinInfo(uint32(env_0.wallet_aliases["did"]))
+        DIDGetCurrentCoinInfo(uint32(env_0.wallet_aliases["did"])),
     )
     # TODO: this check is kind of weak, we should research when this endpoint might actually be useful
     assert current_coin_info_response.wallet_id == env_0.wallet_aliases["did"]
@@ -349,7 +365,10 @@ async def test_creation_from_backup_file(
         assert recovery_info.pubkey is not None
         assert recovery_info.newpuzhash is not None
         message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
-            recovery_info.coin_name, recovery_info.newpuzhash, recovery_info.pubkey, action_scope
+            recovery_info.coin_name,
+            recovery_info.newpuzhash,
+            recovery_info.pubkey,
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -361,7 +380,7 @@ async def test_creation_from_backup_file(
                         "pending_change": 101,
                         "pending_coin_removal_count": 1,
                         "max_send_amount": -101,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "did": {
@@ -369,7 +388,7 @@ async def test_creation_from_backup_file(
                         "pending_change": -101,
                         "pending_coin_removal_count": -1,
                         "max_send_amount": 101,
-                    }
+                    },
                 },
             ),
             WalletStateTransition(
@@ -380,11 +399,11 @@ async def test_creation_from_backup_file(
                 pre_block_balance_updates={
                     "did": {
                         "init": True,
-                    }
+                    },
                 },
                 post_block_balance_updates={},
             ),
-        ]
+        ],
     )
 
     (
@@ -419,7 +438,7 @@ async def test_creation_from_backup_file(
                         "spendable_balance": -201,
                         "max_send_amount": -201,
                         "unspent_coin_count": -1,
-                    }
+                    },
                 },
             ),
             WalletStateTransition(
@@ -427,7 +446,7 @@ async def test_creation_from_backup_file(
                     "did": {
                         "unconfirmed_wallet_balance": 201,
                         "pending_coin_removal_count": 2,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "did": {
@@ -436,10 +455,10 @@ async def test_creation_from_backup_file(
                         "max_send_amount": 201,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": -2,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )
 
     for wallet in [did_wallet_0, did_wallet_1, did_wallet_2]:
@@ -466,17 +485,17 @@ async def test_creation_from_backup_file(
                         "spendable_balance": -201,
                         "max_send_amount": -201,
                         "pending_coin_removal_count": 1,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "did": {
                         "confirmed_wallet_balance": -201,
                         "unspent_coin_count": -1,
                         "pending_coin_removal_count": -1,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )
 
     async def get_coins_with_ph() -> bool:
@@ -497,7 +516,8 @@ async def test_creation_from_backup_file(
 )
 @pytest.mark.anyio
 async def test_did_recovery_with_multiple_backup_dids(
-    wallet_environments: WalletTestFramework, use_alternate_recovery: bool
+    wallet_environments: WalletTestFramework,
+    use_alternate_recovery: bool,
 ) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
@@ -528,7 +548,11 @@ async def test_did_recovery_with_multiple_backup_dids(
 
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_1.wallet_state_manager, wallet_1, uint64(101), action_scope, recovery_list
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
+            uint64(101),
+            action_scope,
+            recovery_list,
         )
 
     await wallet_environments.process_pending_states(
@@ -585,7 +609,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
             ),
-        ]
+        ],
     )
     assert did_wallet_2.did_info.backup_ids == recovery_list
 
@@ -593,7 +617,11 @@ async def test_did_recovery_with_multiple_backup_dids(
 
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet_3: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_1.wallet_state_manager, wallet_1, uint64(201), action_scope, recovery_list
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
+            uint64(201),
+            action_scope,
+            recovery_list,
         )
 
     env_1.wallet_aliases["did_2"] = 3
@@ -636,7 +664,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
             ),
-        ]
+        ],
     )
     coin = await did_wallet_3.get_coin()
 
@@ -654,15 +682,20 @@ async def test_did_recovery_with_multiple_backup_dids(
     pubkey = (await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
     new_ph = did_wallet_4.did_info.temp_puzhash
     async with did_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         message_spend_bundle, attest1 = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, action_scope)
 
     async with did_wallet_2.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope_2:
         message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(
-            coin.name(), new_ph, pubkey, action_scope_2
+            coin.name(),
+            new_ph,
+            pubkey,
+            action_scope_2,
         )
 
     message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])
@@ -727,11 +760,12 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
             ),
-        ]
+        ],
     )
 
     async with did_wallet_4.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle, action_scope)
 
@@ -777,7 +811,7 @@ async def test_did_recovery_with_multiple_backup_dids(
                     },
                 },
             ),
-        ]
+        ],
     )
 
     for wallet in [did_wallet, did_wallet_2, did_wallet_3, did_wallet_4]:
@@ -841,14 +875,15 @@ async def test_did_recovery_with_empty_set(wallet_environments: WalletTestFramew
                     },
                 },
             ),
-        ]
+        ],
     )
     coin = await did_wallet.get_coin()
     info: list[tuple[bytes, bytes, int]] = []
     pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
     with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
         async with did_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             await did_wallet.recovery_spend(
                 coin,
@@ -914,7 +949,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # Delete the coin and wallet
@@ -930,7 +965,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(),
-        )
+        ),
     )
     did_wallet = wallet_node_0.wallet_state_manager.wallets[did_wallets[0].id]
     assert isinstance(did_wallet, DIDWallet)
@@ -944,8 +979,8 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                 "spendable_balance": 101,
                 "max_send_amount": 101,
                 "unspent_coin_count": 1,
-            }
-        }
+            },
+        },
     )
     await env_0.check_balances()
 
@@ -954,7 +989,8 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
     await did_wallet.update_recovery_list(recovery_list, uint64(1))
     assert did_wallet.did_info.backup_ids == recovery_list
     async with did_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet.create_update_spend(action_scope)
 
@@ -978,7 +1014,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # Delete the coin and change inner puzzle
@@ -986,7 +1022,8 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework, use_a
     await wallet_node_0.wallet_state_manager.coin_store.delete_coin_record(coin.name())
     with wallet_environments.new_puzzle_hashes_allowed():
         async with did_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             new_inner_puzzle = await did_wallet.get_did_innerpuz(action_scope, override_reuse_puzhash_with=False)
     did_wallet.did_info = dataclasses.replace(did_wallet.did_info, current_inner=new_inner_puzzle)
@@ -1059,7 +1096,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
@@ -1068,7 +1105,11 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
 
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_1.wallet_state_manager, wallet_1, uint64(101), action_scope, recovery_list
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
+            uint64(101),
+            action_scope,
+            recovery_list,
         )
     await wallet_environments.process_pending_states(
         [
@@ -1099,7 +1140,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     assert did_wallet_2.did_info.backup_ids == recovery_list
@@ -1109,7 +1150,8 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     await did_wallet.update_recovery_list(recovery_list, uint64(1))
     assert did_wallet.did_info.backup_ids == recovery_list
     async with did_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet.create_update_spend(action_scope)
 
@@ -1119,16 +1161,16 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                 pre_block_balance_updates={
                     "did": {
                         "set_remainder": True,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "did": {
                         "set_remainder": True,
-                    }
+                    },
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     # DID Wallet 2 recovers into DID Wallet 3 with new innerpuz
@@ -1143,7 +1185,8 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     env_0.wallet_aliases["did_2"] = 3
     with wallet_environments.new_puzzle_hashes_allowed():
         async with did_wallet_3.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             new_ph = (
                 await did_wallet_3.get_did_innerpuz(action_scope, override_reuse_puzhash_with=False)
@@ -1152,10 +1195,14 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     pubkey = (await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)).pubkey
 
     async with did_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         message_spend_bundle, attest_data = await did_wallet.create_attestment(
-            coin.name(), new_ph, pubkey, action_scope
+            coin.name(),
+            new_ph,
+            pubkey,
+            action_scope,
         )
     await wallet_environments.process_pending_states(
         [
@@ -1179,7 +1226,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     (
@@ -1218,7 +1265,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # DID Wallet 1 recovery spends into DID Wallet 4
@@ -1234,14 +1281,16 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
     coin = await did_wallet.get_coin()
     with wallet_environments.new_puzzle_hashes_allowed():
         async with did_wallet_4.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             new_ph = (
                 await did_wallet_4.get_did_innerpuz(action_scope, override_reuse_puzhash_with=False)
             ).get_tree_hash()
     pubkey = (await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)).pubkey
     async with did_wallet_3.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         message_spend_bundle, attest1 = await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey, action_scope)
 
@@ -1275,7 +1324,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     (
@@ -1313,7 +1362,7 @@ async def test_did_attest_after_recovery(wallet_environments: WalletTestFramewor
                     },
                 },
             ),
-        ]
+        ],
     )
 
     for wallet in [did_wallet, did_wallet_3, did_wallet_4]:
@@ -1389,14 +1438,15 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     # Transfer DID
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         new_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
     async with did_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery, action_scope)
 
@@ -1428,7 +1478,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # Get the new DID wallet
@@ -1436,7 +1486,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework, with_recov
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(),
-        )
+        ),
     )
     did_wallet_2 = wallet_node_1.wallet_state_manager.wallets[did_wallets[0].id]
     assert isinstance(did_wallet_2, DIDWallet)  # mypy
@@ -1480,10 +1530,10 @@ async def test_did_auto_transfer_limit(
 
     if trusted:
         wallet_node.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
         wallet_node_2.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
     else:
         wallet_node.config["trusted_peers"] = {}
@@ -1523,7 +1573,10 @@ async def test_did_auto_transfer_limit(
         # Check if the DID wallet is created in the wallet2
 
         await time_out_assert(
-            30, get_wallet_num, min(2 + i, 11), wallet_node_2.wallet_state_manager
+            30,
+            get_wallet_num,
+            min(2 + i, 11),
+            wallet_node_2.wallet_state_manager,
         )  # check we haven't made more than 10 DID wallets
         await time_out_assert(30, get_wallet_num, 1, wallet_node.wallet_state_manager)
     # Get the new DID wallets
@@ -1531,7 +1584,7 @@ async def test_did_auto_transfer_limit(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
-        )
+        ),
     )
 
     assert len(did_wallets) == 10
@@ -1570,7 +1623,7 @@ async def test_did_auto_transfer_limit(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
-        )
+        ),
     )
     assert len(did_wallets) == 9
 
@@ -1580,7 +1633,7 @@ async def test_did_auto_transfer_limit(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
-        )
+        ),
     )
     assert len(did_wallets) == 10
 
@@ -1607,7 +1660,7 @@ async def test_did_auto_transfer_limit(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
-        )
+        ),
     )
     assert len(did_wallets) == 11
 
@@ -1667,11 +1720,12 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
                     },
                 },
             ),
-        ]
+        ],
     )
     await did_wallet_1.update_recovery_list([ph], uint64(1))
     async with did_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet_1.create_update_spend(action_scope)
 
@@ -1689,7 +1743,7 @@ async def test_update_recovery_list(wallet_environments: WalletTestFramework, us
                     },
                 },
             ),
-        ]
+        ],
     )
     assert did_wallet_1.did_info.backup_ids[0] == bytes(ph)
     assert did_wallet_1.did_info.num_of_backup_ids_needed == 1
@@ -1765,7 +1819,7 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
     assert did_wallet_1.did_info.origin_coin is not None  # mypy
     coin_id_as_bech32 = encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
@@ -1776,7 +1830,8 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
     assert response.launcher_id == did_wallet_1.did_info.origin_coin.name()
     assert did_wallet_1.did_info.current_inner is not None  # mypy
     assert response.full_puzzle == create_singleton_puzzle(
-        did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
+        did_wallet_1.did_info.current_inner,
+        did_wallet_1.did_info.origin_coin.name(),
     )
     assert response.metadata["twitter"] == "twitter"
     assert response.latest_coin == (await did_wallet_1.get_coin()).name()
@@ -1803,7 +1858,8 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
         coin_1 = (await wallet_0.select_coins(odd_amount, action_scope)).pop()
     assert coin_1.amount % 2 == 0
     async with wallet_0.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config.override(excluded_coin_ids=[coin_id]), push=True
+        wallet_environments.tx_config.override(excluded_coin_ids=[coin_id]),
+        push=True,
     ) as action_scope:
         await wallet_0.generate_signed_transaction([odd_amount], [ph_1], action_scope, fee)
 
@@ -1834,16 +1890,16 @@ async def test_get_info(wallet_environments: WalletTestFramework, use_alternate_
                     "xch": {
                         "unconfirmed_wallet_balance": 0,
                         "set_remainder": True,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": odd_amount,
                         "set_remainder": True,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )
 
     with pytest.raises(ValueError, match="This is not a singleton, multiple children coins found."):
@@ -1908,14 +1964,16 @@ async def test_message_spend(wallet_environments: WalletTestFramework, use_alter
                     },
                 },
             ),
-        ]
+        ],
     )
     response = await api_0.did_message_spend(
-        {"wallet_id": did_wallet_1.wallet_id, "coin_announcements": ["0abc"], "puzzle_announcements": ["0def"]}
+        {"wallet_id": did_wallet_1.wallet_id, "coin_announcements": ["0abc"], "puzzle_announcements": ["0def"]},
     )
     spend = response["spend_bundle"].coin_spends[0]
     conditions = conditions_dict_for_solution(
-        spend.puzzle_reveal, spend.solution, wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
+        spend.puzzle_reveal,
+        spend.solution,
+        wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
     )
 
     assert len(conditions[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT]) == 1
@@ -1983,7 +2041,7 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
                     },
                 },
             ),
-        ]
+        ],
     )
 
     assert did_wallet_1.did_info.current_inner is not None  # mypy
@@ -1999,7 +2057,8 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
     metadata["Twitter"] = "http://www.twitter.com"
     await did_wallet_1.update_metadata(metadata)
     async with did_wallet_1.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet_1.create_update_spend(action_scope, fee)
 
@@ -2027,7 +2086,7 @@ async def test_update_metadata(wallet_environments: WalletTestFramework, use_alt
                     },
                 },
             ),
-        ]
+        ],
     )
 
     assert get_parent_num(did_wallet_1) == parent_num + 2
@@ -2093,7 +2152,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
                     },
                 },
             ),
-        ]
+        ],
     )
     # Test general string
     assert did_wallet_1.did_info.origin_coin is not None  # mypy
@@ -2103,7 +2162,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
         {
             "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
             "message": message,
-        }
+        },
     )
     puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
@@ -2118,7 +2177,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
             "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
             "message": message,
             "is_hex": True,
-        }
+        },
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
@@ -2137,7 +2196,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
             "message": message,
             "is_hex": "False",
             "safe_mode": "False",
-        }
+        },
     )
 
     assert AugSchemeMPL.verify(
@@ -2154,7 +2213,7 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
             "message": message,
             "is_hex": True,
             "safe_mode": False,
-        }
+        },
     )
 
     assert AugSchemeMPL.verify(
@@ -2170,7 +2229,9 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
 )
 @pytest.mark.anyio
 async def test_create_did_with_recovery_list(
-    self_hostname: str, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted: bool
+    self_hostname: str,
+    two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets,
+    trusted: bool,
 ) -> None:
     """
     A DID is created on-chain in client0, causing a DID Wallet to be created in client1, which shares the same key.
@@ -2200,10 +2261,10 @@ async def test_create_did_with_recovery_list(
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
         wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
 
     else:
@@ -2350,7 +2411,7 @@ async def test_did_resync(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -2387,15 +2448,19 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, use_al
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     for _ in range(2):
         async with did_wallet.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             await did_wallet.transfer_did(
-                await action_scope.get_puzzle_hash(did_wallet.wallet_state_manager), uint64(0), True, action_scope
+                await action_scope.get_puzzle_hash(did_wallet.wallet_state_manager),
+                uint64(0),
+                True,
+                action_scope,
             )
         await wallet_environments.process_pending_states(
             [
@@ -2410,7 +2475,7 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, use_al
                     },
                 ),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
     assert len(await wallet.wallet_state_manager.get_spendable_coins_for_wallet(did_wallet.id())) == 1

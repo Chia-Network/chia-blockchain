@@ -107,7 +107,8 @@ def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
 
 # This should probably return UnsignedSpendBundle if that type ever exists
 def unsigned_spend_bundle_for_spendable_cats(
-    mod_code: Program, spendable_cat_list: list[SpendableCAT]
+    mod_code: Program,
+    spendable_cat_list: list[SpendableCAT],
 ) -> WalletSpendBundle:
     """
     Given a list of `SpendableCAT` objects, create a `WalletSpendBundle` that spends all those coins.

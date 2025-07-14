@@ -101,7 +101,7 @@ class Wallet:
 
     async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
         spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records),
         )
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
@@ -124,13 +124,14 @@ class Wallet:
 
     async def get_spendable_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         spendable = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.id(), unspent_records
+            self.id(),
+            unspent_records,
         )
         return spendable
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx: list[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.id()
+            self.id(),
         )
         addition_amount = 0
 
@@ -143,7 +144,7 @@ class Wallet:
                 if record.spend_bundle is not None:
                     self.log.warning(
                         f"TransactionRecord SpendBundle ID: {record.spend_bundle.name()} not in mempool. "
-                        f"(peer, included, error) list: {record.sent_to}"
+                        f"(peer, included, error) list: {record.sent_to}",
                     )
                     continue
             our_spend = False
@@ -213,7 +214,7 @@ class Wallet:
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.id()
+            self.id(),
         )
         async with action_scope.use() as interface:
             coins = await select_coins(
@@ -256,7 +257,8 @@ class Wallet:
         if coins is None:
             if total_amount > total_balance:
                 raise ValueError(
-                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
+                    f"Can't spend more than wallet balance: {total_balance} mojos, "
+                    f"tried to spend: {total_amount} mojos",
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
@@ -299,7 +301,9 @@ class Wallet:
                 primaries = [
                     CreateCoin(decorated_target_puzzle_hash, amount, mems)
                     for decorated_target_puzzle_hash, amount, mems in zip(
-                        decorated_target_puzzle_hashes, amounts, decorated_memos
+                        decorated_target_puzzle_hashes,
+                        amounts,
+                        decorated_memos,
                     )
                 ]
                 target_primaries = [
@@ -317,11 +321,12 @@ class Wallet:
                         if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
                             if preferred_change_puzzle_hash is not None:
                                 raise ValueError(
-                                    "A `preferred_change_puzzle_hash` was specified that would make a duplicate output"
+                                    "A `preferred_change_puzzle_hash` was specified that would make a duplicate output",
                                 )
                             # We cannot create two coins has same id, create a new puzhash for the change:
                             change_puzzle_hash = await action_scope.get_puzzle_hash(
-                                self.wallet_state_manager, override_reuse_puzhash_with=False
+                                self.wallet_state_manager,
+                                override_reuse_puzhash_with=False,
                             )
                             break
                     primaries.append(CreateCoin(change_puzzle_hash, uint64(change)))
@@ -340,8 +345,10 @@ class Wallet:
 
                 spends.append(
                     make_spend(
-                        coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
-                    )
+                        coin,
+                        SerializedProgram.from_bytes(bytes(puzzle)),
+                        SerializedProgram.from_bytes(bytes(solution)),
+                    ),
                 )
                 break
         else:
@@ -356,8 +363,10 @@ class Wallet:
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 make_spend(
-                    coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
-                )
+                    coin,
+                    SerializedProgram.from_bytes(bytes(puzzle)),
+                    SerializedProgram.from_bytes(bytes(solution)),
+                ),
             )
 
         self.log.debug(f"Spends is {spends}")
@@ -451,7 +460,7 @@ class Wallet:
                     name=spend_bundle.name(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
-                )
+                ),
             )
 
     async def create_tandem_xch_tx(
@@ -493,7 +502,11 @@ class Wallet:
 
     # WSChiaConnection is only imported for type checking
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+        self,
+        coin: Coin,
+        height: uint32,
+        peer: WSChiaConnection,
+        coin_data: Optional[Streamable],
     ) -> None:
         pass
 
@@ -515,7 +528,7 @@ class Wallet:
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
         dr: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
-            puzzle_hash_for_synthetic_public_key(pk_parsed)
+            puzzle_hash_for_synthetic_public_key(pk_parsed),
         )
         if dr is None:
             return None
@@ -530,7 +543,7 @@ class Wallet:
         index: Optional[uint32] = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pk_parsed)
         if index is None:
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-                puzzle_hash_for_synthetic_public_key(pk_parsed)
+                puzzle_hash_for_synthetic_public_key(pk_parsed),
             )
         root_pubkey: bytes = self.wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big")
         if index is None:
@@ -538,7 +551,8 @@ class Wallet:
             if self.wallet_state_manager.private_key is not None:
                 for pool_wallet_index in range(MAX_POOL_WALLETS):
                     try_owner_sk = master_sk_to_singleton_owner_sk(
-                        self.wallet_state_manager.private_key, uint32(pool_wallet_index)
+                        self.wallet_state_manager.private_key,
+                        uint32(pool_wallet_index),
                     )
                     if try_owner_sk.get_g1() == pk_parsed:
                         return PathHint(
@@ -552,7 +566,9 @@ class Wallet:
         )
 
     async def execute_signing_instructions(
-        self, signing_instructions: SigningInstructions, partial_allowed: bool = False
+        self,
+        signing_instructions: SigningInstructions,
+        partial_allowed: bool = False,
     ) -> list[SigningResponse]:
         root_pubkey: G1Element = self.wallet_state_manager.root_pubkey
         pk_lookup: dict[int, G1Element] = (
@@ -579,7 +595,8 @@ class Wallet:
                     path = [int(step) for step in path_hint.path]
                     derive_child_sk = _derive_path(self.wallet_state_manager.get_master_private_key(), path)
                     derive_child_sk_unhardened = _derive_path_unhardened(
-                        self.wallet_state_manager.get_master_private_key(), path
+                        self.wallet_state_manager.get_master_private_key(),
+                        path,
                     )
                     derive_child_pk = derive_child_sk.get_g1()
                     derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
@@ -597,7 +614,7 @@ class Wallet:
                 if fingerprint_as_int not in pk_lookup:
                     if not partial_allowed:
                         raise ValueError(
-                            f"No pubkey found (or path hinted to) for fingerprint {int.from_bytes(fingerprint, 'big')}"
+                            f"No pubkey found (or path hinted to) for fingerprint {int.from_bytes(fingerprint, 'big')}",
                         )
                     else:
                         aggregate_responses_at_end = False
@@ -627,13 +644,13 @@ class Wallet:
                     SigningResponse(
                         bytes(AugSchemeMPL.sign(sk_lookup[pk_fingerprint], target.message)),
                         target.hook,
-                    )
+                    ),
                 )
             else:  # Implicit if pk_fingerprint in sum_hint_lookup
                 signatures: list[G2Element] = []
                 for partial_fingerprint in sum_hint_lookup[pk_fingerprint]:
                     signatures.append(
-                        AugSchemeMPL.sign(sk_lookup[partial_fingerprint], target.message, pk_lookup[pk_fingerprint])
+                        AugSchemeMPL.sign(sk_lookup[partial_fingerprint], target.message, pk_lookup[pk_fingerprint]),
                     )
                 if partial_allowed:
                     # In multisig scenarios, we return everything as a component signature
@@ -642,7 +659,7 @@ class Wallet:
                             SigningResponse(
                                 bytes(sig),
                                 target.hook,
-                            )
+                            ),
                         )
                 else:
                     # In the scenario where we are the only signer, we can collapse many responses into one
@@ -650,7 +667,7 @@ class Wallet:
                         SigningResponse(
                             bytes(AugSchemeMPL.aggregate(signatures)),
                             target.hook,
-                        )
+                        ),
                     )
 
         # If we have the full set of signing responses for the instructions, aggregate them as much as possible
@@ -665,14 +682,16 @@ class Wallet:
                     SigningResponse(
                         bytes(AugSchemeMPL.aggregate([G2Element.from_bytes(res.signature) for res in group])),
                         hook,
-                    )
+                    ),
                 )
             responses = new_responses
 
         return responses
 
     async def apply_signatures(
-        self, spends: list[Spend], signing_responses: list[SigningResponse]
+        self,
+        spends: list[Spend],
+        signing_responses: list[SigningResponse],
     ) -> SignedTransaction:
         signing_responses_set = set(signing_responses)
         return SignedTransaction(
@@ -685,9 +704,9 @@ class Wallet:
                             [
                                 G2Element.from_bytes(signing_response.signature)
                                 for signing_response in signing_responses_set
-                            ]
-                        )
+                            ],
+                        ),
                     ),
-                )
+                ),
             ],
         )

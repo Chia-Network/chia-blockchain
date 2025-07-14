@@ -49,7 +49,12 @@ def child_writer_dispatch(func: Callable[..., Any], path: Path, timeout: int, at
 
 
 def child_writer_dispatch_with_readiness_check(
-    func: Callable[..., Any], path: Path, timeout: int, attempts: int, ready_dir: Path, finished_dir: Path
+    func: Callable[..., Any],
+    path: Path,
+    timeout: int,
+    attempts: int,
+    ready_dir: Path,
+    finished_dir: Path,
 ) -> Any:
     # Write out a file indicating this process is ready to begin
     ready_file_path: Path = ready_dir / f"{os.getpid()}.ready"
@@ -79,7 +84,7 @@ def child_writer_dispatch_with_readiness_check(
             except Exception as e:
                 log.warning(
                     f"[pid:{os.getpid()}] caught exception in child_writer_dispatch_with_readiness_check: "
-                    f"type: {type(e)}, {e}"
+                    f"type: {type(e)}, {e}",
                 )
                 raise e
     finally:

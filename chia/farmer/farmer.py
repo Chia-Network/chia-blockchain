@@ -369,19 +369,26 @@ class Farmer:
 
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /pool_info {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                f"Exception in GET /pool_info {pool_config.pool_url}, {e}",
             )
 
         return None
 
     async def _pool_get_farmer(
-        self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, authentication_sk: PrivateKey
+        self,
+        pool_config: PoolWalletConfig,
+        authentication_token_timeout: uint8,
+        authentication_sk: PrivateKey,
     ) -> Optional[dict[str, Any]]:
         authentication_token = get_current_authentication_token(authentication_token_timeout)
         message: bytes32 = std_hash(
             AuthenticationPayload(
-                "get_farmer", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
-            )
+                "get_farmer",
+                pool_config.launcher_id,
+                pool_config.target_puzzle_hash,
+                authentication_token,
+            ),
         )
         signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
         get_farmer_params: dict[str, Union[str, int]] = {
@@ -417,12 +424,16 @@ class Farmer:
                         )
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in GET /farmer {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                f"Exception in GET /farmer {pool_config.pool_url}, {e}",
             )
         return None
 
     async def _pool_post_farmer(
-        self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
+        self,
+        pool_config: PoolWalletConfig,
+        authentication_token_timeout: uint8,
+        owner_sk: PrivateKey,
     ) -> Optional[dict[str, Any]]:
         auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
@@ -465,12 +476,16 @@ class Farmer:
                         )
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in POST /farmer {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                f"Exception in POST /farmer {pool_config.pool_url}, {e}",
             )
         return None
 
     async def _pool_put_farmer(
-        self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
+        self,
+        pool_config: PoolWalletConfig,
+        authentication_token_timeout: uint8,
+        owner_sk: PrivateKey,
     ) -> None:
         auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
@@ -512,7 +527,8 @@ class Farmer:
                         )
         except Exception as e:
             self.handle_failed_pool_response(
-                pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
+                pool_config.p2_singleton_puzzle_hash,
+                f"Exception in PUT /farmer {pool_config.pool_url}, {e}",
             )
 
     def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
@@ -602,7 +618,9 @@ class Farmer:
                     async def update_pool_farmer_info() -> tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
                         response = await self._pool_get_farmer(
-                            pool_config, authentication_token_timeout, authentication_sk
+                            pool_config,
+                            authentication_token_timeout,
+                            authentication_sk,
                         )
                         farmer_response: Optional[GetFarmerResponse] = None
                         error_code_response: Optional[PoolErrorCode] = None
@@ -617,7 +635,7 @@ class Farmer:
                                     error_code_response = PoolErrorCode(response["error_code"])
                                 except ValueError:
                                     self.log.error(
-                                        f"Invalid error code received from the pool: {response['error_code']}"
+                                        f"Invalid error code received from the pool: {response['error_code']}",
                                     )
 
                         return farmer_response, error_code_response
@@ -629,11 +647,13 @@ class Farmer:
                             owner_sk_and_index = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             assert owner_sk_and_index is not None
                             post_response = await self._pool_post_farmer(
-                                pool_config, authentication_token_timeout, owner_sk_and_index[0]
+                                pool_config,
+                                authentication_token_timeout,
+                                owner_sk_and_index[0],
                             )
                             if post_response is not None and "error_code" not in post_response:
                                 self.log.info(
-                                    f"Welcome message from {pool_config.pool_url}: {post_response['welcome_message']}"
+                                    f"Welcome message from {pool_config.pool_url}: {post_response['welcome_message']}",
                                 )
                                 # Now we should be able to update the local farmer info
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()
@@ -650,12 +670,14 @@ class Farmer:
                             owner_sk_and_index = find_owner_sk(self.all_root_sks, pool_config.owner_public_key)
                             assert owner_sk_and_index is not None
                             await self._pool_put_farmer(
-                                pool_config, authentication_token_timeout, owner_sk_and_index[0]
+                                pool_config,
+                                authentication_token_timeout,
+                                owner_sk_and_index[0],
                             )
                     else:
                         self.log.warning(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
-                            f", check communication with the pool."
+                            f", check communication with the pool.",
                         )
 
             except Exception as e:
@@ -744,15 +766,18 @@ class Farmer:
             if authentication_token_timeout is None:
                 self.log.error(
                     f"No pool specific authentication_token_timeout has been set for"
-                    f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
+                    f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool.",
                 )
                 return None
 
             authentication_token = get_current_authentication_token(authentication_token_timeout)
             message: bytes32 = std_hash(
                 AuthenticationPayload(
-                    "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
-                )
+                    "get_login",
+                    pool_config.launcher_id,
+                    pool_config.target_puzzle_hash,
+                    authentication_token,
+                ),
             )
             signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
             return (
@@ -772,7 +797,7 @@ class Farmer:
                 harvesters.append(receiver.to_dict(counts_only))
             else:
                 self.log.debug(
-                    f"get_harvesters invalid peer: {connection.peer_info.host}, node_id: {connection.peer_node_id}"
+                    f"get_harvesters invalid peer: {connection.peer_info.host}, node_id: {connection.peer_node_id}",
                 )
 
         return {"harvesters": harvesters}
@@ -784,7 +809,9 @@ class Farmer:
         return receiver
 
     def check_missing_signage_points(
-        self, timestamp: uint64, new_signage_point: farmer_protocol.NewSignagePoint
+        self,
+        timestamp: uint64,
+        new_signage_point: farmer_protocol.NewSignagePoint,
     ) -> Optional[tuple[uint64, uint32]]:
         if self.prev_signage_point is None:
             self.prev_signage_point = (timestamp, new_signage_point)
@@ -849,7 +876,7 @@ class Farmer:
                     time_slept = 0
                     log.debug(
                         f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
-                        f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
+                        f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}",
                     )
                 time_slept += 1
                 refresh_slept += 1
@@ -864,7 +891,9 @@ class Farmer:
             await asyncio.sleep(1)
 
     def notify_farmer_reward_taken_by_harvester_as_fee(
-        self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
+        self,
+        sp: farmer_protocol.NewSignagePoint,
+        proof_of_space: harvester_protocol.NewProofOfSpace,
     ) -> None:
         """
         Apply a fee quality convention (see CHIP-22: https://github.com/Chia-Network/chips/pull/88)
@@ -880,7 +909,7 @@ class Farmer:
 
         self.log.info(
             f"Farmer reward for challenge '{challenge_str}' "
-            + f"taken by harvester for reward address '{farmer_reward_puzzle_hash}'"
+            + f"taken by harvester for reward address '{farmer_reward_puzzle_hash}'",
         )
 
         fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
@@ -893,22 +922,22 @@ class Farmer:
             if fee_quality <= fee_threshold:
                 self.log.info(
                     f"Fee threshold passed for challenge '{challenge_str}': "
-                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})",
                 )
             else:
                 self.log.warning(
                     f"Invalid fee threshold for challenge '{challenge_str}': "
-                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})",
                 )
                 self.log.warning(
                     "Harvester illegitimately took a fee reward that "
-                    + "did not belong to it or it incorrectly applied the fee convention."
+                    + "did not belong to it or it incorrectly applied the fee convention.",
                 )
         else:
             self.log.warning(
                 "Harvester illegitimately took reward by failing to provide its fee rate "
                 + f"for challenge '{challenge_str}'. "
-                + f"Fee quality was {fee_quality_rate:.3f}% ({fee_quality} or 0x{fee_quality:08x})"
+                + f"Fee quality was {fee_quality_rate:.3f}% ({fee_quality} or 0x{fee_quality:08x})",
             )
 
 

@@ -79,7 +79,9 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def setup_two_nodes(
-    consensus_constants: ConsensusConstants, db_version: int, self_hostname: str
+    consensus_constants: ConsensusConstants,
+    db_version: int,
+    self_hostname: str,
 ) -> AsyncIterator[tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
@@ -88,7 +90,9 @@ async def setup_two_nodes(
     config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         bt1 = await create_block_tools_async(
-            constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
+            constants=consensus_constants,
+            keychain=keychain1,
+            config_overrides=config_overrides,
         )
         async with setup_full_node(
             consensus_constants,
@@ -103,7 +107,9 @@ async def setup_two_nodes(
                 "blockchain_test_2.db",
                 self_hostname,
                 await create_block_tools_async(
-                    constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
+                    constants=consensus_constants,
+                    keychain=keychain2,
+                    config_overrides=config_overrides,
                 ),
                 simulator=False,
                 db_version=db_version,
@@ -116,7 +122,10 @@ async def setup_two_nodes(
 
 @asynccontextmanager
 async def setup_n_nodes(
-    consensus_constants: ConsensusConstants, n: int, db_version: int, self_hostname: str
+    consensus_constants: ConsensusConstants,
+    n: int,
+    db_version: int,
+    self_hostname: str,
 ) -> AsyncIterator[list[FullNodeAPI]]:
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
@@ -132,11 +141,13 @@ async def setup_n_nodes(
                         f"blockchain_test_{i}.db",
                         self_hostname,
                         await create_block_tools_async(
-                            constants=consensus_constants, keychain=keychain, config_overrides=config_overrides
+                            constants=consensus_constants,
+                            keychain=keychain,
+                            config_overrides=config_overrides,
                         ),
                         simulator=False,
                         db_version=db_version,
-                    )
+                    ),
                 )
                 for i, keychain in enumerate(keychains)
             ]
@@ -256,8 +267,10 @@ async def setup_simulators_and_wallets_inner(
             for _ in range(wallet_count - simulator_count):
                 bt_tools.append(
                     await create_block_tools_async(
-                        consensus_constants, keychain=keychain2, config_overrides=config_overrides
-                    )
+                        consensus_constants,
+                        keychain=keychain2,
+                        config_overrides=config_overrides,
+                    ),
                 )
 
         simulators: list[SimulatorFullNodeService] = [
@@ -271,7 +284,7 @@ async def setup_simulators_and_wallets_inner(
                     simulator=True,
                     db_version=db_version,
                     disable_capabilities=disable_capabilities,
-                )
+                ),
             )
             for index in range(simulator_count)
         ]
@@ -287,7 +300,7 @@ async def setup_simulators_and_wallets_inner(
                     None,
                     key_seed=std_hash(uint32(index).stream_to_bytes()) if key_seed is None else key_seed,
                     initial_num_public_keys=initial_num_public_keys,
-                )
+                ),
             )
             for index in range(wallet_count)
         ]
@@ -313,7 +326,7 @@ async def setup_farmer_multi_harvester(
                 consensus_constants,
                 port=uint16(0),
                 start_service=start_services,
-            )
+            ),
         )
         if start_services:
             farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], farmer_service._server.get_port())
@@ -327,7 +340,7 @@ async def setup_farmer_multi_harvester(
                     farmer_peer,
                     consensus_constants,
                     start_service=start_services,
-                )
+                ),
             )
             for i in range(harvester_count)
         ]
@@ -345,7 +358,14 @@ async def setup_full_system(
 ) -> AsyncIterator[FullSystem]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_full_system_inner(
-            b_tools, b_tools_1, False, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
+            b_tools,
+            b_tools_1,
+            False,
+            consensus_constants,
+            db_version,
+            keychain1,
+            keychain2,
+            shared_b_tools,
         ) as full_system:
             yield full_system
 
@@ -364,11 +384,15 @@ async def setup_full_system_inner(
     config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     if b_tools is None:
         b_tools = await create_block_tools_async(
-            constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
+            constants=consensus_constants,
+            keychain=keychain1,
+            config_overrides=config_overrides,
         )
     if b_tools_1 is None:
         b_tools_1 = await create_block_tools_async(
-            constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
+            constants=consensus_constants,
+            keychain=keychain2,
+            config_overrides=config_overrides,
         )
 
     self_hostname = shared_b_tools.config["self_hostname"]
@@ -378,10 +402,10 @@ async def setup_full_system_inner(
         vdf2_port = uint16(find_available_listen_port("vdf2"))
 
         await async_exit_stack.enter_async_context(
-            setup_vdf_clients(bt=b_tools, self_hostname=self_hostname, port=vdf1_port)
+            setup_vdf_clients(bt=b_tools, self_hostname=self_hostname, port=vdf1_port),
         )
         await async_exit_stack.enter_async_context(
-            setup_vdf_client(bt=shared_b_tools, self_hostname=self_hostname, port=vdf2_port)
+            setup_vdf_client(bt=shared_b_tools, self_hostname=self_hostname, port=vdf2_port),
         )
 
         daemon_ws = await async_exit_stack.enter_async_context(setup_daemon(btools=b_tools))
@@ -405,7 +429,7 @@ async def setup_full_system_inner(
                 sanitize_weight_proof_only=False,
                 connect_to_daemon=connect_to_daemon,
                 db_version=db_version,
-            )
+            ),
         )
         node_2 = await async_exit_stack.enter_async_context(
             setup_full_node(
@@ -419,7 +443,7 @@ async def setup_full_system_inner(
                 sanitize_weight_proof_only=True,
                 connect_to_daemon=False,  # node 2 doesn't connect to the daemon
                 db_version=db_version,
-            )
+            ),
         )
 
         farmer_service = await async_exit_stack.enter_async_context(
@@ -429,7 +453,7 @@ async def setup_full_system_inner(
                 self_hostname=self_hostname,
                 consensus_constants=consensus_constants,
                 full_node_port=node_1._api.full_node.server.get_port(),
-            )
+            ),
         )
         harvester_service = await async_exit_stack.enter_async_context(
             setup_harvester(
@@ -437,7 +461,7 @@ async def setup_full_system_inner(
                 shared_b_tools.root_path / "harvester",
                 UnresolvedPeerInfo(self_hostname, farmer_service._server.get_port()),
                 consensus_constants,
-            )
+            ),
         )
         harvester = harvester_service._node
 
@@ -449,7 +473,7 @@ async def setup_full_system_inner(
                 config=b_tools.config,
                 root_path=b_tools.root_path,
                 vdf_port=vdf1_port,
-            )
+            ),
         )
         timelord_bluebox_service = await async_exit_stack.enter_async_context(
             setup_timelord(
@@ -459,7 +483,7 @@ async def setup_full_system_inner(
                 b_tools_1.config,
                 b_tools_1.root_path,
                 vdf_port=vdf2_port,
-            )
+            ),
         )
 
         with anyio.fail_after(delay=adjusted_timeout(10)):

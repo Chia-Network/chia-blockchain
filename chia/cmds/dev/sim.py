@@ -23,7 +23,11 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
     default=None,
 )
 @click.option(
-    "--root-path", default=SIMULATOR_ROOT_PATH, help="Simulator root folder.", type=click.Path(), show_default=True
+    "--root-path",
+    default=SIMULATOR_ROOT_PATH,
+    help="Simulator root folder.",
+    type=click.Path(),
+    show_default=True,
 )
 @click.option(
     "-n",
@@ -49,7 +53,11 @@ def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulat
     help="Use this address instead of the default farming address.",
 )
 @click.option(
-    "-p", "--plot-directory", type=str, required=False, help="Use a different directory then 'simulator/plots'."
+    "-p",
+    "--plot-directory",
+    type=str,
+    required=False,
+    help="Use a different directory then 'simulator/plots'.",
 )
 @click.option("-m", "--mnemonic", type=str, required=False, help="Add to keychain and use a specific mnemonic.")
 @click.option("-a", "--auto-farm", type=bool, default=None, help="Enable or Disable auto farming")
@@ -87,7 +95,7 @@ def create_simulator_config(
             auto_farm,
             docker_mode,
             not no_bitfield,
-        )
+        ),
     )
 
 
@@ -143,7 +151,7 @@ def status_cmd(
             show_coins,
             include_rewards,
             show_addresses,
-        )
+        ),
     )
 
 
@@ -161,7 +169,12 @@ def status_cmd(
 @click.option("-d", "--disable-prompt", is_flag=True, help="Disable confirmation prompt when force reverting.")
 @click.pass_context
 def revert_cmd(
-    ctx: click.Context, blocks: int, new_blocks: int, reset: bool, force: bool, disable_prompt: bool
+    ctx: click.Context,
+    blocks: int,
+    new_blocks: int,
+    reset: bool,
+    force: bool,
+    disable_prompt: bool,
 ) -> None:
     if force and not disable_prompt:
         input_str = (
@@ -187,7 +200,7 @@ def revert_cmd(
             new_blocks,
             reset,
             force,
-        )
+        ),
     )
 
 
@@ -205,7 +218,7 @@ def farm_cmd(ctx: click.Context, blocks: int, non_transaction: bool, target_addr
             blocks,
             not non_transaction,
             target_address,
-        )
+        ),
     )
 
 
@@ -220,5 +233,5 @@ def autofarm_cmd(ctx: click.Context, set_autofarm: str) -> None:
             context.rpc_port,
             context.root_path,
             autofarm,
-        )
+        ),
     )

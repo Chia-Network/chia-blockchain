@@ -57,7 +57,7 @@ class NotificationManager:
             if len(coin_memos) == 0 or len(coin_memos[0]) != 32:
                 return False
             wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                bytes32(coin_memos[0])
+                bytes32(coin_memos[0]),
             )
             if (
                 wallet_identifier is not None
@@ -74,7 +74,7 @@ class NotificationManager:
                         coin_memos[1],
                         uint64(coin_state.coin.amount),
                         uint32(coin_state.spent_height),
-                    )
+                    ),
                 )
                 self.wallet_state_manager.state_changed("new_on_chain_notification")
             return True

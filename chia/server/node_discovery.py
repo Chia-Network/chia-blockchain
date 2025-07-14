@@ -186,7 +186,7 @@ class FullNodeDiscovery:
         try:
             if self.default_port is None:
                 self.log.error(
-                    "Network id not supported in NETWORK_ID_DEFAULT_PORTS neither in config. Skipping DNS query."
+                    "Network id not supported in NETWORK_ID_DEFAULT_PORTS neither in config. Skipping DNS query.",
                 )
                 return
             if self.resolver is None:
@@ -201,7 +201,7 @@ class FullNodeDiscovery:
                             ip.to_text(),
                             uint16(self.default_port),
                             uint64(0),
-                        )
+                        ),
                     )
                 self.log.info(f"Received {len(peers)} peers from DNS seeder, using rdtype = {rdtype}.")
                 if len(peers) > 0:
@@ -394,7 +394,7 @@ class FullNodeDiscovery:
                         self.log.debug("Max concurrent outbound connections reached. waiting")
                         await asyncio.wait(self.pending_tasks, return_when=asyncio.FIRST_COMPLETED)
                     self.pending_tasks.add(
-                        create_referenced_task(self.start_client_async(addr, disconnect_after_handshake))
+                        create_referenced_task(self.start_client_async(addr, disconnect_after_handshake)),
                     )
 
                 await asyncio.sleep(connect_peer_interval)
@@ -441,7 +441,10 @@ class FullNodeDiscovery:
         return port in NETWORK_ID_DEFAULT_PORTS.values() and port != self.default_port
 
     async def _add_peers_common(
-        self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
+        self,
+        peer_list: list[TimestampedPeerInfo],
+        peer_src: Optional[PeerInfo],
+        is_full_node: bool,
     ) -> None:
         # Check if we got the peers from a full node or from the introducer.
         peers_adjusted_timestamp = []
@@ -535,7 +538,7 @@ class FullNodePeers(FullNodeDiscovery):
                         peer.host,
                         peer.port,
                         uint64(int(time.time())),
-                    )
+                    ),
                 ]
                 msg = make_msg(
                     ProtocolMessageTypes.respond_peers,
@@ -583,7 +586,10 @@ class FullNodePeers(FullNodeDiscovery):
             return None
 
     async def add_peers(
-        self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
+        self,
+        peer_list: list[TimestampedPeerInfo],
+        peer_src: Optional[PeerInfo],
+        is_full_node: bool,
     ) -> None:
         try:
             await self._add_peers_common(peer_list, peer_src, is_full_node)
@@ -624,8 +630,8 @@ class FullNodePeers(FullNodeDiscovery):
                             std_hash(
                                 self.key.to_bytes(32, byteorder="big")
                                 + peer_info.get_key()
-                                + cur_day.to_bytes(3, byteorder="big")
-                            )
+                                + cur_day.to_bytes(3, byteorder="big"),
+                            ),
                         ),
                         byteorder="big",
                     )
@@ -672,6 +678,9 @@ class WalletPeers(FullNodeDiscovery):
         await self._close_common()
 
     async def add_peers(
-        self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
+        self,
+        peer_list: list[TimestampedPeerInfo],
+        peer_src: Optional[PeerInfo],
+        is_full_node: bool,
     ) -> None:
         await self._add_peers_common(peer_list, peer_src, is_full_node)

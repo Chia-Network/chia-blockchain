@@ -63,7 +63,7 @@ def get_hashes_for_page(page: int, lengths: dict[bytes32, int], max_page_size: i
     for hash, length in sorted(lengths.items(), key=lambda x: (-x[1], x[0])):
         if length > max_page_size:
             raise RuntimeError(
-                f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}"
+                f"Cannot paginate data, item size is larger than max page size: {length} {max_page_size}",
             )
         total_bytes += length
         if current_page_size + length <= max_page_size:
@@ -116,7 +116,7 @@ async def _dot_dump(
         dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
         dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
         dot_pair_boxes.append(
-            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
+            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}",
         )
 
     lines = [
@@ -268,7 +268,9 @@ class ProofOfInclusion:
 
         for layer in self.layers:
             calculated_hash = calculate_internal_hash(
-                hash=existing_hash, other_hash_side=layer.other_hash_side, other_hash=layer.other_hash
+                hash=existing_hash,
+                other_hash_side=layer.other_hash_side,
+                other_hash=layer.other_hash,
             )
 
             if calculated_hash != layer.combined_hash:
@@ -784,7 +786,7 @@ class PluginStatus:
             "plugin_status": {
                 "uploaders": self.uploaders,
                 "downloaders": self.downloaders,
-            }
+            },
         }
 
 
@@ -925,14 +927,16 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
     for reference_proof in dl_proof.store_proofs.proofs:
         inner_puz_hash = dl_proof.inner_puzzle_hash
         host_fullpuz_program = create_host_fullpuz(
-            inner_puz_hash, reference_proof.root(), dl_proof.store_proofs.store_id
+            inner_puz_hash,
+            reference_proof.root(),
+            dl_proof.store_proofs.store_id,
         )
         expected_puzzle_hash = host_fullpuz_program.get_tree_hash_precalc(inner_puz_hash)
 
         if puzzle_hash != expected_puzzle_hash:
             raise ProofIntegrityError(
                 "Invalid Proof: incorrect puzzle hash: expected:"
-                f"{expected_puzzle_hash.hex()} received: {puzzle_hash.hex()}"
+                f"{expected_puzzle_hash.hex()} received: {puzzle_hash.hex()}",
             )
 
         proof = ProofOfInclusion(
@@ -955,7 +959,10 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
             raise ProofIntegrityError("Invalid Proof: invalid proof of inclusion found")
 
         verified_keys.append(
-            KeyValueHashes(key_clvm_hash=reference_proof.key_clvm_hash, value_clvm_hash=reference_proof.value_clvm_hash)
+            KeyValueHashes(
+                key_clvm_hash=reference_proof.key_clvm_hash,
+                value_clvm_hash=reference_proof.value_clvm_hash,
+            ),
         )
 
     return verified_keys

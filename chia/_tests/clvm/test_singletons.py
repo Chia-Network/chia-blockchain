@@ -110,13 +110,19 @@ async def test_singleton_top_layer(version, cost_logger):
         # Try to create an even singleton (driver test)
         try:
             conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
-                starting_coin, adapted_puzzle, comment, (START_AMOUNT - 1)
+                starting_coin,
+                adapted_puzzle,
+                comment,
+                (START_AMOUNT - 1),
             )
             raise AssertionError("This should fail due to an even amount")
         except ValueError as msg:
             assert str(msg) == "Coin amount cannot be even. Subtract one mojo."
             conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
-                starting_coin, adapted_puzzle, comment, START_AMOUNT
+                starting_coin,
+                adapted_puzzle,
+                comment,
+                START_AMOUNT,
             )
 
         # Creating solution for standard transaction
@@ -155,9 +161,9 @@ async def test_singleton_top_layer(version, cost_logger):
                         ConditionOpcode.CREATE_COIN,
                         adapted_puzzle_hash,
                         singleton_eve.amount,
-                    ]
+                    ],
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         # Generate the lineage proof we will need from the launcher coin
@@ -235,7 +241,7 @@ async def test_singleton_top_layer(version, cost_logger):
                     assertion,
                     announcement,
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_coinsol)
@@ -293,7 +299,7 @@ async def test_singleton_top_layer(version, cost_logger):
                     assertion,
                     announcement,
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
@@ -351,7 +357,7 @@ async def test_singleton_top_layer(version, cost_logger):
                     [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 3],
                     [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 7],
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
@@ -360,7 +366,9 @@ async def test_singleton_top_layer(version, cost_logger):
             adapted_puzzle,
         )
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof, singleton_child.amount, inner_solution
+            lineage_proof,
+            singleton_child.amount,
+            inner_solution,
         )
 
         multi_odd_coinsol = make_spend(
@@ -387,7 +395,7 @@ async def test_singleton_top_layer(version, cost_logger):
                     [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 4],
                     [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 10],
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
@@ -396,7 +404,9 @@ async def test_singleton_top_layer(version, cost_logger):
             adapted_puzzle,
         )
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof, singleton_child.amount, inner_solution
+            lineage_proof,
+            singleton_child.amount,
+            inner_solution,
         )
 
         no_odd_coinsol = make_spend(
@@ -429,7 +439,7 @@ async def test_singleton_top_layer(version, cost_logger):
                     ],
                     [ConditionOpcode.CREATE_COIN, adapted_puzzle_hash, 1],
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_claim_coinsol)
@@ -438,7 +448,9 @@ async def test_singleton_top_layer(version, cost_logger):
             adapted_puzzle,
         )
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof, singleton_child.amount, inner_solution
+            lineage_proof,
+            singleton_child.amount,
+            inner_solution,
         )
 
         singleton_even_coinsol = make_spend(
@@ -467,7 +479,7 @@ async def test_singleton_top_layer(version, cost_logger):
                         1,
                     ],
                 ],
-            )
+            ),
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_even_coinsol)
@@ -516,7 +528,9 @@ async def test_singleton_top_layer(version, cost_logger):
             adapted_puzzle,
         )
         full_solution: Program = singleton_top_layer.solution_for_singleton(
-            lineage_proof, singleton_child.amount, inner_solution
+            lineage_proof,
+            singleton_child.amount,
+            inner_solution,
         )
 
         melt_coinsol = make_spend(

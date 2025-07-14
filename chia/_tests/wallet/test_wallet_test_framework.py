@@ -22,7 +22,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
                 "min_mainnet_k_size": 2,  # A config value overridden
             },
             "blocks_needed": [1, 0],
-        }
+        },
     ],
     indirect=True,
 )
@@ -80,8 +80,8 @@ async def test_balance_checking(
                     "spendable_balance": 2_000_000_000_000,
                     "max_send_amount": 2_000_000_000_000,
                     "unspent_coin_count": 2,
-                }
-            }
+                },
+            },
         )
     env_0.wallet_aliases = {
         "xch": 1,
@@ -101,15 +101,15 @@ async def test_balance_checking(
                             "spendable_balance": 2_000_000_000_000,
                             "max_send_amount": 2_000_000_000_000,
                             "unspent_coin_count": 2,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         "xch": {
                             "confirmed_wallet_balance": 13,
-                        }
+                        },
                     },
-                )
-            ]
+                ),
+            ],
         )
 
     # this is necessary to undo the changes made before raising above
@@ -121,8 +121,8 @@ async def test_balance_checking(
                 "spendable_balance": -2_000_000_000_000,
                 "max_send_amount": -2_000_000_000_000,
                 "unspent_coin_count": -2,
-            }
-        }
+            },
+        },
     )
 
     await wallet_environments.process_pending_states(
@@ -135,15 +135,15 @@ async def test_balance_checking(
                         "spendable_balance": 2_000_000_000_000,
                         "max_send_amount": 2_000_000_000_000,
                         "unspent_coin_count": 2,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "xch": {
                         "set_remainder": True,
-                    }
+                    },
                 },
-            )
-        ]
+            ),
+        ],
     )
     await CATWallet.get_or_create_wallet_for_cat(env_0.wallet_state_manager, env_0.xch_wallet, "00" * 32)
     with pytest.raises(KeyError, match="No wallet state for wallet id 2"):
@@ -160,8 +160,8 @@ async def test_balance_checking(
                     "max_send_amount": 0,
                     "unspent_coin_count": 0,
                     "pending_coin_removal_count": 0,
-                }
-            }
+                },
+            },
         )
 
     await env_0.change_balances(
@@ -175,8 +175,8 @@ async def test_balance_checking(
                 "max_send_amount": 0,
                 "unspent_coin_count": 0,
                 "pending_coin_removal_count": 0,
-            }
-        }
+            },
+        },
     )
 
     with pytest.raises(BalanceCheckingError):
@@ -198,8 +198,8 @@ async def test_balance_checking(
             {
                 "xch": {
                     "<#confirmed_wallet_balance": 2_000_000_000_000,
-                }
-            }
+                },
+            },
         )
 
     with pytest.raises(ValueError, match=r"\+ 2000000000000"):
@@ -207,8 +207,8 @@ async def test_balance_checking(
             {
                 "xch": {
                     ">#confirmed_wallet_balance": 2_000_000_000_000,
-                }
-            }
+                },
+            },
         )
 
     with pytest.raises(ValueError, match=r"\+ 1999999999999"):
@@ -216,8 +216,8 @@ async def test_balance_checking(
             {
                 "xch": {
                     "<=#confirmed_wallet_balance": 1_999_999_999_999,
-                }
-            }
+                },
+            },
         )
 
     with pytest.raises(ValueError, match=r"\+ 2000000000001"):
@@ -225,8 +225,8 @@ async def test_balance_checking(
             {
                 "xch": {
                     ">=#confirmed_wallet_balance": 2_000_000_000_001,
-                }
-            }
+                },
+            },
         )
 
     wallet_states_save = env_0.wallet_states.copy()
@@ -236,8 +236,8 @@ async def test_balance_checking(
             "xch": {
                 "<#confirmed_wallet_balance": 2_000_000_000_001,
                 "set_remainder": True,
-            }
-        }
+            },
+        },
     )
     await env_0.check_balances()
     env_0.wallet_states = wallet_states_save
@@ -247,8 +247,8 @@ async def test_balance_checking(
             "xch": {
                 ">#confirmed_wallet_balance": 1_999_999_999_999,
                 "set_remainder": True,
-            }
-        }
+            },
+        },
     )
     await env_0.check_balances()
     env_0.wallet_states = wallet_states_save
@@ -258,8 +258,8 @@ async def test_balance_checking(
             "xch": {
                 ">=#confirmed_wallet_balance": 2_000_000_000_000,
                 "set_remainder": True,
-            }
-        }
+            },
+        },
     )
     await env_0.check_balances()
     env_0.wallet_states = wallet_states_save
@@ -269,7 +269,7 @@ async def test_balance_checking(
             "xch": {
                 "<=#confirmed_wallet_balance": 2_000_000_000_000,
                 "set_remainder": True,
-            }
-        }
+            },
+        },
     )
     await env_0.check_balances()

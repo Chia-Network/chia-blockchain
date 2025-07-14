@@ -143,7 +143,8 @@ def clear() -> None:
     print_keys(keyring)
 
     if not click.confirm(
-        "\nDo you really want to remove all the keys from the legacy keyring? This can't be undone.", default=None
+        "\nDo you really want to remove all the keys from the legacy keyring? This can't be undone.",
+        default=None,
     ):
         raise click.ClickException("Aborted!")
 

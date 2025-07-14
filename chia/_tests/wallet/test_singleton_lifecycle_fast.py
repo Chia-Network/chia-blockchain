@@ -146,7 +146,10 @@ def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: list[Progr
 
 
 def solve_anyone_can_spend_with_padding(
-    solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]
+    solver: Solver,
+    puzzle_db: PuzzleDB,
+    args: list[Program],
+    kwargs: dict[str, Any],
 ) -> Program:
     """This is the puzzle `(a (q . 1) 3)`. It's only for testing."""
     conditions = from_kwargs(kwargs, "conditions", list[Program])
@@ -184,7 +187,10 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: list[Program], 
 
 
 def solve_pool_waiting_room(
-    solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]
+    solver: Solver,
+    puzzle_db: PuzzleDB,
+    args: list[Program],
+    kwargs: dict[str, Any],
 ) -> Program:
     pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type", str)
     allowable = ["exit-waiting-room", "claim-p2-nft"]
@@ -256,7 +262,11 @@ class SingletonWallet:
         puzzle_reveal = puzzle_db.puzzle_for_hash(coin.puzzle_hash)
         assert puzzle_reveal is not None
         solution = solve_puzzle(
-            puzzle_db, puzzle_reveal, lineage_proof=self.lineage_proof, coin_amount=coin.amount, **kwargs
+            puzzle_db,
+            puzzle_reveal,
+            lineage_proof=self.lineage_proof,
+            coin_amount=coin.amount,
+            **kwargs,
         )
         return make_spend(coin, puzzle_reveal, solution)
 
@@ -274,7 +284,7 @@ class SingletonWallet:
                         assert parent_inner_puzzle is not None
                         parent_inner_puzzle_hash = parent_inner_puzzle.get_tree_hash()
                         lineage_proof = Program.to(
-                            [self.current_state.parent_coin_info, parent_inner_puzzle_hash, coin.amount]
+                            [self.current_state.parent_coin_info, parent_inner_puzzle_hash, coin.amount],
                         )
                         self.lineage_proof = lineage_proof
                         self.current_state = coin
@@ -314,7 +324,8 @@ def launcher_conditions_and_spend_bundle(
     singleton_full_puzzle_hash = singleton_full_puzzle.get_tree_hash()
     message_program = Program.to([singleton_full_puzzle_hash, launcher_amount, metadata])
     expected_announcement = AssertCoinAnnouncement(
-        asserted_id=launcher_id, asserted_msg=message_program.get_tree_hash()
+        asserted_id=launcher_id,
+        asserted_msg=message_program.get_tree_hash(),
     )
     expected_conditions = []
     clsp = f"(0x{ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.hex()} 0x{expected_announcement.msg_calc})"
@@ -353,7 +364,11 @@ def p2_singleton_puzzle_for_launcher(
     delayed_puzzle_hash: bytes32,
 ) -> Program:
     puzzle = P2_SINGLETON_MOD.curry(
-        SINGLETON_MOD_HASH, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash
+        SINGLETON_MOD_HASH,
+        launcher_id,
+        launcher_puzzle_hash,
+        seconds_delay,
+        delayed_puzzle_hash,
     )
     puzzle_db.add_puzzle(puzzle)
     return puzzle
@@ -367,12 +382,18 @@ def p2_singleton_puzzle_hash_for_launcher(
     delayed_puzzle_hash: bytes32,
 ) -> bytes32:
     return p2_singleton_puzzle_for_launcher(
-        puzzle_db, launcher_id, launcher_puzzle_hash, seconds_delay, delayed_puzzle_hash
+        puzzle_db,
+        launcher_id,
+        launcher_puzzle_hash,
+        seconds_delay,
+        delayed_puzzle_hash,
     ).get_tree_hash()
 
 
 def claim_p2_singleton(
-    puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, p2_singleton_coin: Coin
+    puzzle_db: PuzzleDB,
+    singleton_wallet: SingletonWallet,
+    p2_singleton_coin: Coin,
 ) -> tuple[CoinSpend, list[Program]]:
     inner_puzzle = singleton_wallet.inner_puzzle(puzzle_db)
     assert inner_puzzle
@@ -389,7 +410,8 @@ def claim_p2_singleton(
     )
     p2_singleton_coin_spend = make_spend(p2_singleton_coin, p2_singleton_puzzle, p2_singleton_solution)
     expected_p2_singleton_announcement = AssertCoinAnnouncement(
-        asserted_id=p2_singleton_coin_name, asserted_msg=b"$"
+        asserted_id=p2_singleton_coin_name,
+        asserted_msg=b"$",
     ).msg_calc
     singleton_conditions = [
         Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin_name]),
@@ -428,7 +450,10 @@ def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent: bool = True) 
 
 
 def spend_coin_to_singleton(
-    puzzle_db: PuzzleDB, launcher_puzzle: Program, coin_store: CoinStore, now: CoinTimestamp
+    puzzle_db: PuzzleDB,
+    launcher_puzzle: Program,
+    coin_store: CoinStore,
+    now: CoinTimestamp,
 ) -> tuple[list[Coin], list[CoinSpend]]:
     farmed_coin_amount = 100000
     metadata = [("foo", "bar")]
@@ -443,7 +468,12 @@ def spend_coin_to_singleton(
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     initial_singleton_puzzle = adaptor_for_singleton_inner_puzzle(ANYONE_CAN_SPEND_PUZZLE)
     launcher_id, condition_list, launcher_spend_bundle = launcher_conditions_and_spend_bundle(
-        puzzle_db, farmed_coin.name(), launcher_amount, initial_singleton_puzzle, metadata, launcher_puzzle
+        puzzle_db,
+        farmed_coin.name(),
+        launcher_amount,
+        initial_singleton_puzzle,
+        metadata,
+        launcher_puzzle,
     )
 
     conditions = Program.to(condition_list)
@@ -475,7 +505,11 @@ def find_interesting_singletons(removals: list[CoinSpend]) -> list[SingletonWall
             lineage_proof = lineage_proof_for_coin_spend(coin_spend)
             launcher_id = coin_spend.coin.name()
             singleton = SingletonWallet(
-                launcher_id, coin_spend.coin.puzzle_hash, key_value_list, eve_coin, lineage_proof
+                launcher_id,
+                coin_spend.coin.puzzle_hash,
+                key_value_list,
+                eve_coin,
+                lineage_proof,
             )
             singletons.append(singleton)
     return singletons
@@ -525,7 +559,11 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # farm a `p2_singleton`
 
     pool_reward_puzzle_hash = p2_singleton_puzzle_hash_for_launcher(
-        PUZZLE_DB, SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, DELAY_SECONDS, DELAY_PUZZLE_HASH
+        PUZZLE_DB,
+        SINGLETON_WALLET.launcher_id,
+        SINGLETON_WALLET.launcher_puzzle_hash,
+        DELAY_SECONDS,
+        DELAY_PUZZLE_HASH,
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
@@ -557,7 +595,11 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # farm and collect another `p2_singleton`
 
     pool_reward_puzzle_hash = p2_singleton_puzzle_hash_for_launcher(
-        PUZZLE_DB, SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, DELAY_SECONDS, DELAY_PUZZLE_HASH
+        PUZZLE_DB,
+        SINGLETON_WALLET.launcher_id,
+        SINGLETON_WALLET.launcher_puzzle_hash,
+        DELAY_SECONDS,
+        DELAY_PUZZLE_HASH,
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
@@ -596,22 +638,32 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     relative_lock_height = 1440
 
     pool_escaping_puzzle = POOL_WAITINGROOM_MOD.curry(
-        pool_puzzle_hash, pool_reward_puzzle_hash, owner_public_key, pool_reward_prefix, relative_lock_height
+        pool_puzzle_hash,
+        pool_reward_puzzle_hash,
+        owner_public_key,
+        pool_reward_prefix,
+        relative_lock_height,
     )
     pool_escaping_puzzle_hash = pool_escaping_puzzle.get_tree_hash()
 
     pool_member_puzzle = POOL_MEMBER_MOD.curry(
-        pool_puzzle_hash, pool_reward_puzzle_hash, owner_public_key, pool_reward_prefix, pool_escaping_puzzle_hash
+        pool_puzzle_hash,
+        pool_reward_puzzle_hash,
+        owner_public_key,
+        pool_reward_prefix,
+        pool_escaping_puzzle_hash,
     )
     pool_member_puzzle_hash = pool_member_puzzle.get_tree_hash()
 
     PUZZLE_DB.add_puzzle(pool_escaping_puzzle)
     PUZZLE_DB.add_puzzle(
-        singleton_puzzle(SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, pool_escaping_puzzle)
+        singleton_puzzle(SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, pool_escaping_puzzle),
     )
     PUZZLE_DB.add_puzzle(pool_member_puzzle)
     full_puzzle = singleton_puzzle(
-        SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, pool_member_puzzle
+        SINGLETON_WALLET.launcher_id,
+        SINGLETON_WALLET.launcher_puzzle_hash,
+        pool_member_puzzle,
     )
     PUZZLE_DB.add_puzzle(full_puzzle)
 
@@ -631,7 +683,11 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # farm a `p2_singleton`
 
     pool_reward_puzzle_hash = p2_singleton_puzzle_hash_for_launcher(
-        PUZZLE_DB, SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, DELAY_SECONDS, DELAY_PUZZLE_HASH
+        PUZZLE_DB,
+        SINGLETON_WALLET.launcher_id,
+        SINGLETON_WALLET.launcher_puzzle_hash,
+        DELAY_SECONDS,
+        DELAY_PUZZLE_HASH,
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
@@ -669,7 +725,9 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # spend the singleton into the "leaving the pool" state
 
     coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(
-        PUZZLE_DB, pool_member_spend_type="to-waiting-room", key_value_list=Program.to([("foo", "bar")])
+        PUZZLE_DB,
+        pool_member_spend_type="to-waiting-room",
+        key_value_list=Program.to([("foo", "bar")]),
     )
     spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
@@ -685,7 +743,11 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # farm a `p2_singleton`
 
     pool_reward_puzzle_hash = p2_singleton_puzzle_hash_for_launcher(
-        PUZZLE_DB, SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, DELAY_SECONDS, DELAY_PUZZLE_HASH
+        PUZZLE_DB,
+        SINGLETON_WALLET.launcher_id,
+        SINGLETON_WALLET.launcher_puzzle_hash,
+        DELAY_SECONDS,
+        DELAY_PUZZLE_HASH,
     )
     farmed_coin = coin_store.farm_coin(pool_reward_puzzle_hash, now)
     now.seconds += 500
@@ -732,7 +794,9 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
     full_puzzle = singleton_puzzle(
-        SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, initial_singleton_puzzle
+        SINGLETON_WALLET.launcher_id,
+        SINGLETON_WALLET.launcher_puzzle_hash,
+        initial_singleton_puzzle,
     )
 
     PUZZLE_DB.add_puzzle(full_puzzle)
@@ -756,7 +820,8 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     # now spend to oblivion with the `-113` hack
 
     coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(
-        PUZZLE_DB, conditions=[Program.to([ConditionOpcode.CREATE_COIN, 0, -113])]
+        PUZZLE_DB,
+        conditions=[Program.to([ConditionOpcode.CREATE_COIN, 0, -113])],
     )
     spend_bundle = WalletSpendBundle([coin_spend], G2Element())
     debug_spend_bundle(spend_bundle)

@@ -66,7 +66,7 @@ class BlockStore:
                 "is_fully_compactified tinyint,"
                 "in_main_chain tinyint,"
                 "block blob,"
-                "block_record blob)"
+                "block_record blob)",
             )
 
             # This is a single-row table containing the hash of the current
@@ -82,7 +82,7 @@ class BlockStore:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
                 "ses_block_hash blob PRIMARY KEY,"
-                "challenge_segments blob)"
+                "challenge_segments blob)",
             )
 
             # If any of these indices are altered, they should also be altered
@@ -90,11 +90,11 @@ class BlockStore:
             log.info("DB: Creating index is_fully_compactified")
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS is_fully_compactified ON"
-                " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
+                " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1",
             )
             log.info("DB: Creating index main_chain")
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1"
+                "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1",
             )
 
         return self
@@ -106,7 +106,8 @@ class BlockStore:
     async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with await conn.executemany(
-                "UPDATE full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
+                "UPDATE full_blocks SET in_main_chain=1 WHERE header_hash=?",
+                header_hashes,
             ) as cursor:
                 if cursor.rowcount != len(header_hashes):
                     raise RuntimeError(f"The blockchain database is corrupt. All of {header_hashes} should exist")
@@ -160,7 +161,9 @@ class BlockStore:
             )
 
     async def persist_sub_epoch_challenge_segments(
-        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
+        self,
+        ses_block_hash: bytes32,
+        segments: list[SubEpochChallengeSegment],
     ) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -242,7 +245,9 @@ class BlockStore:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return GeneratorBlockInfo(
-                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
+                cached.foliage.prev_block_hash,
+                cached.transactions_generator,
+                cached.transactions_generator_ref_list,
             )
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
@@ -261,7 +266,9 @@ class BlockStore:
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
                 return GeneratorBlockInfo(
-                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                    b.foliage.prev_block_hash,
+                    b.transactions_generator,
+                    b.transactions_generator_ref_list,
                 )
 
     async def get_generator(self, header_hash: bytes32) -> Optional[bytes]:
@@ -493,7 +500,8 @@ class BlockStore:
         return bytes32(peak_row[0]), uint32(peak_height[0])
 
     async def get_block_records_close_to_peak(
-        self, blocks_n: int
+        self,
+        blocks_n: int,
     ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
@@ -527,7 +535,8 @@ class BlockStore:
     async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
-                "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (header_hash,)
+                "SELECT is_fully_compactified from full_blocks WHERE header_hash=?",
+                (header_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
         if row is None:
@@ -538,7 +547,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT height FROM full_blocks WHERE in_main_chain=1 AND is_fully_compactified=0 "
-                f"ORDER BY RANDOM() LIMIT {number}"
+                f"ORDER BY RANDOM() LIMIT {number}",
             ) as cursor:
                 rows = await cursor.fetchall()
 
@@ -550,7 +559,7 @@ class BlockStore:
         # DB V2 has an index on is_fully_compactified only for blocks in the main chain
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "select count(*) from full_blocks where is_fully_compactified=1 and in_main_chain=1"
+                "select count(*) from full_blocks where is_fully_compactified=1 and in_main_chain=1",
             ) as cursor:
                 row = await cursor.fetchone()
 
@@ -563,7 +572,7 @@ class BlockStore:
         # DB V2 has an index on is_fully_compactified only for blocks in the main chain
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "select count(*) from full_blocks where is_fully_compactified=0 and in_main_chain=1"
+                "select count(*) from full_blocks where is_fully_compactified=0 and in_main_chain=1",
             ) as cursor:
                 row = await cursor.fetchone()
 

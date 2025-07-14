@@ -17,7 +17,10 @@ from chia.util.errors import Err
 
 
 def run_for_cost(
-    puzzle_reveal: SerializedProgram, solution: SerializedProgram, additions_count: int, max_cost: int
+    puzzle_reveal: SerializedProgram,
+    solution: SerializedProgram,
+    additions_count: int,
+    max_cost: int,
 ) -> uint64:
     create_coins_cost = additions_count * ConditionCost.CREATE_COIN.value
     clvm_cost, _ = run_mempool_with_cost(puzzle_reveal, max_cost, solution)
@@ -32,7 +35,9 @@ class DedupCoinSpend:
 
 
 def set_next_singleton_version(
-    current_singleton: Coin, singleton_additions: list[Coin], fast_forward_spends: dict[bytes32, UnspentLineageInfo]
+    current_singleton: Coin,
+    singleton_additions: list[Coin],
+    fast_forward_spends: dict[bytes32, UnspentLineageInfo],
 ) -> None:
     """
     Finds the next version of the singleton among its additions and updates the
@@ -96,7 +101,7 @@ def perform_the_fast_forward(
     assert new_coin.name() == unspent_lineage_info.coin_id
     assert new_parent.name() == unspent_lineage_info.parent_id
     new_solution = SerializedProgram.from_bytes(
-        fast_forward_singleton(spend=spend_data.coin_spend, new_coin=new_coin, new_parent=new_parent)
+        fast_forward_singleton(spend=spend_data.coin_spend, new_coin=new_coin, new_parent=new_parent),
     )
     singleton_child = None
     patched_additions = []
@@ -128,7 +133,10 @@ class IdenticalSpendDedup:
     deduplication_spends: dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
 
     def get_deduplication_info(
-        self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend], max_cost: int
+        self,
+        *,
+        bundle_coin_spends: dict[bytes32, BundleCoinSpend],
+        max_cost: int,
     ) -> tuple[list[CoinSpend], uint64, list[Coin]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
@@ -214,7 +222,11 @@ class SingletonFastForward:
     fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
 
     def process_fast_forward_spends(
-        self, *, mempool_item: InternalMempoolItem, height: uint32, constants: ConsensusConstants
+        self,
+        *,
+        mempool_item: InternalMempoolItem,
+        height: uint32,
+        constants: ConsensusConstants,
     ) -> dict[bytes32, BundleCoinSpend]:
         """
         Provides the caller with a `bundle_coin_spends` map that has a proper
@@ -312,7 +324,8 @@ class SingletonFastForward:
             return new_bundle_coin_spends
         # Update the mempool item after validating the new spend bundle
         new_sb = SpendBundle(
-            coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
+            coin_spends=new_coin_spends,
+            aggregated_signature=mempool_item.spend_bundle.aggregated_signature,
         )
         assert mempool_item.conds is not None
         try:
@@ -327,6 +340,6 @@ class SingletonFastForward:
                 raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
             else:
                 raise ValueError(
-                    "Mempool item became invalid after singleton fast forward with an unspecified error."
+                    "Mempool item became invalid after singleton fast forward with an unspecified error.",
                 )  # pragma: no cover
         return new_bundle_coin_spends

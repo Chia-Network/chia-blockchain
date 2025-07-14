@@ -73,7 +73,7 @@ def generate_mnemonic() -> str:
 def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     if len(mnemonic_bytes) not in {16, 20, 24, 28, 32}:
         raise ValueError(
-            f"Data length should be one of the following: [16, 20, 24, 28, 32], but it is {len(mnemonic_bytes)}."
+            f"Data length should be one of the following: [16, 20, 24, 28, 32], but it is {len(mnemonic_bytes)}.",
         )
     word_list = bip39_word_list().splitlines()
     CS = len(mnemonic_bytes) // 4
@@ -359,7 +359,10 @@ class Keychain:
     def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: bool) -> Union[PrivateKey, G1Element]: ...
 
     def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+        self,
+        mnemonic_or_pk: str,
+        label: Optional[str] = None,
+        private: bool = True,
     ) -> Union[PrivateKey, G1Element]:
         """
         Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
@@ -424,7 +427,9 @@ class Keychain:
         self.keyring_wrapper.keyring.delete_label(fingerprint)
 
     def _iterate_through_key_datas(
-        self, include_secrets: bool = True, skip_public_only: bool = False
+        self,
+        include_secrets: bool = True,
+        skip_public_only: bool = False,
     ) -> Iterator[KeyData]:
         for index in range(MAX_KEYS):
             try:

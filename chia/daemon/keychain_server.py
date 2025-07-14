@@ -117,7 +117,7 @@ class GetPublicKeysResponse(Streamable):
             "keys": [
                 {key: key_data_dict[key] for key in approved_keys if key in key_data_dict}
                 for key_data_dict in (key_data.to_json_dict() for key_data in self.keys)
-            ]
+            ],
         }
 
 

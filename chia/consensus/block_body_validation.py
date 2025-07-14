@@ -106,7 +106,12 @@ class ForkInfo:
             coin_id = coin.name()
             assert coin_id not in self.additions_since_fork
             self.additions_since_fork[coin_id] = ForkAdd(
-                coin, block.height, timestamp, hint=None, is_coinbase=True, same_as_parent=False
+                coin,
+                block.height,
+                timestamp,
+                hint=None,
+                is_coinbase=True,
+                same_as_parent=False,
             )
 
     def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
@@ -121,7 +126,12 @@ class ForkInfo:
                     coin = Coin(spend_coin_id, bytes32(puzzle_hash), uint64(amount))
                     same_as_parent = coin.puzzle_hash == spend.puzzle_hash and amount == spend.coin_amount
                     self.additions_since_fork[coin.name()] = ForkAdd(
-                        coin, block.height, timestamp, hint=hint, is_coinbase=False, same_as_parent=same_as_parent
+                        coin,
+                        block.height,
+                        timestamp,
+                        hint=hint,
+                        is_coinbase=False,
+                        same_as_parent=same_as_parent,
                     )
         self.include_reward_coins(block)
 
@@ -144,7 +154,12 @@ class ForkInfo:
                 assert parent is not None
                 same_as_parent = coin.puzzle_hash == parent.puzzle_hash and coin.amount == parent.amount
                 self.additions_since_fork[coin.name()] = ForkAdd(
-                    coin, block.height, timestamp, hint=hint, is_coinbase=False, same_as_parent=same_as_parent
+                    coin,
+                    block.height,
+                    timestamp,
+                    hint=hint,
+                    is_coinbase=False,
+                    same_as_parent=same_as_parent,
                 )
         self.include_reward_coins(block)
 
@@ -296,7 +311,7 @@ async def validate_block_body(
                         curr_b.pool_puzzle_hash,
                         calculate_pool_reward(curr_b.height),
                         constants.GENESIS_CHALLENGE,
-                    )
+                    ),
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
@@ -304,7 +319,7 @@ async def validate_block_body(
                         curr_b.farmer_puzzle_hash,
                         calculate_base_farmer_reward(curr_b.height),
                         constants.GENESIS_CHALLENGE,
-                    )
+                    ),
                 )
                 curr_b = records.block_record(curr_b.prev_hash)
                 assert curr_b is not None
@@ -367,7 +382,7 @@ async def validate_block_body(
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
         log.debug(
             f"Cost: {cost} max: {constants.MAX_BLOCK_COST_CLVM} "
-            f"percent full: {round(100 * (cost / constants.MAX_BLOCK_COST_CLVM), 2)}%"
+            f"percent full: {round(100 * (cost / constants.MAX_BLOCK_COST_CLVM), 2)}%",
         )
         if cost > constants.MAX_BLOCK_COST_CLVM:
             return Err.BLOCK_COST_EXCEEDS_MAX

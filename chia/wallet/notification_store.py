@@ -32,7 +32,10 @@ class NotificationStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
+        cls,
+        db_wrapper: DBWrapper2,
+        cache_size: uint32 = uint32(600000),
+        name: Optional[str] = None,
     ) -> NotificationStore:
         self = cls()
 
@@ -46,7 +49,7 @@ class NotificationStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY, msg blob, amount blob)"
+                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY, msg blob, amount blob)",
             )
 
             await conn.execute("CREATE TABLE IF NOT EXISTS all_notification_ids(coin_id blob PRIMARY KEY)")
@@ -98,7 +101,8 @@ class NotificationStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list} ORDER BY amount DESC", coin_ids
+                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list} ORDER BY amount DESC",
+                coin_ids,
             )
 
         return [
@@ -112,7 +116,8 @@ class NotificationStore:
         ]
 
     async def get_all_notifications(
-        self, pagination: Optional[tuple[Optional[int], Optional[int]]] = None
+        self,
+        pagination: Optional[tuple[Optional[int], Optional[int]]] = None,
     ) -> list[Notification]:
         """
         Checks DB for Notification with id: id and returns it.
@@ -136,7 +141,8 @@ class NotificationStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * from notifications ORDER BY amount DESC{pagination_str}", pagination_params
+                f"SELECT * from notifications ORDER BY amount DESC{pagination_str}",
+                pagination_params,
             )
 
         return [
@@ -171,7 +177,8 @@ class NotificationStore:
     async def notification_exists(self, id: bytes32) -> bool:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)
+                "SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)",
+                (id,),
             ) as cursor:
                 row = await cursor.fetchone()
                 assert row is not None

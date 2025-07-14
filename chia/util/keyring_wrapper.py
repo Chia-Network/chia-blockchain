@@ -53,7 +53,7 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
     if "-25308" in str(error):
         print(
             "WARNING: Unable to access the macOS Keychain (-25308 errSecInteractionNotAllowed). "
-            "Are you logged-in remotely?"
+            "Are you logged-in remotely?",
         )
         return True
     return False

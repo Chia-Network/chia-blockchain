@@ -162,7 +162,9 @@ class FullNodeStore:
         self.max_seen_unfinished_blocks = 1000
 
     def is_requesting_unfinished_block(
-        self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]
+        self,
+        reward_block_hash: bytes32,
+        foliage_hash: Optional[bytes32],
     ) -> tuple[bool, int]:
         """
         Asks if we are already requesting this specific unfinished block (given
@@ -200,7 +202,11 @@ class FullNodeStore:
             del self._unfinished_blocks[reward_block_hash]
 
     def add_candidate_block(
-        self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
+        self,
+        quality_string: bytes32,
+        height: uint32,
+        unfinished_block: UnfinishedBlock,
+        backup: bool = False,
     ) -> None:
         if backup:
             self.candidate_backup_blocks[quality_string] = (height, unfinished_block)
@@ -208,7 +214,9 @@ class FullNodeStore:
             self.candidate_blocks[quality_string] = (height, unfinished_block)
 
     def get_candidate_block(
-        self, quality_string: bytes32, backup: bool = False
+        self,
+        quality_string: bytes32,
+        backup: bool = False,
     ) -> Optional[tuple[uint32, UnfinishedBlock]]:
         if backup:
             return self.candidate_backup_blocks.get(quality_string, None)
@@ -246,12 +254,17 @@ class FullNodeStore:
         return False
 
     def add_unfinished_block(
-        self, height: uint32, unfinished_block: UnfinishedBlock, result: PreValidationResult
+        self,
+        height: uint32,
+        unfinished_block: UnfinishedBlock,
+        result: PreValidationResult,
     ) -> None:
         partial_hash = unfinished_block.partial_hash
         entry = self._unfinished_blocks.setdefault(partial_hash, {})
         entry[unfinished_block.foliage.foliage_transaction_block_hash] = UnfinishedBlockEntry(
-            unfinished_block, result, height
+            unfinished_block,
+            result,
+            height,
         )
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
@@ -269,7 +282,9 @@ class FullNodeStore:
         return block
 
     def get_unfinished_block2(
-        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: Optional[bytes32]
+        self,
+        unfinished_reward_hash: bytes32,
+        unfinished_foliage_hash: Optional[bytes32],
     ) -> tuple[Optional[UnfinishedBlock], int, bool]:
         """
         Looks up an UnfinishedBlock by its reward block hash and foliage hash.
@@ -303,7 +318,9 @@ class FullNodeStore:
     # we only have PreValidationResults for transaction blocks, and they all
     # have a foliage hash. That's why unfinished_foliage_hash is not Optional.
     def get_unfinished_block_result(
-        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: bytes32
+        self,
+        unfinished_reward_hash: bytes32,
+        unfinished_foliage_hash: bytes32,
     ) -> Optional[UnfinishedBlockEntry]:
         result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
@@ -441,7 +458,7 @@ class FullNodeStore:
             log.error(
                 f"bad cc_challenge in new_finished_sub_slot, "
                 f"got {eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge.hex()}"
-                f"expected {cc_challenge}"
+                f"expected {cc_challenge}",
             )
             return None
 
@@ -479,7 +496,7 @@ class FullNodeStore:
                 if eos.reward_chain.deficit != self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                     log.error(
                         f"eos reward_chain deficit got {eos.reward_chain.deficit} "
-                        f"expected {self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK}"
+                        f"expected {self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK}",
                     )
                     return None
             elif eos.reward_chain.deficit != peak.deficit:
@@ -532,7 +549,7 @@ class FullNodeStore:
                 if eos.challenge_chain.subepoch_summary_hash != expected_sub_epoch_summary.get_hash():
                     log.warning(
                         f"Bad SES, expected {expected_sub_epoch_summary} "
-                        f"expected hash {expected_sub_epoch_summary.get_hash()}, got {eos.challenge_chain}"
+                        f"expected hash {expected_sub_epoch_summary.get_hash()}, got {eos.challenge_chain}",
                     )
                     return None
 
@@ -590,7 +607,7 @@ class FullNodeStore:
         )
         # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
-            number_of_iterations=sub_slot_iters
+            number_of_iterations=sub_slot_iters,
         ):
             return None
         if not eos.proofs.challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
@@ -640,11 +657,14 @@ class FullNodeStore:
             )
             # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
             if eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != partial_icc_vdf_info.replace(
-                number_of_iterations=icc_iters
+                number_of_iterations=icc_iters,
             ):
                 return None
             if not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
-                eos.proofs.infused_challenge_chain_slot_proof, self.constants, icc_start_element, partial_icc_vdf_info
+                eos.proofs.infused_challenge_chain_slot_proof,
+                self.constants,
+                icc_start_element,
+                partial_icc_vdf_info,
             ):
                 return None
             if eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
@@ -830,7 +850,10 @@ class FullNodeStore:
         return None
 
     def get_signage_point_by_index_and_cc_output(
-        self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
+        self,
+        cc_signage_point: bytes32,
+        challenge: bytes32,
+        index: uint8,
     ) -> Optional[SignagePoint]:
         assert len(self.finished_sub_slots) >= 1
         if cc_signage_point == self.constants.GENESIS_CHALLENGE:
@@ -849,7 +872,10 @@ class FullNodeStore:
         return None
 
     def get_signage_point_by_index(
-        self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
+        self,
+        challenge_hash: bytes32,
+        index: uint8,
+        last_rc_infusion: bytes32,
     ) -> Optional[SignagePoint]:
         assert len(self.finished_sub_slots) >= 1
         for sub_slot, sps, _ in self.finished_sub_slots:
@@ -945,7 +971,7 @@ class FullNodeStore:
                         else:
                             if sp is not None:
                                 log.debug(
-                                    f"Reverting {i} {(total_iters + i * interval_iters)} {fork_block.total_iters}"
+                                    f"Reverting {i} {(total_iters + i * interval_iters)} {fork_block.total_iters}",
                                 )
                             # Sps after the fork point should be removed
                             replaced_sps.append(None)
@@ -980,7 +1006,8 @@ class FullNodeStore:
                 break
 
         future_sps: list[tuple[uint8, SignagePoint]] = self.future_sp_cache.get(
-            peak.reward_infusion_new_challenge, []
+            peak.reward_infusion_new_challenge,
+            [],
         ).copy()
         for index, sp in future_sps:
             assert sp.cc_vdf is not None

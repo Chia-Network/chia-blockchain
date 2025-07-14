@@ -24,7 +24,11 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
 
 # returns quality string for v2 plot, or None if invalid
 def validate_proof_v2(
-    plot_id: bytes32, size: uint8, difficulty: uint8, challenge: bytes32, proof: bytes
+    plot_id: bytes32,
+    size: uint8,
+    difficulty: uint8,
+    challenge: bytes32,
+    proof: bytes,
 ) -> Optional[bytes32]:
     # TODO: todo_v2_plots call into new chiapos library
     raise NotImplementedError

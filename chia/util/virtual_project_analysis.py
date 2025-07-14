@@ -82,7 +82,8 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> dict[Path, list[P
                     for alias in node.names:
                         if alias.name.startswith(dir_params.dir_path.stem):
                             imported_path = os.path.join(
-                                dir_params.dir_path.parent, alias.name.replace(".", "/") + ".py"
+                                dir_params.dir_path.parent,
+                                alias.name.replace(".", "/") + ".py",
                             )
                             if os.path.exists(imported_path):
                                 dependency_graph[chia_file.path].append(Path(imported_path))
@@ -90,7 +91,9 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> dict[Path, list[P
 
 
 def build_virtual_dependency_graph(
-    dir_params: DirectoryParameters, *, existing_graph: Optional[dict[Path, list[Path]]] = None
+    dir_params: DirectoryParameters,
+    *,
+    existing_graph: Optional[dict[Path, list[Path]]] = None,
 ) -> dict[str, list[str]]:
     if existing_graph is None:
         graph = build_dependency_graph(dir_params)
@@ -129,7 +132,7 @@ class Cycle:
                 f"{self.dependent_path} ({self.dependent_package}) -> ",
                 f"{self.provider_path} ({self.provider_package}) -> ",
                 *(f"({extra}) -> " for extra in self.packages_after_provider),
-            )
+            ),
         )[:-4]
 
     def possible_edge_interpretations(self) -> list[tuple[FileOrPackage, FileOrPackage]]:
@@ -206,7 +209,9 @@ def find_cycles(
                 continue
 
             dependency_paths = find_all_dependency_paths(
-                virtual_graph, provider_file.annotations.package, dependent_file.annotations.package
+                virtual_graph,
+                provider_file.annotations.package,
+                dependent_file.annotations.package,
             )
             if dependency_paths is None:
                 continue
@@ -397,7 +402,8 @@ def print_dependency_graph(config: Config) -> None:
 
 
 @click.command(
-    "print_virtual_dependency_graph", short_help="Output a dependency graph of all the packages in a directory"
+    "print_virtual_dependency_graph",
+    short_help="Output a dependency graph of all the packages in a directory",
 )
 @config
 def print_virtual_dependency_graph(config: Config) -> None:
@@ -525,7 +531,7 @@ def print_edges(config: Config, from_package: str, to_package: str) -> None:
                 if provider_file.annotations.package == to_package:
                     print(
                         f"{dependent} ({dependent_file.annotations.package}) -> "
-                        f"{provider} ({provider_file.annotations.package})"
+                        f"{provider} ({provider_file.annotations.package})",
                     )
 
 

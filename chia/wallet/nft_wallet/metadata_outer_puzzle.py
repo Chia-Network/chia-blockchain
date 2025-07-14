@@ -63,7 +63,10 @@ class MetadataOuterPuzzle:
         return puzzle_for_metadata_layer(constructor["metadata"], constructor["updater_hash"], inner_puzzle)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = None,
     ) -> Optional[Program]:
         matched, curried_args = match_metadata_layer_puzzle(puzzle_reveal)
         if matched:

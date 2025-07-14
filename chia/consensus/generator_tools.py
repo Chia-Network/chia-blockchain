@@ -12,7 +12,8 @@ from chia.types.blockchain_format.coin import Coin
 
 
 def get_block_header(
-    block: FullBlock, removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
+    block: FullBlock,
+    removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None,
 ) -> HeaderBlock:
     """
     Returns a HeaderBlock from a FullBlock.

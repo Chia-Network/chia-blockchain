@@ -35,7 +35,8 @@ async def begin_task(coro: Coroutine[Any, Any, T]) -> Task[T]:
 
 @pytest.mark.anyio
 async def test_farmer_ignores_concurrent_duplicate_signage_points(
-    farmer_one_harvester: FarmerOneHarvester, self_hostname: str
+    farmer_one_harvester: FarmerOneHarvester,
+    self_hostname: str,
 ) -> None:
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api
@@ -46,7 +47,14 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     assert ProtocolMessageTypes(response).name == "harvester_handshake"
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
+        std_hash(b"1"),
+        std_hash(b"2"),
+        std_hash(b"3"),
+        uint64(1),
+        uint64(1000000),
+        uint8(2),
+        uint32(1),
+        uint32(0),
     )
     await gather(
         farmer_api.new_signage_point(sp),
@@ -81,7 +89,7 @@ async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOn
     setattr(farmer_api, "_process_respond_signatures", lambda res: signed_values)
 
     signed_values_task: Task[Optional[Message]] = await begin_task(
-        farmer_api.request_signed_values(request_signed_values)
+        farmer_api.request_signed_values(request_signed_values),
     )
 
     # Wait a bit for the dummy harvester to receive the signature request and respond with a dummy signature
@@ -94,7 +102,7 @@ async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOn
             uint8(ProtocolMessageTypes.respond_signatures.value),
             request_signatures_message.id,
             bytes(respond_signatures),
-        )
+        ),
     )
 
     signed_values_message = await signed_values_task

@@ -24,5 +24,5 @@ def test_full_sync_test(keep_up: bool) -> None:
             db_sync="off",
             node_profiler=False,
             start_at_checkpoint=None,
-        )
+        ),
     )

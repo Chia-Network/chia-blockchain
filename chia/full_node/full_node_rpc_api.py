@@ -84,7 +84,7 @@ async def get_average_block_time(
         return None
 
     average_block_time = uint32(
-        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height),
     )
     return average_block_time
 
@@ -150,7 +150,7 @@ class FullNodeRpcApi:
                     data,
                     self.service_name,
                     "wallet_ui",
-                )
+                ),
             )
             payloads.append(
                 create_payload_dict(
@@ -158,7 +158,7 @@ class FullNodeRpcApi:
                     data,
                     self.service_name,
                     "metrics",
-                )
+                ),
             )
 
         if change in {"block", "signage_point"}:
@@ -235,7 +235,7 @@ class FullNodeRpcApi:
             assert header_hash is not None
             older_block_hex = header_hash.hex()
             space = await self.get_network_space(
-                {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
+                {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex},
             )
             average_block_time = await get_average_block_time(self.service.blockchain, peak, 4608)
         else:
@@ -255,7 +255,7 @@ class FullNodeRpcApi:
             mempool_max_total_cost = 0
         if self.service.server is not None:
             is_connected = len(self.service.server.get_connections(NodeType.FULL_NODE)) > 0 or "simulator" in str(
-                self.service.config.get("selected_network")
+                self.service.config.get("selected_network"),
             )
         else:
             is_connected = False
@@ -353,7 +353,7 @@ class FullNodeRpcApi:
                 if next_b is None:
                     return {"signage_point": sp, "time_received": time_received, "reverted": False}
                 next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
-                    self.service.constants
+                    self.service.constants,
                 )
 
                 return {
@@ -368,7 +368,7 @@ class FullNodeRpcApi:
                         if next_b is None:
                             return {"signage_point": sp, "time_received": time_received, "reverted": False}
                         next_b_total_iters = next_b.ip_sub_slot_total_iters(self.service.constants) + next_b.ip_iters(
-                            self.service.constants
+                            self.service.constants,
                         )
                         return {
                             "signage_point": sp,
@@ -441,7 +441,7 @@ class FullNodeRpcApi:
                 "compact_blocks": compact_blocks,
                 "uncompact_blocks": uncompact_blocks,
                 "hint_count": hint_count,
-            }
+            },
         }
 
     async def get_block_records(self, request: dict[str, Any]) -> EndpointResult:
@@ -504,7 +504,9 @@ class FullNodeRpcApi:
             return {"block_spends_with_conditions": []}
 
         spends_with_conditions = get_spends_for_block_with_conditions(
-            block_generator, full_block.height, self.service.constants
+            block_generator,
+            full_block.height,
+            self.service.constants,
         )
 
         return {
@@ -517,7 +519,7 @@ class FullNodeRpcApi:
                     ],
                 }
                 for spend_with_conditions in spends_with_conditions
-            ]
+            ],
         }
 
     async def get_block_record_by_height(self, request: dict[str, Any]) -> EndpointResult:
@@ -783,12 +785,16 @@ class FullNodeRpcApi:
             raise ValueError("Invalid block or block generator")
 
         block_generator: Optional[BlockGenerator] = await get_block_generator(
-            self.service.blockchain.lookup_block_generators, block
+            self.service.blockchain.lookup_block_generators,
+            block,
         )
         assert block_generator is not None
 
         spend_info = get_puzzle_and_solution_for_coin(
-            block_generator, coin_record.coin, block.height, self.service.constants
+            block_generator,
+            coin_record.coin,
+            block.height,
+            self.service.constants,
         )
         return {"coin_solution": CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)}
 
@@ -902,7 +908,7 @@ class FullNodeRpcApi:
                         self.service.log.error(
                             f"invalid cost of generated block: {conds.cost} expected {gen.cost}"
                             f" exe-cost: {conds.execution_cost}"
-                            f" cond-cost: {conds.condition_cost}"
+                            f" cond-cost: {conds.condition_cost}",
                         )
                     # TODO: maybe validate additions and removals too
 

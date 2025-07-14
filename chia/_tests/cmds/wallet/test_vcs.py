@@ -50,7 +50,8 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> VCMintResponse:
             self.add_to_log(
-                "vc_mint", (request.did_id, tx_config, request.target_address, request.fee, request.push, timelock_info)
+                "vc_mint",
+                (request.did_id, tx_config, request.target_address, request.fee, request.push, timelock_info),
             )
 
             return VCMintResponse(
@@ -96,7 +97,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "vc_mint": [(did_id, DEFAULT_TX_CONFIG, target_addr, 500000000000, True, test_condition_valid_times)]
+        "vc_mint": [(did_id, DEFAULT_TX_CONFIG, target_addr, 500000000000, True, test_condition_valid_times)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -122,7 +123,7 @@ def test_vcs_get(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pat
                     ),
                     uint32(0),
                     bytes32.zeros,
-                )
+                ),
             ]
             return VCGetListResponse(records, proofs)
 
@@ -203,8 +204,8 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: tuple[TestRpcCl
                 uint64(500000000000),
                 True,
                 test_condition_valid_times,
-            )
-        ]
+            ),
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -273,7 +274,7 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                         None,
                     ),
                     uint32(0),
-                )
+                ),
             )
 
         async def vc_revoke(
@@ -393,7 +394,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: tuple[TestRpcC
                 uint64(500000000000),
                 True,
                 test_condition_valid_times,
-            )
+            ),
         ],
         "get_wallets": [(None,)],
     }

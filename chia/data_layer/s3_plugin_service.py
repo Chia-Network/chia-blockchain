@@ -143,7 +143,10 @@ class S3Plugin:
     def get_path_for_filename(self, store_id: bytes32, filename: None, group_files_by_store: bool) -> None: ...
 
     def get_path_for_filename(
-        self, store_id: bytes32, filename: Optional[str], group_files_by_store: bool
+        self,
+        store_id: bytes32,
+        filename: Optional[str],
+        group_files_by_store: bool,
     ) -> Optional[Path]:
         if filename is None:
             return None
@@ -159,7 +162,10 @@ class S3Plugin:
     def get_s3_target_from_path(self, store_id: bytes32, path: None, group_files_by_store: bool) -> None: ...
 
     def get_s3_target_from_path(
-        self, store_id: bytes32, path: Optional[Path], group_files_by_store: bool
+        self,
+        store_id: bytes32,
+        path: Optional[Path],
+        group_files_by_store: bool,
     ) -> Optional[str]:
         if path is None:
             return None
@@ -216,7 +222,8 @@ class S3Plugin:
                             ),
                         )
                     await asyncio.get_running_loop().run_in_executor(
-                        pool, functools.partial(my_bucket.upload_file, diff_path, target_diff_path)
+                        pool,
+                        functools.partial(my_bucket.upload_file, diff_path, target_diff_path),
                     )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {type(e).__name__} {e}")
@@ -235,7 +242,7 @@ class S3Plugin:
                 "name": plugin_name,
                 "version": plugin_version,
                 "instance": self.instance_name,
-            }
+            },
         )
 
     async def handle_download(self, request: web.Request) -> web.Response:
@@ -286,7 +293,8 @@ class S3Plugin:
             log.info(f"downloading {url} to {target_filename}...")
             with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-download-") as pool:
                 await asyncio.get_running_loop().run_in_executor(
-                    pool, functools.partial(my_bucket.download_file, filename, str(target_filename))
+                    pool,
+                    functools.partial(my_bucket.download_file, filename, str(target_filename)),
                 )
         except Exception as e:
             log.error(f"failed parsing request {request} {type(e).__name__} {e}")
@@ -398,7 +406,7 @@ def make_app(config: dict[str, Any], instance_name: str) -> web.Application:
     except KeyError as e:
         sys.exit(
             "config file must have server_files_location, aws_credentials with region, access_key_id. "
-            f", and secret_access_key. Missing config key: {e.args[0]!r}"
+            f", and secret_access_key. Missing config key: {e.args[0]!r}",
         )
 
     log_level = config.get("log_level", "INFO")
@@ -407,7 +415,8 @@ def make_app(config: dict[str, Any], instance_name: str) -> web.Application:
     fh.setLevel(log_level)
     # create formatter and add it to the handlers
     file_log_formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"
+        fmt="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
     )
 
     fh.setFormatter(file_log_formatter)

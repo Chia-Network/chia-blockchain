@@ -76,7 +76,9 @@ class TestClawbackLifecycle:
         conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         signatures = []
         for pk, msg in pkm_pairs_for_conditions_dict(
-            conditions_dict, coin_spend.coin, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+            conditions_dict,
+            coin_spend.coin,
+            DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
         ):
             signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
             assert AugSchemeMPL.verify(pk, msg, signature)
@@ -108,7 +110,7 @@ class TestClawbackLifecycle:
                 [
                     [ConditionOpcode.CREATE_COIN, cb_puz_hash, amount],
                     [ConditionOpcode.REMARK.value, RemarkDataType.CLAWBACK, b"Test"],
-                ]
+                ],
             )
             sender_sol = solution_for_conditions(
                 [
@@ -118,11 +120,12 @@ class TestClawbackLifecycle:
                         RemarkDataType.CLAWBACK,
                         bytes(
                             VersionedBlob(
-                                ClawbackVersion.V1.value, bytes(ClawbackMetadata(timelock, sender_ph, recipient_ph))
-                            )
+                                ClawbackVersion.V1.value,
+                                bytes(ClawbackMetadata(timelock, sender_ph, recipient_ph)),
+                            ),
                         ),
                     ],
-                ]
+                ],
             )
             coin_spend = make_spend(starting_coin, sender_puz, sender_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
@@ -240,7 +243,9 @@ class TestClawbackLifecycle:
         assert claim_proof[1][0] is not None
 
         assert check_merkle_proof(
-            merkle_tree.calculate_root(), claw_puz_hash, (clawback_proof[0], clawback_proof[1][0])
+            merkle_tree.calculate_root(),
+            claw_puz_hash,
+            (clawback_proof[0], clawback_proof[1][0]),
         )
         assert check_merkle_proof(merkle_tree.calculate_root(), claim_puz_hash, (claim_proof[0], claim_proof[1][0]))
         assert not check_merkle_proof(merkle_tree.calculate_root(), claim_puz_hash, bad_proof)
@@ -265,7 +270,7 @@ class TestClawbackLifecycle:
         sender_sol = solution_for_conditions(
             [
                 [51, sender_ph, amount],
-            ]
+            ],
         )
         # Test invalid puzzle
         has_exception = False

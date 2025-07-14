@@ -36,14 +36,14 @@ class DefinitionError(StreamableError):
     def __init__(self, message: str, cls: type[object]):
         super().__init__(
             f"{message} Correct usage is:\n\n"
-            f"@streamable\n@dataclass(frozen=True)\nclass {cls.__name__}(Streamable):\n    ..."
+            f"@streamable\n@dataclass(frozen=True)\nclass {cls.__name__}(Streamable):\n    ...",
         )
 
 
 class ParameterMissingError(StreamableError):
     def __init__(self, cls: type, missing: list[str]):
         super().__init__(
-            f"{len(missing)} field{'s' if len(missing) != 1 else ''} missing for {cls.__name__}: {', '.join(missing)}"
+            f"{len(missing)} field{'s' if len(missing) != 1 else ''} missing for {cls.__name__}: {', '.join(missing)}",
         )
 
 
@@ -65,7 +65,7 @@ class ConversionError(StreamableError):
     def __init__(self, value: object, to_type: type, exception: Exception):
         super().__init__(
             f"Failed to convert {value!r} from type {type(value).__name__} to {to_type.__name__}: "
-            + "".join(traceback.format_exception_only(type(exception), value=exception)).strip()
+            + "".join(traceback.format_exception_only(type(exception), value=exception)).strip(),
         )
 
 
@@ -105,7 +105,7 @@ def create_fields(cls: type[DataclassInstance]) -> StreamableFields:
                 parse_function=function_to_parse_one_item(hint),
                 convert_function=function_to_convert_one_item(hint),
                 post_init_function=function_to_post_init_process_one_item(hint),
-            )
+            ),
         )
 
     return tuple(fields)
@@ -151,7 +151,9 @@ def convert_list(convert_func: ConvertFunctionType, items: list[Any]) -> list[An
 
 
 def convert_dict(
-    key_converter: ConvertFunctionType, value_converter: ConvertFunctionType, mapping: dict[Any, Any]
+    key_converter: ConvertFunctionType,
+    value_converter: ConvertFunctionType,
+    mapping: dict[Any, Any],
 ) -> dict[Any, Any]:
     return {key_converter(key): value_converter(value) for key, value in mapping.items()}
 
@@ -206,7 +208,8 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Optional[Callable[[object], Streamable]] = None
+    f_type: type[Any],
+    json_parser: Optional[Callable[[object], Streamable]] = None,
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
@@ -281,7 +284,9 @@ def function_to_post_init_process_one_item(f_type: type[object]) -> ConvertFunct
 
 
 def recurse_jsonify(
-    d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None, **next_recursion_env: Any
+    d: Any,
+    next_recursion_step: Optional[Callable[[Any, Any], Any]] = None,
+    **next_recursion_env: Any,
 ) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
@@ -386,11 +391,14 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: list[ParseFunctionType]) -
 
 
 def parse_dict(
-    f: BinaryIO, key_parse_inner_type_f: ParseFunctionType, value_parse_inner_type_f: ParseFunctionType
+    f: BinaryIO,
+    key_parse_inner_type_f: ParseFunctionType,
+    value_parse_inner_type_f: ParseFunctionType,
 ) -> dict[object, object]:
     # We know this is a list of tuples but our parse_list hint doesn't help us here
     keys_and_values: list[tuple[object, object]] = parse_list(  # type: ignore[assignment]
-        f, lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f])
+        f,
+        lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f]),
     )
     parsed_dict: dict[object, object] = dict(keys_and_values)
     if len(parsed_dict) < len(keys_and_values):
@@ -475,7 +483,9 @@ def stream_dict(
 ) -> None:
     return stream_list(
         lambda inner_item, inner_f: stream_tuple(
-            [key_stream_inner_type_func, value_stream_inner_type_func], inner_item, inner_f
+            [key_stream_inner_type_func, value_stream_inner_type_func],
+            inner_item,
+            inner_f,
         ),
         list(item.items()),
         f,

@@ -141,7 +141,11 @@ async def time_out_assert_custom_interval(
 
 
 async def time_out_assert(
-    timeout: int, function: Callable[..., Any], value: object = True, *args: object, **kwargs: object
+    timeout: int,
+    function: Callable[..., Any],
+    value: object = True,
+    *args: object,
+    **kwargs: object,
 ) -> None:
     __tracebackhide__ = True
     await time_out_assert_custom_interval(
@@ -156,7 +160,10 @@ async def time_out_assert(
 
 
 async def time_out_assert_not_none(
-    timeout: float, function: Callable[..., Any], *args: object, **kwargs: object
+    timeout: float,
+    function: Callable[..., Any],
+    *args: object,
+    **kwargs: object,
 ) -> None:
     # TODO: rework to leverage time_out_assert_custom_interval() such as by allowing
     #       value to be a callable
@@ -177,7 +184,9 @@ async def time_out_assert_not_none(
 
 
 def time_out_messages(
-    incoming_queue: asyncio.Queue[Message], msg_name: str, count: int = 1
+    incoming_queue: asyncio.Queue[Message],
+    msg_name: str,
+    count: int = 1,
 ) -> Callable[[], Awaitable[bool]]:
     async def bool_f() -> bool:
         if incoming_queue.qsize() < count:

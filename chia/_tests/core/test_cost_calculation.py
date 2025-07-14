@@ -59,7 +59,11 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     ph = wallet_tool.get_new_puzzlehash()
     num_blocks = 3
     blocks = bt.get_consecutive_blocks(
-        num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
+        num_blocks,
+        [],
+        guarantee_transaction_block=True,
+        pool_reward_puzzle_hash=ph,
+        farmer_reward_puzzle_hash=ph,
     )
     coinbase = None
     for coin in blocks[2].get_included_reward_coins():
@@ -119,7 +123,11 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
 
     num_blocks = 3
     blocks = bt.get_consecutive_blocks(
-        num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
+        num_blocks,
+        [],
+        guarantee_transaction_block=True,
+        pool_reward_puzzle_hash=ph,
+        farmer_reward_puzzle_hash=ph,
     )
 
     coinbase = None
@@ -136,7 +144,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     assert spend_bundle is not None
 
     pk = bytes.fromhex(
-        "88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280"
+        "88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280",
     )
     puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(pk))
     disassembly = binutils.disassemble(puzzle)
@@ -144,8 +152,8 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     program = SerializedProgram.from_bytes(
         binutils.assemble(
             f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
-            f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
-        ).as_bin()
+            f"  (() (q . (({unknown_opcode} '00000000000000000000000000000000' 0x0cbba106e000))) ()))))",
+        ).as_bin(),
     )
     generator = BlockGenerator(program, [])
     npc_result: NPCResult = get_name_puzzle_conditions(
@@ -233,13 +241,17 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     # mode, the unknown operator should be treated as if it returns ().
     # the CLVM program has a cost of 391969
     program = SerializedProgram.from_bytes(
-        binutils.assemble(f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin()
+        binutils.assemble(f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin(),
     )
 
     # ensure we fail if the program exceeds the cost
     generator = BlockGenerator(program, [])
     npc_result = get_name_puzzle_conditions(
-        generator, 10000000, mempool_mode=False, height=uint32(softfork_height), constants=test_constants
+        generator,
+        10000000,
+        mempool_mode=False,
+        height=uint32(softfork_height),
+        constants=test_constants,
     )
 
     assert npc_result.error is not None
@@ -248,7 +260,11 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
     # raise the max cost to make sure this passes
     # ensure we pass if the program does not exceeds the cost
     npc_result = get_name_puzzle_conditions(
-        generator, 23000000, mempool_mode=False, height=uint32(softfork_height), constants=test_constants
+        generator,
+        23000000,
+        mempool_mode=False,
+        height=uint32(softfork_height),
+        constants=test_constants,
     )
 
     assert npc_result.error is None
@@ -260,17 +276,17 @@ async def test_clvm_max_cost(softfork_height: int) -> None:
 async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
     # this isn't a real public key, but we don't care
     public_key = bytes.fromhex(
-        "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
+        "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21",
     )
     puzzle_program = SerializedProgram.from_bytes(
-        bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key)))
+        bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))),
     )
     conditions = binutils.assemble(
         "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
-        " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
+        " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))",
     )
     solution_program = SerializedProgram.from_bytes(
-        bytes(p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions))
+        bytes(p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)),
     )
 
     with benchmark_runner.assert_runtime(seconds=0.1):
@@ -288,7 +304,9 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
     _, result = run_with_cost(
-        LARGE_BLOCK.transactions_generator, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
+        LARGE_BLOCK.transactions_generator,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        [DESERIALIZE_MOD, []],
     )
 
     coin_spends = result.first()

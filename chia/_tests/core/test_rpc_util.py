@@ -37,7 +37,8 @@ async def test_rpc_marshalling() -> None:
     @marshal
     async def test_rpc_endpoint(self: None, request: TestRequestType) -> TestResponseObject:
         return TestResponseObject(
-            [request.foofoo, str(request.barbar), request.bat.hex(), request.bam.qux], request.bam
+            [request.foofoo, str(request.barbar), request.bat.hex(), request.bam.qux],
+            request.bam,
         )
 
     assert await test_rpc_endpoint(

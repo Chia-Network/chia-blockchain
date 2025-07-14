@@ -170,7 +170,10 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
 
 
 def compute_block_cost(
-    generator: SerializedProgram, constants: ConsensusConstants, height: uint32, prev_tx_height: uint32
+    generator: SerializedProgram,
+    constants: ConsensusConstants,
+    height: uint32,
+    prev_tx_height: uint32,
 ) -> uint64:
     # this function cannot *validate* the block or any of the transactions. We
     # deliberately create invalid blocks as parts of the tests, and we still
@@ -193,7 +196,8 @@ def compute_block_cost(
             cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
             condition_cost += conditions_cost(
-                result, charge_for_conditions=prev_tx_height >= constants.HARD_FORK2_HEIGHT
+                result,
+                charge_for_conditions=prev_tx_height >= constants.HARD_FORK2_HEIGHT,
             )
 
     else:
@@ -431,7 +435,10 @@ class BlockTools:
                 keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
             else:  # if we are automated testing or if we don't have a fingerprint.
                 keychain_proxy = await connect_to_keychain_and_validate(
-                    self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
+                    self.root_path,
+                    self.log,
+                    user="testing-1.8.0",
+                    service="chia-testing-1.8.0",
                 )
             assert keychain_proxy is not None
             if fingerprint is None:  # if we are not specifying an existing key
@@ -455,10 +462,10 @@ class BlockTools:
 
             if reward_ph is None:
                 self.farmer_ph: bytes32 = puzzle_hash_for_pk(
-                    master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+                    master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1(),
                 )
                 self.pool_ph: bytes32 = puzzle_hash_for_pk(
-                    master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+                    master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1(),
                 )
             else:
                 self.farmer_ph = reward_ph
@@ -604,7 +611,8 @@ class BlockTools:
 
     async def refresh_plots(self) -> None:
         self.plot_manager.refresh_parameter = replace(
-            self.plot_manager.refresh_parameter, batch_size=uint32(4 if len(self.expected_plots) % 3 == 0 else 3)
+            self.plot_manager.refresh_parameter,
+            batch_size=uint32(4 if len(self.expected_plots) % 3 == 0 else 3),
         )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
@@ -754,7 +762,7 @@ class BlockTools:
                         available_coins.append(coin)
             print(
                 f"found {len(available_coins)} reward coins in existing chain."
-                "for simplicity, we assume the rewards are all unspent in the original chain"
+                "for simplicity, we assume the rewards are all unspent in the original chain",
             )
             wallet = self.get_farmer_wallet_tool()
             rng = Random()
@@ -835,7 +843,9 @@ class BlockTools:
                 for signage_point_index in range(constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
-                        constants, sub_slot_iters, uint8(signage_point_index)
+                        constants,
+                        sub_slot_iters,
+                        uint8(signage_point_index),
                     ):
                         if curr.height == 0:
                             break
@@ -1123,7 +1133,7 @@ class BlockTools:
                         eos_deficit,
                     ),
                     SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
-                )
+                ),
             )
 
             finished_sub_slots_eos = finished_sub_slots_at_ip.copy()
@@ -1134,7 +1144,7 @@ class BlockTools:
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len) / sub_slots_finished}"
-                f"Sub Epoch Summary Included: {sub_epoch_summary is not None} "
+                f"Sub Epoch Summary Included: {sub_epoch_summary is not None} ",
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
@@ -1447,7 +1457,7 @@ class BlockTools:
                                 uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK),
                             ),
                             SubSlotProofs(cc_proof, None, rc_proof),
-                        )
+                        ),
                     )
 
                 if unfinished_block is not None:
@@ -1469,7 +1479,7 @@ class BlockTools:
                             self.constants,
                             self.constants.SUB_SLOT_ITERS_STARTING,
                             unfinished_block.reward_chain_block.signage_point_index,
-                        )
+                        ),
                     )
                     return unfinished_block_to_full_block(
                         unfinished_block,
@@ -1572,7 +1582,7 @@ def get_signage_point(
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     overflow = is_overflow_block(constants, signage_point_index)
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index),
     )
 
     (
@@ -1684,7 +1694,7 @@ def finish_block(
     )
     assert unfinished_block is not None
     sp_total_iters = uint128(
-        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index),
     )
     full_block: FullBlock = unfinished_block_to_full_block(
         unfinished_block,
@@ -1702,7 +1712,11 @@ def finish_block(
     )
 
     block_record = block_to_block_record(
-        constants, BlockCache(blocks), required_iters, full_block, sub_slot_iters=sub_slot_iters
+        constants,
+        BlockCache(blocks),
+        required_iters,
+        full_block,
+        sub_slot_iters=sub_slot_iters,
     )
     return full_block, block_record
 
@@ -1753,7 +1767,8 @@ def get_plot_tmp_dir(plot_dir_name: str = "test-plots", automated_testing: bool 
 
 
 def load_block_list(
-    block_list: list[FullBlock], constants: ConsensusConstants
+    block_list: list[FullBlock],
+    constants: ConsensusConstants,
 ) -> tuple[dict[uint32, bytes32], uint64, dict[bytes32, BlockRecord]]:
     difficulty = uint64(constants.DIFFICULTY_STARTING)
     sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
@@ -2082,7 +2097,10 @@ def create_block_tools(
 
 
 def make_unfinished_block(
-    block: FullBlock, constants: ConsensusConstants, *, force_overflow: bool = False
+    block: FullBlock,
+    constants: ConsensusConstants,
+    *,
+    force_overflow: bool = False,
 ) -> UnfinishedBlock:
     if force_overflow or is_overflow_block(constants, block.reward_chain_block.signage_point_index):
         finished_ss = block.finished_sub_slots[:-1]

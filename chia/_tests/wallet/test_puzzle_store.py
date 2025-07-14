@@ -36,7 +36,7 @@ class DummyDerivationRecords:
         self.index_per_wallet.setdefault(wallet_id, 0)
         for _ in range(count):
             records.append(
-                get_dummy_record(self.index_per_wallet[wallet_id], wallet_id, seeded_random=self.seeded_random)
+                get_dummy_record(self.index_per_wallet[wallet_id], wallet_id, seeded_random=self.seeded_random),
             )
             self.index_per_wallet[wallet_id] += 1
 
@@ -55,7 +55,7 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
                     WalletType.STANDARD_WALLET,
                     uint32(1),
                     False,
-                )
+                ),
             )
             derivation_recs.append(
                 DerivationRecord(
@@ -65,7 +65,7 @@ async def test_puzzle_store(seeded_random: random.Random) -> None:
                     WalletType.CAT,
                     uint32(2),
                     False,
-                )
+                ),
             )
         assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) is False
         assert await db.index_for_pubkey(derivation_recs[0].pubkey) is None
@@ -110,7 +110,8 @@ async def test_delete_wallet(seeded_random: random.Random) -> None:
             for record in records:
                 assert await db.get_derivation_record(record.index, record.wallet_id, record.hardened) == record
                 assert await db.get_wallet_identifier_for_puzzle_hash(record.puzzle_hash) == WalletIdentifier(
-                    record.wallet_id, record.wallet_type
+                    record.wallet_id,
+                    record.wallet_type,
                 )
         # Remove one wallet after the other and verify before and after each
         for wallet_id, records in dummy_records.records_per_wallet.items():
@@ -118,7 +119,8 @@ async def test_delete_wallet(seeded_random: random.Random) -> None:
             for record in records:
                 assert await db.get_derivation_record(record.index, record.wallet_id, record.hardened) == record
                 assert await db.get_wallet_identifier_for_puzzle_hash(record.puzzle_hash) == WalletIdentifier(
-                    record.wallet_id, record.wallet_type
+                    record.wallet_id,
+                    record.wallet_type,
                 )
                 assert await db.get_last_derivation_path_for_wallet(wallet_id) is not None
             # Remove the wallet_id and make sure its removed fully

@@ -117,7 +117,11 @@ async def init_data_layer_service(
     config["data_layer"]["manage_data_interval"] = manage_data_interval
     save_config(bt.root_path, "config.yaml", config)
     service = create_data_layer_service(
-        root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
+        root_path=bt.root_path,
+        config=config,
+        wallet_service=wallet_service,
+        downloaders=[],
+        uploaders=[],
     )
     async with service.manage():
         yield service
@@ -156,7 +160,8 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
 
 
 async def init_wallet_and_node(
-    self_hostname: str, one_wallet_and_one_simulator: SimulatorsAndWalletsServices
+    self_hostname: str,
+    one_wallet_and_one_simulator: SimulatorsAndWalletsServices,
 ) -> nodes_with_port_bt_ph:
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator
     wallet_node = wallet_service._node
@@ -176,7 +181,11 @@ async def init_wallet_and_node(
 
 
 async def farm_block_check_singleton(
-    data_layer: DataLayer, full_node_api: FullNodeSimulator, ph: bytes32, store_id: bytes32, wallet: WalletNode
+    data_layer: DataLayer,
+    full_node_api: FullNodeSimulator,
+    ph: bytes32,
+    store_id: bytes32,
+    wallet: WalletNode,
 ) -> None:
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -194,7 +203,10 @@ async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
 
 
 async def farm_block_with_spend(
-    full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi
+    full_node_api: FullNodeSimulator,
+    ph: bytes32,
+    tx_rec: bytes32,
+    wallet_rpc_api: WalletRpcApi,
 ) -> None:
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -256,10 +268,13 @@ def create_mnemonic(seed: bytes = b"ab") -> str:
 
 @pytest.mark.anyio
 async def test_create_insert_get(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         # test insert
@@ -335,10 +350,13 @@ async def test_create_insert_get(
 
 @pytest.mark.anyio
 async def test_upsert(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         # test insert
@@ -365,10 +383,13 @@ async def test_upsert(
 
 @pytest.mark.anyio
 async def test_create_double_insert(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -402,10 +423,13 @@ async def test_create_double_insert(
 
 @pytest.mark.anyio
 async def test_keys_values_ancestors(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
@@ -478,10 +502,13 @@ async def test_keys_values_ancestors(
 
 @pytest.mark.anyio
 async def test_get_roots(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -531,10 +558,13 @@ async def test_get_roots(
 
 @pytest.mark.anyio
 async def test_get_root_history(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -585,10 +615,13 @@ async def test_get_root_history(
 
 @pytest.mark.anyio
 async def test_get_kv_diff(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -614,7 +647,7 @@ async def test_get_kv_diff(
                 "id": store_id1.hex(),
                 "hash_1": bytes32.zeros.hex(),
                 "hash_2": history["root_history"][1]["root_hash"].hex(),
-            }
+            },
         )
         assert len(diff_res["diff"]) == 3
         diff1 = {"type": "INSERT", "key": key1.hex(), "value": value1.hex()}
@@ -639,7 +672,7 @@ async def test_get_kv_diff(
                 "id": store_id1.hex(),
                 "hash_1": history["root_history"][1]["root_hash"].hex(),
                 "hash_2": history["root_history"][2]["root_hash"].hex(),
-            }
+            },
         )
         assert len(diff_res["diff"]) == 3
         diff1 = {"type": "DELETE", "key": key1.hex(), "value": value1.hex()}
@@ -652,10 +685,13 @@ async def test_get_kv_diff(
 
 @pytest.mark.anyio
 async def test_batch_update_matches_single_operations(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -724,7 +760,9 @@ async def test_batch_update_matches_single_operations(
 
 @pytest.mark.anyio
 async def test_get_owned_stores(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
     num_blocks = 4
@@ -765,10 +803,13 @@ async def test_get_owned_stores(
 
 @pytest.mark.anyio
 async def test_subscriptions(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
 
     interval = 1
@@ -853,7 +894,7 @@ async def offer_setup_fixture(
                     bt=bt,
                     db_path=tmp_path.joinpath(str(port)),
                     enable_batch_autoinsert=enable_batch_autoinsert,
-                )
+                ),
             )
             data_layer = data_layer_service._api.data_layer
             data_rpc_api = DataLayerRpcApi(data_layer)
@@ -875,7 +916,7 @@ async def offer_setup_fixture(
                     original_hash=bytes32.zeros,
                     data_layer=data_layer,
                     data_rpc_client=data_rpc_client,
-                )
+                ),
             )
 
         [maker, taker] = store_setups
@@ -1037,7 +1078,7 @@ make_one_take_one_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0210"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1069,9 +1110,9 @@ make_one_take_one_reference = MakeAndTakeReference(
                                 "combined_hash": "8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
@@ -1097,7 +1138,7 @@ make_one_take_one_same_values_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0510"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1129,9 +1170,9 @@ make_one_take_one_same_values_reference = MakeAndTakeReference(
                                 "combined_hash": "1d1eb374688e3033cbce2514e4fded10ceffe068e663718b8a20716a65019f91",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x05\x10".hex()}],
@@ -1157,7 +1198,7 @@ make_two_take_one_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0210"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1218,7 +1259,7 @@ make_two_take_one_reference = MakeAndTakeReference(
                         ],
                     },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[
@@ -1247,7 +1288,7 @@ make_one_take_two_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0210"}, {"key": "11", "value": "0211"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1279,9 +1320,9 @@ make_one_take_two_reference = MakeAndTakeReference(
                                 "combined_hash": "8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
@@ -1310,7 +1351,7 @@ make_one_existing_take_one_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0210"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1347,9 +1388,9 @@ make_one_existing_take_one_reference = MakeAndTakeReference(
                                 "combined_hash": "6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x09".hex(), "value": b"\x01\x09".hex()}],
@@ -1374,7 +1415,7 @@ make_one_take_one_existing_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "09", "value": "0209"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1406,9 +1447,9 @@ make_one_take_one_existing_reference = MakeAndTakeReference(
                                 "combined_hash": "8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
@@ -1433,7 +1474,7 @@ make_one_upsert_take_one_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0210"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1465,9 +1506,9 @@ make_one_upsert_take_one_reference = MakeAndTakeReference(
                                 "combined_hash": "3761921b9b0520458995bb0ec353ea28d36efa2a7cfc3aba6772f005f7dd34c6",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x09".hex(), "value": b"\x01\x10".hex()}],
@@ -1493,7 +1534,7 @@ make_one_take_one_upsert_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "09", "value": "0210"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1525,9 +1566,9 @@ make_one_take_one_upsert_reference = MakeAndTakeReference(
                                 "combined_hash": "8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea",
                             },
                         ],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
@@ -1553,7 +1594,7 @@ make_one_take_one_unpopulated_reference = MakeAndTakeReference(
             {
                 "store_id": "7acfcbd1ed73bfe2b698508f4ea5ed353c60ace154360272ce91f9ab0c8423c3",
                 "inclusions": [{"key": "10", "value": "0210"}],
-            }
+            },
         ],
         "maker": [
             {
@@ -1564,9 +1605,9 @@ make_one_take_one_unpopulated_reference = MakeAndTakeReference(
                         "value": "0110",
                         "node_hash": "de4ec93c032f5117d8af076dfc86faa5987a6c0b1d52ffc9cf0dfa43989d8c58",
                         "layers": [],
-                    }
+                    },
                 ],
-            }
+            },
         ],
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
@@ -1604,13 +1645,13 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
             {
                 "store_id": offer_setup.maker.id.hex(),
                 "inclusions": reference.maker_inclusions,
-            }
+            },
         ],
         "taker": [
             {
                 "store_id": offer_setup.taker.id.hex(),
                 "inclusions": reference.taker_inclusions,
-            }
+            },
         ],
         "fee": 0,
     }
@@ -1796,13 +1837,13 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
             {
                 "store_id": offer_setup.maker.id.hex(),
                 "inclusions": reference.maker_inclusions,
-            }
+            },
         ],
         "taker": [
             {
                 "store_id": offer_setup.taker.id.hex(),
                 "inclusions": reference.taker_inclusions,
-            }
+            },
         ],
         "fee": 0,
     }
@@ -1865,7 +1906,9 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
 )
 @pytest.mark.anyio
 async def test_make_and_cancel_offer_then_update(
-    offer_setup: OfferSetup, reference: MakeAndTakeReference, secure: bool
+    offer_setup: OfferSetup,
+    reference: MakeAndTakeReference,
+    secure: bool,
 ) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1876,13 +1919,13 @@ async def test_make_and_cancel_offer_then_update(
             {
                 "store_id": offer_setup.maker.id.hex(),
                 "inclusions": reference.maker_inclusions,
-            }
+            },
         ],
         "taker": [
             {
                 "store_id": offer_setup.taker.id.hex(),
                 "inclusions": reference.taker_inclusions,
-            }
+            },
         ],
         "fee": 0,
     }
@@ -1928,7 +1971,7 @@ async def test_make_and_cancel_offer_then_update(
         {
             "id": offer_setup.maker.id.hex(),
             "changelist": [{"action": "insert", "key": post_key.hex(), "value": post_value.hex()}],
-        }
+        },
     )
 
     await process_for_data_layer_keys(
@@ -1964,13 +2007,13 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
             {
                 "store_id": offer_setup.maker.id.hex(),
                 "inclusions": reference.maker_inclusions,
-            }
+            },
         ],
         "taker": [
             {
                 "store_id": offer_setup.taker.id.hex(),
                 "inclusions": reference.taker_inclusions,
-            }
+            },
         ],
         "fee": 0,
     }
@@ -1996,10 +2039,13 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_get_sync_status(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -2060,7 +2106,8 @@ async def test_clear_pending_roots(
     bt: BlockTools,
 ) -> None:
     _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
         # NOTE: we don't need the service for direct...  simpler to leave it in
@@ -2146,10 +2193,13 @@ async def test_clear_pending_roots(
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_issue_15955_deadlock(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
 
     wallet_node = wallet_rpc_api.service
@@ -2196,7 +2246,7 @@ async def test_issue_15955_deadlock(
         while time.monotonic() < end:
             with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
-                    *(create_referenced_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
+                    *(create_referenced_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10)),
                 )
 
 
@@ -2212,7 +2262,8 @@ async def test_maximum_full_file_count(
     group_files_by_store: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     manage_data_interval = 5
     async with init_data_layer(
@@ -2293,7 +2344,8 @@ async def test_unsubscribe_removes_files(
     group_files_by_store: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     manage_data_interval = 5
     async with init_data_layer(
@@ -2368,7 +2420,8 @@ async def test_wallet_log_in_changes_active_fingerprint(
     layer: InterfaceLayer,
 ) -> None:
     wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
 
@@ -2424,10 +2477,13 @@ async def test_wallet_log_in_changes_active_fingerprint(
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_mirrors(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -2503,7 +2559,7 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
                     }
                     for value in range(count)
                 ],
-            }
+            },
         )
 
         await process_for_data_layer_keys(
@@ -2559,7 +2615,10 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
 
     # random tests for HashOnlyProof root()
     fakeproof = HashOnlyProof(
-        key_clvm_hash=bytes32([1] * 32), value_clvm_hash=bytes32([1] * 32), node_hash=bytes32([3] * 32), layers=[]
+        key_clvm_hash=bytes32([1] * 32),
+        value_clvm_hash=bytes32([1] * 32),
+        node_hash=bytes32([3] * 32),
+        layers=[],
     )
     assert fakeproof.root() == fakeproof.node_hash
 
@@ -2576,7 +2635,7 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
 
     # Test InterfaceLayer.direct
     proof = await offer_setup.maker.api.get_proof(
-        request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove}
+        request={"store_id": offer_setup.maker.id.hex(), "keys": reference.keys_to_prove},
     )
     assert proof["success"] is True
     verify = await offer_setup.taker.api.verify_proof(request=proof["proof"])
@@ -2586,7 +2645,8 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     proof = dict()
     verify = dict()
     proof = await offer_setup.maker.data_rpc_client.get_proof(
-        store_id=offer_setup.maker.id, keys=[hexstr_to_bytes(key) for key in reference.keys_to_prove]
+        store_id=offer_setup.maker.id,
+        keys=[hexstr_to_bytes(key) for key in reference.keys_to_prove],
     )
     assert proof["success"] is True
     verify = await offer_setup.taker.data_rpc_client.verify_proof(proof=proof["proof"])
@@ -2648,10 +2708,13 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_dl_proof_errors(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -2684,7 +2747,7 @@ async def test_dl_proof_verify_errors(offer_setup: OfferSetup, seeded_random: ra
     two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
 
     proof = await offer_setup.maker.api.get_proof(
-        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
+        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove},
     )
     assert proof["success"] is True
 
@@ -2730,7 +2793,7 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
     two_key_proof.verify_proof_response["verified_clvm_hashes"]["store_id"] = f"0x{offer_setup.maker.id.hex()}"
 
     proof = await offer_setup.maker.api.get_proof(
-        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove}
+        request={"store_id": offer_setup.maker.id.hex(), "keys": two_key_proof.keys_to_prove},
     )
     assert proof["success"] is True
 
@@ -2757,10 +2820,13 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_pagination_rpcs(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
@@ -2831,7 +2897,7 @@ async def test_pagination_rpcs(
         assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "page": 1, "max_page_size": 8}
+            {"id": store_id.hex(), "page": 1, "max_page_size": 8},
         )
         expected_kv = [
             {"atom": None, "hash": "0x" + leaf_hash1.hex(), "key": "0x" + key1.hex(), "value": "0x" + value1.hex()},
@@ -2841,7 +2907,7 @@ async def test_pagination_rpcs(
         assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "page": 2, "max_page_size": 8}
+            {"id": store_id.hex(), "page": 2, "max_page_size": 8},
         )
         expected_kv = [
             {"atom": None, "hash": "0x" + leaf_hash5.hex(), "key": "0x" + key5.hex(), "value": "0x" + value5.hex()},
@@ -2851,7 +2917,7 @@ async def test_pagination_rpcs(
         assert keys_values_paginated == {**keys_values_reference, "keys_values": expected_kv}
 
         keys_values_paginated = await data_rpc_api.get_keys_values(
-            {"id": store_id.hex(), "page": 3, "max_page_size": 8}
+            {"id": store_id.hex(), "page": 3, "max_page_size": 8},
         )
         assert keys_values_paginated == keys_values_reference
 
@@ -2885,7 +2951,7 @@ async def test_pagination_rpcs(
                 "hash_2": hash2.hex(),
                 "page": 0,
                 "max_page_size": 5,
-            }
+            },
         )
         expected_diff = [{"type": "DELETE", "key": key3.hex(), "value": value3.hex()}]
         assert diff_res == {**diff_reference, "diff": expected_diff}
@@ -2897,7 +2963,7 @@ async def test_pagination_rpcs(
                 "hash_2": hash2.hex(),
                 "page": 1,
                 "max_page_size": 5,
-            }
+            },
         )
         assert leaf_hash6 < leaf_hash7
         expected_diff = [{"type": "INSERT", "key": key6.hex(), "value": value6.hex()}]
@@ -2910,7 +2976,7 @@ async def test_pagination_rpcs(
                 "hash_2": hash2.hex(),
                 "page": 2,
                 "max_page_size": 5,
-            }
+            },
         )
         expected_diff = [{"type": "INSERT", "key": key7.hex(), "value": value7.hex()}]
         assert diff_res == {**diff_reference, "diff": expected_diff}
@@ -2922,7 +2988,7 @@ async def test_pagination_rpcs(
                 "hash_2": hash2.hex(),
                 "page": 3,
                 "max_page_size": 5,
-            }
+            },
         )
         assert diff_res == diff_reference
 
@@ -2935,7 +3001,7 @@ async def test_pagination_rpcs(
                     "hash_2": invalid_hash.hex(),
                     "page": 0,
                     "max_page_size": 10,
-                }
+                },
             )
 
         with pytest.raises(Exception, match=f"Unable to diff: Can't find keys and values for {invalid_hash.hex()}"):
@@ -2946,7 +3012,7 @@ async def test_pagination_rpcs(
                     "hash_2": hash2.hex(),
                     "page": 0,
                     "max_page_size": 10,
-                }
+                },
             )
 
         new_value = b"\x02\x02"
@@ -2967,7 +3033,7 @@ async def test_pagination_rpcs(
                 "hash_2": hash2.hex(),
                 "page": 0,
                 "max_page_size": 100,
-            }
+            },
         )
         assert leaf_hash6 < new_leaf_hash
         diff_reference = {
@@ -2982,12 +3048,12 @@ async def test_pagination_rpcs(
 
         with pytest.raises(Exception, match="Can't find keys"):
             await data_rpc_api.get_keys(
-                {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
+                {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()},
             )
 
         with pytest.raises(Exception, match="Can't find keys and values"):
             await data_rpc_api.get_keys_values(
-                {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
+                {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()},
             )
 
         with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
@@ -2995,7 +3061,7 @@ async def test_pagination_rpcs(
 
         with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
             keys_values_paginated = await data_rpc_api.get_keys_values(
-                {"id": store_id.hex(), "page": 0, "max_page_size": 1}
+                {"id": store_id.hex(), "page": 0, "max_page_size": 1},
             )
 
         with pytest.raises(RuntimeError, match="Cannot paginate data, item size is larger than max page size"):
@@ -3006,7 +3072,7 @@ async def test_pagination_rpcs(
                     "hash_2": hash2.hex(),
                     "page": 0,
                     "max_page_size": 1,
-                }
+                },
             )
 
 
@@ -3023,7 +3089,8 @@ async def test_pagination_cmds(
     bt: BlockTools,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
         assert data_layer_service.rpc_server is not None
@@ -3222,7 +3289,7 @@ async def test_pagination_cmds(
                         "hash": "0x3c8ecfd41a1c54820f5ad687a4cbfbad0faa78445cbf31ec4f879ce553216a9d",
                         "key": "0x61616161",
                         "value": "0x61",
-                    }
+                    },
                 ],
                 "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
                 "success": True,
@@ -3252,7 +3319,8 @@ async def test_unsubmitted_batch_update(
     bt: BlockTools,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     # Number of farmed blocks to check our batch update was not submitted.
     NUM_BLOCKS_WITHOUT_SUBMIT = 10
@@ -3274,7 +3342,7 @@ async def test_unsubmitted_batch_update(
 
             if layer == InterfaceLayer.direct:
                 res = await data_rpc_api.batch_update(
-                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
                 )
                 assert res == {}
             elif layer == InterfaceLayer.funcs:
@@ -3340,7 +3408,8 @@ async def test_unsubmitted_batch_update(
                 assert False, "unhandled parametrization"
 
             await full_node_api.farm_blocks_to_puzzlehash(
-                count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+                count=NUM_BLOCKS_WITHOUT_SUBMIT,
+                guarantee_transaction_blocks=True,
             )
             keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
             assert keys_values == {"keys_values": []}
@@ -3369,12 +3438,13 @@ async def test_unsubmitted_batch_update(
         value = b"\x00\x05"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
         )
         assert res == {}
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+            count=NUM_BLOCKS_WITHOUT_SUBMIT,
+            guarantee_transaction_blocks=True,
         )
         root = await data_layer.data_store.get_tree_root(store_id=store_id)
         assert root == old_root
@@ -3383,12 +3453,13 @@ async def test_unsubmitted_batch_update(
         value = b"\x00\x06"
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
         )
         assert res == {}
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+            count=NUM_BLOCKS_WITHOUT_SUBMIT,
+            guarantee_transaction_blocks=True,
         )
 
         await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
@@ -3403,12 +3474,13 @@ async def test_unsubmitted_batch_update(
         to_insert.append((key, value))
 
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
         )
         assert res == {}
 
         await full_node_api.farm_blocks_to_puzzlehash(
-            count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
+            count=NUM_BLOCKS_WITHOUT_SUBMIT,
+            guarantee_transaction_blocks=True,
         )
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
         assert keys_values == prev_keys_values
@@ -3482,7 +3554,7 @@ async def test_unsubmitted_batch_update(
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         with pytest.raises(Exception, match="Already have a pending root waiting for confirmation"):
             res = await data_rpc_api.batch_update(
-                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+                {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
             )
         with pytest.raises(Exception, match="Pending root is already submitted"):
             res = await data_rpc_api.submit_pending_root({"id": store_id.hex()})
@@ -3511,7 +3583,8 @@ async def test_multistore_update(
     submit_on_chain: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
         assert data_layer_service.rpc_server is not None
@@ -3545,7 +3618,7 @@ async def test_multistore_update(
 
         if layer == InterfaceLayer.direct:
             res = await data_rpc_api.multistore_batch_update(
-                {"store_updates": store_updates, "submit_on_chain": submit_on_chain}
+                {"store_updates": store_updates, "submit_on_chain": submit_on_chain},
             )
             if submit_on_chain:
                 update_tx_rec0 = res["tx_id"][0]
@@ -3699,11 +3772,14 @@ async def test_unsubmitted_batch_db_migration(
         m.setattr("chia.data_layer.data_layer.Status", ModifiedStatus)
 
         wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
-            self_hostname, one_wallet_and_one_simulator_services
+            self_hostname,
+            one_wallet_and_one_simulator_services,
         )
 
         async with init_data_layer_service(
-            wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
         ) as data_layer_service:
             assert data_layer_service.rpc_server is not None
             data_layer = data_layer_service._api.data_layer
@@ -3732,7 +3808,7 @@ async def test_unsubmitted_batch_db_migration(
             changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
             with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status == 1 OR status == 2"):
                 await data_rpc_api.batch_update(
-                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+                    {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
                 )
 
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
@@ -3753,7 +3829,7 @@ async def test_unsubmitted_batch_db_migration(
         data_layer = data_layer_service._api.data_layer
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.batch_update(
-            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False}
+            {"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False},
         )
         assert res == {}
 
@@ -3775,7 +3851,8 @@ async def test_auto_subscribe_to_local_stores(
     auto_subscribe_to_local_stores: bool,
 ) -> None:
     _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     manage_data_interval = 5
     fake_store = bytes32([1] * 32)
@@ -3824,7 +3901,8 @@ async def test_local_store_exception(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
-        self_hostname, one_wallet_and_one_simulator_services
+        self_hostname,
+        one_wallet_and_one_simulator_services,
     )
     manage_data_interval = 5
     fake_store = bytes32([1] * 32)

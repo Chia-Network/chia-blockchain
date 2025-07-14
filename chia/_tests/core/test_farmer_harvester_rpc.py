@@ -73,7 +73,8 @@ async def test_get_routes(harvester_farmer_environment: HarvesterFarmerEnvironme
 @pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
 @pytest.mark.anyio
 async def test_farmer_get_harvesters_and_summary(
-    harvester_farmer_environment: HarvesterFarmerEnvironment, endpoint: str
+    harvester_farmer_environment: HarvesterFarmerEnvironment,
+    endpoint: str,
 ) -> None:
     _, farmer_rpc_client, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
     harvester = harvester_service._node
@@ -131,7 +132,14 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
         return len(await farmer_rpc_client.get_signage_points()) > 0
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
+        std_hash(b"1"),
+        std_hash(b"2"),
+        std_hash(b"3"),
+        uint64(1),
+        uint64(1000000),
+        uint8(2),
+        uint32(1),
+        uint32(0),
     )
     await farmer_api.new_signage_point(sp)
 
@@ -165,13 +173,14 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
 
     # check observer addresses
     observer_farmer: bytes32 = puzzle_hash_for_pk(
-        master_sk_to_wallet_sk_unhardened(bt.farmer_master_sk, uint32(2)).get_g1()
+        master_sk_to_wallet_sk_unhardened(bt.farmer_master_sk, uint32(2)).get_g1(),
     )
     observer_pool: bytes32 = puzzle_hash_for_pk(
-        master_sk_to_wallet_sk_unhardened(bt.pool_master_sk, uint32(7)).get_g1()
+        master_sk_to_wallet_sk_unhardened(bt.pool_master_sk, uint32(7)).get_g1(),
     )
     await farmer_rpc_client.set_reward_targets(
-        encode_puzzle_hash(observer_farmer, "xch"), encode_puzzle_hash(observer_pool, "xch")
+        encode_puzzle_hash(observer_farmer, "xch"),
+        encode_puzzle_hash(observer_pool, "xch"),
     )
     targets = await farmer_rpc_client.get_reward_targets(True, 10)
     assert decode_puzzle_hash(targets["farmer_target"]) == observer_farmer
@@ -195,7 +204,8 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
 
 @pytest.mark.anyio
 async def test_farmer_get_pool_state(
-    harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
+    harvester_farmer_environment: HarvesterFarmerEnvironment,
+    self_hostname: str,
 ) -> None:
     farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
@@ -209,7 +219,7 @@ async def test_farmer_get_pool_state(
             "pool_url": self_hostname,
             "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
             "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
-        }
+        },
     ]
 
     root_path = farmer_api.farmer._root_path
@@ -225,7 +235,8 @@ async def test_farmer_get_pool_state(
         == "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8"
     )
     await farmer_rpc_client.set_payout_instructions(
-        bytes32.from_hexstr(pool_state[0]["pool_config"]["launcher_id"]), "1234vy"
+        bytes32.from_hexstr(pool_state[0]["pool_config"]["launcher_id"]),
+        "1234vy",
     )
     await farmer_api.farmer.update_pool_state()
     pool_state = (await farmer_rpc_client.get_pool_state())["pool_state"]
@@ -241,7 +252,14 @@ async def test_farmer_get_pool_state(
             pool_dict[key].insert(0, before_24h)
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
+        std_hash(b"1"),
+        std_hash(b"2"),
+        std_hash(b"3"),
+        uint64(1),
+        uint64(1000000),
+        uint8(2),
+        uint32(1),
+        uint32(0),
     )
     await farmer_api.new_signage_point(sp)
     client_pool_state = await farmer_rpc_client.get_pool_state()
@@ -252,7 +270,8 @@ async def test_farmer_get_pool_state(
 
 @pytest.mark.anyio
 async def test_farmer_get_pool_state_plot_count(
-    harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
+    harvester_farmer_environment: HarvesterFarmerEnvironment,
+    self_hostname: str,
 ) -> None:
     farmer_service, farmer_rpc_client, harvester_service, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
@@ -270,7 +289,7 @@ async def test_farmer_get_pool_state_plot_count(
     assert len((await farmer_rpc_client.get_pool_state())["pool_state"]) == 0
 
     pool_contract_puzzle_hash: bytes32 = bytes32.from_hexstr(
-        "1b9d1eaa3c6a9b27cd90ad9070eb012794a74b277446417bc7b904145010c087"
+        "1b9d1eaa3c6a9b27cd90ad9070eb012794a74b277446417bc7b904145010c087",
     )
     pool_list = [
         {
@@ -280,7 +299,7 @@ async def test_farmer_get_pool_state_plot_count(
             "pool_url": self_hostname,
             "p2_singleton_puzzle_hash": pool_contract_puzzle_hash.hex(),
             "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
-        }
+        },
     ]
 
     root_path = farmer_api.farmer._root_path
@@ -379,7 +398,12 @@ async def test_farmer_get_harvester_plots_endpoints(
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         request = PlotInfoRequestData(
-            harvester_id, uint32(0), uint32(0), cast(list[FilterItem], filtering), sort_key, reverse
+            harvester_id,
+            uint32(0),
+            uint32(0),
+            cast(list[FilterItem], filtering),
+            sort_key,
+            reverse,
         )
     else:
         request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(list[str], filtering), reverse)

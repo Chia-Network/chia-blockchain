@@ -103,7 +103,7 @@ class PlotManager:
             log.error(
                 "Currently only compression levels up to 7 are allowed, "
                 f"while {max_compression_level_allowed} was specified."
-                "Setting max_compression_level_allowed to 7."
+                "Setting max_compression_level_allowed to 7.",
             )
             max_compression_level_allowed = 7
         is_using_gpu = decompressor_context_queue.init(
@@ -119,7 +119,7 @@ class PlotManager:
         if not is_using_gpu and use_gpu_harvesting:
             log.error(
                 "GPU harvesting failed initialization. "
-                f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
+                f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads.",
             )
         self.max_compression_level_allowed = max_compression_level_allowed
         self.context_count = context_count
@@ -275,7 +275,7 @@ class PlotManager:
                 self.log.debug(
                     f"_refresh_task: total_result.loaded {len(total_result.loaded)}, "
                     f"total_result.removed {len(total_result.removed)}, "
-                    f"total_duration {total_result.duration:.2f} seconds"
+                    f"total_duration {total_result.duration:.2f} seconds",
                 )
             except Exception as e:
                 log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
@@ -339,7 +339,7 @@ class PlotManager:
                                 f"Not farming plot {file_path}. "
                                 f"Size is {stat_info.st_size / (1024**3)} GiB, "
                                 f"but expected at least: {expected_size / (1024**3)} GiB. "
-                                "We assume the file is being copied."
+                                "We assume the file is being copied.",
                             )
                             return None
 
@@ -352,7 +352,7 @@ class PlotManager:
                 if level > self.max_compression_level_allowed:
                     log.warning(
                         f"Not farming plot {file_path}. Plot compression level: {level}, "
-                        f"max compression level allowed: {self.max_compression_level_allowed}."
+                        f"max compression level allowed: {self.max_compression_level_allowed}.",
                     )
                     return None
 
@@ -360,7 +360,7 @@ class PlotManager:
                     log.warning(
                         f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
                         f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
-                        " to start harvesting compressed plots."
+                        " to start harvesting compressed plots.",
                     )
                     return None
 
@@ -431,6 +431,6 @@ class PlotManager:
             f"refresh_batch: loaded {len(result.loaded)}, "
             f"removed {len(result.removed)}, processed {result.processed}, "
             f"remaining {result.remaining}, batch_size {self.refresh_parameter.batch_size}, "
-            f"duration: {result.duration:.2f} seconds"
+            f"duration: {result.duration:.2f} seconds",
         )
         return result

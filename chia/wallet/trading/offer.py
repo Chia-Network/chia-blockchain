@@ -50,7 +50,9 @@ OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
 
 
 def detect_dependent_coin(
-    names: list[bytes32], deps: dict[bytes32, list[bytes32]], announcement_dict: dict[bytes32, list[bytes32]]
+    names: list[bytes32],
+    deps: dict[bytes32, list[bytes32]],
+    announcement_dict: dict[bytes32, list[bytes32]],
 ) -> Optional[tuple[bytes32, bytes32]]:
     # First, we check for any dependencies on coins in the same bundle
     for name in names:
@@ -79,7 +81,8 @@ class NotarizedPayment(CreateCoin):
 @dataclass(frozen=True, eq=False)
 class Offer:
     requested_payments: dict[
-        Optional[bytes32], list[NotarizedPayment]
+        Optional[bytes32],
+        list[NotarizedPayment],
     ]  # The key is the asset id of the asset being requested
     _bundle: WalletSpendBundle
     driver_dict: dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
@@ -188,7 +191,7 @@ class Offer:
 
     def absolute_valid_times_ban_relatives(self) -> ConditionValidTimes:
         valid_times: ConditionValidTimes = parse_timelock_info(
-            [c for conditions in self.conditions().values() for c in conditions]
+            [c for conditions in self.conditions().values() for c in conditions],
         )
         if (
             valid_times.max_secs_after_created is not None
@@ -415,7 +418,7 @@ class Offer:
             for condition in conditions.as_iter():
                 if condition.first() == 60:  # create coin announcement
                     announcements[name].append(
-                        AssertCoinAnnouncement(asserted_id=name, asserted_msg=condition.at("rf").as_python()).msg_calc
+                        AssertCoinAnnouncement(asserted_id=name, asserted_msg=condition.at("rf").as_python()).msg_calc,
                     )
                 elif condition.first() == 61:  # assert coin announcement
                     dependencies[name].append(bytes32(condition.at("rf").as_python()))
@@ -504,7 +507,7 @@ class Offer:
             coin_to_solution_dict: dict[Coin, Program] = {}
             for coin in offered_coins:
                 parent_spend: CoinSpend = next(
-                    filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self._bundle.coin_spends)
+                    filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self._bundle.coin_spends),
                 )
                 coin_to_spend_dict[coin] = parent_spend
 
@@ -554,7 +557,7 @@ class Offer:
                                 "sibling_puzzles": sibling_puzzles,
                                 "sibling_solutions": sibling_solutions,
                                 **solver.info,
-                            }
+                            },
                         ),
                         OFFER_MOD,
                         Program.to(coin_to_solution_dict[coin]),
@@ -567,7 +570,7 @@ class Offer:
                         coin,
                         construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD,
                         solution,
-                    )
+                    ),
                 )
 
         return WalletSpendBundle.aggregate([WalletSpendBundle(completion_spends, G2Element()), self._bundle])
@@ -597,14 +600,14 @@ class Offer:
                     ),
                     puzzle_reveal,
                     Program.to(inner_solutions),
-                )
+                ),
             )
 
         sb = WalletSpendBundle.aggregate(
             [
                 WalletSpendBundle(additional_coin_spends, G2Element()),
                 self._bundle,
-            ]
+            ],
         )
         object.__setattr__(self, "_final_spend_bundle", sb)
         return sb
@@ -629,7 +632,10 @@ class Offer:
                     nonce = bytes32(payment_group.first().as_atom())
                     payment_args_list = payment_group.rest().as_iter()
                     notarized_payments.extend(
-                        [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
+                        [
+                            NotarizedPayment.from_condition_and_nonce(condition, nonce)
+                            for condition in payment_args_list
+                        ],
                     )
 
                 requested_payments[asset_id] = notarized_payments
@@ -637,7 +643,9 @@ class Offer:
                 leftover_coin_spends.append(coin_spend)
 
         return cls(
-            requested_payments, WalletSpendBundle(leftover_coin_spends, bundle.aggregated_signature), driver_dict
+            requested_payments,
+            WalletSpendBundle(leftover_coin_spends, bundle.aggregated_signature),
+            driver_dict,
         )
 
     def name(self) -> bytes32:

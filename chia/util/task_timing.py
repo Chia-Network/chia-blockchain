@@ -286,7 +286,7 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
             f.write(
                 "digraph {\n"
                 'node [fontsize=11, colorscheme=rdylgn10, style=filled, fontname="Arial"]\n'
-                'edge [fontsize=11, colorscheme=rdylgn10, fontname="Arial"]\n'
+                'edge [fontsize=11, colorscheme=rdylgn10, fontname="Arial"]\n',
             )
 
             # print all nodes (functions)
@@ -305,7 +305,7 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
                     f'{fun_info.num_calls}x\\n",'
                     f"fillcolor={color(percent)}, "
                     f"color={color(percent)}, "
-                    f"fontcolor={fontcolor(percent)}]\n"
+                    f"fontcolor={fontcolor(percent)}]\n",
                 )
 
             # print all edges (calls)
@@ -329,7 +329,7 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
                         f"frame_{caller_info.fun_id} -> frame_{fun_info.fun_id} "
                         f'[label="{percent:0.2f}%\\n{ci.calls}x",'
                         f"penwidth={0.3 + (ci.duration * 6 / total_duration):0.2f},"
-                        f"color={color(percent)}]\n"
+                        f"color={color(percent)}]\n",
                     )
             f.write("}\n")
 

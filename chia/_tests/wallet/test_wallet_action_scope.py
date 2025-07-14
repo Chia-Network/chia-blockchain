@@ -27,10 +27,10 @@ def test_back_and_forth_serialization() -> None:
     assert bytes(WalletSideEffects())
     assert WalletSideEffects.from_bytes(bytes(WalletSideEffects())) == WalletSideEffects()
     assert WalletSideEffects.from_bytes(
-        bytes(WalletSideEffects([STD_TX], [MOCK_SR], [MOCK_SB], [MOCK_COIN]))
+        bytes(WalletSideEffects([STD_TX], [MOCK_SR], [MOCK_SB], [MOCK_COIN])),
     ) == WalletSideEffects([STD_TX], [MOCK_SR], [MOCK_SB], [MOCK_COIN])
     assert WalletSideEffects.from_bytes(
-        bytes(WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR], [MOCK_SB, MOCK_SB], [MOCK_COIN, MOCK_COIN]))
+        bytes(WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR], [MOCK_SB, MOCK_SB], [MOCK_COIN, MOCK_COIN])),
     ) == WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR], [MOCK_SB, MOCK_SB], [MOCK_COIN, MOCK_COIN])
 
 

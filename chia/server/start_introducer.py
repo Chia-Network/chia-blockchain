@@ -46,7 +46,10 @@ def create_introducer_service(
         dns_servers.append("dns-introducer.chia.net")
 
     node = Introducer(
-        service_config["max_peers_to_send"], service_config["recent_peer_threshold"], default_port, dns_servers
+        service_config["max_peers_to_send"],
+        service_config["recent_peer_threshold"],
+        default_port,
+        dns_servers,
     )
     peer_api = IntroducerAPI(node)
 
@@ -83,7 +86,7 @@ def main() -> int:
     root_path = resolve_root_path(override=None)
 
     with maybe_manage_task_instrumentation(
-        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None,
     ):
         return async_run(coro=async_main(root_path=root_path))
 

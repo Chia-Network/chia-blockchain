@@ -72,7 +72,7 @@ def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
     pks, msgs = pkm_pairs(conds, b"foobar")
     result_aligned = [(x, y) for x, y in zip(pks, msgs)]
     conditions_dict = {
-        opcode: [ConditionWithArgs(opcode, [bytes(PK1), b"msg1"]), ConditionWithArgs(opcode, [bytes(PK2), b"msg2"])]
+        opcode: [ConditionWithArgs(opcode, [bytes(PK1), b"msg1"]), ConditionWithArgs(opcode, [bytes(PK2), b"msg2"])],
     }
     result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
     assert result_aligned == result2

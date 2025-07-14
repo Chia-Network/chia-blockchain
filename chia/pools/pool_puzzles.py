@@ -61,7 +61,11 @@ def create_waiting_room_inner_puzzle(
     pool_reward_prefix = bytes32(genesis_challenge[:16] + b"\x00" * 16)
     p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(launcher_id, delay_time, delay_ph)
     return POOL_WAITING_ROOM_MOD.curry(
-        target_puzzle_hash, p2_singleton_puzzle_hash, bytes(owner_pubkey), pool_reward_prefix, relative_lock_height
+        target_puzzle_hash,
+        p2_singleton_puzzle_hash,
+        bytes(owner_pubkey),
+        pool_reward_prefix,
+        relative_lock_height,
     )
 
 
@@ -97,7 +101,11 @@ def create_p2_singleton_puzzle(
 ) -> Program:
     # curry params are SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH SECONDS_DELAY DELAYED_PUZZLE_HASH
     return P2_SINGLETON_MOD.curry(
-        singleton_mod_hash, launcher_id, SINGLETON_LAUNCHER_HASH, seconds_delay, delayed_puzzle_hash
+        singleton_mod_hash,
+        launcher_id,
+        SINGLETON_LAUNCHER_HASH,
+        seconds_delay,
+        delayed_puzzle_hash,
     )
 
 
@@ -208,12 +216,16 @@ def create_travel_spend(
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, key_value_list, pool_reward_height)
         destination_inner: Program = pool_state_to_inner_puzzle(
-            target, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
+            target,
+            launcher_coin.name(),
+            genesis_challenge,
+            delay_time,
+            delay_ph,
         )
         log.debug(
             f"create_travel_spend: waitingroom: target PoolState bytes:\n{bytes(target).hex()}\n"
             f"{target}"
-            f"hash:{shatree_atom(bytes(target))}"
+            f"hash:{shatree_atom(bytes(target))}",
         )
         # key_value_list is:
         # "p" -> poolstate as bytes
@@ -235,7 +247,7 @@ def create_travel_spend(
                 last_coin_spend.coin.parent_coin_info,
                 last_coin_spend_inner_puzzle.get_tree_hash(),
                 last_coin_spend.coin.amount,
-            ]
+            ],
         )
     full_solution: Program = Program.to([parent_info_list, current_singleton.amount, inner_sol])
     full_puzzle: Program = create_full_puzzle(inner_puzzle, launcher_coin.name())
@@ -260,7 +272,11 @@ def create_absorb_spend(
     delay_ph: bytes32,
 ) -> list[CoinSpend]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(
-        current_state, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
+        current_state,
+        launcher_coin.name(),
+        genesis_challenge,
+        delay_time,
+        delay_ph,
     )
     reward_amount: uint64 = calculate_pool_reward(height)
     if is_pool_member_inner_puzzle(inner_puzzle):
@@ -286,7 +302,7 @@ def create_absorb_spend(
                 last_coin_spend.coin.parent_coin_info,
                 last_coin_spend_inner_puzzle.get_tree_hash(),
                 last_coin_spend.coin.amount,
-            ]
+            ],
         )
     full_solution: SerializedProgram = SerializedProgram.to([parent_info, last_coin_spend.coin.amount, inner_sol])
     full_puzzle: SerializedProgram = create_full_puzzle(inner_puzzle, launcher_coin.name()).to_serialized()
@@ -294,7 +310,10 @@ def create_absorb_spend(
 
     reward_parent: bytes32 = pool_parent_id(height, genesis_challenge)
     p2_singleton_puzzle = create_p2_singleton_puzzle(
-        SINGLETON_MOD_HASH, launcher_coin.name(), delay_time, delay_ph
+        SINGLETON_MOD_HASH,
+        launcher_coin.name(),
+        delay_time,
+        delay_ph,
     ).to_serialized()
     reward_coin: Coin = Coin(reward_parent, p2_singleton_puzzle.get_tree_hash(), reward_amount)
     p2_singleton_solution = SerializedProgram.to([inner_puzzle.get_tree_hash(), reward_coin.name()])
@@ -435,7 +454,11 @@ def solution_to_pool_state(full_spend: CoinSpend) -> Optional[PoolState]:
 
 
 def pool_state_to_inner_puzzle(
-    pool_state: PoolState, launcher_id: bytes32, genesis_challenge: bytes32, delay_time: uint64, delay_ph: bytes32
+    pool_state: PoolState,
+    launcher_id: bytes32,
+    genesis_challenge: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
 ) -> Program:
     escaping_inner_puzzle: Program = create_waiting_room_inner_puzzle(
         pool_state.target_puzzle_hash,

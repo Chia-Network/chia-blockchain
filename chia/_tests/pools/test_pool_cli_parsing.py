@@ -33,7 +33,8 @@ def test_plotnft_command_default_parsing() -> None:
     burn_address = encode_puzzle_hash(burn_ph, "xch")
     check_click_parsing(
         ChangePayoutInstructionsPlotNFTCMD(
-            launcher_id=launcher_id, address=CliAddress(burn_ph, burn_address, AddressType.XCH)
+            launcher_id=launcher_id,
+            address=CliAddress(burn_ph, burn_address, AddressType.XCH),
         ),
         "--launcher_id",
         launcher_id.hex(),
@@ -45,7 +46,9 @@ def test_plotnft_command_default_parsing() -> None:
 
     check_click_parsing(
         ClaimPlotNFTCMD(
-            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), fee=uint64(1), id=5
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            fee=uint64(1),
+            id=5,
         ),
         "--id",
         "5",

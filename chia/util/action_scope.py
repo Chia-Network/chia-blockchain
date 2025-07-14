@@ -110,7 +110,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
         if self._final_side_effects is None:
             raise RuntimeError(
                 "Can only request ActionScope.side_effects after exiting context manager. "
-                "While in context manager, use ActionScope.use()."
+                "While in context manager, use ActionScope.use().",
             )
 
         return self._final_side_effects

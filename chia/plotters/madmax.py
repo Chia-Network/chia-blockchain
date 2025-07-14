@@ -180,7 +180,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
             chia_root_path,
             log,
             args.connect_to_daemon,
-        )
+        ),
     )
     call_args = []
     call_args.append(os.fspath(madmax_executable_path_for_ksize))

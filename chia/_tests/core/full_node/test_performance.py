@@ -24,7 +24,11 @@ log = logging.getLogger(__name__)
 class TestPerformance:
     @pytest.mark.anyio
     async def test_full_block_performance(
-        self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname, benchmark_runner: BenchmarkRunner
+        self,
+        request: pytest.FixtureRequest,
+        wallet_nodes_perf,
+        self_hostname,
+        benchmark_runner: BenchmarkRunner,
     ):
         full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
@@ -95,7 +99,10 @@ class TestPerformance:
             else:
                 fee = random.randint(1, 100000000)
             spend_bundle = wallet_receiver.generate_signed_transaction(
-                uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
+                uint64(500),
+                receiver_puzzlehash,
+                coin_record.coin,
+                fee=fee,
             )
             spend_bundles.append(spend_bundle)
             spend_bundle_ids.append(spend_bundle.get_hash())

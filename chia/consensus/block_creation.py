@@ -111,7 +111,8 @@ def create_foliage(
     tx_removals: list[bytes32] = []
 
     pool_target_signature: Optional[G2Element] = get_pool_signature(
-        pool_target, reward_block_unfinished.proof_of_space.pool_public_key
+        pool_target,
+        reward_block_unfinished.proof_of_space.pool_public_key,
     )
 
     foliage_data = FoliageBlockData(
@@ -158,7 +159,10 @@ def create_foliage(
 
             assert curr.fees is not None
             pool_coin = create_pool_coin(
-                curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height), constants.GENESIS_CHALLENGE
+                curr.height,
+                curr.pool_puzzle_hash,
+                calculate_pool_reward(curr.height),
+                constants.GENESIS_CHALLENGE,
             )
 
             farmer_coin = create_farmer_coin(
@@ -262,7 +266,8 @@ def create_foliage(
 
         foliage_transaction_block_hash = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
-            foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
+            foliage_transaction_block_hash,
+            reward_block_unfinished.proof_of_space.plot_public_key,
         )
         assert foliage_transaction_block_signature is not None
     else:

@@ -274,7 +274,8 @@ class WebSocketServer:
 
     async def incoming_connection(self, request: web.Request) -> web.StreamResponse:
         ws: WebSocketResponse = web.WebSocketResponse(
-            max_msg_size=self.daemon_max_message_size, heartbeat=self.heartbeat
+            max_msg_size=self.daemon_max_message_size,
+            heartbeat=self.heartbeat,
         )
         await ws.prepare(request)
 
@@ -407,7 +408,9 @@ class WebSocketServer:
                                 await connection.close()
 
     async def handle_message(
-        self, websocket: WebSocketResponse, message: WsRpcMessage
+        self,
+        websocket: WebSocketResponse,
+        message: WsRpcMessage,
     ) -> Optional[tuple[str, set[WebSocketResponse]]]:
         """
         This function gets called when new message is received via websocket.
@@ -793,8 +796,12 @@ class WebSocketServer:
     def state_changed(self, service: str, message: dict[str, Any]) -> None:
         self.state_changed_msg_queue.put_nowait(
             StatusMessage(
-                service=service, command="state_changed", destination="wallet_ui", origin=service, data=message
-            )
+                service=service,
+                command="state_changed",
+                destination="wallet_ui",
+                origin=service,
+                data=message,
+            ),
         )
 
     def keyring_status_changed(self, keyring_status: dict[str, Any], destination: str) -> None:
@@ -805,7 +812,7 @@ class WebSocketServer:
                 destination=destination,
                 origin="daemon",
                 data=keyring_status,
-            )
+            ),
         )
 
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
@@ -1410,7 +1417,10 @@ def plotter_log_path(root_path: Path, id: str):
 
 
 def launch_plotter(
-    root_path: Path, service_name: str, service_array: list[str], id: str
+    root_path: Path,
+    service_name: str,
+    service_array: list[str],
+    id: str,
 ) -> tuple[subprocess.Popen, Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
@@ -1484,7 +1494,11 @@ def launch_service(root_path: Path, service_command) -> tuple[subprocess.Popen, 
         creationflags = 0
     environ_copy = os.environ.copy()
     process = subprocess.Popen(
-        service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
+        service_array,
+        shell=False,
+        startupinfo=startupinfo,
+        creationflags=creationflags,
+        env=environ_copy,
     )
 
     pid_path = pid_path_for_service(root_path, service_command)
@@ -1542,7 +1556,10 @@ async def kill_processes(
 
 
 async def kill_service(
-    root_path: Path, services: dict[str, list[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
+    root_path: Path,
+    services: dict[str, list[subprocess.Popen]],
+    service_name: str,
+    delay_before_kill: int = 15,
 ) -> bool:
     processes = services.get(service_name)
     if processes is None:

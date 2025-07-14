@@ -45,7 +45,8 @@ class TestAPI:
 
 @pytest.mark.anyio
 async def test_duplicate_client_connection(
-    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
     assert await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
@@ -70,13 +71,15 @@ async def test_connection_string_conversion(
 
 @pytest.mark.anyio
 async def test_connection_versions(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
 ) -> None:
     [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
     wallet_node = wallet_service._node
     full_node = full_node_service._node
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()),
+        None,
     )
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
@@ -96,7 +99,8 @@ async def test_api_not_ready(
     wallet_node = wallet_service._node
     full_node = full_node_service._node
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()),
+        None,
     )
     wallet_node.log_out()
     assert not wallet_service._api.ready()
@@ -107,7 +111,7 @@ async def test_api_not_ready(
 
     with caplog.at_level(logging.WARNING):
         assert await connection.send_message(
-            make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(uint32(0)))
+            make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(uint32(0))),
         )
         await time_out_assert(10, request_ignored)
 
@@ -127,7 +131,8 @@ async def test_error_response(
     full_node.server.api = TestAPI()
 
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()),
+        None,
     )
     wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
     full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
@@ -148,7 +153,8 @@ async def test_error_response(
 
 
 @pytest.mark.parametrize(
-    "error", [Error(int16(Err.UNKNOWN.value), "1", bytes([1, 2, 3])), Error(int16(Err.UNKNOWN.value), "2", None)]
+    "error",
+    [Error(int16(Err.UNKNOWN.value), "1", bytes([1, 2, 3])), Error(int16(Err.UNKNOWN.value), "2", None)],
 )
 @pytest.mark.anyio
 async def test_error_receive(
@@ -161,7 +167,8 @@ async def test_error_receive(
     wallet_node = wallet_service._node
     full_node = full_node_service._node
     await wallet_node.server.start_client(
-        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()),
+        None,
     )
     wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
     full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
@@ -179,13 +186,16 @@ async def test_error_receive(
 
 @pytest.mark.anyio
 async def test_call_api_of_specific(
-    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
     assert await server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
 
     message = await server_1.call_api_of_specific(
-        FullNodeAPI.request_block, RequestBlock(uint32(42), False), server_2.node_id
+        FullNodeAPI.request_block,
+        RequestBlock(uint32(42), False),
+        server_2.node_id,
     )
 
     assert message is not None
@@ -199,7 +209,9 @@ async def test_call_api_of_specific_for_missing_peer(
     _, _, server_1, server_2, _ = two_nodes
 
     message = await server_1.call_api_of_specific(
-        FullNodeAPI.request_block, RequestBlock(uint32(42), False), server_2.node_id
+        FullNodeAPI.request_block,
+        RequestBlock(uint32(42), False),
+        server_2.node_id,
     )
 
     assert message is None
@@ -209,7 +221,11 @@ async def test_call_api_of_specific_for_missing_peer(
 @pytest.mark.anyio
 async def test_get_peer_info(bt: BlockTools) -> None:
     wallet_service = create_wallet_service(
-        bt.root_path, bt.config, bt.constants, keychain=None, connect_to_daemon=False
+        bt.root_path,
+        bt.config,
+        bt.constants,
+        keychain=None,
+        connect_to_daemon=False,
     )
 
     # Wallet server should not have a port or peer info

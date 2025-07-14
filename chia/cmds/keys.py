@@ -38,7 +38,11 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
 
 @keys_cmd.command("show", help="Displays all the keys in keychain or the key with the given fingerprint")
 @click.option(
-    "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
+    "--show-mnemonic-seed",
+    help="Show the mnemonic seed of the keys",
+    default=False,
+    show_default=True,
+    is_flag=True,
 )
 @click.option(
     "--non-observer-derivation",
@@ -207,7 +211,12 @@ def generate_and_print_cmd() -> None:
     is_flag=True,
 )
 def sign_cmd(
-    message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
+    message: str,
+    fingerprint: Optional[int],
+    filename: Optional[str],
+    hd_path: str,
+    as_bytes: bool,
+    json: bool,
 ) -> None:
     from chia.cmds.keys_funcs import resolve_derivation_master_key, sign
 
@@ -289,7 +298,12 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
 @derive_cmd.command("search", help="Search the keyring for one or more matching derived keys or wallet addresses")
 @click.argument("search-terms", type=str, nargs=-1)
 @click.option(
-    "--limit", "-l", default=100, show_default=True, help="Limit the number of derivations to search against", type=int
+    "--limit",
+    "-l",
+    default=100,
+    show_default=True,
+    help="Limit the number of derivations to search against",
+    type=int,
 )
 @click.option(
     "--non-observer-derivation",
@@ -371,7 +385,9 @@ class ResolutionError(Exception):
 
 
 def _resolve_fingerprint_and_sk(
-    filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
+    filename: Optional[str],
+    fingerprint: Optional[int],
+    non_observer_derivation: bool,
 ) -> tuple[Optional[int], Optional[PrivateKey]]:
     from chia.cmds.keys_funcs import resolve_derivation_master_key
 
@@ -390,7 +406,10 @@ def _resolve_fingerprint_and_sk(
 
 @derive_cmd.command("wallet-address", help="Derive wallet receive addresses")
 @click.option(
-    "--index", "-i", help="Index of the first wallet address to derive. Index 0 is the first wallet address.", default=0
+    "--index",
+    "-i",
+    help="Index of the first wallet address to derive. Index 0 is the first wallet address.",
+    default=0,
 )
 @click.option("--count", "-n", help="Number of wallet addresses to derive, starting at index.", default=1)
 @click.option("--prefix", "-x", help="Address prefix (xch for mainnet, txch for testnet)", default=None, type=str)
@@ -412,7 +431,12 @@ def _resolve_fingerprint_and_sk(
 )
 @click.pass_context
 def wallet_address_cmd(
-    ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
+    ctx: click.Context,
+    index: int,
+    count: int,
+    prefix: Optional[str],
+    non_observer_derivation: bool,
+    show_hd_path: bool,
 ) -> None:
     from chia.cmds.keys_funcs import derive_wallet_address
 
@@ -454,7 +478,10 @@ def wallet_address_cmd(
     type=str,
 )
 @click.option(
-    "--index", "-i", help="Index of the first child key to derive. Index 0 is the first child key.", default=0
+    "--index",
+    "-i",
+    help="Index of the first child key to derive. Index 0 is the first child key.",
+    default=0,
 )
 @click.option("--count", "-n", help="Number of child keys to derive, starting at index.", default=1)
 @click.option(

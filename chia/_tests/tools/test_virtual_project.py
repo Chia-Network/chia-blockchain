@@ -330,7 +330,7 @@ def test_check_config(tmp_path: Path) -> None:
             # Package: one
             def func1(): pass
             from chia.module2 import func2
-            """
+            """,
         ),
     )
     create_python_file(
@@ -340,7 +340,7 @@ def test_check_config(tmp_path: Path) -> None:
             """
             # Package: one
             def func1b(): pass
-            """
+            """,
         ),
     )
     create_python_file(
@@ -352,7 +352,7 @@ def test_check_config(tmp_path: Path) -> None:
             def func2(): pass
             from chia.module3 import func3
             from chia.module1b import func1b
-            """
+            """,
         ),
     )
     create_python_file(
@@ -362,7 +362,7 @@ def test_check_config(tmp_path: Path) -> None:
             """
             # Package: three
             def func3(): pass
-            """
+            """,
         ),
     )
 
@@ -550,7 +550,7 @@ def test_parse_edges(tmp_path: Path) -> None:
             def func1(): pass
             from chia.module2 import func2
             from chia.module3 import func3
-            """
+            """,
         ),
     )
     create_python_file(
@@ -560,7 +560,7 @@ def test_parse_edges(tmp_path: Path) -> None:
             """
             # Package: two
             def func2(): pass
-            """
+            """,
         ),
     )
     create_python_file(
@@ -570,7 +570,7 @@ def test_parse_edges(tmp_path: Path) -> None:
             """
             # Package: three
             def func3(): pass
-            """
+            """,
         ),
     )
 

@@ -94,7 +94,10 @@ class TestNewPeak:
 
     @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_not_orphaned(
-        self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
+        self,
+        bt: BlockTools,
+        timelord: tuple[TimelordAPI, ChiaServer],
+        default_1000_blocks: list[FullBlock],
     ) -> None:
         async with create_blockchain(bt.constants, 2) as (b1, _):
             timelord_api, _ = timelord
@@ -171,7 +174,9 @@ class TestNewPeak:
                 # make two new blocks on tip, block_2 has higher total iterations
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
                 block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
+                    1,
+                    default_1000_blocks,
+                    min_signage_point=block_1.reward_chain_block.signage_point_index,
                 )[-1]
 
                 # make sure block_2 has higher iterations then block_1
@@ -248,7 +253,10 @@ class TestNewPeak:
 
     @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_orphaned_overflow(
-        self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
+        self,
+        bt: BlockTools,
+        timelord: tuple[TimelordAPI, ChiaServer],
+        default_1000_blocks: list[FullBlock],
     ) -> None:
         async with create_blockchain(bt.constants, 2) as (b1, _):
             async with create_blockchain(bt.constants, 2) as (b2, _):
@@ -346,7 +354,11 @@ class TestNewPeak:
                 # make two new blocks on tip, block_2 is in a new slot
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
                 block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, skip_slots=1, skip_overflow=True, seed=b"data"
+                    1,
+                    default_1000_blocks,
+                    skip_slots=1,
+                    skip_overflow=True,
+                    seed=b"data",
                 )[-1]
 
                 # make sure block_2 has higher iterations
@@ -416,7 +428,9 @@ class TestNewPeak:
                 # make two new blocks on tip, block_2 has higher total iterations
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
                 block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
+                    1,
+                    default_1000_blocks,
+                    min_signage_point=block_1.reward_chain_block.signage_point_index,
                 )[-1]
                 assert block_2.weight == block_1.weight
                 # make sure block_2 has higher iterations then block_1
@@ -603,7 +617,11 @@ def timelord_peak_from_block(
     peak = blockchain.block_record(block.header_hash)
     _, difficulty = get_next_sub_slot_iters_and_difficulty(blockchain.constants, False, peak, blockchain)
     ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-        blockchain.constants, blockchain, peak.required_iters, block, True
+        blockchain.constants,
+        blockchain,
+        peak.required_iters,
+        block,
+        True,
     )
 
     curr = peak

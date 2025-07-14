@@ -28,7 +28,9 @@ def get_beta_logging_config() -> dict[str, Any]:
 
 
 def get_file_log_handler(
-    formatter: logging.Formatter, root_path: Path, logging_config: dict[str, object]
+    formatter: logging.Formatter,
+    root_path: Path,
+    logging_config: dict[str, object],
 ) -> ConcurrentRotatingFileHandler:
     log_path = path_from_root(root_path, str(logging_config.get("log_filename", "log/debug.log")))
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -36,7 +38,11 @@ def get_file_log_handler(
     maxbytesrotation = cast(int, logging_config.get("log_maxbytesrotation", 50 * 1024 * 1024))
     use_gzip = cast(bool, logging_config.get("log_use_gzip", False))
     handler = ConcurrentRotatingFileHandler(
-        os.fspath(log_path), "a", maxBytes=maxbytesrotation, backupCount=maxrotation, use_gzip=use_gzip
+        os.fspath(log_path),
+        "a",
+        maxBytes=maxbytesrotation,
+        backupCount=maxrotation,
+        use_gzip=use_gzip,
     )
     handler.setFormatter(formatter)
     return handler
@@ -75,7 +81,7 @@ def initialize_logging(
                 ),
                 datefmt=log_date_format,
                 reset=True,
-            )
+            ),
         )
         handlers.append(stdout_handler)
     else:

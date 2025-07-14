@@ -338,14 +338,15 @@ class TestRateLimits:
 
         # The two nodes will use the same rate limits even if their versions are different
         assert get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities) == get_rate_limits_to_use(
-            b_con.local_capabilities, b_con.peer_capabilities
+            b_con.local_capabilities,
+            b_con.peer_capabilities,
         )
 
         # The following code checks whether all of the runs resulted in the same number of items in "rate_limits_tx",
         # which would mean the same rate limits are always used. This should not happen, since two nodes with V2
         # will use V2.
         total_tx_msg_count = len(
-            get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)["rate_limits_tx"]
+            get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)["rate_limits_tx"],
         )
 
         test_different_versions_results.append(total_tx_msg_count)
@@ -443,20 +444,27 @@ async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
     indirect=True,
 )
 async def test_unsolicited_responses(
-    node_with_params, node_with_params_b, self_hostname: str, msg_type: ProtocolMessageTypes, bt: BlockTools
+    node_with_params,
+    node_with_params_b,
+    self_hostname: str,
+    msg_type: ProtocolMessageTypes,
+    bt: BlockTools,
 ):
     node_a = node_with_params
     node_b = node_with_params_b
 
     msg = {
         ProtocolMessageTypes.respond_blocks: make_msg(
-            ProtocolMessageTypes.respond_blocks, bytes(RespondBlocks(uint32(1), uint32(2), []))
+            ProtocolMessageTypes.respond_blocks,
+            bytes(RespondBlocks(uint32(1), uint32(2), [])),
         ),
         ProtocolMessageTypes.reject_blocks: make_msg(
-            ProtocolMessageTypes.reject_blocks, bytes(RejectBlocks(uint32(1), uint32(2)))
+            ProtocolMessageTypes.reject_blocks,
+            bytes(RejectBlocks(uint32(1), uint32(2))),
         ),
         ProtocolMessageTypes.respond_block: make_msg(
-            ProtocolMessageTypes.respond_block, bytes(RespondBlock(bt.get_consecutive_blocks(1)[0]))
+            ProtocolMessageTypes.respond_block,
+            bytes(RespondBlock(bt.get_consecutive_blocks(1)[0])),
         ),
         ProtocolMessageTypes.reject_block: make_msg(ProtocolMessageTypes.reject_block, bytes(RejectBlock(uint32(0)))),
     }[msg_type]

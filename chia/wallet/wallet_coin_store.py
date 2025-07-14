@@ -80,7 +80,7 @@ class WalletCoinStore:
                 " coin_parent text,"
                 " amount blob,"
                 " wallet_type int,"
-                " wallet_id int)"
+                " wallet_id int)",
             )
 
             # Useful for reorg lookups
@@ -218,7 +218,7 @@ class WalletCoinStore:
                 continue
             entries = ",".join(f"{value.hex()!r}" for value in hash_filter.values)
             conditions.append(
-                f"{field} {'not' if FilterMode(hash_filter.mode) == FilterMode.exclude else ''} in ({entries})"
+                f"{field} {'not' if FilterMode(hash_filter.mode) == FilterMode.exclude else ''} in ({entries})",
             )
         if confirmed_range is not None and confirmed_range != UInt32Range():
             conditions.append(f"confirmed_height BETWEEN {confirmed_range.start} AND {confirmed_range.stop}")
@@ -227,12 +227,12 @@ class WalletCoinStore:
         if amount_filter is not None:
             entries = ",".join(f"X'{value.stream_to_bytes().hex()}'" for value in amount_filter.values)
             conditions.append(
-                f"amount {'not' if FilterMode(amount_filter.mode) == FilterMode.exclude else ''} in ({entries})"
+                f"amount {'not' if FilterMode(amount_filter.mode) == FilterMode.exclude else ''} in ({entries})",
             )
         if amount_range is not None and amount_range != UInt64Range():
             conditions.append(
                 f"amount BETWEEN X'{amount_range.start.stream_to_bytes().hex()}' "
-                f"AND X'{amount_range.stop.stream_to_bytes().hex()}'"
+                f"AND X'{amount_range.stop.stream_to_bytes().hex()}'",
             )
 
         where_sql = "WHERE " + " AND ".join(conditions) if len(conditions) > 0 else ""
@@ -266,7 +266,12 @@ class WalletCoinStore:
         )
 
     async def get_coin_records_between(
-        self, wallet_id: int, start: int, end: int, reverse: bool = False, coin_type: CoinType = CoinType.NORMAL
+        self,
+        wallet_id: int,
+        start: int,
+        end: int,
+        reverse: bool = False,
+        coin_type: CoinType = CoinType.NORMAL,
     ) -> list[WalletCoinRecord]:
         """Return a list of coins between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
@@ -293,7 +298,9 @@ class WalletCoinStore:
         return None
 
     async def get_unspent_coins_for_wallet(
-        self, wallet_id: int, coin_type: CoinType = CoinType.NORMAL
+        self,
+        wallet_id: int,
+        coin_type: CoinType = CoinType.NORMAL,
     ) -> set[WalletCoinRecord]:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -307,7 +314,8 @@ class WalletCoinStore:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * FROM coin_record WHERE coin_type=? AND spent_height=0", (coin_type,)
+                "SELECT * FROM coin_record WHERE coin_type=? AND spent_height=0",
+                (coin_type,),
             )
         return {self.coin_record_from_row(row) for row in rows}
 
@@ -324,7 +332,8 @@ class WalletCoinStore:
         """Returns a list of all coin records with the given parent id"""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),)
+                "SELECT * from coin_record WHERE coin_parent=?",
+                (parent_coin_info.hex(),),
             )
 
         return [self.coin_record_from_row(row) for row in rows]

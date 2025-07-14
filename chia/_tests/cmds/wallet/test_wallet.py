@@ -119,7 +119,8 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
             confirmed: Optional[bool] = None,
         ) -> list[TransactionRecord]:
             self.add_to_log(
-                "get_transactions", (wallet_id, start, end, sort_key, reverse, to_address, type_filter, confirmed)
+                "get_transactions",
+                (wallet_id, start, end, sort_key, reverse, to_address, type_filter, confirmed),
             )
             l_tx_rec = []
             for i in range(start, end):
@@ -256,7 +257,8 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def get_connections(
-            self, node_type: Optional[NodeType] = None
+            self,
+            node_type: Optional[NodeType] = None,
         ) -> list[dict[str, Union[str, int, float, bytes32]]]:
             self.add_to_log("get_connections", (node_type,))
             return [
@@ -271,7 +273,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                     "peer_port": 47482,
                     "peer_server_port": 47482,
                     "type": 1,
-                }
+                },
             ]
 
     inst_rpc_client = ShowRpcClient()
@@ -414,10 +416,16 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     ]
     with CliRunner().isolated_filesystem():
         run_cli_command_and_assert(
-            capsys, root_dir, [*command_args, FINGERPRINT_ARG, "--transaction-file-out=temp"], assert_list
+            capsys,
+            root_dir,
+            [*command_args, FINGERPRINT_ARG, "--transaction-file-out=temp"],
+            assert_list,
         )
         run_cli_command_and_assert(
-            capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG, "--transaction-file-out=temp2"], cat_assert_list
+            capsys,
+            root_dir,
+            [*command_args, CAT_FINGERPRINT_ARG, "--transaction-file-out=temp2"],
+            cat_assert_list,
         )
 
         with open("temp", "rb") as file:
@@ -445,7 +453,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 [{"decorator": "CLAWBACK", "clawback_timelock": 60}],
                 True,
                 test_condition_valid_times,
-            )
+            ),
         ],
         "cat_spend": [
             (
@@ -466,7 +474,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 None,
                 True,
                 test_condition_valid_times,
-            )
+            ),
         ],
         "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
     }
@@ -526,8 +534,8 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                         {
                             "selected_network": "mainnet",
                             "network_overrides": {"config": {"mainnet": {"address_prefix": "xch"}}},
-                        }
-                    )
+                        },
+                    ),
                 ],
             }
 
@@ -667,7 +675,10 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
     other_assert_list = [f"Successfully added examplecat with wallet id 3 on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(1).hex()], assert_list)
     run_cli_command_and_assert(
-        capsys, root_dir, [*command_args, "--asset-id", bytes32([1, 2] * 16).hex()], other_assert_list
+        capsys,
+        root_dir,
+        [*command_args, "--asset-id", bytes32([1, 2] * 16).hex()],
+        other_assert_list,
     )
     # these are various things that should be in the output
 
@@ -680,7 +691,9 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
 
 
 def test_make_offer_bad_filename(
-    capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path], tmp_path: Path
+    capsys: object,
+    get_test_cli_clients: tuple[TestRpcClients, Path],
+    tmp_path: Path,
 ) -> None:
     _, root_dir = get_test_cli_clients
 
@@ -820,7 +833,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                             "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft",
                             "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
                             uint16(1000),
-                        )
+                        ),
                     ],
                     [
                         FungibleAsset(
@@ -837,7 +850,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                         ),
                     ],
                 ),
-            )
+            ),
         ],
         "create_offer_for_ids": [
             (
@@ -870,13 +883,13 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                                 },
                             },
                         },
-                    }
+                    },
                 },
                 None,
                 500000000000,
                 False,
                 test_condition_valid_times,
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -1092,7 +1105,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 500000000000,
                 True,
                 test_condition_valid_times,
-            )
+            ),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -1160,7 +1173,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     expected_calls: logType = {
         "get_offer": [(test_offer_id_bytes, True)],
         "cancel_offer": [
-            (test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True, test_condition_valid_times)
+            (test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True, test_condition_valid_times),
         ],
         "cat_asset_id_to_name": [
             (nft_offered_id,),

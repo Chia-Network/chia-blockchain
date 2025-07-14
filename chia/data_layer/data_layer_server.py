@@ -57,7 +57,8 @@ class DataLayerServer:
         self.upnp.remap(self.port)
 
         server_files_replaced: str = self.config.get(
-            "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
+            "server_files_location",
+            "data_layer/db/server_files_location_CHALLENGE",
         ).replace("CHALLENGE", self.config["selected_network"])
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 

@@ -79,7 +79,7 @@ async def test_get_coins_of_interest_with_trade_statuses(seeded_random: random.R
             coin_3.name(),
         }
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == {
-            coin_2.name()
+            coin_2.name(),
         }
 
         # test replace trade record
@@ -100,7 +100,7 @@ async def test_get_coins_of_interest_with_trade_statuses(seeded_random: random.R
         await trade_store.add_trade_record(tr2_1, offer_name=bytes32.random(seeded_random))
 
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == {
-            coin_2.name()
+            coin_2.name(),
         }
 
         # test migration
@@ -113,7 +113,7 @@ async def test_get_coins_of_interest_with_trade_statuses(seeded_random: random.R
             await migrate_coin_of_interest(trade_store.log, conn)
 
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == {
-            coin_2.name()
+            coin_2.name(),
         }
 
 
@@ -129,7 +129,7 @@ async def test_valid_times_migration() -> None:
                 " confirmed_at_index int,"
                 " created_at_time bigint,"
                 " sent int,"
-                " is_my_offer tinyint)"
+                " is_my_offer tinyint)",
             )
 
         fake_offer = Offer({}, WalletSpendBundle([], G2Element()), {})
@@ -201,7 +201,7 @@ async def test_large_trade_record_query() -> None:
                     trade_record_old.sent,
                     trade_record_old.trade_id,
                     trade_record_old.is_my_offer,
-                )
+                ),
             )
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.executemany("INSERT INTO trade_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)", trade_records_to_insert)

@@ -91,7 +91,8 @@ class PlotRefreshTester:
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
         # Set a very high refresh interval here to avoid unintentional refresh cycles
         self.plot_manager.refresh_parameter = replace(
-            self.plot_manager.refresh_parameter, interval_seconds=uint32(10000)
+            self.plot_manager.refresh_parameter,
+            interval_seconds=uint32(10000),
         )
         # Set to the current time to avoid automated refresh after we start below.
         self.plot_manager.last_refresh_time = time.time()
@@ -424,7 +425,8 @@ async def test_invalid_plots(environment):
     assert retry_test_plot in env.refresh_tester.plot_manager.failed_to_open_filenames
     # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
     env.refresh_tester.plot_manager.refresh_parameter = replace(
-        env.refresh_tester.plot_manager.refresh_parameter, retry_invalid_seconds=uint32(0)
+        env.refresh_tester.plot_manager.refresh_parameter,
+        retry_invalid_seconds=uint32(0),
     )
     move(retry_test_plot_save, retry_test_plot)
     expected_result.loaded = env.dir_1.plot_info_list()[0:1]
@@ -561,7 +563,8 @@ async def test_drop_too_large_cache_entries(environment, bt):
         # Memo
         memo_length_offset = filename_offset + filename_length
         memo_length = int.from_bytes(
-            prover_data[memo_length_offset : memo_length_offset + size_length], byteorder=sys.byteorder
+            prover_data[memo_length_offset : memo_length_offset + size_length],
+            byteorder=sys.byteorder,
         )
         memo_offset = memo_length_offset + size_length
         memo = prover_data[memo_offset : memo_offset + memo_length]

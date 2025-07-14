@@ -25,7 +25,7 @@ class WalletInterestedStore:
             await conn.execute("CREATE TABLE IF NOT EXISTS interested_coins(coin_name text PRIMARY KEY)")
 
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS interested_puzzle_hashes(puzzle_hash text PRIMARY KEY, wallet_id integer)"
+                "CREATE TABLE IF NOT EXISTS interested_puzzle_hashes(puzzle_hash text PRIMARY KEY, wallet_id integer)",
             )
 
             # Table for unknown CATs
@@ -64,7 +64,8 @@ class WalletInterestedStore:
     async def get_interested_puzzle_hash_wallet_id(self, puzzle_hash: bytes32) -> Optional[int]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT wallet_id FROM interested_puzzle_hashes WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+                "SELECT wallet_id FROM interested_puzzle_hashes WHERE puzzle_hash=?",
+                (puzzle_hash.hex(),),
             )
             row = await cursor.fetchone()
         if row is None:
@@ -74,14 +75,16 @@ class WalletInterestedStore:
     async def add_interested_puzzle_hash(self, puzzle_hash: bytes32, wallet_id: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO interested_puzzle_hashes VALUES (?, ?)", (puzzle_hash.hex(), wallet_id)
+                "INSERT OR REPLACE INTO interested_puzzle_hashes VALUES (?, ?)",
+                (puzzle_hash.hex(), wallet_id),
             )
             await cursor.close()
 
     async def remove_interested_puzzle_hash(self, puzzle_hash: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "DELETE FROM interested_puzzle_hashes WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+                "DELETE FROM interested_puzzle_hashes WHERE puzzle_hash=?",
+                (puzzle_hash.hex(),),
             )
             await cursor.close()
 
@@ -119,7 +122,7 @@ class WalletInterestedStore:
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT asset_id, name, first_seen_height, sender_puzzle_hash FROM unacknowledged_asset_tokens"
+                "SELECT asset_id, name, first_seen_height, sender_puzzle_hash FROM unacknowledged_asset_tokens",
             )
             cats = await cursor.fetchall()
         return [
@@ -157,7 +160,8 @@ class WalletInterestedStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?", (asset_id,)
+                "SELECT * from unacknowledged_asset_token_states WHERE asset_id=?",
+                (asset_id,),
             )
 
         return [(CoinState.from_bytes(row[0]), uint32(row[2])) for row in rows]

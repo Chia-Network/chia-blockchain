@@ -44,7 +44,10 @@ def get_passphrase_prompt(keyring_file: str) -> str:
 @click.command()
 @click.argument("keyring_file", nargs=1, default=os.fspath(DEFAULT_KEYRING_YAML))
 @click.option(
-    "--full-payload", is_flag=True, default=False, help="Print the full keyring contents, including plaintext"
+    "--full-payload",
+    is_flag=True,
+    default=False,
+    help="Print the full keyring contents, including plaintext",
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
 @click.option("--pretty-print", is_flag=True, default=False)

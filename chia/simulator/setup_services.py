@@ -173,7 +173,9 @@ async def setup_full_node(
 
 @asynccontextmanager
 async def setup_crawler(
-    root_path_populated_with_config: Path, database_uri: str, start_crawler_loop: bool = True
+    root_path_populated_with_config: Path,
+    database_uri: str,
+    start_crawler_loop: bool = True,
 ) -> AsyncGenerator[CrawlerService, None]:
     create_all_ssl(
         root_path=root_path_populated_with_config,
@@ -452,10 +454,14 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
         tasks.append(
             create_referenced_task(
                 spawn_process(
-                    host=self_hostname, port=port, counter=i, process_mgr=process_mgr, prefer_ipv6=prefer_ipv6
+                    host=self_hostname,
+                    port=port,
+                    counter=i,
+                    process_mgr=process_mgr,
+                    prefer_ipv6=prefer_ipv6,
                 ),
                 name=f"vdf_client_{i}",
-            )
+            ),
         )
 
     async def stop(

@@ -233,7 +233,7 @@ class CATWallet:
 
         delete: bool = False
         for state in await self.wallet_state_manager.interested_store.get_unacknowledged_states_for_asset_id(
-            limitations_program_hash
+            limitations_program_hash,
         ):
             new_peer = self.wallet_state_manager.wallet_node.get_full_node_peer()
             if new_peer is not None:
@@ -243,7 +243,7 @@ class CATWallet:
 
         if delete:
             await self.wallet_state_manager.interested_store.delete_unacknowledged_states_for_asset_id(
-                limitations_program_hash
+                limitations_program_hash,
             )
 
         return self
@@ -340,7 +340,7 @@ class CATWallet:
 
     async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
         spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records),
         )
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
@@ -360,7 +360,11 @@ class CATWallet:
         return bytes(self.cat_info.limitations_program_hash).hex()
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[CATCoinData]
+        self,
+        coin: Coin,
+        height: uint32,
+        peer: WSChiaConnection,
+        parent_coin_data: Optional[CATCoinData],
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
@@ -376,7 +380,8 @@ class CATWallet:
                 if parent_coin_data is None:
                     # The method is not triggered after the determine_coin_type, no pre-fetched data
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                        [coin.parent_coin_info], peer=peer
+                        [coin.parent_coin_info],
+                        peer=peer,
                     )
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
@@ -428,7 +433,10 @@ class CATWallet:
         inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)
         limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
         return curry_and_treehash(
-            QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
+            QUOTED_CAT_MOD_HASH,
+            CAT_MOD_HASH_HASH,
+            limitations_program_hash_hash,
+            inner_puzzle_hash,
         )
 
     async def get_cat_puzzle_hash(self, new: bool) -> bytes32:
@@ -479,7 +487,8 @@ class CATWallet:
         result: list[WalletCoinRecord] = []
 
         record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.id(), records
+            self.id(),
+            records,
         )
 
         for record in record_list:
@@ -504,7 +513,7 @@ class CATWallet:
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.id()
+            self.id(),
         )
         async with action_scope.use() as interface:
             coins = await select_coins(
@@ -554,7 +563,8 @@ class CATWallet:
         """
         announcement: Optional[AssertCoinAnnouncement] = None
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config,
+            push=False,
         ) as inner_action_scope:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
@@ -656,7 +666,7 @@ class CATWallet:
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                next(iter(cat_coins)).puzzle_hash
+                next(iter(cat_coins)).puzzle_hash,
             )
             if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
@@ -664,7 +674,8 @@ class CATWallet:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
                         # We cannot create two coins has same id, create a new puzhash for the change
                         change_puzhash = await action_scope.get_puzzle_hash(
-                            self.wallet_state_manager, override_reuse_puzhash_with=False
+                            self.wallet_state_manager,
+                            override_reuse_puzhash_with=False,
                         )
                         break
             else:
@@ -728,7 +739,9 @@ class CATWallet:
                     )
             else:
                 innersol = await self.make_inner_solution(
-                    coin=coin, primaries=[], conditions=(announcement.corresponding_assertion(),)
+                    coin=coin,
+                    primaries=[],
+                    conditions=(announcement.corresponding_assertion(),),
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -810,7 +823,7 @@ class CATWallet:
                     name=spend_bundle.name(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
-                )
+                ),
             )
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:

@@ -85,7 +85,11 @@ async def async_list(
 
 
 def print_coins(
-    target_string: str, coins: list[tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
+    target_string: str,
+    coins: list[tuple[Coin, str]],
+    mojo_per_unit: int,
+    addr_prefix: str,
+    paginate: bool,
 ) -> None:
     if len(coins) == 0:
         print("\tNo Coins.")
@@ -180,7 +184,7 @@ async def async_combine(
         for tx in resp.transactions:
             print(f"Transaction sent: {tx.name}")
             print(
-                f"To get status, use command: chia wallet get_transaction -f {client_info.fingerprint} -tx 0x{tx.name}"
+                f"To get status, use command: chia wallet get_transaction -f {client_info.fingerprint} -tx 0x{tx.name}",
             )
 
     return resp.transactions
@@ -260,17 +264,18 @@ async def async_split(
         for tx in transactions:
             print(f"Transaction sent: {tx.name}")
             print(
-                f"To get status, use command: chia wallet get_transaction -f {client_info.fingerprint} -tx 0x{tx.name}"
+                f"To get status, use command: chia wallet get_transaction -f {client_info.fingerprint} -tx 0x{tx.name}",
             )
     dust_threshold = client_info.config.get("xch_spam_amount", 1000000)  # min amount per coin in mojo
     spam_filter_after_n_txs = client_info.config.get(
-        "spam_filter_after_n_txs", 200
+        "spam_filter_after_n_txs",
+        200,
     )  # how many txs to wait before filtering
     if final_amount_per_coin < dust_threshold and wallet_type == WalletType.STANDARD_WALLET:
         print(
             f"WARNING: The amount per coin: {amount_per_coin.amount} is less than the dust threshold: "
             f"{dust_threshold / (1 if amount_per_coin.mojos else mojo_per_unit)}. Some or all of the Coins "
             f"{'will' if number_of_coins > spam_filter_after_n_txs else 'may'} not show up in your wallet unless "
-            f"you decrease the dust limit to below {final_amount_per_coin} mojos or disable it by setting it to 0."
+            f"you decrease the dust limit to below {final_amount_per_coin} mojos or disable it by setting it to 0.",
         )
     return transactions

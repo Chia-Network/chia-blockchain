@@ -41,7 +41,7 @@ def test_only_odd_coins() -> None:
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
             [],
-        ]
+        ],
     )
 
     with pytest.raises(Exception) as exception_info:
@@ -55,7 +55,7 @@ def test_only_odd_coins() -> None:
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
             0,
-        ]
+        ],
     )
     SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
 
@@ -70,7 +70,7 @@ def test_only_one_odd_coin_created() -> None:
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [],
-        ]
+        ],
     )
 
     with pytest.raises(Exception) as exception_info:
@@ -84,7 +84,7 @@ def test_only_one_odd_coin_created() -> None:
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
             [],
-        ]
+        ],
     )
     SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
 
@@ -98,7 +98,8 @@ def test_p2_singleton() -> None:
     # create a fake coin id for the `p2_singleton`
     p2_singleton_coin_id = Program.to(["test_hash"]).get_tree_hash()
     expected_announcement = AssertPuzzleAnnouncement(
-        asserted_ph=singleton_full_puzzle.get_tree_hash(), asserted_msg=p2_singleton_coin_id
+        asserted_ph=singleton_full_puzzle.get_tree_hash(),
+        asserted_msg=p2_singleton_coin_id,
     ).msg_calc
 
     # create a `p2_singleton` puzzle. This should call driver code.

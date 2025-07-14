@@ -106,7 +106,7 @@ def solve_covenant_layer(lineage_proof: LineageProof, morpher_solution: Program,
             lineage_proof.to_program(),
             morpher_solution,
             inner_solution,
-        ]
+        ],
     )
     return solution
 
@@ -160,7 +160,10 @@ def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[()]]:
 
 
 def solve_did_tp(
-    provider_innerpuzhash: bytes32, my_coin_id: bytes32, new_metadata: Program, new_transfer_program: bytes32
+    provider_innerpuzhash: bytes32,
+    my_coin_id: bytes32,
+    new_metadata: Program,
+    new_transfer_program: bytes32,
 ) -> Program:
     solution: Program = Program.to(
         [
@@ -168,7 +171,7 @@ def solve_did_tp(
             my_coin_id,
             new_metadata,
             new_transfer_program,
-        ]
+        ],
     )
     return solution
 
@@ -197,7 +200,7 @@ def solve_revocation_layer(puzzle_reveal: Program, inner_solution: Program, hidd
             hidden,
             puzzle_reveal,
             inner_solution,
-        ]
+        ],
     )
     return solution
 
@@ -223,10 +226,16 @@ def create_eml_covenant_morpher(
 
 
 def construct_exigent_metadata_layer(
-    metadata: Optional[Program], transfer_program: Program, inner_puzzle: Program
+    metadata: Optional[Program],
+    transfer_program: Program,
+    inner_puzzle: Program,
 ) -> Program:
     return EXTIGENT_METADATA_LAYER.curry(
-        EXTIGENT_METADATA_LAYER_HASH, metadata, transfer_program, transfer_program.get_tree_hash(), inner_puzzle
+        EXTIGENT_METADATA_LAYER_HASH,
+        metadata,
+        transfer_program,
+        transfer_program.get_tree_hash(),
+        inner_puzzle,
     )
 
 
@@ -269,9 +278,9 @@ def solve_std_vc_backdoor(
                 [
                     provider_innerpuzhash,
                     coin_id,
-                ]
+                ],
             ),
-        ]
+        ],
     )
     return solution
 
@@ -354,7 +363,7 @@ class VerifiedCredential(Streamable):
                     inner_transfer_program.get_tree_hash(),
                 ),
                 inner_transfer_program,
-            )
+            ),
         )
         wrapped_inner_puzzle_hash: bytes32 = create_revocation_layer(
             STANDARD_BRICK_PUZZLE_HASH,
@@ -377,7 +386,7 @@ class VerifiedCredential(Streamable):
                     [1, new_inner_puzzle_hash],
                     [-10, provider_id, transfer_program.get_tree_hash()],
                 ],
-            )
+            ),
         )
         second_launcher_solution = Program.to([launch_dpuz, None])
         second_launcher_coin: Coin = Coin(
@@ -395,7 +404,7 @@ class VerifiedCredential(Streamable):
                 [61, first_launcher_announcement_hash],
                 [61, second_launcher_announcement_hash],
                 *[cond.to_program() for cond in extra_conditions],
-            ]
+            ],
         )
 
         primary_dpuz: Program = Program.to((1, create_launcher_conditions))
@@ -417,7 +426,7 @@ class VerifiedCredential(Streamable):
                         Program.to(
                             [
                                 second_launcher_solution,
-                            ]
+                            ],
                         ),
                     ),
                 ),
@@ -564,7 +573,8 @@ class VerifiedCredential(Streamable):
         if layer_below_singleton == OWNERSHIP_LAYER_LAUNCHER:
             proof_hash: Optional[bytes32] = None
             eml_lineage_proof: VCLineageProof = VCLineageProof(
-                parent_name=parent_coin.parent_coin_info, amount=uint64(parent_coin.amount)
+                parent_name=parent_coin.parent_coin_info,
+                amount=uint64(parent_coin.amount),
             )
             # See what conditions were output by the launcher dpuz and dsol
             dpuz: Program = solution.at("rrf").at("f").at("f")
@@ -650,7 +660,7 @@ class VerifiedCredential(Streamable):
                     Program.to(new_proof_hash),
                     None,  # TP update is not allowed because then the singleton will leave the VC protocol
                 ],
-            ]
+            ],
         )
         return magic_condition
 
@@ -668,7 +678,7 @@ class VerifiedCredential(Streamable):
                     self.launcher_id,
                 ],
                 None,
-            ]
+            ],
         )
         return magic_condition
 
@@ -682,7 +692,7 @@ class VerifiedCredential(Streamable):
                     self.launcher_id,
                 ],
                 ACS_TRANSFER_PROGRAM.get_tree_hash(),
-            ]
+            ],
         )
         return magic_condition
 
@@ -709,7 +719,7 @@ class VerifiedCredential(Streamable):
                         inner_puzzle,
                         inner_solution,
                     ),
-                ]
+                ],
             ),
         )
 
@@ -718,8 +728,8 @@ class VerifiedCredential(Streamable):
                 std_hash(
                     self.coin.name()
                     + Program.to(new_proof_hash).get_tree_hash()
-                    + b""  # TP update is banned because singleton will leave the VC protocol
-                )
+                    + b"",  # TP update is banned because singleton will leave the VC protocol
+                ),
             )
         else:
             expected_announcement = None
@@ -744,7 +754,9 @@ class VerifiedCredential(Streamable):
         )
 
     def activate_backdoor(
-        self, provider_innerpuzhash: bytes32, announcement_nonce: Optional[bytes32] = None
+        self,
+        provider_innerpuzhash: bytes32,
+        announcement_nonce: Optional[bytes32] = None,
     ) -> tuple[CreatePuzzleAnnouncement, CoinSpend]:
         """
         Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
@@ -773,12 +785,12 @@ class VerifiedCredential(Streamable):
                         ),
                         hidden=True,
                     ),
-                ]
+                ],
             ),
         )
 
         expected_announcement: CreatePuzzleAnnouncement = CreatePuzzleAnnouncement(
-            std_hash(self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
+            std_hash(self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash()),
         )
 
         return (
@@ -789,7 +801,10 @@ class VerifiedCredential(Streamable):
     ####################################################################################################################
 
     def _next_vc(
-        self, next_inner_puzzle_hash: bytes32, new_proof_hash: Optional[bytes32], next_amount: uint64
+        self,
+        next_inner_puzzle_hash: bytes32,
+        new_proof_hash: Optional[bytes32],
+        next_amount: uint64,
     ) -> VerifiedCredential:
         """
         Private method that creates the next VC class instance.
@@ -842,7 +857,10 @@ class RevocationOuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = None,
     ) -> Optional[Program]:
         if solution is None:
             raise ValueError("Cannot get_inner_puzzle of revocation layer without solution")

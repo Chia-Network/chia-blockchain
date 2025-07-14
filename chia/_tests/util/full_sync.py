@@ -61,7 +61,10 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 class FakeServer:
     async def send_to_all(
-        self, messages: list[Message], node_type: NodeType, exclude: Optional[bytes32] = None
+        self,
+        messages: list[Message],
+        node_type: NodeType,
+        exclude: Optional[bytes32] = None,
     ) -> None:
         pass
 
@@ -81,7 +84,10 @@ class FakeServer:
         return None
 
     def get_connections(
-        self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = False
+        self,
+        node_type: Optional[NodeType] = None,
+        *,
+        outbound: Optional[bool] = False,
     ) -> list[WSChiaConnection]:
         return []
 
@@ -127,7 +133,7 @@ async def run_sync_test(
         logging.Formatter(
             "%(levelname)-8s %(message)s",
             datefmt="%Y-%m-%dT%H:%M:%S",
-        )
+        ),
     )
     logger.addHandler(handler)
     check_log = ExitOnError()
@@ -206,10 +212,13 @@ async def run_sync_test(
                                 await full_node.add_block(b, None, full_node._bls_cache)
                         else:
                             block_record = await full_node.blockchain.get_block_record_from_db(
-                                block_batch[0].prev_header_hash
+                                block_batch[0].prev_header_hash,
                             )
                             ssi, diff = get_next_sub_slot_iters_and_difficulty(
-                                full_node.constants, True, block_record, full_node.blockchain
+                                full_node.constants,
+                                True,
+                                block_record,
+                                full_node.blockchain,
                             )
                             fork_height = block_batch[0].height - 1
                             header_hash = block_batch[0].prev_header_hash

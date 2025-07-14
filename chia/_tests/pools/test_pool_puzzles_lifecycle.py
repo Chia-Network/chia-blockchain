@@ -139,7 +139,10 @@ class TestPoolPuzzles(TestCase):
         assert get_pubkey_from_member_inner_puzzle(pooling_innerpuz) == pk
         # Generating launcher information
         conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
-            starting_coin, pooling_innerpuz, comment, START_AMOUNT
+            starting_coin,
+            pooling_innerpuz,
+            comment,
+            START_AMOUNT,
         )
         # Creating solution for standard transaction
         delegated_puzzle: Program = puzzle_for_conditions(conditions)
@@ -175,7 +178,9 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it!
         fork_coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle([post_launch_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            SpendBundle([post_launch_coinsol], G2Element()),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # HONEST ABSORB
@@ -214,7 +219,9 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle(coin_sols, G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            SpendBundle(coin_sols, G2Element()),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # ABSORB A NON EXISTENT REWARD (Negative test)
@@ -222,7 +229,7 @@ class TestPoolPuzzles(TestCase):
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
-            )
+            ),
         )
         coin_sols: list[CoinSpend] = create_absorb_spend(
             last_coinsol,
@@ -238,14 +245,17 @@ class TestPoolPuzzles(TestCase):
             filter(
                 lambda e: e.coin.amount != START_AMOUNT,
                 coin_sols,
-            )
+            ),
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError,
+            match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED",
         ):
             coin_db.update_coin_store_for_spend_bundle(
-                SpendBundle([singleton_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+                SpendBundle([singleton_coinsol], G2Element()),
+                time,
+                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
 
         # SPEND A NON-REWARD P2_SINGLETON (Negative test)
@@ -264,15 +274,18 @@ class TestPoolPuzzles(TestCase):
                 [
                     pooling_innerpuz.get_tree_hash(),
                     non_reward_p2_singleton.name(),
-                ]
+                ],
             ),
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError,
+            match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED",
         ):
             coin_db.update_coin_store_for_spend_bundle(
-                SpendBundle([singleton_coinsol, bad_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+                SpendBundle([singleton_coinsol, bad_coinsol], G2Element()),
+                time,
+                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
 
         # ENTER WAITING ROOM
@@ -298,7 +311,9 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle([travel_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            SpendBundle([travel_coinsol], sig),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # ESCAPE TOO FAST (Negative test)
@@ -322,7 +337,9 @@ class TestPoolPuzzles(TestCase):
         # Spend it and hope it fails!
         with pytest.raises(BadSpendBundleError, match="condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"):
             coin_db.update_coin_store_for_spend_bundle(
-                SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+                SpendBundle([return_coinsol], sig),
+                time,
+                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             )
 
         # ABSORB WHILE IN WAITING ROOM
@@ -341,7 +358,9 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle(coin_sols, G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            SpendBundle(coin_sols, G2Element()),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # LEAVE THE WAITING ROOM
@@ -351,7 +370,7 @@ class TestPoolPuzzles(TestCase):
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
-            )
+            ),
         )
         singleton: Coin = get_most_recent_singleton_coin_from_coin_spend(singleton_coinsol)
         # get the relevant coin solution
@@ -374,7 +393,9 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            SpendBundle([return_coinsol], sig),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
 
         # ABSORB ONCE MORE FOR GOOD MEASURE
@@ -392,5 +413,7 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it!
         coin_db.update_coin_store_for_spend_bundle(
-            SpendBundle(coin_sols, G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            SpendBundle(coin_sols, G2Element()),
+            time,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )

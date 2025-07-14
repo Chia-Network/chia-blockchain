@@ -72,7 +72,9 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_private_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
+    fingerprint: Optional[int],
 ) -> None:
     root_path = root_path_populated_with_config
     keychain = get_temp_keyring  # empty keyring
@@ -87,7 +89,8 @@ async def test_get_private_key_missing_key(
 
 @pytest.mark.anyio
 async def test_get_private_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
 ) -> None:
     root_path = root_path_populated_with_config
     keychain = get_temp_keyring
@@ -163,7 +166,9 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_public_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
+    fingerprint: Optional[int],
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring  # empty keyring
@@ -178,7 +183,8 @@ async def test_get_public_key_missing_key(
 
 @pytest.mark.anyio
 async def test_get_public_key_missing_key_use_default(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
@@ -218,7 +224,9 @@ def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychai
 
 
 def test_log_in_failure_to_write_last_used_fingerprint(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, monkeypatch: pytest.MonkeyPatch
+    root_path_populated_with_config: Path,
+    get_temp_keyring: Keychain,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     called_update_last_used_fingerprint: bool = False
 
@@ -328,7 +336,8 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
 
 
 def test_get_last_used_fingerprint_file_cant_read_win32(
-    root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
+    root_path_populated_with_config: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     if sys.platform not in {"win32", "cygwin"}:
         pytest.skip("Windows-specific test")
@@ -428,7 +437,9 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_timestamp_for_height_from_peer(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
@@ -452,7 +463,7 @@ async def test_get_timestamp_for_height_from_peer(
     cache = wallet_node.get_cache_for_peer(full_node_peer)
     cache.clear_after_height(0)
     modified_foliage_transaction_block = block_at_peak.foliage_transaction_block.replace(
-        timestamp=uint64(timestamp_at_peak + 1)
+        timestamp=uint64(timestamp_at_peak + 1),
     )
     modified_peak = peak.replace(foliage_transaction_block=modified_foliage_transaction_block)
     cache.add_to_blocks(modified_peak)
@@ -492,7 +503,9 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    default_400_blocks: list[FullBlock],
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
@@ -568,7 +581,9 @@ async def test_get_balance(
 
 @pytest.mark.anyio
 async def test_add_states_from_peer_reorg_failure(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -586,7 +601,9 @@ async def test_add_states_from_peer_reorg_failure(
 
 @pytest.mark.anyio
 async def test_add_states_from_peer_untrusted_shutdown(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -599,7 +616,8 @@ async def test_add_states_from_peer_untrusted_shutdown(
     coin_states = [CoinState(coin_generator.get().coin, uint32(i), uint32(i)) for i in range(3000)]
     with caplog.at_level(logging.INFO):
         assert not await wallet_node.add_states_from_peer(
-            coin_states, next(iter(wallet_server.all_connections.values()))
+            coin_states,
+            next(iter(wallet_server.all_connections.values())),
         )
         assert "Terminating receipt and validation due to shut down request" in caplog.text
 
@@ -607,7 +625,9 @@ async def test_add_states_from_peer_untrusted_shutdown(
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
 @pytest.mark.anyio
 async def test_transaction_send_cache(
-    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
+    self_hostname: str,
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     The purpose of this test is to test that calling _resend_queue on the wallet node does not result in resending a
@@ -624,7 +644,10 @@ async def test_transaction_send_cache(
     logged_spends = []
 
     async def send_transaction(
-        self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
+        self: Self,
+        request: wallet_protocol.SendTransaction,
+        *,
+        test: bool = False,
     ) -> Optional[Message]:
         logged_spends.append(request.transaction.name())
         return None
@@ -653,7 +676,9 @@ async def test_transaction_send_cache(
         msg = make_msg(
             ProtocolMessageTypes.transaction_ack,
             wallet_protocol.TransactionAck(
-                tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name
+                tx.name,
+                uint8(MempoolInclusionStatus.FAILED),
+                Err.GENERATOR_RUNTIME_ERROR.name,
             ),
         )
         assert simulator_and_wallet[1][0][0]._server is not None
@@ -680,19 +705,26 @@ async def test_transaction_send_cache(
 @pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
 @pytest.mark.anyio
 async def test_wallet_node_bad_coin_state_ignore(
-    self_hostname: str, simulator_and_wallet: OldSimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
+    self_hostname: str,
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
     async def register_for_coin_updates(
-        self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
+        self: Self,
+        request: wallet_protocol.RegisterForCoinUpdates,
+        *,
+        test: bool = False,
     ) -> Optional[Message]:
         return make_msg(
             ProtocolMessageTypes.respond_to_coin_updates,
             wallet_protocol.RespondToCoinUpdates(
-                [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
+                [],
+                uint32(0),
+                [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))],
             ),
         )
 
@@ -702,7 +734,8 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     assert full_node_api.full_node._server is not None
     with patch_request_handler(
-        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_for_coin_updates
+        api=full_node_api.full_node._server.get_connections()[0].api,
+        handler=register_for_coin_updates,
     ):
         monkeypatch.setattr(
             wallet_node,
@@ -717,7 +750,9 @@ async def test_wallet_node_bad_coin_state_ignore(
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_key_types(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    default_400_blocks: list[FullBlock],
 ) -> None:
     [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
@@ -748,7 +783,9 @@ async def test_start_with_multiple_key_types(
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_keys(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
+    default_400_blocks: list[FullBlock],
 ) -> None:
     [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 

@@ -51,7 +51,11 @@ CONTEXT_SETTINGS = {
     show_default=True,
 )
 @click.option(
-    "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
+    "--keys-root-path",
+    default=DEFAULT_KEYS_ROOT_PATH,
+    help="Keyring file root",
+    type=click.Path(),
+    show_default=True,
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File to read the keyring passphrase from")
 @click.pass_context

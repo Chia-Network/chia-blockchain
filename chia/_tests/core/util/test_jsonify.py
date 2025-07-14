@@ -98,7 +98,7 @@ class NestedWithTupleOuter(Streamable):
 
 def test_nested_with_tuple() -> None:
     t = NestedWithTupleOuter(
-        (NestedWithTupleInner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])), uint32(321), "baz")
+        (NestedWithTupleInner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])), uint32(321), "baz"),
     )
 
     assert t.to_json_dict() == {"a": [{"a": ["foo", 123, "bar"], "b": "0x1337"}, 321, "baz"]}

@@ -70,7 +70,7 @@ def ssl_context_for_server(
         "ECDHE-ECDSA-AES256-SHA384:"
         "ECDHE-RSA-AES256-SHA384:"
         "ECDHE-ECDSA-AES128-SHA256:"
-        "ECDHE-RSA-AES128-SHA256"
+        "ECDHE-RSA-AES128-SHA256",
     )
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
@@ -78,7 +78,10 @@ def ssl_context_for_server(
 
 
 def ssl_context_for_root(
-    ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
+    ca_cert_file: str,
+    *,
+    check_permissions: bool = True,
+    log: Optional[logging.Logger] = None,
 ) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
@@ -344,10 +347,11 @@ class ChiaServer:
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
-                connection.peer_info.host, self.exempt_peer_networks
+                connection.peer_info.host,
+                self.exempt_peer_networks,
             ):
                 self.log.info(
-                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
+                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached.",
                 )
                 await connection.close()
             else:
@@ -380,7 +384,9 @@ class ChiaServer:
         return ws
 
     async def connection_added(
-        self, connection: WSChiaConnection, on_connect: Optional[ConnectionCallback] = None
+        self,
+        connection: WSChiaConnection,
+        on_connect: Optional[ConnectionCallback] = None,
     ) -> None:
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
@@ -516,19 +522,19 @@ class ChiaServer:
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning(
                     f"Invalid handshake with peer {target_node}{' during feeler connection' if is_feeler else ''}"
-                    f". Maybe the peer is running old software."
+                    f". Maybe the peer is running old software.",
                 )
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
                 self.log.warning(
                     f"Incompatible network ID{' during feeler connection' if is_feeler else ''}"
-                    f". Maybe the peer is on another network"
+                    f". Maybe the peer is on another network",
                 )
             elif e.code == Err.SELF_CONNECTION:
                 pass
             else:
                 error_stack = traceback.format_exc()
                 self.log.error(
-                    f"{'Feeler connection ' if is_feeler else ''}Exception {e}, exception Stack: {error_stack}"
+                    f"{'Feeler connection ' if is_feeler else ''}Exception {e}, exception Stack: {error_stack}",
                 )
         except Exception as e:
             if connection is not None:
@@ -542,7 +548,10 @@ class ChiaServer:
         return False
 
     async def connection_closed(
-        self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False
+        self,
+        connection: WSChiaConnection,
+        ban_time: int,
+        closed_connection: bool = False,
     ) -> None:
         # closed_connection is true if the callback is being called with a connection that was previously closed
         # in this case we still want to do the banning logic and remove the connection from the list
@@ -556,7 +565,8 @@ class ChiaServer:
             self.log.warning(f"Banning {connection.peer_info.host} for {ban_time} seconds")
             if connection.peer_info.host in self.banned_peers:
                 self.banned_peers[connection.peer_info.host] = max(
-                    ban_until, self.banned_peers[connection.peer_info.host]
+                    ban_until,
+                    self.banned_peers[connection.peer_info.host],
                 )
             else:
                 self.banned_peers[connection.peer_info.host] = ban_until
@@ -572,7 +582,7 @@ class ChiaServer:
                 # This means the handshake was never finished with this peer
                 self.log.debug(
                     f"Invalid connection type for connection {connection.peer_info.host},"
-                    f" while closing. Handshake never finished."
+                    f" while closing. Handshake never finished.",
                 )
             connection.cancel_tasks()
             on_disconnect = getattr(self.node, "on_disconnect", None)
@@ -625,7 +635,10 @@ class ChiaServer:
                 await connection.send_message(message)
 
     async def call_api_of_specific(
-        self, request_method: Callable[..., Awaitable[Optional[Message]]], message_data: Streamable, node_id: bytes32
+        self,
+        request_method: Callable[..., Awaitable[Optional[Message]]],
+        message_data: Streamable,
+        node_id: bytes32,
     ) -> Optional[Any]:
         if node_id in self.all_connections:
             connection = self.all_connections[node_id]
@@ -634,7 +647,10 @@ class ChiaServer:
         return None
 
     def get_connections(
-        self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = None
+        self,
+        node_type: Optional[NodeType] = None,
+        *,
+        outbound: Optional[bool] = None,
     ) -> list[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
@@ -718,7 +734,8 @@ class ChiaServer:
         inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
             return inbound_count < cast(int, self.config.get("target_peer_count", 40)) - cast(
-                int, self.config.get("target_outbound_peer_count", 8)
+                int,
+                self.config.get("target_outbound_peer_count", 8),
             )
         if node_type == NodeType.WALLET:
             return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))

@@ -28,7 +28,7 @@ select = [
     "E",
     "W",
     # Trailing commas
-    # "COM812" # missing-trailing-comma (5105 errors)
+    "COM812", # missing-trailing-comma - enabled in ruff 0.12.x
     "COM818",
     "COM819",
     # Libraries we don't use so might as well enable

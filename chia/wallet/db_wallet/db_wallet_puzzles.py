@@ -72,13 +72,15 @@ def launch_solution_to_singleton_info(launch_solution: Program) -> tuple[bytes32
 
 def launcher_to_struct(launcher_id: bytes32) -> Program:
     struct: Program = Program.to(
-        (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH))
+        (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)),
     )
     return struct
 
 
 def create_graftroot_offer_puz(
-    launcher_ids: list[bytes32], values_to_prove: list[list[bytes32]], inner_puzzle: Program
+    launcher_ids: list[bytes32],
+    values_to_prove: list[list[bytes32]],
+    inner_puzzle: Program,
 ) -> Program:
     return GRAFTROOT_DL_OFFERS.curry(
         inner_puzzle,
@@ -96,7 +98,8 @@ MIRROR_PUZZLE_HASH = create_mirror_puzzle().get_tree_hash()
 
 
 def get_mirror_info(
-    parent_puzzle: Union[Program, SerializedProgram], parent_solution: Union[Program, SerializedProgram]
+    parent_puzzle: Union[Program, SerializedProgram],
+    parent_solution: Union[Program, SerializedProgram],
 ) -> tuple[bytes32, list[bytes]]:
     assert type(parent_puzzle) is type(parent_solution)
     _, conditions = run_with_cost(parent_puzzle, INFINITE_COST, parent_solution)

@@ -51,7 +51,9 @@ class HarvesterAPI:
 
     @metadata.request(peer_required=True)
     async def harvester_handshake(
-        self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
+        self,
+        harvester_handshake: harvester_protocol.HarvesterHandshake,
+        peer: WSChiaConnection,
     ) -> None:
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
@@ -59,7 +61,8 @@ class HarvesterAPI:
         We cannot use any plots which have different keys in them.
         """
         self.harvester.plot_manager.set_public_keys(
-            harvester_handshake.farmer_public_keys, harvester_handshake.pool_public_keys
+            harvester_handshake.farmer_public_keys,
+            harvester_handshake.pool_public_keys,
         )
         self.harvester.plot_sync_sender.set_connection(peer)
         await self.harvester.plot_sync_sender.start()
@@ -67,7 +70,9 @@ class HarvesterAPI:
 
     @metadata.request(peer_required=True)
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+        self,
+        new_challenge: harvester_protocol.NewSignagePointHarvester,
+        peer: WSChiaConnection,
     ) -> None:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
@@ -88,7 +93,7 @@ class HarvesterAPI:
 
         self.harvester.log.debug(
             f"new_signage_point_harvester lookup: challenge_hash: {new_challenge.challenge_hash}, "
-            f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
+            f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}",
         )
 
         start = time.monotonic()
@@ -111,24 +116,24 @@ class HarvesterAPI:
                 except RuntimeError as e:
                     if str(e) == "Timeout waiting for context queue.":
                         self.harvester.log.warning(
-                            f"No decompressor available. Cancelling qualities retrieving for {filename}"
+                            f"No decompressor available. Cancelling qualities retrieving for {filename}",
                         )
                         self.harvester.log.warning(
                             f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
-                            f"plot_info: {plot_info}"
+                            f"plot_info: {plot_info}",
                         )
                     else:
                         self.harvester.log.error(f"Exception fetching qualities for {filename}. {e}")
                         self.harvester.log.error(
                             f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
-                            f"plot_info: {plot_info}"
+                            f"plot_info: {plot_info}",
                         )
                     return []
                 except Exception as e:
                     self.harvester.log.error(f"Error using prover object {e}")
                     self.harvester.log.error(
                         f"File: {filename} Plot ID: {plot_id.hex()}, "
-                        f"challenge: {sp_challenge_hash}, plot_info: {plot_info}"
+                        f"challenge: {sp_challenge_hash}, plot_info: {plot_info}",
                     )
                     return []
 
@@ -163,37 +168,39 @@ class HarvesterAPI:
                             # then send to farmer
                             try:
                                 proof_xs = plot_info.prover.get_full_proof(
-                                    sp_challenge_hash, index, self.harvester.parallel_read
+                                    sp_challenge_hash,
+                                    index,
+                                    self.harvester.parallel_read,
                                 )
                             except RuntimeError as e:
                                 if str(e) == "GRResult_NoProof received":
                                     self.harvester.log.info(
-                                        f"Proof dropped due to line point compression for {filename}"
+                                        f"Proof dropped due to line point compression for {filename}",
                                     )
                                     self.harvester.log.info(
                                         f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
-                                        f"plot_info: {plot_info}"
+                                        f"plot_info: {plot_info}",
                                     )
                                 elif str(e) == "Timeout waiting for context queue.":
                                     self.harvester.log.warning(
-                                        f"No decompressor available. Cancelling full proof retrieving for {filename}"
+                                        f"No decompressor available. Cancelling full proof retrieving for {filename}",
                                     )
                                     self.harvester.log.warning(
                                         f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
-                                        f"plot_info: {plot_info}"
+                                        f"plot_info: {plot_info}",
                                     )
                                 else:
                                     self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                     self.harvester.log.error(
                                         f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
-                                        f"plot_info: {plot_info}"
+                                        f"plot_info: {plot_info}",
                                     )
                                 continue
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(
                                     f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
-                                    f"plot_info: {plot_info}"
+                                    f"plot_info: {plot_info}",
                                 )
                                 continue
 
@@ -208,7 +215,7 @@ class HarvesterAPI:
                                         uint8(plot_info.prover.get_size()),
                                         proof_xs,
                                     ),
-                                )
+                                ),
                             )
                 return responses
             except Exception as e:
@@ -216,14 +223,18 @@ class HarvesterAPI:
                 return []
 
         async def lookup_challenge(
-            filename: Path, plot_info: PlotInfo
+            filename: Path,
+            plot_info: PlotInfo,
         ) -> tuple[Path, list[harvester_protocol.NewProofOfSpace]]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: list[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._shut_down:
                 return filename, []
             proofs_of_space_and_q: list[tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
-                self.harvester.executor, blocking_lookup, filename, plot_info
+                self.harvester.executor,
+                blocking_lookup,
+                filename,
+                plot_info,
             )
             for quality_str, proof_of_space in proofs_of_space_and_q:
                 all_responses.append(
@@ -236,7 +247,7 @@ class HarvesterAPI:
                         include_source_signature_data=False,
                         farmer_reward_address_override=None,
                         fee_info=None,
-                    )
+                    ),
                 )
             return filename, all_responses
 
@@ -256,7 +267,7 @@ class HarvesterAPI:
                         self.harvester.constants,
                         new_challenge.peak_height,
                         PlotSize.make_v1(try_plot_info.prover.get_size()),
-                    )
+                    ),
                 )
                 if passes_plot_filter(
                     filter_prefix_bits,
@@ -277,7 +288,7 @@ class HarvesterAPI:
             if time_taken > 8:
                 self.harvester.log.warning(
                     f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
-                    f" to minimize risk of losing rewards."
+                    f" to minimize risk of losing rewards.",
                 )
             else:
                 pass
@@ -304,7 +315,7 @@ class HarvesterAPI:
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
             f" Found {total_proofs_found} proofs. Time: {time_taken:.5f} s. "
-            f"Total {self.harvester.plot_manager.plot_count()} plots"
+            f"Total {self.harvester.plot_manager.plot_count()} plots",
         )
         self.harvester.state_changed(
             "farming_info",
@@ -384,7 +395,7 @@ class HarvesterAPI:
                     plot["file_size"],
                     plot["time_modified"],
                     plot["compression_level"],
-                )
+                ),
             )
 
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)

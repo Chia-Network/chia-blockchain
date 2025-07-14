@@ -19,7 +19,7 @@ class TreeGenerationIncrementingError(IntegrityError):
             build_message_with_hashes(
                 message="Found trees with generations not properly incrementing:",
                 bytes_objects=store_ids,
-            )
+            ),
         )
 
 
@@ -29,7 +29,7 @@ class NodeHashError(IntegrityError):
             build_message_with_hashes(
                 message="Found nodes with incorrect hashes:",
                 bytes_objects=node_hashes,
-            )
+            ),
         )
 
 

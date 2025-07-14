@@ -36,10 +36,19 @@ class ListCMD:
     rpc_info: NeedsWalletRPC
     coin_selection_config: NeedsCoinSelectionConfig
     id: int = option(
-        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+        "-i",
+        "--id",
+        help="Id of the wallet to use",
+        type=int,
+        default=1,
+        show_default=True,
+        required=True,
     )
     show_unconfirmed: bool = option(
-        "-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True
+        "-u",
+        "--show-unconfirmed",
+        help="Separately display unconfirmed coins.",
+        is_flag=True,
     )
     paginate: Optional[bool] = option(
         "--paginate/--no-paginate",
@@ -71,7 +80,13 @@ class ListCMD:
 )
 class CombineCMD(TransactionEndpoint):
     id: int = option(
-        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+        "-i",
+        "--id",
+        help="Id of the wallet to use",
+        type=int,
+        default=1,
+        show_default=True,
+        required=True,
     )
     target_amount: Optional[CliAmount] = option(
         "-a",
@@ -101,7 +116,10 @@ class CombineCMD(TransactionEndpoint):
         help="Sort coins from largest to smallest or smallest to largest.",
     )
     override: bool = option(
-        "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
+        "--override",
+        help="Submits transaction without checking for unusual values",
+        is_flag=True,
+        default=False,
     )
 
     @transaction_endpoint_runner
@@ -136,7 +154,13 @@ class CombineCMD(TransactionEndpoint):
 )
 class SplitCMD(TransactionEndpoint):
     id: int = option(
-        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+        "-i",
+        "--id",
+        help="Id of the wallet to use",
+        type=int,
+        default=1,
+        show_default=True,
+        required=True,
     )
     number_of_coins: int = option(
         "-n",

@@ -70,7 +70,7 @@ async def mint_cr_cat(
                 {
                     "puzzle_hash": cat_puzzle.get_tree_hash(),
                     "amount": CAT_AMOUNT_0,
-                }
+                },
             ],
             tx_config,
             wallet_id=1,
@@ -102,7 +102,7 @@ async def mint_cr_cat(
                                 ],
                                 [51, None, -113, tail, None],
                                 [1, our_puzzle.get_tree_hash(), authorized_providers, proofs_checker.as_program()],
-                            ]
+                            ],
                         ),
                         None,
                         cat_coin.name(),
@@ -110,15 +110,15 @@ async def mint_cr_cat(
                         [cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_coin.amount],
                         0,
                         0,
-                    ]
+                    ],
                 ),
-            )
+            ),
         ],
         G2Element(),
     )
     spend_bundle = WalletSpendBundle.aggregate([spend_bundle, eve_spend])
     await wallet_node_0.wallet_state_manager.add_pending_transactions(
-        [dataclasses.replace(tx, spend_bundle=spend_bundle, name=spend_bundle.name())]
+        [dataclasses.replace(tx, spend_bundle=spend_bundle, name=spend_bundle.name())],
     )
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
@@ -130,7 +130,7 @@ async def mint_cr_cat(
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
             "blocks_needed": [2, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -165,9 +165,12 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         did_id: bytes32 = bytes32.from_hexstr(
             (
                 await DIDWallet.create_new_did_wallet(
-                    wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
+                    wallet_node_0.wallet_state_manager,
+                    wallet_0,
+                    uint64(1),
+                    action_scope,
                 )
-            ).get_my_DID()
+            ).get_my_DID(),
         )
 
     # Mint a VC
@@ -229,7 +232,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
     new_vc_record: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert new_vc_record is not None
@@ -285,7 +288,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
     vc_record_updated: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert vc_record_updated is not None
@@ -308,7 +311,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     # Add proofs to DB
@@ -353,7 +356,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cr_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[env_0.dealias_wallet_id("crcat")]
@@ -436,7 +439,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 0,
-                    }
+                    },
                 },
                 post_block_additional_balance_info={
                     "crcat": {
@@ -444,10 +447,11 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
     assert await wallet_node_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("crcat")].match_hinted_coin(
-        next(c for tx in txs for c in tx.additions if c.amount == 90), wallet_1_ph
+        next(c for tx in txs for c in tx.additions if c.amount == 90),
+        wallet_1_ph,
     )
     pending_tx = await client_1.get_transactions(
         env_1.dealias_wallet_id("crcat"),
@@ -471,21 +475,21 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 pre_block_balance_updates={
                     "vc": {
                         "pending_coin_removal_count": 1,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "vc": {
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": -1,
-                    }
+                    },
                 },
             ),
             WalletStateTransition(
                 post_block_balance_updates={
                     "vc": {"init": True, "set_remainder": True},
-                }
+                },
             ),
-        ]
+        ],
     )
     await client_1.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
 
@@ -541,7 +545,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
@@ -609,7 +613,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
     vc_record_updated = (await client_1.vc_get(VCGet(vc_record_updated.vc.launcher_id))).vc_record
     assert vc_record_updated is not None
@@ -658,7 +662,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
     assert (
         len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
@@ -671,7 +675,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         {
             "num_environments": 1,
             "blocks_needed": [1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -693,7 +697,10 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Generate DID as an "authorized provider"
     async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
+            wallet_node_0.wallet_state_manager,
+            wallet_0,
+            uint64(1),
+            action_scope,
         )
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
@@ -724,8 +731,8 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
                     "did": {"set_remainder": True},
                     "vc": {"set_remainder": True},
                 },
-            )
-        ]
+            ),
+        ],
     )
     new_vc_record: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert new_vc_record is not None
@@ -733,7 +740,8 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Test a negative case real quick (mostly unrelated)
     with pytest.raises(ValueError, match="at the same time"):
         async with wallet_node_0.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
                 [uint64(1)],
@@ -746,7 +754,8 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     # Send the DID to oblivion
     async with did_wallet.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await did_wallet.transfer_did(bytes32.zeros, uint64(0), False, action_scope)
 
@@ -757,13 +766,14 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
                     "did": {"set_remainder": True},
                 },
                 post_block_balance_updates={},
-            )
-        ]
+            ),
+        ],
     )
 
     # Make sure revoking still works
     await client_0.vc_revoke(
-        VCRevoke(vc_parent_id=new_vc_record.vc.coin.parent_coin_info, push=True), wallet_environments.tx_config
+        VCRevoke(vc_parent_id=new_vc_record.vc.coin.parent_coin_info, push=True),
+        wallet_environments.tx_config,
     )
     await wallet_environments.process_pending_states(
         [
@@ -780,8 +790,8 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
                         "unspent_coin_count": -1,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
     vc_record_revoked: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert vc_record_revoked is None
@@ -817,7 +827,7 @@ async def test_cat_wallet_conversion(
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex(),
         }
     else:
         wallet_node_0.config["trusted_peers"] = {}
@@ -828,7 +838,9 @@ async def test_cat_wallet_conversion(
 
     # Key point of test: create a normal CAT wallet first, and see if it gets converted to CR-CAT wallet
     await CATWallet.get_or_create_wallet_for_cat(
-        wallet_node_0.wallet_state_manager, wallet_0, Program.to(None).get_tree_hash().hex()
+        wallet_node_0.wallet_state_manager,
+        wallet_0,
+        Program.to(None).get_tree_hash().hex(),
     )
 
     did_id = bytes32.zeros
@@ -842,8 +854,16 @@ async def test_cat_wallet_conversion(
         return None  # pragma: no cover
 
     await time_out_assert_not_none(
-        15, check_length, 1, wallet_node_0.wallet_state_manager.get_all_wallet_info_entries, WalletType.CRCAT
+        15,
+        check_length,
+        1,
+        wallet_node_0.wallet_state_manager.get_all_wallet_info_entries,
+        WalletType.CRCAT,
     )
     await time_out_assert_not_none(
-        15, check_length, 0, wallet_node_0.wallet_state_manager.get_all_wallet_info_entries, WalletType.CAT
+        15,
+        check_length,
+        0,
+        wallet_node_0.wallet_state_manager.get_all_wallet_info_entries,
+        WalletType.CAT,
     )

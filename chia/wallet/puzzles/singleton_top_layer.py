@@ -203,20 +203,24 @@ def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
 
 # Take standard coin and amount -> launch conditions & launcher coin solution
 def launch_conditions_and_coinsol(
-    coin: Coin, inner_puzzle: Program, comment: list[tuple[str, str]], amount: uint64
+    coin: Coin,
+    inner_puzzle: Program,
+    comment: list[tuple[str, str]],
+    amount: uint64,
 ) -> tuple[list[Program], CoinSpend]:
     if (amount % 2) == 0:
         raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
     launcher_coin = generate_launcher_coin(coin, amount)
     curried_singleton = SINGLETON_MOD.curry(
-        (SINGLETON_MOD_HASH, (launcher_coin.name(), SINGLETON_LAUNCHER_HASH)), inner_puzzle
+        (SINGLETON_MOD_HASH, (launcher_coin.name(), SINGLETON_LAUNCHER_HASH)),
+        inner_puzzle,
     )
 
     launcher_solution = Program.to([curried_singleton.get_tree_hash(), amount, comment])
     create_launcher = Program.to([ConditionOpcode.CREATE_COIN, SINGLETON_LAUNCHER_HASH, amount])
     assert_launcher_announcement = Program.to(
-        [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())]
+        [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())],
     )
 
     conditions = [create_launcher, assert_launcher_announcement]
@@ -246,7 +250,9 @@ def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
 
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
 def puzzle_for_singleton(
-    launcher_id: bytes32, inner_puz: Program, launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
+    launcher_id: bytes32,
+    inner_puz: Program,
+    launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH,
 ) -> Program:
     return SINGLETON_MOD.curry((SINGLETON_MOD_HASH, (launcher_id, launcher_hash)), inner_puz)
 
@@ -268,7 +274,11 @@ def pay_to_singleton_puzzle(launcher_id: bytes32) -> Program:
 # Create a coin that a singleton can claim or that can be sent to another puzzle after a specified time
 def pay_to_singleton_or_delay_puzzle(launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32) -> Program:
     return P2_SINGLETON_OR_DELAYED_MOD.curry(
-        SINGLETON_MOD_HASH, launcher_id, SINGLETON_LAUNCHER_HASH, delay_time, delay_ph
+        SINGLETON_MOD_HASH,
+        launcher_id,
+        SINGLETON_LAUNCHER_HASH,
+        delay_time,
+        delay_ph,
     )
 
 
@@ -297,14 +307,20 @@ def claim_p2_singleton(
     else:
         puzzle = pay_to_singleton_or_delay_puzzle(launcher_id, delay_time, delay_ph)
     claim_coinsol = make_spend(
-        p2_singleton_coin, puzzle, solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash)
+        p2_singleton_coin,
+        puzzle,
+        solution_for_p2_singleton(p2_singleton_coin, singleton_inner_puzhash),
     )
     return assertion, announcement, claim_coinsol
 
 
 # Get the CoinSpend for spending to a delayed puzzle
 def spend_to_delayed_puzzle(
-    p2_singleton_coin: Coin, output_amount: uint64, launcher_id: bytes32, delay_time: uint64, delay_ph: bytes32
+    p2_singleton_coin: Coin,
+    output_amount: uint64,
+    launcher_id: bytes32,
+    delay_time: uint64,
+    delay_ph: bytes32,
 ) -> CoinSpend:
     return make_spend(
         p2_singleton_coin,

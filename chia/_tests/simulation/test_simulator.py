@@ -27,7 +27,8 @@ async def test_simulation_farm_blocks_to_puzzlehash(
     assert full_node_api.full_node.blockchain.get_peak_height() is None
 
     await full_node_api.farm_blocks_to_puzzlehash(
-        count=count, guarantee_transaction_blocks=guarantee_transaction_blocks
+        count=count,
+        guarantee_transaction_blocks=guarantee_transaction_blocks,
     )
 
     # The requested number of blocks had been processed.
@@ -185,7 +186,9 @@ async def test_process_transaction_records(
     ],
 )
 async def test_create_coins_with_amounts(
-    self_hostname: str, amounts: list[uint64], simulator_and_wallet: OldSimulatorsAndWallets
+    self_hostname: str,
+    amounts: list[uint64],
+    simulator_and_wallet: OldSimulatorsAndWallets,
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)

@@ -125,7 +125,7 @@ class TradeManager:
         These will include coins that belong to us and coins that on other side of trade
         """
         coin_ids = await self.trade_store.get_coin_ids_of_interest_with_trade_statuses(
-            trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL]
+            trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL],
         )
         return coin_ids
 
@@ -140,7 +140,10 @@ class TradeManager:
         return trades_by_coin
 
     async def coins_of_interest_farmed(
-        self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
+        self,
+        coin_state: CoinState,
+        fork_height: Optional[uint32],
+        peer: WSChiaConnection,
     ) -> None:
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
@@ -168,11 +171,11 @@ class TradeManager:
             primary_coin_ids = [c.name() for c in offer.removals()]
             # TODO: Add `WalletCoinStore.get_coins`.
             result = await self.wallet_state_manager.coin_store.get_coin_records(
-                coin_id_filter=HashFilter.include(primary_coin_ids)
+                coin_id_filter=HashFilter.include(primary_coin_ids),
             )
             our_primary_coins: list[Coin] = [cr.coin for cr in result.records]
             our_additions: list[Coin] = list(
-                filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
+                filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions()),
             )
             our_addition_ids: list[bytes32] = [c.name() for c in our_additions]
 
@@ -193,7 +196,7 @@ class TradeManager:
                 for tx in tx_records:
                     if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
                         await self.wallet_state_manager.add_transaction(
-                            dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
+                            dataclasses.replace(tx, confirmed_at_height=height, confirmed=True),
                         )
 
                 self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
@@ -225,7 +228,7 @@ class TradeManager:
         #  - No need to get the coin records here, we are only interested in the coin_id on the call site.
         return (
             await self.wallet_state_manager.coin_store.get_coin_records(
-                coin_id_filter=HashFilter.include(coins_of_interest)
+                coin_id_filter=HashFilter.include(coins_of_interest),
             )
         ).coin_id_to_record
 
@@ -351,7 +354,7 @@ class TradeManager:
                         for tx in inner_action_scope.side_effects.transactions
                         if tx.spend_bundle is not None
                         for add in tx.spend_bundle.additions()
-                    ]
+                    ],
                 )
                 all_txs.extend(inner_action_scope.side_effects.transactions)
                 fee_to_pay = uint64(0)
@@ -395,13 +398,13 @@ class TradeManager:
                     tx for tx in interface.side_effects.transactions if tx.name not in all_tx_names
                 ]
                 final_spend_bundle = WalletSpendBundle.aggregate(
-                    [tx.spend_bundle for tx in all_txs if tx.spend_bundle is not None]
+                    [tx.spend_bundle for tx in all_txs if tx.spend_bundle is not None],
                 )
                 interface.side_effects.transactions.append(
-                    dataclasses.replace(all_txs[0], spend_bundle=final_spend_bundle, name=final_spend_bundle.name())
+                    dataclasses.replace(all_txs[0], spend_bundle=final_spend_bundle, name=final_spend_bundle.name()),
                 )
                 interface.side_effects.transactions.extend(
-                    [dataclasses.replace(tx, spend_bundle=None, fee_amount=fee) for tx in all_txs[1:]]
+                    [dataclasses.replace(tx, spend_bundle=None, fee_amount=fee) for tx in all_txs[1:]],
                 )
 
     async def save_trade(self, trade: TradeRecord, offer: Offer) -> None:
@@ -413,7 +416,7 @@ class TradeManager:
         non_offer_additions: set[Coin] = set(offer.additions()) ^ offered_coins
         non_offer_removals: set[Coin] = set(offer.removals()) ^ offered_coins
         await self.wallet_state_manager.add_interested_coin_ids(
-            [coin.name() for coin in (*non_offer_removals, *non_offer_additions)]
+            [coin.name() for coin in (*non_offer_removals, *non_offer_additions)],
         )
 
         self.wallet_state_manager.state_changed("offer_added")
@@ -508,7 +511,7 @@ class TradeManager:
                                 memos = [p2_ph]
                             else:
                                 raise ValueError(
-                                    f"Cannot request assets from wallet id {wallet.id()} without more information"
+                                    f"Cannot request assets from wallet id {wallet.id()} without more information",
                                 )
                     else:
                         asset_id = id
@@ -526,7 +529,7 @@ class TradeManager:
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             else:
                                 raise ValueError(
-                                    f"Cannot offer assets from wallet id {wallet.id()} without more information"
+                                    f"Cannot offer assets from wallet id {wallet.id()} without more information",
                                 )
                     else:
                         asset_id = id
@@ -567,7 +570,7 @@ class TradeManager:
                                 driver_dict[asset_id] = puzzle_driver
                             else:
                                 raise ValueError(
-                                    f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}"
+                                    f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}",
                                 )
                         else:
                             driver_dict[asset_id] = puzzle_driver
@@ -575,7 +578,9 @@ class TradeManager:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             requested_payments = await self.check_for_requested_payment_modifications(
-                requested_payments, driver_dict, taking
+                requested_payments,
+                driver_dict,
+                taking,
             )
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
@@ -592,7 +597,8 @@ class TradeManager:
 
             all_coins: list[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]] = Offer.notarize_payments(
-                requested_payments, all_coins
+                requested_payments,
+                all_coins,
             )
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
@@ -607,7 +613,8 @@ class TradeManager:
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 async with self.wallet_state_manager.new_action_scope(
-                    action_scope.config.tx_config, push=False
+                    action_scope.config.tx_config,
+                    push=False,
                 ) as inner_action_scope:
                     # This should probably not switch on whether or not we're spending XCH but it has to for now
                     assert wallet is not None
@@ -647,7 +654,7 @@ class TradeManager:
                 interface.side_effects.transactions.extend(all_transactions)
 
             total_spend_bundle = WalletSpendBundle.aggregate(
-                [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
+                [x.spend_bundle for x in all_transactions if x.spend_bundle is not None],
             )
 
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
@@ -671,10 +678,11 @@ class TradeManager:
         all_removals: list[Coin] = offer.removals()
         all_removal_names: list[bytes32] = [c.name() for c in all_removals]
         non_ephemeral_removals: list[Coin] = list(
-            filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
+            filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals),
         )
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [c.name() for c in non_ephemeral_removals], peer=peer
+            [c.name() for c in non_ephemeral_removals],
+            peer=peer,
         )
 
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
@@ -705,7 +713,7 @@ class TradeManager:
                 condition
                 for spend in final_spend_bundle.coin_spends
                 for condition in run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter()
-            )
+            ),
         )
         # this executes the puzzles again
         all_fees = uint64(estimate_fees(final_spend_bundle))
@@ -742,7 +750,7 @@ class TradeManager:
                             name=std_hash(final_spend_bundle.name() + addition.name()),
                             memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
                             valid_times=valid_times,
-                        )
+                        ),
                     )
                 else:  # This is change
                     addition_dict.setdefault(wallet_identifier.id, [])
@@ -802,7 +810,7 @@ class TradeManager:
                     name=std_hash(final_spend_bundle.name() + removal_tree_hash),
                     memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
                     valid_times=valid_times,
-                )
+                ),
             )
 
         return txs
@@ -843,7 +851,8 @@ class TradeManager:
             raise ValueError("This offer is no longer valid")
         # We need to sandbox the transactions here because we're going to make our own
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config,
+            push=False,
         ) as inner_action_scope:
             result = await self._create_offer_for_ids(
                 take_offer_dict,
@@ -860,7 +869,9 @@ class TradeManager:
             _success, take_offer, _error = result
 
             complete_offer, valid_spend_solver = await self.check_for_final_modifications(
-                Offer.aggregate([offer, take_offer]), solver, inner_action_scope
+                Offer.aggregate([offer, take_offer]),
+                solver,
+                inner_action_scope,
             )
 
         async with action_scope.use() as interface:
@@ -875,7 +886,7 @@ class TradeManager:
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(
-            solver=Solver({**valid_spend_solver.info, **solver.info})
+            solver=Solver({**valid_spend_solver.info, **solver.info}),
         )
         await self.maybe_create_wallets_for_offer(complete_offer)
 
@@ -921,14 +932,19 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, action_scope, fee, extra_conditions
+                    self.wallet_state_manager,
+                    offer_dict,
+                    driver_dict,
+                    action_scope,
+                    fee,
+                    extra_conditions,
                 )
             elif (
                 puzzle_info.check_type(
                     [
                         AssetType.SINGLETON.value,
                         AssetType.METADATA.value,
-                    ]
+                    ],
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
@@ -949,13 +965,13 @@ class TradeManager:
                 AssetType.SINGLETON.value,
                 AssetType.METADATA.value,
                 AssetType.OWNERSHIP.value,
-            ]
+            ],
         ) and driver_info.check_type(
             [
                 AssetType.SINGLETON.value,
                 AssetType.METADATA.value,
                 AssetType.OWNERSHIP.value,
-            ]
+            ],
         ):
             old_owner = driver_info.also().also().info["owner"]  # type: ignore
             puzzle_info.also().also().info["owner"] = old_owner  # type: ignore
@@ -970,7 +986,7 @@ class TradeManager:
                     [
                         AssetType.SINGLETON.value,
                         AssetType.METADATA.value,
-                    ]
+                    ],
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
@@ -998,7 +1014,10 @@ class TradeManager:
         }
 
     async def check_for_final_modifications(
-        self, offer: Offer, solver: Solver, action_scope: WalletActionScope
+        self,
+        offer: Offer,
+        solver: Solver,
+        action_scope: WalletActionScope,
     ) -> tuple[Offer, Solver]:
         for puzzle_info in offer.driver_dict.values():
             if (
@@ -1006,7 +1025,7 @@ class TradeManager:
                     [
                         AssetType.SINGLETON.value,
                         AssetType.METADATA.value,
-                    ]
+                    ],
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
@@ -1015,7 +1034,7 @@ class TradeManager:
                 [
                     AssetType.CAT.value,
                     AssetType.CR.value,
-                ]
+                ],
             ):
                 # get VC wallet
                 for _, wallet in self.wallet_state_manager.wallets.items():
@@ -1039,7 +1058,7 @@ class TradeManager:
                     [
                         AssetType.CAT.value,
                         AssetType.CR.value,
-                    ]
+                    ],
                 ):
                     vc = await (
                         await self.wallet_state_manager.get_or_create_vc_wallet()
@@ -1056,7 +1075,8 @@ class TradeManager:
                         dataclasses.replace(
                             payment,
                             puzzle_hash=construct_pending_approval_state(
-                                payment.puzzle_hash, payment.amount
+                                payment.puzzle_hash,
+                                payment.amount,
                             ).get_tree_hash(),
                         )
                         for payment in payments
@@ -1066,7 +1086,7 @@ class TradeManager:
                         [
                             AssetType.CAT.value,
                             AssetType.CR.value,
-                        ]
+                        ],
                     )
                     else payments
                 )

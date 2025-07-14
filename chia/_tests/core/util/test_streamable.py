@@ -321,7 +321,10 @@ def test_convert_primitive_failures(input_dict: dict[str, Any], error: Any) -> N
     ],
 )
 def test_streamable_from_dict_failures(
-    test_class: type[Streamable], input_dict: dict[str, Any], error: Any, error_message: str
+    test_class: type[Streamable],
+    input_dict: dict[str, Any],
+    error: Any,
+    error_message: str,
 ) -> None:
     with pytest.raises(error, match=re.escape(error_message)):
         streamable_from_dict(test_class, input_dict)
@@ -451,7 +454,8 @@ def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
             [key_type, value_type] = get_args(type_in)
             assert type(item) is dict
             return validate_item_type(key_type, next(iter(item.keys()))) and validate_item_type(
-                value_type, next(iter(item.values()))
+                value_type,
+                next(iter(item.values())),
             )
         return isinstance(item, type_in)
 
@@ -937,5 +941,5 @@ class UnsupportedDictToDeserialize(Streamable):
 def test_duplicate_dict_key_error() -> None:
     with pytest.raises(ValueError, match="duplicate dict keys"):
         UnsupportedDictToDeserialize.from_bytes(
-            bytes(UnsupportedDictToSerialize([("foo", uint8(1)), ("foo", uint8(2))]))
+            bytes(UnsupportedDictToSerialize([("foo", uint8(1)), ("foo", uint8(2))])),
         )

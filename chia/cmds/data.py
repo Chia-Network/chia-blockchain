@@ -198,7 +198,7 @@ def update_data_store(
             fee=fee,
             fingerprint=fingerprint,
             submit_on_chain=submit,
-        )
+        ),
     )
 
 
@@ -224,7 +224,7 @@ def update_multiple_stores(
             fee=fee,
             fingerprint=fingerprint,
             submit_on_chain=submit,
-        )
+        ),
     )
 
 
@@ -247,7 +247,7 @@ def submit_pending_root(
             store_id=id,
             fee=fee,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -267,7 +267,7 @@ def submit_all_pending_roots(
             rpc_port=data_rpc_port,
             fee=fee,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -310,8 +310,13 @@ def get_keys_values(
 
     run(
         get_keys_values_cmd(
-            data_rpc_port, id, root_hash, fingerprint=fingerprint, page=page, max_page_size=max_page_size
-        )
+            data_rpc_port,
+            id,
+            root_hash,
+            fingerprint=fingerprint,
+            page=page,
+            max_page_size=max_page_size,
+        ),
     )
 
 
@@ -385,7 +390,8 @@ def unsubscribe(
 
 
 @data_cmd.command(
-    "get_kv_diff", help="Get the inserted and deleted keys and values between an initial and a final hash"
+    "get_kv_diff",
+    help="Get the inserted and deleted keys and values between an initial and a final hash",
 )
 @create_data_store_id_option()
 @click.option("-hash_1", "--hash_1", help="Initial hash", type=Bytes32ParamType(), required=True)
@@ -414,7 +420,7 @@ def get_kv_diff(
             fingerprint=fingerprint,
             page=page,
             max_page_size=max_page_size,
-        )
+        ),
     )
 
 
@@ -447,7 +453,11 @@ def get_root_history(
     help="Specify if already existing files need to be overwritten by this command",
 )
 @click.option(
-    "-d", "--directory", type=str, help="If specified, use a non-default directory to write the files", required=False
+    "-d",
+    "--directory",
+    type=str,
+    help="If specified, use a non-default directory to write the files",
+    required=False,
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
@@ -467,7 +477,7 @@ def add_missing_files(
             overwrite=overwrite,
             foldername=None if directory is None else Path(directory),
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -475,7 +485,12 @@ def add_missing_files(
 @data_cmd.command("add_mirror", help="Publish mirror urls on chain")
 @create_data_store_id_option()
 @click.option(
-    "-a", "--amount", help="Amount to spend for this mirror, in mojos", type=int, default=0, show_default=True
+    "-a",
+    "--amount",
+    help="Amount to spend for this mirror, in mojos",
+    type=int,
+    default=0,
+    show_default=True,
 )
 @click.option(
     "-u",
@@ -506,7 +521,7 @@ def add_mirror(
             amount=amount,
             fee=fee,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -530,7 +545,7 @@ def delete_mirror(
             coin_id=coin_id,
             fee=fee,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -550,7 +565,7 @@ def get_mirrors(
             rpc_port=data_rpc_port,
             store_id=id,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -567,7 +582,7 @@ def get_subscriptions(
         get_subscriptions_cmd(
             rpc_port=data_rpc_port,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -584,7 +599,7 @@ def get_owned_stores(
         get_owned_stores_cmd(
             rpc_port=data_rpc_port,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -639,7 +654,7 @@ def clear_pending_roots(
             rpc_port=data_rpc_port,
             store_id=id,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 
@@ -659,7 +674,7 @@ def wallet_log_in(
         wallet_log_in_cmd(
             rpc_port=data_rpc_port,
             fingerprint=fingerprint,
-        )
+        ),
     )
 
 

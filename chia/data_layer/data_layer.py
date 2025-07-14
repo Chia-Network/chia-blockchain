@@ -89,7 +89,8 @@ def server_files_path_from_config(config: dict[str, Any], root_path: Path) -> Pa
     server_files_replaced: Path = path_from_root(
         root_path,
         config.get("server_files_location", "data_layer/db/server_files_location_CHALLENGE").replace(
-            "CHALLENGE", config["selected_network"]
+            "CHALLENGE",
+            config["selected_network"],
         ),
     )
     return server_files_replaced
@@ -140,7 +141,7 @@ class DataLayer:
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
     client_timeout: aiohttp.ClientTimeout = dataclasses.field(
-        default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
+        default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5),
     )
     group_files_by_store: bool = False
 
@@ -203,7 +204,8 @@ class DataLayer:
             subscription_update_concurrency=config.get("subscription_update_concurrency", 5),
             unsubscribe_data_queue=[],
             client_timeout=aiohttp.ClientTimeout(
-                total=config.get("client_timeout", 45), sock_connect=config.get("connect_timeout", 5)
+                total=config.get("client_timeout", 45),
+                sock_connect=config.get("connect_timeout", 5),
             ),
             group_files_by_store=config.get("group_files_by_store", False),
         )
@@ -321,7 +323,8 @@ class DataLayer:
                 root_hash = await self._get_publishable_root_hash(store_id=store_id)
                 updates.append(LauncherRootPair(store_id, root_hash))
             response = await self.wallet_rpc.dl_update_multiple(
-                DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
+                DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee),
+                DEFAULT_TX_CONFIG,
             )
             return response.transactions
         else:
@@ -353,7 +356,8 @@ class DataLayer:
             updates.append(LauncherRootPair(pending_root.store_id, root_hash))
             await self.data_store.change_root_status(pending_root, Status.PENDING)
         response = await self.wallet_rpc.dl_update_multiple(
-            DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
+            DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee),
+            DEFAULT_TX_CONFIG,
         )
         return response.transactions
 
@@ -423,7 +427,10 @@ class DataLayer:
             return node.hash
 
     async def get_value(
-        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, Unspecified] = unspecified
+        self,
+        store_id: bytes32,
+        key: bytes,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -539,7 +546,7 @@ class DataLayer:
             if root.generation > singleton_record.generation:
                 self.log.info(
                     f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
-                    "Maybe we're doing a batch update."
+                    "Maybe we're doing a batch update.",
                 )
                 return
             wallet_history = (
@@ -548,7 +555,7 @@ class DataLayer:
                         launcher_id=store_id,
                         min_generation=uint32(root.generation + 1),
                         max_generation=singleton_record.generation,
-                    )
+                    ),
                 )
             ).history
             new_hashes = [record.root for record in reversed(wallet_history)]
@@ -599,7 +606,7 @@ class DataLayer:
             if root.generation > singleton_record.generation:
                 self.log.info(
                     "Fetch data: local DL store is ahead of chain generation. "
-                    f"Local root: {root}. Singleton: {singleton_record}"
+                    f"Local root: {root}. Singleton: {singleton_record}",
                 )
                 break
             if root.generation == singleton_record.generation:
@@ -610,7 +617,7 @@ class DataLayer:
                 f"Downloading files {store_id}. "
                 f"Current wallet generation: {root.generation}. "
                 f"Target wallet generation: {singleton_record.generation}. "
-                f"Server used: {url}."
+                f"Server used: {url}.",
             )
 
             to_download = (
@@ -619,7 +626,7 @@ class DataLayer:
                         launcher_id=store_id,
                         min_generation=uint32(root.generation + 1),
                         max_generation=singleton_record.generation,
-                    )
+                    ),
                 )
             ).history
             try:
@@ -643,7 +650,7 @@ class DataLayer:
                     self.log.info(
                         f"Finished downloading and validating {store_id}. "
                         f"Wallet generation saved: {singleton_record.generation}. "
-                        f"Root hash saved: {singleton_record.root}."
+                        f"Root hash saved: {singleton_record.root}.",
                     )
                     break
             except aiohttp.client_exceptions.ClientConnectorError:
@@ -759,11 +766,11 @@ class DataLayer:
                                 if res_json["uploaded"]:
                                     self.log.info(
                                         f"Uploaded files to {uploader} for store {store_id.hex()} "
-                                        f"generation {publish_generation}"
+                                        f"generation {publish_generation}",
                                     )
                                 else:
                                     self.log.error(
-                                        f"Failed to upload files to, will retry later: {uploader} : {res_json}"
+                                        f"Failed to upload files to, will retry later: {uploader} : {res_json}",
                                     )
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: store id {store_id}")
@@ -862,7 +869,7 @@ class DataLayer:
                             root_hash,
                             root.generation,
                             group_by_store,
-                        )
+                        ),
                     )
                     paths.append(
                         get_delta_filename_path(
@@ -871,7 +878,7 @@ class DataLayer:
                             root_hash,
                             root.generation,
                             group_by_store,
-                        )
+                        ),
                     )
 
         # stop tracking first, then unsubscribe from the data store
@@ -895,7 +902,8 @@ class DataLayer:
         if not urls:
             raise RuntimeError("URL list can't be empty")
         await self.wallet_rpc.dl_new_mirror(
-            DLNewMirror(launcher_id=store_id, amount=amount, urls=urls, fee=fee, push=True), DEFAULT_TX_CONFIG
+            DLNewMirror(launcher_id=store_id, amount=amount, urls=urls, fee=fee, push=True),
+            DEFAULT_TX_CONFIG,
         )
 
     async def delete_mirror(self, coin_id: bytes32, fee: uint64) -> None:
@@ -980,7 +988,7 @@ class DataLayer:
                         subscriptions.insert(0, Subscription(store_id=store_id, servers_info=[]))
                     except Exception as e:
                         self.log.info(
-                            f"Can't subscribe to owned store {store_id}: {type(e)} {e} {traceback.format_exc()}"
+                            f"Can't subscribe to owned store {store_id}: {type(e)} {e} {traceback.format_exc()}",
                         )
 
             # Optionally
@@ -996,7 +1004,7 @@ class DataLayer:
                             subscriptions.insert(0, subscription)
                         except Exception as e:
                             self.log.info(
-                                f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                                f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}",
                             )
 
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
@@ -1058,7 +1066,7 @@ class DataLayer:
                         {
                             "action": "delete",
                             "key": entry.key,
-                        }
+                        },
                     )
 
                 changelist.append(
@@ -1066,7 +1074,7 @@ class DataLayer:
                         "action": "insert",
                         "key": entry.key,
                         "value": entry.value,
-                    }
+                    },
                 )
 
             return changelist
@@ -1222,7 +1230,7 @@ class DataLayer:
                             root.hex(),
                             str(sibling_sides_integer),
                             ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
-                        )
+                        ),
                     )
 
             solver: dict[str, Any] = {

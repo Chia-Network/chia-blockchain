@@ -101,7 +101,11 @@ class VCWallet:
         return self.wallet_info.id
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+        self,
+        coin: Coin,
+        height: uint32,
+        peer: WSChiaConnection,
+        coin_data: Optional[Streamable],
     ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
@@ -112,26 +116,28 @@ class VCWallet:
         coin_states: Optional[list[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if coin_states is None:
             self.log.error(
-                f"Cannot find parent coin of the verified credential coin: {coin.name().hex()}"
+                f"Cannot find parent coin of the verified credential coin: {coin.name().hex()}",
             )  # pragma: no cover
             return  # pragma: no cover
         parent_coin_state = coin_states[0]
         cs = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         if cs is None:
             self.log.error(
-                f"Cannot get verified credential coin: {coin.name().hex()} puzzle and solution"
+                f"Cannot get verified credential coin: {coin.name().hex()} puzzle and solution",
             )  # pragma: no cover
             return  # pragma: no cover
         try:
             vc = VerifiedCredential.get_next_from_coin_spend(cs)
         except Exception as e:  # pragma: no cover
             self.log.debug(
-                f"Syncing VC from coin spend failed (likely means it was revoked): {e}\n{traceback.format_exc()}"
+                f"Syncing VC from coin spend failed (likely means it was revoked): {e}\n{traceback.format_exc()}",
             )
             return
         vc_record: VCRecord = VCRecord(vc, height)
         self.wallet_state_manager.state_changed(
-            "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
+            "vc_coin_added",
+            self.id(),
+            dict(launcher_id=vc_record.vc.launcher_id.hex()),
         )
         await self.store.add_or_replace_vc_record(vc_record)
 
@@ -146,7 +152,9 @@ class VCWallet:
         if vc_record is not None:
             await self.store.delete_vc_record(vc_record.vc.launcher_id)
             self.wallet_state_manager.state_changed(
-                "vc_coin_removed", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
+                "vc_coin_removed",
+                self.id(),
+                dict(launcher_id=vc_record.vc.launcher_id.hex()),
             )
 
     async def get_vc_record_for_launcher_id(self, launcher_id: bytes32) -> VCRecord:
@@ -224,7 +232,7 @@ class VCWallet:
                     name=spend_bundle.name(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
-                )
+                ),
             )
 
         return vc_record
@@ -241,7 +249,8 @@ class VCWallet:
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         new_proof_hash: Optional[bytes32] = kwargs.get(
-            "new_proof_hash", None
+            "new_proof_hash",
+            None,
         )  # Requires that this key possesses the DID to update the specified VC
         provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
         self_revoke: Optional[bool] = kwargs.get("self_revoke", False)
@@ -279,13 +288,13 @@ class VCWallet:
         if vc_record.confirmed_at_height == 0:
             raise ValueError(
                 f"Verified credential with {lookup_info[0]} {lookup_info[1].hex()}"
-                "is not confirmed, please try again later."
+                "is not confirmed, please try again later.",
             )  # pragma: no cover
         inner_puzhash: bytes32 = vc_record.vc.inner_puzzle_hash
         inner_puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(inner_puzhash)
 
         primaries: list[CreateCoin] = [
-            CreateCoin(puzzle_hashes[0], uint64(vc_record.vc.coin.amount), [puzzle_hashes[0]])
+            CreateCoin(puzzle_hashes[0], uint64(vc_record.vc.coin.amount), [puzzle_hashes[0]]),
         ]
 
         if fee > 0:
@@ -335,7 +344,7 @@ class VCWallet:
                         break
             else:
                 raise ValueError(
-                    f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
+                    f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}.",
                 )  # pragma: no cover
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
@@ -361,7 +370,7 @@ class VCWallet:
                     name=spend_bundle.name(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
-                )
+                ),
             )
 
     async def revoke_vc(
@@ -373,7 +382,8 @@ class VCWallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         vc_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [parent_id], peer=peer
+            [parent_id],
+            peer=peer,
         )
         if vc_coin_states is None:
             raise ValueError(f"Cannot find verified credential coin: {parent_id.hex()}")  # pragma: no cover
@@ -417,7 +427,9 @@ class VCWallet:
 
         if fee > 0:
             await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, action_scope, extra_conditions=(vc_announcement,)
+                fee,
+                action_scope,
+                extra_conditions=(vc_announcement,),
             )
 
         # Assemble final bundle
@@ -430,7 +442,10 @@ class VCWallet:
             interface.side_effects.extra_spends.append(WalletSpendBundle([vc_spend], G2Element()))
 
     async def add_vc_authorization(
-        self, offer: Offer, solver: Solver, action_scope: WalletActionScope
+        self,
+        offer: Offer,
+        solver: Solver,
+        action_scope: WalletActionScope,
     ) -> tuple[Offer, Solver]:
         """
         This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
@@ -482,7 +497,7 @@ class VCWallet:
             # ...then whether or not we should
             our_crcat: bool = (
                 await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                    crcat_spend.crcat.inner_puzzle_hash
+                    crcat_spend.crcat.inner_puzzle_hash,
                 )
                 is not None
             )
@@ -491,7 +506,7 @@ class VCWallet:
                 if not (
                     (  # it's coming to us
                         await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                            bytes32(cc.at("rf").as_atom())
+                            bytes32(cc.at("rf").as_atom()),
                         )
                         is not None
                     )
@@ -503,7 +518,8 @@ class VCWallet:
                         and cc.at("rrrf").atom is None
                         and bytes32(cc.at("rf").as_atom())
                         == construct_pending_approval_state(
-                            bytes32(cc.at("rrrff").as_atom()), uint64(cc.at("rrf").as_int())
+                            bytes32(cc.at("rrrff").as_atom()),
+                            uint64(cc.at("rrf").as_int()),
                         ).get_tree_hash()
                     )
                     or bytes32(cc.at("rf").as_atom()) == Offer.ph()  # it's going to the offer mod
@@ -513,7 +529,7 @@ class VCWallet:
                 announcements_to_make.setdefault(vc_to_use, [])
                 announcements_to_assert.setdefault(vc_to_use, [])
                 announcements_to_make[vc_to_use].append(
-                    CreatePuzzleAnnouncement(crcat_spend.crcat.expected_announcement())
+                    CreatePuzzleAnnouncement(crcat_spend.crcat.expected_announcement()),
                 )
                 announcements_to_assert[vc_to_use].extend(
                     [
@@ -522,7 +538,7 @@ class VCWallet:
                             asserted_msg=b"\xcd" + std_hash(crc.inner_puzzle_hash + int_to_bytes(crc.coin.amount)),
                         )
                         for crc in crcat_spend.children
-                    ]
+                    ],
                 )
 
                 coin_name: str = crcat_spend.crcat.coin.name().hex()
@@ -550,13 +566,14 @@ class VCWallet:
                                 frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
                             )
                             .to_serialized(),
-                        )
+                        ),
                     )
             else:
                 raise ValueError("Wallet cannot verify all spends in specified offer")  # pragma: no cover
 
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config,
+            push=False,
         ) as inner_action_scope:
             for launcher_id, vc in vcs.items():
                 await self.generate_signed_transaction(
@@ -592,12 +609,14 @@ class VCWallet:
                         for tx in inner_action_scope.side_effects.transactions
                         if tx.spend_bundle is not None
                     ],
-                ]
-            )
+                ],
+            ),
         ), Solver({"vc_authorizations": coin_args})
 
     async def get_vc_with_provider_in_and_proofs(
-        self, authorized_providers: list[bytes32], proofs: list[str]
+        self,
+        authorized_providers: list[bytes32],
+        proofs: list[str],
     ) -> VerifiedCredential:
         vc_records: list[VCRecord] = await self.store.get_vc_records_by_providers(authorized_providers)
         if len(vc_records) == 0:  # pragma: no cover

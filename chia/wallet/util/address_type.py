@@ -44,12 +44,12 @@ def ensure_valid_address(address: str, *, allowed_types: set[AddressType], confi
     if address_type is None:
         raise ValueError(
             f"Invalid address: {address}. "
-            f"Expected an address with one of the following prefixes: {[t.hrp(config) for t in allowed_types]}"
+            f"Expected an address with one of the following prefixes: {[t.hrp(config) for t in allowed_types]}",
         )
     decoded_data = convertbits(b32data, 5, 8, False)
     if len(decoded_data) != address_type.expected_decoded_length():
         raise ValueError(
             f"Invalid address: {address}. "
-            f"Expected {address_type.expected_decoded_length()} bytes, got {len(decoded_data)}"
+            f"Expected {address_type.expected_decoded_length()} bytes, got {len(decoded_data)}",
         )
     return address

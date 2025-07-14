@@ -132,7 +132,9 @@ class DIDWallet:
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
+            name=name,
+            wallet_type=WalletType.DECENTRALIZED_ID.value,
+            data=info_as_string,
         )
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
@@ -179,7 +181,9 @@ class DIDWallet:
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
+            name=name,
+            wallet_type=WalletType.DECENTRALIZED_ID.value,
+            data=info_as_string,
         )
         await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.did_info)
@@ -235,7 +239,7 @@ class DIDWallet:
             except Exception:
                 self.log.warning(
                     f"DID {launch_coin.name().hex()} has a recovery list hash but missing a reveal,"
-                    " you may need to reset the recovery info."
+                    " you may need to reset the recovery info.",
                 )
         self.did_info = DIDInfo(
             origin_coin=launch_coin,
@@ -253,7 +257,9 @@ class DIDWallet:
         info_as_string = json.dumps(self.did_info.to_json_dict())
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
+            name=name,
+            wallet_type=WalletType.DECENTRALIZED_ID.value,
+            data=info_as_string,
         )
         await self.wallet_state_manager.add_new_wallet(self)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
@@ -376,7 +382,8 @@ class DIDWallet:
         else:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state(
-                    coin_names=[coin.parent_coin_info], peer=peer
+                    coin_names=[coin.parent_coin_info],
+                    peer=peer,
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
@@ -473,7 +480,8 @@ class DIDWallet:
 
         async with self.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             new_puzhash = await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
+                self.wallet_state_manager,
+                override_reuse_puzhash_with=True,
             )
             new_pubkey = await self.wallet_state_manager.get_public_key(new_puzhash)
             parent_info = None
@@ -599,7 +607,7 @@ class DIDWallet:
                     puzzle_hash=new_inner_puzzle.get_tree_hash(),
                     amount=uint64(coin.amount),
                     memos=[p2_puzzle.get_tree_hash()],
-                )
+                ),
             ],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
@@ -622,7 +630,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         # Create an additional spend to confirm the change on-chain
         new_full_puzzle: Program = create_singleton_puzzle(
@@ -638,7 +646,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         new_coin = Coin(coin.name(), new_full_puzzle.get_tree_hash(), coin.amount)
         list_of_coinspends = [
@@ -657,7 +665,8 @@ class DIDWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
+                self.wallet_state_manager,
+                override_reuse_puzhash_with=True,
             ),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
@@ -736,7 +745,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -751,7 +760,8 @@ class DIDWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
+                self.wallet_state_manager,
+                override_reuse_puzhash_with=True,
             ),
             amount=uint64(coin.amount),
             fee_amount=fee,
@@ -824,7 +834,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -877,7 +887,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -888,7 +898,8 @@ class DIDWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=await action_scope.get_puzzle_hash(
-                        self.wallet_state_manager, override_reuse_puzhash_with=True
+                        self.wallet_state_manager,
+                        override_reuse_puzhash_with=True,
                     ),
                     amount=uint64(coin.amount),
                     fee_amount=uint64(0),
@@ -904,7 +915,7 @@ class DIDWallet:
                     name=bytes32.secret(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=ConditionValidTimes(),
-                )
+                ),
             )
 
     # Pushes a spend bundle to create a message coin on the blockchain
@@ -963,7 +974,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
@@ -973,7 +984,8 @@ class DIDWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
+                self.wallet_state_manager,
+                override_reuse_puzhash_with=True,
             ),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
@@ -1032,7 +1044,7 @@ class DIDWallet:
                         info_dict[entry.hex()][0],
                         info_dict[entry.hex()][1],
                         info_dict[entry.hex()][2],
-                    ]
+                    ],
                 )
             else:
                 info_list.append([])
@@ -1060,7 +1072,7 @@ class DIDWallet:
                 bytes(pubkey),
                 self.did_info.backup_ids,
                 coin.name(),
-            ]
+            ],
         )
         # full solution is (parent_info my_amount solution)
         assert self.did_info.current_inner is not None
@@ -1080,7 +1092,7 @@ class DIDWallet:
                 ],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
 
@@ -1092,7 +1104,8 @@ class DIDWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=await action_scope.get_puzzle_hash(
-                        self.wallet_state_manager, override_reuse_puzhash_with=True
+                        self.wallet_state_manager,
+                        override_reuse_puzhash_with=True,
                     ),
                     amount=uint64(coin.amount),
                     fee_amount=uint64(0),
@@ -1108,7 +1121,7 @@ class DIDWallet:
                     name=bytes32.secret(),
                     memos=list(compute_memos(spend_bundle).items()),
                     valid_times=ConditionValidTimes(),
-                )
+                ),
             )
         new_did_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,
@@ -1139,7 +1152,8 @@ class DIDWallet:
 
         return did_wallet_puzzles.create_innerpuz(
             p2_puzzle_or_hash=await action_scope.get_puzzle(
-                self.wallet_state_manager, override_reuse_puzhash_with=override_reuse_puzhash_with
+                self.wallet_state_manager,
+                override_reuse_puzhash_with=override_reuse_puzhash_with,
             ),
             recovery_list=self.did_info.backup_ids,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
@@ -1168,7 +1182,7 @@ class DIDWallet:
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            did_hash
+            did_hash,
         )
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
@@ -1177,7 +1191,7 @@ class DIDWallet:
         p2_puzzle, _, _, _, _ = uncurried_args
         if record is None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                p2_puzzle.get_tree_hash()
+                p2_puzzle.get_tree_hash(),
             )
 
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
@@ -1316,7 +1330,8 @@ class DIDWallet:
             created_at_time=uint64(int(time.time())),
             amount=uint64(amount),
             to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
+                self.wallet_state_manager,
+                override_reuse_puzhash_with=True,
             ),
             fee_amount=fee,
             confirmed=False,
@@ -1358,7 +1373,7 @@ class DIDWallet:
                 [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
                 coin.amount,
                 innersol,
-            ]
+            ],
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
@@ -1366,13 +1381,14 @@ class DIDWallet:
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id, unspent_records
+            self.wallet_info.id,
+            unspent_records,
         )
         return spendable_am
 
     async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None):
         spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records),
         )
         max_send_amount = sum(cr.coin.amount for cr in spendable)
         return max_send_amount
@@ -1509,7 +1525,7 @@ class DIDWallet:
 
     async def get_coin(self) -> Coin:
         spendable_coins: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.wallet_info.id
+            self.wallet_info.id,
         )
         if len(spendable_coins) == 0:
             raise RuntimeError("DID is not currently spendable")

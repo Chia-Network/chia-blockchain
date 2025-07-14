@@ -18,27 +18,31 @@ from chia.wallet.wallet_blockchain import WalletBlockchain
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_wallet_blockchain(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: list[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    default_1000_blocks: list[FullBlock],
 ) -> None:
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
     await add_blocks_in_batches(default_1000_blocks[:600], full_node_api.full_node)
     resp = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
-            uint32(default_1000_blocks[499].height + 1), default_1000_blocks[499].header_hash
-        )
+            uint32(default_1000_blocks[499].height + 1),
+            default_1000_blocks[499].header_hash,
+        ),
     )
     assert resp is not None
     resp_2 = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
-            uint32(default_1000_blocks[460].height + 1), default_1000_blocks[460].header_hash
-        )
+            uint32(default_1000_blocks[460].height + 1),
+            default_1000_blocks[460].header_hash,
+        ),
     )
     assert resp_2 is not None
     resp_3 = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
-            uint32(default_1000_blocks[505].height + 1), default_1000_blocks[505].header_hash
-        )
+            uint32(default_1000_blocks[505].height + 1),
+            default_1000_blocks[505].header_hash,
+        ),
     )
     assert resp_3 is not None
     weight_proof = full_node_protocol.RespondProofOfWeight.from_bytes(resp.data).wp
@@ -90,7 +94,7 @@ async def test_wallet_blockchain(
         assert res == AddBlockResult.DISCONNECTED_BLOCK
 
         res, err = await chain.add_block(
-            header_blocks[506].replace(challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True))
+            header_blocks[506].replace(challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True)),
         )
         assert res == AddBlockResult.INVALID_BLOCK
 

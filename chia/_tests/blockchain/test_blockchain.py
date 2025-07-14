@@ -91,7 +91,9 @@ async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[
 class TestGenesisBlock:
     @pytest.mark.anyio
     async def test_block_tools_proofs_400(
-        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_400_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -104,7 +106,9 @@ class TestGenesisBlock:
 
     @pytest.mark.anyio
     async def test_block_tools_proofs_1000(
-        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self,
+        default_1000_blocks: list[FullBlock],
+        blockchain_constants: ConsensusConstants,
     ) -> None:
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -176,7 +180,9 @@ class TestBlockHeaderValidation:
                     uint64(10_000_000),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]]
+                    block,
+                    "finished_sub_slots",
+                    [new_finished_ss, *block.finished_sub_slots[1:]],
                 )
                 header_block_bad = get_block_header(block_bad)
                 # TODO: Inspect these block values as they are currently None
@@ -184,14 +190,21 @@ class TestBlockHeaderValidation:
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
                 expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+                    empty_blockchain.constants,
+                    empty_blockchain,
+                    header_block_bad,
+                    False,
+                    expected_vs,
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+                    empty_blockchain,
+                    block_bad,
+                    expected_result=AddBlockResult.INVALID_BLOCK,
+                    fork_info=fork_info,
                 )
 
                 new_finished_ss_2 = recursive_replace(
@@ -200,7 +213,9 @@ class TestBlockHeaderValidation:
                     uint64(10_000_000),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_2, *block.finished_sub_slots[1:]]
+                    block,
+                    "finished_sub_slots",
+                    [new_finished_ss_2, *block.finished_sub_slots[1:]],
                 )
 
                 header_block_bad_2 = get_block_header(block_bad_2)
@@ -209,14 +224,21 @@ class TestBlockHeaderValidation:
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
                 expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad_2, False, expected_vs
+                    empty_blockchain.constants,
+                    empty_blockchain,
+                    header_block_bad_2,
+                    False,
+                    expected_vs,
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_NEW_DIFFICULTY
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_2, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+                    empty_blockchain,
+                    block_bad_2,
+                    expected_result=AddBlockResult.INVALID_BLOCK,
+                    fork_info=fork_info,
                 )
 
                 # 3c
@@ -239,14 +261,21 @@ class TestBlockHeaderValidation:
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
                 expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad_3, False, expected_vs
+                    empty_blockchain.constants,
+                    empty_blockchain,
+                    header_block_bad_3,
+                    False,
+                    expected_vs,
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_3, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+                    empty_blockchain,
+                    block_bad_3,
+                    expected_result=AddBlockResult.INVALID_BLOCK,
+                    fork_info=fork_info,
                 )
 
                 # 3d
@@ -268,18 +297,25 @@ class TestBlockHeaderValidation:
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
                 expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad_4, False, expected_vs
+                    empty_blockchain.constants,
+                    empty_blockchain,
+                    header_block_bad_4,
+                    False,
+                    expected_vs,
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
 
                 # Also fails calling the outer methods, but potentially with a different error
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad_4, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+                    empty_blockchain,
+                    block_bad_4,
+                    expected_result=AddBlockResult.INVALID_BLOCK,
+                    fork_info=fork_info,
                 )
             await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
-                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}",
             )
         peak = empty_blockchain.get_peak()
         assert peak is not None
@@ -287,7 +323,10 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_unfinished_blocks(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        softfork_height: uint32,
+        bt: BlockTools,
     ) -> None:
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(3)
@@ -393,7 +432,10 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_unf_block_overflow(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        softfork_height: uint32,
+        bt: BlockTools,
     ) -> None:
         blockchain = empty_blockchain
 
@@ -434,7 +476,9 @@ class TestBlockHeaderValidation:
                     block_bytes = bytes(unf)
                     npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
                 validate_res = await blockchain.validate_unfinished_block(
-                    unf, npc_result, skip_overflow_ss_validation=True
+                    unf,
+                    npc_result,
+                    skip_overflow_ss_validation=True,
                 )
                 assert validate_res.error is None
                 return None
@@ -514,15 +558,23 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss, *blocks[0].finished_sub_slots[1:]]
+            blocks[0],
+            "finished_sub_slots",
+            [new_finished_ss, *blocks[0].finished_sub_slots[1:]],
         )
 
         header_block_bad = get_block_header(block_0_bad)
         expected_vs = ValidationState(
-            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
+            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING,
+            empty_blockchain.constants.DIFFICULTY_STARTING,
+            None,
         )
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            expected_vs,
         )
 
         assert error is not None
@@ -531,7 +583,9 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_invalid_sub_slot_challenge_hash_non_genesis(
-        self, empty_blockchain: Blockchain, bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
     ) -> None:
         # 2b
         blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
@@ -542,7 +596,9 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", [new_finished_ss, *blocks[1].finished_sub_slots[1:]]
+            blocks[1],
+            "finished_sub_slots",
+            [new_finished_ss, *blocks[1].finished_sub_slots[1:]],
         )
 
         await _validate_and_add_block(empty_blockchain, blocks[0])
@@ -552,7 +608,11 @@ class TestBlockHeaderValidation:
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
         expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            expected_vs,
         )
         assert error is not None
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
@@ -569,7 +629,9 @@ class TestBlockHeaderValidation:
             bytes([2] * 32),
         )
         block_1_bad = recursive_replace(
-            blocks[1], "finished_sub_slots", [*blocks[1].finished_sub_slots[:-1], new_finished_ss]
+            blocks[1],
+            "finished_sub_slots",
+            [*blocks[1].finished_sub_slots[:-1], new_finished_ss],
         )
         await _validate_and_add_block(empty_blockchain, blocks[0])
 
@@ -579,7 +641,11 @@ class TestBlockHeaderValidation:
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
         expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            expected_vs,
         )
         assert error is not None
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
@@ -597,16 +663,21 @@ class TestBlockHeaderValidation:
                     bytes32.zeros,
                     uint64(1200),
                     ClassgroupElement.get_default_element(),
-                )
+                ),
             ),
         )
         block_0_bad = recursive_replace(
-            blocks[0], "finished_sub_slots", [new_finished_ss, *blocks[0].finished_sub_slots[1:]]
+            blocks[0],
+            "finished_sub_slots",
+            [new_finished_ss, *blocks[0].finished_sub_slots[1:]],
         )
         await _validate_and_add_block(empty_blockchain, block_0_bad, expected_error=Err.SHOULD_NOT_HAVE_ICC)
 
     async def do_test_invalid_icc_sub_slot_vdf(
-        self, keychain: Keychain, db_version: int, constants: ConsensusConstants
+        self,
+        keychain: Keychain,
+        db_version: int,
+        constants: ConsensusConstants,
     ) -> None:
         bt_high_iters = await create_block_tools_async(
             constants=constants.replace(
@@ -631,11 +702,13 @@ class TestBlockHeaderValidation:
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
                                 number_of_iterations=uint64(10000000),
-                            )
+                            ),
                         ),
                     )
                     block_bad = recursive_replace(
-                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
+                        block,
+                        "finished_sub_slots",
+                        [*block.finished_sub_slots[:-1], new_finished_ss],
                     )
                     await _validate_and_add_block(bc1, block_bad, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -648,12 +721,14 @@ class TestBlockHeaderValidation:
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
                                 output=ClassgroupElement.get_default_element(),
-                            )
+                            ),
                         ),
                     )
                     log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
                     block_bad_2 = recursive_replace(
-                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
+                        block,
+                        "finished_sub_slots",
+                        [*block.finished_sub_slots[:-1], new_finished_ss_2],
                     )
                     await _validate_and_add_block(bc1, block_bad_2, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -665,12 +740,14 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
-                                challenge=bytes32.zeros
-                            )
+                                challenge=bytes32.zeros,
+                            ),
                         ),
                     )
                     block_bad_3 = recursive_replace(
-                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
+                        block,
+                        "finished_sub_slots",
+                        [*block.finished_sub_slots[:-1], new_finished_ss_3],
                     )
                     await _validate_and_add_block(bc1, block_bad_3, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -681,7 +758,9 @@ class TestBlockHeaderValidation:
                         VDFProof(uint8(0), b"1239819023890", False),
                     )
                     block_bad_5 = recursive_replace(
-                        block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
+                        block,
+                        "finished_sub_slots",
+                        [*block.finished_sub_slots[:-1], new_finished_ss_5],
                     )
                     await _validate_and_add_block(bc1, block_bad_5, expected_error=Err.INVALID_ICC_EOS_VDF)
 
@@ -709,7 +788,7 @@ class TestBlockHeaderValidation:
                         block.finished_sub_slots[-1],
                         "challenge_chain",
                         block.finished_sub_slots[-1].challenge_chain.replace(
-                            infused_challenge_chain_sub_slot_hash=bytes32([1] * 32)
+                            infused_challenge_chain_sub_slot_hash=bytes32([1] * 32),
                         ),
                     )
                 else:
@@ -725,7 +804,9 @@ class TestBlockHeaderValidation:
                         ),
                     )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss],
                 )
 
                 header_block_bad = get_block_header(block_bad)
@@ -734,7 +815,11 @@ class TestBlockHeaderValidation:
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
                 expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+                    empty_blockchain.constants,
+                    empty_blockchain,
+                    header_block_bad,
+                    False,
+                    expected_vs,
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_ICC_HASH_CC
@@ -747,7 +832,9 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[-1].reward_chain.replace(infused_challenge_chain_sub_slot_hash=None),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc],
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_RC)
             elif len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is None:
@@ -757,11 +844,13 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[-1],
                     "challenge_chain",
                     block.finished_sub_slots[-1].challenge_chain.replace(
-                        infused_challenge_chain_sub_slot_hash=bytes32([1] * 32)
+                        infused_challenge_chain_sub_slot_hash=bytes32([1] * 32),
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_cc]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_bad_cc],
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_CC)
 
@@ -771,11 +860,13 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[-1],
                     "reward_chain",
                     block.finished_sub_slots[-1].reward_chain.replace(
-                        infused_challenge_chain_sub_slot_hash=bytes32([1] * 32)
+                        infused_challenge_chain_sub_slot_hash=bytes32([1] * 32),
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_bad_rc],
                 )
                 await _validate_and_add_block(blockchain, block_bad, expected_error=Err.INVALID_ICC_HASH_RC)
 
@@ -796,15 +887,23 @@ class TestBlockHeaderValidation:
             blocks[-1].finished_sub_slots[-1].challenge_chain.replace(subepoch_summary_hash=std_hash(b"0")),
         )
         block_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
+            blocks[-1],
+            "finished_sub_slots",
+            [*blocks[-1].finished_sub_slots[:-1], new_finished_ss],
         )
 
         header_block_bad = get_block_header(block_bad)
         expected_vs = ValidationState(
-            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
+            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING,
+            empty_blockchain.constants.DIFFICULTY_STARTING,
+            None,
         )
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            empty_blockchain.constants,
+            empty_blockchain,
+            header_block_bad,
+            False,
+            expected_vs,
         )
         assert error is not None
         assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
@@ -812,7 +911,10 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_empty_sub_slots_epoch(
-        self, empty_blockchain: Blockchain, default_400_blocks: list[FullBlock], bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        default_400_blocks: list[FullBlock],
+        bt: BlockTools,
     ) -> None:
         # 2m
         # Tests adding an empty sub slot after the sub-epoch / epoch.
@@ -824,11 +926,17 @@ class TestBlockHeaderValidation:
         for block in blocks_base:
             await _validate_and_add_block(empty_blockchain, block, skip_prevalidation=True)
         await _validate_and_add_block(
-            empty_blockchain, blocks_1[-1], expected_result=AddBlockResult.NEW_PEAK, skip_prevalidation=True
+            empty_blockchain,
+            blocks_1[-1],
+            expected_result=AddBlockResult.NEW_PEAK,
+            skip_prevalidation=True,
         )
         assert blocks_1[-1].header_hash != blocks_2[-1].header_hash
         await _validate_and_add_block(
-            empty_blockchain, blocks_2[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, skip_prevalidation=True
+            empty_blockchain,
+            blocks_2[-1],
+            expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+            skip_prevalidation=True,
         )
 
     @pytest.mark.anyio
@@ -845,7 +953,9 @@ class TestBlockHeaderValidation:
             blocks[-1].finished_sub_slots[-1].reward_chain.replace(challenge_chain_sub_slot_hash=bytes32([3] * 32)),
         )
         block_1_bad = recursive_replace(
-            blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
+            blocks[-1],
+            "finished_sub_slots",
+            [*blocks[-1].finished_sub_slots[:-1], new_finished_ss],
         )
 
         await _validate_and_add_block(blockchain, block_1_bad, expected_error=Err.INVALID_CHALLENGE_SLOT_HASH_RC)
@@ -883,7 +993,9 @@ class TestBlockHeaderValidation:
                 )
                 log.warning(f"Num slots: {len(block.finished_sub_slots)}")
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss],
                 )
                 log.warning(f"Signage point index: {block_bad.reward_chain_block.signage_point_index}")
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_EOS_VDF)
@@ -905,7 +1017,9 @@ class TestBlockHeaderValidation:
                     new_finished_ss_2.challenge_chain.get_hash(),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_2],
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_2, expected_error=Err.INVALID_CC_EOS_VDF)
 
@@ -926,7 +1040,9 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_3],
                 )
 
                 await _validate_and_add_block_multi_error(
@@ -942,7 +1058,9 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_5],
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_5, expected_error=Err.INVALID_CC_EOS_VDF)
 
@@ -974,7 +1092,9 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss],
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -989,7 +1109,9 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_2 = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_2]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_2],
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_2, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1004,7 +1126,9 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_3]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_3],
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_3, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1015,7 +1139,9 @@ class TestBlockHeaderValidation:
                     VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
-                    block, "finished_sub_slots", [*block.finished_sub_slots[:-1], new_finished_ss_5]
+                    block,
+                    "finished_sub_slots",
+                    [*block.finished_sub_slots[:-1], new_finished_ss_5],
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad_5, expected_error=Err.INVALID_RC_EOS_VDF)
 
@@ -1063,10 +1189,14 @@ class TestBlockHeaderValidation:
                     case_2 = True
 
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", [*blocks[-1].finished_sub_slots[:-1], new_finished_ss]
+                    blocks[-1],
+                    "finished_sub_slots",
+                    [*blocks[-1].finished_sub_slots[:-1], new_finished_ss],
                 )
                 await _validate_and_add_block_multi_error(
-                    empty_blockchain, block_bad, [Err.INVALID_DEFICIT, Err.INVALID_ICC_HASH_CC]
+                    empty_blockchain,
+                    block_bad,
+                    [Err.INVALID_DEFICIT, Err.INVALID_ICC_HASH_CC],
                 )
 
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -1089,14 +1219,16 @@ class TestBlockHeaderValidation:
             new_finished_ss,
             "reward_chain",
             new_finished_ss.reward_chain.replace(
-                challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
+                challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash(),
             ),
         )
         block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]])
         with pytest.raises(AssertionError):
             # Fails pre validation
             await _validate_and_add_block(
-                empty_blockchain, block_bad, expected_error=Err.INVALID_SUB_EPOCH_SUMMARY_HASH
+                empty_blockchain,
+                block_bad,
+                expected_error=Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
             )
 
     @pytest.mark.anyio
@@ -1108,7 +1240,8 @@ class TestBlockHeaderValidation:
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if len(blocks[-1].finished_sub_slots) > 0 and is_overflow_block(
-                bt.constants, blocks[-1].reward_chain_block.signage_point_index
+                bt.constants,
+                blocks[-1].reward_chain_block.signage_point_index,
             ):
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
@@ -1128,7 +1261,9 @@ class TestBlockHeaderValidation:
                     ),
                 )
                 block_bad = recursive_replace(
-                    blocks[-1], "finished_sub_slots", [new_finished_ss, *blocks[-1].finished_sub_slots[1:]]
+                    blocks[-1],
+                    "finished_sub_slots",
+                    [new_finished_ss, *blocks[-1].finished_sub_slots[1:]],
                 )
                 await _validate_and_add_block_multi_error(
                     empty_blockchain,
@@ -1156,7 +1291,9 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.proof_of_space.pool_contract_puzzle_hash", std_hash(b"")
+            blocks[-1],
+            "reward_chain_block.proof_of_space.pool_contract_puzzle_hash",
+            std_hash(b""),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
@@ -1192,12 +1329,16 @@ class TestBlockHeaderValidation:
 
         with pytest.raises(ValueError):
             block_bad = recursive_replace(
-                blocks[-1], "reward_chain_block.signage_point_index", bt.constants.NUM_SPS_SUB_SLOT
+                blocks[-1],
+                "reward_chain_block.signage_point_index",
+                bt.constants.NUM_SPS_SUB_SLOT,
             )
             await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
         with pytest.raises(ValueError):
             block_bad = recursive_replace(
-                blocks[-1], "reward_chain_block.signage_point_index", bt.constants.NUM_SPS_SUB_SLOT + 1
+                blocks[-1],
+                "reward_chain_block.signage_point_index",
+                bt.constants.NUM_SPS_SUB_SLOT + 1,
             )
             await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_SP_INDEX)
 
@@ -1217,7 +1358,9 @@ class TestBlockHeaderValidation:
                 case_2 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(0))
                 await _validate_and_add_block_multi_error(
-                    empty_blockchain, block_bad, [Err.INVALID_SP_INDEX, Err.INVALID_POSPACE]
+                    empty_blockchain,
+                    block_bad,
+                    [Err.INVALID_SP_INDEX, Err.INVALID_POSPACE],
                 )
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
@@ -1233,7 +1376,9 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, blocks[0])
 
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.total_iters", blocks[-1].reward_chain_block.total_iters + 1
+            blocks[-1],
+            "reward_chain_block.total_iters",
+            blocks[-1].reward_chain_block.total_iters + 1,
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_TOTAL_ITERS)
 
@@ -1247,7 +1392,9 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].reward_chain_block.signage_point_index != 0:
                 block_bad = recursive_replace(
-                    blocks[-1], "reward_chain_block.reward_chain_sp_vdf.challenge", std_hash(b"1")
+                    blocks[-1],
+                    "reward_chain_block.reward_chain_sp_vdf.challenge",
+                    std_hash(b"1"),
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_RC_SP_VDF)
                 block_bad = recursive_replace(
@@ -1290,7 +1437,9 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].reward_chain_block.signage_point_index != 0:
                 block_bad = recursive_replace(
-                    blocks[-1], "reward_chain_block.challenge_chain_sp_vdf.challenge", std_hash(b"1")
+                    blocks[-1],
+                    "reward_chain_block.challenge_chain_sp_vdf.challenge",
+                    std_hash(b"1"),
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
                 block_bad = recursive_replace(
@@ -1320,7 +1469,9 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.challenge_chain_sp_signature", G2Element.generator()
+            blocks[-1],
+            "reward_chain_block.challenge_chain_sp_signature",
+            G2Element.generator(),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_SIGNATURE)
 
@@ -1347,7 +1498,9 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad = recursive_replace(
-                    blocks[-1], "foliage.foliage_transaction_block_signature", G2Element.generator()
+                    blocks[-1],
+                    "foliage.foliage_transaction_block_signature",
+                    G2Element.generator(),
                 )
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PLOT_SIGNATURE)
                 return None
@@ -1359,7 +1512,9 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
         block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage.foliage_block_data.unfinished_reward_block_hash", std_hash(b"2")
+            blocks[-1],
+            "foliage.foliage_block_data.unfinished_reward_block_hash",
+            std_hash(b"2"),
         )
         new_m = block_bad.foliage.foliage_block_data.get_hash()
         assert new_m is not None
@@ -1385,7 +1540,9 @@ class TestBlockHeaderValidation:
         # 20a
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", std_hash(b"12")
+            blocks[-1],
+            "foliage.foliage_block_data.pool_target.puzzle_hash",
+            std_hash(b"12"),
         )
         new_m = block_bad.foliage.foliage_block_data.get_hash()
         assert new_m is not None
@@ -1404,11 +1561,15 @@ class TestBlockHeaderValidation:
         while True:
             # Go until we get a block that has a pool pk, as opposed to a pool contract
             blocks = bt.get_consecutive_blocks(
-                1, blocks_initial, seed=std_hash(attempts.to_bytes(4, byteorder="big", signed=False))
+                1,
+                blocks_initial,
+                seed=std_hash(attempts.to_bytes(4, byteorder="big", signed=False)),
             )
             if blocks[-1].foliage.foliage_block_data.pool_signature is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_block_data.pool_signature", G2Element.generator()
+                    blocks[-1],
+                    "foliage.foliage_block_data.pool_signature",
+                    G2Element.generator(),
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
                 assert new_m is not None
@@ -1420,7 +1581,10 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_pool_target_contract(
-        self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
+        seeded_random: random.Random,
     ) -> None:
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1431,11 +1595,15 @@ class TestBlockHeaderValidation:
         while True:
             # Go until we get a block that has a pool contract opposed to a pool pk
             blocks = bt.get_consecutive_blocks(
-                1, blocks_initial, seed=std_hash(attempts.to_bytes(4, byteorder="big", signed=False))
+                1,
+                blocks_initial,
+                seed=std_hash(attempts.to_bytes(4, byteorder="big", signed=False)),
             )
             if blocks[-1].foliage.foliage_block_data.pool_signature is None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32.random(seeded_random)
+                    blocks[-1],
+                    "foliage.foliage_block_data.pool_target.puzzle_hash",
+                    bytes32.random(seeded_random),
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
                 assert new_m is not None
@@ -1480,7 +1648,9 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_transaction_block_hash", std_hash(b"2")
+                    blocks[-1],
+                    "foliage.foliage_transaction_block_hash",
+                    std_hash(b"2"),
                 )
 
                 new_m = block_bad.foliage.foliage_transaction_block_hash
@@ -1488,7 +1658,9 @@ class TestBlockHeaderValidation:
                 new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_error=Err.INVALID_FOLIAGE_BLOCK_HASH
+                    empty_blockchain,
+                    block_bad,
+                    expected_error=Err.INVALID_FOLIAGE_BLOCK_HASH,
                 )
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -1498,11 +1670,15 @@ class TestBlockHeaderValidation:
         # 24a
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage_transaction_block.prev_transaction_block_hash", std_hash(b"2")
+            blocks[-1],
+            "foliage_transaction_block.prev_transaction_block_hash",
+            std_hash(b"2"),
         )
         assert block_bad.foliage_transaction_block is not None
         block_bad = recursive_replace(
-            block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
+            block_bad,
+            "foliage.foliage_transaction_block_hash",
+            block_bad.foliage_transaction_block.get_hash(),
         )
         new_m = block_bad.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -1519,11 +1695,15 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage_transaction_block.prev_transaction_block_hash", std_hash(b"2")
+                    blocks[-1],
+                    "foliage_transaction_block.prev_transaction_block_hash",
+                    std_hash(b"2"),
                 )
                 assert block_bad.foliage_transaction_block is not None
                 block_bad = recursive_replace(
-                    block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
                 assert new_m is not None
@@ -1542,18 +1722,24 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if blocks[-1].foliage_transaction_block is not None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage_transaction_block.filter_hash", std_hash(b"2")
+                    blocks[-1],
+                    "foliage_transaction_block.filter_hash",
+                    std_hash(b"2"),
                 )
                 assert block_bad.foliage_transaction_block is not None
                 block_bad = recursive_replace(
-                    block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
                 )
                 new_m = block_bad.foliage.foliage_transaction_block_hash
                 assert new_m is not None
                 new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
                 block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_error=Err.INVALID_TRANSACTIONS_FILTER_HASH
+                    empty_blockchain,
+                    block_bad,
+                    expected_error=Err.INVALID_TRANSACTIONS_FILTER_HASH,
                 )
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -1588,7 +1774,8 @@ class TestBlockHeaderValidation:
                     new_m = block_bad.foliage.foliage_transaction_block_hash
                     assert new_m is not None
                     new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
+                        new_m,
+                        blocks[-1].reward_chain_block.proof_of_space.plot_public_key,
                     )
                     block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                     await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
@@ -1608,7 +1795,8 @@ class TestBlockHeaderValidation:
                     new_m = block_bad.foliage.foliage_transaction_block_hash
                     assert new_m is not None
                     new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
+                        new_m,
+                        blocks[-1].reward_chain_block.proof_of_space.plot_public_key,
                     )
                     block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                     await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
@@ -1630,7 +1818,8 @@ class TestBlockHeaderValidation:
                     new_m = block_bad.foliage.foliage_transaction_block_hash
                     assert new_m is not None
                     new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
+                        new_m,
+                        blocks[-1].reward_chain_block.proof_of_space.plot_public_key,
                     )
                     block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
                     await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
@@ -1731,7 +1920,9 @@ class TestBlockHeaderValidation:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.infused_challenge_chain_ip_vdf.challenge", std_hash(b"1")
+            blocks[-1],
+            "reward_chain_block.infused_challenge_chain_ip_vdf.challenge",
+            std_hash(b"1"),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_ICC_VDF)
         block_bad = recursive_replace(
@@ -1778,10 +1969,14 @@ class TestBlockHeaderValidation:
             if not blocks[-1].is_transaction_block():
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.is_transaction_block", True)
                 block_bad = recursive_replace(
-                    block_bad, "foliage.reward_block_hash", block_bad.reward_chain_block.get_hash()
+                    block_bad,
+                    "foliage.reward_block_hash",
+                    block_bad.reward_chain_block.get_hash(),
                 )
                 await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_error=Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+                    empty_blockchain,
+                    block_bad,
+                    expected_error=Err.INVALID_FOLIAGE_BLOCK_PRESENCE,
                 )
                 return None
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -1799,7 +1994,9 @@ class TestPreValidation:
         ssi = empty_blockchain.constants.SUB_SLOT_ITERS_STARTING
         difficulty = empty_blockchain.constants.DIFFICULTY_STARTING
         block_bad = recursive_replace(
-            blocks[-1], "reward_chain_block.total_iters", blocks[-1].reward_chain_block.total_iters + 1
+            blocks[-1],
+            "reward_chain_block.total_iters",
+            blocks[-1].reward_chain_block.total_iters + 1,
         )
         futures = []
         vs = ValidationState(ssi, difficulty, None)
@@ -1813,7 +2010,7 @@ class TestPreValidation:
                     empty_blockchain.pool,
                     None,
                     vs,
-                )
+                ),
             )
         res: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert res[0].error is None
@@ -1821,7 +2018,10 @@ class TestPreValidation:
 
     @pytest.mark.anyio
     async def test_pre_validation(
-        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock], bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        default_1000_blocks: list[FullBlock],
+        bt: BlockTools,
     ) -> None:
         blocks = default_1000_blocks[:100]
         start = time.time()
@@ -1840,7 +2040,7 @@ class TestPreValidation:
                     empty_blockchain.pool,
                     None,
                     vs,
-                )
+                ),
             )
 
         results = await asyncio.gather(*futures)
@@ -1879,7 +2079,11 @@ class TestBodyValidation:
     )
     @pytest.mark.parametrize("with_garbage", [True, False])
     async def test_conditions(
-        self, empty_blockchain: Blockchain, opcode: ConditionOpcode, with_garbage: bool, bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        opcode: ConditionOpcode,
+        with_garbage: bool,
+        bt: BlockTools,
     ) -> None:
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -1897,7 +2101,9 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1 = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         coin1: Coin = tx1.additions()[0]
 
@@ -1918,7 +2124,7 @@ class TestBodyValidation:
             assert False
 
         conditions: dict[ConditionOpcode, list[ConditionWithArgs]] = {
-            opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))]
+            opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))],
         }
 
         tx2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
@@ -2028,7 +2234,11 @@ class TestBodyValidation:
         ],
     )
     async def test_timelock_conditions(
-        self, opcode: ConditionOpcode, lock_value: int, expected: AddBlockResult, bt: BlockTools
+        self,
+        opcode: ConditionOpcode,
+        lock_value: int,
+        expected: AddBlockResult,
+        bt: BlockTools,
     ) -> None:
         async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
@@ -2117,7 +2327,9 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1 = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         coin1: Coin = tx1.additions()[0]
         secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
@@ -2154,7 +2366,10 @@ class TestBodyValidation:
         repl_preval_results = replace(pre_validation_result, error=None, required_iters=uint64(1))
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
         res, error, state_change = await b.add_block(
-            block, repl_preval_results, sub_slot_iters=ssi, fork_info=fork_info
+            block,
+            repl_preval_results,
+            sub_slot_iters=ssi,
+            fork_info=fork_info,
         )
         assert res == AddBlockResult.NEW_PEAK
         assert error is None
@@ -2229,7 +2444,12 @@ class TestBodyValidation:
         ],
     )
     async def test_ephemeral_timelock(
-        self, opcode: ConditionOpcode, lock_value: int, expected: AddBlockResult, with_garbage: bool, bt: BlockTools
+        self,
+        opcode: ConditionOpcode,
+        lock_value: int,
+        expected: AddBlockResult,
+        with_garbage: bool,
+        bt: BlockTools,
     ) -> None:
         async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
@@ -2247,11 +2467,15 @@ class TestBodyValidation:
             wt: WalletTool = bt.get_pool_wallet_tool()
 
             conditions = {
-                opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)] + ([b"garbage"] if with_garbage else []))]
+                opcode: [
+                    ConditionWithArgs(opcode, [int_to_bytes(lock_value)] + ([b"garbage"] if with_garbage else [])),
+                ],
             }
 
             tx1 = wt.generate_signed_transaction(
-                uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+                uint64(10),
+                wt.get_new_puzzlehash(),
+                blocks[-1].get_included_reward_coins()[0],
             )
             coin1: Coin = tx1.additions()[0]
             tx2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
@@ -2302,7 +2526,10 @@ class TestBodyValidation:
 
         block = recursive_replace(original_block, "transactions_generator", SerializedProgram.to(None))
         await _validate_and_add_block(
-            empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
+            empty_blockchain,
+            block,
+            expected_error=Err.NOT_BLOCK_BUT_HAS_DATA,
+            skip_prevalidation=True,
         )
         h = std_hash(b"")
         i = uint64(1)
@@ -2312,12 +2539,18 @@ class TestBodyValidation:
             TransactionsInfo(h, h, G2Element(), uint64(1), uint64(1), []),
         )
         await _validate_and_add_block(
-            empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
+            empty_blockchain,
+            block,
+            expected_error=Err.NOT_BLOCK_BUT_HAS_DATA,
+            skip_prevalidation=True,
         )
 
         block = recursive_replace(original_block, "transactions_generator_ref_list", [i])
         await _validate_and_add_block(
-            empty_blockchain, block, expected_error=Err.NOT_BLOCK_BUT_HAS_DATA, skip_prevalidation=True
+            empty_blockchain,
+            block,
+            expected_error=Err.NOT_BLOCK_BUT_HAS_DATA,
+            skip_prevalidation=True,
         )
 
     @pytest.mark.anyio
@@ -2332,7 +2565,9 @@ class TestBodyValidation:
             None,
         )
         await _validate_and_add_block_multi_error(
-            b, block, [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE]
+            b,
+            block,
+            [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE],
         )
 
         block = recursive_replace(
@@ -2342,7 +2577,9 @@ class TestBodyValidation:
         )
         with pytest.raises(AssertionError):
             await _validate_and_add_block_multi_error(
-                b, block, [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE]
+                b,
+                block,
+                [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE],
             )
 
     @pytest.mark.anyio
@@ -2358,7 +2595,9 @@ class TestBodyValidation:
             h,
         )
         block = recursive_replace(
-            block, "foliage.foliage_transaction_block_hash", std_hash(block.foliage_transaction_block)
+            block,
+            "foliage.foliage_transaction_block_hash",
+            std_hash(block.foliage_transaction_block),
         )
         new_m = block.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2394,16 +2633,22 @@ class TestBodyValidation:
         assert block.transactions_info is not None
         too_few_reward_claims = block.transactions_info.reward_claims_incorporated[:-1]
         block_2: FullBlock = recursive_replace(
-            block, "transactions_info.reward_claims_incorporated", too_few_reward_claims
+            block,
+            "transactions_info.reward_claims_incorporated",
+            too_few_reward_claims,
         )
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
 
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2421,11 +2666,15 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", too_many_reward_claims)
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2442,11 +2691,15 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", duplicate_reward_claims)
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2466,10 +2719,14 @@ class TestBodyValidation:
         block: FullBlock = blocks[-1]
         block_2 = recursive_replace(block, "transactions_info.generator_root", bytes([1] * 32))
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2477,7 +2734,10 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         await _validate_and_add_block(
-            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH, skip_prevalidation=True
+            b,
+            block_2,
+            expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH,
+            skip_prevalidation=True,
         )
 
         await _validate_and_add_block(b, blocks[1])
@@ -2493,20 +2753,29 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
 
         # Non empty generator hash must be correct
         block = blocks[-1]
         block_2 = recursive_replace(block, "transactions_info.generator_root", bytes([0] * 32))
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2516,7 +2785,10 @@ class TestBodyValidation:
 
     @pytest.mark.anyio
     async def test_invalid_transactions_ref_list(
-        self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
     ) -> None:
         # No generator should have [1]s for the root
         b = empty_blockchain
@@ -2532,10 +2804,14 @@ class TestBodyValidation:
         block: FullBlock = blocks[-1]
         block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([0] * 32))
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2543,28 +2819,39 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         await _validate_and_add_block(
-            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, skip_prevalidation=True
+            b,
+            block_2,
+            expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT,
+            skip_prevalidation=True,
         )
 
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
         await _validate_and_add_block(
-            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, skip_prevalidation=True
+            b,
+            block_2,
+            expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT,
+            skip_prevalidation=True,
         )
 
         # Hash should be correct when there is a ref list
         await _validate_and_add_block(b, blocks[-1])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
         for block in blocks[-5:]:
             await _validate_and_add_block(b, block)
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
@@ -2583,7 +2870,10 @@ class TestBodyValidation:
 
     @pytest.mark.anyio
     async def test_cost_exceeds_max(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        softfork_height: uint32,
+        bt: BlockTools,
     ) -> None:
         # 7
         b = empty_blockchain
@@ -2605,11 +2895,17 @@ class TestBodyValidation:
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
+            condition_dic=condition_dict,
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
 
         assert blocks[-1].transactions_generator is not None
@@ -2654,7 +2950,10 @@ class TestBodyValidation:
 
     @pytest.mark.anyio
     async def test_invalid_cost_in_block(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
+        self,
+        empty_blockchain: Blockchain,
+        softfork_height: uint32,
+        bt: BlockTools,
     ) -> None:
         # 9
         b = empty_blockchain
@@ -2671,11 +2970,16 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         block: FullBlock = blocks[-1]
 
@@ -2683,11 +2987,15 @@ class TestBodyValidation:
         block_2: FullBlock = recursive_replace(block, "transactions_info.cost", uint64(0))
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2718,11 +3026,15 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_info.cost", uint64(1))
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2752,11 +3064,15 @@ class TestBodyValidation:
         block_2 = recursive_replace(block, "transactions_info.cost", uint64(1000000))
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2853,11 +3169,16 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         block: FullBlock = blocks[-1]
 
@@ -2865,7 +3186,9 @@ class TestBodyValidation:
         # additions
         block_2 = recursive_replace(block, "foliage_transaction_block.additions_root", merkle_set.get_root())
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2878,7 +3201,9 @@ class TestBodyValidation:
         merkle_set = MerkleSet([std_hash(b"1")])
         block_2 = recursive_replace(block, "foliage_transaction_block.removals_root", merkle_set.get_root())
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2904,16 +3229,23 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         block: FullBlock = blocks[-1]
         block_2 = recursive_replace(block, "foliage_transaction_block.filter_hash", std_hash(b"3"))
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -2944,11 +3276,17 @@ class TestBodyValidation:
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
+            condition_dic=condition_dict,
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.DUPLICATE_OUTPUT)
 
@@ -2969,15 +3307,22 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         tx_2 = wt.generate_signed_transaction(
-            uint64(11), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(11),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         agg = SpendBundle.aggregate([tx, tx_2])
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=agg
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=agg,
         )
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.DOUBLE_SPEND)
 
@@ -2998,19 +3343,29 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         await _validate_and_add_block(b, blocks[-1])
 
         tx_2 = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-2].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-2].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx_2,
         )
 
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.DOUBLE_SPEND)
@@ -3032,10 +3387,15 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         await _validate_and_add_block(b, blocks[-1])
 
@@ -3043,7 +3403,10 @@ class TestBodyValidation:
         tx_2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), new_coin)
         # This is fine because coin exists
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx_2,
         )
         await _validate_and_add_block(b, blocks[-1])
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=True)
@@ -3053,15 +3416,24 @@ class TestBodyValidation:
         blocks_reorg = bt.get_consecutive_blocks(2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
         fork_info = ForkInfo(blocks[-8].height, blocks[-8].height, blocks[-8].header_hash)
         await _validate_and_add_block(
-            b, blocks_reorg[-2], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+            b,
+            blocks_reorg[-2],
+            expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+            fork_info=fork_info,
         )
         await _validate_and_add_block(
-            b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+            b,
+            blocks_reorg[-1],
+            expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+            fork_info=fork_info,
         )
 
         # Coin does not exist in reorg
         blocks_reorg = bt.get_consecutive_blocks(
-            1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
+            1,
+            block_list_input=blocks_reorg,
+            guarantee_transaction_block=True,
+            transaction_data=tx_2,
         )
         peak = b.get_peak()
         assert peak is not None
@@ -3070,17 +3442,26 @@ class TestBodyValidation:
         # Finally add the block to the fork (spending both in same bundle, this is ephemeral)
         agg = SpendBundle.aggregate([tx, tx_2])
         blocks_reorg = bt.get_consecutive_blocks(
-            1, block_list_input=blocks_reorg[:-1], guarantee_transaction_block=True, transaction_data=agg
+            1,
+            block_list_input=blocks_reorg[:-1],
+            guarantee_transaction_block=True,
+            transaction_data=agg,
         )
 
         peak = b.get_peak()
         assert peak is not None
         await _validate_and_add_block(
-            b, blocks_reorg[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+            b,
+            blocks_reorg[-1],
+            expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+            fork_info=fork_info,
         )
 
         blocks_reorg = bt.get_consecutive_blocks(
-            1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
+            1,
+            block_list_input=blocks_reorg,
+            guarantee_transaction_block=True,
+            transaction_data=tx_2,
         )
         peak = b.get_peak()
         assert peak is not None
@@ -3098,7 +3479,10 @@ class TestBodyValidation:
         assert peak is not None
         for block in blocks_reorg[-10:]:
             await _validate_and_add_block_multi_result(
-                b, block, expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.NEW_PEAK], fork_info=fork_info
+                b,
+                block,
+                expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.NEW_PEAK],
+                fork_info=fork_info,
             )
 
         # ephemeral coin is spent
@@ -3116,7 +3500,10 @@ class TestBodyValidation:
         tx_3 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), farmer_coin)
 
         blocks_reorg = bt.get_consecutive_blocks(
-            1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_3
+            1,
+            block_list_input=blocks_reorg,
+            guarantee_transaction_block=True,
+            transaction_data=tx_3,
         )
         await _validate_and_add_block(b, blocks_reorg[-1])
 
@@ -3149,7 +3536,10 @@ class TestBodyValidation:
         tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), spend, condition_dic=condition_dict)
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         await _validate_and_add_block(b, blocks[-1], expected_error=Err.MINTING_COIN)
         # 17 is tested in mempool tests
@@ -3176,11 +3566,16 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
         block: FullBlock = blocks[-1]
 
@@ -3188,11 +3583,15 @@ class TestBodyValidation:
         block_2: FullBlock = recursive_replace(block, "transactions_info.fees", uint64(1239))
         assert block_2.transactions_info is not None
         block_2 = recursive_replace(
-            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+            block_2,
+            "foliage_transaction_block.transactions_info_hash",
+            block_2.transactions_info.get_hash(),
         )
         assert block_2.foliage_transaction_block is not None
         block_2 = recursive_replace(
-            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+            block_2,
+            "foliage.foliage_transaction_block_hash",
+            block_2.foliage_transaction_block.get_hash(),
         )
         new_m = block_2.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -3218,20 +3617,29 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[-1].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
         )
 
         last_block = recursive_replace(blocks[-1], "transactions_info.aggregated_signature", G2Element.generator())
         assert last_block.transactions_info is not None
         last_block = recursive_replace(
-            last_block, "foliage_transaction_block.transactions_info_hash", last_block.transactions_info.get_hash()
+            last_block,
+            "foliage_transaction_block.transactions_info_hash",
+            last_block.transactions_info.get_hash(),
         )
         assert last_block.foliage_transaction_block is not None
         last_block = recursive_replace(
-            last_block, "foliage.foliage_transaction_block_hash", last_block.foliage_transaction_block.get_hash()
+            last_block,
+            "foliage.foliage_transaction_block_hash",
+            last_block.foliage_transaction_block.get_hash(),
         )
         new_m = last_block.foliage.foliage_transaction_block_hash
         assert new_m is not None
@@ -3279,11 +3687,17 @@ class TestReorgs:
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ALREADY_HAVE_BLOCK,
+                    fork_info=fork_info,
                 )
             elif reorg_block.height < 15:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
                 )
             elif reorg_block.height >= 15:
                 await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
@@ -3293,7 +3707,10 @@ class TestReorgs:
 
     @pytest.mark.anyio
     async def test_get_tx_peak_reorg(
-        self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
     ) -> None:
         b = empty_blockchain
 
@@ -3324,7 +3741,10 @@ class TestReorgs:
                 await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
             elif reorg_block.height < reorg_point:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
                 )
             elif reorg_block.height >= reorg_point:
                 await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
@@ -3379,7 +3799,7 @@ class TestReorgs:
                     b.pool,
                     None,
                     vs,
-                )
+                ),
             )
         pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         for i, block in enumerate(blocks):
@@ -3393,7 +3813,10 @@ class TestReorgs:
             fork_info: ForkInfo = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
             assert fork_info is not None
             (result, err, _) = await b.add_block(
-                block, pre_validation_results[i], sub_slot_iters=ssi, fork_info=fork_info
+                block,
+                pre_validation_results[i],
+                sub_slot_iters=ssi,
+                fork_info=fork_info,
             )
             await check_block_store_invariant(b)
             assert err is None
@@ -3427,7 +3850,7 @@ class TestReorgs:
                 print(
                     f"reorg chain: {reorg_block.height:4} "
                     f"weight: {reorg_block.weight:7} "
-                    f"peak: {str(peak.header_hash)[:6]}"
+                    f"peak: {str(peak.header_hash)[:6]}",
                 )
 
             if reorg_block.height < num_blocks_chain_2_start:
@@ -3436,11 +3859,17 @@ class TestReorgs:
                 if fork_info2 is None:
                     fork_info2 = ForkInfo(reorg_block.height - 1, reorg_block.height - 1, reorg_block.prev_header_hash)
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info2
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info2,
                 )
             elif reorg_block.weight > chain_1_weight:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info2
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.NEW_PEAK,
+                    fork_info=fork_info2,
                 )
 
         # if these asserts fires, there was no reorg
@@ -3503,7 +3932,9 @@ class TestReorgs:
 
     @pytest.mark.anyio
     async def test_long_compact_blockchain(
-        self, empty_blockchain: Blockchain, default_2000_blocks_compact: list[FullBlock]
+        self,
+        empty_blockchain: Blockchain,
+        default_2000_blocks_compact: list[FullBlock],
     ) -> None:
         b = empty_blockchain
         for block in default_2000_blocks_compact:
@@ -3546,11 +3977,17 @@ class TestReorgs:
         for reorg_block in blocks_reorg_chain_2:
             if reorg_block.height < 15:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ALREADY_HAVE_BLOCK,
+                    fork_info=fork_info,
                 )
             elif reorg_block.height < 16:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
                 )
             else:
                 await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
@@ -3569,7 +4006,10 @@ class TestReorgs:
 
         blocks = bt.get_consecutive_blocks(10, farmer_reward_puzzle_hash=coinbase_puzzlehash)
         blocks = bt.get_consecutive_blocks(
-            2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
+            2,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_transaction_block=True,
         )
 
         spend_block = blocks[10]
@@ -3589,7 +4029,11 @@ class TestReorgs:
         )
 
         blocks_fork = bt.get_consecutive_blocks(
-            1, blocks[:12], farmer_reward_puzzle_hash=coinbase_puzzlehash, seed=b"123", guarantee_transaction_block=True
+            1,
+            blocks[:12],
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            seed=b"123",
+            guarantee_transaction_block=True,
         )
         blocks_fork = bt.get_consecutive_blocks(
             2,
@@ -3620,7 +4064,9 @@ class TestReorgs:
         await _validate_and_add_block(b, blocks[2])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), blocks[2].get_included_reward_coins()[0]
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            blocks[2].get_included_reward_coins()[0],
         )
         blocks = bt.get_consecutive_blocks(
             1,
@@ -3654,7 +4100,10 @@ class TestReorgs:
 
     @pytest.mark.anyio
     async def test_overlong_generator_encoding(
-        self, empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode
+        self,
+        empty_blockchain: Blockchain,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
     ) -> None:
         # add enough blocks to pass the hard fork
         blocks = bt.get_consecutive_blocks(10)
@@ -3673,10 +4122,14 @@ class TestReorgs:
         block = recursive_replace(original_block, "transactions_generator", generator)
         block = recursive_replace(block, "transactions_info.generator_root", std_hash(bytes(generator)))
         block = recursive_replace(
-            block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
+            block,
+            "foliage_transaction_block.transactions_info_hash",
+            std_hash(bytes(block.transactions_info)),
         )
         block = recursive_replace(
-            block, "foliage.foliage_transaction_block_hash", std_hash(bytes(block.foliage_transaction_block))
+            block,
+            "foliage.foliage_transaction_block_hash",
+            std_hash(bytes(block.foliage_transaction_block)),
         )
 
         # overlong encoding became invalid in the 3.0 hard fork
@@ -3749,7 +4202,11 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
 
     spend_bundle2 = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
     blocks_reorg_chain = bt.get_consecutive_blocks(
-        4, blocks_reorg_chain, seed=b"2", block_refs=[uint32(5), uint32(11)], transaction_data=spend_bundle2
+        4,
+        blocks_reorg_chain,
+        seed=b"2",
+        block_refs=[uint32(5), uint32(11)],
+        transaction_data=spend_bundle2,
     )
     blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
 
@@ -4049,7 +4506,7 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
                 bc.pool,
                 None,
                 vs,
-            )
+            ),
         )
 
     res: list[PreValidationResult] = list(await asyncio.gather(*futures))
@@ -4218,7 +4675,7 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     log.info(
         f"executed {counter} block generators in {end - start:2f} s. "
         f"{len(fork_info.additions_since_fork)} additions, "
-        f"{len(fork_info.removals_since_fork)} removals"
+        f"{len(fork_info.removals_since_fork)} removals",
     )
 
     return fork_info
@@ -4264,7 +4721,7 @@ class ForkInfoTestSetup:
                 hint=None,
                 is_coinbase=False,
                 same_as_parent=False,
-            )
+            ),
         }
         fork_info = ForkInfo(
             test_block.height - 1,
@@ -4301,7 +4758,10 @@ class ForkInfoTestSetup:
 @pytest.mark.parametrize("reset", [True, False])
 @pytest.mark.anyio
 async def test_include_spends_same_as_parent(
-    same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+    same_ph_as_parent: bool,
+    same_amount_as_parent: bool,
+    rollback: bool,
+    reset: bool,
 ) -> None:
     """
     Tests that `ForkInfo` properly tracks same-as-parent created coins.
@@ -4336,7 +4796,7 @@ async def test_include_spends_same_as_parent(
                 0,
                 0,
                 0,
-            )
+            ),
         ],
         0,
         0,
@@ -4379,7 +4839,10 @@ async def test_include_spends_same_as_parent(
 @pytest.mark.parametrize("reset", [True, False])
 @pytest.mark.anyio
 async def test_include_block_same_as_parent_coins(
-    same_ph_as_parent: bool, same_amount_as_parent: bool, rollback: bool, reset: bool
+    same_ph_as_parent: bool,
+    same_amount_as_parent: bool,
+    rollback: bool,
+    reset: bool,
 ) -> None:
     """
     Tests that `ForkInfo` properly tracks same-as-parent created coins.

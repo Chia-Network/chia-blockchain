@@ -102,7 +102,9 @@ async def test_determine_coin_type(simulator_and_wallet: OldSimulatorsAndWallets
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
     peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
     assert (None, None) == await wallet_state_manager.determine_coin_type(
-        peer, CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)), None
+        peer,
+        CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)),
+        None,
     )
 
 
@@ -158,7 +160,9 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     )
 
     extra_coin_spend = make_spend(
-        Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), Program.to(1), Program.to([])
+        Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)),
+        Program.to(1),
+        Program.to([]),
     )
     extra_spend = WalletSpendBundle([extra_coin_spend], G2Element())
 
@@ -241,22 +245,22 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
                 post_block_balance_updates={
                     1: {
                         "unspent_coin_count": 1,  # We just split a coin so no other balance changes
-                    }
+                    },
                 },
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
                     1: {
                         "pending_coin_removal_count": 1,  # not sure if this is desirable
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     1: {
                         "pending_coin_removal_count": -1,
-                    }
+                    },
                 },
             ),
-        ]
+        ],
     )
 
 
@@ -314,27 +318,32 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Make sure `up_to_index` works
     result = await wsm.create_more_puzzle_hashes(
-        up_to_index=uint32(expected_state.highest_index + 100), mark_existing_as_used=False
+        up_to_index=uint32(expected_state.highest_index + 100),
+        mark_existing_as_used=False,
     )
     await result.commit(wsm)
     expected_state = PuzzleHashState(
-        expected_state.highest_index + 100 + wsm.initial_num_public_keys, expected_state.used_up_to_index
+        expected_state.highest_index + 100 + wsm.initial_num_public_keys,
+        expected_state.used_up_to_index,
     )
     assert await get_puzzle_hash_state() == expected_state
 
     # Make sure `mark_existing_as_used` works
     result = await wsm.create_more_puzzle_hashes(
-        up_to_index=uint32(expected_state.highest_index + 1), mark_existing_as_used=True
+        up_to_index=uint32(expected_state.highest_index + 1),
+        mark_existing_as_used=True,
     )
     await result.commit(wsm)
     expected_state = PuzzleHashState(
-        expected_state.highest_index + 1 + wsm.initial_num_public_keys, expected_state.highest_index
+        expected_state.highest_index + 1 + wsm.initial_num_public_keys,
+        expected_state.highest_index,
     )
     assert await get_puzzle_hash_state() == expected_state
 
     # Test basic transactionality
     result = await wsm.create_more_puzzle_hashes(
-        up_to_index=uint32(expected_state.highest_index + 1), mark_existing_as_used=False
+        up_to_index=uint32(expected_state.highest_index + 1),
+        mark_existing_as_used=False,
     )
     result = await wsm.create_more_puzzle_hashes(
         num_additional_phs=(expected_state.highest_index - expected_state.used_up_to_index)
@@ -345,7 +354,8 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
     )
     await result.commit(wsm)
     expected_state = PuzzleHashState(
-        expected_state.highest_index + 1 + wsm.initial_num_public_keys + 1, expected_state.used_up_to_index
+        expected_state.highest_index + 1 + wsm.initial_num_public_keys + 1,
+        expected_state.used_up_to_index,
     )
     assert await get_puzzle_hash_state() == expected_state
 
@@ -359,7 +369,8 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
     result = await wsm.create_more_puzzle_hashes()
     await result.commit(wsm)
     expected_state = PuzzleHashState(
-        wsm.initial_num_public_keys, -1
+        wsm.initial_num_public_keys,
+        -1,
     )  # -1 being no puzzle hashes used, not even at index 0
     assert await get_puzzle_hash_state() == expected_state
 
@@ -374,7 +385,9 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
         len(list(await wsm.puzzle_store.get_all_puzzle_hashes())) == (expected_state.highest_index) * 2
     )  # 0 inclusive
     result = await wsm.create_more_puzzle_hashes(
-        from_zero=True, mark_existing_as_used=False, up_to_index=uint32(expected_state.highest_index)
+        from_zero=True,
+        mark_existing_as_used=False,
+        up_to_index=uint32(expected_state.highest_index),
     )
     await result.commit(wsm)
     expected_state = PuzzleHashState(expected_state.highest_index + wsm.initial_num_public_keys, -1)
@@ -392,7 +405,8 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
     await wsm.puzzle_store.set_used_up_to(uint32(expected_state.highest_index))
     await wsm.get_unused_derivation_record(wsm.main_wallet.id())
     expected_state = PuzzleHashState(
-        expected_state.highest_index + wsm.initial_num_public_keys + 1, expected_state.highest_index + 1
+        expected_state.highest_index + wsm.initial_num_public_keys + 1,
+        expected_state.highest_index + 1,
     )
     assert await get_puzzle_hash_state() == expected_state
 
@@ -403,7 +417,8 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
     assert previous_result is not None
     await previous_result.commit(wsm)
     expected_state = PuzzleHashState(
-        expected_state.highest_index + wsm.initial_num_public_keys, expected_state.highest_index
+        expected_state.highest_index + wsm.initial_num_public_keys,
+        expected_state.highest_index,
     )
     assert await get_puzzle_hash_state() == expected_state
 
@@ -439,7 +454,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test the actual functionality
     assert await rpc_client.extend_derivation_index(expected_state.highest_index + 5) == str(
-        expected_state.highest_index + 5
+        expected_state.highest_index + 5,
     )
     expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
     assert await get_puzzle_hash_state() == expected_state

@@ -188,7 +188,10 @@ async def test_root_shared_right() -> None:
 @pytest.mark.anyio
 async def test_no_left_chain() -> None:
     chain, fork_hash = await lookup_fork_chain(
-        test_chain, (-1, test_constants.GENESIS_CHALLENGE), (3, F), test_constants
+        test_chain,
+        (-1, test_constants.GENESIS_CHALLENGE),
+        (3, F),
+        test_constants,
     )
     assert chain == {0: G, 1: D, 2: E, 3: F}
     assert fork_hash == test_constants.GENESIS_CHALLENGE

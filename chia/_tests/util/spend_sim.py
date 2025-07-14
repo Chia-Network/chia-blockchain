@@ -58,7 +58,9 @@ and is designed so that you could test with it and then swap in a real rpc clien
 
 @asynccontextmanager
 async def sim_and_client(
-    db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
+    db_path: Optional[Path] = None,
+    defaults: ConsensusConstants = DEFAULT_CONSTANTS,
+    pass_prefarm: bool = True,
 ) -> AsyncIterator[tuple[SpendSim, SimClient]]:
     async with SpendSim.managed(db_path, defaults) as sim:
         client: SimClient = SimClient(sim)
@@ -155,7 +157,9 @@ class SpendSim:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
+        cls,
+        db_path: Optional[Path] = None,
+        defaults: ConsensusConstants = DEFAULT_CONSTANTS,
     ) -> AsyncIterator[Self]:
         self = cls()
         if db_path is None:
@@ -167,7 +171,9 @@ class SpendSim:
             self.coin_store = await CoinStore.create(self.db_wrapper)
             self.hint_store = await HintStore.create(self.db_wrapper)
             self.mempool_manager = MempoolManager(
-                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+                self.coin_store.get_coin_records,
+                self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                defaults,
             )
             self.defaults = defaults
 
@@ -344,7 +350,10 @@ class SimClient:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak is not None
         info = await self.service.mempool_manager.add_spend_bundle(
-            spend_bundle, sbc, spend_bundle_id, self.service.mempool_manager.peak.height
+            spend_bundle,
+            sbc,
+            spend_bundle_id,
+            self.service.mempool_manager.peak.height,
         )
         return info.status, info.error
 
@@ -418,7 +427,7 @@ class SimClient:
 
     async def get_block(self, header_hash: bytes32) -> SimFullBlock:
         selected_block: SimBlockRecord = next(
-            filter(lambda br: br.header_hash == header_hash, self.service.block_records)
+            filter(lambda br: br.header_hash == header_hash, self.service.block_records),
         )
         block_height: uint32 = selected_block.height
         block: SimFullBlock = next(filter(lambda block: block.height == block_height, self.service.blocks))
@@ -429,7 +438,7 @@ class SimClient:
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> tuple[list[CoinRecord], list[CoinRecord]]:
         selected_block: SimBlockRecord = next(
-            filter(lambda br: br.header_hash == header_hash, self.service.block_records)
+            filter(lambda br: br.header_hash == header_hash, self.service.block_records),
         )
         block_height: uint32 = selected_block.height
         additions: list[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block_height)

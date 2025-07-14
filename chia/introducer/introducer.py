@@ -142,7 +142,7 @@ class Introducer:
                         ip.to_text(),
                         self.default_port,
                         uint64(0),
-                    )
+                    ),
                 )
             if len(peers) > num_peers:
                 break

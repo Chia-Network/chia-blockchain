@@ -21,7 +21,7 @@ def show_plots(root_path: Path) -> None:
     print(
         "Add with 'chia plots add -d [dir]' and remove with"
         + " 'chia plots remove -d [dir]'"
-        + " Scan and check plots with 'chia plots check'"
+        + " Scan and check plots with 'chia plots check'",
     )
     print()
     for str_path in get_plot_directories(root_path):
@@ -84,7 +84,11 @@ def plots_cmd(ctx: click.Context) -> None:
 @click.option("-m", "--memo", help="Memo in hex for reproducing plots (debugging only)", type=str, default=None)
 @click.option("-e", "--nobitfield", help="Disable bitfield", default=False, is_flag=True)
 @click.option(
-    "-x", "--exclude_final_dir", help="Skips adding [final dir] to harvester for farming", default=False, is_flag=True
+    "-x",
+    "--exclude_final_dir",
+    help="Skips adding [final dir] to harvester for farming",
+    default=False,
+    is_flag=True,
 )
 @click.option(
     "-D",
@@ -149,7 +153,7 @@ def create_cmd(
             root_path,
             log,
             connect_to_daemon,
-        )
+        ),
     )
 
     asyncio.run(create_plots(params, plot_keys))
@@ -174,7 +178,12 @@ def create_cmd(
 @click.option("--challenge-start", help="Begins at a different [start] for -n [challenges]", type=int, default=None)
 @click.pass_context
 def check_cmd(
-    ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int
+    ctx: click.Context,
+    num: int,
+    grep_string: str,
+    list_duplicates: bool,
+    debug_show_memo: bool,
+    challenge_start: int,
 ) -> None:
     from chia.plotting.check_plots import check_plots
 

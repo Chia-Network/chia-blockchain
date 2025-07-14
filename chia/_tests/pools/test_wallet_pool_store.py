@@ -19,7 +19,9 @@ from chia.wallet.wallet_pool_store import WalletPoolStore
 
 
 def make_child_solution(
-    coin_spend: Optional[CoinSpend], new_coin: Optional[Coin], seeded_random: random.Random
+    coin_spend: Optional[CoinSpend],
+    new_coin: Optional[Coin],
+    seeded_random: random.Random,
 ) -> CoinSpend:
     new_puzzle_hash: bytes32 = bytes32.random(seeded_random)
     solution = "()"
@@ -70,13 +72,19 @@ class TestWalletPoolStore:
                     coin_0 = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(12312))
                     coin_0_alt = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(12312))
                     solution_0: CoinSpend = make_child_solution(
-                        coin_spend=None, new_coin=coin_0, seeded_random=seeded_random
+                        coin_spend=None,
+                        new_coin=coin_0,
+                        seeded_random=seeded_random,
                     )
                     solution_0_alt: CoinSpend = make_child_solution(
-                        coin_spend=None, new_coin=coin_0_alt, seeded_random=seeded_random
+                        coin_spend=None,
+                        new_coin=coin_0_alt,
+                        seeded_random=seeded_random,
                     )
                     solution_1: CoinSpend = make_child_solution(
-                        coin_spend=solution_0, new_coin=None, seeded_random=seeded_random
+                        coin_spend=solution_0,
+                        new_coin=None,
+                        seeded_random=seeded_random,
                     )
 
                     assert await store.get_spends_for_wallet(0) == []

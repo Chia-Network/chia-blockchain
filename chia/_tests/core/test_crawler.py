@@ -50,7 +50,8 @@ async def test_unknown_messages(
     crawler = crawler_service_no_loop._node
     full_node = full_node_service._node
     assert await crawler.server.start_client(
-        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()),
+        None,
     )
     connection = full_node.server.all_connections[crawler.server.node_id]
 
@@ -74,7 +75,8 @@ async def test_valid_message(
     crawler = crawler_service_no_loop._node
     full_node = full_node_service._node
     assert await crawler.server.start_client(
-        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()),
+        None,
     )
     connection = full_node.server.all_connections[crawler.server.node_id]
 
@@ -129,7 +131,8 @@ async def test_crawler_to_db(crawler_service_no_loop: CrawlerService, one_node: 
 
 @pytest.mark.anyio
 async def test_crawler_peer_cleanup(
-    crawler_service_no_loop: CrawlerService, one_node: SimulatorsAndWalletsServices
+    crawler_service_no_loop: CrawlerService,
+    one_node: SimulatorsAndWalletsServices,
 ) -> None:
     """
     This is a lot more of an integration test, but it tests the whole process. We add multiple nodes to the crawler,

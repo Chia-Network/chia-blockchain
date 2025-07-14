@@ -460,7 +460,7 @@ class Blockchain:
             self._peak_height = previous_peak_height
             log.error(
                 f"Error while adding block {header_hash} height {block.height},"
-                f" rolling back: {traceback.format_exc()} {e}"
+                f" rolling back: {traceback.format_exc()} {e}",
             )
             raise
 
@@ -506,7 +506,7 @@ class Blockchain:
                     f"block has equal weight as our peak ({peak.weight}), but fewer "
                     f"total iterations {block_record.total_iters} "
                     f"peak: {peak.total_iters} "
-                    f"peak-hash: {peak.header_hash}"
+                    f"peak-hash: {peak.header_hash}",
                 )
 
             if block_record.prev_hash != peak.header_hash:
@@ -520,7 +520,7 @@ class Blockchain:
                                 name.hex()[0:6]
                                 for name, state in rolled_back_state.items()
                                 if state.confirmed_block_index == 0
-                            ]
+                            ],
                         ),
                     )
                     log.info(
@@ -530,7 +530,7 @@ class Blockchain:
                                 name.hex()[0:6]
                                 for name, state in rolled_back_state.items()
                                 if state.confirmed_block_index != 0
-                            ]
+                            ],
                         ),
                     )
 
@@ -583,7 +583,7 @@ class Blockchain:
                 log.info(
                     f"adding new block to coin_store "
                     f"(hh: {fetched_block_record.header_hash} "
-                    f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
+                    f"height: {fetched_block_record.height}), {len(tx_removals)} spends",
                 )
                 log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
                 log.info("additions: %s", ",".join([add[0].hex()[0:6] for add in tx_additions]))
@@ -619,7 +619,8 @@ class Blockchain:
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)
 
     async def get_sp_and_ip_sub_slots(
-        self, header_hash: bytes32
+        self,
+        header_hash: bytes32,
     ) -> Optional[tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
         block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
         if block is None:
@@ -693,7 +694,9 @@ class Blockchain:
         return list(reversed(recent_rc))
 
     async def validate_unfinished_block_header(
-        self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
+        self,
+        block: UnfinishedBlock,
+        skip_overflow_ss_validation: bool = True,
     ) -> tuple[Optional[uint64], Optional[Err]]:
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
@@ -735,7 +738,10 @@ class Blockchain:
         )
         prev_b = self.try_block_record(unfinished_header_block.prev_header_hash)
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            self.constants, len(unfinished_header_block.finished_sub_slots) > 0, prev_b, self
+            self.constants,
+            len(unfinished_header_block.finished_sub_slots) > 0,
+            prev_b,
+            self,
         )
         expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
@@ -751,7 +757,10 @@ class Blockchain:
         return required_iters, None
 
     async def validate_unfinished_block(
-        self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation: bool = True
+        self,
+        block: UnfinishedBlock,
+        npc_result: Optional[NPCResult],
+        skip_overflow_ss_validation: bool = True,
     ) -> PreValidationResult:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
@@ -828,7 +837,8 @@ class Blockchain:
         if self._peak_height is None:
             return None
         block_records = await self.block_store.get_block_records_in_range(
-            max(fork_point - self.constants.BLOCKS_CACHE_SIZE, uint32(0)), fork_point
+            max(fork_point - self.constants.BLOCKS_CACHE_SIZE, uint32(0)),
+            fork_point,
         )
         for block_record in block_records.values():
             self.add_block_record(block_record)
@@ -873,7 +883,10 @@ class Blockchain:
         return await self.block_store.get_block_records_in_range(start, stop)
 
     async def get_header_blocks_in_range(
-        self, start: int, stop: int, tx_filter: bool = True
+        self,
+        start: int,
+        stop: int,
+        tx_filter: bool = True,
     ) -> dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
@@ -917,7 +930,10 @@ class Blockchain:
         return header_blocks
 
     async def get_header_block_by_height(
-        self, height: int, header_hash: bytes32, tx_filter: bool = True
+        self,
+        height: int,
+        header_hash: bytes32,
+        tx_filter: bool = True,
     ) -> Optional[HeaderBlock]:
         header_dict: dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height, tx_filter)
         if len(header_dict) == 0:
@@ -996,7 +1012,9 @@ class Blockchain:
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
     async def persist_sub_epoch_challenge_segments(
-        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
+        self,
+        ses_block_hash: bytes32,
+        segments: list[SubEpochChallengeSegment],
     ) -> None:
         await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
@@ -1005,7 +1023,7 @@ class Blockchain:
         ses_block_hash: bytes32,
     ) -> Optional[list[SubEpochChallengeSegment]]:
         segments: Optional[list[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
-            ses_block_hash
+            ses_block_hash,
         )
         if segments is None:
             return None

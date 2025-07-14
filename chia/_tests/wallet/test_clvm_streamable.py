@@ -106,7 +106,7 @@ def test_compound_type_serialization() -> None:
     # clvm streamable + regular values
     instance_clvm = CompoundCLVM(optional=BasicCLVMStreamable(a="1"), list=[BasicCLVMStreamable(a="1")])
     assert program_serialize_clvm_streamable(instance_clvm) == Program.to(
-        [["optional", 1, (97, 49)], ["list", [(97, 49)]]]
+        [["optional", 1, (97, 49)], ["list", [(97, 49)]]],
     )
     assert (
         byte_serialize_clvm_streamable(instance_clvm).hex()
@@ -122,13 +122,15 @@ def test_compound_type_serialization() -> None:
     )
     assert (
         byte_deserialize_clvm_streamable(
-            bytes.fromhex("ffff886f7074696f6e616cff01ffff613180ffff846c697374ffffff6131808080"), CompoundCLVM
+            bytes.fromhex("ffff886f7074696f6e616cff01ffff613180ffff846c697374ffffff6131808080"),
+            CompoundCLVM,
         )
         == instance_clvm
     )
     assert (
         json_deserialize_with_clvm_streamable(
-            "ffff886f7074696f6e616cff01ffff613180ffff846c697374ffffff6131808080", CompoundCLVM
+            "ffff886f7074696f6e616cff01ffff613180ffff846c697374ffffff6131808080",
+            CompoundCLVM,
         )
         == instance_clvm
     )
@@ -186,8 +188,8 @@ def test_translation_layer() -> None:
                 FooSpend,
                 FooSpend.from_wallet_api,
                 FooSpend.to_wallet_api,
-            )
-        ]
+            ),
+        ],
     )
 
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
@@ -202,22 +204,31 @@ def test_translation_layer() -> None:
     )
 
     byte_serialize_clvm_streamable(foo_spend) == byte_serialize_clvm_streamable(
-        spend, translation_layer=FOO_TRANSLATION
+        spend,
+        translation_layer=FOO_TRANSLATION,
     )
     program_serialize_clvm_streamable(foo_spend) == program_serialize_clvm_streamable(
-        spend, translation_layer=FOO_TRANSLATION
+        spend,
+        translation_layer=FOO_TRANSLATION,
     )
     json_serialize_with_clvm_streamable(foo_spend) == json_serialize_with_clvm_streamable(
-        spend, translation_layer=FOO_TRANSLATION
+        spend,
+        translation_layer=FOO_TRANSLATION,
     )
     assert spend == byte_deserialize_clvm_streamable(
-        byte_serialize_clvm_streamable(foo_spend), Spend, translation_layer=FOO_TRANSLATION
+        byte_serialize_clvm_streamable(foo_spend),
+        Spend,
+        translation_layer=FOO_TRANSLATION,
     )
     assert spend == program_deserialize_clvm_streamable(
-        program_serialize_clvm_streamable(foo_spend), Spend, translation_layer=FOO_TRANSLATION
+        program_serialize_clvm_streamable(foo_spend),
+        Spend,
+        translation_layer=FOO_TRANSLATION,
     )
     assert spend == json_deserialize_with_clvm_streamable(
-        json_serialize_with_clvm_streamable(foo_spend), Spend, translation_layer=FOO_TRANSLATION
+        json_serialize_with_clvm_streamable(foo_spend),
+        Spend,
+        translation_layer=FOO_TRANSLATION,
     )
 
     # Deserialization should only work now if using the translation layer
@@ -230,7 +241,9 @@ def test_translation_layer() -> None:
 
     # Test that types not registered with translation layer are serialized properly
     assert coin == byte_deserialize_clvm_streamable(
-        byte_serialize_clvm_streamable(coin, translation_layer=FOO_TRANSLATION), Coin, translation_layer=FOO_TRANSLATION
+        byte_serialize_clvm_streamable(coin, translation_layer=FOO_TRANSLATION),
+        Coin,
+        translation_layer=FOO_TRANSLATION,
     )
     assert coin == program_deserialize_clvm_streamable(
         program_serialize_clvm_streamable(coin, translation_layer=FOO_TRANSLATION),

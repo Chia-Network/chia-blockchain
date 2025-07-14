@@ -43,7 +43,10 @@ class RateLimiter:
         self.non_tx_cumulative_size = 0
 
     def process_msg_and_check(
-        self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
+        self,
+        message: Message,
+        our_capabilities: list[Capability],
+        peer_capabilities: list[Capability],
     ) -> Optional[str]:
         """
         Returns a string indicating which limit was hit if a rate limit is
@@ -90,7 +93,7 @@ class RateLimiter:
                                 f"non-tx count: {new_non_tx_count}",
                                 f"> {non_tx_freq * proportion_of_limit}",
                                 f"(scale factor: {proportion_of_limit})",
-                            ]
+                            ],
                         )
                     if new_non_tx_size > non_tx_max_total_size * proportion_of_limit:
                         return " ".join(
@@ -98,7 +101,7 @@ class RateLimiter:
                                 f"non-tx size: {new_non_tx_size}",
                                 f"> {non_tx_max_total_size * proportion_of_limit}",
                                 f"(scale factor: {proportion_of_limit})",
-                            ]
+                            ],
                         )
             else:  # pragma: no cover
                 log.warning(
@@ -123,8 +126,8 @@ class RateLimiter:
                         [
                             f"message count: {new_message_counts}"
                             f"> {limits.frequency * proportion_of_limit}"
-                            f"(scale factor: {proportion_of_limit})"
-                        ]
+                            f"(scale factor: {proportion_of_limit})",
+                        ],
                     )
                 if len(message.data) > limits.max_size:
                     return f"message size: {len(message.data)} > {limits.max_size}"
@@ -134,7 +137,7 @@ class RateLimiter:
                             f"cumulative size: {new_cumulative_size}",
                             f"> {limits.max_total_size * proportion_of_limit}",
                             f"(scale factor: {proportion_of_limit})",
-                        ]
+                        ],
                     )
 
                 ret = True

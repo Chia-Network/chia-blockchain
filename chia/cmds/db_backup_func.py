@@ -36,7 +36,7 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
         raise RuntimeError(
             f"SQLite {sqlite3.sqlite_version} not supported. Version needed is 3.27.0"
             f"\n\tuse '--no_indexes' option to create a backup without indexes instead."
-            f"\n\tIn case of a restore, the missing indexes will be recreated during full node startup."
+            f"\n\tIn case of a restore, the missing indexes will be recreated during full node startup.",
         )
 
     if not backup_db.parent.exists():
@@ -56,14 +56,14 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
                 cursor = in_db.cursor()
                 for row in cursor.execute(
                     "select replace(sql,'CREATE TABLE ', 'CREATE TABLE backup.') from sqlite_master "
-                    "where upper(type)='TABLE'"
+                    "where upper(type)='TABLE'",
                 ):
                     in_db.execute(row[0])
 
                 in_db.execute("BEGIN TRANSACTION")
                 for row in cursor.execute(
                     "select 'INSERT INTO backup.'||name||' SELECT * FROM main.'||name from sqlite_master "
-                    "where upper(type)='TABLE'"
+                    "where upper(type)='TABLE'",
                 ):
                     in_db.execute(row[0])
                 in_db.execute("COMMIT")
@@ -73,5 +73,5 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
         except sqlite3.OperationalError as e:
             raise RuntimeError(
                 f"backup failed with error: '{e}'"
-                f"\n\tYour backup file {backup_db} is probably left over in an insconsistent state."
+                f"\n\tYour backup file {backup_db} is probably left over in an insconsistent state.",
             )

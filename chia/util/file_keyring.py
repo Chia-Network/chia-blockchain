@@ -85,7 +85,7 @@ class FileKeyringVersionError(Exception):
         super().__init__(
             f"Keyring format is unrecognized. Found version {actual_version}"
             f", expected a value <= {MAX_SUPPORTED_VERSION}. "
-            "Please update to a newer version"
+            "Please update to a newer version",
         )
 
 
@@ -143,7 +143,10 @@ class FileKeyringContent:
         return dict(yaml.safe_load(data_yml))
 
     def update_encrypted_data_dict(
-        self, passphrase: str, decrypted_dict: DecryptedKeyringData, update_salt: bool
+        self,
+        passphrase: str,
+        decrypted_dict: DecryptedKeyringData,
+        update_salt: bool,
     ) -> None:
         self.nonce = generate_nonce()
         if update_salt:
@@ -421,7 +424,7 @@ class FileKeyring(FileSystemEventHandler):
             passphrase = obtain_current_passphrase(use_passphrase_cache=True)
 
         self.cached_data_dict = DecryptedKeyringData.from_dict(
-            self.cached_file_content.get_decrypted_data_dict(passphrase)
+            self.cached_file_content.get_decrypted_data_dict(passphrase),
         )
 
     def write_keyring(self, fresh_salt: bool = False) -> None:

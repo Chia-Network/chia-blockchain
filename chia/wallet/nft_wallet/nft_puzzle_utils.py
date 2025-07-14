@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 
 
 def create_nft_layer_puzzle_with_curry_params(
-    metadata: Program, metadata_updater_hash: bytes32, inner_puzzle: Program
+    metadata: Program,
+    metadata_updater_hash: bytes32,
+    inner_puzzle: Program,
 ) -> Program:
     """Curries params into nft_state_layer.clsp
 
@@ -55,7 +57,10 @@ def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Prog
 
 
 def create_full_puzzle(
-    singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
+    singleton_id: bytes32,
+    metadata: Program,
+    metadata_updater_puzhash: bytes32,
+    inner_puzzle: Program,
 ) -> Program:
     if log.isEnabledFor(logging.DEBUG):
         log.debug(
@@ -205,13 +210,18 @@ def create_ownership_layer_puzzle(
     nft_inner_puzzle = p2_puzzle
 
     nft_ownership_layer_puzzle = construct_ownership_layer(
-        bytes32(did_id) if did_id else None, transfer_program, nft_inner_puzzle
+        bytes32(did_id) if did_id else None,
+        transfer_program,
+        nft_inner_puzzle,
     )
     return nft_ownership_layer_puzzle
 
 
 def create_ownership_layer_transfer_solution(
-    new_did: bytes, new_did_inner_hash: bytes, trade_prices_list: list[list[int]], new_puzhash: bytes32
+    new_did: bytes,
+    new_did_inner_hash: bytes,
+    trade_prices_list: list[list[int]],
+    new_puzhash: bytes32,
 ) -> Program:
     log.debug(
         "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s puzhash:%s",

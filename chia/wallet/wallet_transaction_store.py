@@ -64,12 +64,12 @@ class WalletTransactionStore:
                 " sent int,"
                 " wallet_id bigint,"
                 " trade_id text,"
-                " type int)"
+                " type int)",
             )
 
             # Useful for reorg lookups
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_height)"
+                "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_height)",
             )
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_created_index on transaction_record(created_at_time)")
             # Remove a redundant index on `created_at_time`
@@ -79,10 +79,10 @@ class WalletTransactionStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)")
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)")
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
+                "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)",
             )
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS transaction_record_trade_id_idx ON transaction_record(trade_id)"
+                "CREATE INDEX IF NOT EXISTS transaction_record_trade_id_idx ON transaction_record(trade_id)",
             )
             await conn.execute("CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)")
 
@@ -143,7 +143,8 @@ class WalletTransactionStore:
                 ),
             )
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
+                "INSERT OR REPLACE INTO tx_times VALUES (?, ?)",
+                (record.name, bytes(record.valid_times)),
             )
             ltx = get_light_transaction_record(record)
             if record.confirmed is False and ltx not in self.unconfirmed_txs:
@@ -210,7 +211,11 @@ class WalletTransactionStore:
         Updates transaction sent count to 0 and resets confirmation data
         """
         tx: TransactionRecord = dataclasses.replace(
-            record, confirmed_at_height=uint32(0), confirmed=False, sent=uint32(0), sent_to=[]
+            record,
+            confirmed_at_height=uint32(0),
+            confirmed=False,
+            sent=uint32(0),
+            sent_to=[],
         )
         await self.add_transaction_record(tx)
 
@@ -222,8 +227,9 @@ class WalletTransactionStore:
             # NOTE: bundle_id is being stored as bytes, not hex
             rows = list(
                 await conn.execute_fetchall(
-                    "SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)
-                )
+                    "SELECT transaction_record from transaction_record WHERE bundle_id=?",
+                    (tx_id,),
+                ),
             )
         if len(rows) > 0:
             return (await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(rows[0][0])]))[0]
@@ -301,7 +307,8 @@ class WalletTransactionStore:
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT transaction_record from transaction_record WHERE confirmed=0 AND wallet_id=?", (wallet_id,)
+                "SELECT transaction_record from transaction_record WHERE confirmed=0 AND wallet_id=?",
+                (wallet_id,),
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
@@ -380,12 +387,14 @@ class WalletTransactionStore:
                 await conn.execute_fetchall(
                     f"SELECT COUNT(*) FROM transaction_record where wallet_id=? {type_filter_str} {confirmed_str}",
                     (wallet_id,),
-                )
+                ),
             )
         return 0 if len(rows) == 0 else rows[0][0]
 
     async def get_all_transactions_for_wallet(
-        self, wallet_id: int, type: Optional[int] = None
+        self,
+        wallet_id: int,
+        type: Optional[int] = None,
     ) -> list[TransactionRecord]:
         """
         Returns all stored transactions.
@@ -393,7 +402,8 @@ class WalletTransactionStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             if type is None:
                 rows = await conn.execute_fetchall(
-                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=?", (wallet_id,)
+                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=?",
+                    (wallet_id,),
                 )
             else:
                 rows = await conn.execute_fetchall(
@@ -418,14 +428,16 @@ class WalletTransactionStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT transaction_record from transaction_record WHERE confirmed_at_height>?", (height,)
+                "SELECT transaction_record from transaction_record WHERE confirmed_at_height>?",
+                (height,),
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
     async def get_transactions_by_trade_id(self, trade_id: bytes32) -> list[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,)
+                "SELECT transaction_record from transaction_record WHERE trade_id=?",
+                (trade_id,),
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
@@ -492,5 +504,9 @@ class WalletTransactionStore:
 
 def get_light_transaction_record(rec: TransactionRecordOld) -> LightTransactionRecord:
     return LightTransactionRecord(
-        name=rec.name, additions=rec.additions, removals=rec.removals, type=rec.type, spend_bundle=rec.spend_bundle
+        name=rec.name,
+        additions=rec.additions,
+        removals=rec.removals,
+        type=rec.type,
+        spend_bundle=rec.spend_bundle,
     )

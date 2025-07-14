@@ -63,7 +63,10 @@ class SingletonOuterPuzzle:
         return puzzle_for_singleton(constructor["launcher_id"], inner_puzzle, launcher_hash)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+        self,
+        constructor: PuzzleInfo,
+        puzzle_reveal: UncurriedPuzzle,
+        solution: Optional[Program] = None,
     ) -> Optional[Program]:
         matched, curried_args = match_singleton_puzzle(puzzle_reveal)
         if matched:

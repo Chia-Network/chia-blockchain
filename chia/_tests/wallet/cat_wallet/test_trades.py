@@ -144,7 +144,8 @@ async def test_cat_trades(
 
         # Mint some DIDs
         async with wallet_maker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_maker.wallet_state_manager,
@@ -153,7 +154,8 @@ async def test_cat_trades(
                 action_scope,
             )
         async with wallet_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_taker.wallet_state_manager,
@@ -236,19 +238,21 @@ async def test_cat_trades(
                         "new cat": {"set_remainder": True},
                     },
                 ),
-            ]
+            ],
         )
 
         # Mint some VCs that can spend the CR-CATs
         async with env_maker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             vc_record_maker = (
                 await client_maker.vc_mint(
                     VCMint(
                         did_id=encode_puzzle_hash(did_id_maker, "did"),
                         target_address=encode_puzzle_hash(
-                            await action_scope.get_puzzle_hash(env_maker.wallet_state_manager), "txch"
+                            await action_scope.get_puzzle_hash(env_maker.wallet_state_manager),
+                            "txch",
                         ),
                         push=True,
                     ),
@@ -256,14 +260,16 @@ async def test_cat_trades(
                 )
             ).vc_record
         async with env_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=True
+            wallet_environments.tx_config,
+            push=True,
         ) as action_scope:
             vc_record_taker = (
                 await client_taker.vc_mint(
                     VCMint(
                         did_id=encode_puzzle_hash(did_id_taker, "did"),
                         target_address=encode_puzzle_hash(
-                            await action_scope.get_puzzle_hash(env_taker.wallet_state_manager), "txch"
+                            await action_scope.get_puzzle_hash(env_taker.wallet_state_manager),
+                            "txch",
                         ),
                         push=True,
                     ),
@@ -293,7 +299,7 @@ async def test_cat_trades(
                         "vc": {"set_remainder": True},
                     },
                 ),
-            ]
+            ],
         )
 
         proofs_maker = VCProofs({"foo": "1", "bar": "1", "zap": "1"})
@@ -340,7 +346,7 @@ async def test_cat_trades(
                         "vc": {"set_remainder": True},
                     },
                 ),
-            ]
+            ],
         )
     else:
         # Aliasing
@@ -357,10 +363,22 @@ async def test_cat_trades(
 
         # Mint some standard CATs
         cat_wallet_maker = await mint_cat(
-            wallet_environments, env_maker, "xch", "cat", uint64(100), wallet_type, "cat maker"
+            wallet_environments,
+            env_maker,
+            "xch",
+            "cat",
+            uint64(100),
+            wallet_type,
+            "cat maker",
         )
         new_cat_wallet_taker = await mint_cat(
-            wallet_environments, env_taker, "xch", "new cat", uint64(100), wallet_type, "cat taker"
+            wallet_environments,
+            env_taker,
+            "xch",
+            "new cat",
+            uint64(100),
+            wallet_type,
+            "cat taker",
         )
 
     if credential_restricted:
@@ -396,7 +414,10 @@ async def test_cat_trades(
         else:
             extra_args = tuple()
         new_cat_wallet_maker = await wallet_type.get_or_create_wallet_for_cat(
-            wallet_node_maker.wallet_state_manager, wallet_maker, new_cat_wallet_taker.get_asset_id(), *extra_args
+            wallet_node_maker.wallet_state_manager,
+            wallet_maker,
+            new_cat_wallet_taker.get_asset_id(),
+            *extra_args,
         )
 
     await env_maker.change_balances(
@@ -409,8 +430,8 @@ async def test_cat_trades(
                 "pending_coin_removal_count": 0,
                 "pending_change": 0,
                 "max_send_amount": 0,
-            }
-        }
+            },
+        },
     )
     await env_maker.check_balances()
 
@@ -465,22 +486,25 @@ async def test_cat_trades(
     trade_manager_maker = env_maker.wallet_state_manager.trade_manager
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
     maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-        uint32(1)
+        uint32(1),
     )
     assert maker_unused_dr is not None
     maker_unused_index = maker_unused_dr.index
     taker_unused_dr = await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-        uint32(1)
+        uint32(1),
     )
     assert taker_unused_dr is not None
     taker_unused_index = taker_unused_dr.index
     # Execute all of the trades
     # chia_for_cat
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            chia_for_cat, action_scope, fee=uint64(1)
+            chia_for_cat,
+            action_scope,
+            fee=uint64(1),
         )
     assert error is None
     assert success is True
@@ -488,10 +512,12 @@ async def test_cat_trades(
 
     peer = wallet_node_taker.get_full_node_peer()
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             maker_offer,
@@ -547,7 +573,7 @@ async def test_cat_trades(
                     {
                         "new cat": {
                             "pending_approval_balance": 2,
-                        }
+                        },
                     }
                     if credential_restricted
                     else {}
@@ -574,7 +600,7 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": 1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
@@ -601,14 +627,14 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": -1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     if credential_restricted:
@@ -634,7 +660,7 @@ async def test_cat_trades(
                     pre_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 2,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         "new cat": {
@@ -652,33 +678,33 @@ async def test_cat_trades(
                     post_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 0,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
     if wallet_environments.tx_config.reuse_puzhash:
         # Check if unused index changed
         maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert maker_unused_dr is not None
         assert maker_unused_index == maker_unused_dr.index
         taker_unused_dr = await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert taker_unused_dr is not None
         assert taker_unused_index == taker_unused_dr.index
     else:
         maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert maker_unused_dr is not None
         assert maker_unused_index < maker_unused_dr.index
         taker_unused_dr = await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert taker_unused_dr is not None
         assert taker_unused_index < taker_unused_dr.index
@@ -693,12 +719,18 @@ async def test_cat_trades(
     await time_out_assert(15, assert_trade_tx_number, True, wallet_node_maker, trade_make.trade_id, 1)
     # CR-CATs will also have a TX record for the VC
     await time_out_assert(
-        15, assert_trade_tx_number, True, wallet_node_taker, trade_take.trade_id, 4 if credential_restricted else 3
+        15,
+        assert_trade_tx_number,
+        True,
+        wallet_node_taker,
+        trade_take.trade_id,
+        4 if credential_restricted else 3,
     )
 
     # cat_for_chia
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     assert error is None
@@ -706,10 +738,12 @@ async def test_cat_trades(
     assert trade_make is not None
 
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
@@ -775,7 +809,7 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": 1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
@@ -799,46 +833,54 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": -1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
     await time_out_assert(15, assert_trade_tx_number, True, wallet_node_maker, trade_make.trade_id, 1)
     await time_out_assert(
-        15, assert_trade_tx_number, True, wallet_node_taker, trade_take.trade_id, 3 if credential_restricted else 2
+        15,
+        assert_trade_tx_number,
+        True,
+        wallet_node_taker,
+        trade_take.trade_id,
+        3 if credential_restricted else 2,
     )
 
     # cat_for_cat
     maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-        uint32(1)
+        uint32(1),
     )
     assert maker_unused_dr is not None
     maker_unused_index = maker_unused_dr.index
     taker_unused_dr = await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-        uint32(1)
+        uint32(1),
     )
     assert taker_unused_dr is not None
     taker_unused_index = taker_unused_dr.index
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat, action_scope)
     assert error is None
     assert success is True
     assert trade_make is not None
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
@@ -892,7 +934,7 @@ async def test_cat_trades(
                     {
                         "new cat": {
                             "pending_approval_balance": 6,
-                        }
+                        },
                     }
                     if credential_restricted
                     else {}
@@ -914,7 +956,7 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": 1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
@@ -938,14 +980,14 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": -1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -974,7 +1016,7 @@ async def test_cat_trades(
                     pre_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 6,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         "new cat": {
@@ -992,40 +1034,41 @@ async def test_cat_trades(
                     post_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 0,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
     if wallet_environments.tx_config.reuse_puzhash:
         # Check if unused index changed
         maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert maker_unused_dr is not None
         assert maker_unused_index == maker_unused_dr.index
         taker_unused_dr = await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert taker_unused_dr is not None
         assert taker_unused_index == taker_unused_dr.index
     else:
         maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert maker_unused_dr is not None
         assert maker_unused_index < maker_unused_dr.index
         taker_unused_dr = await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
-            uint32(1)
+            uint32(1),
         )
         assert taker_unused_dr is not None
         assert taker_unused_index < taker_unused_dr.index
 
     # chia_for_multiple_cat
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             chia_for_multiple_cat,
@@ -1037,10 +1080,12 @@ async def test_cat_trades(
     assert trade_make is not None
 
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
@@ -1144,7 +1189,7 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": 1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
@@ -1176,14 +1221,14 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": -1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -1234,7 +1279,7 @@ async def test_cat_trades(
                     },
                 ),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
         await client_maker.crcat_approve_pending(
@@ -1259,7 +1304,7 @@ async def test_cat_trades(
                     pre_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 9,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         "new cat": {
@@ -1277,16 +1322,17 @@ async def test_cat_trades(
                     post_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 0,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
     # multiple_cat_for_chia
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             multiple_cat_for_chia,
@@ -1296,10 +1342,12 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
@@ -1373,7 +1421,7 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": 1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
@@ -1403,14 +1451,14 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": -1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -1418,7 +1466,8 @@ async def test_cat_trades(
 
     # chia_and_cat_for_cat
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             chia_and_cat_for_cat,
@@ -1429,10 +1478,12 @@ async def test_cat_trades(
     assert trade_make is not None
 
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make.offer)]
+        [Offer.from_bytes(trade_make.offer)],
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer),
@@ -1516,7 +1567,7 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": 1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
@@ -1546,14 +1597,14 @@ async def test_cat_trades(
                         {
                             "vc": {
                                 "pending_coin_removal_count": -1,
-                            }
+                            },
                         }
                         if credential_restricted
                         else {}
                     ),
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -1582,7 +1633,7 @@ async def test_cat_trades(
                     pre_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 15,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         "new cat": {
@@ -1600,11 +1651,11 @@ async def test_cat_trades(
                     post_block_additional_balance_info={
                         "new cat": {
                             "pending_approval_balance": 0,
-                        }
+                        },
                     },
                 ),
                 WalletStateTransition(),
-            ]
+            ],
         )
 
     if test_aggregation:
@@ -1613,7 +1664,11 @@ async def test_cat_trades(
         bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
         program = simple_solution_generator(bundle)
         result: NPCResult = get_name_puzzle_conditions(
-            program, INFINITE_COST, mempool_mode=True, height=active_softfork_height, constants=DEFAULT_CONSTANTS
+            program,
+            INFINITE_COST,
+            mempool_mode=True,
+            height=active_softfork_height,
+            constants=DEFAULT_CONSTANTS,
         )
         assert result.error is None
 
@@ -1624,7 +1679,7 @@ async def test_cat_trades(
         {
             "num_environments": 2,
             "blocks_needed": [2, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -1646,7 +1701,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     xch_to_cat_amount = uint64(100)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -1670,7 +1726,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cat_for_chia: OfferSummary = {
@@ -1687,7 +1743,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     assert error is None
@@ -1696,10 +1753,13 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
 
     # Cancelling the trade and trying an ID that doesn't exist just in case
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         await trade_manager_maker.cancel_pending_offers(
-            [trade_make.trade_id, bytes32.zeros], action_scope, secure=False
+            [trade_make.trade_id, bytes32.zeros],
+            action_scope,
+            secure=False,
         )
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -1730,7 +1790,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     fee = uint64(2_000_000_000_000)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=fee, secure=True)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
@@ -1771,7 +1832,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     sum_of_outgoing = uint64(0)
@@ -1789,13 +1850,15 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     peer = env_taker.node.get_full_node_peer()
     with pytest.raises(ValueError, match="This offer is no longer valid"):
         async with env_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     # Now we're going to create the other way around for test coverage sake
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, action_scope)
     assert error is None
@@ -1808,12 +1871,14 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
         match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
     ):
         async with env_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
@@ -1839,8 +1904,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
                     },
                     "cat": {},
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -1854,7 +1919,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
 
     # Now we're going to create the other way around for test coverage sake
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             chia_and_cat_for_something,
@@ -1866,13 +1932,14 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     assert trade_make is not None
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
 
     # Check an announcement ring has been created
     total_spend = SpendBundle.aggregate(
-        [tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None]
+        [tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None],
     )
     all_conditions: list[Program] = []
     creations: list[CreateCoinAnnouncement] = []
@@ -1882,9 +1949,10 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
             [
                 c.to_program()
                 for c in parse_conditions_non_consensus(
-                    run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter(), abstractions=False
+                    run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_iter(),
+                    abstractions=False,
                 )
-            ]
+            ],
         )
         creations.append(CreateCoinAnnouncement(msg=announcement_nonce, coin_id=spend.coin.name()))
     for creation in creations:
@@ -1923,8 +1991,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
                         "pending_coin_removal_count": -1,
                     },
                 },
-            )
-        ]
+            ),
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -1936,7 +2004,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
         {
             "num_environments": 3,
             "blocks_needed": [2, 1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -1964,7 +2032,8 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     fee = uint64(10)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -1988,7 +2057,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cat_for_chia: OfferSummary = {
@@ -2001,7 +2070,8 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     trade_manager_trader = env_trader.wallet_state_manager.trade_manager
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
@@ -2012,25 +2082,30 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     offer = Offer.from_bytes(trade_make.offer)
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
 
     await wallet_environments.full_node.wait_transaction_records_entered_mempool(
-        records=action_scope.side_effects.transactions
+        records=action_scope.side_effects.transactions,
     )
 
     # we shouldn't be able to respond to a duplicate offer
     with pytest.raises(ValueError):
         async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            wallet_environments.tx_config, push=False
+            wallet_environments.tx_config,
+            push=False,
         ) as action_scope:
             await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([offer])
     async with trade_manager_trader.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         tr2 = await trade_manager_trader.respond_to_offer(offer, peer, action_scope, fee=fee)
     assert await trade_manager_trader.get_coins_of_interest()
@@ -2043,7 +2118,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": cat_for_chia[env_maker.wallet_aliases["cat"]],
                         "pending_change": 0,
                         "pending_coin_removal_count": 1,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -2133,7 +2208,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -2155,7 +2230,8 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
     xch_to_cat_amount = uint64(100)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -2179,7 +2255,7 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cat_for_chia: OfferSummary = {
@@ -2191,7 +2267,8 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
@@ -2204,7 +2281,9 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
     offer = dataclasses.replace(offer, _bundle=bundle)
     fee = uint64(10)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, sign=False
+        wallet_environments.tx_config,
+        push=True,
+        sign=False,
     ) as action_scope:
         tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
     env_taker.node.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
@@ -2255,7 +2334,7 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -2277,7 +2356,8 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     xch_to_cat_amount = uint64(100)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -2301,7 +2381,7 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cat_for_chia: OfferSummary = {
@@ -2313,7 +2393,8 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
@@ -2324,7 +2405,9 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
     fee = uint64(1_000_000_000_000)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
+        wallet_environments.tx_config,
+        push=True,
+        additional_signing_responses=signing_response,
     ) as action_scope:
         tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
 
@@ -2337,7 +2420,7 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": cat_for_chia[env_maker.wallet_aliases["cat"]],
                         "pending_change": 0,
                         "pending_coin_removal_count": 1,
-                    }
+                    },
                 },
                 post_block_balance_updates={
                     "xch": {
@@ -2388,7 +2471,7 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
             ),
-        ]
+        ],
     )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
@@ -2400,7 +2483,7 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
-        }
+        },
     ],
     indirect=True,
 )
@@ -2422,7 +2505,8 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
     xch_to_cat_amount = uint64(100)
 
     async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
+        wallet_environments.tx_config,
+        push=True,
     ) as action_scope:
         await CATWallet.create_new_cat_wallet(
             env_maker.wallet_state_manager,
@@ -2446,7 +2530,7 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
                 },
             ),
             WalletStateTransition(),
-        ]
+        ],
     )
 
     cat_for_chia: OfferSummary = {
@@ -2468,7 +2552,8 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make_1, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, action_scope)
     await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make_1)
@@ -2476,7 +2561,8 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
     assert success is True
     assert trade_make_1 is not None
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=False
+        wallet_environments.tx_config,
+        push=False,
     ) as action_scope:
         success, trade_make_2, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make_2)
@@ -2485,10 +2571,10 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
     assert trade_make_2 is not None
 
     [offer_1], signing_response_1 = await env_maker.node.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make_1.offer)]
+        [Offer.from_bytes(trade_make_1.offer)],
     )
     [offer_2], signing_response_2 = await env_maker.node.wallet_state_manager.sign_offers(
-        [Offer.from_bytes(trade_make_2.offer)]
+        [Offer.from_bytes(trade_make_2.offer)],
     )
     agg_offer = Offer.aggregate([offer_1, offer_2])
 
@@ -2572,5 +2658,5 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
                     },
                 },
             ),
-        ]
+        ],
     )

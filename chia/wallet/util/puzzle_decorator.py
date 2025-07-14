@@ -19,15 +19,23 @@ class PuzzleDecoratorProtocol(Protocol):
     def decorate(self, inner_puzzle: Program) -> Program: ...
 
     def decorate_target_puzzle_hash(
-        self, inner_puzzle: Program, target_puzzle_hash: bytes32
+        self,
+        inner_puzzle: Program,
+        target_puzzle_hash: bytes32,
     ) -> tuple[Program, bytes32]: ...
 
     def decorate_memos(
-        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: list[bytes]
+        self,
+        inner_puzzle: Program,
+        target_puzzle_hash: bytes32,
+        memos: list[bytes],
     ) -> tuple[Program, list[bytes]]: ...
 
     def solve(
-        self, puzzle: Program, primaries: list[CreateCoin], inner_solution: Program
+        self,
+        puzzle: Program,
+        primaries: list[CreateCoin],
+        inner_solution: Program,
     ) -> tuple[Program, Program]: ...
 
 

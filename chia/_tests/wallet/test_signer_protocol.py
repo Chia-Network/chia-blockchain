@@ -121,7 +121,7 @@ def test_unsigned_transaction_type() -> None:
             "blocks_needed": [1],
             "trusted": True,
             "reuse_puzhash": True,
-        }
+        },
     ],
     indirect=True,
 )
@@ -166,13 +166,13 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
             [pubkey.get_fingerprint().to_bytes(4, "big")],
             calculate_synthetic_offset(pubkey, DEFAULT_HIDDEN_PUZZLE_HASH).to_bytes(32, "big"),
             wallet_state_manager.main_wallet.puzzle_for_pk(pubkey).uncurry()[1].at("f").as_atom(),
-        )
+        ),
     ]
     assert utx.signing_instructions.key_hints.path_hints == [
         PathHint(
             wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big"),
             [uint64(12381), uint64(8444), uint64(2), uint64(derivation_record.index)],
-        )
+        ),
     ]
     assert len(utx.signing_instructions.targets) == 1
     assert utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(4, "big")
@@ -202,18 +202,22 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         TransactionInfo([Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]),
         (
             await wallet_rpc.gather_signing_info(
-                GatherSigningInfo(spends=[Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)])
+                GatherSigningInfo(
+                    spends=[Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)],
+                ),
             )
         ).signing_instructions,
     )
     assert not_our_utx.signing_instructions.key_hints == utx.signing_instructions.key_hints
     assert len(not_our_utx.signing_instructions.targets) == 2
     assert not_our_utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(
-        4, "big"
+        4,
+        "big",
     )
     assert not_our_utx.signing_instructions.targets[0].message == bytes(message)
     assert not_our_utx.signing_instructions.targets[1].fingerprint == not_our_pubkey.get_fingerprint().to_bytes(
-        4, "big"
+        4,
+        "big",
     )
     assert not_our_utx.signing_instructions.targets[1].message == bytes(not_our_message)
     not_our_signing_instructions: SigningInstructions = not_our_utx.signing_instructions
@@ -230,7 +234,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                         SumHint([bytes(not_our_pubkey)], std_hash(b"sum hint only"), bytes(G1Element())),
                     ],
                 ),
-            )
+            ),
         )
     with pytest.raises(ValueError, match="No root pubkey for fingerprint"):
         await wallet_state_manager.execute_signing_instructions(
@@ -243,10 +247,11 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                         PathHint(bytes(not_our_pubkey), [uint64(0)]),
                     ],
                 ),
-            )
+            ),
         )
     signing_responses_2 = await wallet_state_manager.execute_signing_instructions(
-        not_our_signing_instructions, partial_allowed=True
+        not_our_signing_instructions,
+        partial_allowed=True,
     )
     assert len(signing_responses_2) == 2
     assert (
@@ -256,7 +261,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 
     signed_txs: list[SignedTransaction] = (
         await wallet_rpc.apply_signatures(
-            ApplySignatures(spends=[Spend.from_coin_spend(coin_spend)], signing_responses=signing_responses)
+            ApplySignatures(spends=[Spend.from_coin_spend(coin_spend)], signing_responses=signing_responses),
         )
     ).signed_transactions
     await wallet_rpc.submit_transactions(SubmitTransactions(signed_transactions=signed_txs))
@@ -265,8 +270,8 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
             WalletSpendBundle(
                 [spend.as_coin_spend() for tx in signed_txs for spend in tx.transaction_info.spends],
                 G2Element.from_bytes(signing_responses[0].signature),
-            ).name()
-        ]
+            ).name(),
+        ],
     )
 
     await wallet_environments.process_pending_states(
@@ -284,16 +289,18 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
                     },
                 },
             ),
-        ]
+        ],
     )
 
     # And test that we can get compressed versions if we want
     request = GatherSigningInfo(
-        [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
+        [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)],
     ).to_json_dict()
     response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-0029", **request})
     response: GatherSigningInfoResponse = json_deserialize_with_clvm_streamable(
-        response_dict, GatherSigningInfoResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+        response_dict,
+        GatherSigningInfoResponse,
+        translation_layer=BLIND_SIGNER_TRANSLATION,
     )
     assert response.signing_instructions == not_our_utx.signing_instructions
 
@@ -306,7 +313,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
             "blocks_needed": [1],
             "trusted": True,
             "reuse_puzhash": True,
-        }
+        },
     ],
     indirect=True,
 )
@@ -327,7 +334,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
                 [PathHint(root_fingerprint, [uint64(1), uint64(2), uint64(3), uint64(4)])],
             ),
             [SigningTarget(child_sk.get_g1().get_fingerprint().to_bytes(4, "big"), test_name, test_name)],
-        )
+        ),
     )
     assert signing_responses == [SigningResponse(bytes(AugSchemeMPL.sign(child_sk, test_name)), test_name)]
 
@@ -351,8 +358,8 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
                         [
                             AugSchemeMPL.sign(other_sk, test_name, sum_pk),
                             AugSchemeMPL.sign(root_sk, test_name, sum_pk),
-                        ]
-                    )
+                        ],
+                    ),
                 ),
                 test_name,
             ),
@@ -402,8 +409,8 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
                         [
                             AugSchemeMPL.sign(other_sk, test_name, sum_pk),
                             AugSchemeMPL.sign(child_sk, test_name, sum_pk),
-                        ]
-                    )
+                        ],
+                    ),
                 ),
                 test_name,
             ),
@@ -560,30 +567,39 @@ def test_blind_signer_translation_layer() -> None:
     bstl_transaction_json = json_serialize_with_clvm_streamable(bstl_transaction)
     bstl_signing_response_json = json_serialize_with_clvm_streamable(bstl_signing_response)
     assert bstl_instructions_json == json_serialize_with_clvm_streamable(
-        instructions, translation_layer=BLIND_SIGNER_TRANSLATION
+        instructions,
+        translation_layer=BLIND_SIGNER_TRANSLATION,
     )
     assert bstl_transaction_json == json_serialize_with_clvm_streamable(
-        transaction, translation_layer=BLIND_SIGNER_TRANSLATION
+        transaction,
+        translation_layer=BLIND_SIGNER_TRANSLATION,
     )
     assert bstl_signing_response_json == json_serialize_with_clvm_streamable(
-        signing_response, translation_layer=BLIND_SIGNER_TRANSLATION
+        signing_response,
+        translation_layer=BLIND_SIGNER_TRANSLATION,
     )
 
     assert (
         json_deserialize_with_clvm_streamable(
-            bstl_instructions_json, SigningInstructions, translation_layer=BLIND_SIGNER_TRANSLATION
+            bstl_instructions_json,
+            SigningInstructions,
+            translation_layer=BLIND_SIGNER_TRANSLATION,
         )
         == instructions
     )
     assert (
         json_deserialize_with_clvm_streamable(
-            bstl_transaction_json, UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
+            bstl_transaction_json,
+            UnsignedTransaction,
+            translation_layer=BLIND_SIGNER_TRANSLATION,
         )
         == transaction
     )
     assert (
         json_deserialize_with_clvm_streamable(
-            bstl_signing_response_json, SigningResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+            bstl_signing_response_json,
+            SigningResponse,
+            translation_layer=BLIND_SIGNER_TRANSLATION,
         )
         == signing_response
     )
@@ -597,7 +613,7 @@ def test_blind_signer_translation_layer() -> None:
             "blocks_needed": [1],
             "trusted": True,
             "reuse_puzhash": True,
-        }
+        },
     ],
     indirect=True,
 )
@@ -614,7 +630,9 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
 
     AMOUNT = uint64(1)
     async with wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, sign=False, push=False
+        wallet_environments.tx_config,
+        sign=False,
+        push=False,
     ) as action_scope:
         await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
@@ -672,7 +690,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
                             "<=#max_send_amount": -1 * AMOUNT,
                             "pending_change": sum(c.amount for c in tx.removals) - AMOUNT,
                             "pending_coin_removal_count": 1,
-                        }
+                        },
                     },
                     post_block_balance_updates={
                         1: {
@@ -683,7 +701,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
                         },
                     },
                 ),
-            ]
+            ],
         )
 
 
@@ -810,8 +828,8 @@ FOO_COIN_TRANSLATION = TranslationLayer(
             FooCoin,
             FooCoin.from_wallet_api,
             FooCoin.to_wallet_api,
-        )
-    ]
+        ),
+    ],
 )
 
 
@@ -852,7 +870,8 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
                 file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
         result = runner.invoke(
-            cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]
+            cmd,
+            ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"],
         )
         assert result.exception is not None
         result = runner.invoke(
@@ -895,7 +914,9 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
         assert result.output == "--output-format=file specified without any --output-file\n"
 
         result = runner.invoke(
-            cmd, ["temp_cmd", "--output-format", "file", "--output-file", "some file"], catch_exceptions=False
+            cmd,
+            ["temp_cmd", "--output-format", "file", "--output-file", "some file"],
+            catch_exceptions=False,
         )
         assert "Incorrect number of file outputs specified" in result.output
 
@@ -916,7 +937,9 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
         assert result.output != ""  # separate test for QrCodeDisplay
 
         result = runner.invoke(
-            cmd, ["temp_cmd", "--output-format", "hex", "--translation", "CHIP-0028"], catch_exceptions=False
+            cmd,
+            ["temp_cmd", "--output-format", "hex", "--translation", "CHIP-0028"],
+            catch_exceptions=False,
         )
         assert result.output.strip() != coin_bytes.hex()
         coin_hex = byte_serialize_clvm_streamable(coin, translation_layer=ALL_TRANSLATION_LAYERS["CHIP-0028"]).hex()

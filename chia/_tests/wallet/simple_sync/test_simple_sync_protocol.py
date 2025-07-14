@@ -120,7 +120,9 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     assert peak is not None
     zero_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-        True, {zero_ph}, uint32(peak.height + 1)
+        True,
+        {zero_ph},
+        uint32(peak.height + 1),
     )
     one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {one_ph})
 
@@ -256,7 +258,11 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     coins.add(coin_to_spend)
     async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await standard_wallet.generate_signed_transaction(
-            [uint64(10)], [puzzle_hash], action_scope, uint64(0), coins=coins
+            [uint64(10)],
+            [puzzle_hash],
+            action_scope,
+            uint64(0),
+            coins=coins,
         )
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -494,8 +500,8 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
 
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [
-            ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
-        ]
+            ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint]),
+        ],
     }
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -528,7 +534,8 @@ async def test_subscribe_for_hint(simulator_and_wallet: OldSimulatorsAndWallets,
 
 @pytest.mark.anyio
 async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    self_hostname: str,
 ) -> None:
     [full_node_api], [[_, wallet_server]], bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
@@ -547,7 +554,7 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
         wt.get_new_puzzlehash(),
         coins[0].coin,
         condition_dic={
-            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [ph, int_to_bytes(1), ph])]
+            ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [ph, int_to_bytes(1), ph])],
         },
     )
     await full_node_api.respond_transaction(RespondTransaction(tx), wallet_connection)
@@ -564,7 +571,8 @@ async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_subscribe_for_hint_long_sync(
-    wallet_two_node_simulator: OldSimulatorsAndWallets, self_hostname: str
+    wallet_two_node_simulator: OldSimulatorsAndWallets,
+    self_hostname: str,
 ) -> None:
     full_nodes, wallets, bt = wallet_two_node_simulator
     full_node_api = full_nodes[0]
@@ -601,8 +609,8 @@ async def test_subscribe_for_hint_long_sync(
 
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [
-            ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
-        ]
+            ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint]),
+        ],
     }
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 

@@ -136,7 +136,11 @@ class TestConditions:
         ],
     )
     async def test_unknown_conditions_with_cost(
-        self, opcode: int, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
+        self,
+        opcode: int,
+        expected_cost: int,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
     ) -> None:
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
         _additions, _removals, new_block = await check_conditions(bt, conditions)
@@ -159,7 +163,11 @@ class TestConditions:
         ],
     )
     async def test_softfork_condition(
-        self, condition: str, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
+        self,
+        condition: str,
+        expected_cost: int,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
     ) -> None:
         conditions = Program.to(assemble(condition))
         _additions, _removals, new_block = await check_conditions(bt, conditions)
@@ -289,8 +297,8 @@ class TestConditions:
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )
+                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))",
+            ),
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -302,8 +310,8 @@ class TestConditions:
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )
+                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))",
+            ),
         )
         await check_conditions(bt, conditions)
 
@@ -313,8 +321,8 @@ class TestConditions:
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )
+                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))",
+            ),
         )
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
@@ -324,8 +332,8 @@ class TestConditions:
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))"
-            )
+                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.msg_calc.hex()}))",
+            ),
         )
         await check_conditions(bt, conditions)
 
@@ -357,7 +365,8 @@ class TestConditions:
         ],
     )
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.HARD_FORK_2_0], reason="announce conditions limit was removed in hard-fork 3.0"
+        allowed=[ConsensusMode.HARD_FORK_2_0],
+        reason="announce conditions limit was removed in hard-fork 3.0",
     )
     async def test_announce_conditions_limit(
         self,
@@ -409,8 +418,8 @@ class TestConditions:
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.SEND_MESSAGE[0]} 0x3f 'test' 0x{coin.name().hex()})"
-                f"({ConditionOpcode.RECEIVE_MESSAGE[0]} 0x3f 'test' 0x{coin.name().hex()}))"
-            )
+                f"({ConditionOpcode.RECEIVE_MESSAGE[0]} 0x3f 'test' 0x{coin.name().hex()}))",
+            ),
         )
         await check_conditions(bt, conditions)
 
@@ -421,8 +430,8 @@ class TestConditions:
         conditions = Program.to(
             assemble(
                 f"(({ConditionOpcode.SEND_MESSAGE[0]} 0x24 'test' 0x{coin.parent_coin_info})"
-                f"({ConditionOpcode.RECEIVE_MESSAGE[0]} 0x24 'test' 0x{coin.parent_coin_info}))"
-            )
+                f"({ConditionOpcode.RECEIVE_MESSAGE[0]} 0x24 'test' 0x{coin.parent_coin_info}))",
+            ),
         )
         await check_conditions(bt, conditions)
 
@@ -446,7 +455,11 @@ class TestConditions:
         ],
     )
     async def test_message_conditions(
-        self, bt: BlockTools, consensus_mode: ConsensusMode, conds: str, expected: Optional[Err]
+        self,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
+        conds: str,
+        expected: Optional[Err],
     ) -> None:
         blocks = await initial_blocks(bt)
         coin = blocks[-2].get_included_reward_coins()[0]
@@ -469,14 +482,17 @@ class TestConditions:
         ],
     )
     async def test_agg_sig_infinity(
-        self, opcode: ConditionOpcode, bt: BlockTools, consensus_mode: ConsensusMode
+        self,
+        opcode: ConditionOpcode,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
     ) -> None:
         conditions = Program.to(
             assemble(
                 f"(({opcode.value[0]} "
                 "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-                ' "foobar"))'
-            )
+                ' "foobar"))',
+            ),
         )
 
         # infinity is disallowed after soft-fork-5 activates

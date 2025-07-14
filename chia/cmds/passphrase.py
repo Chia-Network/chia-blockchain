@@ -25,7 +25,9 @@ def passphrase_cmd() -> None:
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
 @click.option(
-    "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
+    "--current-passphrase-file",
+    type=click.File("r"),
+    help="File or descriptor to read the current passphrase from",
 )
 @click.option("--hint", type=str, help="Passphrase hint")
 @click.pass_context
@@ -52,7 +54,8 @@ def set_cmd(
             # Read the passphrase from a file and verify it
             new_passphrase: str = read_passphrase_from_file(passphrase_file)
             valid_passphrase, error_msg = verify_passphrase_meets_requirements(
-                new_passphrase, new_passphrase
+                new_passphrase,
+                new_passphrase,
             )  # new_passphrase provided for both args since we don't have a separate confirmation passphrase
 
             if not valid_passphrase:
@@ -64,7 +67,9 @@ def set_cmd(
         else:
             # Interactively prompt for the current passphrase (if set)
             success = set_or_update_passphrase(
-                passphrase=new_passphrase, current_passphrase=current_passphrase, hint=hint
+                passphrase=new_passphrase,
+                current_passphrase=current_passphrase,
+                hint=hint,
             )
     else:
         success = set_or_update_passphrase(passphrase=None, current_passphrase=current_passphrase, hint=hint)
@@ -83,7 +88,9 @@ def set_cmd(
     short_help="Remove the keyring passphrase",
 )
 @click.option(
-    "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
+    "--current-passphrase-file",
+    type=click.File("r"),
+    help="File or descriptor to read the current passphrase from",
 )
 @click.pass_context
 def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapper]) -> None:

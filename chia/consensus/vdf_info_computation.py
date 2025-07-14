@@ -84,9 +84,9 @@ def get_signage_point_vdf_info(
                         zip(
                             curr.finished_challenge_slot_hashes,
                             curr.finished_reward_slot_hashes,
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
         else:
             found_sub_slots = []
@@ -104,9 +104,9 @@ def get_signage_point_vdf_info(
                             zip(
                                 curr.finished_challenge_slot_hashes,
                                 curr.finished_reward_slot_hashes,
-                            )
-                        )
-                    )
+                            ),
+                        ),
+                    ),
                 )
         if sp_pre_sb is None and curr.total_iters < sp_total_iters:
             sp_pre_sb = curr

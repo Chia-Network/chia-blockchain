@@ -208,7 +208,9 @@ async def test_root_store_id_must_not_be_null(data_store: DataStore, store_id: b
 @pytest.mark.parametrize(argnames="generation", argvalues=[-200, -2, -1])
 @pytest.mark.anyio
 async def test_root_generation_must_not_be_less_than_zero(
-    data_store: DataStore, store_id: bytes32, generation: int
+    data_store: DataStore,
+    store_id: bytes32,
+    generation: int,
 ) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {

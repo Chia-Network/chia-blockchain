@@ -195,7 +195,10 @@ async def connect_to_daemon(
 
 
 async def connect_to_daemon_and_validate(
-    root_path: Path, config: dict[str, Any], quiet: bool = False, wait_for_start: bool = False
+    root_path: Path,
+    config: dict[str, Any],
+    quiet: bool = False,
+    wait_for_start: bool = False,
 ) -> Optional[DaemonProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
@@ -232,7 +235,9 @@ async def connect_to_daemon_and_validate(
 
 @asynccontextmanager
 async def acquire_connection_to_daemon(
-    root_path: Path, config: dict[str, Any], quiet: bool = False
+    root_path: Path,
+    config: dict[str, Any],
+    quiet: bool = False,
 ) -> AsyncIterator[Optional[DaemonProxy]]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.

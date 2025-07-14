@@ -69,7 +69,7 @@ def check_addresses_used_contiguous(derivation_paths: list[DerivationPath]) -> l
             if saw_unused and dp.used == 1 and ordering_errors == []:
                 ordering_errors.append(
                     f"Wallet {dp.wallet_id}: "
-                    f"Used address after unused address at derivation index {dp.derivation_index}"
+                    f"Used address after unused address at derivation index {dp.derivation_index}",
                 )
 
             if dp.used == 1:
@@ -200,7 +200,7 @@ def print_min_max_derivation_for_wallets(derivation_paths: list[DerivationPath])
         # TODO: Fix count by separating hardened and unhardened
         print(
             f"Wallet ID {wallet_id:2} derivation index min: {derivation_index_list[0]} "
-            f"max: {derivation_index_list[-1]} count: {len(derivation_index_list)}"
+            f"max: {derivation_index_list[-1]} count: {len(derivation_index_list)}",
         )
 
 
@@ -253,7 +253,7 @@ class WalletDBReader:
                 elif row[2] != main_wallet_type:
                     errors.append(
                         f"We expect wallet {main_wallet_id} to have type {wallet_type_name(main_wallet_type)}, "
-                        f"but it has {wallet_type_name(row[2])}"
+                        f"but it has {wallet_type_name(row[2])}",
                     )
             except Exception as e:
                 errors.append(f"Exception while trying to access wallet {main_wallet_id} from users_wallets: {e}")
@@ -284,7 +284,9 @@ class WalletDBReader:
             return errors
 
     def check_wallets_missing_derivations(
-        self, wallets: list[Wallet], derivation_paths: list[DerivationPath]
+        self,
+        wallets: list[Wallet],
+        derivation_paths: list[DerivationPath],
     ) -> list[str]:
         p = []
         d = derivation_indices_by_wallet_id(derivation_paths)  # TODO: calc this once, pass in
@@ -314,13 +316,18 @@ class WalletDBReader:
                 h = ["  hardened", "unhardened"][hardened]
                 errors.extend(
                     check_for_gaps(
-                        dpi, 0, max_id, data_type_plural=f"DerivationPath indexes for {h} wallet_id={wallet_id}"
-                    )
+                        dpi,
+                        0,
+                        max_id,
+                        data_type_plural=f"DerivationPath indexes for {h} wallet_id={wallet_id}",
+                    ),
                 )
         return errors
 
     def check_unexpected_derivation_entries(
-        self, wallets: list[Wallet], derivation_paths: list[DerivationPath]
+        self,
+        wallets: list[Wallet],
+        derivation_paths: list[DerivationPath],
     ) -> list[str]:
         """
         Check for unexpected derivation path entries
@@ -343,7 +350,7 @@ class WalletDBReader:
                 missing_wallet_ids.append(d.wallet_id)
             elif d.wallet_type != wallet_id_to_type[d.wallet_id]:
                 wrong_type[d.hardened, d.wallet_id, d.wallet_type, wallet_id_to_type[d.wallet_id]].append(
-                    d.derivation_index
+                    d.derivation_index,
                 )
 
         if len(invalid_wallet_types) > 0:
@@ -351,13 +358,13 @@ class WalletDBReader:
 
         if len(missing_wallet_ids) > 0:
             errors.append(
-                f"Wallet IDs found in derivation_paths table, but not in users_wallets table: {missing_wallet_ids}"
+                f"Wallet IDs found in derivation_paths table, but not in users_wallets table: {missing_wallet_ids}",
             )
 
         for k, v in wrong_type.items():
             errors.append(
                 f"""{["  ", "un"][int(k[0])]}hardened Wallet ID {k[1]} uses type {wallet_type_name(k[2])} in """
-                f"derivation_paths, but type {wallet_type_name(k[3])} in wallet table at these derivation indices: {v}"
+                f"derivation_paths, but type {wallet_type_name(k[3])} in wallet table at these derivation indices: {v}",
             )
 
         return errors

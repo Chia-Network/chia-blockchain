@@ -46,7 +46,7 @@ def calculate_phase_out(
             uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT)
             * calculate_sp_interval_iters(constants, sub_slot_iters)
         )
-        // PHASE_OUT_PERIOD
+        // PHASE_OUT_PERIOD,
     )
 
 
@@ -65,7 +65,7 @@ def calculate_ip_iters(
     if required_iters >= sp_interval_iters or required_iters == 0:
         raise ValueError(
             f"Required iters {required_iters} is not below the sp interval iters {sp_interval_iters} "
-            f"{sub_slot_iters} or not >0."
+            f"{sub_slot_iters} or not >0.",
         )
 
     return uint64((sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters)
@@ -82,7 +82,11 @@ def validate_pospace_and_get_required_iters(
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
 ) -> Optional[uint64]:
     q_str: Optional[bytes32] = verify_and_get_quality_string(
-        proof_of_space, constants, challenge, cc_sp_hash, height=height
+        proof_of_space,
+        constants,
+        challenge,
+        cc_sp_hash,
+        height=height,
     )
     if q_str is None:
         return None
@@ -122,7 +126,7 @@ def calculate_iterations_quality(
                 * int.from_bytes(sp_quality_string, "big", signed=False)
                 // (int(pow(2, 256)) * int(_expected_plot_size(size.size_v1)))
             )
-            + phase_out
+            + phase_out,
         )
         return max(iters, uint64(1))
     else:

@@ -92,7 +92,7 @@ def gen_ssl(suffix: str = "") -> None:
     append_str = "" if suffix == "" else f"_{suffix}"
     print(
         f"SSL_TEST_PRIVATE_CA_CERT_AND_KEY{append_str}: tuple[bytes, bytes] = "
-        "(SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)"
+        "(SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)",
     )
     print()
     print(f"SSL_TEST_NODE_CERTS_AND_KEYS{append_str}: dict[str, dict[str, dict[str, bytes]]] = {{")

@@ -92,7 +92,8 @@ def split_manager(manager: contextlib.AbstractContextManager[object], object: T)
 
 @contextlib.asynccontextmanager
 async def split_async_manager(
-    manager: contextlib.AbstractAsyncContextManager[object], object: T
+    manager: contextlib.AbstractAsyncContextManager[object],
+    object: T,
 ) -> AsyncIterator[SplitAsyncManager[T]]:
     # NOTE: only for transitional testing use, please avoid usage
     split = SplitAsyncManager(manager=manager, object=object)

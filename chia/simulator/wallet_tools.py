@@ -148,18 +148,21 @@ class WalletTool:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
                     coin_to_append = Coin(
-                        coin.name(), bytes32(outputs.vars[0]), uint64(int_from_bytes(outputs.vars[1]))
+                        coin.name(),
+                        bytes32(outputs.vars[0]),
+                        uint64(int_from_bytes(outputs.vars[1])),
                     )
                     message_list.append(coin_to_append.name())
                 message = std_hash(b"".join(message_list))
                 condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(
-                    ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message])
+                    ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message]),
                 )
                 primary_announcement_hash = AssertCoinAnnouncement(
-                    asserted_id=coin.name(), asserted_msg=message
+                    asserted_id=coin.name(),
+                    asserted_msg=message,
                 ).msg_calc
                 secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT].append(
-                    ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash])
+                    ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash]),
                 )
                 main_solution = self.make_solution(condition_dic)
                 spends.append(make_spend(coin, puzzle, main_solution))
@@ -183,7 +186,9 @@ class WalletTool:
             secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
             conditions_dict = conditions_dict_for_solution(
-                coin_spend.puzzle_reveal, coin_spend.solution, self.constants.MAX_BLOCK_COST_CLVM
+                coin_spend.puzzle_reveal,
+                coin_spend.solution,
+                self.constants.MAX_BLOCK_COST_CLVM,
             )
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
@@ -214,7 +219,13 @@ class WalletTool:
         if condition_dic is None:
             condition_dic = {}
         transaction = self.generate_unsigned_transaction(
-            amount, new_puzzle_hash, [coin], condition_dic, fee, additional_outputs=additional_outputs, memo=memo
+            amount,
+            new_puzzle_hash,
+            [coin],
+            condition_dic,
+            fee,
+            additional_outputs=additional_outputs,
+            memo=memo,
         )
         assert transaction is not None
         return self.sign_transaction(transaction)
@@ -231,7 +242,12 @@ class WalletTool:
         if condition_dic is None:
             condition_dic = {}
         transaction = self.generate_unsigned_transaction(
-            amount, new_puzzle_hash, coins, condition_dic, fee, additional_outputs=additional_outputs
+            amount,
+            new_puzzle_hash,
+            coins,
+            condition_dic,
+            fee,
+            additional_outputs=additional_outputs,
         )
         assert transaction is not None
         return self.sign_transaction(transaction)

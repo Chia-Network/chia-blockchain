@@ -123,13 +123,13 @@ class Mempool:
                 assert_before_seconds INT,
                 fee_per_cost REAL,
                 seq INTEGER PRIMARY KEY AUTOINCREMENT)
-                """
+                """,
             )
             self._db_conn.execute("CREATE INDEX name_idx ON tx(name)")
             self._db_conn.execute("CREATE INDEX feerate ON tx(fee_per_cost)")
             self._db_conn.execute(
                 "CREATE INDEX assert_before ON tx(assert_before_height, assert_before_seconds) "
-                "WHERE assert_before_height IS NOT NULL OR assert_before_seconds IS NOT NULL"
+                "WHERE assert_before_height IS NOT NULL OR assert_before_seconds IS NOT NULL",
             )
 
             # This table maps coin IDs to spend bundles hashes
@@ -138,7 +138,7 @@ class Mempool:
                 coin_id BLOB NOT NULL,
                 tx BLOB NOT NULL,
                 UNIQUE(coin_id, tx))
-                """
+                """,
             )
             self._db_conn.execute("CREATE INDEX spend_by_coin ON spends(coin_id)")
             self._db_conn.execute("CREATE INDEX spend_by_bundle ON spends(tx)")
@@ -313,7 +313,8 @@ class Mempool:
                     return fee_per_cost
 
             log.info(
-                f"Transaction with cost {cost} does not fit in mempool of max cost {self.mempool_info.max_size_in_cost}"
+                f"Transaction with cost {cost} does not fit in mempool of max cost "
+                f"{self.mempool_info.max_size_in_cost}",
             )
             return None
 
@@ -348,7 +349,8 @@ class Mempool:
                 args = ",".join(["?"] * len(batch.entries))
                 with self._db_conn:
                     cursor = self._db_conn.execute(
-                        f"SELECT name, cost, fee FROM tx WHERE name in ({args})", batch.entries
+                        f"SELECT name, cost, fee FROM tx WHERE name in ({args})",
+                        batch.entries,
                     )
                     for row in cursor:
                         name = bytes32(row[0])
@@ -362,7 +364,8 @@ class Mempool:
             args = ",".join(["?"] * len(batch.entries))
             with self._db_conn:
                 cursor = self._db_conn.execute(
-                    f"SELECT SUM(cost), SUM(fee) FROM tx WHERE name in ({args})", batch.entries
+                    f"SELECT SUM(cost), SUM(fee) FROM tx WHERE name in ({args})",
+                    batch.entries,
                 )
                 cost_to_remove, fee_to_remove = cursor.fetchone()
 
@@ -376,7 +379,10 @@ class Mempool:
 
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
             info = FeeMempoolInfo(
-                self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now()
+                self.mempool_info,
+                self.total_mempool_cost(),
+                self.total_mempool_fees(),
+                datetime.now(),
             )
             for iteminfo in removed_items:
                 self.fee_estimator.remove_mempool_item(info, iteminfo)
@@ -481,7 +487,10 @@ class Mempool:
             conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
 
         self._items[item_name] = InternalMempoolItem(
-            item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
+            item.spend_bundle,
+            item.conds,
+            item.height_added_to_mempool,
+            item.bundle_coin_spends,
         )
         self._total_cost += item.cost
         self._total_fee += item.fee
@@ -552,7 +561,7 @@ class Mempool:
             log.error(
                 f"Failed to compute block cost during farming: {err} "
                 f"height: {height} "
-                f"generator: {bytes(block_program).hex()}"
+                f"generator: {bytes(block_program).hex()}",
             )
             return None
 
@@ -570,7 +579,10 @@ class Mempool:
         )
 
     def create_bundle_from_mempool_items(
-        self, constants: ConsensusConstants, height: uint32, timeout: float = 1.0
+        self,
+        constants: ConsensusConstants,
+        height: uint32,
+        timeout: float = 1.0,
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -624,14 +636,20 @@ class Mempool:
                     cost_saving = 0
                 else:
                     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-                        mempool_item=item, height=height, constants=constants
+                        mempool_item=item,
+                        height=height,
+                        constants=constants,
                     )
                     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-                        bundle_coin_spends=bundle_coin_spends, max_cost=cost
+                        bundle_coin_spends=bundle_coin_spends,
+                        max_cost=cost,
                     )
                 item_cost = cost - cost_saving
                 log.info(
-                    "Cumulative cost: %d, fee per cost: %0.4f, item cost: %d", cost_sum, fee / item_cost, item_cost
+                    "Cumulative cost: %d, fee per cost: %0.4f, item cost: %d",
+                    cost_sum,
+                    fee / item_cost,
+                    item_cost,
                 )
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
@@ -674,7 +692,7 @@ class Mempool:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
-            f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
+            f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}",
         )
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         agg = SpendBundle(coin_spends, aggregated_signature)
@@ -687,7 +705,10 @@ class Mempool:
         return agg, additions
 
     def create_block_generator2(
-        self, constants: ConsensusConstants, height: uint32, timeout: float
+        self,
+        constants: ConsensusConstants,
+        height: uint32,
+        timeout: float,
     ) -> Optional[NewBlockGenerator]:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
@@ -723,10 +744,13 @@ class Mempool:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
                 bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-                    mempool_item=item, height=height, constants=constants
+                    mempool_item=item,
+                    height=height,
+                    constants=constants,
                 )
                 unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-                    bundle_coin_spends=bundle_coin_spends, max_cost=cost
+                    bundle_coin_spends=bundle_coin_spends,
+                    max_cost=cost,
                 )
                 new_fee_sum = fee_sum + fee
                 if new_fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT:
@@ -747,7 +771,7 @@ class Mempool:
                         removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
                         log.info(
                             f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
-                            f"cost: {batch_cost} total cost: {block_cost}"
+                            f"cost: {batch_cost} total cost: {block_cost}",
                         )
                     else:
                         skipped_items += 1
@@ -783,7 +807,7 @@ class Mempool:
                 block_cost = builder.cost()
                 log.info(
                     f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
-                    f"cost: {batch_cost} total cost: {block_cost}"
+                    f"cost: {batch_cost} total cost: {block_cost}",
                 )
 
         if removals == []:

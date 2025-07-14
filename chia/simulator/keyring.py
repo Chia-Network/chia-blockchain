@@ -30,7 +30,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
                 "data: xtcxYOWtbeO9ruv4Nkwhw1pcTJCNh/fvPSdFxez/L0ysnag=\n"
                 "nonce: 17ecac58deb7a392fccef49e\n"
                 "salt: b1aa32d5730288d653e82017e4a4057c\n"
-                "version: 1"
+                "version: 1",
             )
 
     # Create the file keyring
