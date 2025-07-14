@@ -139,8 +139,11 @@ class RCATWallet(CATWallet):
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: dict[AssetType, Any] = {},
+        potential_subclasses: Optional[dict[AssetType, Any]] = None,
     ) -> Any:
+        if potential_subclasses is None:
+            potential_subclasses = {}
+
         rev_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if rev_layer is None:
             raise ValueError("create_from_puzzle_info called on RCATWallet with a non R-CAT puzzle driver")
