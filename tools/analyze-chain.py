@@ -101,7 +101,7 @@ def main(
         if verify_signatures:
             block = FullBlock.from_bytes_unchecked(zstd.decompress(r[2]))
         else:
-            block = block_info_from_block(zstd.decompress(r[2]))
+            block = block_info_from_block(memoryview(zstd.decompress(r[2])))
 
         if block.transactions_generator is None:
             sys.stderr.write(f" no-generator. block {height}\r")
@@ -111,7 +111,7 @@ def main(
         generator_blobs = []
         for h in block.transactions_generator_ref_list:
             ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (h,))
-            generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
+            generator = generator_from_block(memoryview(zstd.decompress(ref.fetchone()[0])))
             assert generator is not None
             generator_blobs.append(generator)
             ref.close()

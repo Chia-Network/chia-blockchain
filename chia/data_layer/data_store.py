@@ -233,7 +233,7 @@ class DataStore:
                     await anyio.to_thread.run_sync(delta_reader.collect_from_merkle_blobs, jobs)
                 await self.build_cache_and_collect_missing_hashes(root, store_id, delta_reader)
 
-            merkle_blob, _ = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
+            merkle_blob = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)

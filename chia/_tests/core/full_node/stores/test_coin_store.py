@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+import aiosqlite
 import pytest
 from chia_rs import CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.coin_store import add_coin_records_to_db
@@ -28,6 +28,8 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
+from chia.util.casts import int_to_bytes
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 
 constants = test_constants
@@ -104,8 +106,8 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 additions, removals = additions_and_removals(
                     bytes(block.transactions_generator), [], flags, bt.constants
                 )
-                tx_removals = [removal.name() for removal in removals]
-                tx_additions = [addition for addition, _ in additions]
+                tx_removals = [name for name, _ in removals]
+                tx_additions = [(addition.name(), addition, False) for addition, _ in additions]
             else:
                 tx_removals, tx_additions = [], []
 
@@ -145,16 +147,16 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 assert record is not None
                 assert record.spent
                 all_records.add(record)
-            for coin in tx_additions:
+            for coin_id, coin, _ in tx_additions:
                 # Check that the added coins are added
-                record = await coin_store.get_coin_record(coin.name())
+                record = await coin_store.get_coin_record(coin_id)
                 assert record is not None
                 assert not record.spent
                 assert coin == record.coin
                 all_records.add(record)
 
             db_records = await coin_store.get_coin_records(
-                [c.name() for c in list(should_be_included_prev) + tx_additions] + tx_removals
+                [c.name() for c in should_be_included_prev] + [coin_id for coin_id, _, _ in tx_additions] + tx_removals
             )
             assert len(db_records) == len(should_be_included_prev) + len(tx_removals) + len(tx_additions)
             assert len(db_records) == len(all_records)
@@ -423,7 +425,7 @@ async def test_get_coin_states(db_version: int) -> None:
             for i in range(1, 301)
         ]
         coin_store = await CoinStore.create(db_wrapper)
-        await add_coin_records_to_db(coin_store.db_wrapper, crs)
+        await add_coin_records_to_db(coin_store, crs)
 
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, uint32(0))) == 300
         assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, uint32(0))) == 0
@@ -551,7 +553,7 @@ async def test_coin_state_batches(
         coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
 
-        await add_coin_records_to_db(coin_store.db_wrapper, random_coin_records.items)
+        await add_coin_records_to_db(coin_store, random_coin_records.items)
         await hint_store.add_hints(random_coin_records.hints)
 
         # Make sure all of the coin states are found when batching.
@@ -645,7 +647,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
         coin_store = await CoinStore.create(db_wrapper)
         await HintStore.create(db_wrapper)
 
-        await add_coin_records_to_db(coin_store.db_wrapper, coin_records)
+        await add_coin_records_to_db(coin_store, coin_records)
 
         # Make sure all of the coin states are found.
         (all_coin_states, next_height) = await coin_store.batch_coin_states_by_puzzle_hashes([ph])
@@ -659,7 +661,7 @@ async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> 
 
         # For the middle case, insert a coin record between the two heights 10 and 12.
         await add_coin_records_to_db(
-            coin_store.db_wrapper,
+            coin_store,
             [
                 CoinRecord(
                     coin=Coin(std_hash(b"extra coin"), ph, uint64(0)),
@@ -707,7 +709,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
             uint64(12321312),
         )
 
-        await add_coin_records_to_db(coin_store.db_wrapper, [cr])
+        await add_coin_records_to_db(coin_store, [cr])
         await hint_store.add_hints([(cr.coin.name(), cr.coin.puzzle_hash)])
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
@@ -738,7 +740,7 @@ class UnspentLineageInfoTestItem:
     puzzlehash: bytes
     amount: int
     parent_id: bytes
-    is_spent: bool = False
+    spent_index: int = 0
 
 
 @dataclass
@@ -758,7 +760,7 @@ class UnspentLineageInfoCase:
             UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
             UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
             UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
-            UnspentLineageInfoTestItem(TEST_PARENT_ID, b"4" * 32, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True),
+            UnspentLineageInfoTestItem(TEST_PARENT_ID, b"4" * 32, TEST_AMOUNT, TEST_PARENT_PARENT_ID, spent_index=1),
         ],
         expected_success=False,
     ),
@@ -773,7 +775,7 @@ class UnspentLineageInfoCase:
                 TEST_PUZZLEHASH,
                 TEST_PARENT_DIFFERENT_AMOUNT,
                 TEST_PARENT_PARENT_ID,
-                is_spent=True,
+                spent_index=1,
             ),
         ],
         parent_with_diff_amount=True,
@@ -796,7 +798,7 @@ class UnspentLineageInfoCase:
             UnspentLineageInfoTestItem(b"2" * 32, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
             UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
             UnspentLineageInfoTestItem(
-                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True
+                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, spent_index=1
             ),
         ],
         expected_success=False,
@@ -804,11 +806,11 @@ class UnspentLineageInfoCase:
     UnspentLineageInfoCase(
         id="Unspent with parent that has same puzzlehash and amount",
         items=[
-            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageInfoTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID, spent_index=-1),
             UnspentLineageInfoTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
             UnspentLineageInfoTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
             UnspentLineageInfoTestItem(
-                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True
+                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, spent_index=1
             ),
         ],
         expected_success=True,
@@ -833,7 +835,7 @@ async def test_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInfo
                 (
                     item.coin_id,
                     0,
-                    1 if item.is_spent else 0,
+                    item.spent_index,
                     0,
                     item.puzzlehash,
                     item.parent_id,
@@ -884,9 +886,104 @@ async def test_add_coin_records_to_db() -> None:
             )
             for i in range(5)
         ]
-        await add_coin_records_to_db(db_wrapper, test_records)
+        await add_coin_records_to_db(coin_store, test_records)
         # Verify all records got inserted correctly
         for record in test_records:
             resulting_record = await coin_store.get_coin_record(record.coin.name())
             assert resulting_record is not None
             assert resulting_record == record
+
+
+async def get_spent_index(conn: aiosqlite.Connection, coin_name: bytes32) -> int:
+    cursor = await conn.execute("SELECT spent_index FROM coin_record WHERE coin_name = ?", (coin_name,))
+    row = await cursor.fetchone()
+    assert row is not None
+    return int(row[0])
+
+
+@pytest.mark.anyio
+async def test_new_block_tx_additions() -> None:
+    """
+    Covers properly adding coin records for normal unspent coins and potential
+    fast forward singleton unspent coins. That means giving them spent index 0
+    and -1 respectively.
+    """
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        normal_coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(1))
+        normal_coin_id = normal_coin.name()
+        same_as_parent_coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(1337))
+        same_as_parent_coin_id = same_as_parent_coin.name()
+        await coin_store.new_block(
+            height=uint32(0),
+            timestamp=uint64(1),
+            included_reward_coins=[],
+            tx_additions=[
+                (normal_coin_id, normal_coin, False),
+                (same_as_parent_coin_id, same_as_parent_coin, True),
+            ],
+            tx_removals=[],
+        )
+        async with db_wrapper.reader_no_transaction() as conn:
+            # Normal coin should have spent_index 0
+            assert await get_spent_index(conn, normal_coin_id) == 0
+            # Potential ff singleton should have spent_index -1
+            assert await get_spent_index(conn, same_as_parent_coin_id) == -1
+
+
+@pytest.mark.anyio
+async def test_rollback_to_block_spent_index_update() -> None:
+    """
+    Covers properly marking coins as unspent on rollback. Reward coins and
+    normal coins get `spent_index` set to `0`, potential ff singleton ones get
+    `spent_index` set to `-1`.
+    """
+
+    async def insert_coins(db_wrapper: DBWrapper2, coins: list[tuple[Coin, int, bool]]) -> None:
+        values_to_insert = [
+            (
+                coin.name(),
+                0,
+                spent_index,
+                int(coinbase),
+                coin.puzzle_hash,
+                coin.parent_coin_info,
+                coin.amount.stream_to_bytes(),
+                0,
+            )
+            for coin, spent_index, coinbase in coins
+        ]
+        async with db_wrapper.writer() as conn:
+            await conn.executemany("INSERT INTO coin_record VALUES (?, ?, ?, ?, ?, ?, ?, ?)", values_to_insert)
+
+    async with DBConnection(2) as db_wrapper:
+        coin_store = await CoinStore.create(db_wrapper)
+        # Let's set things up for roll back. All coins are confirmed at height
+        # 0, parent coin gets spent at height 2 and the other test coins get
+        # spent at height 3.
+        parent_coin = Coin(bytes32([0] * 32), bytes32([1] * 32), uint64(1337))
+        parent_coin_id = parent_coin.name()
+        normal_child = Coin(parent_coin_id, bytes32([2] * 32), uint64(42))
+        same_as_parent_child = Coin(parent_coin_id, parent_coin.puzzle_hash, parent_coin.amount)
+        reward_coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(1))
+        await insert_coins(
+            db_wrapper,
+            # List of (coin, spent_index, coinbase) values
+            [
+                (parent_coin, 2, False),
+                (normal_child, 3, False),
+                (same_as_parent_child, 3, False),
+                (reward_coin, 3, True),
+            ],
+        )
+        # Let's roll back
+        await coin_store.rollback_to_block(2)
+        async with db_wrapper.reader_no_transaction() as conn:
+            # Parent should still be spent
+            assert await get_spent_index(conn, parent_coin_id) == 2
+            # Normal child should be unspent with spent_index 0
+            assert await get_spent_index(conn, normal_child.name()) == 0
+            # Same for the reward coin
+            assert await get_spent_index(conn, reward_coin.name()) == 0
+            # The potential ff singleton child should be marked with -1
+            assert await get_spent_index(conn, same_as_parent_child.name()) == -1
