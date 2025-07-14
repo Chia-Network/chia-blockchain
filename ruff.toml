@@ -27,8 +27,8 @@ select = [
     # pycodestyle
     "E",
     "W",
-    # Trailing commas
-    "COM812", # missing-trailing-comma - enabled in ruff 0.12.x
+    # Trailing commas - COM812 disabled when using formatter to avoid conflicts
+    # "COM812", # missing-trailing-comma - conflicts with formatter
     "COM818",
     "COM819",
     # Libraries we don't use so might as well enable
@@ -139,3 +139,10 @@ max-bool-expr = 5
 
 [lint.pyupgrade]
 keep-runtime-typing = true
+
+[format]
+# Ruff's formatter will handle trailing commas automatically, so we disable the linter rule
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
