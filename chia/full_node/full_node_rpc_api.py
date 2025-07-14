@@ -493,6 +493,8 @@ class FullNodeRpcApi:
             get_flags_for_height_and_constants(full_block.height, self.service.constants),
         )
 
+        # chia_rs returning a list is a mistake that will be fixed in the next release
+        # it ought to be returning a dict of {"block_spends": [spends]}
         return spends[0]
 
     async def get_block_spends_with_conditions(self, request: dict[str, Any]) -> EndpointResult:
