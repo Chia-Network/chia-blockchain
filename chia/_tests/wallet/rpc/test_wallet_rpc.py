@@ -20,6 +20,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
     get_coin_records_amount_range_tests,
@@ -1112,39 +1113,23 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework) -> None:
         )
 
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos and fee=10
-    await env_0.rpc_client.create_new_cat_and_wallet(uint64(100), fee=uint64(10), test=True)
-    await env_0.rpc_client.create_new_cat_and_wallet(uint64(20), test=True)
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat0": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                    "cat1": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat0": {
-                        "set_remainder": True,
-                    },
-                    "cat1": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(),
-        ]
+    await mint_cat(
+        wallet_environments,
+        env_0,
+        "xch",
+        "cat0",
+        uint64(100),
+        CATWallet,
+        "cat0",
+    )
+    await mint_cat(
+        wallet_environments,
+        env_0,
+        "xch",
+        "cat1",
+        uint64(20),
+        CATWallet,
+        "cat1",
     )
 
     cat_0_id = env_0.wallet_aliases["cat0"]
