@@ -70,6 +70,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoinAnnouncement,
@@ -1089,8 +1090,9 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_cat_endpoints(wallet_environments: WalletTestFramework) -> None:
+async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     env_0.wallet_aliases = {
@@ -1119,7 +1121,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework) -> None:
         "xch",
         "cat0",
         uint64(100),
-        CATWallet,
+        wallet_type,
         "cat0",
     )
     await mint_cat(
@@ -1128,7 +1130,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework) -> None:
         "xch",
         "cat1",
         uint64(20),
-        CATWallet,
+        wallet_type,
         "cat1",
     )
 
@@ -1138,7 +1140,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework) -> None:
         <= (await env_0.rpc_client.get_wallet_balance(cat_0_id)).items()
     )
     asset_id = await env_0.rpc_client.get_cat_asset_id(cat_0_id)
-    assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == CATWallet.default_wallet_name_for_unknown_cat(
+    assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == wallet_type.default_wallet_name_for_unknown_cat(
         asset_id.hex()
     )
     await env_0.rpc_client.set_cat_name(cat_0_id, "My cat")
