@@ -534,7 +534,7 @@ def spend_bundle_from_conditions(
 
 async def add_spendbundle(
     mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
-) -> tuple[uint64, MempoolInclusionStatus, Optional[Err]]:
+) -> tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
     sbc = await mempool_manager.pre_validate_spendbundle(sb, sb_name)
     ret = await mempool_manager.add_spend_bundle(sb, sbc, sb_name, TEST_HEIGHT)
     invariant_check_mempool(mempool_manager.mempool)
@@ -546,7 +546,7 @@ async def generate_and_add_spendbundle(
     conditions: list[list[Any]],
     coin: Coin = TEST_COIN,
     aggsig: G2Element = G2Element(),
-) -> tuple[SpendBundle, bytes32, tuple[uint64, MempoolInclusionStatus, Optional[Err]]]:
+) -> tuple[SpendBundle, bytes32, tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]]:
     sb = spend_bundle_from_conditions(conditions, coin, aggsig)
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
@@ -703,7 +703,7 @@ async def test_unknown_unspent() -> None:
     mempool_manager = await instantiate_mempool_manager(get_coin_records)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     _, _, result = await generate_and_add_spendbundle(mempool_manager, conditions)
-    assert result == (0, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT)
+    assert result == (None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT)
 
 
 @pytest.mark.anyio
@@ -1594,7 +1594,7 @@ def test_dedup_info_nothing_to_do() -> None:
     mempool_item = mempool_item_from_spendbundle(sb)
     dedup_coin_spends = IdenticalSpendDedup()
     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
@@ -1614,7 +1614,7 @@ def test_dedup_info_eligible_1st_time() -> None:
     dedup_coin_spends = IdenticalSpendDedup()
     solution = SerializedProgram.to(conditions)
     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb.coin_spends
     assert cost_saving == 0
@@ -1639,9 +1639,7 @@ def test_dedup_info_eligible_but_different_solution() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
     mempool_item = mempool_item_from_spendbundle(sb)
     with pytest.raises(SkipDedup, match="Solution is different from what we're deduplicating on"):
-        dedup_coin_spends.get_deduplication_info(
-            bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
-        )
+        dedup_coin_spends.get_deduplication_info(bundle_coin_spends=mempool_item.bundle_coin_spends)
 
 
 def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
@@ -1662,7 +1660,7 @@ def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     # Only the eligible one that we encountered more than once gets deduplicated
     assert unique_coin_spends == sb2.coin_spends
@@ -1709,7 +1707,7 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     mempool_item = mempool_item_from_spendbundle(sb)
     assert mempool_item.conds is not None
     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
-        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.conds.cost
+        bundle_coin_spends=mempool_item.bundle_coin_spends
     )
     assert unique_coin_spends == sb3.coin_spends
     saved_cost2 = uint64(1337)
@@ -2153,7 +2151,7 @@ async def test_mempool_timelocks(cond1: list[object], cond2: list[object], expec
         result = await add_spendbundle(mempool_manager, bundle, bundle_name)
         print(result)
         if expected is not None:
-            assert result == (0, MempoolInclusionStatus.FAILED, expected)
+            assert result == (None, MempoolInclusionStatus.FAILED, expected)
         else:
             assert result[0] is not None
             assert result[1] != MempoolInclusionStatus.FAILED

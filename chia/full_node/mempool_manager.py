@@ -124,7 +124,7 @@ def compute_assert_height(
 
 @dataclass
 class SpendBundleAddInfo:
-    cost: uint64
+    cost: Optional[uint64]
     status: MempoolInclusionStatus
     removals: list[MempoolRemoveInfo]
     error: Optional[Err]
@@ -545,7 +545,7 @@ class MempoolManager:
             return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.PENDING, [], err)
         else:
             # Cannot add to the mempool or pending pool.
-            return SpendBundleAddInfo(uint64(0), MempoolInclusionStatus.FAILED, [], err)
+            return SpendBundleAddInfo(None, MempoolInclusionStatus.FAILED, [], err)
 
     async def validate_spend_bundle(
         self,

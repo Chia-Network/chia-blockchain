@@ -116,7 +116,7 @@ class IdenticalSpendDedup:
     deduplication_spends: dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
 
     def get_deduplication_info(
-        self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend], max_cost: int
+        self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend]
     ) -> tuple[list[CoinSpend], uint64, list[Coin]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
@@ -125,7 +125,6 @@ class IdenticalSpendDedup:
 
         Args:
             bundle_coin_spends: the mempool item's coin spends data
-            max_cost: the maximum limit when running for cost
 
         Returns:
             list[CoinSpend]: list of unique coin spends in this mempool item
