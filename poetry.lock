@@ -831,8 +831,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "fc.check_root_hash"
-resolved_reference = "6eae3409e812a20146a09f69782279fa2a8e6e45"
+reference = "long_lived/datalayer_merkle_blob"
+resolved_reference = "ca58fd4617fb06684a90f669221290623293d3a2"
 subdirectory = "wheel/"
 
 [[package]]
