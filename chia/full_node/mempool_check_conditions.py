@@ -57,10 +57,13 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
     spends: list[CoinSpend] = []
 
     for spend in Program.to(ret).first().as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
-        puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
-        spends.append(make_spend(coin, puzzle, solution))
+        try:
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+            spends.append(make_spend(coin, puzzle, solution))
+        except ValueError:
+            log.warning("get_spends_for_block() encountered a puzzle we couldn't serialize: {e}")
 
     return spends
 
@@ -86,11 +89,14 @@ def get_spends_for_block_with_conditions(
     spends: list[CoinSpendWithConditions] = []
 
     for spend in Program.to(ret).first().as_iter():
-        parent, puzzle, amount, solution = spend.as_iter()
-        puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
-        coin_spend = make_spend(coin, puzzle, solution)
-        conditions = conditions_for_solution(puzzle, solution, constants.MAX_BLOCK_COST_CLVM)
-        spends.append(CoinSpendWithConditions(coin_spend, conditions))
+        try:
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+            coin_spend = make_spend(coin, puzzle, solution)
+            conditions = conditions_for_solution(puzzle, solution, constants.MAX_BLOCK_COST_CLVM)
+            spends.append(CoinSpendWithConditions(coin_spend, conditions))
+        except ValueError:
+            log.warning("get_spends_for_block_with_conditions() encountered a puzzle we couldn't serialize: {e}")
 
     return spends

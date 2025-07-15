@@ -66,11 +66,13 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
                 raise ValueError("Internal Error. Marshalled endpoint was made with clvm_streamable.")
             return response_dict
 
+    rpc_endpoint.__name__ = func.__name__
     return rpc_endpoint
 
 
 def wrap_http_handler(
     f: Callable[[dict[str, Any]], Awaitable[EndpointResult]],
+    route: str,
 ) -> Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.StreamResponse]]:
     async def inner(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
         request_data = await request.json()
@@ -82,7 +84,7 @@ def wrap_http_handler(
                 res_object["success"] = True
         except Exception as e:
             tb = traceback.format_exc()
-            log.warning(f"Error while handling message: {tb}")
+            log.warning(f"Error while handling message for {route}: {tb}")
             if len(e.args) > 0:
                 res_object = {"success": False, "error": f"{e.args[0]}", "traceback": f"{tb}"}
             else:

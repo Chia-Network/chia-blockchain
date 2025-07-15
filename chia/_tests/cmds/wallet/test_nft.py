@@ -5,19 +5,27 @@ from typing import Any, Optional
 
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_request_types import (
+    NFTAddURI,
     NFTAddURIResponse,
+    NFTGetNFTs,
+    NFTGetNFTsResponse,
+    NFTGetWalletDID,
+    NFTGetWalletDIDResponse,
+    NFTMintNFTRequest,
     NFTMintNFTResponse,
+    NFTSetNFTDID,
     NFTSetNFTDIDResponse,
+    NFTTransferNFT,
     NFTTransferNFTResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -78,56 +86,44 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
 
     # set RPC Client
     class NFTCreateRpcClient(TestWalletRpcClient):
-        async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
-            self.add_to_log("get_nft_wallet_did", (wallet_id,))
-            return {"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}
+        async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
+            self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
+            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def mint_nft(
             self,
-            wallet_id: int,
-            royalty_address: Optional[str],
-            target_address: Optional[str],
-            hash: str,
-            uris: list[str],
-            meta_hash: str = "",
-            meta_uris: Optional[list[str]] = None,
-            license_hash: str = "",
-            license_uris: Optional[list[str]] = None,
-            edition_total: uint8 = uint8(1),
-            edition_number: uint8 = uint8(1),
-            fee: uint64 = uint64(0),
-            royalty_percentage: int = 0,
-            did_id: Optional[str] = None,
-            reuse_puzhash: Optional[bool] = None,
-            push: bool = True,
+            request: NFTMintNFTRequest,
+            tx_config: TXConfig,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTMintNFTResponse:
             self.add_to_log(
                 "mint_nft",
                 (
-                    wallet_id,
-                    royalty_address,
-                    target_address,
-                    hash,
-                    uris,
-                    meta_hash,
-                    meta_uris,
-                    license_hash,
-                    license_uris,
-                    edition_total,
-                    edition_number,
-                    fee,
-                    royalty_percentage,
-                    did_id,
-                    reuse_puzhash,
-                    push,
+                    request.wallet_id,
+                    request.royalty_address,
+                    request.target_address,
+                    request.hash,
+                    request.uris,
+                    request.meta_hash,
+                    request.meta_uris,
+                    request.license_hash,
+                    request.license_uris,
+                    request.edition_total,
+                    request.edition_number,
+                    request.fee,
+                    request.royalty_amount,
+                    request.did_id,
+                    request.push,
+                    tx_config,
                     timelock_info,
+                    extra_conditions,
                 ),
             )
             return NFTMintNFTResponse(
                 [STD_UTX],
                 [STD_TX],
-                uint32(wallet_id),
+                uint32(request.wallet_id),
                 WalletSpendBundle([], G2Element()),
                 bytes32.zeros.hex(),
             )
@@ -142,7 +138,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
         FINGERPRINT_ARG,
         "-i4",
         "--hash",
-        "0x1234",
+        bytes32.zeros.hex(),
         "--uris",
         "https://example.com",
         "--target-address",
@@ -164,8 +160,18 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 4,
                 None,
                 "xch1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqzc0j4g",
-                "0x1234",
+                bytes32.zeros,
                 ["https://example.com"],
+                None,
+                [],
+                None,
+                [],
+                1,
+                1,
+                500000000000,
+                0,
+                "did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
+                True,
                 TXConfig(
                     min_coin_amount=uint64(0),
                     max_coin_amount=uint64(18446744073709551615),
@@ -173,17 +179,8 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                     excluded_coin_ids=[],
                     reuse_puzhash=True,
                 ),
-                "",
-                [],
-                "",
-                [],
-                1,
-                1,
-                500000000000,
-                0,
-                "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
-                True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }
@@ -197,17 +194,26 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     class NFTAddUriRpcClient(TestWalletRpcClient):
         async def add_uri_to_nft(
             self,
-            wallet_id: int,
-            nft_coin_id: str,
-            key: str,
-            uri: str,
-            fee: int,
+            request: NFTAddURI,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTAddURIResponse:
-            self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config, push, timelock_info))
-            return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), WalletSpendBundle([], G2Element()))
+            self.add_to_log(
+                "add_uri_to_nft",
+                (
+                    request.wallet_id,
+                    request.nft_coin_id,
+                    request.key,
+                    request.uri,
+                    request.fee,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                    extra_conditions,
+                ),
+            )
+            return NFTAddURIResponse([STD_UTX], [STD_TX], request.wallet_id, WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = NFTAddUriRpcClient()
     nft_coin_id = get_bytes32(2).hex()
@@ -244,6 +250,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }
@@ -257,21 +264,28 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     class NFTTransferRpcClient(TestWalletRpcClient):
         async def transfer_nft(
             self,
-            wallet_id: int,
-            nft_coin_id: str,
-            target_address: str,
-            fee: int,
+            request: NFTTransferNFT,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTTransferNFTResponse:
             self.add_to_log(
-                "transfer_nft", (wallet_id, nft_coin_id, target_address, fee, tx_config, push, timelock_info)
+                "transfer_nft",
+                (
+                    request.wallet_id,
+                    request.nft_coin_id,
+                    request.target_address,
+                    request.fee,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                    extra_conditions,
+                ),
             )
             return NFTTransferNFTResponse(
                 [STD_UTX],
                 [STD_TX],
-                uint32(wallet_id),
+                request.wallet_id,
                 WalletSpendBundle([], G2Element()),
             )
 
@@ -310,6 +324,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }
@@ -321,10 +336,10 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
 
     # set RPC Client
     class NFTListRpcClient(TestWalletRpcClient):
-        async def list_nfts(self, wallet_id: int, num: int = 50, start_index: int = 0) -> dict[str, object]:
-            self.add_to_log("list_nfts", (wallet_id, num, start_index))
+        async def list_nfts(self, request: NFTGetNFTs) -> NFTGetNFTsResponse:
+            self.add_to_log("list_nfts", (request.wallet_id, request.num, request.start_index))
             nft_list = []
-            for i in range(start_index, start_index + num):
+            for i in range(request.start_index, request.start_index + request.num):
                 index_bytes = bytes32([i] * 32)
                 nft_list.append(
                     NFTInfo(
@@ -348,9 +363,9 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                         mint_height=uint32(1),
                         supports_did=True,
                         p2_address=get_bytes32(8),
-                    ).to_json_dict()
+                    )
                 )
-            return {"nft_list": nft_list}
+            return NFTGetNFTsResponse(request.wallet_id, nft_list)
 
     inst_rpc_client = NFTListRpcClient()
     launcher_ids = [bytes32([i] * 32).hex() for i in range(50, 60)]
@@ -386,24 +401,33 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     class NFTSetDidRpcClient(TestWalletRpcClient):
         async def set_nft_did(
             self,
-            wallet_id: int,
-            did_id: str,
-            nft_coin_id: str,
-            fee: int,
+            request: NFTSetNFTDID,
             tx_config: TXConfig,
-            push: bool,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> NFTSetNFTDIDResponse:
-            self.add_to_log("set_nft_did", (wallet_id, did_id, nft_coin_id, fee, tx_config, push, timelock_info))
+            self.add_to_log(
+                "set_nft_did",
+                (
+                    request.wallet_id,
+                    request.did_id,
+                    request.nft_coin_id,
+                    request.fee,
+                    tx_config,
+                    request.push,
+                    timelock_info,
+                    extra_conditions,
+                ),
+            )
             return NFTSetNFTDIDResponse(
                 [STD_UTX],
                 [STD_TX],
-                uint32(wallet_id),
+                request.wallet_id,
                 WalletSpendBundle([], G2Element()),
             )
 
     inst_rpc_client = NFTSetDidRpcClient()
-    nft_coin_id = get_bytes32(2).hex()
+    nft_coin_id = get_bytes32(2)
     did_id = encode_puzzle_hash(get_bytes32(3), "did:chia:")
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
@@ -413,7 +437,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
         FINGERPRINT_ARG,
         "-i4",
         "--nft-coin-id",
-        nft_coin_id,
+        nft_coin_id.hex(),
         "--did-id",
         did_id,
         "-m0.5",
@@ -437,6 +461,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 True,
                 test_condition_valid_times,
+                (),
             )
         ],
     }

@@ -3,11 +3,11 @@ from __future__ import annotations
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, run_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.casts import int_from_bytes
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 

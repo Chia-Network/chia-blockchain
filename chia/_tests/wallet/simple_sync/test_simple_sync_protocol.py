@@ -5,7 +5,6 @@ import asyncio
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
 from colorlog import getLogger
 
 from chia._tests.connection_utils import add_dummy_connection
@@ -22,6 +21,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
+from chia.util.casts import int_to_bytes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 

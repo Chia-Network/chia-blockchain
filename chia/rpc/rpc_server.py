@@ -199,7 +199,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func, route)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
