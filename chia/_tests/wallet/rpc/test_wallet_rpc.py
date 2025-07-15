@@ -20,6 +20,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
     get_coin_records_amount_range_tests,
@@ -69,6 +70,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoinAnnouncement,
@@ -1077,23 +1079,34 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
     assert transaction_count == 0
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-
-    wallet_node: WalletNode = env.wallet_1.node
-
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    client_2: WalletRpcClient = env.wallet_2.rpc_client
-
-    full_node_api: FullNodeSimulator = env.full_node.api
-
-    await generate_funds(full_node_api, env.wallet_1, 1)
-    await generate_funds(full_node_api, env.wallet_2, 1)
-
+async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
+    env_0 = wallet_environments.environments[0]
+    env_1 = wallet_environments.environments[1]
+    env_0.wallet_aliases = {
+        "xch": 1,
+        "cat0": 2,
+        "cat1": 3,
+    }
+    env_1.wallet_aliases = {
+        "xch": 1,
+        "cat0": 2,
+    }
     # Test a deprecated path
     with pytest.raises(ValueError, match="dropped"):
-        await client.fetch(
+        await env_0.rpc_client.fetch(
             "create_new_wallet",
             {
                 "wallet_type": "cat_wallet",
@@ -1102,82 +1115,85 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
         )
 
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos and fee=10
-    await client.create_new_cat_and_wallet(uint64(100), fee=uint64(10), test=True)
-    await time_out_assert(20, check_client_synced, True, client)
+    await mint_cat(
+        wallet_environments,
+        env_0,
+        "xch",
+        "cat0",
+        uint64(100),
+        wallet_type,
+        "cat0",
+    )
+    await mint_cat(
+        wallet_environments,
+        env_0,
+        "xch",
+        "cat1",
+        uint64(20),
+        wallet_type,
+        "cat1",
+    )
 
-    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
-    assert res["success"]
-    cat_0_id = res["wallet_id"]
-    asset_id = bytes32.fromhex(res["asset_id"])
-    assert len(asset_id) > 0
-
-    await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
-    await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
-
-    bal_0 = await client.get_wallet_balance(cat_0_id)
-    assert bal_0["confirmed_wallet_balance"] == 0
-    assert bal_0["pending_coin_removal_count"] == 1
-    col = await client.get_cat_asset_id(cat_0_id)
-    assert col == asset_id
-    assert (await client.get_cat_name(cat_0_id)) == CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex())
-    await client.set_cat_name(cat_0_id, "My cat")
-    assert (await client.get_cat_name(cat_0_id)) == "My cat"
-    result = await client.cat_asset_id_to_name(col)
+    cat_0_id = env_0.wallet_aliases["cat0"]
+    # The RPC response contains more than just the balance info but all the
+    # balance info should match. We're leveraging the `<=` operator to check
+    # for subset on `dict` `.items()`.
+    assert (
+        env_0.wallet_states[uint32(env_0.wallet_aliases["cat0"])].balance.to_json_dict().items()
+        <= (await env_0.rpc_client.get_wallet_balance(cat_0_id)).items()
+    )
+    asset_id = await env_0.rpc_client.get_cat_asset_id(cat_0_id)
+    assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == wallet_type.default_wallet_name_for_unknown_cat(
+        asset_id.hex()
+    )
+    await env_0.rpc_client.set_cat_name(cat_0_id, "My cat")
+    assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == "My cat"
+    result = await env_0.rpc_client.cat_asset_id_to_name(asset_id)
     assert result is not None
     wid, name = result
     assert wid == cat_0_id
     assert name == "My cat"
-    result = await client.cat_asset_id_to_name(bytes32.zeros)
+    result = await env_0.rpc_client.cat_asset_id_to_name(bytes32.zeros)
     assert result is None
     verified_asset_id = next(iter(DEFAULT_CATS.items()))[1]["asset_id"]
-    result = await client.cat_asset_id_to_name(bytes32.from_hexstr(verified_asset_id))
+    result = await env_0.rpc_client.cat_asset_id_to_name(bytes32.from_hexstr(verified_asset_id))
     assert result is not None
     should_be_none, name = result
     assert should_be_none is None
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
-    # make sure spend is in mempool before farming tx block
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
-    for i in range(5):
-        if check_mempool_spend_count(full_node_api, 0):
-            break
-        await farm_transaction_block(full_node_api, wallet_node)
-
-    # check that we farmed the transaction
-    assert check_mempool_spend_count(full_node_api, 0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
-
-    await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
-    bal_0 = await client.get_wallet_balance(cat_0_id)
-    assert bal_0["pending_coin_removal_count"] == 0
-    assert bal_0["unspent_coin_count"] == 1
-
     # Creates a second wallet with the same CAT
-    res = await client_2.create_wallet_for_existing_cat(asset_id)
+    res = await env_1.rpc_client.create_wallet_for_existing_cat(asset_id)
     assert res["success"]
     cat_1_id = res["wallet_id"]
     cat_1_asset_id = bytes.fromhex(res["asset_id"])
     assert cat_1_asset_id == asset_id
 
-    await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
-    await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 1})
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat0": {
+                        "init": True,
+                    }
+                },
+                post_block_balance_updates={},
+            ),
+        ]
+    )
 
-    await farm_transaction_block(full_node_api, wallet_node)
-
-    bal_1 = await client_2.get_wallet_balance(cat_1_id)
-    assert bal_1["confirmed_wallet_balance"] == 0
-
-    addr_0 = await client.get_next_address(cat_0_id, False)
-    addr_1 = await client_2.get_next_address(cat_1_id, False)
+    addr_0 = await env_0.rpc_client.get_next_address(cat_0_id, False)
+    addr_1 = await env_1.rpc_client.get_next_address(cat_1_id, False)
 
     assert addr_0 != addr_1
 
     # Test CAT spend without a fee
     with pytest.raises(ValueError):
-        await client.cat_spend(
+        await env_0.rpc_client.cat_spend(
             cat_0_id,
             DEFAULT_TX_CONFIG.override(
-                excluded_coin_amounts=[uint64(20)],
+                excluded_coin_amounts=[uint64(100)],
                 excluded_coin_ids=[bytes32.zeros],
             ),
             uint64(4),
@@ -1185,53 +1201,146 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
             uint64(0),
             ["the cat memo"],
         )
-    tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(4), addr_1, uint64(0), ["the cat memo"])
+    tx_res = await env_0.rpc_client.cat_spend(
+        cat_0_id, wallet_environments.tx_config, uint64(4), addr_1, uint64(0), ["the cat memo"]
+    )
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
     assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal).mod == CAT_MOD
-    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
-    await farm_transaction_block(full_node_api, wallet_node)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat0": {
+                        "unconfirmed_wallet_balance": -4,
+                        "spendable_balance": -100,
+                        "max_send_amount": -100,
+                        "pending_change": 96,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    "cat0": {
+                        "confirmed_wallet_balance": -4,
+                        "spendable_balance": 96,
+                        "max_send_amount": 96,
+                        "pending_change": -96,
+                        "pending_coin_removal_count": -1,
+                    }
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "cat0": {
+                        "confirmed_wallet_balance": 4,
+                        "unconfirmed_wallet_balance": 4,
+                        "spendable_balance": 4,
+                        "max_send_amount": 4,
+                        "unspent_coin_count": 1,
+                    }
+                },
+            ),
+        ]
+    )
 
     # Test CAT spend with a fee
-    tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"])
+    tx_res = await env_0.rpc_client.cat_spend(
+        cat_0_id, wallet_environments.tx_config, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"]
+    )
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    cat_spend_changes = [
+        WalletStateTransition(
+            pre_block_balance_updates={
+                "xch": {
+                    "unconfirmed_wallet_balance": -5_000_000,
+                    "<=#spendable_balance": -5_000_000,
+                    "<=#max_send_amount": -5_000_000,
+                    ">=#pending_change": 1,  # any amount increase
+                    "unspent_coin_count": 0,
+                    "pending_coin_removal_count": 1,
+                },
+                "cat0": {
+                    "unconfirmed_wallet_balance": -1,
+                    "<=#spendable_balance": -1,
+                    "<=#max_send_amount": -1,
+                    ">=#pending_change": 1,
+                    "pending_coin_removal_count": 1,
+                },
+            },
+            post_block_balance_updates={
+                "xch": {
+                    "confirmed_wallet_balance": -5_000_000,
+                    ">=#spendable_balance": 1,  # any amount increase
+                    ">=#max_send_amount": 1,  # any amount increase
+                    "<=#pending_change": -1,  # any amount decrease
+                    "unspent_coin_count": 0,
+                    "pending_coin_removal_count": -1,
+                },
+                "cat0": {
+                    "confirmed_wallet_balance": -1,
+                    ">=#spendable_balance": 1,  # any amount increase
+                    ">=#max_send_amount": 1,  # any amount increase
+                    "<=#pending_change": -1,  # any amount decrease
+                    "pending_coin_removal_count": -1,
+                },
+            },
+        ),
+        WalletStateTransition(
+            pre_block_balance_updates={},
+            post_block_balance_updates={
+                "cat0": {
+                    "confirmed_wallet_balance": 1,
+                    "unconfirmed_wallet_balance": 1,
+                    "spendable_balance": 1,
+                    "max_send_amount": 1,
+                    "unspent_coin_count": 1,
+                },
+            },
+        ),
+    ]
+    await wallet_environments.process_pending_states(cat_spend_changes)
 
     # Test CAT spend with a fee and pre-specified removals / coins
-    removals = await client.select_coins(
-        amount=uint64(2), wallet_id=cat_0_id, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+    removals = await env_0.rpc_client.select_coins(
+        amount=uint64(2), wallet_id=cat_0_id, coin_selection_config=wallet_environments.tx_config.coin_selection_config
     )
-    tx_res = await client.cat_spend(
-        cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals
+    tx_res = await env_0.rpc_client.cat_spend(
+        cat_0_id,
+        wallet_environments.tx_config,
+        uint64(1),
+        addr_1,
+        uint64(5_000_000),
+        ["the cat memo"],
+        removals=removals,
     )
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
     assert removals[0] in {removal for tx in tx_res.transactions for removal in tx.removals}
-    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    await wallet_environments.process_pending_states(cat_spend_changes)
 
     # Test unacknowledged CAT
-    await wallet_node.wallet_state_manager.interested_store.add_unacknowledged_token(
+    await env_0.wallet_state_manager.interested_store.add_unacknowledged_token(
         asset_id, "Unknown", uint32(10000), bytes32(b"\00" * 32)
     )
-    cats = await client.get_stray_cats()
+    cats = await env_0.rpc_client.get_stray_cats()
     assert len(cats) == 1
 
-    await time_out_assert(20, get_confirmed_balance, 14, client, cat_0_id)
-    await time_out_assert(20, get_confirmed_balance, 6, client_2, cat_1_id)
-
     # Test CAT coin selection
-    selected_coins = await client.select_coins(
-        amount=1, wallet_id=cat_0_id, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+    selected_coins = await env_0.rpc_client.select_coins(
+        amount=1, wallet_id=cat_0_id, coin_selection_config=wallet_environments.tx_config.coin_selection_config
     )
     assert len(selected_coins) > 0
 
     # Test get_cat_list
-    cat_list = (await client.get_cat_list()).cat_list
+    cat_list = (await env_0.rpc_client.get_cat_list()).cat_list
     assert len(DEFAULT_CATS) == len(cat_list)
     default_cats_set = {
         DefaultCAT(asset_id=bytes32.from_hexstr(cat["asset_id"]), name=cat["name"], symbol=cat["symbol"])
