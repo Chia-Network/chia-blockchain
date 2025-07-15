@@ -15,8 +15,10 @@ from chia_rs import (
     G2Element,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
     run_block_generator2,
 )
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
@@ -46,7 +48,6 @@ from chia.full_node.eligible_coin_spends import run_for_cost
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE, LineageInfoCache
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -3198,7 +3199,16 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     with pytest.raises(
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
-        get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram.to(None), []), TEST_COIN, 0, test_constants)
+        try:
+            get_puzzle_and_solution_for_coin(
+                SerializedProgram.to(None),
+                [],
+                test_constants.MAX_BLOCK_COST_CLVM,
+                TEST_COIN,
+                get_flags_for_height_and_constants(0, test_constants),
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to get puzzle and solution for coin {TEST_COIN}, error: {e}") from e
 
 
 @pytest.mark.parametrize("old", [True, False])
