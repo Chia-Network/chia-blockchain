@@ -185,7 +185,7 @@ class RCATWallet(CATWallet):
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
         await cat_wallet.wallet_state_manager.puzzle_store.delete_wallet(cat_wallet.id())
-        result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+        result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes()
         await result.commit(cat_wallet.wallet_state_manager)
         return True
 
