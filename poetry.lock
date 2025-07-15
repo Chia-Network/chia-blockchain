@@ -2003,42 +2003,32 @@ python-versions = "*"
 groups = ["main"]
 markers = "extra == \"upnp\""
 files = [
-    {file = "miniupnpc-2.3.3-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:24de3f61f0c8debee7f1b601664c2b41c829788d173ea0798b92b1a303631476"},
-    {file = "miniupnpc-2.3.3-cp310-cp310-macosx_13_0_universal2.whl", hash = "sha256:fe4d3ceae9d48bd7edb211f25b2e543bc0753934e921dc704a8a54c777ae2a32"},
-    {file = "miniupnpc-2.3.3-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:1fa6b3543eb5c9164328513d5c350157f05a95cdb6d44a249078080d5c0ae9e6"},
-    {file = "miniupnpc-2.3.3-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:aae6157fb672e0b301f5757f8a2fadfe6745e5c5f9553cdc0cd72cd3fb0142bc"},
-    {file = "miniupnpc-2.3.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:20f388bdff03ff99c3ffe9d22ebe25c5c9f54bb0aa90fcd7643b2a3145a2b871"},
-    {file = "miniupnpc-2.3.3-cp310-cp310-win32.whl", hash = "sha256:60af8afba0324b93a27117bc2e6c8f3e831c1de73c260bab0fadaf506e3f1f18"},
-    {file = "miniupnpc-2.3.3-cp310-cp310-win_amd64.whl", hash = "sha256:20b77da4f97473abee8bace08983cefa6f3eb0346c0560301f810ad7585f3252"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:131d03e395eeb5b4c8437ed60daeccbc72456dd95bc58c565519c492f387d2ce"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:ab5f053366d2685e74eb915e06a55ee2dca35f8d8785deb150908e7d0d200ce5"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:2086b9c6f67ee50f1954e16d25bf097134a26abe2a0fc2ff9b5b69ad76d4f5b5"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b855a01fe521a3936ba3449c48b24b42dfb82b7569a4c9bbf394a5bcc975c416"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e07ea5c02d3e2ce9837149af337b06d6ebdbe158f028dfc1a2ebde40703a45da"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-win32.whl", hash = "sha256:09e3fbfd7e0fcd76c425291107d38b2718c726c026e393d7a57815757940e017"},
-    {file = "miniupnpc-2.3.3-cp311-cp311-win_amd64.whl", hash = "sha256:19958caa3830a86fc4a0bdca35d30fd07b5d565ba136d9fb26823d14edb216d4"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:cf14a95c5fcd83c495b91cf40cf7b6d985742e626fa44d9b1e9e222938991d20"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-macosx_13_0_universal2.whl", hash = "sha256:77c2e9bab5bbe9d3e5cc456b373182e4a419fc96ab07dc98bc52013ceb9536d2"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:dc64e972a7a24c2837ce848e76ee5c2920d7eececc9f37b092b30d7469ce2819"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4b86e5b476b82d15d617d948eb07c1c0b3c23531b09d35991d85d2f68c1e5304"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5f1c74d6c49f93d090adb40351f5d402e0d15bd3ccb84af12fd0fe86b43ccf88"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-win32.whl", hash = "sha256:4416e3e2d24e2741f05cb602f8864dc3a3f86063a94a668c16d5d59b323b2f87"},
-    {file = "miniupnpc-2.3.3-cp312-cp312-win_amd64.whl", hash = "sha256:117ab34081a9b70ee7fe9b5dfe3dd7498a7cb07d30c2462b2ef0cd9cdb7426ce"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:7ba6d2bc1809f6699ce151455ce58c0a26f7d1a6febc0175c10b990b2bf9cf75"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-macosx_13_0_universal2.whl", hash = "sha256:6d606171dbe9b8ceb9cc5d9eb07035013a9ff2b58704a55466deec53795006d6"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:1bdf467cd1b656750f2f011b0ab8971cf726b3e8a454189f85e551f1a03bbf7f"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:191013f4533e5eece06292ea1f5a692de0f5daa436b5d2774ed72eb56014f4d1"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:56f2818da9a13dfd80e3e5f3a6036f27f2eec0f0fa0c6657ffa9bdc0d331bdf0"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-win32.whl", hash = "sha256:19e01f00cdcf63d98b19b75756ebc199dffe69bf33e55828241dbebeb385f61b"},
-    {file = "miniupnpc-2.3.3-cp313-cp313-win_amd64.whl", hash = "sha256:53f7f1aae294754db13e7f109c34137d6c00640597aa66f66d4ca57aae1b12b9"},
-    {file = "miniupnpc-2.3.3-cp39-cp39-macosx_13_0_universal2.whl", hash = "sha256:dfb70827a3881bcd97dd28f54e56448906c0ed9a54829409f5e999bebe9aa2ff"},
-    {file = "miniupnpc-2.3.3-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:5e28ea6ee01cbd67f653d292b54b21c4eb9c4bc1c0bc8633e1126145132ddfef"},
-    {file = "miniupnpc-2.3.3-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:0fe402082568e9631a556ba7647799a1d1439f8b083a32dcabdb0a246981ac59"},
-    {file = "miniupnpc-2.3.3-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c8463bfc14b6a43441c770edac31f9e4a75d401a1e4c8978171f881b4e2c4156"},
-    {file = "miniupnpc-2.3.3-cp39-cp39-win32.whl", hash = "sha256:54342cd9464af9d72ba68afbad055a52527b3224b478b6ee0a87fc24644eae01"},
-    {file = "miniupnpc-2.3.3-cp39-cp39-win_amd64.whl", hash = "sha256:d3a4288969e79544dc51bfcc590695aae0316191ce346195a2f0c2066c8648d8"},
-    {file = "miniupnpc-2.3.3.tar.gz", hash = "sha256:ee5e957df828d2fa1cc364e60c583d10439110888f086c9182071c96a374b2ad"},
+    {file = "miniupnpc-2.3.3-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:0424940059620f7b2a753876d40719324f32d2d2d6684a8851ae512b22b978ec"},
+    {file = "miniupnpc-2.3.3-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:6a86e1d7387954f5a1ab43ef1ddbf35cd7a0cdcf7f1d02b632fd79e473fedd64"},
+    {file = "miniupnpc-2.3.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:77a513b4070ee644d00bceceb7a7f5a3edf6bac950e677ca7d5ed61017f8f60f"},
+    {file = "miniupnpc-2.3.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f4c8fac7fa833f39beeb4ca067ec22d482aa083ef8bef338862981dc9e409b43"},
+    {file = "miniupnpc-2.3.3-cp310-cp310-win_amd64.whl", hash = "sha256:ddc834535f55e1d19c1ee0d9ef0a51e7fdfde23d47beaf40f1a3fd4ff9bccd62"},
+    {file = "miniupnpc-2.3.3-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:616875c8c595b0980a8f316c662bcc29c34bf4cdd5e267c715ec6e608484946f"},
+    {file = "miniupnpc-2.3.3-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:ffe871ae8e9d6a8549e795a58403302b161f23041d286e70369609297494242e"},
+    {file = "miniupnpc-2.3.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f783fe9d0996412ff5c96674543a917885610bd7d48431386ce817b80779bd35"},
+    {file = "miniupnpc-2.3.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:70508a8e1a6f1970ec03242f9eedd374a97b403db1d406ec7a0b74b1ba8e921a"},
+    {file = "miniupnpc-2.3.3-cp311-cp311-win_amd64.whl", hash = "sha256:94c76f96c02aa9f12e5c49af7caca398f4e4cbf036242bb058379158c52b3ba1"},
+    {file = "miniupnpc-2.3.3-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:405c3c4c3b9447d77fd4dc3e97b9965b0ca8306a528f98e824de9b27ef071935"},
+    {file = "miniupnpc-2.3.3-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:805c0aa2d5ddcb758932c2dea13ab3982b23f4e845d651139719b2ac5fa51d31"},
+    {file = "miniupnpc-2.3.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a693cfad0a04c072203a62687c5ce412ec4b7d71f9ea6557b9056980ed5b1ef4"},
+    {file = "miniupnpc-2.3.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:67e9821fd1e1a07d3fc26e7bb6a44f3b91353ab1ed0fdee6e25aa821af3e8adb"},
+    {file = "miniupnpc-2.3.3-cp312-cp312-win_amd64.whl", hash = "sha256:be09644534d4e3ff527af9702c442ab9ad9fd0ae2ddeb7b7809997e35148d5e5"},
+    {file = "miniupnpc-2.3.3-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:f1d6b0c99687244c9b4eae36017db54e19442b4204d95632f27543cf351f40b1"},
+    {file = "miniupnpc-2.3.3-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:9892df1b8b09279ed2addb7ab42b5a04c8c415d0f83d870e6c469199729b07b6"},
+    {file = "miniupnpc-2.3.3-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:cb84588afe6c9afa2d53f81baae211c66e32b7a0524de44a8adf04563bb4cdb2"},
+    {file = "miniupnpc-2.3.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5f4bc330fd4ed3bf11b6a09b4897207be51baebbe8cd98a1f0f2034499d3335f"},
+    {file = "miniupnpc-2.3.3-cp39-cp39-win_amd64.whl", hash = "sha256:97f7257e217975b2ba9c85a31e230f7165062d9a22cd93d7e3183241e2d37a42"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.chia.net/simple"
+reference = "chia"
 
 [[package]]
 name = "more-itertools"
@@ -3795,4 +3785,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "3293ff0599e616275fcf2e6057aafd46c5b39764aec44df57fd71d8387d9e39e"
+content-hash = "a0b086bb169964bc3c677ffeceb8d2d8a3e5c13d0eb245f685ea49538cab48a5"
