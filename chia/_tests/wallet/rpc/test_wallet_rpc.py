@@ -1135,6 +1135,9 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     )
 
     cat_0_id = env_0.wallet_aliases["cat0"]
+    # The RPC response contains more than just the balance info but all the
+    # balance info should match. We're leveraging the `<=` operator to check
+    # for subset on `dict` `.items()`.
     assert (
         env_0.wallet_states[uint32(env_0.wallet_aliases["cat0"])].balance.to_json_dict().items()
         <= (await env_0.rpc_client.get_wallet_balance(cat_0_id)).items()
