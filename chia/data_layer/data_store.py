@@ -231,7 +231,7 @@ class DataStore:
                         for old_root_hash, indexes in merkle_blob_queries.items()
                     ]
                     await anyio.to_thread.run_sync(delta_reader.collect_from_merkle_blobs, jobs)
-                await self.build_cache_and_collect_missing_hashes(root, store_id, delta_reader)
+                await self.build_cache_and_collect_missing_hashes(root, root_hash, store_id, delta_reader)
 
             merkle_blob = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
 
@@ -270,10 +270,11 @@ class DataStore:
     async def build_cache_and_collect_missing_hashes(
         self,
         root: Root,
+        root_hash: bytes32,
         store_id: bytes32,
         delta_reader: DeltaReader,
     ) -> None:
-        missing_hashes = delta_reader.get_missing_hashes()
+        missing_hashes = delta_reader.get_missing_hashes(root_hash)
 
         if len(missing_hashes) == 0:
             return
@@ -335,7 +336,7 @@ class DataStore:
                     ),
                 )
 
-            missing_hashes = delta_reader.get_missing_hashes()
+            missing_hashes = delta_reader.get_missing_hashes(root_hash)
 
             log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
