@@ -56,7 +56,6 @@ from chia.data_layer.data_layer_util import (
     internal_hash,
     key_hash,
     leaf_hash,
-    row_to_node,
     unspecified,
 )
 from chia.util.batches import to_batches
@@ -711,22 +710,6 @@ class DataStore:
 
         return terminal_nodes
 
-    async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT generation FROM nodes WHERE hash = ? AND store_id = ?",
-                (
-                    node_hash,
-                    store_id,
-                ),
-            )
-
-            row = await cursor.fetchone()
-            if row is None:
-                return None
-
-            return int(row[0])
-
     async def get_existing_hashes(self, node_hashes: list[bytes32], store_id: bytes32) -> set[bytes32]:
         result: set[bytes32] = set()
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
@@ -976,25 +959,6 @@ class DataStore:
 
         return roots
 
-    async def get_last_tree_root_by_hash(
-        self, store_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None
-    ) -> Optional[Root]:
-        async with self.db_wrapper.reader() as reader:
-            max_generation_str = "AND generation < :max_generation " if max_generation is not None else ""
-            node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
-            cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id "
-                f"{max_generation_str}"
-                f"{node_hash_str}"
-                "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": store_id, "node_hash": hash, "max_generation": max_generation},
-            )
-            row = await cursor.fetchone()
-
-        if row is None:
-            return None
-        return Root.from_row(row=row)
-
     async def get_ancestors(
         self,
         node_hash: bytes32,
@@ -1025,35 +989,6 @@ class DataStore:
                 )
             )
         return result
-
-    async def get_internal_nodes(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> list[InternalNode]:
-        async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
-                root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
-            cursor = await reader.execute(
-                """
-                WITH RECURSIVE
-                    tree_from_root_hash(hash, node_type, left, right, key, value) AS (
-                        SELECT node.* FROM node WHERE node.hash == :root_hash
-                        UNION ALL
-                        SELECT node.* FROM node, tree_from_root_hash WHERE node.hash == tree_from_root_hash.left
-                        OR node.hash == tree_from_root_hash.right
-                    )
-                SELECT * FROM tree_from_root_hash
-                WHERE node_type == :node_type
-                """,
-                {"root_hash": root_hash, "node_type": NodeType.INTERNAL},
-            )
-
-            internal_nodes: list[InternalNode] = []
-            async for row in cursor:
-                node = row_to_node(row=row)
-                if not isinstance(node, InternalNode):
-                    raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
-                internal_nodes.append(node)
-
-        return internal_nodes
 
     def get_terminal_node_from_table_blobs(
         self,
@@ -1234,19 +1169,6 @@ class DataStore:
             kv_diff,
         )
 
-    async def get_node_type(self, node_hash: bytes32) -> NodeType:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT node_type FROM node WHERE hash == :hash LIMIT 1",
-                {"hash": node_hash},
-            )
-            raw_node_type = await cursor.fetchone()
-
-        if raw_node_type is None:
-            raise Exception(f"No node found for specified hash: {node_hash.hex()}")
-
-        return NodeType(raw_node_type["node_type"])
-
     async def autoinsert(
         self,
         key: bytes,
@@ -1264,14 +1186,6 @@ class DataStore:
             status=status,
             root=root,
         )
-
-    async def get_keys_values_dict(
-        self,
-        store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
-    ) -> dict[bytes, bytes]:
-        pairs = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
-        return {node.key: node.value for node in pairs}
 
     async def get_keys(
         self,
@@ -1490,59 +1404,6 @@ class DataStore:
             new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status, old_root)
             return new_root.node_hash
 
-    async def _get_one_ancestor(
-        self,
-        node_hash: bytes32,
-        store_id: bytes32,
-        generation: Optional[int] = None,
-    ) -> Optional[InternalNode]:
-        async with self.db_wrapper.reader() as reader:
-            if generation is None:
-                generation = await self.get_tree_generation(store_id=store_id)
-            cursor = await reader.execute(
-                """
-                SELECT * from node INNER JOIN (
-                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
-                    FROM ancestors
-                    WHERE ancestors.hash == :hash
-                    AND ancestors.tree_id == :tree_id
-                    AND ancestors.generation <= :generation
-                    GROUP BY hash
-                ) asc on asc.hash == node.hash
-                """,
-                {"hash": node_hash, "tree_id": store_id, "generation": generation},
-            )
-            row = await cursor.fetchone()
-            if row is None:
-                return None
-            return InternalNode.from_row(row=row)
-
-    async def _get_one_ancestor_multiple_hashes(
-        self,
-        node_hashes: list[bytes32],
-        store_id: bytes32,
-        generation: Optional[int] = None,
-    ) -> list[InternalNode]:
-        async with self.db_wrapper.reader() as reader:
-            node_hashes_place_holders = ",".join("?" for _ in node_hashes)
-            if generation is None:
-                generation = await self.get_tree_generation(store_id=store_id)
-            cursor = await reader.execute(
-                f"""
-                SELECT * from node INNER JOIN (
-                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
-                    FROM ancestors
-                    WHERE ancestors.hash IN ({node_hashes_place_holders})
-                    AND ancestors.tree_id == ?
-                    AND ancestors.generation <= ?
-                    GROUP BY hash
-                ) asc on asc.hash == node.hash
-                """,
-                [*node_hashes, store_id, generation],
-            )
-            rows = await cursor.fetchall()
-            return [InternalNode.from_row(row=row) for row in rows]
-
     async def get_node_by_key(
         self,
         key: bytes,
@@ -1567,17 +1428,6 @@ class DataStore:
                 raise KeyNotFoundError(key=key)
             kid = KeyId(kvid)
             return await self.get_terminal_node_from_kid(merkle_blob, kid, store_id)
-
-    async def get_node(self, node_hash: bytes32) -> Node:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash LIMIT 1", {"hash": node_hash})
-            row = await cursor.fetchone()
-
-        if row is None:
-            raise Exception(f"Node not found for requested hash: {node_hash.hex()}")
-
-        node = row_to_node(row=row)
-        return node
 
     async def get_tree_as_nodes(self, store_id: bytes32) -> Node:
         async with self.db_wrapper.reader():

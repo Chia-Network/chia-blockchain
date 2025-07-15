@@ -29,7 +29,6 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError, TreeGenerationIn
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
-    Node,
     OperationType,
     Root,
     SerializedNode,
@@ -1279,6 +1278,23 @@ async def test_server_http_ban(
     assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
 
 
+async def get_first_generation(data_store: DataStore, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
+    async with data_store.db_wrapper.reader() as reader:
+        cursor = await reader.execute(
+            "SELECT generation FROM nodes WHERE hash = ? AND store_id = ?",
+            (
+                node_hash,
+                store_id,
+            ),
+        )
+
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+
+        return int(row[0])
+
+
 async def write_tree_to_file_old_format(
     data_store: DataStore,
     root: Root,
@@ -1296,7 +1312,7 @@ async def write_tree_to_file_old_format(
     if hash_to_index is None:
         hash_to_index = merkle_blob.get_hashes_indexes()
 
-    generation = await data_store.get_first_generation(node_hash, store_id)
+    generation = await get_first_generation(data_store, node_hash, store_id)
     # Root's generation is not the first time we see this hash, so it's not a new delta.
     if root.generation != generation:
         return
@@ -2057,35 +2073,6 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
             with pytest.raises(KeyNotFoundError, match=f"Key not found: {bytes_key.hex()}"):
                 await data_store.get_node_by_key(bytes_key, store_id)
         num_keys += new_keys
-
-
-async def _check_ancestors(
-    data_store: DataStore, store_id: bytes32, root_hash: bytes32
-) -> dict[bytes32, Optional[bytes32]]:
-    ancestors: dict[bytes32, Optional[bytes32]] = {}
-    root_node: Node = await data_store.get_node(root_hash)
-    queue: list[Node] = [root_node]
-
-    while queue:
-        node = queue.pop(0)
-        if isinstance(node, InternalNode):
-            left_node = await data_store.get_node(node.left_hash)
-            right_node = await data_store.get_node(node.right_hash)
-            ancestors[left_node.hash] = node.hash
-            ancestors[right_node.hash] = node.hash
-            queue.append(left_node)
-            queue.append(right_node)
-
-    ancestors[root_hash] = None
-    for node_hash, ancestor_hash in ancestors.items():
-        ancestor_node = await data_store._get_one_ancestor(node_hash, store_id)
-        if ancestor_hash is None:
-            assert ancestor_node is None
-        else:
-            assert ancestor_node is not None
-            assert ancestor_node.hash == ancestor_hash
-
-    return ancestors
 
 
 @pytest.mark.anyio
