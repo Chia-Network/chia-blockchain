@@ -831,7 +831,7 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "long_lived/datalayer_merkle_blob"
+reference = "long_lived/initial_datalayer"
 resolved_reference = "ca58fd4617fb06684a90f669221290623293d3a2"
 subdirectory = "wheel/"
 
@@ -3782,4 +3782,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "caabd9b7c357a123a48859adcb8a69465c608bbd7b2b17a26bad9abb4da7fec7"
+content-hash = "ee2764d498d4bdb5a78a1cfe9a3362b601e41d06e0829823414d0b48631d5204"
