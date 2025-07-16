@@ -166,7 +166,7 @@ class V1Prover(ProverProtocol):
 
 def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
     """Factory function to create appropriate prover based on plot version"""
-    if filename.endswith(".plot2"):
+    if filename.endswith(".plot_v2"):
         return V2Prover.from_bytes(prover_data)
     elif filename.endswith(".plot"):
         return V1Prover(DiskProver.from_bytes(prover_data))
@@ -176,7 +176,7 @@ def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
 
 def get_prover_from_file(filename: str) -> ProverProtocol:
     """Factory function to create appropriate prover based on plot version"""
-    if filename.endswith(".plot2"):
+    if filename.endswith(".plot_v2"):
         return V2Prover(filename)
     elif filename.endswith(".plot"):
         return V1Prover(DiskProver(filename))
