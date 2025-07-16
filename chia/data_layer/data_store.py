@@ -59,6 +59,7 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.util.batches import to_batches
+from chia.util.cpu import available_logical_cores
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.log_exceptions import log_exceptions
 from chia.util.lru_cache import LRUCache
@@ -299,8 +300,7 @@ class DataStore:
 
             current_generation = generations[-1] + 1
 
-            # TODO: at least shouldn't be hard coded
-            batch_size = 10
+            batch_size = available_logical_cores()
             generations = range(
                 current_generation,
                 min(current_generation + batch_size, root.generation),
