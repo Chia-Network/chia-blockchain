@@ -25,6 +25,7 @@ from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import V1Prover
 from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.protocols.outbound_message import make_msg
@@ -79,7 +80,7 @@ class TestData:
         removed_paths: list[Path] = [p.prover.get_filename() for p in removed] if removed is not None else []
         invalid_dict: dict[Path, int] = {p.prover.get_filename(): 0 for p in self.invalid}
         keys_missing_set: set[Path] = {p.prover.get_filename() for p in self.keys_missing}
-        duplicates_set: set[str] = {p.prover.get_filename() for p in self.duplicates}
+        duplicates_set: set[str] = {p.prover.get_filename_str() for p in self.duplicates}
 
         # Inject invalid plots into `PlotManager` of the harvester so that the callback calls below can use them
         # to sync them to the farmer.
@@ -131,30 +132,30 @@ class TestData:
         assert len(self.invalid) == len(self.plot_sync_receiver.invalid())
         assert len(self.keys_missing) == len(self.plot_sync_receiver.keys_missing())
         for _, plot_info in self.plots.items():
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.invalid()
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.keys_missing()
-            assert plot_info.prover.get_filename() in self.plot_sync_receiver.plots()
-            synced_plot = self.plot_sync_receiver.plots()[plot_info.prover.get_filename()]
-            assert plot_info.prover.get_filename() == synced_plot.filename
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.invalid()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.keys_missing()
+            assert plot_info.prover.get_filename_str() in self.plot_sync_receiver.plots()
+            synced_plot = self.plot_sync_receiver.plots()[plot_info.prover.get_filename_str()]
+            assert plot_info.prover.get_filename_str() == synced_plot.filename
             assert plot_info.pool_public_key == synced_plot.pool_public_key
             assert plot_info.pool_contract_puzzle_hash == synced_plot.pool_contract_puzzle_hash
             assert plot_info.plot_public_key == synced_plot.plot_public_key
             assert plot_info.file_size == synced_plot.file_size
             assert uint64(int(plot_info.time_modified)) == synced_plot.time_modified
         for plot_info in self.invalid:
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.plots()
-            assert plot_info.prover.get_filename() in self.plot_sync_receiver.invalid()
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.keys_missing()
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.duplicates()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.plots()
+            assert plot_info.prover.get_filename_str() in self.plot_sync_receiver.invalid()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.keys_missing()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.duplicates()
         for plot_info in self.keys_missing:
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.plots()
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.invalid()
-            assert plot_info.prover.get_filename() in self.plot_sync_receiver.keys_missing()
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.duplicates()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.plots()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.invalid()
+            assert plot_info.prover.get_filename_str() in self.plot_sync_receiver.keys_missing()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.duplicates()
         for plot_info in self.duplicates:
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.invalid()
-            assert plot_info.prover.get_filename() not in self.plot_sync_receiver.keys_missing()
-            assert plot_info.prover.get_filename() in self.plot_sync_receiver.duplicates()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.invalid()
+            assert plot_info.prover.get_filename_str() not in self.plot_sync_receiver.keys_missing()
+            assert plot_info.prover.get_filename_str() in self.plot_sync_receiver.duplicates()
 
 
 @dataclass
@@ -284,7 +285,7 @@ def create_example_plots(count: int, seeded_random: random.Random) -> list[PlotI
 
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32.random(seeded_random), 25 + x % 26),
+            prover=V1Prover(DiskProver(f"{x}", bytes32.random(seeded_random), 25 + x % 26)),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),

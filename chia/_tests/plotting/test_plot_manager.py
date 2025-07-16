@@ -42,8 +42,8 @@ pytestmark = [pytest.mark.limit_consensus_modes(reason="does not depend on conse
 class MockDiskProver:
     filename: str
 
-    def get_filename(self) -> str:
-        return self.filename
+    def get_filename(self) -> Path:
+        return Path(self.filename)
 
 
 @dataclass
@@ -614,7 +614,7 @@ async def test_drop_too_large_cache_entries(environment, bt):
     # Write the modified cache entries to the file
     cache_path.write_bytes(bytes(VersionedBlob(uint16(CURRENT_VERSION), bytes(cache_data))))
     # And now test that plots in invalid_entries are not longer loaded
-    assert_cache([plot_info for plot_info in plot_infos if plot_info.prover.get_filename() not in invalid_entries])
+    assert_cache([plot_info for plot_info in plot_infos if str(plot_info.prover.get_filename()) not in invalid_entries])
 
 
 @pytest.mark.anyio
