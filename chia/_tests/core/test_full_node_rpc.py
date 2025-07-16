@@ -88,12 +88,8 @@ async def test1(
 
         peak_block = await client.get_block(state["peak"].header_hash)
         assert peak_block == blocks[-1]
-        try:
+        with pytest.raises(ValueError, match="not found"):
             await client.get_block(bytes32([1] * 32))
-        except ValueError as e:
-            assert str(e).endswith("not found")
-        else:
-            assert False, "Expected ValueError for non-existent block"
         block_record = await client.get_block_record_by_height(2)
         assert block_record is not None
         assert block_record.header_hash == blocks[2].header_hash
@@ -154,13 +150,9 @@ async def test1(
 
         assert len(await client.get_all_mempool_items()) == 0
         assert len(await client.get_all_mempool_tx_ids()) == 0
-        try:
+        with pytest.raises(ValueError, match="not in the mempool"):
             await client.get_mempool_item_by_tx_id(spend_bundle.name())
             await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)
-        except ValueError as e:
-            assert str(e).endswith("not in the mempool")
-        else:
-            assert False, "Expected ValueError for non-existent mempool item"
 
         await client.push_tx(spend_bundle)
         coin = spend_bundle.additions()[0]
@@ -177,12 +169,8 @@ async def test1(
         mempool_item = await client.get_mempool_item_by_tx_id(spend_bundle.name())
         assert mempool_item is not None
         assert WalletSpendBundle.from_json_dict(mempool_item["spend_bundle"]) == spend_bundle
-        try:
+        with pytest.raises(ValueError, match="not found"):
             await client.get_coin_record_by_name(coin.name())
-        except ValueError as e:
-            assert str(e).endswith("not found")
-        else:
-            assert False, "Expected ValueError for non-existent coin record"
 
         # Verify that the include_pending arg to get_mempool_item_by_tx_id works
         coin_to_spend_pending = included_reward_coins[1]
@@ -195,14 +183,9 @@ async def test1(
             condition_dic=condition_dic,
         )
         await client.push_tx(spend_bundle_pending)
-        try:
+        with pytest.raises(ValueError, match="not in the mempool"):
             # not strictly in the mempool
             await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)
-        except ValueError as e:
-            assert str(e).endswith("not in the mempool")
-        else:
-            assert False, "Expected ValueError for non-existent mempool item"
-
         # pending entry into mempool, so include_pending fetches
         mempool_item = await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True)
         assert WalletSpendBundle.from_json_dict(mempool_item["spend_bundle"]) == spend_bundle_pending
@@ -473,28 +456,14 @@ async def test_signage_points(
         full_node_service_1.config,
     ) as client:
         # Only provide one
-        try:
+        with pytest.raises(ValueError, match="sp_hash or challenge_hash must be provided."):
             await client.get_recent_signage_point_or_eos(None, None)
-        except ValueError as e:
-            assert str(e) == "sp_hash or challenge_hash must be provided."
-        else:
-            assert False, "Expected ValueError"
-
-        try:
+        with pytest.raises(ValueError, match="Either sp_hash or challenge_hash must be provided, not both."):
             await client.get_recent_signage_point_or_eos(std_hash(b"0"), std_hash(b"1"))
-        except ValueError as e:
-            assert str(e) == "Either sp_hash or challenge_hash must be provided, not both."
-        else:
-            assert False, "Expected ValueError"
         # Not found
-        try:
+        with pytest.raises(ValueError, match="in cache"):
             await client.get_recent_signage_point_or_eos(std_hash(b"0"), None)
             await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
-        except ValueError as e:
-            assert str(e).endswith("in cache")
-        else:
-            assert False, "Expected ValueError"
-
         blocks = bt.get_consecutive_blocks(5)
         for block in blocks:
             await full_node_api_1.full_node.add_block(block)
@@ -524,12 +493,8 @@ async def test_signage_points(
         assert sp.rc_proof is not None
         assert sp.rc_vdf is not None
         # Don't have SP yet
-        try:
+        with pytest.raises(ValueError, match="Did not find sp"):
             await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
-        except ValueError as e:
-            assert str(e).startswith("Did not find sp")
-        else:
-            assert False, "Expected ValueError"
 
         # Add the last block
         await full_node_api_1.full_node.add_block(blocks[-1])
@@ -551,13 +516,8 @@ async def test_signage_points(
         selected_eos = blocks[-1].finished_sub_slots[0]
 
         # Don't have EOS yet
-        try:
+        with pytest.raises(ValueError, match="Did not find eos"):
             await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
-        except ValueError as e:
-            assert str(e).startswith("Did not find eos")
-        else:
-            assert False, "Expected ValueError"
-
         # Properly fetch an EOS
         for eos in blocks[-1].finished_sub_slots:
             await full_node_api_1.full_node.add_end_of_sub_slot(eos, peer)
