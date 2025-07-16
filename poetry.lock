@@ -877,6 +877,7 @@ files = [
     {file = "chiabip158-1.5.2-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b7b36a529ee5685294fe55cedfa0788cb1baac03c310b1533cd23481357efd10"},
     {file = "chiabip158-1.5.2-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ad40df68317d39f33272e25fd9651f05a27b85d524e9ed694ac7549cde44918c"},
     {file = "chiabip158-1.5.2-cp39-cp39-win_amd64.whl", hash = "sha256:07b298cfb0621dba1027c710e9669970f4e089c118db8732bd456101c727db65"},
+    {file = "chiabip158-1.5.2.tar.gz", hash = "sha256:86c225f5a566cca3199607f6ea646799da9e406df6fb0ae7323d57e5ac8e2f2c"},
 ]
 
 [[package]]
@@ -3332,15 +3333,15 @@ files = [
 
 [[package]]
 name = "types-aiofiles"
-version = "24.1.0.20250606"
+version = "24.1.0.20250708"
 description = "Typing stubs for aiofiles"
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "types_aiofiles-24.1.0.20250606-py3-none-any.whl", hash = "sha256:e568c53fb9017c80897a9aa15c74bf43b7ee90e412286ec1e0912b6e79301aee"},
-    {file = "types_aiofiles-24.1.0.20250606.tar.gz", hash = "sha256:48f9e26d2738a21e0b0f19381f713dcdb852a36727da8414b1ada145d40a18fe"},
+    {file = "types_aiofiles-24.1.0.20250708-py3-none-any.whl", hash = "sha256:07f8f06465fd415d9293467d1c66cd074b2c3b62b679e26e353e560a8cf63720"},
+    {file = "types_aiofiles-24.1.0.20250708.tar.gz", hash = "sha256:c8207ed7385491ce5ba94da02658164ebd66b69a44e892288c9f20cbbf5284ff"},
 ]
 
 [[package]]
