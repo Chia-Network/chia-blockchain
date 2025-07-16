@@ -31,6 +31,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
+from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -196,6 +197,28 @@ class GetTimestampForHeight(Streamable):
 @dataclass(frozen=True)
 class GetTimestampForHeightResponse(Streamable):
     timestamp: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWallets(Streamable):
+    type: Optional[uint16] = None
+    include_data: bool = True
+
+
+# utility for GetWalletsResponse
+@streamable
+@dataclass(frozen=True)
+class WalletInfoResponse(WalletInfo):
+    authorized_providers: list[bytes32] = field(default_factory=list)
+    flags_needed: list[str] = field(default_factory=list)
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletsResponse(Streamable):
+    wallets: list[WalletInfoResponse]
+    fingerprint: Optional[uint32] = None
 
 
 @streamable

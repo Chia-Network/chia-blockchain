@@ -296,7 +296,7 @@ def parse_file_or_package(identifier: str) -> FileOrPackage:
         if "(" not in identifier:
             return File(Path(identifier))
         else:
-            return File(Path(identifier.split("(")[0].strip()))
+            return File(Path(identifier.split("(", maxsplit=1)[0].strip()))
 
     if ".py" not in identifier and identifier[0] == "(" and identifier[-1] == ")":
         return Package(identifier[1:-1])  # strip parens

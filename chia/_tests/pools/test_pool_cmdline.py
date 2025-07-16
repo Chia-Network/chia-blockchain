@@ -9,7 +9,7 @@ import click
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from pytest_mock import MockerFixture
@@ -46,7 +46,7 @@ from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import PWStatus
+from chia.wallet.wallet_request_types import GetWallets, PWStatus
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -153,9 +153,9 @@ async def test_plotnft_cli_create(
         ]
     )
 
-    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 1
-    wallet_id: int = summaries_response[0]["id"]
+    summaries_response = await wallet_rpc.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))
+    assert len(summaries_response.wallets) == 1
+    wallet_id: int = summaries_response.wallets[0].id
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
 

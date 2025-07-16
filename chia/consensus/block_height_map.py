@@ -10,6 +10,7 @@ from chia_rs import SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_height_map_protocol import BlockHeightMapProtocol
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.files import write_file_async
 from chia.util.streamable import Streamable, streamable
@@ -23,7 +24,7 @@ class SesCache(Streamable):
     content: list[tuple[uint32, bytes]]
 
 
-class BlockHeightMap:
+class BlockHeightMap(BlockHeightMapProtocol):
     db: DBWrapper2
 
     # the below dictionaries are loaded from the database, from the peak
