@@ -37,7 +37,7 @@ def main() -> int:
         artifact_directory_path = directory_path.joinpath("artifacts")
         artifact_directory_path.mkdir()
 
-        extras = ["upnp"]
+        extras = ["dev", "legacy-keyring", "upnp"]
 
         print("Downloading packages for Python version:")
         lines = [
