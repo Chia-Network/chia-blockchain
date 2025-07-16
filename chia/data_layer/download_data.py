@@ -257,6 +257,7 @@ async def insert_from_delta_file(
                 # Don't penalize this server if we didn't download the file from it.
                 await data_store.server_misses_file(store_id, server_info, timestamp)
             await data_store.rollback_to_generation(store_id, existing_generation - 1)
+            await data_store.delete_unconfirmed_kvids(store_id)
             return False
 
     return True

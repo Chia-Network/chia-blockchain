@@ -163,7 +163,8 @@ class DataStore:
                         kv_id INTEGER PRIMARY KEY,
                         hash BLOB NOT NULL CHECK(length(store_id) == 32),
                         blob BLOB,
-                        store_id BLOB NOT NULL CHECK(length(store_id) == 32)
+                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
+                        confirmed tinyint CHECK(confirmed == 0 OR confirmed == 1)
                     )
                     """
                 )
@@ -182,6 +183,11 @@ class DataStore:
                 await writer.execute(
                     """
                     CREATE UNIQUE INDEX IF NOT EXISTS ids_hash_index ON ids(hash, store_id)
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS ids_confirmed_index ON ids(confirmed, store_id)
                     """
                 )
                 await writer.execute(
@@ -236,6 +242,7 @@ class DataStore:
 
         # Don't store these blob objects into cache, since their data structures are not calculated yet.
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
+        await self.confirm_all_kvids(store_id=store_id)
         return delta_reader
 
     async def build_merkle_blob_queries_for_missing_hashes(
@@ -380,6 +387,7 @@ class DataStore:
                             serialized_node.value2,
                             store_id,
                             writer=writer,
+                            confirmed=False,
                         )
                         node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
                         terminal_nodes[node_hash] = (kid, vid)
@@ -625,7 +633,9 @@ class DataStore:
 
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
-    async def add_kvid(self, blob: bytes, store_id: bytes32, writer: aiosqlite.Connection) -> KeyOrValueId:
+    async def add_kvid(
+        self, blob: bytes, store_id: bytes32, writer: aiosqlite.Connection, confirmed: bool = True
+    ) -> KeyOrValueId:
         use_file = self._use_file_for_new_kv_blob(blob)
         blob_hash = bytes32(sha256(blob).digest())
         if use_file:
@@ -634,11 +644,12 @@ class DataStore:
             table_blob = blob
         try:
             row = await writer.execute_insert(
-                "INSERT INTO ids (hash, blob, store_id) VALUES (?, ?, ?)",
+                "INSERT INTO ids (hash, blob, store_id, confirmed) VALUES (?, ?, ?, ?)",
                 (
                     blob_hash,
                     table_blob,
                     store_id,
+                    confirmed,
                 ),
             )
         except sqlite3.IntegrityError as e:
@@ -659,11 +670,51 @@ class DataStore:
             path.write_bytes(zstd.compress(blob))
         return KeyOrValueId(row[0])
 
+    async def delete_unconfirmed_kvids(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
+                """
+                SELECT blob, hash FROM ids WHERE store_id == :store_id AND confirmed == 0
+                """,
+                {
+                    "store_id": store_id,
+                },
+            )
+
+            rows = await cursor.fetchall()
+
+        for row in rows:
+            blob = row["blob"]
+            if blob is None:
+                blob_hash = row["hash"]
+                path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
+
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                "DELETE FROM ids WHERE store_id == :store_id AND confirmed == 0",
+                {
+                    "store_id": store_id,
+                },
+            )
+
+    async def confirm_all_kvids(self, store_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                "UPDATE ids SET confirmed = 1 WHERE store_id == :store_id and confirmed == 0",
+                {
+                    "store_id": store_id,
+                },
+            )
+
     async def add_key_value(
-        self, key: bytes, value: bytes, store_id: bytes32, writer: aiosqlite.Connection
+        self, key: bytes, value: bytes, store_id: bytes32, writer: aiosqlite.Connection, confirmed: bool = True
     ) -> tuple[KeyId, ValueId]:
-        kid = KeyId(await self.add_kvid(key, store_id, writer=writer))
-        vid = ValueId(await self.add_kvid(value, store_id, writer=writer))
+        kid = KeyId(await self.add_kvid(key, store_id, writer=writer, confirmed=confirmed))
+        vid = ValueId(await self.add_kvid(value, store_id, writer=writer, confirmed=confirmed))
 
         return (kid, vid)
 
