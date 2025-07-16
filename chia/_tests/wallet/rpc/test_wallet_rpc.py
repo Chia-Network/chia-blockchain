@@ -1251,8 +1251,9 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_offer_endpoints(wallet_environments: WalletTestFramework) -> None:
+async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_1 = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
 
@@ -1272,7 +1273,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework) -> None
         "xch",
         "cat",
         uint64(20),
-        CATWallet,
+        wallet_type,
         "cat",
     )
     cat_wallet_id = cat_wallet.id()
@@ -1341,7 +1342,17 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework) -> None
     all_offers = await env_1.rpc_client.get_all_offers()
     assert len(all_offers) == 0
 
-    driver_dict: dict[str, Any] = {cat_asset_id.hex(): {"type": "CAT", "tail": "0x" + cat_asset_id.hex()}}
+    driver_dict: dict[str, Any] = {
+        cat_asset_id.hex(): {
+            "type": "CAT",
+            "tail": "0x" + cat_asset_id.hex(),
+            **(
+                {}
+                if wallet_type is CATWallet
+                else {"also": {"type": "revocation layer", "hidden_puzzle_hash": "0x" + bytes32.zeros.hex()}}
+            ),
+        }
+    }
 
     create_res = await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
