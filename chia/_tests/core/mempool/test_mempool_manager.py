@@ -567,11 +567,10 @@ def make_bundle_spends_map_and_fee(
         removals_amount += coin_spend.coin.amount
         spend_conds = spend_conditions.pop(coin_id)
 
-        additions_amount += coin_spend.coin.amount
-
         additions = []
         for puzzle_hash, amount, _ in spend_conds.create_coin:
             additions.append(Coin(coin_id, puzzle_hash, uint64(amount)))
+            additions_amount += amount
 
         bundle_coin_spends[coin_id] = BundleCoinSpend(
             coin_spend=coin_spend,
@@ -583,6 +582,8 @@ def make_bundle_spends_map_and_fee(
             if bool(spend_conds.flags & ELIGIBLE_FOR_FF)
             else None,
         )
+    assert additions_amount == conds.addition_amount
+    assert removals_amount == conds.removal_amount
     fee = uint64(removals_amount - additions_amount)
     return bundle_coin_spends, fee
 

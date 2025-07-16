@@ -133,7 +133,7 @@ class IdenticalSpendDedup:
 
         Raises:
             ValueError to skip the mempool item we're currently in, if it's
-            attempting to spend an eligible coin with a different solution than the
+            attempting to spend an dedup coin with a different solution than the
             one we're already deduplicating on.
         """
         cost_saving = 0
@@ -158,13 +158,8 @@ class IdenticalSpendDedup:
                 continue
             # See if the solution was identical
             if dedup_coin_spend.solution != spend_data.coin_spend.solution:
-                # It wasn't, so let's skip this whole item because it's relying on
-                # spending this coin with a different solution and that would
-                # conflict with the coin spends that we're deduplicating already
-                # NOTE: We can miss an opportunity to deduplicate on other solutions
-                # even if they end up saving more cost, as we're going for the first
-                # solution we see from the relatively highest FPC item, to avoid
-                # severe performance and/or time-complexity impact
+                # This should not happen. DEDUP spends of the same coin with
+                # different solutions are rejected in check_removals().
                 raise SkipDedup("Solution is different from what we're deduplicating on")
             cost_saving += dedup_coin_spend.cost
         # Update the eligible coin spends data
