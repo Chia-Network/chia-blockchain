@@ -13,7 +13,7 @@ homepage = "https://chia.net/"
 
 [tool.poetry]
 # see [tool.poetry-dynamic-versioning]
-packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
+packages = [{ include = "chia"}]
 version = "0.0.0"
 
 [project.scripts]
@@ -49,6 +49,7 @@ aiosqlite = ">=0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = ">=4.6.2.post1"
 bitstring = ">=4.1.4"  # Binary data management library
 boto3 = ">=1.35.43"  # AWS S3 for Data Layer S3 plugin
+certifi = ">=2023.11.17"  # Root CA bundle for SSL certificate verification
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
