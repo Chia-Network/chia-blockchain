@@ -2442,7 +2442,7 @@ async def test_new_peak_ff_eviction(
 
     bundle_add_info = await mempool_manager.add_spend_bundle(
         bundle,
-        make_test_conds(spend_ids=[(singleton_spend.coin, ELIGIBLE_FOR_FF), (TEST_COIN, 0)], cost=uint64(1000000)),
+        make_test_conds(spend_ids=[(singleton_spend.coin, ELIGIBLE_FOR_FF), (TEST_COIN, 0)], cost=1000000),
         bundle.name(),
         first_added_height=uint32(1),
     )
@@ -2530,7 +2530,7 @@ async def test_multiple_ff(use_optimization: bool) -> None:
                 (singleton_spend2.coin, ELIGIBLE_FOR_FF),
                 (TEST_COIN, 0),
             ],
-            cost=uint64(1000000),
+            cost=1000000,
         ),
         bundle.name(),
         first_added_height=uint32(1),
