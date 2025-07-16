@@ -40,7 +40,6 @@ from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_height_map import BlockHeightMap
-from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
@@ -400,7 +399,7 @@ class FullNode:
                 await asyncio.gather(*self._segment_task_list, return_exceptions=True)
 
     @property
-    def block_store(self) -> BlockStoreProtocol:
+    def block_store(self) -> BlockStore:
         assert self._block_store is not None
         return self._block_store
 
