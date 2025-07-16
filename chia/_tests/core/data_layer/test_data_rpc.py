@@ -3712,7 +3712,6 @@ async def test_multistore_update(
             await data_rpc_api.multistore_batch_update({"store_updates": store_updates})
 
 
-@pytest.mark.skip
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_unsubmitted_batch_db_migration(
