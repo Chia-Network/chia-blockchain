@@ -1266,35 +1266,17 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework) -> None
     }
 
     # Creates a CAT wallet with 20 mojos
-    res = await env_1.rpc_client.create_new_cat_and_wallet(uint64(20), test=True)
-    assert res["success"]
-    cat_wallet_id = res["wallet_id"]
-    cat_asset_id = bytes32.fromhex(res["asset_id"])
-
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {
-                        "set_remainder": True,
-                    },
-                    "cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(),
-        ]
+    cat_wallet = await mint_cat(
+        wallet_environments,
+        env_1,
+        "xch",
+        "cat",
+        uint64(20),
+        CATWallet,
+        "cat",
     )
+    cat_wallet_id = cat_wallet.id()
+    cat_asset_id = cat_wallet.cat_info.limitations_program_hash
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await env_2.rpc_client.create_wallet_for_existing_cat(cat_asset_id)
