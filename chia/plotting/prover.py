@@ -159,7 +159,7 @@ class V1Prover(ProverProtocol):
 
 
 def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
-    if filename.endswith(".plot_v2"):
+    if filename.endswith(".plot2"):
         return V2Prover.from_bytes(prover_data)
     elif filename.endswith(".plot"):
         return V1Prover(DiskProver.from_bytes(prover_data))
@@ -168,7 +168,7 @@ def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
 
 
 def get_prover_from_file(filename: str) -> ProverProtocol:
-    if filename.endswith(".plot_v2"):
+    if filename.endswith(".plot2"):
         return V2Prover(filename)
     elif filename.endswith(".plot"):
         return V1Prover(DiskProver(filename))

@@ -236,7 +236,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
             import glob
 
             v1_file_strs = glob.glob(str(directory / "**" / "*.plot"), recursive=True)
-            v2_file_strs = glob.glob(str(directory / "**" / "*.plot_v2"), recursive=True)
+            v2_file_strs = glob.glob(str(directory / "**" / "*.plot2"), recursive=True)
 
             for file in v1_file_strs + v2_file_strs:
                 filepath = Path(file).resolve()
@@ -248,7 +248,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
                 child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")
             ]
             v2_files: list[Path] = [
-                child for child in glob_function("*.plot_v2") if child.is_file() and not child.name.startswith("._")
+                child for child in glob_function("*.plot2") if child.is_file() and not child.name.startswith("._")
             ]
             all_files = v1_files + v2_files
         log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
