@@ -13,15 +13,13 @@ if TYPE_CHECKING:
 
 
 class ProverProtocol(ABC):
-    """Abstract protocol for all prover implementations (V1 and V2)"""
-
     @abstractmethod
     def get_filename(self) -> Path:
-        """Returns the filename of the plot"""
+        """Returns the filename for the plot"""
 
     @abstractmethod
     def get_filename_str(self) -> str:
-        """Returns the filename of the plot"""
+        """Returns the filename string for the plot"""
 
     @abstractmethod
     def get_size(self) -> uint8:
@@ -29,19 +27,19 @@ class ProverProtocol(ABC):
 
     @abstractmethod
     def get_memo(self) -> bytes:
-        """Returns the memo containing keys and other metadata"""
+        """Returns the memo"""
 
     @abstractmethod
     def get_compression_level(self) -> uint8:
-        """Returns the compression level (0 for uncompressed)"""
+        """Returns the compression level"""
 
     @abstractmethod
     def get_version(self) -> int:
-        """Returns the plot version (1 for V1, 2 for V2)"""
+        """Returns the plot version"""
 
     @abstractmethod
     def __bytes__(self) -> bytes:
-        """Returns the prover serialized as bytes for caching"""
+        """Returns the prover bytes"""
 
     @abstractmethod
     def get_id(self) -> bytes32:
@@ -62,11 +60,11 @@ class ProverProtocol(ABC):
 
 
 class V2Prover(ProverProtocol):
-    """V2 Plot Prover implementation - currently stubbed"""
+    """V2 Plot Prover stubb"""
 
     def __init__(self, filename: str):
         self._filename = filename
-        # TODO: Implement V2 plot file parsing and validation
+        # TODO: todo_v2_plots Implement plot file parsing and validation
 
     def get_filename(self) -> Path:
         return Path(self._filename)
@@ -75,11 +73,11 @@ class V2Prover(ProverProtocol):
         return str(self._filename)
 
     def get_size(self) -> uint8:
-        # TODO: Extract k size from V2 plot file
+        # TODO: todo_v2_plots get k size from plot
         return uint8(32)  # Stub value
 
     def get_memo(self) -> bytes:
-        # TODO: Extract memo from V2 plot file
+        # TODO: todo_v2_plots
         return b""  # Stub value
 
     def get_compression_level(self) -> uint8:
@@ -90,7 +88,7 @@ class V2Prover(ProverProtocol):
         return 2
 
     def __bytes__(self) -> bytes:
-        # TODO: Implement proper V2 prover serialization for caching
+        # TODO: todo_v2_plots Implement prover serialization for caching
         # For now, just serialize the filename as a placeholder
         return self._filename.encode("utf-8")
 
@@ -99,17 +97,15 @@ class V2Prover(ProverProtocol):
         return bytes32(b"")  # Stub value
 
     def get_qualities_for_challenge(self, challenge: bytes) -> list[bytes32]:
-        # TODO: Implement V2 plot quality lookup
+        # TODO: todo_v2_plots Implement plot quality lookup
         return []  # Stub value
 
     def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
-        # TODO: Implement V2 plot proof generation
-        return b""  # Stub value
+        # TODO: todo_v2_plots Implement plot proof generation
+        return b""
 
     @classmethod
     def from_bytes(cls, data: bytes) -> V2Prover:
-        # TODO: Implement proper V2 prover deserialization from cache
-        # For now, just deserialize the filename
         filename = data.decode("utf-8")
         return cls(filename)
 
@@ -152,7 +148,6 @@ class V1Prover(ProverProtocol):
 
     @classmethod
     def from_bytes(cls, data: bytes) -> V1Prover:
-        """Create V1ProverWrapper from serialized bytes"""
         from chiapos import DiskProver
 
         disk_prover = DiskProver.from_bytes(data)
@@ -160,12 +155,10 @@ class V1Prover(ProverProtocol):
 
     @property
     def disk_prover(self) -> DiskProver:
-        """Access to underlying DiskProver for backwards compatibility"""
         return self._disk_prover
 
 
 def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
-    """Factory function to create appropriate prover based on plot version"""
     if filename.endswith(".plot_v2"):
         return V2Prover.from_bytes(prover_data)
     elif filename.endswith(".plot"):
@@ -175,7 +168,6 @@ def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:
 
 
 def get_prover_from_file(filename: str) -> ProverProtocol:
-    """Factory function to create appropriate prover based on plot version"""
     if filename.endswith(".plot_v2"):
         return V2Prover(filename)
     elif filename.endswith(".plot"):
