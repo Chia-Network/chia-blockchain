@@ -2289,7 +2289,7 @@ async def test_unconfirmed_keys_values(
             num_confirmed_blobs += confirmed
 
     async with data_store.db_wrapper.reader() as reader:
-        async with reader.execute(f"SELECT COUNT(*) FROM ids WHERE confirmed = 0") as cursor:
+        async with reader.execute("SELECT COUNT(*) FROM ids WHERE confirmed = 0") as cursor:
             row_count = await cursor.fetchone()
             assert row_count is not None
             assert row_count[0] == 2 * (num_keys - num_confirmed_blobs)
@@ -2305,7 +2305,7 @@ async def test_unconfirmed_keys_values(
     assert sum(1 for _ in keys_value_path.rglob("*") if _.is_file()) == expected_num_files
 
     async with data_store.db_wrapper.reader() as reader:
-        async with reader.execute(f"SELECT COUNT(*) FROM ids WHERE confirmed = 0") as cursor:
+        async with reader.execute("SELECT COUNT(*) FROM ids WHERE confirmed = 0") as cursor:
             row_count = await cursor.fetchone()
             assert row_count is not None
             assert row_count[0] == 0
