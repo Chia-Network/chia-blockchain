@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
+import certifi
 import importlib_resources
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -36,8 +37,7 @@ def get_chia_ca_crt_key() -> tuple[Any, Any]:
 
 
 def get_mozilla_ca_crt() -> str:
-    mozilla_path = Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
-    return str(mozilla_path)
+    return certifi.where()
 
 
 def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes, overwrite: bool = True):
