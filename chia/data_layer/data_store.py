@@ -187,7 +187,7 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE UNIQUE INDEX IF NOT EXISTS ids_confirmed_index ON ids(confirmed, store_id)
+                    CREATE INDEX IF NOT EXISTS ids_confirmed_index ON ids(confirmed, store_id)
                     """
                 )
                 await writer.execute(
