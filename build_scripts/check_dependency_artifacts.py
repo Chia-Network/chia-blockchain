@@ -13,6 +13,7 @@ excepted_packages = {
     "chialisp_loader",
     "chialisp_puzzles",
     "chia_base",
+    "keyrings.cryptfile",
 }
 
 
