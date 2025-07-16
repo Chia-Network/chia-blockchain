@@ -978,22 +978,27 @@ class WalletRpcApi:
         wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
         wallet_infos: list[WalletInfoResponse] = []
         for wallet in wallets:
+            if request.include_data:
+                data = wallet.data
+            else:
+                data = ""
+
+            if request.include_data and WalletType(wallet.type) is WalletType.CRCAT:
+                crcat_info = CRCATInfo.from_bytes(bytes.fromhex(wallet.data))
+                authorized_providers = crcat_info.authorized_providers
+                proofs_checker_flags = crcat_info.proofs_checker.flags
+            else:
+                authorized_providers = []
+                proofs_checker_flags = []
+
             wallet_infos.append(
                 WalletInfoResponse(
                     wallet.id,
                     wallet.name,
                     wallet.type,
-                    wallet.data if request.include_data else "",
-                    (
-                        CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
-                        if request.include_data and WalletType(wallet.type) is WalletType.CRCAT
-                        else []
-                    ),
-                    (
-                        CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags
-                        if request.include_data and WalletType(wallet.type) is WalletType.CRCAT
-                        else []
-                    ),
+                    data,
+                    authorized_providers,
+                    proofs_checker_flags,
                 )
             )
 
