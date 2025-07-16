@@ -37,12 +37,7 @@ class FullNodeRpcClient(RpcClient):
         return cast(dict[str, Any], response["blockchain_state"])
 
     async def get_block(self, header_hash: bytes32) -> FullBlock:
-        try:
-            response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
-        except ResponseFailureError as e:
-            if "not found" in str(e):
-                raise ValueError(f"Block {header_hash.hex()} not found") from e
-            raise e
+        response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
         return FullBlock.from_json_dict(response["block"])
 
     async def get_blocks(self, start: int, end: int, exclude_reorged: bool = False) -> list[FullBlock]:
@@ -55,7 +50,7 @@ class FullNodeRpcClient(RpcClient):
         try:
             response = await self.fetch("get_block_record_by_height", {"height": height})
         except ResponseFailureError as e:  # Block Height not found
-            if "not found" in str(e):
+            if e.response["error"] == f"Block height {height} not found in chain":
                 return None
             raise e
         return BlockRecord.from_json_dict(response["block_record"])
@@ -86,12 +81,7 @@ class FullNodeRpcClient(RpcClient):
         return cast(int, network_space_bytes_estimate["space"])
 
     async def get_coin_record_by_name(self, coin_id: bytes32) -> CoinRecord:
-        try:
-            response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
-        except ResponseFailureError as e:  # Coin ID not found
-            if "Coin record" in str(e):
-                raise ValueError(f"Coin record {coin_id.hex()} not found") from e
-            raise e
+        response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
         return CoinRecord.from_json_dict(coin_record_dict_backwards_compat(response["coin_record"]))
 
     async def get_coin_records_by_names(
@@ -195,7 +185,7 @@ class FullNodeRpcClient(RpcClient):
         try:
             response = await self.fetch("get_block_records", {"start": start, "end": end})
         except ResponseFailureError as e:  # No Peak Yet
-            if "Peak is None" in str(e):
+            if e.response["error"] == "Peak is None":
                 return []
             raise e
         if response["block_records"] is None:
@@ -248,14 +238,9 @@ class FullNodeRpcClient(RpcClient):
         tx_id: bytes32,
         include_pending: bool = False,
     ) -> dict[str, Any]:
-        try:
-            response = await self.fetch(
-                "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
-            )
-        except ResponseFailureError as e:
-            if "not in the mempool" in str(e):
-                raise ValueError(f"Tx id {tx_id.hex()} not in the mempool") from e
-            raise e
+        response = await self.fetch(
+            "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
+        )
         return cast(dict[str, Any], response["mempool_item"])
 
     async def get_mempool_items_by_coin_name(self, coin_name: bytes32) -> dict[str, Any]:
@@ -272,24 +257,14 @@ class FullNodeRpcClient(RpcClient):
         if sp_hash is not None and challenge_hash is not None:
             raise ValueError("Either sp_hash or challenge_hash must be provided, not both.")
         elif sp_hash is not None:
-            try:
-                response = await self.fetch("get_recent_signage_point_or_eos", {"sp_hash": sp_hash.hex()})
-            except ResponseFailureError as e:
-                if "Did not find sp" in str(e):
-                    raise ValueError(f"Did not find sp {sp_hash.hex()} in cache") from e
-                raise e
+            response = await self.fetch("get_recent_signage_point_or_eos", {"sp_hash": sp_hash.hex()})
             return {
                 "signage_point": SignagePoint.from_json_dict(response["signage_point"]),
                 "time_received": response["time_received"],
                 "reverted": response["reverted"],
             }
         elif challenge_hash is not None:
-            try:
-                response = await self.fetch("get_recent_signage_point_or_eos", {"challenge_hash": challenge_hash.hex()})
-            except ResponseFailureError as e:
-                if "Did not find eos" in str(e):
-                    raise ValueError(f"Did not find eos {challenge_hash.hex()} in cache") from e
-                raise e
+            response = await self.fetch("get_recent_signage_point_or_eos", {"challenge_hash": challenge_hash.hex()})
             return {
                 "eos": EndOfSubSlotBundle.from_json_dict(response["eos"]),
                 "time_received": response["time_received"],
