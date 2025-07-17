@@ -105,6 +105,15 @@ jobs:
             exclude_from:
               limited: True
               main: True
+          - name: "3.13"
+            file_name: "3.13"
+            action: "3.13"
+            apt: "3.13"
+            install_sh: "3.13"
+            matrix: "3.13"
+            exclude_from:
+              limited: True
+              main: True
         exclude:
           - arch:
               matrix: arm
