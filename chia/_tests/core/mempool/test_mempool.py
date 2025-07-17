@@ -3130,7 +3130,7 @@ def make_coin(idx: int) -> Coin:
 
 def test_dedup_by_fee() -> None:
     """
-    We pick the solution to use for dedup based on the spend with the highest
+    We pick the solution to use for dedup based on the spendbundle with the highest
     fee per cost, not based on which one would give the overall best fee per cost
     """
     mempool = construct_mempool()
@@ -3141,13 +3141,18 @@ def test_dedup_by_fee() -> None:
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
 
+    DEDUP_COIN = make_coin(0)
+    COIN_A1 = make_coin(1)
+    COIN_A2 = make_coin(2)
+    # all other coins belong to solution B, the dedup alternative to solution A
+
     # Create a spend bundle with a high fee, spending sb_A, which supports dedup
-    sb_A = make_test_spendbundle(make_coin(0))
-    sb_high_rate = make_test_spendbundle(make_coin(1), fee=10)
+    sb_A = make_test_spendbundle(DEDUP_COIN)
+    sb_high_rate = make_test_spendbundle(COIN_A1, fee=10)
     add_spend_bundles([sb_A, sb_high_rate])
 
     # Create a spend bundle, with a low fee, that spends the dedup coin using the same solution A
-    sb_low_rate = make_test_spendbundle(make_coin(2), fee=10)
+    sb_low_rate = make_test_spendbundle(COIN_A2, fee=10)
     add_spend_bundles([sb_A, sb_low_rate])
 
     # validate that dedup happens at all for sb_A
@@ -3155,12 +3160,12 @@ def test_dedup_by_fee() -> None:
     assert result is not None
     agg, _ = result
     # Make sure both items would be processed
-    assert [c.coin for c in agg.coin_spends] == [make_coin(0), make_coin(1), make_coin(2)]
+    assert [c.coin for c in agg.coin_spends] == [DEDUP_COIN, COIN_A1, COIN_A2]
 
     # Now we add a bunch of alternative spends for coin 0, with lower fees
     # Even though the total fee would be higher if we deduped on this solution,
     # we won't.
-    sb_B = make_test_spendbundle(make_coin(0), with_higher_cost=True)
+    sb_B = make_test_spendbundle(DEDUP_COIN, with_higher_cost=True)
     for i in range(3, 600):
         sb_high_rate = make_test_spendbundle(make_coin(i), fee=10)
         add_spend_bundles([sb_B, sb_high_rate])
@@ -3169,8 +3174,9 @@ def test_dedup_by_fee() -> None:
     assert result is not None
     agg, _ = result
     # We ran with solution A and missed bigger savings on solution B
+    # we've added 599 spend bundles now. 2 with solution A and 598 with solution B
     assert mempool.size() == 599
-    assert [c.coin for c in agg.coin_spends] == [make_coin(0), make_coin(1), make_coin(2)]
+    assert [c.coin for c in agg.coin_spends] == [DEDUP_COIN, COIN_A1, COIN_A2]
 
     # Now, if we add a high fee per-cost-for sb_B, it should be picked
     sb_high_rate = make_test_spendbundle(make_coin(600), fee=1_000_000_000)
@@ -3181,11 +3187,12 @@ def test_dedup_by_fee() -> None:
     agg, _ = result
     # The 3 items got skipped here
     # We ran with solution B
+    # we've added 600 spend bundles now. 2 with solution A and 599 with solution B
     assert mempool.size() == 600
     spends_in_block = {c.coin for c in agg.coin_spends}
-    assert make_coin(0) in spends_in_block
-    assert make_coin(1) not in spends_in_block
-    assert make_coin(2) not in spends_in_block
+    assert DEDUP_COIN in spends_in_block
+    assert COIN_A1 not in spends_in_block
+    assert COIN_A2 not in spends_in_block
 
     for i in range(3, 601):
         assert make_coin(i) in spends_in_block
