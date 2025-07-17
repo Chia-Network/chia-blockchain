@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,13 @@ from chiapos import DiskProver
 
 if TYPE_CHECKING:
     from chiapos import DiskProver
+
+
+class PlotVersion(IntEnum):
+    """Enum for plot format versions"""
+
+    V1 = 1
+    V2 = 2
 
 
 class ProverProtocol(ABC):
@@ -34,7 +42,7 @@ class ProverProtocol(ABC):
         """Returns the compression level"""
 
     @abstractmethod
-    def get_version(self) -> int:
+    def get_version(self) -> PlotVersion:
         """Returns the plot version"""
 
     @abstractmethod
@@ -64,7 +72,6 @@ class V2Prover(ProverProtocol):
 
     def __init__(self, filename: str):
         self._filename = filename
-        # TODO: todo_v2_plots Implement plot file parsing and validation
 
     def get_filename(self) -> Path:
         return Path(self._filename)
@@ -74,40 +81,39 @@ class V2Prover(ProverProtocol):
 
     def get_size(self) -> uint8:
         # TODO: todo_v2_plots get k size from plot
-        return uint8(32)  # Stub value
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_memo(self) -> bytes:
         # TODO: todo_v2_plots
-        return b""  # Stub value
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_compression_level(self) -> uint8:
-        # TODO: Extract compression level from V2 plot file
-        return uint8(0)  # Stub value
+        # TODO: todo_v2_plots implement compression level retrieval
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_version(self) -> int:
-        return 2
+    def get_version(self) -> PlotVersion:
+        return PlotVersion.V2
 
     def __bytes__(self) -> bytes:
         # TODO: todo_v2_plots Implement prover serialization for caching
-        # For now, just serialize the filename as a placeholder
-        return self._filename.encode("utf-8")
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_id(self) -> bytes32:
         # TODO: Extract plot ID from V2 plot file
-        return bytes32(b"")  # Stub value
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_qualities_for_challenge(self, challenge: bytes) -> list[bytes32]:
+    def get_qualities_for_challenge(self, _challenge: bytes) -> list[bytes32]:
         # TODO: todo_v2_plots Implement plot quality lookup
-        return []  # Stub value
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
+    def get_full_proof(self, _challenge: bytes, _index: int, _parallel_read: bool = True) -> bytes:
         # TODO: todo_v2_plots Implement plot proof generation
-        return b""
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> V2Prover:
-        filename = data.decode("utf-8")
-        return cls(filename)
+    def from_bytes(cls, _data: bytes) -> V2Prover:
+        # TODO: todo_v2_plots Implement prover deserialization from cache
+        raise NotImplementedError("V2 plot format is not yet implemented")
 
 
 class V1Prover(ProverProtocol):
@@ -131,8 +137,8 @@ class V1Prover(ProverProtocol):
     def get_compression_level(self) -> uint8:
         return uint8(self._disk_prover.get_compression_level())
 
-    def get_version(self) -> int:
-        return 1
+    def get_version(self) -> PlotVersion:
+        return PlotVersion.V1
 
     def __bytes__(self) -> bytes:
         return bytes(self._disk_prover)
