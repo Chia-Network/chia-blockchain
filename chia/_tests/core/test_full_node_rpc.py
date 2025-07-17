@@ -152,6 +152,7 @@ async def test1(
         assert len(await client.get_all_mempool_tx_ids()) == 0
         with pytest.raises(ValueError, match="not in the mempool"):
             await client.get_mempool_item_by_tx_id(spend_bundle.name())
+        with pytest.raises(ValueError, match="not in the mempool"):
             await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)
 
         await client.push_tx(spend_bundle)
@@ -463,6 +464,7 @@ async def test_signage_points(
         # Not found
         with pytest.raises(ValueError, match="in cache"):
             await client.get_recent_signage_point_or_eos(std_hash(b"0"), None)
+        with pytest.raises(ValueError, match="in cache"):
             await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
         blocks = bt.get_consecutive_blocks(5)
         for block in blocks:
