@@ -13,8 +13,7 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSe
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.generator_block_info import GeneratorBlockInfo
-from chia.full_node.full_block_utils import block_info_from_block, generator_from_block
+from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
