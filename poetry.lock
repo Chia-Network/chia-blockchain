@@ -190,7 +190,7 @@ description = "Python graph (network) package"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "python_version <= \"3.12\" and extra == \"dev\""
+markers = "python_version < \"3.13\" and extra == \"dev\""
 files = [
     {file = "altgraph-0.17.4-py2.py3-none-any.whl", hash = "sha256:642743b4750de17e655e6711601b077bc6598dbfa3ba5fa2b2a35ce12b508dff"},
     {file = "altgraph-0.17.4.tar.gz", hash = "sha256:1b5afbb98f6c4dcadb2e2ae6ab9fa994bbb8c1d75f4fa96d340f9437ae454406"},
@@ -1859,7 +1859,7 @@ description = "Mach-O header analysis and editing"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"darwin\" and python_version <= \"3.12\""
+markers = "python_version < \"3.13\" and extra == \"dev\" and sys_platform == \"darwin\""
 files = [
     {file = "macholib-1.16.3-py2.py3-none-any.whl", hash = "sha256:0e315d7583d38b8c77e815b1ecbdbf504a8258d8b3e17b61165c6feb60d18f2c"},
     {file = "macholib-1.16.3.tar.gz", hash = "sha256:07ae9e15e8e4cd9a788013d81f5908b3609aa76f9b1421bae9c4d7606ec86a30"},
@@ -2237,7 +2237,7 @@ description = "Python package for creating and manipulating graphs and networks"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "python_version >= \"3.10\" and extra == \"dev\" and python_version < \"3.12\""
+markers = "python_version >= \"3.10\" and extra == \"dev\""
 files = [
     {file = "networkx-3.4.2-py3-none-any.whl", hash = "sha256:df5d4365b724cf81b8c6a7312509d0c22386097011ad1abe274afd5e9d3bbc5f"},
     {file = "networkx-3.4.2.tar.gz", hash = "sha256:307c3669428c5362aab27c8a1260aa8f47c4e91d3891f48be0141738d8d053e1"},
@@ -2250,28 +2250,6 @@ doc = ["intersphinx-registry", "myst-nb (>=1.1)", "numpydoc (>=1.8.0)", "pillow 
 example = ["cairocffi (>=1.7)", "contextily (>=1.6)", "igraph (>=0.11)", "momepy (>=0.7.2)", "osmnx (>=1.9)", "scikit-learn (>=1.5)", "seaborn (>=0.13)"]
 extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.10)"]
 test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
-
-[[package]]
-name = "networkx"
-version = "3.5"
-description = "Python package for creating and manipulating graphs and networks"
-optional = true
-python-versions = ">=3.11"
-groups = ["main"]
-markers = "python_version >= \"3.12\" and extra == \"dev\""
-files = [
-    {file = "networkx-3.5-py3-none-any.whl", hash = "sha256:0030d386a9a06dee3565298b4a734b68589749a544acbb6c412dc9e2489ec6ec"},
-    {file = "networkx-3.5.tar.gz", hash = "sha256:d4c6f9cf81f52d69230866796b82afbccdec3db7ae4fbd1b65ea750feed50037"},
-]
-
-[package.extras]
-default = ["matplotlib (>=3.8)", "numpy (>=1.25)", "pandas (>=2.0)", "scipy (>=1.11.2)"]
-developer = ["mypy (>=1.15)", "pre-commit (>=4.1)"]
-doc = ["intersphinx-registry", "myst-nb (>=1.1)", "numpydoc (>=1.8.0)", "pillow (>=10)", "pydata-sphinx-theme (>=0.16)", "sphinx (>=8.0)", "sphinx-gallery (>=0.18)", "texext (>=0.6.7)"]
-example = ["cairocffi (>=1.7)", "contextily (>=1.6)", "igraph (>=0.11)", "momepy (>=0.7.2)", "osmnx (>=2.0.0)", "scikit-learn (>=1.5)", "seaborn (>=0.13)"]
-extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.10)"]
-test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "pytest-xdist (>=3.0)"]
-test-extras = ["pytest-mpl", "pytest-randomly"]
 
 [[package]]
 name = "nodeenv"
@@ -2308,7 +2286,7 @@ description = "Python PE parsing module"
 optional = true
 python-versions = ">=3.6.0"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"win32\" and python_version <= \"3.12\""
+markers = "python_version < \"3.13\" and extra == \"dev\" and sys_platform == \"win32\""
 files = [
     {file = "pefile-2023.2.7-py3-none-any.whl", hash = "sha256:da185cd2af68c08a6cd4481f7325ed600a88f6a813bad9dea07ab3ef73d8d8d6"},
     {file = "pefile-2023.2.7.tar.gz", hash = "sha256:82e6114004b3d6911c77c3953e3838654b04511b8b66e8583db70c65998017dc"},
@@ -2646,7 +2624,7 @@ description = "PyInstaller bundles a Python application and all its dependencies
 optional = true
 python-versions = "<3.14,>=3.8"
 groups = ["main"]
-markers = "python_version <= \"3.12\" and extra == \"dev\""
+markers = "python_version < \"3.13\" and extra == \"dev\""
 files = [
     {file = "pyinstaller-6.14.1-py3-none-macosx_10_13_universal2.whl", hash = "sha256:da559cfe4f7a20a7ebdafdf12ea2a03ea94d3caa49736ef53ee2c155d78422c9"},
     {file = "pyinstaller-6.14.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:f040d1e3d42af3730104078d10d4a8ca3350bd1c78de48f12e1b26f761e0cbc3"},
@@ -2683,7 +2661,7 @@ description = "Community maintained hooks for PyInstaller"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "python_version <= \"3.12\" and extra == \"dev\""
+markers = "python_version < \"3.13\" and extra == \"dev\""
 files = [
     {file = "pyinstaller_hooks_contrib-2025.5-py3-none-any.whl", hash = "sha256:ebfae1ba341cb0002fb2770fad0edf2b3e913c2728d92df7ad562260988ca373"},
     {file = "pyinstaller_hooks_contrib-2025.5.tar.gz", hash = "sha256:707386770b8fe066c04aad18a71bc483c7b25e18b4750a756999f7da2ab31982"},
@@ -3640,53 +3618,11 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 
 [[package]]
 name = "zstd"
-version = "1.5.5.1"
-description = "ZSTD Bindings for Python"
-optional = false
-python-versions = "*"
-groups = ["main"]
-markers = "python_version == \"3.12\""
-files = [
-    {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b5cd20afab8d13c52d2b2219bf18cc765eae87b8219343bce20647007890adab"},
-    {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:0f467ab9b57ab8b4b874e6974d38b802f20406803bb7ec9308df923553cd48f7"},
-    {file = "zstd-1.5.5.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4ca7df4319ef56b50b441ee6f6427e94672db811ad890bbb487d42bb0a6eebeb"},
-    {file = "zstd-1.5.5.1-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:06d91d45b912417e83793a78a3f6668be631a1744a7841ecde4dbfeee309f5ca"},
-    {file = "zstd-1.5.5.1-cp310-cp310-win_amd64.whl", hash = "sha256:408d3f56bbf0f091a2bab33a3dee62ac9bafe94bb96940b5e4611e43dcf0ee68"},
-    {file = "zstd-1.5.5.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:23f6fb9a631f7e7934cccdfbb69e06a47e1a5e64d69b09a7a2a5cf6e1db5014d"},
-    {file = "zstd-1.5.5.1-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:02ecf7d9c41ae9a5685a7fdbf2aebbfb185125c07622819512fed41459233d51"},
-    {file = "zstd-1.5.5.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d3d13647ff05da2f8a9c1067b6e4182102fc4b6547c49ecdd3031e7ae2cadc1a"},
-    {file = "zstd-1.5.5.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b0f0c81d4241226eab831a500120ddaf9a35dd59593eeb48ed7879e2c722c24c"},
-    {file = "zstd-1.5.5.1-cp311-cp311-win_amd64.whl", hash = "sha256:62d2ab79a32bb2d09c74e550636cf4639c1ff3760625f03dccd30e2606b24e66"},
-    {file = "zstd-1.5.5.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ec16bc70e3db77a88129c001fb62ce0956a1a3321e0ea4ee389c78d7f616ac50"},
-    {file = "zstd-1.5.5.1-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:b8e7f5ee15e7d5d9a5deebc49f62316c901000d8485e68c5f5d602312bfba9ae"},
-    {file = "zstd-1.5.5.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:55bcbcca3a342e8298fd23e58f300b13a33e65667e837cb34dd16c8126cdf77a"},
-    {file = "zstd-1.5.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:95c3f06af07fc8976114bb233c426c499b3ac219a6545d163b3c1a4989c40288"},
-    {file = "zstd-1.5.5.1-cp312-cp312-win_amd64.whl", hash = "sha256:ab96e69cd4a70c5a4d3c613e85d6492817c35a9ba3921ee86f9d26a788c1522b"},
-    {file = "zstd-1.5.5.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:1b111beaf6a4d98b6382e0891287a0d61ae44c3ec819b37f2256a482cc2ccc08"},
-    {file = "zstd-1.5.5.1-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:4a434d83bcfa8a0d843451bc073fe60bae9f710dce796c9dba716c66df49c311"},
-    {file = "zstd-1.5.5.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cccbafaeda62b98f3d3c70b5e686c6c539c0ea76cab88a9817f1cf3842d4272d"},
-    {file = "zstd-1.5.5.1-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:59afd7c07ff24dfde876fed3cce5dee64d246e54b394ca6c698b2ec15b0f2454"},
-    {file = "zstd-1.5.5.1-cp38-cp38-win_amd64.whl", hash = "sha256:eb17b3401e3fa2c16ecfee4b00cca82fbc71ffd6c64c97619605b2779bc7f5d0"},
-    {file = "zstd-1.5.5.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:8612bb288facb0e24d171f7010f2ea2159d8bd7d8243667f707994f398b6d26d"},
-    {file = "zstd-1.5.5.1-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:8cee6c496fe49a27f4a641c75814681ee932201680eb4b07c88afde1b730b633"},
-    {file = "zstd-1.5.5.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b629e950bd0bcd169149af8c9c312d8091a922c07adeef0cd6e9fb06dc11216a"},
-    {file = "zstd-1.5.5.1-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:86a968e443d735ff4716c18fda91b88d30fee7419c381d26ab2f92e779e69c22"},
-    {file = "zstd-1.5.5.1-cp39-cp39-win_amd64.whl", hash = "sha256:7e4a460b169110b16d39eb05249d36c9b09c9d1b4831e72ead13a484b5404029"},
-]
-
-[package.source]
-type = "legacy"
-url = "https://pypi.chia.net/simple"
-reference = "chia"
-
-[[package]]
-name = "zstd"
 version = "1.5.7.2"
 description = "ZSTD Bindings for Python"
 optional = false
 python-versions = "*"
 groups = ["main"]
-markers = "python_version < \"3.12\""
 files = [
     {file = "zstd-1.5.7.2-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:e17104d0e88367a7571dde4286e233126c8551691ceff11f9ae2e3a3ac1bb483"},
     {file = "zstd-1.5.7.2-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:d6ee5dfada4c8fa32f43cc092fcf7d8482da6ad242c22fdf780f7eebd0febcc7"},
@@ -3824,4 +3760,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4"
-content-hash = "a0b086bb169964bc3c677ffeceb8d2d8a3e5c13d0eb245f685ea49538cab48a5"
+content-hash = "6ed23c4db94d16c481c923401fd6077db3338a02971ca328e4cb0ee5b8503708"
