@@ -55,7 +55,6 @@ class CacheEntry:
 
     @classmethod
     def from_prover(cls, prover: ProverProtocol) -> CacheEntry:
-        """Create CacheEntry from prover"""
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,

@@ -102,16 +102,16 @@ class V2Prover(ProverProtocol):
         # TODO: Extract plot ID from V2 plot file
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_qualities_for_challenge(self, _challenge: bytes) -> list[bytes32]:
+    def get_qualities_for_challenge(self, challenge: bytes) -> list[bytes32]:
         # TODO: todo_v2_plots Implement plot quality lookup
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_full_proof(self, _challenge: bytes, _index: int, _parallel_read: bool = True) -> bytes:
+    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
         # TODO: todo_v2_plots Implement plot proof generation
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     @classmethod
-    def from_bytes(cls, _data: bytes) -> V2Prover:
+    def from_bytes(cls, data: bytes) -> V2Prover:
         # TODO: todo_v2_plots Implement prover deserialization from cache
         raise NotImplementedError("V2 plot format is not yet implemented")
 

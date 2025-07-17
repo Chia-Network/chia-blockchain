@@ -115,7 +115,7 @@ class PlotRefreshTester:
                     for value in actual_value:
                         if type(value) is PlotInfo:
                             for plot_info in expected_list:
-                                if plot_info.prover.get_filename() == value.prover.get_filepath():
+                                if plot_info.prover.get_filepath() == value.prover.get_filepath():
                                     values_found += 1
                                     continue
                         else:
