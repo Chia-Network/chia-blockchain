@@ -97,7 +97,7 @@ class HarvesterAPI:
         loop = asyncio.get_running_loop()
 
         def blocking_lookup(filename: Path, plot_info: PlotInfo) -> list[tuple[bytes32, ProofOfSpace]]:
-            # Uses the DiskProver object to lookup qualities. This is a blocking call,
+            # Uses the Prover object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
                 plot_id = plot_info.prover.get_id()
@@ -218,7 +218,7 @@ class HarvesterAPI:
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
         ) -> tuple[Path, list[harvester_protocol.NewProofOfSpace]]:
-            # Executes a DiskProverLookup in a thread pool, and returns responses
+            # Executes a ProverLookup in a thread pool, and returns responses
             all_responses: list[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._shut_down:
                 return filename, []
