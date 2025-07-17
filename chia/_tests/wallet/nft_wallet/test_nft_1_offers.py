@@ -2066,7 +2066,8 @@ async def test_complex_nft_offer(
         + taker_royalty_summary[nft_to_offer_asset_id_taker_2][0]["amount"]
     )
 
-    xch_coins = int(XCH_REQUESTED / 1_750_000_000_000) + 2
+    # in the zero royalty case, exact change ends up being selected which complicates things a bit
+    xch_coins = int(XCH_REQUESTED / 1_750_000_000_000) + 2 - (1 if royalty_basis_pts_maker == 0 else 0)
     fee_coins = int(FEE / 1_750_000_000_000) + 1 if FEE > 1_750_000_000_000 else 1
     await wallet_environments.process_pending_states(
         [
@@ -2127,7 +2128,7 @@ async def test_complex_nft_offer(
                         "unconfirmed_wallet_balance": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
                         "<=#spendable_balance": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
                         "<=#max_send_amount": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
-                        ">=#pending_change": 1,
+                        ">=#pending_change": 0,
                         "pending_coin_removal_count": xch_coins + fee_coins,
                     },
                     "cat_taker": {
@@ -2149,9 +2150,9 @@ async def test_complex_nft_offer(
                 post_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": -XCH_REQUESTED - maker_xch_royalties_expected - FEE,
-                        ">=#spendable_balance": 1,
-                        ">=#max_send_amount": 1,
-                        "<=#pending_change": -1,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
                         "pending_coin_removal_count": -fee_coins - xch_coins,
                         # Parametrizations make unspent_coin_count too complicated
                         "set_remainder": True,
