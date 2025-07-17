@@ -193,7 +193,7 @@ class Environment:
             assert path in delta.valid.additions
             plot = harvester.plot_manager.plots.get(Path(path), None)
             assert plot is not None
-            assert plot.prover.get_filename_str() == delta.valid.additions[path].filename
+            assert plot.prover.get_filename() == delta.valid.additions[path].filename
             assert plot.prover.get_size() == delta.valid.additions[path].size
             assert plot.prover.get_id() == delta.valid.additions[path].plot_id
             assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
@@ -254,7 +254,7 @@ class Environment:
             assert expected.duplicates_delta.empty()
             for path, plot_info in plot_manager.plots.items():
                 assert str(path) in receiver.plots()
-                assert plot_info.prover.get_filename_str() == receiver.plots()[str(path)].filename
+                assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 assert plot_info.prover.get_size() == receiver.plots()[str(path)].size
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
                 assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level

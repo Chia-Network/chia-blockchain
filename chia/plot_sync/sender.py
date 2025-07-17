@@ -39,7 +39,7 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     for plot_info in plot_infos:
         converted.append(
             Plot(
-                filename=plot_info.prover.get_filename_str(),
+                filename=plot_info.prover.get_filename(),
                 size=plot_info.prover.get_size(),
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,

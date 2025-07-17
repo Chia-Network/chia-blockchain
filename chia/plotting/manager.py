@@ -386,10 +386,10 @@ class PlotManager:
                 with self.plot_filename_paths_lock:
                     paths: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
                     if paths is None:
-                        paths = (str(Path(cache_entry.prover.get_filename()).parent), set())
+                        paths = (str(Path(cache_entry.prover.get_filepath()).parent), set())
                         self.plot_filename_paths[file_path.name] = paths
                     else:
-                        paths[1].add(str(Path(cache_entry.prover.get_filename()).parent))
+                        paths[1].add(str(Path(cache_entry.prover.get_filepath()).parent))
                         log.warning(f"Have multiple copies of the plot {file_path.name} in {[paths[0], *paths[1]]}.")
                         return None
 
@@ -423,7 +423,7 @@ class PlotManager:
             plots_refreshed: dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:
-                    plots_refreshed[Path(new_plot.prover.get_filename())] = new_plot
+                    plots_refreshed[Path(new_plot.prover.get_filepath())] = new_plot
             self.plots.update(plots_refreshed)
 
         result.duration = time.time() - start_time

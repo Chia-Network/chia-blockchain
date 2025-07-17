@@ -115,7 +115,7 @@ class PlotRefreshTester:
                     for value in actual_value:
                         if type(value) is PlotInfo:
                             for plot_info in expected_list:
-                                if plot_info.prover.get_filename() == value.prover.get_filename():
+                                if plot_info.prover.get_filename() == value.prover.get_filepath():
                                     values_found += 1
                                     continue
                         else:
@@ -507,7 +507,7 @@ async def test_plot_info_caching(environment, bt):
     await refresh_tester.run(expected_result)
     for path, plot_info in env.refresh_tester.plot_manager.plots.items():
         assert path in plot_manager.plots
-        assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
+        assert plot_manager.plots[path].prover.get_filepath() == plot_info.prover.get_filepath()
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
         assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
         assert plot_manager.plots[path].prover.get_size() == plot_info.prover.get_size()

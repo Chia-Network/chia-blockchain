@@ -22,11 +22,11 @@ class PlotVersion(IntEnum):
 
 class ProverProtocol(ABC):
     @abstractmethod
-    def get_filename(self) -> Path:
+    def get_filepath(self) -> Path:
         """Returns the filename for the plot"""
 
     @abstractmethod
-    def get_filename_str(self) -> str:
+    def get_filename(self) -> str:
         """Returns the filename string for the plot"""
 
     @abstractmethod
@@ -73,10 +73,10 @@ class V2Prover(ProverProtocol):
     def __init__(self, filename: str):
         self._filename = filename
 
-    def get_filename(self) -> Path:
+    def get_filepath(self) -> Path:
         return Path(self._filename)
 
-    def get_filename_str(self) -> str:
+    def get_filename(self) -> str:
         return str(self._filename)
 
     def get_size(self) -> uint8:
@@ -122,10 +122,10 @@ class V1Prover(ProverProtocol):
     def __init__(self, disk_prover: DiskProver) -> None:
         self._disk_prover = disk_prover
 
-    def get_filename(self) -> Path:
+    def get_filepath(self) -> Path:
         return Path(self._disk_prover.get_filename())
 
-    def get_filename_str(self) -> str:
+    def get_filename(self) -> str:
         return str(self._disk_prover.get_filename())
 
     def get_size(self) -> uint8:
