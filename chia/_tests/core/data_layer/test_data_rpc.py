@@ -3712,7 +3712,6 @@ async def test_multistore_update(
             await data_rpc_api.multistore_batch_update({"store_updates": store_updates})
 
 
-@pytest.mark.skip
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_unsubmitted_batch_db_migration(
@@ -3804,7 +3803,9 @@ async def test_unsubmitted_batch_db_migration(
         update_tx_rec1 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         keys = await data_rpc_api.get_keys({"id": store_id.hex()})
-        assert keys == {"keys": ["0x30303031", "0x30303030"]}
+        # order agnostic comparison of the list
+        keys["keys"] = set(keys["keys"])
+        assert keys == {"keys": {"0x30303031", "0x30303030"}}
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
