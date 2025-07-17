@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from chia_rs.sized_bytes import bytes32
@@ -21,10 +20,6 @@ class PlotVersion(IntEnum):
 
 
 class ProverProtocol(ABC):
-    @abstractmethod
-    def get_filepath(self) -> Path:
-        """Returns the filename for the plot"""
-
     @abstractmethod
     def get_filename(self) -> str:
         """Returns the filename string for the plot"""
@@ -73,9 +68,6 @@ class V2Prover(ProverProtocol):
     def __init__(self, filename: str):
         self._filename = filename
 
-    def get_filepath(self) -> Path:
-        return Path(self._filename)
-
     def get_filename(self) -> str:
         return str(self._filename)
 
@@ -121,9 +113,6 @@ class V1Prover(ProverProtocol):
 
     def __init__(self, disk_prover: DiskProver) -> None:
         self._disk_prover = disk_prover
-
-    def get_filepath(self) -> Path:
-        return Path(self._disk_prover.get_filename())
 
     def get_filename(self) -> str:
         return str(self._disk_prover.get_filename())

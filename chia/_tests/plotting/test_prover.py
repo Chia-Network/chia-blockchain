@@ -12,7 +12,6 @@ class TestProver:
     def test_v2_prover_init_with_nonexistent_file(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
         assert prover.get_version() == PlotVersion.V2
-        assert prover.get_filepath() == Path("/nonexistent/path/test.plot2")
         assert prover.get_filename() == "/nonexistent/path/test.plot2"
 
     def test_v2_prover_get_size_raises_error(self) -> None:
