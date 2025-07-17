@@ -65,7 +65,7 @@ class ExpectedResult:
     def add_valid(self, list_plots: list[MockPlotInfo]) -> None:
         def create_mock_plot(info: MockPlotInfo) -> Plot:
             return Plot(
-                info.prover.get_filename_str(),
+                info.prover.get_filename(),
                 uint8(0),
                 bytes32.zeros,
                 None,
@@ -77,7 +77,7 @@ class ExpectedResult:
             )
 
         self.valid_count += len(list_plots)
-        self.valid_delta.additions.update({x.prover.get_filename_str(): create_mock_plot(x) for x in list_plots})
+        self.valid_delta.additions.update({x.prover.get_filename(): create_mock_plot(x) for x in list_plots})
 
     def remove_valid(self, list_paths: list[Path]) -> None:
         self.valid_count -= len(list_paths)
