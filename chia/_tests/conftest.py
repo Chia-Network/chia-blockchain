@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import cProfile
 import datetime
 import functools
 import json
@@ -10,10 +9,7 @@ import logging
 import math
 import multiprocessing
 import os
-import pathlib
 import random
-import subprocess
-import sys
 import sysconfig
 import tempfile
 from collections.abc import AsyncIterator, Iterator
@@ -188,23 +184,6 @@ def task_instrumentation_fixture(node_name_for_file: str, test_time_for_file: st
     yield
     stop_task_instrumentation(target_dir=target_directory)
     task_instrumentation_main(args=[target_directory])
-
-
-@pytest.fixture(name="c_profile")
-def c_profile_fixture(node_name_for_file: str, test_time_for_file: str) -> Iterator[cProfile.Profile]:
-    profile_path = pathlib.Path(f"cProfile-{node_name_for_file}-{test_time_for_file}")
-
-    profile = cProfile.Profile()
-
-    yield profile
-
-    profile_path.mkdir(exist_ok=True, parents=True)
-    stat_path = profile_path.joinpath("log.profile")
-    profile.dump_stats(stat_path)
-    dot_path = profile_path.joinpath("log.dot")
-    subprocess.run([sys.executable, "-m", "gprof2dot", "-f", "pstats", stat_path, "-o", dot_path], check=False)
-    png_path = profile_path.joinpath("log.png")
-    subprocess.run(["dot", "-Tpng", "-o", png_path, dot_path], check=False)
 
 
 @pytest.fixture(scope="session")

@@ -1320,7 +1320,6 @@ async def write_tree_to_file_old_format(
     raw_index = hash_to_index[node_hash]
     raw_node = merkle_blob.get_raw_node(raw_index)
 
-    to_write = b""
     if isinstance(raw_node, chia_rs.datalayer.InternalNode):
         left_hash = merkle_blob.get_hash_at_index(raw_node.left)
         right_hash = merkle_blob.get_hash_at_index(raw_node.right)
@@ -2016,7 +2015,6 @@ async def test_insert_key_already_present(data_store: DataStore, store_id: bytes
     await data_store.insert(
         key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.COMMITTED
     )
-    # TODO: this exception should just be more specific to avoid the case sensitivity concerns
     with pytest.raises(KeyAlreadyPresentError):
         await data_store.insert(key=key, value=value, store_id=store_id, reference_node_hash=None, side=None)
 
@@ -2032,7 +2030,6 @@ async def test_batch_insert_key_already_present(
     value = b"bar"
     changelist = [{"action": "insert", "key": key, "value": value}]
     await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
-    # TODO: this exception should just be more specific to avoid the case sensitivity concerns
     with pytest.raises(KeyAlreadyPresentError):
         await data_store.insert_batch(store_id, changelist, Status.COMMITTED, use_batch_autoinsert)
 
