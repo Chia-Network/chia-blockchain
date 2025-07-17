@@ -45,6 +45,9 @@ class MockDiskProver:
     def get_filename(self) -> Path:
         return Path(self.filename)
 
+    def get_filename_str(self) -> str:
+        return self.filename
+
 
 @dataclass
 class MockPlotInfo:
