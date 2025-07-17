@@ -7,8 +7,8 @@ from pathlib import Path
 
 from chia_rs import ConsensusConstants
 
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.util.db_wrapper import DBWrapper2

@@ -54,6 +54,7 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
+    GetWallets,
     NFTAddURI,
     NFTCalculateRoyalties,
     NFTCalculateRoyaltiesResponse,
@@ -132,7 +133,7 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
         WalletType.VC,
     }:
         mojo_per_unit = units["chia"]
-    elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
+    elif wallet_type in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
         mojo_per_unit = units["cat"]
     elif wallet_type in {WalletType.NFT, WalletType.DECENTRALIZED_ID}:
         mojo_per_unit = units["mojo"]
@@ -143,10 +144,10 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
 
 
 async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> WalletType:
-    summaries_response = await wallet_client.get_wallets()
-    for summary in summaries_response:
-        summary_id: int = summary["id"]
-        summary_type: int = summary["type"]
+    summaries_response = await wallet_client.get_wallets(GetWallets())
+    for summary in summaries_response.wallets:
+        summary_id: int = summary.id
+        summary_type: int = summary.type
         if wallet_id == summary_id:
             return WalletType(summary_type)
 
@@ -166,7 +167,7 @@ async def get_unit_name_for_wallet_id(
         WalletType.VC,
     }:
         name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
-    elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
+    elif wallet_type in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
         name = await wallet_client.get_cat_name(wallet_id=wallet_id)
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
@@ -358,7 +359,7 @@ async def send(
                 push=push,
                 timelock_info=condition_valid_times,
             )
-        elif typ in {WalletType.CAT, WalletType.CRCAT}:
+        elif typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             print("Submitting transaction...")
             res = await wallet_client.cat_spend(
                 wallet_id,
@@ -891,7 +892,7 @@ async def cancel_offer(
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> tuple[str, int]:
-    if typ in {WalletType.CAT, WalletType.CRCAT}:
+    if typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
         return "", units["cat"]
     if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG}:
         return address_prefix, units["chia"]
@@ -913,7 +914,7 @@ async def print_balances(
     root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        summaries_response = await wallet_client.get_wallets(wallet_type)
+        summaries_response = await wallet_client.get_wallets(GetWallets(uint16.construct_optional(wallet_type)))
         address_prefix = selected_network_address_prefix(config)
 
         sync_response = await wallet_client.get_sync_status()
@@ -927,19 +928,19 @@ async def print_balances(
             print("Sync status: Not synced")
 
         if not sync_response.syncing and sync_response.synced:
-            if len(summaries_response) == 0:
+            if len(summaries_response.wallets) == 0:
                 type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
                 print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")
             else:
                 print(f"Balances, fingerprint: {fingerprint}")
-            for summary in summaries_response:
+            for summary in summaries_response.wallets:
                 indent: str = "   "
                 # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
                 # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
-                asset_id = summary["data"][:64]
-                wallet_id = summary["id"]
+                asset_id = summary.data[:64]
+                wallet_id = summary.id
                 balances = await wallet_client.get_wallet_balance(wallet_id)
-                typ = WalletType(int(summary["type"]))
+                typ = WalletType(int(summary.type))
                 address_prefix, scale = wallet_coin_unit(typ, address_prefix)
                 total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
                 unconfirmed_wallet_balance: str = print_balance(
@@ -951,7 +952,7 @@ async def print_balances(
                 if typ == WalletType.CRCAT:
                     ljust = 36
                 print()
-                print(f"{summary['name']}:")
+                print(f"{summary.name}:")
                 print(f"{indent}{'-Total Balance:'.ljust(ljust)} {total_balance}")
                 if typ == WalletType.CRCAT:
                     print(
@@ -1105,10 +1106,7 @@ async def did_message_spend(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_message_spend(
-                DIDMessageSpend(
-                    wallet_id=uint32(did_wallet_id),
-                    push=push,
-                ),
+                DIDMessageSpend(wallet_id=uint32(did_wallet_id), push=push),
                 CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
                 extra_conditions=(
                     *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in coin_announcements),

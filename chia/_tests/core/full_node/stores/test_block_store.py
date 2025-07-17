@@ -14,15 +14,14 @@ from _pytest.fixtures import SubRequest
 from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
-from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_block_utils import GeneratorBlockInfo
@@ -30,6 +29,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFProof
+from chia.util.casts import int_to_bytes
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.task_referencer import create_referenced_task
 

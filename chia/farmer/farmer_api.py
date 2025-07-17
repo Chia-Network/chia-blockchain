@@ -38,7 +38,6 @@ from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     get_plot_id,
@@ -536,7 +535,7 @@ class FarmerAPI:
                 new_signage_point.signage_point_index,
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
-                uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
+                new_signage_point.peak_height,
                 new_signage_point.last_tx_height,
             )
 

@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint8, uint16, uint64
 from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
@@ -31,6 +31,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    GetWallets,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -38,6 +39,7 @@ from chia.wallet.wallet_request_types import (
     VCMint,
     VCRevoke,
     VCSpend,
+    WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -363,14 +365,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         wallet_node_0.wallet_state_manager.main_wallet,
         (await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT))[0],
     )
-    assert {
-        "data": bytes(cr_cat_wallet_0.info).hex(),
-        "id": env_0.dealias_wallet_id("crcat"),
-        "name": cr_cat_wallet_0.get_name(),
-        "type": cr_cat_wallet_0.type(),
-        "authorized_providers": [p.hex() for p in cr_cat_wallet_0.info.authorized_providers],
-        "flags_needed": cr_cat_wallet_0.info.proofs_checker.flags,
-    } == (await client_0.get_wallets(wallet_type=cr_cat_wallet_0.type()))[0]
+    assert (
+        WalletInfoResponse(
+            data=bytes(cr_cat_wallet_0.info).hex(),
+            id=env_0.dealias_wallet_id("crcat"),
+            name=cr_cat_wallet_0.get_name(),
+            type=uint8(cr_cat_wallet_0.type()),
+            authorized_providers=cr_cat_wallet_0.info.authorized_providers,
+            flags_needed=cr_cat_wallet_0.info.proofs_checker.flags,
+        )
+        == (await client_0.get_wallets(GetWallets(type=uint16(cr_cat_wallet_0.type())))).wallets[0]
+    )
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)

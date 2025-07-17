@@ -33,7 +33,7 @@ class OwnershipOuterPuzzle:
     _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
     def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
@@ -68,13 +68,15 @@ class OwnershipOuterPuzzle:
             transfer_program = self._construct(transfer_program_info, inner_puzzle)
         return puzzle_for_ownership_layer(constructor["owner"], transfer_program, inner_puzzle)
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
+    def get_inner_puzzle(
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+    ) -> Optional[Program]:
         matched, curried_args = match_ownership_layer_puzzle(puzzle_reveal)
         if matched:
             _, _, _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle))
+                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
                 return deep_inner_puzzle
             else:
                 return inner_puzzle

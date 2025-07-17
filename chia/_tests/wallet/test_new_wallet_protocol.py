@@ -278,7 +278,7 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
         coinbase=False,
         timestamp=uint64(1),
     )
-    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, [*coin_records, ignored_coin])
+    await add_coin_records_to_db(simulator.full_node.coin_store, [*coin_records, ignored_coin])
 
     # Request no coin states
     resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState([], None, genesis, False), peer)
@@ -378,7 +378,7 @@ async def test_request_coin_state_limit(one_node: OneNode, self_hostname: str) -
             )
             coin_records[coin_record.coin.name()] = coin_record
 
-    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, list(coin_records.values()))
+    await add_coin_records_to_db(simulator.full_node.coin_store, list(coin_records.values()))
 
     # Fetch the coin records using the wallet protocol,
     # with more coin ids than the limit of 100,000, but only after height 10000.
@@ -441,7 +441,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
         timestamp=uint64(1),
     )
 
-    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, [*coin_records, ignored_coin])
+    await add_coin_records_to_db(simulator.full_node.coin_store, [*coin_records, ignored_coin])
 
     # We already test permutations of CoinStateFilters in the CoinStore tests
     # So it's redundant to do so here
@@ -570,7 +570,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
             )
             coin_records[coin_record.coin.name()] = coin_record
 
-    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, list(coin_records.values()))
+    await add_coin_records_to_db(simulator.full_node.coin_store, list(coin_records.values()))
 
     # Fetch the coin records using the wallet protocol,
     # only after height 10000, so that the limit of 100000 isn't exceeded
@@ -724,7 +724,7 @@ async def test_sync_puzzle_state(
             if coin_ph != puzzle_hash:
                 hints.append((coin.name(), puzzle_hash))
 
-    await add_coin_records_to_db(simulator.full_node.coin_store.db_wrapper, list(coin_records.values()))
+    await add_coin_records_to_db(simulator.full_node.coin_store, list(coin_records.values()))
     await simulator.full_node.hint_store.add_hints(hints)
 
     # Farm peak
@@ -828,7 +828,7 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     reward_1 = Coin(std_hash(b"reward 1"), std_hash(b"reward puzzle hash"), uint64(1000))
     reward_2 = Coin(std_hash(b"reward 2"), std_hash(b"reward puzzle hash"), uint64(2000))
     await simulator.full_node.coin_store.new_block(
-        uint32(2), uint64(10000), [reward_1, reward_2], [coin for coin, _ in new_coins], []
+        uint32(2), uint64(10000), [reward_1, reward_2], [(coin.name(), coin, False) for coin, _ in new_coins], []
     )
     await simulator.full_node.hint_store.add_hints([(coin.name(), hint) for coin, hint in new_coins])
 
@@ -855,7 +855,9 @@ async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
 
     reward_1 = Coin(std_hash(b"reward 1"), std_hash(b"reward puzzle hash"), uint64(3000))
     reward_2 = Coin(std_hash(b"reward 2"), std_hash(b"reward puzzle hash"), uint64(4000))
-    await full_node.coin_store.new_block(uint32(height + 1), uint64(200000), [reward_1, reward_2], [coin], [])
+    await full_node.coin_store.new_block(
+        uint32(height + 1), uint64(200000), [reward_1, reward_2], [(coin.name(), coin, False)], []
+    )
     await full_node.hint_store.add_hints([(coin.name(), hint)])
 
     return coin, hint

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Optional, TypeVar, Union
 from chia_rs import CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
-from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
@@ -16,6 +15,7 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import (
