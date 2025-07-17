@@ -810,42 +810,6 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
         "taker cat",
     )
 
-    # mostly set_remainder here as minting CATs is tested elsewhere
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "taker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "taker cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-        ]
-    )
-
     if wallet_type is RCATWallet:
         extra_args: Any = (bytes32.zeros,)
     else:
@@ -857,6 +821,9 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
     await wallet_type.get_or_create_wallet_for_cat(
         env_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id(), *extra_args
     )
+
+    await env_0.change_balances({"taker cat": {"init": True}})
+    await env_1.change_balances({"maker cat": {"init": True}})
 
     # MAKE FIRST TRADE: 1 NFT for 10 taker cats
     nft_to_offer = coins_maker[0]
@@ -908,9 +875,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
                         "<=#max_send_amount": -maker_fee,
                         "pending_coin_removal_count": 1,
                     },
-                    "taker cat": {
-                        "init": True,
-                    },
+                    "taker cat": {},
                     "nft": {
                         "pending_coin_removal_count": 1,
                     },
@@ -946,9 +911,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
                     },
-                    "maker cat": {
-                        "init": True,
-                    },
+                    "maker cat": {},
                     "taker cat": {
                         "unconfirmed_wallet_balance": -taker_cat_offered,
                         "<=#spendable_balance": -taker_cat_offered,
