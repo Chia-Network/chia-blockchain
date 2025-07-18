@@ -19,6 +19,11 @@ from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.lru_cache import LRUCache
 
+
+class UnsupportedDatabaseVersionError(Exception):
+    """Raised when a method is called with an unsupported database version."""
+
+
 log = logging.getLogger(__name__)
 
 
@@ -479,7 +484,7 @@ class BlockStore:
         """
 
         if self.db_wrapper.db_version != 2:
-            raise NotImplementedError("get_block_bytes_in_range requires DB version 2")
+            raise UnsupportedDatabaseVersionError("get_block_bytes_in_range requires DB version 2")
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? AND in_main_chain=1",

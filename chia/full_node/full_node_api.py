@@ -41,6 +41,7 @@ from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.block_store import UnsupportedDatabaseVersionError
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
