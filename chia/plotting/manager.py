@@ -9,10 +9,11 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from chia_rs import G1Element
-from chiapos import DiskProver, decompressor_context_queue
+from chiapos import decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
+from chia.plotting.prover import get_prover_from_file
 from chia.plotting.util import (
     HarvestingMode,
     PlotInfo,
@@ -323,7 +324,7 @@ class PlotManager:
                 cache_entry = self.cache.get(file_path)
                 cache_hit = cache_entry is not None
                 if not cache_hit:
-                    prover = DiskProver(str(file_path))
+                    prover = get_prover_from_file(str(file_path))
 
                     log.debug(f"process_file {file_path!s}")
 
@@ -343,7 +344,7 @@ class PlotManager:
                             )
                             return None
 
-                    cache_entry = CacheEntry.from_disk_prover(prover)
+                    cache_entry = CacheEntry.from_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None

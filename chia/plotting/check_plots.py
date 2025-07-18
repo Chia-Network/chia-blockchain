@@ -9,7 +9,7 @@ from time import sleep, time
 from typing import Optional
 
 from chia_rs import G1Element
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
@@ -133,7 +133,7 @@ def check_plots(
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
-    total_good_plots: Counter[str] = Counter()
+    total_good_plots: Counter[uint8] = Counter()
     total_size = 0
     bad_plots_list: list[Path] = []
 
