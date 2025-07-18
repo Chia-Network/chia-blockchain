@@ -52,10 +52,6 @@ from chia.wallet.wallet_request_types import (
     DIDGetMetadataResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
-    DIDGetRecoveryInfo,
-    DIDGetRecoveryInfoResponse,
-    DIDGetRecoveryList,
-    DIDGetRecoveryListResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
     DIDMessageSpend,
@@ -66,8 +62,6 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
-    DIDUpdateRecoveryIDs,
-    DIDUpdateRecoveryIDsResponse,
     DLDeleteMirror,
     DLDeleteMirrorResponse,
     DLGetMirrors,
@@ -543,25 +537,6 @@ class WalletRpcClient(RpcClient):
             await self.fetch("did_create_backup_file", request.to_json_dict())
         )
 
-    async def update_did_recovery_list(
-        self,
-        request: DIDUpdateRecoveryIDs,
-        tx_config: TXConfig,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> DIDUpdateRecoveryIDsResponse:
-        return DIDUpdateRecoveryIDsResponse.from_json_dict(
-            await self.fetch(
-                "did_update_recovery_ids",
-                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
-            )
-        )
-
-    async def get_did_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
-        return DIDGetRecoveryListResponse.from_json_dict(
-            await self.fetch("did_get_recovery_list", request.to_json_dict())
-        )
-
     async def did_message_spend(
         self,
         request: DIDMessageSpend,
@@ -604,42 +579,10 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def did_create_attest(
-        self,
-        wallet_id: int,
-        coin_name: str,
-        pubkey: str,
-        puzhash: str,
-        file_name: str,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> dict[str, Any]:
-        request = {
-            "wallet_id": wallet_id,
-            "coin_name": coin_name,
-            "pubkey": pubkey,
-            "puzhash": puzhash,
-            "filename": file_name,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_create_attest", request)
-        return response
-
-    async def did_get_recovery_info(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
-        return DIDGetRecoveryInfoResponse.from_json_dict(
-            await self.fetch("did_get_information_needed_for_recovery", request.to_json_dict())
-        )
-
     async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
         return DIDGetCurrentCoinInfoResponse.from_json_dict(
             await self.fetch("did_get_current_coin_info", request.to_json_dict())
         )
-
-    async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "attest_filenames": attest_filenames}
-        response = await self.fetch("did_recovery_spend", request)
-        return response
 
     async def did_transfer_did(
         self,

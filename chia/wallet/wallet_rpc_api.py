@@ -132,10 +132,6 @@ from chia.wallet.wallet_request_types import (
     DIDGetMetadataResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
-    DIDGetRecoveryInfo,
-    DIDGetRecoveryInfoResponse,
-    DIDGetRecoveryList,
-    DIDGetRecoveryListResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
     DIDMessageSpend,
@@ -146,8 +142,6 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
-    DIDUpdateRecoveryIDs,
-    DIDUpdateRecoveryIDsResponse,
     DLDeleteMirror,
     DLDeleteMirrorResponse,
     DLGetMirrors,
@@ -556,15 +550,10 @@ class WalletRpcApi:
             # DID Wallet
             "/did_set_wallet_name": self.did_set_wallet_name,
             "/did_get_wallet_name": self.did_get_wallet_name,
-            "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_update_metadata": self.did_update_metadata,
             "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_did": self.did_get_did,
-            "/did_recovery_spend": self.did_recovery_spend,
-            "/did_get_recovery_list": self.did_get_recovery_list,
             "/did_get_metadata": self.did_get_metadata,
-            "/did_create_attest": self.did_create_attest,
-            "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
@@ -1112,12 +1101,8 @@ class WalletRpcApi:
 
         elif request["wallet_type"] == "did_wallet":
             if request["did_type"] == "new":
-                backup_dids = []
-                num_needed = 0
-                for d in request["backup_dids"]:
-                    backup_dids.append(decode_puzzle_hash(d))
-                if len(backup_dids) > 0:
-                    num_needed = uint64(request["num_of_backup_ids_needed"])
+                if "backup_dids" in request and request["backup_dids"] != []:
+                    raise ValueError("Recovery options are no longer supported. `backup_dids` cannot be set.")
                 metadata: dict[str, str] = {}
                 if "metadata" in request:
                     if type(request["metadata"]) is dict:
@@ -1132,8 +1117,6 @@ class WalletRpcApi:
                         main_wallet,
                         uint64(request["amount"]),
                         action_scope,
-                        backup_dids,
-                        uint64(num_needed),
                         metadata,
                         did_wallet_name,
                         uint64(request.get("fee", 0)),
@@ -2591,31 +2574,6 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         return DIDGetWalletNameResponse(request.wallet_id, wallet.get_name())
 
-    @tx_endpoint(push=True)
-    @marshal
-    async def did_update_recovery_ids(
-        self,
-        request: DIDUpdateRecoveryIDs,
-        action_scope: WalletActionScope,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> DIDUpdateRecoveryIDsResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        recovery_list = [decode_puzzle_hash(puzzle_hash) for puzzle_hash in request.new_list]
-        new_amount_verifications_required = (
-            request.num_verifications_required
-            if request.num_verifications_required is not None
-            else uint64(len(recovery_list))
-        )
-        async with self.service.wallet_state_manager.lock:
-            update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
-            # Update coin with new ID info
-            if update_success:
-                await wallet.create_update_spend(action_scope, fee=request.fee, extra_conditions=extra_conditions)
-                # tx_endpoint will take care of default values here
-                return DIDUpdateRecoveryIDsResponse([], [])
-            else:
-                raise RuntimeError("updating recovery list failed")
-
     @tx_endpoint(push=False)
     @marshal
     async def did_message_spend(
@@ -2911,124 +2869,19 @@ class WalletRpcApi:
                 return DIDGetDIDResponse(wallet_id=request.wallet_id, my_did=my_did)
 
     @marshal
-    async def did_get_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        recovery_list = wallet.did_info.backup_ids
-        recovery_dids = []
-        for backup_id in recovery_list:
-            recovery_dids.append(encode_puzzle_hash(backup_id, AddressType.DID.hrp(self.service.config)))
-        return DIDGetRecoveryListResponse(
-            wallet_id=request.wallet_id,
-            recovery_list=recovery_dids,
-            num_required=uint16(wallet.did_info.num_of_backup_ids_needed),
-        )
-
-    @marshal
     async def did_get_metadata(self, request: DIDGetMetadata) -> DIDGetMetadataResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         metadata = json.loads(wallet.did_info.metadata)
-        return DIDGetMetadataResponse(wallet_id=request.wallet_id, metadata=metadata)
-
-    # TODO: this needs a test
-    # Don't need full @tx_endpoint decorator here, but "push" is still a valid option
-    async def did_recovery_spend(self, request: dict[str, Any]) -> EndpointResult:  # pragma: no cover
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
-            return {"success": False, "reason": "insufficient messages"}
-        async with self.service.wallet_state_manager.lock:
-            (
-                info_list,
-                message_spend_bundle,
-            ) = await wallet.load_attest_files_for_recovery_spend(request["attest_data"])
-
-            if "pubkey" in request:
-                pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            else:
-                assert wallet.did_info.temp_pubkey is not None
-                pubkey = G1Element.from_bytes(wallet.did_info.temp_pubkey)
-
-            if "puzhash" in request:
-                puzhash = bytes32.from_hexstr(request["puzhash"])
-            else:
-                assert wallet.did_info.temp_puzhash is not None
-                puzhash = wallet.did_info.temp_puzhash
-
-            assert wallet.did_info.temp_coin is not None
-            async with self.service.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=request.get("push", True)
-            ) as action_scope:
-                await wallet.recovery_spend(
-                    wallet.did_info.temp_coin,
-                    puzhash,
-                    info_list,
-                    pubkey,
-                    message_spend_bundle,
-                    action_scope,
-                )
-            [tx] = action_scope.side_effects.transactions
-        return {
-            "success": True,
-            "spend_bundle": tx.spend_bundle,
-            "transactions": [tx.to_json_dict_convenience(self.service.config)],
-        }
+        return DIDGetMetadataResponse(
+            wallet_id=request.wallet_id,
+            metadata=metadata,
+        )
 
     @marshal
     async def did_get_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         return DIDGetPubkeyResponse(
             (await wallet.wallet_state_manager.get_unused_derivation_record(request.wallet_id)).pubkey
-        )
-
-    # TODO: this needs a test
-    @tx_endpoint(push=True)
-    async def did_create_attest(
-        self,
-        request: dict[str, Any],
-        action_scope: WalletActionScope,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:  # pragma: no cover
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        async with self.service.wallet_state_manager.lock:
-            info = await wallet.get_info_for_recovery()
-            coin = bytes32.from_hexstr(request["coin_name"])
-            pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            message_spend_bundle, attest_data = await wallet.create_attestment(
-                coin,
-                bytes32.from_hexstr(request["puzhash"]),
-                pubkey,
-                action_scope,
-                extra_conditions=extra_conditions,
-            )
-        if info is not None:
-            return {
-                "success": True,
-                "message_spend_bundle": bytes(message_spend_bundle).hex(),
-                "info": [info[0].hex(), info[1].hex(), info[2]],
-                "attest_data": attest_data,
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
-        else:
-            return {"success": False}
-
-    @marshal
-    async def did_get_information_needed_for_recovery(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        my_did = encode_puzzle_hash(
-            bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
-        )
-        assert did_wallet.did_info.temp_coin is not None
-        coin_name = did_wallet.did_info.temp_coin.name()
-        return DIDGetRecoveryInfoResponse(
-            wallet_id=request.wallet_id,
-            my_did=my_did,
-            coin_name=coin_name,
-            newpuzhash=did_wallet.did_info.temp_puzhash,
-            pubkey=G1Element.from_bytes(did_wallet.did_info.temp_pubkey)
-            if did_wallet.did_info.temp_pubkey is not None
-            else None,
-            backup_dids=did_wallet.did_info.backup_ids,
         )
 
     @marshal
@@ -3038,15 +2891,15 @@ class WalletRpcApi:
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
 
-        did_coin_threeple = await did_wallet.get_info_for_recovery()
+        assert did_wallet.did_info.current_inner is not None
+        parent_coin = await did_wallet.get_coin()
         assert my_did is not None
-        assert did_coin_threeple is not None
         return DIDGetCurrentCoinInfoResponse(
             wallet_id=request.wallet_id,
             my_did=my_did,
-            did_parent=did_coin_threeple[0],
-            did_innerpuz=did_coin_threeple[1],
-            did_amount=did_coin_threeple[2],
+            did_parent=parent_coin.parent_coin_info,
+            did_innerpuz=did_wallet.did_info.current_inner.get_tree_hash(),
+            did_amount=parent_coin.amount,
         )
 
     @marshal
@@ -3070,7 +2923,6 @@ class WalletRpcApi:
             await did_wallet.transfer_did(
                 puzzle_hash,
                 request.fee,
-                request.with_recovery_info,
                 action_scope,
                 extra_conditions=extra_conditions,
             )
