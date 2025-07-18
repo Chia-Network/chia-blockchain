@@ -44,7 +44,7 @@ do_install_npm_locally() {
     if [ "$NODEJS_VERSION" -lt "20" ]; then
       echo "Current NodeJS version($(node -v)) is less than 20. GUI app requires NodeJS>=20."
     fi
-    if [ "$NPM_VERSION" -lt "9" ]; then
+    if [ "$NPM_VERSION" -lt "10" ]; then
       echo "Current npm version($(npm -v)) is less than 10. GUI app requires npm>=10."
     fi
 
