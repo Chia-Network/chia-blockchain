@@ -671,7 +671,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32.secret(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
 
@@ -765,7 +765,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
 
@@ -844,7 +844,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=unsigned_spend_bundle.name(),
-            memos=list(compute_memos(unsigned_spend_bundle).items()),
+            memos=compute_memos(unsigned_spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
         async with action_scope.use() as interface:
@@ -902,7 +902,7 @@ class DIDWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=bytes32.secret(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=ConditionValidTimes(),
                 )
             )
@@ -987,7 +987,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32.secret(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
         async with action_scope.use() as interface:
@@ -1106,7 +1106,7 @@ class DIDWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=bytes32.secret(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=ConditionValidTimes(),
                 )
             )
@@ -1329,7 +1329,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=full_spend.name(),
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         async with action_scope.use() as interface:
