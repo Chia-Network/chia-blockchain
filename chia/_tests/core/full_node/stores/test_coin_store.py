@@ -186,16 +186,16 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
             coins = block.get_included_reward_coins()
             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-            await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+            await coin_store._set_spent([r.name() for r in records if r is not None], block.height)
 
             if len(records) > 0:
                 for r in records:
                     assert r is not None
-                    assert (await coin_store.get_coin_record(r.name)) is not None
+                    assert (await coin_store.get_coin_record(r.name())) is not None
 
                 # Check that we can't spend a coin twice in DB
                 with pytest.raises(ValueError, match="Invalid operation to set spent"):
-                    await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+                    await coin_store._set_spent([r.name() for r in records if r is not None], block.height)
 
             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
             for record in records:
@@ -303,7 +303,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
             if block.height <= reorg_index:
                 for record in records:
                     assert record is not None
-                    assert record.spent() == (record.name != selected_coin.name)
+                    assert record.spent() == (record.name() != selected_coin.name())
             else:
                 for record in records:
                     assert record is None
