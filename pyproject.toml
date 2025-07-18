@@ -109,7 +109,7 @@ miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # 	{version=">=1.26.4", python = ">=3.9", optional = true}]
 ruff = { version = ">=0.8.1", optional = true }
 
-[tool.poetry.extras]
+[project.optional-dependencies]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "lxml"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
