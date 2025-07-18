@@ -153,9 +153,11 @@ async def node_spends_with_conditions(
     block_hash: bytes32,
     height: int,
 ) -> None:
-    result = await node_client.get_block_spends_with_conditions(block_hash)
-    if result is None:
+    try:
+        await node_client.get_block_spends_with_conditions(block_hash)
+    except Exception as e:
         print(f"ERROR: [{height}] get_block_spends_with_conditions returned invalid result")
+        raise e
 
 
 async def node_block_spends(
@@ -163,9 +165,11 @@ async def node_block_spends(
     block_hash: bytes32,
     height: int,
 ) -> None:
-    result = await node_client.get_block_spends(block_hash)
-    if result is None:
+    try:
+        await node_client.get_block_spends(block_hash)
+    except Exception as e:
         print(f"ERROR: [{height}] get_block_spends returned invalid result")
+        raise e
 
 
 async def node_additions_removals(
@@ -173,9 +177,11 @@ async def node_additions_removals(
     block_hash: bytes32,
     height: int,
 ) -> None:
-    response = await node_client.get_additions_and_removals(block_hash)
-    if response is None:
+    try:
+        await node_client.get_additions_and_removals(block_hash)
+    except Exception as e:
         print(f"ERROR: [{height}] get_additions_and_removals returned invalid result")
+        raise e
 
 
 async def cli_async(
