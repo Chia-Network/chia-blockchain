@@ -2725,13 +2725,13 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment) ->
     await time_out_assert(20, check_client_synced, True, client)
     bals_response = await client.get_wallet_balances(GetWalletBalances())
     assert len(bals_response.wallet_balances) == 3
-    assert bals_response.wallet_balances_dict[uint32(1)].confirmed_wallet_balance == 1999999999880
-    assert bals_response.wallet_balances_dict[uint32(2)].confirmed_wallet_balance == 100
-    assert bals_response.wallet_balances_dict[uint32(3)].confirmed_wallet_balance == 20
+    assert bals_response.wallet_balances[uint32(1)].confirmed_wallet_balance == 1999999999880
+    assert bals_response.wallet_balances[uint32(2)].confirmed_wallet_balance == 100
+    assert bals_response.wallet_balances[uint32(3)].confirmed_wallet_balance == 20
     bals_response = await client.get_wallet_balances(GetWalletBalances([uint32(3), uint32(2)]))
     assert len(bals_response.wallet_balances) == 2
-    assert bals_response.wallet_balances_dict[uint32(2)].confirmed_wallet_balance == 100
-    assert bals_response.wallet_balances_dict[uint32(3)].confirmed_wallet_balance == 20
+    assert bals_response.wallet_balances[uint32(2)].confirmed_wallet_balance == 100
+    assert bals_response.wallet_balances[uint32(3)].confirmed_wallet_balance == 20
 
 
 @pytest.mark.parametrize(

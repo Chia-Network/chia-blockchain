@@ -1314,7 +1314,9 @@ class WalletRpcApi:
             wallet_ids = request.wallet_ids
         else:
             wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
-        return GetWalletBalancesResponse([await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids])
+        return GetWalletBalancesResponse(
+            {wallet_id: await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids}
+        )
 
     async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
         transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])

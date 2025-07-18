@@ -254,25 +254,7 @@ class GetWalletBalanceResponse(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GetWalletBalancesResponse(Streamable):
-    wallet_balances: list[BalanceResponse]
-
-    @property
-    def wallet_balances_dict(self) -> dict[uint32, BalanceResponse]:
-        return {response.wallet_id: response for response in self.wallet_balances}
-
-    # special dict format that streamable can't handle natively
-    def to_json_dict(self) -> dict[str, Any]:
-        return {
-            "wallet_balances": {
-                str(wallet_id): response.to_json_dict() for wallet_id, response in self.wallet_balances_dict.items()
-            }
-        }
-
-    @classmethod
-    def from_json_dict(cls, json_dict: dict[str, Any]) -> GetWalletBalancesResponse:
-        return super().from_json_dict(
-            {"wallet_balances": [balance_response for balance_response in json_dict["wallet_balances"].values()]}
-        )
+    wallet_balances: dict[uint32, BalanceResponse]
 
 
 @streamable
