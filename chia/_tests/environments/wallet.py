@@ -25,6 +25,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_request_types import GetWalletBalance
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -169,7 +170,9 @@ class WalletEnvironment:
                     else {}
                 ),
             }
-            balance_response: dict[str, int] = await self.rpc_client.get_wallet_balance(wallet_id)
+            balance_response: dict[str, int] = (
+                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))
+            ).wallet_balance.to_json_dict()
 
             if not expected_result.items() <= balance_response.items():
                 for key, value in expected_result.items():
