@@ -20,7 +20,7 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.check_time_locks import check_time_locks
+from chia_rs import check_time_locks
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.coin_record import CoinRecord
