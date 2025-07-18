@@ -867,7 +867,7 @@ async def test_valid_times_migration() -> None:
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     bytes(old_record),
-                    old_record.namex,
+                    old_record.name,
                     old_record.confirmed_at_height,
                     old_record.created_at_time,
                     old_record.to_puzzle_hash.hex(),

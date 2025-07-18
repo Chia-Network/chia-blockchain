@@ -518,7 +518,7 @@ async def validate_block_body(
             False,
             addition.timestamp,
         )
-        removal_coin_records[new_coin_record.name] = new_coin_record
+        removal_coin_records[new_coin_record.name()] = new_coin_record
 
     removed = 0
     for unspent in removal_coin_records.values():

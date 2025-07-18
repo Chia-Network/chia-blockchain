@@ -265,7 +265,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
                 assert record is not None
                 if (
                     selected_coin is not None
-                    and selected_coin.name == record.name
+                    and selected_coin.name == record.name()
                     and not selected_coin.confirmed_block_index < block.height
                 ):
                     assert not record.spent()
@@ -714,7 +714,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
 
-        assert coin_states == [cr.coin_state]
+        assert coin_states == [cr.coin_state()]
         assert height is None
 
 
