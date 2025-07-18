@@ -22,7 +22,7 @@ class MempoolSubmissionStatus(Streamable):
     inclusion_status: uint8  # MempoolInclusionStatus
     error_msg: Optional[str]
 
-    def to_json_dict_convenience(self) -> dict[str, Union[str, MempoolInclusionStatus, Optional[str]]]:
+    def to_json_dict_convenience(self) -> dict[str, Union[str, MempoolInclusionStatus, None]]:
         formatted = self.to_json_dict()
         formatted["inclusion_status"] = MempoolInclusionStatus(self.inclusion_status).name
         return formatted
