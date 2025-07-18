@@ -3128,7 +3128,8 @@ def make_coin(idx: int) -> Coin:
     return Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(2_000_000_000 + idx * 2))
 
 
-def test_dedup_by_fee() -> None:
+@pytest.mark.parametrize("old", [True, False])
+def test_dedup_by_fee(old: bool) -> None:
     """
     We pick the solution to use for dedup based on the spendbundle with the highest
     fee per cost, not based on which one would give the overall best fee per cost
@@ -3155,12 +3156,12 @@ def test_dedup_by_fee() -> None:
     sb_low_rate = make_test_spendbundle(COIN_A2, fee=10)
     add_spend_bundles([sb_A, sb_low_rate])
 
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
     # validate that dedup happens at all for sb_A
-    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
+    result = create_block(test_constants, uint32(0), 5.0)
     assert result is not None
-    agg, _ = result
     # Make sure both items would be processed
-    assert [c.coin for c in agg.coin_spends] == [DEDUP_COIN, COIN_A1, COIN_A2]
+    assert result.removals == [DEDUP_COIN, COIN_A1, COIN_A2]
 
     # Now we add a bunch of alternative spends for coin 0, with lower fees
     # Even though the total fee would be higher if we deduped on this solution,
@@ -3170,26 +3171,24 @@ def test_dedup_by_fee() -> None:
         sb_high_rate = make_test_spendbundle(make_coin(i), fee=10)
         add_spend_bundles([sb_B, sb_high_rate])
 
-    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
+    result = create_block(test_constants, uint32(0), 5.0)
     assert result is not None
-    agg, _ = result
     # We ran with solution A and missed bigger savings on solution B
     # we've added 599 spend bundles now. 2 with solution A and 598 with solution B
     assert mempool.size() == 599
-    assert [c.coin for c in agg.coin_spends] == [DEDUP_COIN, COIN_A1, COIN_A2]
+    assert result.removals == [DEDUP_COIN, COIN_A1, COIN_A2]
 
     # Now, if we add a high fee per-cost-for sb_B, it should be picked
     sb_high_rate = make_test_spendbundle(make_coin(600), fee=1_000_000_000)
     add_spend_bundles([sb_B, sb_high_rate])
 
-    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
+    result = create_block(test_constants, uint32(0), 5.0)
     assert result is not None
-    agg, _ = result
     # The 3 items got skipped here
     # We ran with solution B
     # we've added 600 spend bundles now. 2 with solution A and 599 with solution B
     assert mempool.size() == 600
-    spends_in_block = {c.coin for c in agg.coin_spends}
+    spends_in_block = set(result.removals)
     assert DEDUP_COIN in spends_in_block
     assert COIN_A1 not in spends_in_block
     assert COIN_A2 not in spends_in_block
