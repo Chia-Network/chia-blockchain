@@ -2076,7 +2076,7 @@ class TestBodyValidation:
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin was in fact spent
                 c = await b.coin_store.get_coin_record(coin.name())
-                assert c is not None and c.spent
+                assert c is not None and c.spent()
 
     @pytest.mark.anyio
     @pytest.mark.parametrize(
@@ -2286,10 +2286,10 @@ class TestBodyValidation:
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin1 was in fact spent
                 c = await b.coin_store.get_coin_record(coin1.name())
-                assert c is not None and c.spent
+                assert c is not None and c.spent()
                 # ensure coin2 was NOT spent
                 c = await b.coin_store.get_coin_record(coin2.name())
-                assert c is not None and not c.spent
+                assert c is not None and not c.spent()
 
     @pytest.mark.anyio
     async def test_not_tx_block_but_has_data(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
@@ -3103,9 +3103,9 @@ class TestBodyValidation:
 
         # ephemeral coin is spent
         first_coin = await b.coin_store.get_coin_record(new_coin.name())
-        assert first_coin is not None and first_coin.spent
+        assert first_coin is not None and first_coin.spent()
         second_coin = await b.coin_store.get_coin_record(tx_2.additions()[0].name())
-        assert second_coin is not None and not second_coin.spent
+        assert second_coin is not None and not second_coin.spent()
 
         farmer_coin = create_farmer_coin(
             blocks_reorg[-1].height,
@@ -3121,7 +3121,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks_reorg[-1])
 
         farmer_coin_record = await b.coin_store.get_coin_record(farmer_coin.name())
-        assert farmer_coin_record is not None and farmer_coin_record.spent
+        assert farmer_coin_record is not None and farmer_coin_record.spent()
 
     @pytest.mark.anyio
     async def test_minting_coin(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:

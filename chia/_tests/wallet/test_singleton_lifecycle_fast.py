@@ -424,7 +424,7 @@ def create_throwaway_pubkey(seed: bytes) -> G1Element:
 def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent: bool = True) -> None:
     coin_record = coin_store.coin_record(coin.name())
     assert coin_record is not None
-    assert coin_record.spent is is_spent
+    assert coin_record.spent() is is_spent
 
 
 def spend_coin_to_singleton(

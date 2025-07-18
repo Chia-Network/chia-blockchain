@@ -12,6 +12,7 @@ from chia_rs import (
     FullBlock,
     SpendBundleConditions,
     UnfinishedBlock,
+    check_time_locks,
     compute_merkle_set_root,
     is_canonical_serialization,
 )
@@ -21,7 +22,6 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.coin_record import CoinRecord
@@ -482,7 +482,7 @@ async def validate_block_body(
         if unspent.confirmed_block_index <= fork_info.fork_height:
             # Spending something in the current chain, confirmed before fork
             # (We ignore all coins confirmed after fork)
-            if unspent.spent == 1 and unspent.spent_block_index <= fork_info.fork_height:
+            if unspent.spent() == 1 and unspent.spent_block_index <= fork_info.fork_height:
                 # Check for coins spent in an ancestor block
                 return Err.DOUBLE_SPEND
             removal_coin_records[unspent.name] = unspent
@@ -518,7 +518,7 @@ async def validate_block_body(
             False,
             addition.timestamp,
         )
-        removal_coin_records[new_coin_record.name] = new_coin_record
+        removal_coin_records[new_coin_record.name()] = new_coin_record
 
     removed = 0
     for unspent in removal_coin_records.values():

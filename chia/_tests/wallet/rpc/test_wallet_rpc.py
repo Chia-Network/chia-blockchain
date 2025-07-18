@@ -1462,7 +1462,7 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     # Prepare some records and parameters first
     result = await store.get_coin_records()
     coins = {record.coin for record in result.records}
-    coins_unspent = {record.coin for record in result.records if not record.spent}
+    coins_unspent = {record.coin for record in result.records if not record.spent()}
     coin_ids = [coin.name() for coin in coins]
     coin_ids_unspent = [coin.name() for coin in coins_unspent]
     assert len(coin_ids) > 0

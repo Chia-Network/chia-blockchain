@@ -15,6 +15,7 @@ from chia_rs import (
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    check_time_locks,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -23,7 +24,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
@@ -249,7 +249,7 @@ def check_removals(
     conflicts = set()
     for coin_id, coin_bcs in bundle_coin_spends.items():
         # 1. Checks if it's been spent already
-        if removals[coin_id].spent and not coin_bcs.eligible_for_fast_forward:
+        if removals[coin_id].spent() and not coin_bcs.eligible_for_fast_forward:
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict

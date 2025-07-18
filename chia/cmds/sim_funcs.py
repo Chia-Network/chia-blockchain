@@ -334,10 +334,10 @@ def print_coin_record(
     from datetime import datetime
 
     coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
-    print(f"Coin 0x{coin_record.name.hex()}")
+    print(f"Coin 0x{coin_record.name().hex()}")
     print(f"Wallet Address: {coin_address}")
     print(f"Confirmed at block: {coin_record.confirmed_block_index}")
-    print(f"Spent: {f'at Block {coin_record.spent_block_index}' if coin_record.spent else 'No'}")
+    print(f"Spent: {f'at Block {coin_record.spent_block_index}' if coin_record.spent() else 'No'}")
     print(f"Coin Amount: {coin_record.coin.amount} {name}")
     print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info.hex()}")
     print(f"Created at: {datetime.fromtimestamp(float(coin_record.timestamp)).strftime('%Y-%m-%d %H:%M:%S')}\n")
