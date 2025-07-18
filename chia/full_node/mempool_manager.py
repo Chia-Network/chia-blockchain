@@ -25,7 +25,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
-from chia.consensus.check_time_locks import check_time_locks
+from chia_rs import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
@@ -719,12 +719,18 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        tl_error: Optional[Err] = check_time_locks(
-            removal_record_dict,
-            conds,
-            self.peak.height,
-            self.peak.timestamp,
-        )
+        try:
+            tl_error: Optional[Err] = check_time_locks(
+                removal_record_dict,
+                conds,
+                self.peak.height,
+                self.peak.timestamp,
+            )
+        except Exception as e:
+            breakpoint()
+
+        if tl_error is not None:
+            breakpoint()
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 
