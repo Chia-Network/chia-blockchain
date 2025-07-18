@@ -79,8 +79,8 @@ do_install_npm_locally() {
       echo "Error: Failed to install NodeJS>=20"
       exit 1
     fi
-    if [ "$(npm -v | cut -d'.' -f 1)" -lt "9" ]; then
-      echo "Error: Failed to install npm>=9"
+    if [ "$(npm -v | cut -d'.' -f 1)" -lt "10" ]; then
+      echo "Error: Failed to install npm>=10"
       exit 1
     fi
     cd "${SCRIPT_DIR}"
