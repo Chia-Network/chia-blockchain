@@ -329,7 +329,7 @@ class DIDWallet:
             for coin in record.additions:
                 hint_dict = {
                     coin_id: bytes32(memos[0])
-                    for coin_id, memos in record.memos
+                    for coin_id, memos in record.memos.items()
                     if len(memos) > 0 and len(memos[0]) == 32
                 }
                 if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict)) and (

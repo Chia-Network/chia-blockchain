@@ -303,7 +303,9 @@ def recurse_jsonify(
     elif isinstance(d, dict):
         new_dict = {}
         for name, val in d.items():
-            new_dict[name] = next_recursion_step(val, None, **next_recursion_env)
+            new_dict[next_recursion_step(name, None, **next_recursion_env)] = next_recursion_step(
+                val, None, **next_recursion_env
+            )
         return new_dict
 
     elif issubclass(type(d), bytes):
