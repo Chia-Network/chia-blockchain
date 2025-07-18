@@ -1623,6 +1623,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
+            assert pre_validation_results[i].error is None
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             # when adding blocks in batches, we won't have any overlapping
