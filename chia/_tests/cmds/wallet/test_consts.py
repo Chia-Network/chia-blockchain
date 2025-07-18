@@ -39,7 +39,7 @@ STD_TX = TransactionRecord(
     trade_id=None,
     type=uint32(TransactionType.OUTGOING_TX.value),
     name=get_bytes32(2),
-    memos=[(get_bytes32(3), [bytes([4] * 32)])],
+    memos={get_bytes32(3): [bytes([4] * 32)]},
     valid_times=ConditionValidTimes(),
 )
 

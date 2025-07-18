@@ -545,7 +545,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -740,7 +740,7 @@ class DataLayerWallet:
                     spend_bundle=mirror_bundle,
                     additions=mirror_bundle.additions(),
                     removals=mirror_bundle.removals(),
-                    memos=list(compute_memos(mirror_bundle).items()),
+                    memos=compute_memos(mirror_bundle),
                     wallet_id=self.id(),  # This is being called before the wallet is created so we're using a ID of 0
                     sent_to=[],
                     trade_id=None,

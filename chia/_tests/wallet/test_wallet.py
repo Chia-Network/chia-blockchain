@@ -1733,7 +1733,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])

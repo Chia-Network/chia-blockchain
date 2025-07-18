@@ -143,7 +143,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                     trade_id=None,
                     type=uint32(t_type.value),
                     name=bytes32([2 + i] * 32),
-                    memos=[(bytes32([3 + i] * 32), [bytes([4 + i] * 32)])],
+                    memos={bytes32([3 + i] * 32): [bytes([4 + i] * 32)]},
                     valid_times=ConditionValidTimes(),
                 )
                 l_tx_rec.append(tx_rec)
@@ -352,7 +352,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_CLAWBACK.value),
                 name=name,
-                memos=[(get_bytes32(3), [bytes([4] * 32)])],
+                memos={get_bytes32(3): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
             )
             return SendTransactionResponse([STD_UTX], [STD_TX], tx_rec, name)

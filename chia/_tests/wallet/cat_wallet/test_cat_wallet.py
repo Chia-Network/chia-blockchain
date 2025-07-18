@@ -1043,11 +1043,10 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
     for tx in txs:
         if tx.amount == 30:
-            memos = tx.get_memos()
-            assert len(memos) == 2  # One for tx, one for change
-            assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
+            assert len(tx.memos) == 2  # One for tx, one for change
+            assert b"Markus Walburg" in [v for v_list in tx.memos.values() for v in v_list]
             assert tx.spend_bundle is not None
-            assert next(iter(memos.keys())) in [a.name() for a in tx.spend_bundle.additions()]
+            assert next(iter(tx.memos.keys())) in [a.name() for a in tx.spend_bundle.additions()]
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
