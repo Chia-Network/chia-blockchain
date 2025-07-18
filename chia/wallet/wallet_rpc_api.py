@@ -1552,7 +1552,7 @@ class WalletRpcApi:
                 log.error(f"Could not parse coin record metadata: {type(e).__name__} {e}")
                 continue
             tx["metadata"]["coin_id"] = coin.name().hex()
-            tx["metadata"]["spent"] = record.spent
+            tx["metadata"]["spent"] = record.spent()
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,

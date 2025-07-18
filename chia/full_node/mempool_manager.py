@@ -249,7 +249,7 @@ def check_removals(
     conflicts = set()
     for coin_id, coin_bcs in bundle_coin_spends.items():
         # 1. Checks if it's been spent already
-        if removals[coin_id].spent and not coin_bcs.eligible_for_fast_forward:
+        if removals[coin_id].spent() and not coin_bcs.eligible_for_fast_forward:
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict
@@ -715,18 +715,12 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        try:
-            tl_error: Optional[Err] = check_time_locks(
-                removal_record_dict,
-                conds,
-                self.peak.height,
-                self.peak.timestamp,
-            )
-        except Exception as e:
-            breakpoint()
-
-        if tl_error is not None:
-            breakpoint()
+        tl_error: Optional[Err] = check_time_locks(
+            removal_record_dict,
+            conds,
+            self.peak.height,
+            self.peak.timestamp,
+        )
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 

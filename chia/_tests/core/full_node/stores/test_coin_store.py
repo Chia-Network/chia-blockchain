@@ -138,20 +138,20 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 # Check that the coinbase rewards are added
                 record = await coin_store.get_coin_record(expected_coin.name())
                 assert record is not None
-                assert not record.spent
+                assert not record.spent()
                 assert record.coin == expected_coin
                 all_records.add(record)
             for coin_name in tx_removals:
                 # Check that the removed coins are set to spent
                 record = await coin_store.get_coin_record(coin_name)
                 assert record is not None
-                assert record.spent
+                assert record.spent()
                 all_records.add(record)
             for coin_id, coin, _ in tx_additions:
                 # Check that the added coins are added
                 record = await coin_store.get_coin_record(coin_id)
                 assert record is not None
-                assert not record.spent
+                assert not record.spent()
                 assert coin == record.coin
                 all_records.add(record)
 
@@ -200,7 +200,7 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
             for record in records:
                 assert record is not None
-                assert record.spent
+                assert record.spent()
                 assert record.spent_block_index == block.height
 
 
@@ -268,9 +268,9 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
                     and selected_coin.name == record.name
                     and not selected_coin.confirmed_block_index < block.height
                 ):
-                    assert not record.spent
+                    assert not record.spent()
                 else:
-                    assert record.spent
+                    assert record.spent()
                     assert record.spent_block_index == block.height
 
             if spend_selected_coin:
@@ -303,7 +303,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
             if block.height <= reorg_index:
                 for record in records:
                     assert record is not None
-                    assert record.spent == (record.name != selected_coin.name)
+                    assert record.spent() == (record.name != selected_coin.name)
             else:
                 for record in records:
                     assert record is None
@@ -334,7 +334,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
                         assert record is not None
-                        assert not record.spent
+                        assert not record.spent()
                         assert record.confirmed_block_index == block.height
                         assert record.spent_block_index == 0
 
@@ -359,7 +359,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
                         records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                         for record in records:
                             assert record is not None
-                            assert not record.spent
+                            assert not record.spent()
                             assert record.confirmed_block_index == reorg_block.height
                             assert record.spent_block_index == 0
             peak = b.get_peak()

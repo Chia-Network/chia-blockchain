@@ -144,7 +144,7 @@ class FullNodeSimulator(FullNodeAPI):
 
             if not request.include_spent_coins:
                 # Filter out spent coins if not requested
-                records_at_height = [record for record in records_at_height if not record.spent]
+                records_at_height = [record for record in records_at_height if not record.spent()]
 
             coin_records.extend(records_at_height)
             current_height += 1

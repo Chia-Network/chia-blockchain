@@ -482,7 +482,7 @@ async def validate_block_body(
         if unspent.confirmed_block_index <= fork_info.fork_height:
             # Spending something in the current chain, confirmed before fork
             # (We ignore all coins confirmed after fork)
-            if unspent.spent == 1 and unspent.spent_block_index <= fork_info.fork_height:
+            if unspent.spent() == 1 and unspent.spent_block_index <= fork_info.fork_height:
                 # Check for coins spent in an ancestor block
                 return Err.DOUBLE_SPEND
             removal_coin_records[unspent.name] = unspent

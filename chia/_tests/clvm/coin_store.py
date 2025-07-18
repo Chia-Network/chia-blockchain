@@ -130,7 +130,7 @@ class CoinStore:
 
     def all_unspent_coins(self) -> Iterator[Coin]:
         for coin_entry in self._db.values():
-            if not coin_entry.spent:
+            if not coin_entry.spent():
                 yield coin_entry.coin
 
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:
