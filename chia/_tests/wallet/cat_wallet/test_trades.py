@@ -1629,8 +1629,9 @@ async def test_cat_trades(
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> None:
+async def test_trade_cancellation(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
@@ -1645,16 +1646,15 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
 
     xch_to_cat_amount = uint64(100)
 
-    async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            env_maker.wallet_state_manager,
-            env_maker.xch_wallet,
-            {"identifier": "genesis_by_id"},
-            xch_to_cat_amount,
-            action_scope,
-        )
+    cat_wallet_maker = await mint_cat(
+        wallet_environments,
+        env_maker,
+        "xch",
+        "cat",
+        xch_to_cat_amount,
+        wallet_type,
+        "cat",
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -1941,8 +1941,9 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
+async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
     env_trader = wallet_environments.environments[2]
@@ -1963,16 +1964,15 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     xch_to_cat_amount = uint64(100)
     fee = uint64(10)
 
-    async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        await CATWallet.create_new_cat_wallet(
-            env_maker.wallet_state_manager,
-            env_maker.xch_wallet,
-            {"identifier": "genesis_by_id"},
-            xch_to_cat_amount,
-            action_scope,
-        )
+    await mint_cat(
+        wallet_environments,
+        env_maker,
+        "xch",
+        "cat",
+        xch_to_cat_amount,
+        wallet_type,
+        "cat",
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -2138,8 +2138,9 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None:
+async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
@@ -2154,16 +2155,15 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
 
     xch_to_cat_amount = uint64(100)
 
-    async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        await CATWallet.create_new_cat_wallet(
-            env_maker.wallet_state_manager,
-            env_maker.xch_wallet,
-            {"identifier": "genesis_by_id"},
-            xch_to_cat_amount,
-            action_scope,
-        )
+    await mint_cat(
+        wallet_environments,
+        env_maker,
+        "xch",
+        "cat",
+        xch_to_cat_amount,
+        wallet_type,
+        "cat",
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -2260,8 +2260,9 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
+async def test_trade_high_fee(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
@@ -2276,16 +2277,15 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
 
     xch_to_cat_amount = uint64(100)
 
-    async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        await CATWallet.create_new_cat_wallet(
-            env_maker.wallet_state_manager,
-            env_maker.xch_wallet,
-            {"identifier": "genesis_by_id"},
-            xch_to_cat_amount,
-            action_scope,
-        )
+    await mint_cat(
+        wallet_environments,
+        env_maker,
+        "xch",
+        "cat",
+        xch_to_cat_amount,
+        wallet_type,
+        "cat",
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -2405,8 +2405,9 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) -> None:
+async def test_aggregated_trade_state(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_maker = wallet_environments.environments[0]
     env_taker = wallet_environments.environments[1]
 
@@ -2421,16 +2422,15 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework) 
 
     xch_to_cat_amount = uint64(100)
 
-    async with env_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        await CATWallet.create_new_cat_wallet(
-            env_maker.wallet_state_manager,
-            env_maker.xch_wallet,
-            {"identifier": "genesis_by_id"},
-            xch_to_cat_amount,
-            action_scope,
-        )
+    await mint_cat(
+        wallet_environments,
+        env_maker,
+        "xch",
+        "cat",
+        xch_to_cat_amount,
+        wallet_type,
+        "cat",
+    )
 
     await wallet_environments.process_pending_states(
         [
