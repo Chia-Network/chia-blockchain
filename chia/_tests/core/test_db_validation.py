@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -25,10 +24,7 @@ from chia.util.db_wrapper import DBWrapper2
 
 
 def rand_hash() -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = random.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random()
 
 
 def make_version(conn: sqlite3.Connection, version: int) -> None:

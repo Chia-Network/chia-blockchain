@@ -1589,11 +1589,7 @@ async def test_benchmark_batch_insert_speed(
     r.seed("shadowlands", version=2)
 
     changelist = [
-        {
-            "action": "insert",
-            "key": x.to_bytes(32, byteorder="big", signed=False),
-            "value": bytes(r.getrandbits(8) for _ in range(1200)),
-        }
+        {"action": "insert", "key": x.to_bytes(32, byteorder="big", signed=False), "value": r.randbytes(1200)}
         for x in range(case.pre + case.count)
     ]
 
@@ -1637,7 +1633,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
                 {
                     "action": "insert",
                     "key": x.to_bytes(32, byteorder="big", signed=False),
-                    "value": bytes(r.getrandbits(8) for _ in range(10000)),
+                    "value": r.randbytes(10000),
                 }
                 for x in range(batch * case.count, (batch + 1) * case.count)
             ]

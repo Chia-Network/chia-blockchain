@@ -20,13 +20,6 @@ from chia.simulator.block_tools import test_constants
 from chia.util.db_wrapper import DBWrapper2
 
 
-def rand_bytes(num) -> bytes:
-    ret = bytearray(num)
-    for i in range(num):
-        ret[i] = random.getrandbits(8)
-    return bytes(ret)
-
-
 @pytest.mark.anyio
 @pytest.mark.parametrize("with_hints", [True, False])
 @pytest.mark.skip("we no longer support DB v1")
@@ -35,21 +28,21 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
 
     hints: list[tuple[bytes32, bytes]] = []
     for i in range(351):
-        hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+        hints.append((bytes32.random(), random.randbytes(20)))
 
     # the v1 schema allows duplicates in the hints table
     for i in range(10):
-        coin_id = bytes32(rand_bytes(32))
-        hint = rand_bytes(20)
+        coin_id = bytes32.random()
+        hint = random.randbytes(20)
         hints.append((coin_id, hint))
         hints.append((coin_id, hint))
 
     for i in range(2000):
-        hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+        hints.append((bytes32.random(), random.randbytes(20)))
 
     for i in range(5):
-        coin_id = bytes32(rand_bytes(32))
-        hint = rand_bytes(20)
+        coin_id = bytes32.random()
+        hint = random.randbytes(20)
         hints.append((coin_id, hint))
         hints.append((coin_id, hint))
 

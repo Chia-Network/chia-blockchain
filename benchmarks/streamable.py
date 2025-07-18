@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 import sys
 from dataclasses import dataclass
 from enum import Enum
@@ -14,7 +15,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
 from benchmarks.utils import EnumType, get_commit_hash
-from chia._tests.util.benchmarks import rand_bytes, rand_full_block, rand_hash
+from chia._tests.util.benchmarks import rand_full_block, rand_hash
 from chia.util.streamable import Streamable, streamable
 
 # to run this benchmark:
@@ -50,13 +51,13 @@ class BenchmarkClass(Streamable):
 
 
 def get_random_inner() -> BenchmarkInner:
-    return BenchmarkInner(rand_bytes(20).hex())
+    return BenchmarkInner(random.randbytes(20).hex())
 
 
 def get_random_middle() -> BenchmarkMiddle:
     a: uint64 = uint64(10)
     b: list[bytes32] = [rand_hash() for _ in range(a)]
-    c: tuple[str, bool, uint8, list[bytes]] = ("benchmark", False, uint8(1), [rand_bytes(a) for _ in range(a)])
+    c: tuple[str, bool, uint8, list[bytes]] = ("benchmark", False, uint8(1), [random.randbytes(a) for _ in range(a)])
     d: tuple[BenchmarkInner, BenchmarkInner] = (get_random_inner(), get_random_inner())
     e: BenchmarkInner = get_random_inner()
     return BenchmarkMiddle(a, b, c, d, e)
