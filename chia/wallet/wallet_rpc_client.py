@@ -416,8 +416,8 @@ class WalletRpcClient(RpcClient):
         updated_index = response["index"]
         return str(updated_index)
 
-    async def get_farmed_amount(self) -> dict[str, Any]:
-        return await self.fetch("get_farmed_amount", {})
+    async def get_farmed_amount(self, include_pool_rewards: bool = False) -> dict[str, Any]:
+        return await self.fetch("get_farmed_amount", {"include_pool_rewards": include_pool_rewards})
 
     async def create_signed_transactions(
         self,
