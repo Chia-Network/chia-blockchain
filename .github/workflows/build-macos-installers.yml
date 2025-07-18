@@ -57,7 +57,7 @@ jobs:
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
             arch-artifact-name: intel
-          - runs-on: macos-13-arm64
+          - runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-15' }}
             name: m1
             bladebit-suffix: macos-arm64.tar.gz
             arch-artifact-name: arm
