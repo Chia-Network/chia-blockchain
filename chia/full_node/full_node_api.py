@@ -41,6 +41,7 @@ from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.block_store import UnsupportedDatabaseVersionError
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
@@ -1457,7 +1458,9 @@ class FullNodeAPI:
             blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
                 request.start_height, request.end_height
             )
-        except NotImplementedError:
+        except ValueError:
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        except UnsupportedDatabaseVersionError:
             # The underlying block store may not support this optimized call
             # (e.g. v1 DB). In this case, we fall back to the legacy approach
             height_to_hash = self.full_node.blockchain.height_to_hash
@@ -1469,8 +1472,6 @@ class FullNodeAPI:
                 header_hashes.append(header_hash)
 
             blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
-        except ValueError:
-            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter
