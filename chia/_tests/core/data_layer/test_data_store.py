@@ -2343,6 +2343,7 @@ async def test_db_data_insert_from_file(
         root = await tmp_data_store.get_tree_root(store_id)
         files_path = tmp_path.joinpath("files")
         await write_files_for_root(tmp_data_store, store_id, root, files_path, 1000)
+        assert root.node_hash is not None
         filename = get_delta_filename_path(files_path, store_id, root.node_hash, 1)
         assert filename.exists()
 
