@@ -12,10 +12,10 @@ from chia.apis import ApiProtocolRegistry
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_service import DataLayerService
 from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import DataLayerService, WalletService
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
@@ -24,8 +24,8 @@ from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 
-# See: https://bugs.python.org/issue29288
 "".encode("idna")
 
 SERVICE_NAME = "data_layer"
@@ -33,12 +33,11 @@ SERVICE_NAME = "data_layer"
 log = logging.getLogger(__name__)
 
 
-# TODO: Review need for config and if retained then hint it properly.
 def create_data_layer_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
     downloaders: list[PluginRemote],
-    uploaders: list[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
+    uploaders: list[PluginRemote],
     wallet_service: Optional[WalletService] = None,
     connect_to_daemon: bool = True,
 ) -> DataLayerService:
@@ -61,7 +60,6 @@ def create_data_layer_service(
         wallet_config = wallet_service.config
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
 
-    # dont add Fil)
     node = DataLayer.create(
         config=service_config,
         root_path=root_path,
@@ -79,7 +77,6 @@ def create_data_layer_service(
         root_path=root_path,
         config=config,
         node=node,
-        # TODO: not for peers...
         peer_api=peer_api,
         node_type=NodeType.DATA_LAYER,
         advertised_port=None,
@@ -93,7 +90,6 @@ def create_data_layer_service(
 
 
 async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml", fill_missing_services=True)
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
     config[SERVICE_NAME] = service_config
