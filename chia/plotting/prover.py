@@ -120,14 +120,7 @@ class V1Prover:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> V1Prover:
-        from chiapos import DiskProver
-
-        disk_prover = DiskProver.from_bytes(data)
-        return cls(disk_prover)
-
-    @property
-    def disk_prover(self) -> DiskProver:
-        return self._disk_prover
+        return cls(DiskProver.from_bytes(data))
 
 
 def get_prover_from_bytes(filename: str, prover_data: bytes) -> ProverProtocol:

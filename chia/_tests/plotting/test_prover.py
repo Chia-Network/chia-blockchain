@@ -75,6 +75,14 @@ class TestProver:
             get_prover_from_file("/nonexistent/path/test.txt")
 
 
+class TestV1Prover:
+    def test_v1_prover_get_version(self) -> None:
+        """Test that V1Prover.get_version() returns PlotVersion.V1"""
+        mock_disk_prover = MagicMock()
+        prover = V1Prover(mock_disk_prover)
+        assert prover.get_version() == PlotVersion.V1
+
+
 class TestGetProverFromBytes:
     def test_get_prover_from_bytes_v2_plot(self) -> None:
         with patch("chia.plotting.prover.V2Prover.from_bytes") as mock_v2_from_bytes:
