@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from enum import IntEnum
-from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
@@ -20,61 +18,29 @@ class PlotVersion(IntEnum):
     V2 = 2
 
 
-class ProverProtocol(ABC):
-    @abstractmethod
-    def get_filepath(self) -> Path:
-        """Returns the filename for the plot"""
-
-    @abstractmethod
-    def get_filename(self) -> str:
-        """Returns the filename string for the plot"""
-
-    @abstractmethod
-    def get_size(self) -> uint8:
-        """Returns the k size of the plot"""
-
-    @abstractmethod
-    def get_memo(self) -> bytes:
-        """Returns the memo"""
-
-    @abstractmethod
-    def get_compression_level(self) -> uint8:
-        """Returns the compression level"""
-
-    @abstractmethod
-    def get_version(self) -> PlotVersion:
-        """Returns the plot version"""
-
-    @abstractmethod
-    def __bytes__(self) -> bytes:
-        """Returns the prover bytes"""
-
-    @abstractmethod
-    def get_id(self) -> bytes32:
-        """Returns the plot ID"""
-
-    @abstractmethod
-    def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
-        """Returns the qualities for a given challenge"""
-
-    @abstractmethod
-    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
-        """Returns the full proof for a given challenge and index"""
+class ProverProtocol(Protocol):
+    def get_filename(self) -> str: ...
+    def get_size(self) -> uint8: ...
+    def get_memo(self) -> bytes: ...
+    def get_compression_level(self) -> uint8: ...
+    def get_version(self) -> PlotVersion: ...
+    def __bytes__(self) -> bytes: ...
+    def get_id(self) -> bytes32: ...
+    def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]: ...
+    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes: ...
 
     @classmethod
-    @abstractmethod
-    def from_bytes(cls, data: bytes) -> ProverProtocol:
-        """Create a prover from serialized bytes"""
+    def from_bytes(cls, data: bytes) -> ProverProtocol: ...
 
 
-class V2Prover(ProverProtocol):
-    """V2 Plot Prover stubb"""
+class V2Prover:
+    """Placeholder for future V2 plot format support"""
+
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[ProverProtocol] = cast("V2Prover", None)
 
     def __init__(self, filename: str):
         self._filename = filename
-
-    def get_filepath(self) -> Path:
-        return Path(self._filename)
 
     def get_filename(self) -> str:
         return str(self._filename)
@@ -102,28 +68,28 @@ class V2Prover(ProverProtocol):
         # TODO: Extract plot ID from V2 plot file
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_qualities_for_challenge(self, _challenge: bytes) -> list[bytes32]:
+    def get_qualities_for_challenge(self, challenge: bytes) -> list[bytes32]:
         # TODO: todo_v2_plots Implement plot quality lookup
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_full_proof(self, _challenge: bytes, _index: int, _parallel_read: bool = True) -> bytes:
+    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
         # TODO: todo_v2_plots Implement plot proof generation
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     @classmethod
-    def from_bytes(cls, _data: bytes) -> V2Prover:
+    def from_bytes(cls, data: bytes) -> V2Prover:
         # TODO: todo_v2_plots Implement prover deserialization from cache
         raise NotImplementedError("V2 plot format is not yet implemented")
 
 
-class V1Prover(ProverProtocol):
+class V1Prover:
     """Wrapper for existing DiskProver to implement ProverProtocol"""
+
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[ProverProtocol] = cast("V1Prover", None)
 
     def __init__(self, disk_prover: DiskProver) -> None:
         self._disk_prover = disk_prover
-
-    def get_filepath(self) -> Path:
-        return Path(self._disk_prover.get_filename())
 
     def get_filename(self) -> str:
         return str(self._disk_prover.get_filename())

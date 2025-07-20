@@ -42,9 +42,6 @@ pytestmark = [pytest.mark.limit_consensus_modes(reason="does not depend on conse
 class MockDiskProver:
     filename: str
 
-    def get_filepath(self) -> Path:
-        return Path(self.filename)
-
     def get_filename(self) -> str:
         return self.filename
 
@@ -115,7 +112,7 @@ class PlotRefreshTester:
                     for value in actual_value:
                         if type(value) is PlotInfo:
                             for plot_info in expected_list:
-                                if plot_info.prover.get_filename() == value.prover.get_filepath():
+                                if plot_info.prover.get_filename() == value.prover.get_filename():
                                     values_found += 1
                                     continue
                         else:
@@ -507,7 +504,7 @@ async def test_plot_info_caching(environment, bt):
     await refresh_tester.run(expected_result)
     for path, plot_info in env.refresh_tester.plot_manager.plots.items():
         assert path in plot_manager.plots
-        assert plot_manager.plots[path].prover.get_filepath() == plot_info.prover.get_filepath()
+        assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
         assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
         assert plot_manager.plots[path].prover.get_size() == plot_info.prover.get_size()
@@ -598,7 +595,7 @@ async def test_drop_too_large_cache_entries(environment, bt):
         test_cache.load()
         assert len(test_cache) == len(expected)
         for plot_info in expected:
-            assert test_cache.get(Path(plot_info.prover.get_filepath())) is not None
+            assert test_cache.get(Path(plot_info.prover.get_filename())) is not None
 
     # Modify two entries, with and without memo modification, they both should remain in the cache after load
     modify_cache_entry(0, 1500, modify_memo=False)
@@ -617,7 +614,7 @@ async def test_drop_too_large_cache_entries(environment, bt):
     # Write the modified cache entries to the file
     cache_path.write_bytes(bytes(VersionedBlob(uint16(CURRENT_VERSION), bytes(cache_data))))
     # And now test that plots in invalid_entries are not longer loaded
-    assert_cache([plot_info for plot_info in plot_infos if str(plot_info.prover.get_filepath()) not in invalid_entries])
+    assert_cache([plot_info for plot_info in plot_infos if plot_info.prover.get_filename() not in invalid_entries])
 
 
 @pytest.mark.anyio
