@@ -118,7 +118,7 @@ class WalletCoinStore:
     async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
         if name is None:
             name = record.name()
-        assert record.spent() == (record.spent_block_height != 0)
+        assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO coin_record ("
@@ -128,7 +128,7 @@ class WalletCoinStore:
                     name.hex(),
                     record.confirmed_block_height,
                     record.spent_block_height,
-                    int(record.spent()),
+                    int(record.spent),
                     int(record.coinbase),
                     str(record.coin.puzzle_hash.hex()),
                     str(record.coin.parent_coin_info.hex()),
