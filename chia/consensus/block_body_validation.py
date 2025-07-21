@@ -568,7 +568,8 @@ async def validate_block_body(
             prev_transaction_block_timestamp,
         )
         if error is not None:
-            return error
+            # TODO: standardise errors across Rust and Python so cast is not necesary here
+            return Err(error)
 
     # 22. Verify aggregated signature is done in pre-validation
     if not block.transactions_info.aggregated_signature:
