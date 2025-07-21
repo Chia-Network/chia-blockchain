@@ -732,6 +732,8 @@ class MempoolManager:
             self.peak.height,
             self.peak.timestamp,
         )
+        if tl_error is not None:
+            tl_error = Err(tl_error)
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 

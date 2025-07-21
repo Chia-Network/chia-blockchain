@@ -434,15 +434,16 @@ class TestCheckTimeLocks:
         conds: SpendBundleConditions,
         expected: Err | None,
     ) -> None:
-        assert (
-            check_time_locks(
-                dict(self.REMOVALS),
-                conds,
-                self.PREV_BLOCK_HEIGHT,
-                self.PREV_BLOCK_TIMESTAMP,
-            )
-            == expected
+        res = check_time_locks(
+            dict(self.REMOVALS),
+            conds,
+            self.PREV_BLOCK_HEIGHT,
+            self.PREV_BLOCK_TIMESTAMP,
         )
+        if res is not None:
+            # TODO: remove when Rust errors and Python Errors are the same
+            res = Err(res)
+        assert res == expected
 
 
 def expect(
