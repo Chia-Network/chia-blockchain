@@ -60,7 +60,7 @@ table_columns: dict[str, list[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
-    "ids": ["kv_id", "hash", "blob", "store_id", "confirmed"],
+    "ids": ["kv_id", "hash", "blob", "store_id"],
     "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
 

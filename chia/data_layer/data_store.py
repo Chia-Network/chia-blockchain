@@ -485,7 +485,7 @@ class DataStore:
                             f"Total roots processed: {(synced_generations / total_generations * 100):.2f}%"
                         )
                     except Exception as e:
-                        await data_store.delete_unconfirmed_kvids(store_id)
+                        await self.delete_unconfirmed_kvids(store_id)
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
 
