@@ -2344,7 +2344,14 @@ class TestCoins:
             self.lineage_info[ph] = UnspentLineageInfo(c.name(), c.parent_coin_info, bytes32([42] * 32))
 
     def spend_coin(self, coin_id: bytes32, height: uint32 = uint32(10)) -> None:
-        self.coin_records[coin_id] = dataclasses.replace(self.coin_records[coin_id], spent_block_index=height)
+        new_cr = CoinRecord(
+            self.coin_records[coin_id].coin,
+            self.coin_records[coin_id].confirmed_block_index,
+            height,
+            self.coin_records[coin_id].coinbase,
+            self.coin_records[coin_id].timestamp,
+        )
+        self.coin_records[coin_id] = new_cr
 
     def update_lineage(self, puzzle_hash: bytes32, coin: Optional[Coin]) -> None:
         if coin is None:
