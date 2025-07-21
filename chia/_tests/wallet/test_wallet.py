@@ -587,7 +587,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert next(iter(txs["transactions"][0]["memos"].values())) == b"Test".hex()
+        assert "0x" + b"Test".hex() in next(iter(txs["transactions"][0]["memos"].values()))
 
     @pytest.mark.parametrize(
         "wallet_environments",
