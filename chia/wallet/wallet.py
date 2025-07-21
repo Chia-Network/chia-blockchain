@@ -420,7 +420,7 @@ class Wallet:
         assert len(transaction) > 0
         spend_bundle = WalletSpendBundle(transaction, G2Element())
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
 

@@ -536,7 +536,7 @@ class DataLayerWallet:
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=new_puz_hash,
             amount=uint64(singleton_record.lineage_proof.amount),
             fee_amount=fee,
@@ -731,7 +731,7 @@ class DataLayerWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_puzhash,
                     amount=uint64(mirror_coin.amount),
                     fee_amount=fee,

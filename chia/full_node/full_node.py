@@ -887,7 +887,7 @@ class FullNode:
 
     async def synced(self, block_is_current_at: Optional[uint64] = None) -> bool:
         if block_is_current_at is None:
-            block_is_current_at = uint64(int(time.time() - 60 * 7))
+            block_is_current_at = uint64(time.time() - 60 * 7)
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
