@@ -465,7 +465,7 @@ async def validate_block_body(
                 False,
                 block.foliage_transaction_block.timestamp,
             )
-            removal_coin_records[new_unspent.name] = new_unspent
+            removal_coin_records[new_unspent.name()] = new_unspent
         else:
             # This check applies to both coins created before fork (pulled from coin_store),
             # and coins created after fork (additions_since_fork)
@@ -487,9 +487,9 @@ async def validate_block_body(
             if unspent.spent == 1 and unspent.spent_block_index <= fork_info.fork_height:
                 # Check for coins spent in an ancestor block
                 return Err.DOUBLE_SPEND
-            removal_coin_records[unspent.name] = unspent
+            removal_coin_records[unspent.name()] = unspent
         else:
-            look_in_fork.append(unspent.name)
+            look_in_fork.append(unspent.name())
 
     if log_coins and len(look_in_fork) > 0:
         log.info("%d coins spent after fork", len(look_in_fork))
@@ -497,7 +497,7 @@ async def validate_block_body(
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
-        found: set[bytes32] = {u.name for u in unspent_records}
+        found: set[bytes32] = {u.name() for u in unspent_records}
         for rem in removals_from_db:
             if rem in found:
                 continue
@@ -555,7 +555,7 @@ async def validate_block_body(
 
     # 20. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
     for unspent in removal_coin_records.values():
-        if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
+        if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name()]:
             return Err.WRONG_PUZZLE_HASH
 
     # 21. Verify conditions
