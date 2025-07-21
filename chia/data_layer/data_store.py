@@ -82,6 +82,7 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
+    unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]]
     prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length
 
     @classmethod
@@ -110,11 +111,14 @@ class DataStore:
             log_path=sql_log_path,
         ) as db_wrapper:
             recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
+            unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]] = defaultdict(list)
+
             self = cls(
                 db_wrapper=db_wrapper,
                 recent_merkle_blobs=recent_merkle_blobs,
                 merkle_blobs_path=merkle_blobs_path,
                 key_value_blobs_path=key_value_blobs_path,
+                unconfirmed_keys_values=unconfirmed_keys_values,
                 prefer_db_kv_blob_length=prefer_db_kv_blob_length,
             )
 
@@ -163,8 +167,7 @@ class DataStore:
                         kv_id INTEGER PRIMARY KEY,
                         hash BLOB NOT NULL CHECK(length(store_id) == 32),
                         blob BLOB,
-                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
-                        confirmed tinyint CHECK(confirmed == 0 OR confirmed == 1)
+                        store_id BLOB NOT NULL CHECK(length(store_id) == 32)
                     )
                     """
                 )
@@ -187,11 +190,6 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS ids_confirmed_index ON ids(confirmed, store_id)
-                    """
-                )
-                await writer.execute(
-                    """
                     CREATE INDEX IF NOT EXISTS nodes_generation_index ON nodes(generation)
                     """
                 )
@@ -210,6 +208,9 @@ class DataStore:
         filename: Path,
         delta_reader: Optional[DeltaReader] = None,
     ) -> Optional[DeltaReader]:
+        if self.unconfirmed_keys_values[store_id]:
+            raise Exception("Internal error: unconfirmed keys values cache not cleaned")
+
         if root_hash is None:
             merkle_blob = MerkleBlob(b"")
         else:
@@ -476,13 +477,15 @@ class DataStore:
                         break
 
                     try:
-                        await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
+                        async with self.db_wrapper.writer():
+                            await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
                         synced_generations += 1
                         log.info(
                             f"Successfully recovered root from {filename}. "
                             f"Total roots processed: {(synced_generations / total_generations * 100):.2f}%"
                         )
                     except Exception as e:
+                        await data_store.delete_unconfirmed_kvids(store_id)
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
 
@@ -644,14 +647,15 @@ class DataStore:
             table_blob = blob
         try:
             row = await writer.execute_insert(
-                "INSERT INTO ids (hash, blob, store_id, confirmed) VALUES (?, ?, ?, ?)",
+                "INSERT INTO ids (hash, blob, store_id) VALUES (?, ?, ?)",
                 (
                     blob_hash,
                     table_blob,
                     store_id,
-                    confirmed,
                 ),
             )
+            if not confirmed and use_file:
+                self.unconfirmed_keys_values[store_id].append(blob_hash)
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in str(e):
                 kv_id = await self.get_kvid(blob, store_id)
@@ -671,44 +675,16 @@ class DataStore:
         return KeyOrValueId(row[0])
 
     async def delete_unconfirmed_kvids(self, store_id: bytes32) -> None:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                """
-                SELECT blob, hash FROM ids WHERE store_id == :store_id AND confirmed == 0
-                """,
-                {
-                    "store_id": store_id,
-                },
-            )
-
-            rows = await cursor.fetchall()
-
-        for row in rows:
-            blob = row["blob"]
-            if blob is None:
-                blob_hash = row["hash"]
-                path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
-                try:
-                    path.unlink()
-                except FileNotFoundError:
-                    log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
-
-        async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "DELETE FROM ids WHERE store_id == :store_id AND confirmed == 0",
-                {
-                    "store_id": store_id,
-                },
-            )
+        for blob_hash in self.unconfirmed_keys_values[store_id]:
+            path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
+        self.unconfirmed_keys_values[store_id].clear()
 
     async def confirm_all_kvids(self, store_id: bytes32) -> None:
-        async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "UPDATE ids SET confirmed = 1 WHERE store_id == :store_id and confirmed == 0",
-                {
-                    "store_id": store_id,
-                },
-            )
+        self.unconfirmed_keys_values[store_id].clear()
 
     async def add_key_value(
         self, key: bytes, value: bytes, store_id: bytes32, writer: aiosqlite.Connection, confirmed: bool = True

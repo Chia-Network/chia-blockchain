@@ -2261,57 +2261,6 @@ async def test_get_keys_values_both_disk_and_db(
 
 
 @pytest.mark.anyio
-@boolean_datacases(name="test_confirmation", true="confirm blobs", false="don't confirm blobs")
-async def test_unconfirmed_keys_values(
-    data_store: DataStore,
-    store_id: bytes32,
-    seeded_random: random.Random,
-    test_confirmation: bool,
-) -> None:
-    num_keys = 10000
-    num_confirmed_files = 0
-    num_files = 0
-    num_confirmed_blobs = 0
-
-    async with data_store.db_wrapper.writer() as writer:
-        for _ in range(num_keys):
-            confirmed = seeded_random.choice([True, False])
-            use_file = seeded_random.choice([True, False])
-            assert data_store.prefer_db_kv_blob_length > 7
-            size = data_store.prefer_db_kv_blob_length + 1 if use_file else 8
-            key = bytes(seeded_random.getrandbits(8) for _ in range(size))
-            value = bytes(seeded_random.getrandbits(8) for _ in range(size))
-            await data_store.add_key_value(key, value, store_id, writer, confirmed)
-            if use_file:
-                num_files += 1
-                if confirmed:
-                    num_confirmed_files += confirmed
-            num_confirmed_blobs += confirmed
-
-    async with data_store.db_wrapper.reader() as reader:
-        async with reader.execute("SELECT COUNT(*) FROM ids WHERE confirmed = 0") as cursor:
-            row_count = await cursor.fetchone()
-            assert row_count is not None
-            assert row_count[0] == 2 * (num_keys - num_confirmed_blobs)
-
-    keys_value_path = data_store.key_value_blobs_path.joinpath(store_id.hex())
-    assert sum(1 for _ in keys_value_path.rglob("*") if _.is_file()) == 2 * num_files
-
-    if test_confirmation:
-        await data_store.confirm_all_kvids(store_id)
-    expected_num_files = 2 * num_files if test_confirmation else 2 * num_confirmed_files
-
-    await data_store.delete_unconfirmed_kvids(store_id)
-    assert sum(1 for _ in keys_value_path.rglob("*") if _.is_file()) == expected_num_files
-
-    async with data_store.db_wrapper.reader() as reader:
-        async with reader.execute("SELECT COUNT(*) FROM ids WHERE confirmed = 0") as cursor:
-            row_count = await cursor.fetchone()
-            assert row_count is not None
-            assert row_count[0] == 0
-
-
-@pytest.mark.anyio
 @boolean_datacases(name="success", false="invalid file", true="valid file")
 async def test_db_data_insert_from_file(
     data_store: DataStore,
