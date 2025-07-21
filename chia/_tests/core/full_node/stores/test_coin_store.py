@@ -252,20 +252,20 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
             if block.height != 0 and selected_coin is None:
                 # Select the first CoinRecord which will be spent at the next transaction block.
                 selected_coin = records[0]
-                await coin_store._set_spent([r.name for r in records[1:] if r is not None], block.height)
+                await coin_store._set_spent([r.name() for r in records[1:] if r is not None], block.height)
             else:
-                await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+                await coin_store._set_spent([r.name() for r in records if r is not None], block.height)
 
             if spend_selected_coin:
                 assert selected_coin is not None
-                await coin_store._set_spent([selected_coin.name], block.height)
+                await coin_store._set_spent([selected_coin.name()], block.height)
 
             records = [await coin_store.get_coin_record(coin.name()) for coin in reward_coins]  # update coin records
             for record in records:
                 assert record is not None
                 if (
                     selected_coin is not None
-                    and selected_coin.name == record.name()
+                    and selected_coin.name() == record.name()
                     and not selected_coin.confirmed_block_index < block.height
                 ):
                     assert not record.spent()
