@@ -734,18 +734,14 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        try:
-            tl_error: Optional[Err] = check_time_locks(
-                removal_record_dict,
-                conds,
-                self.peak.height,
-                self.peak.timestamp,
-            )
-        except Exception as e:
-            breakpoint()
-
+        tl_error: Optional[Err] = check_time_locks(
+            removal_record_dict,
+            conds,
+            self.peak.height,
+            self.peak.timestamp,
+        )
         if tl_error is not None:
-            breakpoint()
+            tl_error = Err(tl_error)
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 
