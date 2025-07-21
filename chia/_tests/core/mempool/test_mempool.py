@@ -2955,11 +2955,8 @@ def test_timeout(old: bool) -> None:
 
 
 def rand_hash() -> bytes32:
-    rng = random.Random()
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = rng.getrandbits(8)
-    return bytes32(ret)
+    # TODO: does this need to be creating a new rng?
+    return bytes32.random(r=random.Random())
 
 
 def item_cost(cost: int, fee_rate: float) -> MempoolItem:

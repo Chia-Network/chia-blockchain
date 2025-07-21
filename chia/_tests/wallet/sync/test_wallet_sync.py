@@ -25,6 +25,7 @@ from chia_rs.sized_ints import uint32, uint64, uint128
 from chiabip158 import PyBIP158
 from colorlog import getLogger
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer, disconnect_all, disconnect_all_and_reconnect
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
@@ -1702,6 +1703,11 @@ async def test_long_sync_untrusted_break(
 @pytest.mark.anyio
 @pytest.mark.parametrize("chain_length", [0, 100])
 @pytest.mark.parametrize("fork_point", [500, 1500])
+# TODO: todo_v2_plots once we have new test chains, we can probably re-enable this
+@pytest.mark.limit_consensus_modes(
+    allows=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="after plot-v1 phase-out, the chains aren't valid anymore",
+)
 async def test_long_reorg_nodes_and_wallet(
     chain_length: int,
     fork_point: int,

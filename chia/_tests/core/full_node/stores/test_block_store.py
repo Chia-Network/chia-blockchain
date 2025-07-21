@@ -369,16 +369,10 @@ async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_ver
 async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
-    def rand_bytes(num: int) -> bytes:
-        ret = bytearray(num)
-        for i in range(num):
-            ret[i] = random.getrandbits(8)
-        return bytes(ret)
-
     def rand_vdf_proof() -> VDFProof:
         return VDFProof(
             uint8(1),  # witness_type
-            rand_bytes(32),  # witness
+            random.randbytes(32),  # witness
             bool(random.randint(0, 1)),  # normalized_to_identity
         )
 

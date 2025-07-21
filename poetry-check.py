@@ -9,6 +9,7 @@ def main() -> int:
         [
             "poetry",
             "check",
+            "--strict",
         ],
         check=True,
     )
