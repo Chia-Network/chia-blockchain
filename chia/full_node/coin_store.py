@@ -235,7 +235,8 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coins.append(CoinRecord(coin, row[0], spent_index, row[2], row[6]))
+                    coinbase = False if row[2] == 0 else True
+                    coins.append(CoinRecord(coin, row[0], spent_index, coinbase, row[6]))
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
