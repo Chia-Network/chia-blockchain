@@ -40,7 +40,7 @@ repos:
     hooks:
       - id: poetry
         name: poetry
-        entry: ./activated.py --poetry poetry check
+        entry: ./activated.py --poetry poetry check --strict
         language: system
         pass_filenames: false
   - repo: https://github.com/pre-commit/mirrors-prettier
