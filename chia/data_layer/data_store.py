@@ -8,12 +8,12 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Iterable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Iterator, Optional, Union
+from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 import anyio.to_thread
