@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Optional, Union
+from typing import Any, BinaryIO, Callable, Iterator, Optional, Union
 
 import aiosqlite
 import anyio.to_thread
