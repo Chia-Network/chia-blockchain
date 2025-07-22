@@ -9,7 +9,7 @@ import shutil
 import sqlite3
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Iterable, Sequence
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
@@ -208,43 +208,44 @@ class DataStore:
         filename: Path,
         delta_reader: Optional[DeltaReader] = None,
     ) -> Optional[DeltaReader]:
-        if self.unconfirmed_keys_values[store_id]:
-            raise Exception("Internal error: unconfirmed keys values cache not cleaned")
+        async with self.db_wrapper.writer():
+            with self.manage_kv_files(store_id):
+                if root_hash is None:
+                    merkle_blob = MerkleBlob(b"")
+                else:
+                    root = await self.get_tree_root(store_id=store_id)
+                    if delta_reader is None:
+                        delta_reader = DeltaReader(internal_nodes={}, leaf_nodes={})
+                        if root.node_hash is not None:
+                            delta_reader.collect_from_merkle_blob(
+                                self.get_merkle_path(store_id=store_id, root_hash=root.node_hash),
+                                indexes=[TreeIndex(0)],
+                            )
 
-        if root_hash is None:
-            merkle_blob = MerkleBlob(b"")
-        else:
-            root = await self.get_tree_root(store_id=store_id)
-            if delta_reader is None:
-                delta_reader = DeltaReader(internal_nodes={}, leaf_nodes={})
-                if root.node_hash is not None:
-                    delta_reader.collect_from_merkle_blob(
-                        self.get_merkle_path(store_id=store_id, root_hash=root.node_hash), indexes=[TreeIndex(0)]
-                    )
+                    internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
+                    delta_reader.add_internal_nodes(internal_nodes)
+                    delta_reader.add_leaf_nodes(terminal_nodes)
 
-            internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
-            delta_reader.add_internal_nodes(internal_nodes)
-            delta_reader.add_leaf_nodes(terminal_nodes)
+                    missing_hashes = await anyio.to_thread.run_sync(delta_reader.get_missing_hashes, root_hash)
 
-            missing_hashes = await anyio.to_thread.run_sync(delta_reader.get_missing_hashes, root_hash)
+                    if len(missing_hashes) > 0:
+                        # TODO: consider adding transactions around this code
+                        merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(
+                            missing_hashes, store_id
+                        )
+                        if len(merkle_blob_queries) > 0:
+                            jobs = [
+                                (self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes)
+                                for old_root_hash, indexes in merkle_blob_queries.items()
+                            ]
+                            await anyio.to_thread.run_sync(delta_reader.collect_from_merkle_blobs, jobs)
+                        await self.build_cache_and_collect_missing_hashes(root, root_hash, store_id, delta_reader)
 
-            if len(missing_hashes) > 0:
-                # TODO: consider adding transactions around this code
-                merkle_blob_queries = await self.build_merkle_blob_queries_for_missing_hashes(missing_hashes, store_id)
-                if len(merkle_blob_queries) > 0:
-                    jobs = [
-                        (self.get_merkle_path(store_id=store_id, root_hash=old_root_hash), indexes)
-                        for old_root_hash, indexes in merkle_blob_queries.items()
-                    ]
-                    await anyio.to_thread.run_sync(delta_reader.collect_from_merkle_blobs, jobs)
-                await self.build_cache_and_collect_missing_hashes(root, root_hash, store_id, delta_reader)
+                    merkle_blob = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
 
-            merkle_blob = delta_reader.create_merkle_blob_and_filter_unused_nodes(root_hash, set())
-
-        # Don't store these blob objects into cache, since their data structures are not calculated yet.
-        await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
-        await self.confirm_all_kvids(store_id=store_id)
-        return delta_reader
+                # Don't store these blob objects into cache, since their data structures are not calculated yet.
+                await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED, update_cache=False)
+                return delta_reader
 
     async def build_merkle_blob_queries_for_missing_hashes(
         self,
@@ -477,15 +478,13 @@ class DataStore:
                         break
 
                     try:
-                        async with self.db_wrapper.writer():
-                            await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
+                        await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
                         synced_generations += 1
                         log.info(
                             f"Successfully recovered root from {filename}. "
                             f"Total roots processed: {(synced_generations / total_generations * 100):.2f}%"
                         )
                     except Exception as e:
-                        await self.delete_unconfirmed_kvids(store_id)
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
 
@@ -674,7 +673,7 @@ class DataStore:
             path.write_bytes(zstd.compress(blob))
         return KeyOrValueId(row[0])
 
-    async def delete_unconfirmed_kvids(self, store_id: bytes32) -> None:
+    def delete_unconfirmed_kvids(self, store_id: bytes32) -> None:
         for blob_hash in self.unconfirmed_keys_values[store_id]:
             with log_exceptions(log=log, consume=True):
                 path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
@@ -684,8 +683,21 @@ class DataStore:
                     log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
         self.unconfirmed_keys_values[store_id].clear()
 
-    async def confirm_all_kvids(self, store_id: bytes32) -> None:
+    def confirm_all_kvids(self, store_id: bytes32) -> None:
         self.unconfirmed_keys_values[store_id].clear()
+
+    @contextmanager
+    def manage_kv_files(self, store_id: bytes32) -> Iterator[None]:
+        if self.unconfirmed_keys_values[store_id]:
+            raise Exception("Internal error: unconfirmed keys values cache not cleaned")
+
+        try:
+            yield
+        except Exception:
+            self.delete_unconfirmed_kvids(store_id)
+            raise
+        else:
+            self.confirm_all_kvids(store_id)
 
     async def add_key_value(
         self, key: bytes, value: bytes, store_id: bytes32, writer: aiosqlite.Connection, confirmed: bool = True

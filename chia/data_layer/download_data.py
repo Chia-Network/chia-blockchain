@@ -218,13 +218,12 @@ async def insert_from_delta_file(
                     existing_generation,
                     group_files_by_store,
                 )
-                async with data_store.db_wrapper.writer():
-                    delta_reader = await data_store.insert_into_data_store_from_file(
-                        store_id,
-                        None if root_hash == bytes32.zeros else root_hash,
-                        target_filename_path,
-                        delta_reader=delta_reader,
-                    )
+                delta_reader = await data_store.insert_into_data_store_from_file(
+                    store_id,
+                    None if root_hash == bytes32.zeros else root_hash,
+                    target_filename_path,
+                    delta_reader=delta_reader,
+                )
                 log.info(
                     f"Successfully inserted hash {root_hash} from delta file. "
                     f"Generation: {existing_generation}. Store id: {store_id}."
@@ -257,7 +256,6 @@ async def insert_from_delta_file(
             if not filename_exists:
                 # Don't penalize this server if we didn't download the file from it.
                 await data_store.server_misses_file(store_id, server_info, timestamp)
-            await data_store.delete_unconfirmed_kvids(store_id)
             return False
 
     return True
