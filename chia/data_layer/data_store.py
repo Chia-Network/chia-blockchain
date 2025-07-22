@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import functools
 import itertools
 import logging
 import shutil
