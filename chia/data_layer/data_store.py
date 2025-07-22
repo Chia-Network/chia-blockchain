@@ -83,7 +83,9 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
-    unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]] = field(default_factory=functools.partial(defaultdict, list))
+    unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]] = field(
+        default_factory=functools.partial(defaultdict, list)
+    )
     prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length
 
     @classmethod
