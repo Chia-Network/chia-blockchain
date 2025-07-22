@@ -6,12 +6,13 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, TextIO, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TextIO, Union, cast
 
 import aiosqlite
 import aiosqlite.context
 import anyio
 from aiosqlite import Cursor
+from typing_extensions import Self
 
 from chia.util.transactioner import (
     ConnectionProtocol,
