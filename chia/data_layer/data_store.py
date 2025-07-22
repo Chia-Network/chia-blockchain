@@ -9,7 +9,7 @@ import sqlite3
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Iterable, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional, Union
