@@ -2626,7 +2626,7 @@ async def test_long_reorg(
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
-    # when using add_block manualy we must warmup the cache
+    # when using add_block manually we must warmup the cache
     await node.full_node.blockchain.warmup(uint32(fork_point - 100))
     if light_blocks:
         blocks = default_10000_blocks[fork_point - 100 : 3200]
@@ -2854,7 +2854,7 @@ async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname
 
     # now continue building the chain on top of B
     # since spend_bundle was supposed to have been reorged-out, we should be
-    # able to include it in another block, howerver, since we replaced a TX
+    # able to include it in another block, however, since we replaced a TX
     # block with a non-TX block, it won't be available immediately at height 11
 
     # add a TX block, this will make spend_bundle valid in the next block
