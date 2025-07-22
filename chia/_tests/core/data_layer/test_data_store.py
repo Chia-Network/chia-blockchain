@@ -2284,8 +2284,8 @@ async def test_db_data_insert_from_file(
             use_file = seeded_random.choice([True, False])
             assert tmp_data_store.prefer_db_kv_blob_length > 7
             size = tmp_data_store.prefer_db_kv_blob_length + 1 if use_file else 8
-            key = bytes(seeded_random.getrandbits(8) for _ in range(size))
-            value = bytes(seeded_random.getrandbits(8) for _ in range(size))
+            key = seeded_random.randbytes(size)
+            value = seeded_random.randbytes(size)
             changelist.append({"action": "insert", "key": key, "value": value})
 
         await tmp_data_store.insert_batch(store_id, changelist, status=Status.COMMITTED)
@@ -2305,7 +2305,7 @@ async def test_db_data_insert_from_file(
         assert target_filename_path.exists()
 
     keys_value_path = data_store.key_value_blobs_path.joinpath(store_id.hex())
-    assert sum(1 for _ in keys_value_path.rglob("*") if _.is_file()) == 0
+    assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == 0
 
     is_success = await insert_from_delta_file(
         data_store=data_store,
@@ -2332,6 +2332,6 @@ async def test_db_data_insert_from_file(
                 assert row_count[0] == 0
 
     if success:
-        assert sum(1 for _ in keys_value_path.rglob("*") if _.is_file()) > 0
+        assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) > 0
     else:
-        assert sum(1 for _ in keys_value_path.rglob("*") if _.is_file()) == 0
+        assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == 0

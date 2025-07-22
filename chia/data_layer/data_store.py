@@ -82,7 +82,7 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
-    unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]]
+    unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]] = field(default_factory=functools.partial(defaultdict, list))
     prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length
 
     @classmethod
@@ -111,14 +111,11 @@ class DataStore:
             log_path=sql_log_path,
         ) as db_wrapper:
             recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=cache_capacity)
-            unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]] = defaultdict(list)
-
             self = cls(
                 db_wrapper=db_wrapper,
                 recent_merkle_blobs=recent_merkle_blobs,
                 merkle_blobs_path=merkle_blobs_path,
                 key_value_blobs_path=key_value_blobs_path,
-                unconfirmed_keys_values=unconfirmed_keys_values,
                 prefer_db_kv_blob_length=prefer_db_kv_blob_length,
             )
 
@@ -676,11 +673,12 @@ class DataStore:
 
     async def delete_unconfirmed_kvids(self, store_id: bytes32) -> None:
         for blob_hash in self.unconfirmed_keys_values[store_id]:
-            path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
-            try:
-                path.unlink()
-            except FileNotFoundError:
-                log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
+            with log_exceptions(log=log, consume=True):
+                path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
         self.unconfirmed_keys_values[store_id].clear()
 
     async def confirm_all_kvids(self, store_id: bytes32) -> None:
