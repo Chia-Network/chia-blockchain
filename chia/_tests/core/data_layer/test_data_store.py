@@ -2352,13 +2352,14 @@ async def test_manage_kv_files(
             with data_store.manage_kv_files(store_id):
                 for _ in range(num_keys):
                     use_file = seeded_random.choice([True, False])
-                    assert tmp_data_store.prefer_db_kv_blob_length > 7
-                    size = tmp_data_store.prefer_db_kv_blob_length + 1 if use_file else 8
+                    assert data_store.prefer_db_kv_blob_length > 7
+                    size = data_store.prefer_db_kv_blob_length + 1 if use_file else 8
                     key = seeded_random.randbytes(size)
                     value = seeded_random.randbytes(size)
                     await data_store.add_key_value(key, value, store_id, writer)
                     num_files += 2 * use_file
 
+                assert num_files > 0
                 assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == num_files
                 raise Exception("Test exception")
 
