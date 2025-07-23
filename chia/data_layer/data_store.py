@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import copy
-import functools
 import itertools
 import logging
 import shutil
@@ -206,7 +205,7 @@ class DataStore:
         filename: Path,
         delta_reader: Optional[DeltaReader] = None,
     ) -> Optional[DeltaReader]:
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer():
             with self.manage_kv_files(store_id):
                 if root_hash is None:
                     merkle_blob = MerkleBlob(b"")
@@ -220,7 +219,7 @@ class DataStore:
                                 indexes=[TreeIndex(0)],
                             )
 
-                    internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id, writer)
+                    internal_nodes, terminal_nodes = await self.read_from_file(filename, store_id)
                     delta_reader.add_internal_nodes(internal_nodes)
                     delta_reader.add_leaf_nodes(terminal_nodes)
 
@@ -347,50 +346,51 @@ class DataStore:
             log.info(f"Missing hashes: added old hashes from generation {current_generation}")
 
     async def read_from_file(
-        self, filename: Path, store_id: bytes32, writer: aiosqlite.Connection
+        self, filename: Path, store_id: bytes32
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
-        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
-        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
+        async with self.db_wrapper.writer() as writer:
+            internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
+            terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
 
-        with open(filename, "rb") as reader:
-            while True:
-                chunk = b""
-                while len(chunk) < 4:
-                    size_to_read = 4 - len(chunk)
-                    cur_chunk = reader.read(size_to_read)
-                    if cur_chunk is None or cur_chunk == b"":
-                        if size_to_read < 4:
-                            raise Exception("Incomplete read of length.")
+            with open(filename, "rb") as reader:
+                while True:
+                    chunk = b""
+                    while len(chunk) < 4:
+                        size_to_read = 4 - len(chunk)
+                        cur_chunk = reader.read(size_to_read)
+                        if cur_chunk is None or cur_chunk == b"":
+                            if size_to_read < 4:
+                                raise Exception("Incomplete read of length.")
+                            break
+                        chunk += cur_chunk
+                    if chunk == b"":
                         break
-                    chunk += cur_chunk
-                if chunk == b"":
-                    break
 
-                size = int.from_bytes(chunk, byteorder="big")
-                serialize_nodes_bytes = b""
-                while len(serialize_nodes_bytes) < size:
-                    size_to_read = size - len(serialize_nodes_bytes)
-                    cur_chunk = reader.read(size_to_read)
-                    if cur_chunk is None or cur_chunk == b"":
-                        raise Exception("Incomplete read of blob.")
-                    serialize_nodes_bytes += cur_chunk
-                serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
+                    size = int.from_bytes(chunk, byteorder="big")
+                    serialize_nodes_bytes = b""
+                    while len(serialize_nodes_bytes) < size:
+                        size_to_read = size - len(serialize_nodes_bytes)
+                        cur_chunk = reader.read(size_to_read)
+                        if cur_chunk is None or cur_chunk == b"":
+                            raise Exception("Incomplete read of blob.")
+                        serialize_nodes_bytes += cur_chunk
+                    serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
-                node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-                if node_type == NodeType.INTERNAL:
-                    node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
-                    internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
-                else:
-                    kid, vid = await self.add_key_value(
-                        serialized_node.value1,
-                        serialized_node.value2,
-                        store_id,
-                        writer=writer,
-                    )
-                    node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
-                    terminal_nodes[node_hash] = (kid, vid)
+                    node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
+                    if node_type == NodeType.INTERNAL:
+                        node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                        internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                    else:
+                        kid, vid = await self.add_key_value(
+                            serialized_node.value1,
+                            serialized_node.value2,
+                            store_id,
+                            writer=writer,
+                        )
+                        node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
+                        terminal_nodes[node_hash] = (kid, vid)
 
-        return internal_nodes, terminal_nodes
+            return internal_nodes, terminal_nodes
 
     async def migrate_db(self, server_files_location: Path) -> None:
         async with self.db_wrapper.reader() as reader:
@@ -647,8 +647,6 @@ class DataStore:
                     store_id,
                 ),
             )
-            if use_file:
-                self.unconfirmed_keys_values[store_id].append(blob_hash)
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in str(e):
                 kv_id = await self.get_kvid(blob, store_id)
@@ -663,6 +661,7 @@ class DataStore:
         if use_file:
             path = self.get_key_value_path(store_id=store_id, blob_hash=blob_hash)
             path.parent.mkdir(parents=True, exist_ok=True)
+            self.unconfirmed_keys_values[store_id].append(blob_hash)
             # TODO: consider file-system based locking of either the file or the store directory
             path.write_bytes(zstd.compress(blob))
         return KeyOrValueId(row[0])
@@ -683,7 +682,7 @@ class DataStore:
     @contextmanager
     def manage_kv_files(self, store_id: bytes32) -> Iterator[None]:
         if store_id not in self.unconfirmed_keys_values:
-            self.unconfirmed_keys_values[store_id] = {}
+            self.unconfirmed_keys_values[store_id] = []
         else:
             raise Exception("Internal error: unconfirmed keys values cache not cleaned")
 
