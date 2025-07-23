@@ -57,7 +57,7 @@ class TransactionRecordOld(Streamable):
 
     # name is also called bundle_id and tx_id
     name: bytes32
-    memos: list[tuple[bytes32, list[bytes]]]
+    memos: dict[bytes32, list[bytes]]
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success or pending, we return True
@@ -81,9 +81,6 @@ class TransactionRecordOld(Streamable):
                     return uint32(block_index)
         return None
 
-    def get_memos(self) -> dict[bytes32, list[bytes]]:
-        return {coin_id: ms for coin_id, ms in self.memos}
-
     @classmethod
     def from_json_dict_convenience(
         cls: builtins.type[_T_TransactionRecord], modified_tx_input: dict
@@ -93,17 +90,6 @@ class TransactionRecordOld(Streamable):
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
         if "to_address" in modified_tx:
             del modified_tx["to_address"]
-        # Converts memos from a flat dict into a nested list
-        memos_dict: dict[str, list[str]] = {}
-        memos_list: list = []
-        if "memos" in modified_tx:
-            for coin_id, memo in modified_tx["memos"].items():
-                if coin_id not in memos_dict:
-                    memos_dict[coin_id] = []
-                memos_dict[coin_id].append(memo)
-        for coin_id, memos in memos_dict.items():
-            memos_list.append((coin_id, memos))
-        modified_tx["memos"] = memos_list
         return cls.from_json_dict(modified_tx)
 
     @classmethod
@@ -118,12 +104,6 @@ class TransactionRecordOld(Streamable):
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
         formatted = self.to_json_dict()
         formatted["to_address"] = encode_puzzle_hash(self.to_puzzle_hash, prefix)
-        formatted["memos"] = {
-            coin_id.hex(): memo.hex()
-            for coin_id, memos in self.get_memos().items()
-            for memo in memos
-            if memo is not None
-        }
         return formatted
 
     def is_valid(self) -> bool:
@@ -139,7 +119,11 @@ class TransactionRecordOld(Streamable):
         return False
 
     def hint_dict(self) -> dict[bytes32, bytes32]:
-        return {coin_id: bytes32(memos[0]) for coin_id, memos in self.memos if len(memos) > 0 and len(memos[0]) == 32}
+        return {
+            coin_id: bytes32(memos[0])
+            for coin_id, memos in self.memos.items()
+            if len(memos) > 0 and len(memos[0]) == 32
+        }
 
 
 @streamable

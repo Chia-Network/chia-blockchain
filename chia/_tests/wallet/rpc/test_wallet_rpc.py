@@ -426,9 +426,9 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     # Checks that the memo can be retrieved
     tx_confirmed = await client.get_transaction(transaction_id)
     assert tx_confirmed.confirmed
-    assert len(tx_confirmed.get_memos()) == 1
-    assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
-    assert next(iter(tx_confirmed.get_memos().keys())) in [a.name() for a in spend_bundle.additions()]
+    assert len(tx_confirmed.memos) == 1
+    assert [b"this is a basic tx"] in tx_confirmed.memos.values()
+    assert next(iter(tx_confirmed.memos.keys())) in [a.name() for a in spend_bundle.additions()]
 
     await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
 
@@ -968,7 +968,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     # Checks that the memo can be retrieved
     tx_confirmed = await client.get_transaction(send_tx_res.name)
     assert tx_confirmed.confirmed
-    memos = tx_confirmed.get_memos()
+    memos = tx_confirmed.memos
     assert len(memos) == len(outputs)
     for output in outputs:
         assert [output["memos"][0].encode()] in memos.values()

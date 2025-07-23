@@ -373,7 +373,7 @@ class TradeManager:
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=cancellation_additions[0].name(),
-                    memos=[],
+                    memos={},
                     valid_times=valid_times,
                 )
                 all_txs.append(incoming_tx)
@@ -740,7 +740,7 @@ class TradeManager:
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
                             name=std_hash(final_spend_bundle.name() + addition.name()),
-                            memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
+                            memos={coin_id: [hint] for coin_id, hint in hint_dict.items()},
                             valid_times=valid_times,
                         )
                     )
@@ -800,7 +800,7 @@ class TradeManager:
                     trade_id=offer.name(),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
                     name=std_hash(final_spend_bundle.name() + removal_tree_hash),
-                    memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
+                    memos={coin_id: [hint] for coin_id, hint in hint_dict.items()},
                     valid_times=valid_times,
                 )
             )

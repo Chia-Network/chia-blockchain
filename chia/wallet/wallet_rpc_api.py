@@ -459,7 +459,7 @@ REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
     trade_id=None,
     type=uint32(0),
     name=bytes32.zeros,
-    memos=[],
+    memos={},
     valid_times=ConditionValidTimes(),
 )
 

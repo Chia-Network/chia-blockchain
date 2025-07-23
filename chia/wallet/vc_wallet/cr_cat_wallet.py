@@ -265,7 +265,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_CRCAT_PENDING),
                     name=coin.name(),
-                    memos=list(memos.items()),
+                    memos=memos,
                     valid_times=ConditionValidTimes(),
                 )
                 await self.wallet_state_manager.tx_store.add_transaction_record(tx_record)
@@ -674,7 +674,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
                 for i, payment in enumerate(payments)
@@ -805,7 +805,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=claim_bundle.name(),
-                    memos=list(compute_memos(claim_bundle).items()),
+                    memos=compute_memos(claim_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
