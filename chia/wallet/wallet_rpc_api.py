@@ -1290,19 +1290,30 @@ class WalletRpcApi:
     async def _get_wallet_balance(self, wallet_id: uint32) -> BalanceResponse:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await self.service.get_balance(wallet_id)
-        wallet_balance = balance.to_json_dict()
-        wallet_balance["wallet_id"] = wallet_id
-        wallet_balance["wallet_type"] = wallet.type()
-        if self.service.logged_in_fingerprint is not None:
-            wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
+        asset_id = None
+        pending_approval_balance = None
+
         if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             assert isinstance(wallet, CATWallet)
-            wallet_balance["asset_id"] = wallet.get_asset_id()
+            asset_id = bytes32.from_hexstr(wallet.get_asset_id())
             if wallet.type() == WalletType.CRCAT:
                 assert isinstance(wallet, CRCATWallet)
-                wallet_balance["pending_approval_balance"] = await wallet.get_pending_approval_balance()
+                pending_approval_balance = await wallet.get_pending_approval_balance()
 
-        return BalanceResponse.from_json_dict(wallet_balance)
+        return BalanceResponse(
+            confirmed_wallet_balance=balance.confirmed_wallet_balance,
+            unconfirmed_wallet_balance=balance.unconfirmed_wallet_balance,
+            spendable_balance=balance.spendable_balance,
+            pending_change=balance.pending_change,
+            max_send_amount=balance.max_send_amount,
+            unspent_coin_count=balance.unspent_coin_count,
+            pending_coin_removal_count=balance.pending_coin_removal_count,
+            wallet_id=wallet_id,
+            wallet_type=uint8(wallet.type().value),
+            fingerprint=uint32.construct_optional(self.service.logged_in_fingerprint),
+            asset_id=asset_id,
+            pending_approval_balance=pending_approval_balance,
+        )
 
     @marshal
     async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:

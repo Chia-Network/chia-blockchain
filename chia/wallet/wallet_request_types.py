@@ -6,7 +6,7 @@ from typing import Any, Optional, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from typing_extensions import Self, dataclass_transform
 
 from chia.data_layer.data_layer_wallet import Mirror
@@ -242,7 +242,7 @@ class BalanceResponse(Balance):
     wallet_type: uint8 = field(default_factory=default_raise)
     fingerprint: Optional[uint32] = None
     asset_id: Optional[bytes32] = None
-    pending_approval_balance: Optional[uint64] = None
+    pending_approval_balance: Optional[uint128] = None
 
 
 @streamable

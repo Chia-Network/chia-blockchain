@@ -18,6 +18,7 @@ from chia_rs import AugSchemeMPL, CoinState, ConsensusConstants, G1Element, G2El
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from packaging.version import Version
+from typing_extensions import Self
 
 from chia.consensus.blockchain import AddBlockResult
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -93,13 +94,25 @@ def get_wallet_db_path(root_path: Path, config: dict[str, Any], key_fingerprint:
 @streamable
 @dataclasses.dataclass(frozen=True)
 class Balance(Streamable):
-    confirmed_wallet_balance: uint128 = uint128(0)
-    unconfirmed_wallet_balance: uint128 = uint128(0)
-    spendable_balance: uint128 = uint128(0)
-    pending_change: uint64 = uint64(0)
-    max_send_amount: uint128 = uint128(0)
-    unspent_coin_count: uint32 = uint32(0)
-    pending_coin_removal_count: uint32 = uint32(0)
+    confirmed_wallet_balance: uint128
+    unconfirmed_wallet_balance: uint128
+    spendable_balance: uint128
+    pending_change: uint64
+    max_send_amount: uint128
+    unspent_coin_count: uint32
+    pending_coin_removal_count: uint32
+
+    @classmethod
+    def create_empty(cls) -> Self:
+        return cls(
+            confirmed_wallet_balance=uint128(0),
+            unconfirmed_wallet_balance=uint128(0),
+            spendable_balance=uint128(0),
+            pending_change=uint64(0),
+            max_send_amount=uint128(0),
+            unspent_coin_count=uint32(0),
+            pending_coin_removal_count=uint32(0),
+        )
 
 
 @dataclasses.dataclass
@@ -1762,4 +1775,4 @@ class WalletNode:
             self.log.debug(f"get_balance - Updating cache for {wallet_id}")
             async with self.wallet_state_manager.lock:
                 await self._update_balance_cache(wallet_id)
-        return self._balance_cache.get(wallet_id, Balance())
+        return self._balance_cache.get(wallet_id, Balance.create_empty())

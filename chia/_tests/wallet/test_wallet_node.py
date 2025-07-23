@@ -515,7 +515,7 @@ async def test_get_balance(
     await add_blocks_in_batches(default_400_blocks, full_node_api.full_node)
     # Initially there should be no sync and no balance
     assert not wallet_synced()
-    assert await wallet_node.get_balance(wallet_id) == Balance()
+    assert await wallet_node.get_balance(wallet_id) == Balance.create_empty()
     # Generate some funds, get the balance and make sure it's as expected
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
@@ -526,6 +526,8 @@ async def test_get_balance(
         spendable_balance=uint128(generated_funds),
         max_send_amount=uint128(generated_funds),
         unspent_coin_count=uint32(10),
+        pending_change=uint64(0),
+        pending_coin_removal_count=uint32(0),
     )
     generated_balance = await wallet_node.get_balance(wallet_id)
     assert generated_balance == expected_generated_balance
@@ -534,7 +536,7 @@ async def test_get_balance(
     assert wallet_node.local_keychain is not None
     wallet_node.local_keychain.add_key(other_key.mnemonic_str())
     await restart_with_fingerprint(other_key.fingerprint)
-    assert await wallet_node.get_balance(wallet_id) == Balance()
+    assert await wallet_node.get_balance(wallet_id) == Balance.create_empty()
     # Load the initial fingerprint again and make sure the balance is still what we generated earlier
     await restart_with_fingerprint(initial_fingerprint)
     assert await wallet_node.get_balance(wallet_id) == generated_balance
@@ -555,6 +557,8 @@ async def test_get_balance(
         spendable_balance=uint128(generated_funds),
         max_send_amount=uint128(generated_funds),
         unspent_coin_count=uint32(20),
+        pending_change=uint64(0),
+        pending_coin_removal_count=uint32(0),
     )
     async with wallet_node.wallet_state_manager.set_sync_mode(uint32(100)):
         # During sync the balance cache should not become updated, so it still should have the old balance here
