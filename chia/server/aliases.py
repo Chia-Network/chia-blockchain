@@ -9,9 +9,6 @@ from chia.farmer.farmer_rpc_api import FarmerRpcApi
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
-from chia.harvester.harvester_rpc_api import HarvesterRpcApi
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.seeder.crawler import Crawler
@@ -29,7 +26,6 @@ CrawlerService = Service[Crawler, CrawlerAPI, CrawlerRpcApi]
 DataLayerService = Service[DataLayer, DataLayerAPI, DataLayerRpcApi]
 FarmerService = Service[Farmer, FarmerAPI, FarmerRpcApi]
 FullNodeService = Service[FullNode, FullNodeAPI, FullNodeRpcApi]
-HarvesterService = Service[Harvester, HarvesterAPI, HarvesterRpcApi]
 IntroducerService = Service[Introducer, IntroducerAPI, FullNodeRpcApi]
 TimelordService = Service[Timelord, TimelordAPI, TimelordRpcApi]
 WalletService = Service[WalletNode, WalletNodeAPI, WalletRpcApi]

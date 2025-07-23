@@ -20,9 +20,10 @@ from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.server.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
+from chia.server.aliases import FarmerService, FullNodeService, TimelordService, WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
