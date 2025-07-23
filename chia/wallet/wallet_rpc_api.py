@@ -340,10 +340,7 @@ def tx_endpoint(
             else:
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
 
-            response["transactions"] = [
-                TransactionRecord.to_json_dict_convenience(tx, self.service.config)
-                for tx in action_scope.side_effects.transactions
-            ]
+            response["transactions"] = [tx.to_json_dict() for tx in action_scope.side_effects.transactions]
 
             # Some backwards compatibility code here because transaction information being returned was not uniform
             # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
@@ -447,6 +444,7 @@ REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
     confirmed_at_height=uint32(0),
     created_at_time=uint64(0),
     to_puzzle_hash=bytes32.zeros,
+    to_address=encode_puzzle_hash(bytes32.zeros, "replace"),
     amount=uint64(0),
     fee_amount=uint64(0),
     confirmed=False,
@@ -1304,7 +1302,7 @@ class WalletRpcApi:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
         return {
-            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
+            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict(),
             "transaction_id": tr.name,
         }
 
@@ -1518,7 +1516,7 @@ class WalletRpcApi:
         tx_list = []
         # Format for clawback transactions
         for tr in transactions:
-            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict()
             tx_list.append(tx)
             if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
                 continue
@@ -1654,7 +1652,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": transaction,
-            "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
+            "transaction_id": TransactionRecord.from_json_dict(transaction).name,
             "transactions": transactions,
             "unsigned_transactions": response["unsigned_transactions"],
         }

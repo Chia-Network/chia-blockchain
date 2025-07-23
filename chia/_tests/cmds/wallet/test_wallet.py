@@ -131,6 +131,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                     confirmed_at_height=uint32(1 + i),
                     created_at_time=uint64(1234 + i),
                     to_puzzle_hash=bytes32([1 + i] * 32),
+                    to_address=encode_puzzle_hash(bytes32([1 + i] * 32), "xch"),
                     amount=uint64(12345678 + i),
                     fee_amount=uint64(1234567 + i),
                     confirmed=False,
@@ -340,6 +341,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 confirmed_at_height=uint32(1),
                 created_at_time=uint64(1234),
                 to_puzzle_hash=get_bytes32(1),
+                to_address=encode_puzzle_hash(get_bytes32(1), "xch"),
                 amount=uint64(12345678),
                 fee_amount=uint64(1234567),
                 confirmed=False,
@@ -529,14 +531,7 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
             tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
             return {
                 "transaction_ids": tx_hex_list,
-                "transactions": [
-                    STD_TX.to_json_dict_convenience(
-                        {
-                            "selected_network": "mainnet",
-                            "network_overrides": {"config": {"mainnet": {"address_prefix": "xch"}}},
-                        }
-                    )
-                ],
+                "transactions": [STD_TX.to_json_dict()],
             }
 
     inst_rpc_client = ClawbackWalletRpcClient()

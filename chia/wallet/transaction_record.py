@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import builtins
 from dataclasses import dataclass
-from typing import Any, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -11,7 +10,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash
 from chia.util.errors import Err
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import ConditionValidTimes
@@ -19,7 +18,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 T = TypeVar("T")
-_T_TransactionRecord = TypeVar("_T_TransactionRecord", bound="TransactionRecordOld")
 
 minimum_send_attempts = 6
 
@@ -81,31 +79,6 @@ class TransactionRecordOld(Streamable):
                     return uint32(block_index)
         return None
 
-    @classmethod
-    def from_json_dict_convenience(
-        cls: builtins.type[_T_TransactionRecord], modified_tx_input: dict
-    ) -> _T_TransactionRecord:
-        modified_tx = modified_tx_input.copy()
-        if "to_address" in modified_tx:
-            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
-        if "to_address" in modified_tx:
-            del modified_tx["to_address"]
-        return cls.from_json_dict(modified_tx)
-
-    @classmethod
-    def from_json_dict(cls: builtins.type[_T_TransactionRecord], json_dict: dict[str, Any]) -> _T_TransactionRecord:
-        try:
-            return super().from_json_dict(json_dict)
-        except Exception:
-            return cls.from_json_dict_convenience(json_dict)
-
-    def to_json_dict_convenience(self, config: dict) -> dict:
-        selected = config["selected_network"]
-        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
-        formatted = self.to_json_dict()
-        formatted["to_address"] = encode_puzzle_hash(self.to_puzzle_hash, prefix)
-        return formatted
-
     def is_valid(self) -> bool:
         if len(self.sent_to) < minimum_send_attempts:
             # we haven't tried enough peers yet
@@ -130,6 +103,12 @@ class TransactionRecordOld(Streamable):
 @dataclass(frozen=True)
 class TransactionRecord(TransactionRecordOld):
     valid_times: ConditionValidTimes
+    to_address: str
+
+    def __post_init__(self) -> None:
+        if decode_puzzle_hash(self.to_address) != self.to_puzzle_hash:
+            raise ValueError("Invalid tx record initialization, to_address must match to_puzzle_hash")
+        return super().__post_init__()
 
 
 @streamable
