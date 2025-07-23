@@ -52,12 +52,12 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
+from chia.harvester.harvester_service import HarvesterService
 from chia.seeder.dns_server import DNSServer
 from chia.server.aliases import (
     CrawlerService,
     FarmerService,
     FullNodeService,
-    HarvesterService,
     TimelordService,
     WalletService,
 )

@@ -172,8 +172,25 @@ COLLECT_ARGS = []
 add_binary("chia", f"{ROOT}/chia/cmds/chia.py", COLLECT_ARGS)
 add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 
-for server in SERVERS:
+SERVERS_IN_SERVER = [
+    "data_layer",
+    "wallet",
+    "full_node",
+    "farmer",
+    "introducer",
+    "timelord",
+]
+
+for server in SERVERS_IN_SERVER:
     add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
+
+
+SERVERS = [
+    "harvester",
+]
+
+for server in SERVERS:
+    add_binary(f"start_{server}", f"{ROOT}/chia/{server}/start_{server}.py", COLLECT_ARGS)
 
 add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
 add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
