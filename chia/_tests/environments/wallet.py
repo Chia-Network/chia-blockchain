@@ -5,7 +5,7 @@ import json
 import operator
 import unittest
 from collections.abc import Iterator
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import TYPE_CHECKING, Any, ClassVar, Union, cast
 
 from chia_rs.sized_bytes import bytes32
@@ -217,7 +217,7 @@ class WalletEnvironment:
         for wallet_id_or_alias, kwargs in update_dictionary.items():
             wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
 
-            new_values: dict[str, int] = {}
+            new_values: dict[str, object] = {}
             existing_values: Balance = await self.node.get_balance(wallet_id)
             if kwargs.get("init", False):
                 new_values = {k: v for k, v in kwargs.items() if k not in {"set_remainder", "init"}}
@@ -247,21 +247,22 @@ class WalletEnvironment:
                     else:
                         new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
 
+            if kwargs.get("set_remainder", False):
+                new_balance = existing_values
+            elif kwargs.get("init"):
+                new_balance = Balance.create_empty()
+            else:
+                new_balance = self.wallet_states[wallet_id].balance
+
+            # retaining the untyped nature of the new values (for now...)
+            new_balance = replace(new_balance, **new_values)  # type: ignore[arg-type]
+
             self.wallet_states = {
                 **self.wallet_states,
                 wallet_id: WalletState(
                     **{
                         **({} if kwargs.get("init", False) else asdict(self.wallet_states[wallet_id])),
-                        "balance": Balance(
-                            **{
-                                **(
-                                    asdict(existing_values)
-                                    if kwargs.get("set_remainder", False)
-                                    else ({} if kwargs.get("init") else asdict(self.wallet_states[wallet_id].balance))
-                                ),
-                                **new_values,
-                            }
-                        ),
+                        "balance": new_balance,
                     }
                 ),
             }
