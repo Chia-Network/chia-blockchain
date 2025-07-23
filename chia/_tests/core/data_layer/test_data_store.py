@@ -2335,3 +2335,31 @@ async def test_db_data_insert_from_file(
         assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) > 0
     else:
         assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == 0
+
+
+@pytest.mark.anyio
+async def test_manage_kv_files(
+    data_store: DataStore,
+    store_id: bytes32,
+    seeded_random: random.Random,
+) -> None:
+    num_keys = 1000
+    num_files = 0
+    keys_value_path = data_store.key_value_blobs_path.joinpath(store_id.hex())
+
+    with pytest.raises(Exception):
+        async with data_store.db_wrapper.writer() as writer:
+            with data_store.manage_kv_files(store_id):
+                for _ in range(num_keys):
+                    use_file = seeded_random.choice([True, False])
+                    assert tmp_data_store.prefer_db_kv_blob_length > 7
+                    size = tmp_data_store.prefer_db_kv_blob_length + 1 if use_file else 8
+                    key = seeded_random.randbytes(size)
+                    value = seeded_random.randbytes(size)
+                    await data_store.add_key_value(key, value, store_id, writer)
+                    num_files += 2 * use_file
+
+                assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == num_files
+                raise Exception("Test exception")
+
+    assert sum(1 for path in keys_value_path.rglob("*") if path.is_file()) == 0
