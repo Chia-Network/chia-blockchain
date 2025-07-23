@@ -2347,7 +2347,7 @@ async def test_manage_kv_files(
     num_files = 0
     keys_value_path = data_store.key_value_blobs_path.joinpath(store_id.hex())
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="Test exception"):
         async with data_store.db_wrapper.writer() as writer:
             with data_store.manage_kv_files(store_id):
                 for _ in range(num_keys):
