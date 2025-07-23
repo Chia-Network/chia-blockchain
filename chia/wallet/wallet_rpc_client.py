@@ -708,7 +708,7 @@ class WalletRpcClient(RpcClient):
         except ValueError:  # This happens if the asset_id is unknown
             return None
 
-        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(int(res["wallet_id"]))
+        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(res["wallet_id"])
         return wallet_id, res["name"]
 
     async def get_cat_name(self, wallet_id: int) -> str:

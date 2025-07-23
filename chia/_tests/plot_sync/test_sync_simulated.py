@@ -140,7 +140,7 @@ class TestData:
             assert plot_info.pool_contract_puzzle_hash == synced_plot.pool_contract_puzzle_hash
             assert plot_info.plot_public_key == synced_plot.plot_public_key
             assert plot_info.file_size == synced_plot.file_size
-            assert uint64(int(plot_info.time_modified)) == synced_plot.time_modified
+            assert uint64(plot_info.time_modified) == synced_plot.time_modified
         for plot_info in self.invalid:
             assert plot_info.prover.get_filename() not in self.plot_sync_receiver.plots()
             assert plot_info.prover.get_filename() in self.plot_sync_receiver.invalid()

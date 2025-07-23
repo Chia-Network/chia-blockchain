@@ -660,7 +660,7 @@ class CRCATWallet(CATWallet):
             tx_list = [
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=payment.puzzle_hash,
                     amount=payment.amount,
                     fee_amount=fee,
@@ -791,7 +791,7 @@ class CRCATWallet(CATWallet):
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=to_puzzle_hash,
                     amount=uint64(sum(c.amount for c in coins)),
                     fee_amount=fee,

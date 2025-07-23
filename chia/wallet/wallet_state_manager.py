@@ -963,7 +963,7 @@ class WalletStateManager:
         assert len(clawback_coins) > 0
         coin_spends: list[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
-        now: uint64 = uint64(int(time.time()))
+        now: uint64 = uint64(time.time())
         derivation_record: Optional[DerivationRecord] = None
         amount: uint64 = uint64(0)
         for coin, metadata in clawback_coins.items():
@@ -1878,7 +1878,7 @@ class WalletStateManager:
                                         to_puzzle_hash=(
                                             await self.convert_puzzle_hash(wallet_identifier.id, to_puzzle_hash)
                                         ),
-                                        amount=uint64(int(amount)),
+                                        amount=uint64(amount),
                                         fee_amount=uint64(fee),
                                         confirmed=True,
                                         sent=uint32(0),

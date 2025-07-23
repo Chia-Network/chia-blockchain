@@ -48,7 +48,7 @@ class IntroducerPeers:
             return False
 
         p = VettedPeer(peer.host, peer.port)
-        p.time_added = uint64(int(time.time()))
+        p.time_added = uint64(time.time())
 
         if p in self._peers:
             return True
