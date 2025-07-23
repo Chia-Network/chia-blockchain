@@ -83,9 +83,7 @@ class DataStore:
     recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
     merkle_blobs_path: Path
     key_value_blobs_path: Path
-    unconfirmed_keys_values: defaultdict[bytes32, list[bytes32]] = field(
-        default_factory=functools.partial(defaultdict, list)
-    )
+    unconfirmed_keys_values: dict[bytes32, list[bytes32]] = field(default_factory=dict)
     prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length
 
     @classmethod
@@ -677,19 +675,21 @@ class DataStore:
                     path.unlink()
                 except FileNotFoundError:
                     log.error(f"Cannot find key/value path {path} for hash {blob_hash}")
-        self.unconfirmed_keys_values[store_id].clear()
+        del self.unconfirmed_keys_values[store_id]
 
     def confirm_all_kvids(self, store_id: bytes32) -> None:
-        self.unconfirmed_keys_values[store_id].clear()
+        del self.unconfirmed_keys_values[store_id]
 
     @contextmanager
     def manage_kv_files(self, store_id: bytes32) -> Iterator[None]:
-        if self.unconfirmed_keys_values[store_id]:
+        if store_id not in self.unconfirmed_keys_values:
+            self.unconfirmed_keys_values[store_id] = {}
+        else:
             raise Exception("Internal error: unconfirmed keys values cache not cleaned")
 
         try:
             yield
-        except Exception:
+        except:
             self.delete_unconfirmed_kvids(store_id)
             raise
         else:
