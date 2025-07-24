@@ -1348,69 +1348,131 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     assert default_cats_set == set(cat_list)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_node: WalletNode = env.wallet_1.node
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
-
-    await generate_funds(full_node_api, env.wallet_1, 1)
-    await generate_funds(full_node_api, env.wallet_2, 1)
+    env_1.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+    env_2.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
 
     # Creates a CAT wallet with 20 mojos
-    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20), test=True)
-    assert res["success"]
-    cat_wallet_id = res["wallet_id"]
-    cat_asset_id = bytes32.fromhex(res["asset_id"])
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
-
-    await time_out_assert(5, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
+    cat_wallet = await mint_cat(
+        wallet_environments,
+        env_1,
+        "xch",
+        "cat",
+        uint64(20),
+        wallet_type,
+        "cat",
+    )
+    cat_wallet_id = cat_wallet.id()
+    cat_asset_id = cat_wallet.cat_info.limitations_program_hash
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
-    await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
-    wallet_2_address = await wallet_2_rpc.get_next_address(cat_wallet_id, False)
+    await env_2.rpc_client.create_wallet_for_existing_cat(cat_asset_id)
+    wallet_2_address = await env_2.rpc_client.get_next_address(cat_wallet_id, False)
     adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
     tx_res = (
-        await wallet_1_rpc.send_transaction_multi(
-            cat_wallet_id, additions=adds, tx_config=DEFAULT_TX_CONFIG, fee=uint64(0)
+        await env_1.rpc_client.send_transaction_multi(
+            cat_wallet_id, additions=adds, tx_config=wallet_environments.tx_config, fee=uint64(0)
         )
     ).transaction
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
-    await farm_transaction(full_node_api, wallet_node, spend_bundle)
-    await time_out_assert(5, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
-    test_crs: list[CoinRecord] = await wallet_1_rpc.get_coin_records_by_names(
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": -4,
+                        "spendable_balance": -20,
+                        "max_send_amount": -20,
+                        "pending_change": 16,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": -4,
+                        "spendable_balance": 16,
+                        "max_send_amount": 16,
+                        "pending_change": -16,
+                        "pending_coin_removal_count": -1,
+                    }
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={"cat": {"init": True}},
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": 4,
+                        "unconfirmed_wallet_balance": 4,
+                        "spendable_balance": 4,
+                        "max_send_amount": 4,
+                        "unspent_coin_count": 1,
+                    }
+                },
+            ),
+        ]
+    )
+
+    test_crs: list[CoinRecord] = await env_1.rpc_client.get_coin_records_by_names(
         [a.name() for a in spend_bundle.additions() if a.amount != 4]
     )
     for cr in test_crs:
         assert cr.coin in spend_bundle.additions()
     with pytest.raises(ValueError):
-        await wallet_1_rpc.get_coin_records_by_names([a.name() for a in spend_bundle.additions() if a.amount == 4])
+        await env_1.rpc_client.get_coin_records_by_names([a.name() for a in spend_bundle.additions() if a.amount == 4])
     # Create an offer of 5 chia for one CAT
-    await wallet_1_rpc.create_offer_for_ids(
-        {uint32(1): -5, cat_asset_id.hex(): 1}, DEFAULT_TX_CONFIG, validate_only=True
+    await env_1.rpc_client.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1}, wallet_environments.tx_config, validate_only=True
     )
-    all_offers = await wallet_1_rpc.get_all_offers()
+    all_offers = await env_1.rpc_client.get_all_offers()
     assert len(all_offers) == 0
 
-    driver_dict: dict[str, Any] = {cat_asset_id.hex(): {"type": "CAT", "tail": "0x" + cat_asset_id.hex()}}
+    driver_dict: dict[str, Any] = {
+        cat_asset_id.hex(): {
+            "type": "CAT",
+            "tail": "0x" + cat_asset_id.hex(),
+            **(
+                {}
+                if wallet_type is CATWallet
+                else {"also": {"type": "revocation layer", "hidden_puzzle_hash": "0x" + bytes32.zeros.hex()}}
+            ),
+        }
+    }
 
-    create_res = await wallet_1_rpc.create_offer_for_ids(
+    create_res = await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         driver_dict=driver_dict,
         fee=uint64(1),
     )
     offer = create_res.offer
 
-    id, summary = await wallet_1_rpc.get_offer_summary(offer)
+    id, summary = await env_1.rpc_client.get_offer_summary(offer)
     assert id == offer.name()
-    id, advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
+    id, advanced_summary = await env_1.rpc_client.get_offer_summary(offer, advanced=True)
     assert id == offer.name()
     assert summary == {
         "offered": {"xch": 5},
@@ -1428,120 +1490,262 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     }
     assert advanced_summary == summary
 
-    id, _valid = await wallet_1_rpc.check_offer_validity(offer)
+    id, _valid = await env_1.rpc_client.check_offer_validity(offer)
     assert id == offer.name()
 
-    all_offers = await wallet_1_rpc.get_all_offers(file_contents=True)
+    all_offers = await env_1.rpc_client.get_all_offers(file_contents=True)
     assert len(all_offers) == 1
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
 
-    offer_count = await wallet_1_rpc.get_offers_count()
+    offer_count = await env_1.rpc_client.get_offers_count()
     assert offer_count.total == 1
     assert offer_count.my_offers_count == 1
     assert offer_count.taken_offers_count == 0
 
-    trade_record = (await wallet_2_rpc.take_offer(offer, DEFAULT_TX_CONFIG, fee=uint64(1))).trade_record
+    trade_record = (await env_2.rpc_client.take_offer(offer, wallet_environments.tx_config, fee=uint64(1))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
-    await wallet_1_rpc.cancel_offer(offer.name(), DEFAULT_TX_CONFIG, secure=False)
+    await env_1.rpc_client.cancel_offer(offer.name(), wallet_environments.tx_config, secure=False)
 
-    trade_record = await wallet_1_rpc.get_offer(offer.name(), file_contents=True)
+    trade_record = await env_1.rpc_client.get_offer(offer.name(), file_contents=True)
     assert trade_record.offer == bytes(offer)
     assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
-    await wallet_1_rpc.cancel_offer(offer.name(), DEFAULT_TX_CONFIG, fee=uint64(1), secure=True)
+    failed_cancel_res = await env_1.rpc_client.cancel_offer(
+        offer.name(), wallet_environments.tx_config, fee=uint64(1), secure=True
+    )
 
-    trade_record = await wallet_1_rpc.get_offer(offer.name())
+    trade_record = await env_1.rpc_client.get_offer(offer.name())
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
-    create_res = await wallet_1_rpc.create_offer_for_ids(
-        {uint32(1): -5, cat_wallet_id: 1}, DEFAULT_TX_CONFIG, fee=uint64(1)
+    create_res = await env_1.rpc_client.create_offer_for_ids(
+        {uint32(1): -5, cat_wallet_id: 1}, wallet_environments.tx_config, fee=uint64(1)
     )
-    all_offers = await wallet_1_rpc.get_all_offers()
+    all_offers = await env_1.rpc_client.get_all_offers()
     assert len(all_offers) == 2
-    offer_count = await wallet_1_rpc.get_offers_count()
+    offer_count = await env_1.rpc_client.get_offers_count()
     assert offer_count.total == 2
     assert offer_count.my_offers_count == 2
     assert offer_count.taken_offers_count == 0
     new_trade_record = create_res.trade_record
 
-    await farm_transaction_block(full_node_api, wallet_node)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1,  # The cancellation that won't complete
+                        "<=#spendable_balance": -5,
+                        "<=#max_send_amount": -5,
+                        "unspent_coin_count": 0,
+                        ">=#pending_change": 1,  # any amount increase (again, cancellation)
+                        "pending_coin_removal_count": 2,  # one for each open offer
+                    },
+                    "cat": {},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -5 - 1,
+                        "unconfirmed_wallet_balance": -5 - 1 + 1,  # cancellation TX now failed
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease (cancellation TX now failed)
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        "confirmed_wallet_balance": 1,
+                        "unconfirmed_wallet_balance": 1,
+                        "spendable_balance": 1,
+                        "max_send_amount": 1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": 5 - 1,
+                        "<=#spendable_balance": -1,  # any amount decrease
+                        "<=#max_send_amount": -1,  # any amount decrease
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {
+                        "unconfirmed_wallet_balance": -1,
+                        "<=#spendable_balance": -1,  # any amount decrease
+                        "<=#max_send_amount": -1,  # any amount decrease
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": 5 - 1,
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                    "cat": {
+                        "confirmed_wallet_balance": -1,
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+        ],
+        invalid_transactions=[tx.name for tx in failed_cancel_res.transactions],
+    )
 
     async def is_trade_confirmed(client: WalletRpcClient, offer: Offer) -> bool:
         trade_record = await client.get_offer(offer.name())
         return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
 
-    await time_out_assert(15, is_trade_confirmed, True, wallet_1_rpc, offer)
+    await time_out_assert(15, is_trade_confirmed, True, env_1.rpc_client, offer)
 
     # Test trade sorting
     def only_ids(trades: list[TradeRecord]) -> list[bytes32]:
         return [t.trade_id for t in trades]
 
-    trade_record = await wallet_1_rpc.get_offer(offer.name())
-    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True)  # confirmed at index descending
+    trade_record = await env_1.rpc_client.get_offer(offer.name())
+    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True)  # confirmed at index descending
     assert len(all_offers) == 2
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
-    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, reverse=True)  # confirmed at index ascending
+    all_offers = await env_1.rpc_client.get_all_offers(
+        include_completed=True, reverse=True
+    )  # confirmed at index ascending
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
+    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await wallet_1_rpc.get_all_offers(
+    all_offers = await env_1.rpc_client.get_all_offers(
         include_completed=True, sort_key="RELEVANCE", reverse=True
     )  # least relevant
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
-    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=1)
+    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=0, end=1)
     assert len(all_offers) == 1
-    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=50)
+    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=50)
     assert len(all_offers) == 0
-    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=50)
+    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=0, end=50)
     assert len(all_offers) == 2
 
-    await wallet_1_rpc.create_offer_for_ids(
+    await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         driver_dict=driver_dict,
     )
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
-    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, batch_size=1)
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    )
+    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, batch_size=1)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+    )
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -5,
+                        "<=#max_send_amount": -5,
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -2,
+                    },
+                    "cat": {},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
-    await farm_transaction_block(full_node_api, wallet_node)
-
-    await wallet_1_rpc.create_offer_for_ids(
+    await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         driver_dict=driver_dict,
     )
-    await wallet_1_rpc.create_offer_for_ids(
+    await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): 5, cat_asset_id.hex(): -1},
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         driver_dict=driver_dict,
     )
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
-    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, cancel_all=True)
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_node)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    )
+    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, cancel_all=True)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+    )
 
-    await wallet_1_rpc.create_offer_for_ids(
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -5,
+                        "<=#max_send_amount": -5,
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        ">=#spendable_balance": 5,
+                        ">=#max_send_amount": 5,
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
+    await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): 5, cat_asset_id.hex(): -1},
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         driver_dict=driver_dict,
     )
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
-    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, asset_id=bytes32.zeros)
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
-    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, asset_id=cat_asset_id)
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    )
+    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, asset_id=bytes32.zeros)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    )
+    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, asset_id=cat_asset_id)
+    assert (
+        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+    )
 
     with pytest.raises(ValueError, match="not currently supported"):
-        await wallet_1_rpc.create_offer_for_ids(
+        await env_1.rpc_client.create_offer_for_ids(
             {uint32(1): -5, cat_asset_id.hex(): 1},
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
             driver_dict=driver_dict,
             timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
         )
