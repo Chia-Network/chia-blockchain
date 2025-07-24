@@ -20,6 +20,7 @@ from chia_rs.sized_ints import int16, uint8, uint64
 from chia._tests.plot_sync.util import start_harvester_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver
@@ -31,7 +32,6 @@ from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.aliases import FarmerService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.util.batches import to_batches

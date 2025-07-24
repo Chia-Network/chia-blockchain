@@ -31,6 +31,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
@@ -40,7 +41,7 @@ from chia.protocols import farmer_protocol, full_node_protocol, harvester_protoc
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.aliases import FarmerService, FullNodeService
+from chia.server.aliases import FullNodeService
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools

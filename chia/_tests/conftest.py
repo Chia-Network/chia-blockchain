@@ -50,13 +50,13 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.harvester.harvester_service import HarvesterService
 from chia.seeder.dns_server import DNSServer
 from chia.server.aliases import (
     CrawlerService,
-    FarmerService,
     FullNodeService,
     TimelordService,
     WalletService,
