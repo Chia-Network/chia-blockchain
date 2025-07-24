@@ -2278,7 +2278,7 @@ class TestGeneratorConditions:
     def test_just_announcement(self, opcode: ConditionOpcode, softfork_height: uint32) -> None:
         message = "a" * 1024
         # announcements are validated on the Rust side and never returned
-        # back. They are either satisified or cause an immediate failure
+        # back. They are either satisfied or cause an immediate failure
         npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ' * 50, height=softfork_height)
         assert npc_result.error is None
         assert npc_result.conds is not None
@@ -2296,7 +2296,7 @@ class TestGeneratorConditions:
     def test_assert_announcement_fail(self, opcode: ConditionOpcode, softfork_height: uint32) -> None:
         message = "a" * 1024
         # announcements are validated on the Rust side and never returned
-        # back. They ar either satisified or cause an immediate failure
+        # back. They ar either satisfied or cause an immediate failure
         # in this test we just assert announcements, we never make them, so
         # these should fail
         npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ', height=softfork_height)
