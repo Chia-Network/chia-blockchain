@@ -350,6 +350,7 @@ class DataStore:
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
+
         with open(filename, "rb") as reader:
             async with self.db_wrapper.writer() as writer:
                 while True:
