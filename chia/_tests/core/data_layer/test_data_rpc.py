@@ -190,7 +190,7 @@ async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
     except ValueError:  # pragma: no cover
         return False
 
-    return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
+    return True if TransactionRecord.from_json_dict(val["transaction"]).confirmed else False  # mypy
 
 
 async def farm_block_with_spend(

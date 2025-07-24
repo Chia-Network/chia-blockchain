@@ -4,6 +4,7 @@ from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.signer_protocol import KeyHints, SigningInstructions, TransactionInfo, UnsignedTransaction
 from chia.wallet.transaction_record import TransactionRecord
@@ -27,6 +28,7 @@ STD_TX = TransactionRecord(
     confirmed_at_height=uint32(1),
     created_at_time=uint64(1234),
     to_puzzle_hash=get_bytes32(1),
+    to_address=encode_puzzle_hash(get_bytes32(1), "xch"),
     amount=uint64(12345678),
     fee_amount=uint64(1234567),
     confirmed=False,

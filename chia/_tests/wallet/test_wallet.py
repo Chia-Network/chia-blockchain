@@ -1721,6 +1721,7 @@ class TestWalletSimulator:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(0),
             to_puzzle_hash=bytes32(32 * b"0"),
+            to_address=encode_puzzle_hash(bytes32(32 * b"0"), "txch"),
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,

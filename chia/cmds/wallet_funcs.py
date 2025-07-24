@@ -1152,7 +1152,7 @@ async def transfer_did(
             if push:
                 print(f"Successfully transferred DID to {target_address}")
             print(f"Transaction ID: {response.transaction_id.hex()}")
-            print(f"Transaction: {response.transaction.to_json_dict_convenience(config)}")
+            print(f"Transaction: {response.transaction.to_json_dict()}")
             return response.transactions
         except Exception as e:
             print(f"Failed to transfer DID: {e}")
@@ -1651,7 +1651,7 @@ async def spend_clawback(
             timelock_info=condition_valid_times,
         )
         print(str(response))
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+        return [TransactionRecord.from_json_dict(tx) for tx in response["transactions"]]
 
 
 async def mint_vc(

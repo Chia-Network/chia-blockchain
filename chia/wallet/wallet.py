@@ -431,12 +431,14 @@ class Wallet:
         else:
             assert output_amount == input_amount
 
+        to_ph = add_list[0].puzzle_hash if len(add_list) > 0 else bytes32.zeros
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
-                    to_puzzle_hash=add_list[0].puzzle_hash if len(add_list) > 0 else bytes32.zeros,
+                    to_puzzle_hash=to_ph,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
                     amount=uint64(non_change_amount),
                     fee_amount=uint64(fee),
                     confirmed=False,
