@@ -40,17 +40,17 @@ do_install_npm_locally() {
   NODEJS_VERSION="$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')"
   NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
 
-  if [ "$NODEJS_VERSION" -lt "18" ] || [ "$NPM_VERSION" -lt "9" ]; then
-    if [ "$NODEJS_VERSION" -lt "18" ]; then
-      echo "Current NodeJS version($(node -v)) is less than 18. GUI app requires NodeJS>=18."
+  if [ "$NODEJS_VERSION" -lt "20" ] || [ "$NPM_VERSION" -lt "10" ]; then
+    if [ "$NODEJS_VERSION" -lt "20" ]; then
+      echo "Current NodeJS version($(node -v)) is less than 20. GUI app requires NodeJS>=20."
     fi
-    if [ "$NPM_VERSION" -lt "9" ]; then
-      echo "Current npm version($(npm -v)) is less than 9. GUI app requires npm>=9."
+    if [ "$NPM_VERSION" -lt "10" ]; then
+      echo "Current npm version($(npm -v)) is less than 10. GUI app requires npm>=10."
     fi
 
     if [ "$(uname)" = "OpenBSD" ] || [ "$(uname)" = "FreeBSD" ]; then
       # `n` package does not support OpenBSD/FreeBSD
-      echo "Please install NodeJS>=18 and/or npm>=9 manually"
+      echo "Please install NodeJS>=20 and/or npm>=10 manually"
       exit 1
     fi
 
@@ -70,17 +70,17 @@ do_install_npm_locally() {
     export N_PREFIX=${SCRIPT_DIR}/.n
     PATH="${N_PREFIX}/bin:$(npm prefix)/node_modules/.bin:${PATH}"
     export PATH
-    # `n 18` here installs nodejs@18 under $N_PREFIX directory
-    echo "n 18"
-    n 18
+    # `n 20` here installs nodejs@20 under $N_PREFIX directory
+    echo "n 20"
+    n 20
     echo "Current NodeJS version: $(node -v)"
     echo "Current npm version: $(npm -v)"
-    if [ "$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')" -lt "18" ]; then
-      echo "Error: Failed to install NodeJS>=18"
+    if [ "$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')" -lt "20" ]; then
+      echo "Error: Failed to install NodeJS>=20"
       exit 1
     fi
-    if [ "$(npm -v | cut -d'.' -f 1)" -lt "9" ]; then
-      echo "Error: Failed to install npm>=9"
+    if [ "$(npm -v | cut -d'.' -f 1)" -lt "10" ]; then
+      echo "Error: Failed to install npm>=10"
       exit 1
     fi
     cd "${SCRIPT_DIR}"
@@ -131,7 +131,7 @@ if [ "$(uname)" = "Linux" ]; then
     # AMZN 2
     if ! nodejs_is_installed; then
       echo "Installing nodejs on Amazon Linux 2."
-      curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
+      curl -sL https://rpm.nodesource.com/setup_20.x | sudo bash -
       sudo yum install -y nodejs
     fi
     do_install_npm_locally
@@ -139,7 +139,7 @@ if [ "$(uname)" = "Linux" ]; then
     # CentOS or Redhat
     if ! nodejs_is_installed; then
       echo "Installing nodejs on CentOS/Redhat."
-      curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
+      curl -sL https://rpm.nodesource.com/setup_20.x | sudo bash -
       sudo yum install -y nodejs
     fi
     do_install_npm_locally
@@ -147,7 +147,7 @@ if [ "$(uname)" = "Linux" ]; then
     # RockyLinux
     if ! nodejs_is_installed; then
       echo "Installing nodejs on RockyLinux/Fedora"
-      sudo dnf module enable nodejs:12
+      sudo dnf module enable nodejs:20
       sudo dnf install -y nodejs
     fi
     do_install_npm_locally

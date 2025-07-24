@@ -32,8 +32,8 @@ if ! npm version >/dev/null 2>&1; then
 fi
 
 NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
-if [ "$NPM_VERSION" -lt "9" ]; then
-  echo "Current npm version($(npm -v)) is less than 9. GUI app requires npm>=9."
+if [ "$NPM_VERSION" -lt "10" ]; then
+  echo "Current npm version($(npm -v)) is less than 10. GUI app requires npm>=10."
   exit 1
 else
   echo "Found npm $(npm -v)"
