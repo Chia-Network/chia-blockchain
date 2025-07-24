@@ -17,6 +17,7 @@ from chia_rs import (
     SpendBundle,
     SpendBundleConditions,
     SpendConditions,
+    check_time_locks,
     get_conditions_from_spendbundle,
     run_block_generator2,
 )
@@ -27,7 +28,6 @@ from chiabip158 import PyBIP158
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.eligible_coin_spends import (
@@ -431,15 +431,16 @@ class TestCheckTimeLocks:
         conds: SpendBundleConditions,
         expected: Optional[Err],
     ) -> None:
-        assert (
-            check_time_locks(
-                dict(self.REMOVALS),
-                conds,
-                self.PREV_BLOCK_HEIGHT,
-                self.PREV_BLOCK_TIMESTAMP,
-            )
-            == expected
+        res = check_time_locks(
+            dict(self.REMOVALS),
+            conds,
+            self.PREV_BLOCK_HEIGHT,
+            self.PREV_BLOCK_TIMESTAMP,
         )
+        if res is not None:
+            # TODO: remove when Rust errors and Python Errors are the same
+            res = Err(res)
+        assert res == expected
 
 
 def expect(
@@ -2343,7 +2344,14 @@ class TestCoins:
             self.lineage_info[ph] = UnspentLineageInfo(c.name(), c.parent_coin_info, bytes32([42] * 32))
 
     def spend_coin(self, coin_id: bytes32, height: uint32 = uint32(10)) -> None:
-        self.coin_records[coin_id] = dataclasses.replace(self.coin_records[coin_id], spent_block_index=height)
+        new_cr = CoinRecord(
+            self.coin_records[coin_id].coin,
+            self.coin_records[coin_id].confirmed_block_index,
+            height,
+            self.coin_records[coin_id].coinbase,
+            self.coin_records[coin_id].timestamp,
+        )
+        self.coin_records[coin_id] = new_cr
 
     def update_lineage(self, puzzle_hash: bytes32, coin: Optional[Coin]) -> None:
         if coin is None:

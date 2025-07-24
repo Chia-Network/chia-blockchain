@@ -769,7 +769,7 @@ class FullNodeRpcApi:
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
-        if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
+        if coin_record is None or not coin_record.spent() or coin_record.spent_block_index != height:
             raise ValueError(f"Invalid height {height}. coin record {coin_record}")
 
         header_hash = self.service.blockchain.height_to_hash(height)

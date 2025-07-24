@@ -5,12 +5,11 @@ from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from typing import Optional
 
-from chia_rs import ConsensusConstants, SpendBundle
+from chia_rs import ConsensusConstants, SpendBundle, check_time_locks
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.coin import Coin
@@ -130,7 +129,7 @@ class CoinStore:
 
     def all_unspent_coins(self) -> Iterator[Coin]:
         for coin_entry in self._db.values():
-            if not coin_entry.spent:
+            if not coin_entry.spent():
                 yield coin_entry.coin
 
     def _add_coin_entry(self, coin: Coin, birthday: CoinTimestamp) -> None:

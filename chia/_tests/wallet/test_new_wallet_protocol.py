@@ -612,7 +612,7 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
 
     for coin_state in response.coin_states:
         coin_record = coin_records[coin_state.coin.name()]
-        assert coin_record.coin_state == coin_state
+        assert coin_record.coin_state() == coin_state
         # Unlike requesting coin state by ids, the order is enforced here so block 11 should be excluded
         assert coin_record.confirmed_block_index <= 10
 
@@ -765,7 +765,7 @@ async def test_sync_puzzle_state(
                 coin_ids.add(coin_id)
 
                 coin_record = expected_coin_records[coin_id]
-                assert coin_record.coin_state == coin_state
+                assert coin_record.coin_state() == coin_state
 
                 height = max(coin_state.created_height or 0, coin_state.spent_height or 0)
 

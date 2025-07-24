@@ -138,20 +138,20 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
                 # Check that the coinbase rewards are added
                 record = await coin_store.get_coin_record(expected_coin.name())
                 assert record is not None
-                assert not record.spent
+                assert not record.spent()
                 assert record.coin == expected_coin
                 all_records.add(record)
             for coin_name in tx_removals:
                 # Check that the removed coins are set to spent
                 record = await coin_store.get_coin_record(coin_name)
                 assert record is not None
-                assert record.spent
+                assert record.spent()
                 all_records.add(record)
             for coin_id, coin, _ in tx_additions:
                 # Check that the added coins are added
                 record = await coin_store.get_coin_record(coin_id)
                 assert record is not None
-                assert not record.spent
+                assert not record.spent()
                 assert coin == record.coin
                 all_records.add(record)
 
@@ -186,21 +186,21 @@ async def test_set_spent(db_version: int, bt: BlockTools) -> None:
             coins = block.get_included_reward_coins()
             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-            await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+            await coin_store._set_spent([r.name() for r in records if r is not None], block.height)
 
             if len(records) > 0:
                 for r in records:
                     assert r is not None
-                    assert (await coin_store.get_coin_record(r.name)) is not None
+                    assert (await coin_store.get_coin_record(r.name())) is not None
 
                 # Check that we can't spend a coin twice in DB
                 with pytest.raises(ValueError, match="Invalid operation to set spent"):
-                    await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+                    await coin_store._set_spent([r.name() for r in records if r is not None], block.height)
 
             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
             for record in records:
                 assert record is not None
-                assert record.spent
+                assert record.spent()
                 assert record.spent_block_index == block.height
 
 
@@ -252,25 +252,25 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
             if block.height != 0 and selected_coin is None:
                 # Select the first CoinRecord which will be spent at the next transaction block.
                 selected_coin = records[0]
-                await coin_store._set_spent([r.name for r in records[1:] if r is not None], block.height)
+                await coin_store._set_spent([r.name() for r in records[1:] if r is not None], block.height)
             else:
-                await coin_store._set_spent([r.name for r in records if r is not None], block.height)
+                await coin_store._set_spent([r.name() for r in records if r is not None], block.height)
 
             if spend_selected_coin:
                 assert selected_coin is not None
-                await coin_store._set_spent([selected_coin.name], block.height)
+                await coin_store._set_spent([selected_coin.name()], block.height)
 
             records = [await coin_store.get_coin_record(coin.name()) for coin in reward_coins]  # update coin records
             for record in records:
                 assert record is not None
                 if (
                     selected_coin is not None
-                    and selected_coin.name == record.name
+                    and selected_coin.name() == record.name()
                     and not selected_coin.confirmed_block_index < block.height
                 ):
-                    assert not record.spent
+                    assert not record.spent()
                 else:
-                    assert record.spent
+                    assert record.spent()
                     assert record.spent_block_index == block.height
 
             if spend_selected_coin:
@@ -303,7 +303,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
             if block.height <= reorg_index:
                 for record in records:
                     assert record is not None
-                    assert record.spent == (record.name != selected_coin.name)
+                    assert record.spent() == (record.name() != selected_coin.name())
             else:
                 for record in records:
                     assert record is None
@@ -334,7 +334,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
                         assert record is not None
-                        assert not record.spent
+                        assert not record.spent()
                         assert record.confirmed_block_index == block.height
                         assert record.spent_block_index == 0
 
@@ -359,7 +359,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
                         records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                         for record in records:
                             assert record is not None
-                            assert not record.spent
+                            assert not record.spent()
                             assert record.confirmed_block_index == reorg_block.height
                             assert record.spent_block_index == 0
             peak = b.get_peak()
@@ -714,7 +714,7 @@ async def test_duplicate_by_hint(db_version: int) -> None:
 
         coin_states, height = await coin_store.batch_coin_states_by_puzzle_hashes([cr.coin.puzzle_hash])
 
-        assert coin_states == [cr.coin_state]
+        assert coin_states == [cr.coin_state()]
         assert height is None
 
 

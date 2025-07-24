@@ -1454,14 +1454,14 @@ class FullNode:
         )
         changes_for_peer: dict[bytes32, set[CoinState]] = {}
         for coin_record in wallet_update.coin_records:
-            coin_id = coin_record.name
+            coin_id = coin_record.name()
             subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
             subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash))
             hint = wallet_update.hints.get(coin_id)
             if hint is not None:
                 subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(hint))
             for peer in subscribed_peers:
-                changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state)
+                changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state())
 
         for peer, changes in changes_for_peer.items():
             connection = self.server.all_connections.get(peer)

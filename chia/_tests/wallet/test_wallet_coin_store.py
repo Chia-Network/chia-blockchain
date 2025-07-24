@@ -202,9 +202,9 @@ async def test_set_spent() -> None:
         store = await WalletCoinStore.create(db_wrapper)
         await store.add_coin_record(record_1)
 
-        assert not (await store.get_coin_record(coin_1.name())).spent
+        assert not (await store.get_coin_record(coin_1.name())).spent()
         await store.set_spent(coin_1.name(), uint32(12))
-        assert (await store.get_coin_record(coin_1.name())).spent
+        assert (await store.get_coin_record(coin_1.name())).spent()
         assert (await store.get_coin_record(coin_1.name())).spent_block_height == 12
 
 
@@ -908,7 +908,7 @@ async def test_rollback_to_block() -> None:
         await store.rollback_to_block(6)
 
         new_r5 = await store.get_coin_record(coin_5.name())
-        assert not new_r5.spent
+        assert not new_r5.spent()
         assert new_r5.spent_block_height == 0
         assert new_r5 != r5
 
@@ -918,7 +918,7 @@ async def test_rollback_to_block() -> None:
 
         assert await store.get_coin_record(coin_5.name()) is None
         new_r4 = await store.get_coin_record(coin_4.name())
-        assert not new_r4.spent
+        assert not new_r4.spent()
         assert new_r4.spent_block_height == 0
         assert new_r4 != r4
 

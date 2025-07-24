@@ -1885,11 +1885,11 @@ class TestWalletSimulator:
         added_1 = tx_record.additions[1]
         wallet_coin_record_rem = await wsm.coin_store.get_coin_record(removed.name())
         assert wallet_coin_record_rem is not None
-        assert wallet_coin_record_rem.spent
+        assert wallet_coin_record_rem.spent()
 
         coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(removed.name())
         assert coin_record_full_node is not None
-        assert coin_record_full_node.spent
+        assert coin_record_full_node.spent()
         add_1_coin_record_full_node = await full_node_api.full_node.coin_store.get_coin_record(added.name())
         assert add_1_coin_record_full_node is not None
         assert add_1_coin_record_full_node.confirmed_block_index > 0
