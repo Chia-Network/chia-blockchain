@@ -2176,7 +2176,8 @@ async def test_basic_key_value_db_vs_disk_cutoff(
     blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
     blob_hash = bytes32(sha256(blob).digest())
     async with data_store.db_wrapper.writer() as writer:
-        await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
+        with data_store.manage_kv_files(store_id):
+            await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
 
     file_exists = data_store.get_key_value_path(store_id=store_id, blob_hash=blob_hash).exists()
     async with data_store.db_wrapper.writer() as writer:
@@ -2210,7 +2211,8 @@ async def test_changing_key_value_db_vs_disk_cutoff(
 
     blob = bytes(seeded_random.getrandbits(8) for _ in range(size))
     async with data_store.db_wrapper.writer() as writer:
-        kv_id = await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
+        with data_store.manage_kv_files(store_id):
+            kv_id = await data_store.add_kvid(blob=blob, store_id=store_id, writer=writer)
 
     data_store.prefer_db_kv_blob_length += limit_change
     retrieved_blob = await data_store.get_blob_from_kvid(kv_id=kv_id, store_id=store_id)
