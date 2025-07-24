@@ -48,7 +48,7 @@ tr1 = TransactionRecord(
     bytes32(bytes32.random(module_seeded_random)),  # name
     {},  # memos
     ConditionValidTimes(),
-    encode_puzzle_hash(bytes32(bytes32.zeros), "xch"),
+    encode_puzzle_hash(bytes32(bytes32.zeros), "txch"),
 )
 
 MINIMUM_CONFIG = {
@@ -726,19 +726,21 @@ async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Ran
         store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         ph1 = bytes32.random(seeded_random)
+        ad1 = encode_puzzle_hash(ph1, "txch")
         ph2 = bytes32.random(seeded_random)
+        ad2 = encode_puzzle_hash(ph2, "txch")
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(1), to_puzzle_hash=ph1
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(1), to_puzzle_hash=ph1, to_address=ad1
         )
         tr3 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(2), to_puzzle_hash=ph1
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(2), to_puzzle_hash=ph1, to_address=ad1
         )
         tr4 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(3), to_puzzle_hash=ph2
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(3), to_puzzle_hash=ph2, to_address=ad2
         )
         tr5 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(4), to_puzzle_hash=ph2
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(4), to_puzzle_hash=ph2, to_address=ad2
         )
 
         await store.add_transaction_record(tr1)
