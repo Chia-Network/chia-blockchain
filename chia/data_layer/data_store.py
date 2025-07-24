@@ -348,10 +348,9 @@ class DataStore:
     async def read_from_file(
         self, filename: Path, store_id: bytes32
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
+        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
+        terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
         async with self.db_wrapper.writer() as writer:
-            internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
-            terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
-
             with open(filename, "rb") as reader:
                 while True:
                     chunk = b""
