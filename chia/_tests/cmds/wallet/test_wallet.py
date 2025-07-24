@@ -259,7 +259,11 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                     wallet_type=uint8(0),  # Doesn't matter
                     confirmed_wallet_balance=amount,
                     spendable_balance=amount,
+                    max_send_amount=uint128(0),
+                    unspent_coin_count=uint32(0),
                     unconfirmed_wallet_balance=uint128(0),
+                    pending_change=uint64(0),
+                    pending_coin_removal_count=uint32(0),
                 )
             )
 
