@@ -651,7 +651,7 @@ class DIDWallet:
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=to_ph,
             to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             amount=uint64(coin.amount),
@@ -737,7 +737,7 @@ class DIDWallet:
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=to_ph,
             to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             amount=uint64(coin.amount),
@@ -817,7 +817,7 @@ class DIDWallet:
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         tx = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=p2_ph,
             to_address=self.wallet_state_manager.encode_puzzle_hash(p2_ph),
             amount=uint64(coin.amount),
@@ -1028,7 +1028,7 @@ class DIDWallet:
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             amount=uint64(amount),
             to_puzzle_hash=to_ph,
             to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
@@ -1171,12 +1171,12 @@ class DIDWallet:
         :return: DIDInfo
         """
         details = backup_data.split(":")
-        origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(int(details[2])))
+        origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(details[2]))
         backup_ids = []
         if len(details[3]) > 0:
             for d in details[3].split(","):
                 backup_ids.append(bytes32.from_hexstr(d))
-        num_of_backup_ids_needed = uint64(int(details[5]))
+        num_of_backup_ids_needed = uint64(details[5])
         if num_of_backup_ids_needed > len(backup_ids):
             raise Exception
         innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))

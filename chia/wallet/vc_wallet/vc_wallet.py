@@ -200,7 +200,7 @@ class VCWallet:
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
         vc_record: VCRecord = VCRecord(vc, uint32(0))
@@ -340,7 +340,7 @@ class VCWallet:
                 )  # pragma: no cover
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(

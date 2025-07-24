@@ -615,7 +615,7 @@ class NFTWallet:
             }
             tx = TransactionRecord(
                 confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
+                created_at_time=uint64(time.time()),
                 to_puzzle_hash=puzzle_hashes[0],
                 to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                 amount=uint64(payment_sum),
@@ -1405,7 +1405,7 @@ class NFTWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=innerpuz.get_tree_hash(),
                     to_address=self.wallet_state_manager.encode_puzzle_hash(innerpuz.get_tree_hash()),
                     amount=uint64(1),

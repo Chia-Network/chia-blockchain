@@ -40,29 +40,22 @@ def rewards(height: uint32) -> tuple[Coin, Coin]:
     return farmer_coin, pool_coin
 
 
-def rand_bytes(num: int) -> bytes:
-    ret = bytearray(num)
-    for i in range(num):
-        ret[i] = random.getrandbits(8)
-    return bytes(ret)
-
-
 def rand_hash() -> bytes32:
-    return bytes32(rand_bytes(32))
+    return bytes32.random()
 
 
 def rand_g1() -> G1Element:
-    sk = AugSchemeMPL.key_gen(rand_bytes(96))
+    sk = AugSchemeMPL.key_gen(random.randbytes(96))
     return sk.get_g1()
 
 
 def rand_g2() -> G2Element:
-    sk = AugSchemeMPL.key_gen(rand_bytes(96))
+    sk = AugSchemeMPL.key_gen(random.randbytes(96))
     return AugSchemeMPL.sign(sk, b"foobar")
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    return ClassgroupElement(bytes100(rand_bytes(100)))
+    return ClassgroupElement(bytes100.random())
 
 
 def rand_vdf() -> VDFInfo:
@@ -84,7 +77,7 @@ def rand_full_block() -> FullBlock:
         None,
         rand_g1(),
         uint8(0),
-        rand_bytes(8 * 32),
+        random.randbytes(8 * 32),
     )
 
     reward_chain_block = RewardChainBlock(

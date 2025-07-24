@@ -175,7 +175,7 @@ class CATWallet:
         converted_ph = await self.convert_puzzle_hash(cat_coin.puzzle_hash)
         cat_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=converted_ph,
             to_address=self.wallet_state_manager.encode_puzzle_hash(converted_ph),
             amount=uint64(cat_coin.amount),
@@ -796,7 +796,7 @@ class CATWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=puzzle_hashes[0],
                     to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                     amount=uint64(payment_sum),

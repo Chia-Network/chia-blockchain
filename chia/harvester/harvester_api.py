@@ -287,7 +287,7 @@ class HarvesterAPI:
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                 await peer.send_message(msg)
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
 
         farming_info = FarmingInfo(
             new_challenge.challenge_hash,

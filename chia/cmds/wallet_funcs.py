@@ -525,7 +525,7 @@ async def make_offer(
                             assert hrp is not None
                             unit = units[hrp]
                     except ValueError:
-                        id = uint32(int(name))
+                        id = uint32(name)
                         if id == 1:
                             name = "XCH"
                             unit = units["chia"]

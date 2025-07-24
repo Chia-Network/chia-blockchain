@@ -372,7 +372,7 @@ def test_not_lists() -> None:
 
 def test_basic_optional() -> None:
     assert is_type_SpecificOptional(Optional[int])
-    assert is_type_SpecificOptional(Optional[Optional[int]])
+    assert is_type_SpecificOptional(Optional[int])
     assert not is_type_SpecificOptional(list[int])
 
 
@@ -398,8 +398,8 @@ class PostInitTestClassBad(Streamable):
 class PostInitTestClassOptional(Streamable):
     a: Optional[uint8]
     b: Optional[uint8]
-    c: Optional[Optional[uint8]]
-    d: Optional[Optional[uint8]]
+    c: Optional[uint8]
+    d: Optional[uint8]
 
 
 @streamable

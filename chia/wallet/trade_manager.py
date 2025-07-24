@@ -359,7 +359,7 @@ class TradeManager:
 
                 incoming_tx = TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_ph,
                     to_address=self.wallet_state_manager.encode_puzzle_hash(new_ph),
                     amount=uint64(coin.amount),
@@ -448,7 +448,7 @@ class TradeManager:
 
         success, created_offer, error = result
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         trade_offer: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
             accepted_at_time=None,
@@ -727,7 +727,7 @@ class TradeManager:
                     txs.append(
                         TransactionRecord(
                             confirmed_at_height=uint32(0),
-                            created_at_time=uint64(int(time.time())),
+                            created_at_time=uint64(time.time()),
                             to_puzzle_hash=to_puzzle_hash,
                             to_address=self.wallet_state_manager.encode_puzzle_hash(to_puzzle_hash),
                             amount=uint64(addition.amount),
@@ -788,7 +788,7 @@ class TradeManager:
             txs.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=to_puzzle_hash,
                     to_address=self.wallet_state_manager.encode_puzzle_hash(to_puzzle_hash),
                     amount=uint64(sent_amount),
@@ -886,8 +886,8 @@ class TradeManager:
 
         trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
-            accepted_at_time=uint64(int(time.time())),
-            created_at_time=uint64(int(time.time())),
+            accepted_at_time=uint64(time.time()),
+            created_at_time=uint64(time.time()),
             is_my_offer=False,
             sent=uint32(0),
             offer=bytes(complete_offer),
