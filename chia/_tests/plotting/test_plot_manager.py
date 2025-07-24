@@ -13,12 +13,14 @@ from typing import Callable, Optional, cast
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_ints import uint16, uint32
+from chiapos import DiskProver
 
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
+from chia.plotting.prover import V1Prover
 from chia.plotting.util import (
     PlotInfo,
     PlotRefreshEvents,
@@ -741,6 +743,20 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     add_plot_directory(env.root_path, str(sub_dir_1_0_1.path))
     expected_result.loaded = []
     await env.refresh_tester.run(expected_result)
+
+
+@pytest.mark.anyio
+async def test_disk_prover_from_bytes(environment: Environment):
+    env: Environment = environment
+    expected_result = PlotRefreshResult()
+    expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
+    expected_result.processed = len(env.dir_1)
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    await env.refresh_tester.run(expected_result)
+    _, plot_info = next(iter(env.refresh_tester.plot_manager.plots.items()))
+    recreated_prover = V1Prover(DiskProver.from_bytes(bytes(plot_info.prover)))
+    assert recreated_prover.get_id() == plot_info.prover.get_id()
+    assert recreated_prover.get_filename() == plot_info.prover.get_filename()
 
 
 @boolean_datacases(name="follow_links", false="no_follow", true="follow")

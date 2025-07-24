@@ -7,13 +7,16 @@ from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass, field
 from math import ceil
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from chia.plotting.prover import ProverProtocol
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
-from chiapos import DiskProver
 
+from chia.plotting.prover import get_prover_from_bytes
 from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
 from chia.util.streamable import Streamable, VersionedBlob, streamable
@@ -43,7 +46,7 @@ class CacheDataV1(Streamable):
 
 @dataclass
 class CacheEntry:
-    prover: DiskProver
+    prover: ProverProtocol
     farmer_public_key: G1Element
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
@@ -51,7 +54,7 @@ class CacheEntry:
     last_use: float
 
     @classmethod
-    def from_disk_prover(cls, prover: DiskProver) -> CacheEntry:
+    def from_prover(cls, prover: ProverProtocol) -> CacheEntry:
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,
@@ -149,8 +152,9 @@ class Cache:
                     39: 44367,
                 }
                 for path, cache_entry in cache_data.entries:
+                    prover: ProverProtocol = get_prover_from_bytes(path, cache_entry.prover_data)
                     new_entry = CacheEntry(
-                        DiskProver.from_bytes(cache_entry.prover_data),
+                        prover,
                         cache_entry.farmer_public_key,
                         cache_entry.pool_public_key,
                         cache_entry.pool_contract_puzzle_hash,

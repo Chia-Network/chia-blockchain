@@ -4,12 +4,14 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+if TYPE_CHECKING:
+    from chia.plotting.prover import ProverProtocol
 
 from chia_rs import G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
-from chiapos import DiskProver
 from typing_extensions import final
 
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -39,7 +41,7 @@ class PlotsRefreshParameter(Streamable):
 
 @dataclass
 class PlotInfo:
-    prover: DiskProver
+    prover: ProverProtocol
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
@@ -233,16 +235,22 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
         if follow_links and recursive:
             import glob
 
-            files = glob.glob(str(directory / "**" / "*.plot"), recursive=True)
-            for file in files:
+            v1_file_strs = glob.glob(str(directory / "**" / "*.plot"), recursive=True)
+            v2_file_strs = glob.glob(str(directory / "**" / "*.plot2"), recursive=True)
+
+            for file in v1_file_strs + v2_file_strs:
                 filepath = Path(file).resolve()
                 if filepath.is_file() and not filepath.name.startswith("._"):
                     all_files.append(filepath)
         else:
             glob_function = directory.rglob if recursive else directory.glob
-            all_files = [
+            v1_files: list[Path] = [
                 child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")
             ]
+            v2_files: list[Path] = [
+                child for child in glob_function("*.plot2") if child.is_file() and not child.name.startswith("._")
+            ]
+            all_files = v1_files + v2_files
         log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
