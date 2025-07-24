@@ -42,7 +42,10 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.types.blockchain_format.program import Program
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util import sqlite_wrapper
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
+from chia.util.sqlite_wrapper import SqliteConnection
+from chia.util.transactioner import Transactioner
 
 log = logging.getLogger(__name__)
 
@@ -55,14 +58,14 @@ log = logging.getLogger(__name__)
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
-    db_wrapper: DBWrapper2
+    db_wrapper: Transactioner[sqlite_wrapper.SqliteConnection]
 
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
         cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
     ) -> AsyncIterator[DataStore]:
-        async with DBWrapper2.managed(
+        async with sqlite_wrapper.managed(
             database=database,
             uri=uri,
             journal_mode="WAL",
@@ -756,7 +759,7 @@ class DataStore:
 
     async def get_keys_values_cursor(
         self,
-        reader: aiosqlite.Connection,
+        reader: SqliteConnection,
         root_hash: Optional[bytes32],
         only_keys: bool = False,
     ) -> aiosqlite.Cursor:
@@ -1404,7 +1407,7 @@ class DataStore:
 
             return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
-    async def clean_node_table(self, writer: Optional[aiosqlite.Connection] = None) -> None:
+    async def clean_node_table(self, writer: Optional[SqliteConnection] = None) -> None:
         query = """
             WITH RECURSIVE pending_nodes AS (
                 SELECT node_hash AS hash FROM root
