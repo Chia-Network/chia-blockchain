@@ -20,6 +20,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
     get_coin_records_amount_range_tests,
@@ -69,6 +70,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoinAnnouncement,
