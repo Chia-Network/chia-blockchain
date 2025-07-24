@@ -58,7 +58,6 @@ from chia.seeder.dns_server import DNSServer
 from chia.server.aliases import (
     CrawlerService,
     FullNodeService,
-    TimelordService,
     WalletService,
 )
 from chia.server.server import ChiaServer
@@ -74,6 +73,7 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri

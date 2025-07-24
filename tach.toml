@@ -40,7 +40,7 @@ depends_on = [
     { path = "chia.simulator", deprecated = false },
     { path = "chia.daemon", deprecated = false },
     { path = "chia.harvester", deprecated = true },
-    { path = "chia.timelord", deprecated = false },
+    { path = "chia.timelord", deprecated = true },
     { path = "chia.introducer", deprecated = false },
     { path = "chia.consensus", deprecated = false },
     { path = "chia.wallet", deprecated = false },
@@ -158,6 +158,7 @@ depends_on = ["chia.util"]
 [[modules]]
 path = "chia.timelord"
 depends_on = [
+    "chia.apis",
     "chia.types",
     "chia.util",
     { path = "chia.server", deprecated = false },

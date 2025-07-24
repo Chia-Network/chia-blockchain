@@ -11,20 +11,17 @@ from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import TimelordService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_rpc_api import TimelordRpcApi
+from chia.timelord.timelord_service import TimelordService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
-
-# See: https://bugs.python.org/issue29288
-"".encode("idna")
 
 SERVICE_NAME = "timelord"
 
@@ -36,7 +33,6 @@ def create_timelord_service(
     connect_to_daemon: bool = True,
 ) -> TimelordService:
     service_config = config[SERVICE_NAME]
-
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)

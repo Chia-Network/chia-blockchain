@@ -178,7 +178,6 @@ SERVERS_IN_SERVER = [
     "wallet",
     "full_node",
     "introducer",
-    "timelord",
 ]
 
 for server in SERVERS_IN_SERVER:
@@ -188,6 +187,7 @@ for server in SERVERS_IN_SERVER:
 SERVERS = [
     "harvester",
     "farmer",
+    "timelord",
 ]
 
 for server in SERVERS:
