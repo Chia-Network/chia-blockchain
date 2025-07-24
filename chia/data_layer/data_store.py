@@ -350,8 +350,8 @@ class DataStore:
     ) -> tuple[dict[bytes32, tuple[bytes32, bytes32]], dict[bytes32, tuple[KeyId, ValueId]]]:
         internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
         terminal_nodes: dict[bytes32, tuple[KeyId, ValueId]] = {}
-        async with self.db_wrapper.writer() as writer:
-            with open(filename, "rb") as reader:
+        with open(filename, "rb") as reader:
+            async with self.db_wrapper.writer() as writer:
                 while True:
                     chunk = b""
                     while len(chunk) < 4:
@@ -389,7 +389,7 @@ class DataStore:
                         node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
                         terminal_nodes[node_hash] = (kid, vid)
 
-            return internal_nodes, terminal_nodes
+        return internal_nodes, terminal_nodes
 
     async def migrate_db(self, server_files_location: Path) -> None:
         async with self.db_wrapper.reader() as reader:
