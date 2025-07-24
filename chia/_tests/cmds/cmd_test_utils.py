@@ -133,7 +133,7 @@ class TestWalletRpcClient(TestRpcClient):
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32([2] * 32),
-            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+            memos={bytes32([3] * 32): [bytes([4] * 32)]},
             valid_times=ConditionValidTimes(),
         )
 
@@ -283,7 +283,7 @@ class TestWalletRpcClient(TestRpcClient):
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=name,
-                memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+                memos={bytes32([3] * 32): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
             ),
             name,

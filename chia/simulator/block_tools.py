@@ -772,7 +772,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
+                timestamp=(uint64(time.time()) if genesis_timestamp is None else genesis_timestamp),
             )
             self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -1311,7 +1311,7 @@ class BlockTools:
         skip_slots: int = 0,
     ) -> FullBlock:
         if timestamp is None:
-            timestamp = uint64(int(time.time()))
+            timestamp = uint64(time.time())
 
         finished_sub_slots: list[EndOfSubSlotBundle] = []
         unfinished_block: Optional[UnfinishedBlock] = None

@@ -753,7 +753,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     async with did_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await did_wallet.transfer_did(bytes32.zeros, uint64(0), False, action_scope)
+        await did_wallet.transfer_did(bytes32.zeros, uint64(0), action_scope)
 
     await wallet_environments.process_pending_states(
         [

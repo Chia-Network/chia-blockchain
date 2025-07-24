@@ -548,7 +548,7 @@ async def test_request_peers(
     async def have_msgs(full_node_peers: FullNodePeers) -> bool:
         assert full_node_peers.address_manager is not None
         await full_node_peers.address_manager.add_to_new_table(
-            [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time()) - 1000))],
+            [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(time.time() - 1000))],
             None,
         )
         assert server_2._port is not None
