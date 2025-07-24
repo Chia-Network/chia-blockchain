@@ -36,7 +36,7 @@ depends_on = [
     { path = "chia.rpc", deprecated = false },
     { path = "chia.full_node", deprecated = false },
     { path = "chia.data_layer", deprecated = false },
-    { path = "chia.farmer", deprecated = false },
+    { path = "chia.farmer", deprecated = true },
     { path = "chia.simulator", deprecated = false },
     { path = "chia.daemon", deprecated = false },
     { path = "chia.harvester", deprecated = true },
@@ -57,6 +57,7 @@ depends_on = [
     { path = "chia.plotting", deprecated = false },
     { path = "chia.full_node", deprecated = false },
     { path = "chia.wallet", deprecated = false },
+    { path = "chia.farmer", deprecated = false },
     { path = "chia.seeder", deprecated = false },
     { path = "chia.consensus", deprecated = false },
     { path = "chia.apis", deprecated = false },
@@ -128,6 +129,7 @@ depends_on = [
 [[modules]]
 path = "chia.farmer"
 depends_on = [
+    "chia.apis",
     "chia.types",
     "chia.util",
     { path = "chia.protocols", deprecated = false },

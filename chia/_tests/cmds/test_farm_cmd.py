@@ -8,9 +8,10 @@ from _pytest.capture import CaptureFixture
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.farm_funcs import summary
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
-from chia.server.aliases import FarmerService, WalletService
+from chia.server.aliases import WalletService
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
 
