@@ -863,7 +863,7 @@ async def test_valid_times_migration() -> None:
         )
 
         async with db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     bytes(old_record),
