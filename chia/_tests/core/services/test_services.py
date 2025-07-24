@@ -94,7 +94,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         [None, "chia.server.start_introducer", "introducer"],
         # TODO: fails...  make it not do that
         # [None, "chia.seeder.start_crawler", "crawler"],
-        [None, "chia.server.start_timelord", "timelord"],
+        [None, "chia.timelord.start_timelord", "timelord"],
         pytest.param(
             None,
             "chia.timelord.timelord_launcher",

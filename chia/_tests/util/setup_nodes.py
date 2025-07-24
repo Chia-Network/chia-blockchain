@@ -24,7 +24,7 @@ from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.server.aliases import FullNodeService, TimelordService, WalletService
+from chia.server.aliases import FullNodeService, WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -42,6 +42,7 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
