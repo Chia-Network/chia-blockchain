@@ -13,7 +13,7 @@ homepage = "https://chia.net/"
 
 [tool.poetry]
 # see [tool.poetry-dynamic-versioning]
-packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
+packages = [{ include = "chia"}]
 version = "0.0.0"
 
 [project.scripts]

@@ -37,8 +37,6 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-git submodule update --init mozilla-ca
-
 if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
 {
     Write-Output "Unable to find py"
