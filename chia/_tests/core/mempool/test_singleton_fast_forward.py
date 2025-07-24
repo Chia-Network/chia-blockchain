@@ -168,7 +168,7 @@ def test_perform_the_fast_forward() -> None:
         "517b0dadb0c310ded24dd86dff8205398080ff808080"
     )
     test_coin_spend = CoinSpend(test_coin, test_puzzle_reveal, test_solution)
-    test_spend_data = BundleCoinSpend(test_coin_spend, False, True, [test_child_coin])
+    test_spend_data = BundleCoinSpend(test_coin_spend, False, True, [test_child_coin], uint64(0))
     test_unspent_lineage_info = UnspentLineageInfo(
         coin_id=latest_unspent_coin.name(),
         parent_id=latest_unspent_coin.parent_coin_info,

@@ -625,6 +625,7 @@ class MempoolManager:
                 eligible_for_dedup=bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP),
                 eligible_for_fast_forward=eligible_for_ff,
                 additions=spend_additions,
+                cost=uint64(spend_conds.condition_cost + spend_conds.execution_cost),
                 latest_singleton_lineage=lineage_info,
             )
 
