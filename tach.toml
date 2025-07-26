@@ -22,7 +22,6 @@ path = "chia.consensus"
 depends_on = [
     "chia.types",
     "chia.util",
-    { path = "chia.full_node", deprecated = false },
 ]
 
 [[modules]]
@@ -36,12 +35,12 @@ depends_on = [
     # and/or the `start_*.py` scripts, which can go in their respective modules
     { path = "chia.rpc", deprecated = false },
     { path = "chia.full_node", deprecated = false },
-    { path = "chia.data_layer", deprecated = false },
-    { path = "chia.farmer", deprecated = false },
+    { path = "chia.data_layer", deprecated = true },
+    { path = "chia.farmer", deprecated = true },
     { path = "chia.simulator", deprecated = false },
     { path = "chia.daemon", deprecated = false },
-    { path = "chia.harvester", deprecated = false },
-    { path = "chia.timelord", deprecated = false },
+    { path = "chia.harvester", deprecated = true },
+    { path = "chia.timelord", deprecated = true },
     { path = "chia.introducer", deprecated = false },
     { path = "chia.consensus", deprecated = false },
     { path = "chia.wallet", deprecated = false },
@@ -58,12 +57,14 @@ depends_on = [
     { path = "chia.plotting", deprecated = false },
     { path = "chia.full_node", deprecated = false },
     { path = "chia.wallet", deprecated = false },
+    { path = "chia.farmer", deprecated = false },
     { path = "chia.seeder", deprecated = false },
     { path = "chia.consensus", deprecated = false },
     { path = "chia.apis", deprecated = false },
     { path = "chia.cmds", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.timelord", deprecated = false },
+    { path = "chia.harvester", deprecated = false },
     { path = "chia.daemon", deprecated = false },
     { path = "chia.ssl", deprecated = false },
     { path = "chia.rpc", deprecated = false },
@@ -83,6 +84,8 @@ depends_on = [
 [[modules]]
 path = "chia.data_layer"
 depends_on = [
+    "chia.apis",
+    "chia.ssl",
     "chia.types",
     "chia.util",
     "chia.protocols",
@@ -128,6 +131,7 @@ depends_on = [
 [[modules]]
 path = "chia.farmer"
 depends_on = [
+    "chia.apis",
     "chia.types",
     "chia.util",
     { path = "chia.protocols", deprecated = false },
@@ -156,6 +160,7 @@ depends_on = ["chia.util"]
 [[modules]]
 path = "chia.timelord"
 depends_on = [
+    "chia.apis",
     "chia.types",
     "chia.util",
     { path = "chia.server", deprecated = false },
@@ -183,6 +188,7 @@ depends_on = [
 [[modules]]
 path = "chia.harvester"
 depends_on = [
+    "chia.apis",
     "chia.types",
     "chia.util",
     { path = "chia.protocols", deprecated = false },

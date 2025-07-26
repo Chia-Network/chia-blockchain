@@ -10,31 +10,34 @@ from chia_rs import ConsensusConstants
 from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
+from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_rpc_api import FarmerRpcApi
+from chia.farmer.farmer_service import FarmerService
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import TimelordService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.timelord.timelord import Timelord
-from chia.timelord.timelord_api import TimelordAPI
-from chia.timelord.timelord_rpc_api import TimelordRpcApi
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
+from chia.util.keychain import Keychain
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
 
-SERVICE_NAME = "timelord"
+SERVICE_NAME = "farmer"
 
 
-def create_timelord_service(
+def create_farmer_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
+    config_pool: dict[str, Any],
     consensus_constants: ConsensusConstants,
+    keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> TimelordService:
+) -> FarmerService:
     service_config = config[SERVICE_NAME]
 
     network_id = service_config["selected_network"]
@@ -42,22 +45,25 @@ def create_timelord_service(
     update_testnet_overrides(network_id, overrides)
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
-    node = Timelord(root_path, service_config, updated_constants)
-    peer_api = TimelordAPI(node)
+    node = Farmer(
+        root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
+    )
+    peer_api = FarmerAPI(node)
 
-    rpc_info: Optional[RpcInfo[TimelordRpcApi]] = None
+    rpc_info: Optional[RpcInfo[FarmerRpcApi]] = None
     if service_config.get("start_rpc_server", True):
-        rpc_info = (TimelordRpcApi, service_config.get("rpc_port", 8557))
+        rpc_info = (FarmerRpcApi, service_config["rpc_port"])
 
     return Service(
         root_path=root_path,
         config=config,
         node=node,
         peer_api=peer_api,
-        node_type=NodeType.TIMELORD,
-        advertised_port=None,
+        node_type=NodeType.FARMER,
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
+        on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
@@ -70,9 +76,11 @@ async def async_main(root_path: pathlib.Path) -> int:
     config = load_config(root_path, "config.yaml")
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
+    config_pool = load_config_cli(root_path, "config.yaml", "pool")
+    config["pool"] = config_pool
     initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
-    service = create_timelord_service(root_path, config, DEFAULT_CONSTANTS)
+    service = create_farmer_service(root_path, config, config_pool, DEFAULT_CONSTANTS)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()

@@ -44,6 +44,7 @@ from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
 from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.data_layer.data_layer_service import DataLayerService
 from chia.data_layer.data_layer_util import (
     HashOnlyProof,
     OfferStore,
@@ -56,8 +57,8 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
-from chia.server.aliases import DataLayerService, WalletService
-from chia.server.start_data_layer import create_data_layer_service
+from chia.data_layer.start_data_layer import create_data_layer_service
+from chia.server.aliases import WalletService
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
