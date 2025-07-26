@@ -35,7 +35,7 @@ depends_on = [
     # and/or the `start_*.py` scripts, which can go in their respective modules
     { path = "chia.rpc", deprecated = false },
     { path = "chia.full_node", deprecated = false },
-    { path = "chia.data_layer", deprecated = false },
+    { path = "chia.data_layer", deprecated = true },
     { path = "chia.farmer", deprecated = true },
     { path = "chia.simulator", deprecated = false },
     { path = "chia.daemon", deprecated = false },
@@ -84,6 +84,8 @@ depends_on = [
 [[modules]]
 path = "chia.data_layer"
 depends_on = [
+    "chia.apis",
+    "chia.ssl",
     "chia.types",
     "chia.util",
     "chia.protocols",

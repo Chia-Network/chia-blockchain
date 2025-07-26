@@ -86,7 +86,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 @pytest.mark.parametrize(
     argnames=["create_service", "module_path", "service_config_name"],
     argvalues=[
-        [DataLayerRpcClient.create_as_context, "chia.server.start_data_layer", "data_layer"],
+        [DataLayerRpcClient.create_as_context, "chia.data_layer.start_data_layer", "data_layer"],
         [FarmerRpcClient.create_as_context, "chia.farmer.start_farmer", "farmer"],
         [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
         [HarvesterRpcClient.create_as_context, "chia.harvester.start_harvester", "harvester"],
