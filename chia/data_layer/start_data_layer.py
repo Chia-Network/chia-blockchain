@@ -12,10 +12,11 @@ from chia.apis import ApiProtocolRegistry
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_service import DataLayerService
 from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import DataLayerService, WalletService
+from chia.server.aliases import WalletService
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.ssl.create_ssl import create_all_ssl
@@ -143,7 +144,7 @@ def main() -> int:
     root_path = resolve_root_path(override=None)
 
     with maybe_manage_task_instrumentation(
-        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None,
     ):
         return async_run(coro=async_main(root_path=root_path))
 

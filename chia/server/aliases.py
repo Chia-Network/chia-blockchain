@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_api import DataLayerAPI
-from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
@@ -17,7 +14,6 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 CrawlerService = Service[Crawler, CrawlerAPI, CrawlerRpcApi]
-DataLayerService = Service[DataLayer, DataLayerAPI, DataLayerRpcApi]
 FullNodeService = Service[FullNode, FullNodeAPI, FullNodeRpcApi]
 IntroducerService = Service[Introducer, IntroducerAPI, FullNodeRpcApi]
 WalletService = Service[WalletNode, WalletNodeAPI, WalletRpcApi]
