@@ -12,6 +12,7 @@ from typing_extensions import Self, dataclass_transform
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
+from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -291,6 +292,70 @@ class GetCATListResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDSetWalletName(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDSetWalletNameResponse(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetWalletName(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetWalletNameResponse(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetInfo(Streamable):
+    coin_id: str
+    latest: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetInfoResponse(Streamable):
+    did_id: str
+    latest_coin: bytes32
+    p2_address: str
+    public_key: bytes
+    recovery_list_hash: Optional[bytes32]
+    num_verification: uint16
+    metadata: dict[str, str]
+    launcher_id: bytes32
+    full_puzzle: Program
+    solution: Program
+    hints: list[bytes]
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDFindLostDID(Streamable):
+    coin_id: str
+    recovery_list_hash: Optional[bytes32] = None
+    num_verification: Optional[uint16] = None
+    metadata: Optional[dict[str, str]] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDFindLostDIDResponse(Streamable):
+    latest_coin_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDGetPubkey(Streamable):
     wallet_id: uint32
 
@@ -313,8 +378,8 @@ class DIDGetRecoveryInfoResponse(Streamable):
     wallet_id: uint32
     my_did: str
     coin_name: bytes32
-    newpuzhash: bytes32
-    pubkey: G1Element
+    newpuzhash: Optional[bytes32]
+    pubkey: Optional[G1Element]
     backup_dids: list[bytes32]
 
 
@@ -332,6 +397,60 @@ class DIDGetCurrentCoinInfoResponse(Streamable):
     did_parent: bytes32
     did_innerpuz: bytes32
     did_amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDCreateBackupFile(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDCreateBackupFileResponse(Streamable):
+    wallet_id: uint32
+    backup_data: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetDID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetDIDResponse(Streamable):
+    wallet_id: uint32
+    my_did: str
+    coin_id: Optional[bytes32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetRecoveryList(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetRecoveryListResponse(Streamable):
+    wallet_id: uint32
+    recovery_list: list[str]
+    num_required: uint16
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetMetadata(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetMetadataResponse(Streamable):
+    wallet_id: uint32
+    metadata: dict[str, str]
 
 
 @streamable
@@ -859,6 +978,63 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class DIDUpdateRecoveryIDs(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    new_list: list[str] = field(default_factory=default_raise)
+    num_verifications_required: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class DIDMessageSpend(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    coin_announcements: list[bytes] = field(default_factory=list)
+    puzzle_announcements: list[bytes] = field(default_factory=list)
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDMessageSpendResponse(TransactionEndpointResponse):
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
+class DIDUpdateMetadata(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    metadata: dict[str, str] = field(default_factory=dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDUpdateMetadataResponse(TransactionEndpointResponse):
+    spend_bundle: WalletSpendBundle
+    wallet_id: uint32
+
+
+@streamable
+@kw_only_dataclass
+class DIDTransferDID(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    inner_address: str = field(default_factory=default_raise)
+    with_recovery_info: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDTransferDIDResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@kw_only_dataclass
 class NFTMintNFTRequest(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     royalty_address: Optional[str] = field(default_factory=default_raise)
@@ -1204,32 +1380,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
-    pass
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDMessageSpendResponse(TransactionEndpointResponse):
-    spend_bundle: WalletSpendBundle
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDUpdateMetadataResponse(TransactionEndpointResponse):
-    spend_bundle: WalletSpendBundle
-    wallet_id: uint32
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDTransferDIDResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable

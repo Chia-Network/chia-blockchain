@@ -26,7 +26,6 @@ from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.eligible_coin_spends import EligibilityAndAdditions
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
@@ -584,59 +583,50 @@ class MempoolManager:
         removal_names: set[bytes32] = set()
         additions_dict: dict[bytes32, Coin] = {}
         addition_amount: int = 0
-        # Map of coin ID to eligibility information
-        eligibility_and_additions: dict[bytes32, EligibilityAndAdditions] = {}
-        for spend in conds.spends:
-            coin_id = bytes32(spend.coin_id)
-            removal_names.add(coin_id)
-            spend_additions = []
-            for puzzle_hash, amount, _ in spend.create_coin:
-                child_coin = Coin(coin_id, puzzle_hash, uint64(amount))
-                spend_additions.append(child_coin)
-                additions_dict[child_coin.name()] = child_coin
-                addition_amount += child_coin.amount
-            is_eligible_for_dedup = bool(spend.flags & ELIGIBLE_FOR_DEDUP)
-            is_eligible_for_ff = bool(spend.flags & ELIGIBLE_FOR_FF)
-            eligibility_and_additions[coin_id] = EligibilityAndAdditions(
-                is_eligible_for_dedup=is_eligible_for_dedup,
-                spend_additions=spend_additions,
-                ff_puzzle_hash=bytes32(spend.puzzle_hash) if is_eligible_for_ff else None,
-            )
-        removal_names_from_coin_spends: set[bytes32] = set()
+
+        # Map of coin ID to SpendConditions
+        spend_conditions = {bytes32(spend.coin_id): spend for spend in conds.spends}
+
+        # if this happens, the SpendBundle doesn't match the
+        # SpendBundleConditions.
+        assert len(new_spend.coin_spends) == len(spend_conditions)
+
         bundle_coin_spends: dict[bytes32, BundleCoinSpend] = {}
         for coin_spend in new_spend.coin_spends:
             coin_id = coin_spend.coin.name()
-            removal_names_from_coin_spends.add(coin_id)
-            eligibility_info = eligibility_and_additions.get(
-                coin_id,
-                EligibilityAndAdditions(is_eligible_for_dedup=False, spend_additions=[], ff_puzzle_hash=None),
-            )
+            removal_names.add(coin_id)
 
-            supports_dedup = eligibility_info.is_eligible_for_dedup
-            if supports_dedup and not is_clvm_canonical(bytes(coin_spend.solution)):
+            # if this coin_id isn't found, the SpendBundle doesn't match the
+            # SpendBundleConditions.
+            spend_conds = spend_conditions.pop(coin_id)
+
+            if bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP) and not is_clvm_canonical(bytes(coin_spend.solution)):
                 return Err.INVALID_COIN_SOLUTION, None, []
 
-            mark_as_fast_forward = eligibility_info.ff_puzzle_hash is not None and supports_fast_forward(coin_spend)
             lineage_info = None
-            if mark_as_fast_forward:
+            eligible_for_ff = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
+            if eligible_for_ff:
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been melted, the
                 # fast forward spend will never become valid.
-                assert eligibility_info.ff_puzzle_hash is not None
-                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash)
+                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(bytes32(spend_conds.puzzle_hash))
                 if lineage_info is None:
                     return Err.DOUBLE_SPEND, None, []
+
+            spend_additions = []
+            for puzzle_hash, amount, _ in spend_conds.create_coin:
+                child_coin = Coin(coin_id, puzzle_hash, uint64(amount))
+                spend_additions.append(child_coin)
+                additions_dict[child_coin.name()] = child_coin
+                addition_amount += amount
+
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
-                eligible_for_dedup=supports_dedup,
-                eligible_for_fast_forward=mark_as_fast_forward,
-                additions=eligibility_info.spend_additions,
+                eligible_for_dedup=bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP),
+                eligible_for_fast_forward=eligible_for_ff,
+                additions=spend_additions,
                 latest_singleton_lineage=lineage_info,
             )
-
-        if removal_names != removal_names_from_coin_spends:
-            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
-            return Err.INVALID_SPEND_BUNDLE, None, []
 
         # fast forward spends are only allowed when bundled with other, non-FF, spends
         # in order to evict an FF spend, it must be associated with a normal

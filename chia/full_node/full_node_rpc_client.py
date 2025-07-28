@@ -10,7 +10,10 @@ from chia.consensus.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpendWithConditions
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.util.byte_types import hexstr_to_bytes
 
 
 def coin_record_dict_backwards_compat(coin_record: dict[str, Any]) -> dict[str, Any]:
@@ -202,10 +205,10 @@ class FullNodeRpcClient(RpcClient):
     async def get_block_spends(self, header_hash: bytes32) -> Optional[list[CoinSpend]]:
         try:
             response = await self.fetch("get_block_spends", {"header_hash": header_hash.hex()})
-            block_spends = []
+            output = []
             for block_spend in response["block_spends"]:
-                block_spends.append(CoinSpend.from_json_dict(block_spend))
-            return block_spends
+                output.append(CoinSpend.from_json_dict(block_spend))
+            return output
         except Exception:
             return None
 
@@ -214,7 +217,15 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch("get_block_spends_with_conditions", {"header_hash": header_hash.hex()})
             block_spends: list[CoinSpendWithConditions] = []
             for block_spend in response["block_spends_with_conditions"]:
-                block_spends.append(CoinSpendWithConditions.from_json_dict(block_spend))
+                coin_spend = CoinSpend.from_json_dict(block_spend["coin_spend"])
+                cond_tuples = block_spend["conditions"]
+                conditions = []
+                for condition in cond_tuples:
+                    cwa = ConditionWithArgs(
+                        opcode=ConditionOpcode(bytes([condition[0]])), vars=[hexstr_to_bytes(b) for b in condition[1]]
+                    )
+                    conditions.append(cwa)
+                block_spends.append(CoinSpendWithConditions(coin_spend=coin_spend, conditions=conditions))
             return block_spends
 
         except Exception:
