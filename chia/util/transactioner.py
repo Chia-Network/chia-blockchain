@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Generic, Optional, Protocol, TextIO, TypeVar, Union
+from typing import Any, Callable, Generic, Optional, Protocol, TextIO, TypeVar, Union
 
 import aiosqlite
 import anyio
@@ -29,25 +29,6 @@ SQLITE_INT_MAX = 2**63 - 1
 
 class DBWrapperError(Exception):
     pass
-
-
-class ForeignKeyError(DBWrapperError):
-    def __init__(self, violations: Iterable[Union[aiosqlite.Row, tuple[str, object, str, object]]]) -> None:
-        self.violations: list[dict[str, object]] = []
-
-        for violation in violations:
-            if isinstance(violation, tuple):
-                violation_dict = dict(zip(["table", "rowid", "parent", "fkid"], violation))
-            else:
-                violation_dict = dict(violation)
-            self.violations.append(violation_dict)
-
-        super().__init__(f"Found {len(self.violations)} FK violations: {self.violations}")
-
-
-class NestedForeignKeyDelayedRequestError(DBWrapperError):
-    def __init__(self) -> None:
-        super().__init__("Unable to enable delayed foreign key enforcement in a nested request.")
 
 
 class InternalError(DBWrapperError):
@@ -159,6 +140,7 @@ class ConnectionProtocol(Protocol[T_co]):
 # TODO: are these ok missing type parameters so they stay generic?  or...
 TConnection = TypeVar("TConnection", bound=ConnectionProtocol)  # type: ignore[type-arg]
 TConnection_co = TypeVar("TConnection_co", bound=ConnectionProtocol, covariant=True)  # type: ignore[type-arg]
+TUntransactionedConnection = TypeVar("TUntransactionedConnection")
 
 
 class CreateConnectionCallable(Protocol[TConnection_co]):
@@ -191,8 +173,9 @@ async def manage_connection(
 
 @final
 @dataclass
-class Transactioner(Generic[TConnection]):
+class Transactioner(Generic[TConnection, TUntransactionedConnection]):
     create_connection: CreateConnectionCallable[TConnection]
+    create_untransactioned_connection: Callable[[TConnection], TUntransactionedConnection]
     _write_connection: TConnection
     db_version: int = 1
     _log_file: Optional[TextIO] = None
@@ -228,10 +211,35 @@ class Transactioner(Generic[TConnection]):
         return name
 
     @contextlib.asynccontextmanager
-    async def writer(
-        self,
-        foreign_key_enforcement_enabled: Optional[bool] = None,
-    ) -> AsyncIterator[TConnection]:
+    async def writer_no_transaction(self) -> AsyncIterator[TUntransactionedConnection]:
+        """
+        Initiates a new, possibly nested, transaction. If this task is already
+        in a transaction, none of the changes made as part of this transaction
+        will become visible to others until that top level transaction commits.
+        If this transaction fails (by exiting the context manager with an
+        exception) this transaction will be rolled back, but the next outer
+        transaction is not necessarily cancelled. It would also need to exit
+        with an exception to be cancelled.
+        The sqlite features this relies on are SAVEPOINT, ROLLBACK TO and RELEASE.
+        """
+        task = asyncio.current_task()
+        assert task is not None
+        if self._current_writer == task:
+            if self._write_connection.in_transaction:
+                raise Exception("can't nest for no transaction inside an active transaction")
+
+            yield self.create_untransactioned_connection(self._write_connection)
+            return
+
+        async with self._lock:
+            self._current_writer = task
+            try:
+                yield self.create_untransactioned_connection(self._write_connection)
+            finally:
+                self._current_writer = None
+
+    @contextlib.asynccontextmanager
+    async def writer(self) -> AsyncIterator[TConnection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
         in a transaction, none of the changes made as part of this transaction
@@ -246,63 +254,17 @@ class Transactioner(Generic[TConnection]):
         assert task is not None
         if self._current_writer == task:
             # we allow nesting writers within the same task
-            if foreign_key_enforcement_enabled is not None:
-                # NOTE: Technically this is complaining even if the requested state is
-                #       already in place.  This could be adjusted to allow nesting
-                #       when the existing and requested states agree.  In this case,
-                #       probably skip the nested foreign key check when exiting since
-                #       we don't have many foreign key errors and so it is likely ok
-                #       to save the extra time checking twice.
-                raise NestedForeignKeyDelayedRequestError
             async with self._write_connection.savepoint_ctx(name=self._next_savepoint()):
                 yield self._write_connection
             return
 
         async with self._lock:
-            async with contextlib.AsyncExitStack() as exit_stack:
-                if foreign_key_enforcement_enabled is not None:
-                    await exit_stack.enter_async_context(
-                        self._set_foreign_key_enforcement(enabled=foreign_key_enforcement_enabled),
-                    )
-
-                async with self._write_connection.savepoint_ctx(name=self._next_savepoint()):
-                    self._current_writer = task
-                    try:
-                        yield self._write_connection
-
-                        if foreign_key_enforcement_enabled is not None and not foreign_key_enforcement_enabled:
-                            await self._check_foreign_keys()
-                    finally:
-                        self._current_writer = None
-
-    @contextlib.asynccontextmanager
-    async def _set_foreign_key_enforcement(self, enabled: bool) -> AsyncIterator[None]:
-        if self._current_writer is not None:
-            raise InternalError("Unable to set foreign key enforcement state while a writer is held")
-
-        async with self._write_connection.execute("PRAGMA foreign_keys") as cursor:
-            result = await cursor.fetchone()
-            if result is None:  # pragma: no cover
-                raise InternalError("No results when querying for present foreign key enforcement state")
-            [original_value] = result
-
-        if original_value == enabled:
-            yield
-            return
-
-        try:
-            await self._write_connection.execute(f"PRAGMA foreign_keys={enabled}")
-            yield
-        finally:
-            with anyio.CancelScope(shield=True):
-                await self._write_connection.execute(f"PRAGMA foreign_keys={original_value}")
-
-    async def _check_foreign_keys(self) -> None:
-        async with self._write_connection.execute("PRAGMA foreign_key_check") as cursor:
-            violations = list(await cursor.fetchall())
-
-        if len(violations) > 0:
-            raise ForeignKeyError(violations=violations)
+            async with self._write_connection.savepoint_ctx(name=self._next_savepoint()):
+                self._current_writer = task
+                try:
+                    yield self._write_connection
+                finally:
+                    self._current_writer = None
 
     @contextlib.asynccontextmanager
     async def writer_maybe_transaction(self) -> AsyncIterator[TConnection]:

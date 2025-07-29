@@ -17,17 +17,19 @@ from _pytest.fixtures import SubRequest
 
 from chia._tests.util.misc import Marks, boolean_datacases, datacases
 from chia.util import sqlite_wrapper
-from chia.util.sqlite_wrapper import SqliteConnection
+from chia.util.sqlite_wrapper import (
+    ForeignKeyError,
+    NestedForeignKeyDelayedRequestError,
+    SqliteConnection,
+    SqliteTransactioner,
+)
 from chia.util.task_referencer import create_referenced_task
 from chia.util.transactioner import (
-    ForeignKeyError,
     InternalError,
-    NestedForeignKeyDelayedRequestError,
-    Transactioner,
     generate_in_memory_db_uri,
 )
 
-DBWrapper2 = Transactioner[SqliteConnection]
+DBWrapper2 = SqliteTransactioner
 
 
 @asynccontextmanager
@@ -477,11 +479,13 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
 @pytest.mark.anyio
 async def test_foreign_key_pragma_controlled_by_writer(initial: bool, forced: bool) -> None:
     async with DBConnection(2, foreign_keys=initial) as db_wrapper:
-        async with db_wrapper.writer(foreign_key_enforcement_enabled=forced) as writer:
-            async with writer.execute("PRAGMA foreign_keys") as cursor:
-                result = await cursor.fetchone()
-                assert result is not None
-                [actual] = result
+        async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+            async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
+                async with db_wrapper.writer() as writer:
+                    async with writer.execute("PRAGMA foreign_keys") as cursor:
+                        result = await cursor.fetchone()
+                        assert result is not None
+                        [actual] = result
 
     assert actual == (1 if forced else 0)
 
@@ -516,13 +520,15 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 
         # make sure the writer raises a foreign key error on exit
         with pytest.raises(ForeignKeyError):
-            async with db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
-                async with writer.execute("DELETE FROM people WHERE id = 1"):
-                    pass
+            async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+                async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
+                    async with db_wrapper.writer() as writer:
+                        async with writer.execute("DELETE FROM people WHERE id = 1"):
+                            pass
 
-                # make sure a foreign key error can be detected here
-                with pytest.raises(ForeignKeyError):
-                    await db_wrapper._check_foreign_keys()
+                        # make sure a foreign key error can be detected here
+                        with pytest.raises(ForeignKeyError):
+                            await writer._check_foreign_keys()
 
         async with writer.execute("SELECT * FROM people WHERE id = 1") as cursor:
             [person] = await cursor.fetchall()
@@ -575,9 +581,11 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
 
         # make sure the writer raises a foreign key error on exit
         with pytest.raises(ForeignKeyError) as error:
-            async with db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
-                async with writer.execute("DELETE FROM people WHERE id = 1"):
-                    pass
+            async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+                async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
+                    async with db_wrapper.writer() as writer:
+                        async with writer.execute("DELETE FROM people WHERE id = 1"):
+                            pass
 
         assert error.value.violations == [{"table": "people", "rowid": 2, "parent": "people", "fkid": 0}]
 
@@ -585,12 +593,12 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
 @pytest.mark.anyio
 async def test_set_foreign_keys_fails_within_acquired_writer() -> None:
     async with DBConnection(2, foreign_keys=True) as db_wrapper:
-        async with db_wrapper.writer():
+        async with db_wrapper.writer() as writer:
             with pytest.raises(
                 InternalError,
                 match="Unable to set foreign key enforcement state while a writer is held",
             ):
-                async with db_wrapper._set_foreign_key_enforcement(enabled=False):
+                async with writer._set_foreign_key_enforcement(enabled=False):
                     pass  # pragma: no cover
 
 
@@ -600,5 +608,7 @@ async def test_delayed_foreign_key_request_fails_when_nested(initial: bool) -> N
     async with DBConnection(2, foreign_keys=initial) as db_wrapper:
         async with db_wrapper.writer():
             with pytest.raises(NestedForeignKeyDelayedRequestError):
-                async with db_wrapper.writer(foreign_key_enforcement_enabled=True):
-                    pass  # pragma: no cover
+                async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+                    async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
+                        async with db_wrapper.writer():
+                            pass  # pragma: no cover
