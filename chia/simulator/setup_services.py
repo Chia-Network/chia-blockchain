@@ -22,6 +22,7 @@ from chia.farmer.farmer_service import FarmerService
 from chia.farmer.start_farmer import create_farmer_service
 from chia.harvester.harvester_service import HarvesterService
 from chia.harvester.start_harvester import create_harvester_service
+from chia.introducer.start_introducer import IntroducerService, create_introducer_service
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
@@ -29,13 +30,11 @@ from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.aliases import (
     CrawlerService,
     FullNodeService,
-    IntroducerService,
     WalletService,
 )
 from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_full_node import create_full_node_service
-from chia.server.start_introducer import create_introducer_service
 from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring

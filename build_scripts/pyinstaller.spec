@@ -168,7 +168,6 @@ add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 SERVERS_IN_SERVER = [
     "wallet",
     "full_node",
-    "introducer",
 ]
 
 for server in SERVERS_IN_SERVER:
@@ -179,6 +178,7 @@ SERVERS = [
     "harvester",
     "farmer",
     "timelord",
+    "introducer",
 ]
 
 for server in SERVERS:
