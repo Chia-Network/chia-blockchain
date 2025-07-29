@@ -4,27 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import secrets
-import sqlite3
-import sys
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Callable, Generic, Optional, Protocol, TextIO, TypeVar, Union
 
-import aiosqlite
 import anyio
 from typing_extensions import Self, final
-
-if aiosqlite.sqlite_version_info < (3, 32, 0):
-    SQLITE_MAX_VARIABLE_NUMBER = 900
-else:
-    SQLITE_MAX_VARIABLE_NUMBER = 32700
-
-# integers in sqlite are limited by int64
-SQLITE_INT_MAX = 2**63 - 1
 
 
 class DBWrapperError(Exception):
@@ -40,73 +27,6 @@ class PurposefulAbort(DBWrapperError):
 
     def __init__(self, obj: object) -> None:
         self.obj = obj
-
-
-def generate_in_memory_db_uri() -> str:
-    # We need to use shared cache as our DB wrapper uses different types of connections
-    return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"
-
-
-async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
-) -> Optional[sqlite3.Row]:
-    rows = await c.execute_fetchall(sql, parameters)
-    for row in rows:
-        return row
-    return None
-
-
-def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
-    timestamp = datetime.now().strftime("%H:%M:%S.%f")
-    if name is not None:
-        line = f"{timestamp} {name} {req}\n"
-    else:
-        line = f"{timestamp} {req}\n"
-    file.write(line)
-
-
-def get_host_parameter_limit() -> int:
-    # NOTE: This does not account for dynamically adjusted limits since it makes a
-    #       separate db and connection.  If aiosqlite adds support we should use it.
-    if sys.version_info >= (3, 11):
-        connection = sqlite3.connect(":memory:")
-
-        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
-        host_parameter_limit = connection.getlimit(limit_number)
-    else:
-        # guessing based on defaults, seems you can't query
-
-        # https://www.sqlite.org/changes.html#version_3_32_0
-        # Increase the default upper bound on the number of parameters from 999 to 32766.
-        if sqlite3.sqlite_version_info >= (3, 32, 0):
-            host_parameter_limit = 32766
-        else:
-            host_parameter_limit = 999
-    return host_parameter_limit
-
-
-# class CursorProtocol(Protocol):
-#     async def close(self) -> None: ...
-#     # async def __aenter__(self) -> Self: ...
-#     # async def __aexit__(
-#     #     self,
-#     #     exc_type: Optional[type[BaseException]],
-#     #     exc_val: Optional[BaseException],
-#     #     exc_tb: Optional[TracebackType],
-#     # ) -> None: ...
-#
-#
-# TCursor_co = TypeVar("TCursor_co", bound=CursorProtocol, covariant=True)
-#
-# class AwaitableEnterable(Protocol[TCursor_co]):
-#     def __await__(self) -> TCursor_co: ...
-#     async def __aenter__(self) -> TCursor_co: ...
-#     async def __aexit__(
-#         self,
-#         exc_type: Optional[type[BaseException]],
-#         exc_val: Optional[BaseException],
-#         exc_tb: Optional[TracebackType],
-#     ) -> None: ...
 
 
 T_co = TypeVar("T_co", covariant=True)
@@ -134,8 +54,6 @@ class ConnectionProtocol(Protocol[T_co]):
     async def savepoint_ctx(self, name: str) -> AsyncIterator[None]:
         yield
 
-
-# a_cursor: CursorProtocol = cast(aiosqlite.Cursor, None)
 
 # TODO: are these ok missing type parameters so they stay generic?  or...
 TConnection = TypeVar("TConnection", bound=ConnectionProtocol)  # type: ignore[type-arg]
@@ -179,7 +97,6 @@ class Transactioner(Generic[TConnection, TUntransactionedConnection]):
     _write_connection: TConnection
     db_version: int = 1
     _log_file: Optional[TextIO] = None
-    host_parameter_limit: int = get_host_parameter_limit()
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _read_connections: asyncio.Queue[TConnection] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0
@@ -220,7 +137,6 @@ class Transactioner(Generic[TConnection, TUntransactionedConnection]):
         exception) this transaction will be rolled back, but the next outer
         transaction is not necessarily cancelled. It would also need to exit
         with an exception to be cancelled.
-        The sqlite features this relies on are SAVEPOINT, ROLLBACK TO and RELEASE.
         """
         task = asyncio.current_task()
         assert task is not None
@@ -248,7 +164,6 @@ class Transactioner(Generic[TConnection, TUntransactionedConnection]):
         exception) this transaction will be rolled back, but the next outer
         transaction is not necessarily cancelled. It would also need to exit
         with an exception to be cancelled.
-        The sqlite features this relies on are SAVEPOINT, ROLLBACK TO and RELEASE.
         """
         task = asyncio.current_task()
         assert task is not None

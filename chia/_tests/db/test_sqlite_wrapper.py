@@ -22,12 +22,10 @@ from chia.util.sqlite_wrapper import (
     NestedForeignKeyDelayedRequestError,
     SqliteConnection,
     SqliteTransactioner,
-)
-from chia.util.task_referencer import create_referenced_task
-from chia.util.transactioner import (
-    InternalError,
     generate_in_memory_db_uri,
 )
+from chia.util.task_referencer import create_referenced_task
+from chia.util.transactioner import InternalError
 
 DBWrapper2 = SqliteTransactioner
 
