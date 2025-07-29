@@ -165,12 +165,8 @@ add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 
 
 
-SERVERS_IN_SERVER = [
-    "full_node",
-]
 
-for server in SERVERS_IN_SERVER:
-    add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
+
 
 SERVERS = [
     "data_layer",
@@ -179,6 +175,7 @@ SERVERS = [
     "timelord",
     "introducer",
     "wallet",
+    "full_node",
 ]
 
 for server in SERVERS:

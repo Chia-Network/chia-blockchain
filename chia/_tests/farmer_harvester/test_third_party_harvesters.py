@@ -34,6 +34,7 @@ from chia.farmer.farmer_api import FarmerAPI
 from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.harvester.harvester_service import HarvesterService
@@ -41,7 +42,6 @@ from chia.protocols import farmer_protocol, full_node_protocol, harvester_protoc
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.aliases import FullNodeService
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools

@@ -15,11 +15,11 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_o
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
+from chia.full_node.full_node_service import FullNodeService
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import FullNodeService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_service import RpcInfo, Service, async_run
+from chia.server.start_service import RpcInfo, async_run
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -56,7 +56,7 @@ async def create_full_node_service(
     if service_config.get("start_rpc_server", True):
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
 
-    return Service(
+    return FullNodeService(
         root_path=root_path,
         config=config,
         node=node,

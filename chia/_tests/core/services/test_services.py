@@ -88,7 +88,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
     argvalues=[
         [DataLayerRpcClient.create_as_context, "chia.data_layer.start_data_layer", "data_layer"],
         [FarmerRpcClient.create_as_context, "chia.farmer.start_farmer", "farmer"],
-        [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
+        [FullNodeRpcClient.create_as_context, "chia.full_node.start_full_node", "full_node"],
         [HarvesterRpcClient.create_as_context, "chia.harvester.start_harvester", "harvester"],
         [WalletRpcClient.create_as_context, "chia.wallet.start_wallet", "wallet"],
         [None, "chia.introducer.start_introducer", "introducer"],

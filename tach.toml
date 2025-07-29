@@ -31,16 +31,8 @@ depends_on = [
     "chia.types",
     "chia.util",
     { path = "chia.ssl", deprecated = false },
-    # these ones can be removed by getting rid of `chia.server.aliases`
-    # and/or the `start_*.py` scripts, which can go in their respective modules
     { path = "chia.rpc", deprecated = false },
-    { path = "chia.full_node", deprecated = false },
-    { path = "chia.simulator", deprecated = false },
     { path = "chia.daemon", deprecated = false },
-    { path = "chia.consensus", deprecated = false },
-    { path = "chia.wallet", deprecated = true },
-    { path = "chia.apis", deprecated = false },
-    { path = "chia.seeder", deprecated = false },
 ]
 
 [[modules]]
@@ -69,6 +61,7 @@ depends_on = [
 [[modules]]
 path = "chia.full_node"
 depends_on = [
+    "chia.apis",
     "chia.types",
     "chia.util",
     "chia.consensus",

@@ -20,20 +20,18 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.farmer.farmer_service import FarmerService
 from chia.farmer.start_farmer import create_farmer_service
+from chia.full_node.full_node_service import FullNodeService
+from chia.full_node.start_full_node import create_full_node_service
 from chia.harvester.harvester_service import HarvesterService
 from chia.harvester.start_harvester import create_harvester_service
 from chia.introducer.start_introducer import IntroducerService, create_introducer_service
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
+from chia.seeder.crawler_service import CrawlerService
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
-from chia.server.aliases import (
-    CrawlerService,
-    FullNodeService,
-)
 from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_full_node import create_full_node_service
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
