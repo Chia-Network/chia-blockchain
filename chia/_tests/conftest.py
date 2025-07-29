@@ -58,7 +58,6 @@ from chia.seeder.dns_server import DNSServer
 from chia.server.aliases import (
     CrawlerService,
     FullNodeService,
-    WalletService,
 )
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
@@ -82,6 +81,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 
 # TODO: review how this is now after other imports and before some stdlib imports...  :[
 # Set spawn after stdlib imports, but before other imports

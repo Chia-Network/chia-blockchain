@@ -30,12 +30,10 @@ from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.aliases import (
     CrawlerService,
     FullNodeService,
-    WalletService,
 )
 from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_full_node import create_full_node_service
-from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
@@ -51,6 +49,8 @@ from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
 from chia.util.task_referencer import create_referenced_task
+from chia.wallet.start_wallet import create_wallet_service
+from chia.wallet.wallet_service import WalletService
 
 log = logging.getLogger(__name__)
 

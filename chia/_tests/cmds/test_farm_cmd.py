@@ -11,9 +11,9 @@ from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
-from chia.server.aliases import WalletService
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.wallet.wallet_service import WalletService
 
 
 @pytest.mark.anyio

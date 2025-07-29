@@ -90,7 +90,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         [FarmerRpcClient.create_as_context, "chia.farmer.start_farmer", "farmer"],
         [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
         [HarvesterRpcClient.create_as_context, "chia.harvester.start_harvester", "harvester"],
-        [WalletRpcClient.create_as_context, "chia.server.start_wallet", "wallet"],
+        [WalletRpcClient.create_as_context, "chia.wallet.start_wallet", "wallet"],
         [None, "chia.introducer.start_introducer", "introducer"],
         # TODO: fails...  make it not do that
         # [None, "chia.seeder.start_crawler", "crawler"],

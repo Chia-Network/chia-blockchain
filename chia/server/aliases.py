@@ -7,10 +7,6 @@ from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.crawler_rpc_api import CrawlerRpcApi
 from chia.server.start_service import Service
-from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
-from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 CrawlerService = Service[Crawler, CrawlerAPI, CrawlerRpcApi]
 FullNodeService = Service[FullNode, FullNodeAPI, FullNodeRpcApi]
-WalletService = Service[WalletNode, WalletNodeAPI, WalletRpcApi]
