@@ -3647,7 +3647,7 @@ class TestReorgs:
             heights.append(block.height)
             await _validate_and_add_block(b, block)
 
-        blocks = await b.get_block_records_at(heights, batch_size=2)
+        blocks = await b.get_block_records_at(heights)
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199

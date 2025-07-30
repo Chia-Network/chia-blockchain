@@ -421,7 +421,7 @@ class Blockchain:
 
         try:
             # Always add the block to the database
-            async with self.block_store.db_wrapper.writer():
+            async with self.block_store.transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
@@ -883,7 +883,7 @@ class Blockchain:
 
         blocks: list[FullBlock] = []
         for hash in hashes.copy():
-            block = self.block_store.block_cache.get(hash)
+            block = self.block_store.get_block_from_cache(hash)
             if block is not None:
                 blocks.append(block)
                 hashes.remove(hash)
@@ -926,27 +926,18 @@ class Blockchain:
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: list[uint32], batch_size: int = 900) -> list[BlockRecord]:
+    async def get_block_records_at(self, heights: list[uint32]) -> list[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
-        records: list[BlockRecord] = []
         hashes: list[bytes32] = []
-        assert batch_size < self.block_store.db_wrapper.host_parameter_limit
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:
                 raise ValueError(f"Do not have block at height {height}")
             hashes.append(header_hash)
-            if len(hashes) > batch_size:
-                res = await self.block_store.get_block_records_by_hash(hashes)
-                records.extend(res)
-                hashes = []
 
-        if len(hashes) > 0:
-            res = await self.block_store.get_block_records_by_hash(hashes)
-            records.extend(res)
-        return records
+        return await self.block_store.get_block_records_by_hash(hashes)
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:
