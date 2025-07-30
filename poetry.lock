@@ -859,33 +859,38 @@ typing-extensions = "*"
 
 [[package]]
 name = "chiabip158"
-version = "1.5.2"
+version = "1.5.3"
 description = "Chia BIP158 (wraps C++)"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
 files = [
-    {file = "chiabip158-1.5.2-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:0c141e7441403d0721722a55f5954b0d23a011e6d1e741c01244b68ba0827497"},
-    {file = "chiabip158-1.5.2-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:eb2ca7dc10471cca83dd00075d5f77ff71c2c81c7c9f7d89a42b49579a9d3b62"},
-    {file = "chiabip158-1.5.2-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:35176f6b09fe6078b300b783776a2eaacf2251293353d2d9537381ed793c0a97"},
-    {file = "chiabip158-1.5.2-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4a06a24e57029ba6298294029117bc653f88ca6401bb0424d2e9d7c49a77cb42"},
-    {file = "chiabip158-1.5.2-cp310-cp310-win_amd64.whl", hash = "sha256:a869972b46afcd1f44efacad5d22de000dc3cfa0573bd4d7a281aacf1abb8f44"},
-    {file = "chiabip158-1.5.2-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:d33c41b594decf57b85b2d98a3566ffafb936916ca7fe5b711455e1a6755cc26"},
-    {file = "chiabip158-1.5.2-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:1e7f86d67c49cfe4384729af0387055ddcfa089e41930dc022b1670fb95ba406"},
-    {file = "chiabip158-1.5.2-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b9a64f425cd94418d196e52060dcd861f49a929e89177d8996f041c744d38882"},
-    {file = "chiabip158-1.5.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:55e6685d70721effa5314dc3652b486dbe28dab34f06b79d7882f3001c24f987"},
-    {file = "chiabip158-1.5.2-cp311-cp311-win_amd64.whl", hash = "sha256:f6a21bbb2a203063d8ef8494e000cd874d02682eccc27fcbb462515d827f7ba4"},
-    {file = "chiabip158-1.5.2-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:5e96244e0e3db6c8b30acf460bea983a53e2bf5e74143805ada7887fa4fe3104"},
-    {file = "chiabip158-1.5.2-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:a54913ffb85f077aeef3e799160209d512906b5321c7ce7146f46e47efc46f43"},
-    {file = "chiabip158-1.5.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ef02033eb1418c96f3a91e8b3c6e2adc9d2109f051f3372fa75d1620b499bcc6"},
-    {file = "chiabip158-1.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:262fc317125381c8979c5d40583215a5bc73624f003054ba3212f9eef634c82d"},
-    {file = "chiabip158-1.5.2-cp312-cp312-win_amd64.whl", hash = "sha256:94d07b19787f3569993ef51fc7476a2ce5c79cea50b16713d67ebdd3adaacebf"},
-    {file = "chiabip158-1.5.2-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:6a10e3246e87897b4831d2beb0ecda4ae919aac3e536f5f4552c2222c6c83136"},
-    {file = "chiabip158-1.5.2-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:2077364665d526bf8af086884b7d077387aa0b3d0294f1e2f919ffa60a12f78a"},
-    {file = "chiabip158-1.5.2-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b7b36a529ee5685294fe55cedfa0788cb1baac03c310b1533cd23481357efd10"},
-    {file = "chiabip158-1.5.2-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ad40df68317d39f33272e25fd9651f05a27b85d524e9ed694ac7549cde44918c"},
-    {file = "chiabip158-1.5.2-cp39-cp39-win_amd64.whl", hash = "sha256:07b298cfb0621dba1027c710e9669970f4e089c118db8732bd456101c727db65"},
-    {file = "chiabip158-1.5.2.tar.gz", hash = "sha256:86c225f5a566cca3199607f6ea646799da9e406df6fb0ae7323d57e5ac8e2f2c"},
+    {file = "chiabip158-1.5.3-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:4f213a7bfdd909eca0cc4b9e8a47ba11780b0745c81a3dddd76c2ac29d669626"},
+    {file = "chiabip158-1.5.3-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:c94988bf591b886ed37bf29d8980608d80632bac041a7d1569ca355275e23609"},
+    {file = "chiabip158-1.5.3-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:dc6ccbd3b9493677c14e13efc970bd3a62f19f04ecf6f2b6e02acf436dcda314"},
+    {file = "chiabip158-1.5.3-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ca476a40bbb2ec6e9662d5bbc8fe7fd9d22e57fde0b44bb1ad7015b5ecc0c649"},
+    {file = "chiabip158-1.5.3-cp310-cp310-win_amd64.whl", hash = "sha256:c3c0e026081215ecd4c33a76da9723f1a78ef453eca27166991e9b0a36598fe6"},
+    {file = "chiabip158-1.5.3-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:491ac072ad9381e606edf4d0f657643728595255519c79557765d73aa60ef3fd"},
+    {file = "chiabip158-1.5.3-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:ee8aa83b58e2adaa8e61c64150f794c93db77ea34c96eb8b86147da988e7e0d9"},
+    {file = "chiabip158-1.5.3-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:acd858cb186ac7d6c4676d8b0637fafad1d93b3e550140c6d4e866117e9fceb0"},
+    {file = "chiabip158-1.5.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b4c422e9a9303dc47cc5baa9857a752a4f5feb00b0a3e2396413d18d572cb4c5"},
+    {file = "chiabip158-1.5.3-cp311-cp311-win_amd64.whl", hash = "sha256:99c4388c19c59905de803f4022a32a1228939f4c3f551a95882f26fe85d249dc"},
+    {file = "chiabip158-1.5.3-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:899b168541bf6bbb99457612ac221cef20452a8ff0fec87d226793c77f56b89d"},
+    {file = "chiabip158-1.5.3-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:e6c9860984bde47d5e55aa427076e482f0d7b302e32ac31471dc41320c450f5f"},
+    {file = "chiabip158-1.5.3-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0edaa1773ecb05fe45b98dba1ee320d72c1fa2248f265d5c036896f208689992"},
+    {file = "chiabip158-1.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ed6d304671d5ff44dd56cbbfd0e20350e8b6488e4417688239af4de1e2960872"},
+    {file = "chiabip158-1.5.3-cp312-cp312-win_amd64.whl", hash = "sha256:78cd758346b66f3f25aa500f5b730496a6cece4f6928dffc6a410f9f00886eea"},
+    {file = "chiabip158-1.5.3-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:4cec60c59d865febf938a76ef35610e9de1e222449fa79b8da206dceb359edce"},
+    {file = "chiabip158-1.5.3-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:8ad127b806c6351f930fe2f1022ecf773e691b1aab5e634a7fad89e573e9a29a"},
+    {file = "chiabip158-1.5.3-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:71841bd6d83d22e971ae03f3d8d4cb9adb14c006b965777c956db1ffa10e9eec"},
+    {file = "chiabip158-1.5.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6a396a565164f420bc3a2a9a33664d5fa81c58462b7e71661b0f566dedea611a"},
+    {file = "chiabip158-1.5.3-cp313-cp313-win_amd64.whl", hash = "sha256:915b0f2a2987dc1d9f40788b5edd4adff9b8a1b09701e92aeadfe72c26180d95"},
+    {file = "chiabip158-1.5.3-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:8905419650b446c73109999759549243979ad161c944f83c8f18570b2f0639ee"},
+    {file = "chiabip158-1.5.3-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:3b5c220bae0c49ccc1a6608d129f0d0b4e7a5ddfe020bef5aebef5d589e51ea8"},
+    {file = "chiabip158-1.5.3-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c696d0778f3f08d5f0a1c64f6cfd5ad4d0dc04cecac0badb5ecb146f5533009d"},
+    {file = "chiabip158-1.5.3-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ec6bcf5d6c99098b5004a90a415bede442e268b3005ea53ea24d11ce5f909475"},
+    {file = "chiabip158-1.5.3-cp39-cp39-win_amd64.whl", hash = "sha256:9015da0191b527fb323d021e2267f555b05798a456f97855e109bd94dfcdecbd"},
+    {file = "chiabip158-1.5.3.tar.gz", hash = "sha256:d33833e0f9f1c15828a5a2467f06a19d1766c366183403ada45b03a438ca24e9"},
 ]
 
 [[package]]
