@@ -21,7 +21,7 @@ class FarmerRpcClient(RpcClient):
     async def get_signage_point(self, sp_hash: bytes32) -> Optional[dict[str, Any]]:
         try:
             return await self.fetch("get_signage_point", {"sp_hash": sp_hash.hex()})
-        except ValueError:
+        except ValueError:  # not synced
             return None
 
     async def get_signage_points(self) -> list[dict[str, Any]]:
@@ -83,5 +83,5 @@ class FarmerRpcClient(RpcClient):
         try:
             result = await self.fetch("get_pool_login_link", {"launcher_id": launcher_id.hex()})
             return cast(Optional[str], result["login_link"])
-        except ValueError:
+        except ValueError:  # not connected to pool.
             return None

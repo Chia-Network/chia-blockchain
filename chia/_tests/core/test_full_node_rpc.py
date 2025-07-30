@@ -88,8 +88,8 @@ async def test1(
 
         peak_block = await client.get_block(state["peak"].header_hash)
         assert peak_block == blocks[-1]
-        assert (await client.get_block(bytes32([1] * 32))) is None
-
+        with pytest.raises(ValueError, match="not found"):
+            await client.get_block(bytes32([1] * 32))
         block_record = await client.get_block_record_by_height(2)
         assert block_record is not None
         assert block_record.header_hash == blocks[2].header_hash
@@ -150,8 +150,10 @@ async def test1(
 
         assert len(await client.get_all_mempool_items()) == 0
         assert len(await client.get_all_mempool_tx_ids()) == 0
-        assert (await client.get_mempool_item_by_tx_id(spend_bundle.name())) is None
-        assert (await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)) is None
+        with pytest.raises(ValueError, match="not in the mempool"):
+            await client.get_mempool_item_by_tx_id(spend_bundle.name())
+        with pytest.raises(ValueError, match="not in the mempool"):
+            await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)
 
         await client.push_tx(spend_bundle)
         coin = spend_bundle.additions()[0]
@@ -168,7 +170,8 @@ async def test1(
         mempool_item = await client.get_mempool_item_by_tx_id(spend_bundle.name())
         assert mempool_item is not None
         assert WalletSpendBundle.from_json_dict(mempool_item["spend_bundle"]) == spend_bundle
-        assert (await client.get_coin_record_by_name(coin.name())) is None
+        with pytest.raises(ValueError, match="not found"):
+            await client.get_coin_record_by_name(coin.name())
 
         # Verify that the include_pending arg to get_mempool_item_by_tx_id works
         coin_to_spend_pending = included_reward_coins[1]
@@ -181,11 +184,11 @@ async def test1(
             condition_dic=condition_dic,
         )
         await client.push_tx(spend_bundle_pending)
-        # not strictly in the mempool
-        assert (await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)) is None
+        with pytest.raises(ValueError, match="not in the mempool"):
+            # not strictly in the mempool
+            await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)
         # pending entry into mempool, so include_pending fetches
         mempool_item = await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True)
-        assert mempool_item is not None
         assert WalletSpendBundle.from_json_dict(mempool_item["spend_bundle"]) == spend_bundle_pending
 
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
@@ -454,17 +457,15 @@ async def test_signage_points(
         full_node_service_1.config,
     ) as client:
         # Only provide one
-        res = await client.get_recent_signage_point_or_eos(None, None)
-        assert res is None
-        res = await client.get_recent_signage_point_or_eos(std_hash(b"0"), std_hash(b"1"))
-        assert res is None
-
+        with pytest.raises(ValueError, match="sp_hash or challenge_hash must be provided."):
+            await client.get_recent_signage_point_or_eos(None, None)
+        with pytest.raises(ValueError, match="Either sp_hash or challenge_hash must be provided, not both."):
+            await client.get_recent_signage_point_or_eos(std_hash(b"0"), std_hash(b"1"))
         # Not found
-        res = await client.get_recent_signage_point_or_eos(std_hash(b"0"), None)
-        assert res is None
-        res = await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
-        assert res is None
-
+        with pytest.raises(ValueError, match="in cache"):
+            await client.get_recent_signage_point_or_eos(std_hash(b"0"), None)
+        with pytest.raises(ValueError, match="in cache"):
+            await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
         blocks = bt.get_consecutive_blocks(5)
         for block in blocks:
             await full_node_api_1.full_node.add_block(block)
@@ -494,8 +495,8 @@ async def test_signage_points(
         assert sp.rc_proof is not None
         assert sp.rc_vdf is not None
         # Don't have SP yet
-        res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
-        assert res is None
+        with pytest.raises(ValueError, match="Did not find sp"):
+            await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
 
         # Add the last block
         await full_node_api_1.full_node.add_block(blocks[-1])
@@ -517,9 +518,8 @@ async def test_signage_points(
         selected_eos = blocks[-1].finished_sub_slots[0]
 
         # Don't have EOS yet
-        res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
-        assert res is None
-
+        with pytest.raises(ValueError, match="Did not find eos"):
+            await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
         # Properly fetch an EOS
         for eos in blocks[-1].finished_sub_slots:
             await full_node_api_1.full_node.add_end_of_sub_slot(eos, peer)

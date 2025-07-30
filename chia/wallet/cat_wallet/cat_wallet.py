@@ -174,7 +174,7 @@ class CATWallet:
 
         cat_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
             amount=uint64(cat_coin.amount),
             fee_amount=fee,
@@ -188,7 +188,7 @@ class CATWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=spend_bundle.name(),
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         async with action_scope.use() as interface:
@@ -467,7 +467,7 @@ class CATWallet:
             for coin in record.additions:
                 hint_dict = {
                     coin_id: bytes32(memos[0])
-                    for coin_id, memos in record.memos
+                    for coin_id, memos in record.memos.items()
                     if len(memos) > 0 and len(memos[0]) == 32
                 }
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict=hint_dict):
@@ -794,7 +794,7 @@ class CATWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=puzzle_hashes[0],
                     amount=uint64(payment_sum),
                     fee_amount=fee,
@@ -808,7 +808,7 @@ class CATWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )

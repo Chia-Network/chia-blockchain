@@ -359,7 +359,7 @@ class TradeManager:
 
                 incoming_tx = TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_ph,
                     amount=uint64(coin.amount),
                     fee_amount=fee,
@@ -373,7 +373,7 @@ class TradeManager:
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=cancellation_additions[0].name(),
-                    memos=[],
+                    memos={},
                     valid_times=valid_times,
                 )
                 all_txs.append(incoming_tx)
@@ -447,7 +447,7 @@ class TradeManager:
 
         success, created_offer, error = result
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         trade_offer: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
             accepted_at_time=None,
@@ -726,7 +726,7 @@ class TradeManager:
                     txs.append(
                         TransactionRecord(
                             confirmed_at_height=uint32(0),
-                            created_at_time=uint64(int(time.time())),
+                            created_at_time=uint64(time.time()),
                             to_puzzle_hash=to_puzzle_hash,
                             amount=uint64(addition.amount),
                             fee_amount=uint64(0),
@@ -740,7 +740,7 @@ class TradeManager:
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
                             name=std_hash(final_spend_bundle.name() + addition.name()),
-                            memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
+                            memos={coin_id: [hint] for coin_id, hint in hint_dict.items()},
                             valid_times=valid_times,
                         )
                     )
@@ -786,7 +786,7 @@ class TradeManager:
             txs.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=to_puzzle_hash,
                     amount=uint64(sent_amount),
                     fee_amount=all_fees,
@@ -800,7 +800,7 @@ class TradeManager:
                     trade_id=offer.name(),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
                     name=std_hash(final_spend_bundle.name() + removal_tree_hash),
-                    memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
+                    memos={coin_id: [hint] for coin_id, hint in hint_dict.items()},
                     valid_times=valid_times,
                 )
             )
@@ -883,8 +883,8 @@ class TradeManager:
 
         trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
-            accepted_at_time=uint64(int(time.time())),
-            created_at_time=uint64(int(time.time())),
+            accepted_at_time=uint64(time.time()),
+            created_at_time=uint64(time.time()),
             is_my_offer=False,
             sent=uint32(0),
             offer=bytes(complete_offer),
