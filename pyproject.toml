@@ -76,8 +76,9 @@ sortedcontainers = ">=2.4.0"  # For maintaining sorted mempools
 typing-extensions = ">=4.12.2"  # typing backports like Protocol and TypedDict
 watchdog = ">=4.0.1"  # Filesystem event watching - watches keyring.yaml
 zstd = [
-	{version=">=1.5.5.1", python = "<3.12"},
-	{version=">=1.5.5.1", python = "3.12", source="chia"},
+	{version=">=1.5.7.2"},
+    # https://github.com/sergey-dryabzhinsky/python-zstd/issues/257
+    {version=">=1.5.7.2", python = ">=3.12", markers = "sys_platform == 'linux' and platform_machine == 'arm64'", source = "chia"},
 ]
 importlib-resources = ">=6.4.5"
 hsms = ">=0.3.1"
