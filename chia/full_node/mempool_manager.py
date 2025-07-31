@@ -16,6 +16,7 @@ from chia_rs import (
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    check_time_locks,
     get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
@@ -25,7 +26,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
-from chia_rs import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
