@@ -17,6 +17,7 @@ from chia_rs import (
     SpendBundle,
     SpendBundleConditions,
     SpendConditions,
+    check_time_locks,
     get_conditions_from_spendbundle,
     run_block_generator2,
 )
@@ -27,7 +28,6 @@ from chiabip158 import PyBIP158
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
-from chia_rs import check_time_locks
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.eligible_coin_spends import (
