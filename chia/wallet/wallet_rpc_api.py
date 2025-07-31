@@ -1109,7 +1109,7 @@ class WalletRpcApi:
                         metadata = request["metadata"]
 
                 async with self.service.wallet_state_manager.lock:
-                    did_wallet_name: str = request.get("wallet_name", None)
+                    did_wallet_name: Optional[str] = request.get("wallet_name", None)
                     if did_wallet_name is not None:
                         did_wallet_name = did_wallet_name.strip()
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(

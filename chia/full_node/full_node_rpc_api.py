@@ -1004,6 +1004,7 @@ class FullNodeRpcApi:
             while last_tx_block is None or last_peak_timestamp is None:
                 peak_with_timestamp -= 1
                 last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+                assert last_tx_block.timestamp is not None  # mypy
                 last_peak_timestamp = last_tx_block.timestamp
 
             assert last_tx_block is not None  # mypy

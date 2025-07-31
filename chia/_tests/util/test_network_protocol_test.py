@@ -58,6 +58,7 @@ def test_message_ids() -> None:
             assert isinstance(entry.value, ast.Constant)
             assert isinstance(entry.targets[0], ast.Name)
             message_id = entry.value.value
+            assert isinstance(message_id, int), f"message ID must be an int, got {type(message_id).__name__}"
             message_name = entry.targets[0].id
             if message_id in message_ids:  # pragma: no cover
                 raise AssertionError(

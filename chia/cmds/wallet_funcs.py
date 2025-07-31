@@ -435,13 +435,18 @@ async def add_token(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         existing_info: Optional[tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id)
-        if existing_info is None or existing_info[0] is None:
+        if existing_info is None:
+            wallet_id = None
+            old_name = None
+        else:
+            wallet_id, old_name = existing_info
+
+        if wallet_id is None:
             response = await wallet_client.create_wallet_for_existing_cat(asset_id)
             wallet_id = response["wallet_id"]
             await wallet_client.set_cat_name(wallet_id, token_name)
             print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
         else:
-            wallet_id, old_name = existing_info
             await wallet_client.set_cat_name(wallet_id, token_name)
             print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
 
