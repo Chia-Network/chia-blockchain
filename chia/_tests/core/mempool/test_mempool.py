@@ -44,7 +44,6 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.eligible_coin_spends import run_for_cost
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
@@ -2909,14 +2908,7 @@ coins = make_test_coins()
     ],
 )
 def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> None:
-    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
-
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
-    )
-    mempool = Mempool(mempool_info, fee_estimator)
+    mempool = construct_mempool()
     for i in items:
         mempool.add_to_pool(i)
 
@@ -2934,13 +2926,7 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
 @pytest.mark.parametrize("old", [True, False])
 def test_timeout(old: bool) -> None:
-    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
-    )
-    mempool = Mempool(mempool_info, fee_estimator)
+    mempool = construct_mempool()
 
     for i in range(50):
         item = mk_item(coins[i : i + 1], flags=[0], fee=0, cost=50)
@@ -3107,13 +3093,7 @@ def test_limit_expiring_transactions(height: bool, items: list[int], expected: l
     ],
 )
 def test_get_items_by_coin_ids(items: list[MempoolItem], coin_ids: list[bytes32], expected: list[MempoolItem]) -> None:
-    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
-    )
-    mempool = Mempool(mempool_info, fee_estimator)
+    mempool = construct_mempool()
     for i in items:
         mempool.add_to_pool(i)
         invariant_check_mempool(mempool)
@@ -3127,69 +3107,92 @@ def make_test_spendbundle(coin: Coin, *, fee: int = 0, with_higher_cost: bool = 
     if with_higher_cost:
         conditions.extend([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i] for i in range(3)])
         actual_fee += 3
-    conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - actual_fee])
+    conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - actual_fee)])
     sb = spend_bundle_from_conditions(conditions, coin)
     return sb
 
 
-def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None:
-    def agg_and_add_sb_returning_cost_info(mempool: Mempool, spend_bundles: list[SpendBundle]) -> uint64:
+def construct_mempool() -> Mempool:
+    fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(test_constants.MAX_BLOCK_COST_CLVM * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(test_constants.MAX_BLOCK_COST_CLVM),
+    )
+    return Mempool(mempool_info, fee_estimator)
+
+
+def make_coin(idx: int) -> Coin:
+    return Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(2_000_000_000 + idx * 2))
+
+
+@pytest.mark.parametrize("old", [True, False])
+def test_dedup_by_fee(old: bool) -> None:
+    """
+    We pick the solution to use for dedup based on the spendbundle with the highest
+    fee per cost, not based on which one would give the overall best fee per cost
+    """
+    mempool = construct_mempool()
+
+    def add_spend_bundles(spend_bundles: list[SpendBundle]) -> None:
         sb = SpendBundle.aggregate(spend_bundles)
         mi = mempool_item_from_spendbundle(sb)
         mempool.add_to_pool(mi)
         invariant_check_mempool(mempool)
-        saved_cost = run_for_cost(
-            sb.coin_spends[0].puzzle_reveal, sb.coin_spends[0].solution, len(mi.additions), mi.cost
-        )
-        return saved_cost
 
-    fee_estimator = create_bitcoin_fee_estimator(uint64(11000000000))
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
-    )
-    mempool = Mempool(mempool_info, fee_estimator)
-    coins = [
-        Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000020, 2)
-    ]
-    # Create a ~10 FPC item that spends the eligible coin[0]
-    sb_A = make_test_spendbundle(coins[0])
-    highest_fee = 58282830
-    sb_high_rate = make_test_spendbundle(coins[1], fee=highest_fee)
-    agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_high_rate])
-    invariant_check_mempool(mempool)
-    # Create a ~2 FPC item that spends the eligible coin using the same solution A
-    sb_low_rate = make_test_spendbundle(coins[2], fee=highest_fee // 5)
-    saved_cost_on_solution_A = agg_and_add_sb_returning_cost_info(mempool, [sb_A, sb_low_rate])
-    invariant_check_mempool(mempool)
-    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
+    DEDUP_COIN = make_coin(0)
+    COIN_A1 = make_coin(1)
+    COIN_A2 = make_coin(2)
+    # all other coins belong to solution B, the dedup alternative to solution A
+
+    # Create a spend bundle with a high fee, spending sb_A, which supports dedup
+    sb_A = make_test_spendbundle(DEDUP_COIN)
+    sb_high_rate = make_test_spendbundle(COIN_A1, fee=10)
+    add_spend_bundles([sb_A, sb_high_rate])
+
+    # Create a spend bundle, with a low fee, that spends the dedup coin using the same solution A
+    sb_low_rate = make_test_spendbundle(COIN_A2, fee=10)
+    add_spend_bundles([sb_A, sb_low_rate])
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    # validate that dedup happens at all for sb_A
+    result = create_block(test_constants, uint32(0), 5.0)
     assert result is not None
-    agg, _ = result
     # Make sure both items would be processed
-    assert [c.coin for c in agg.coin_spends] == [coins[0], coins[1], coins[2]]
-    # Now let's add 3 x ~3 FPC items that spend the eligible coin differently
-    # (solution B). It creates a higher (saved) cost than solution A
-    sb_B = make_test_spendbundle(coins[0], with_higher_cost=True)
-    for i in range(3, 6):
-        # We're picking this fee to get a ~3 FPC, and get picked after sb_A1
-        # (which has ~10 FPC) but before sb_A2 (which has ~2 FPC)
-        sb_mid_rate = make_test_spendbundle(coins[i], fee=38004852 - i)
-        saved_cost_on_solution_B = agg_and_add_sb_returning_cost_info(mempool, [sb_B, sb_mid_rate])
-        invariant_check_mempool(mempool)
-    # We'd save more cost if we went with solution B instead of A
-    assert saved_cost_on_solution_B > saved_cost_on_solution_A
-    # If we process everything now, the 3 x ~3 FPC items get skipped because
-    # sb_A1 gets picked before them (~10 FPC), so from then on only sb_A2 (~2 FPC)
-    # would get picked
-    result = mempool.create_bundle_from_mempool_items(test_constants, uint32(0))
+    assert result.removals == [DEDUP_COIN, COIN_A1, COIN_A2]
+
+    # Now we add a bunch of alternative spends for coin 0, with lower fees
+    # Even though the total fee would be higher if we deduped on this solution,
+    # we won't.
+    sb_B = make_test_spendbundle(DEDUP_COIN, with_higher_cost=True)
+    for i in range(3, 600):
+        sb_high_rate = make_test_spendbundle(make_coin(i), fee=10)
+        add_spend_bundles([sb_B, sb_high_rate])
+
+    result = create_block(test_constants, uint32(0), 5.0)
     assert result is not None
-    agg, _ = result
-    # The 3 items got skipped here
     # We ran with solution A and missed bigger savings on solution B
-    assert mempool.size() == 5
-    assert [c.coin for c in agg.coin_spends] == [coins[0], coins[1], coins[2]]
-    invariant_check_mempool(mempool)
+    # we've added 599 spend bundles now. 2 with solution A and 598 with solution B
+    assert mempool.size() == 599
+    assert result.removals == [DEDUP_COIN, COIN_A1, COIN_A2]
+
+    # Now, if we add a high fee per-cost-for sb_B, it should be picked
+    sb_high_rate = make_test_spendbundle(make_coin(600), fee=1_000_000_000)
+    add_spend_bundles([sb_B, sb_high_rate])
+
+    result = create_block(test_constants, uint32(0), 5.0)
+    assert result is not None
+    # The 3 items got skipped here
+    # We ran with solution B
+    # we've added 600 spend bundles now. 2 with solution A and 599 with solution B
+    assert mempool.size() == 600
+    spends_in_block = set(result.removals)
+    assert DEDUP_COIN in spends_in_block
+    assert COIN_A1 not in spends_in_block
+    assert COIN_A2 not in spends_in_block
+
+    for i in range(3, 601):
+        assert make_coin(i) in spends_in_block
 
 
 def test_get_puzzle_and_solution_for_coin_failure() -> None:
@@ -3210,14 +3213,7 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
 
 @pytest.mark.parametrize("old", [True, False])
 def test_create_block_generator(old: bool) -> None:
-    mempool_info = MempoolInfo(
-        CLVMCost(uint64(11000000000 * 3)),
-        FeeRate(uint64(1000000)),
-        CLVMCost(uint64(11000000000)),
-    )
-
-    fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)
-    mempool = Mempool(mempool_info, fee_estimator)
+    mempool = construct_mempool()
     coins = [
         Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount)) for amount in range(2000000000, 2000000020, 2)
     ]
