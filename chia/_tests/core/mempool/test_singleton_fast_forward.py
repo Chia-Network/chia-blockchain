@@ -663,4 +663,4 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         status, error = await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=sig)
         # It fails validation because it doesn't currently have a latest unspent
         assert status == MempoolInclusionStatus.FAILED
-        assert error == Err.DOUBLE_SPEND
+        assert error == Err.UNKNOWN_UNSPENT
