@@ -86,15 +86,15 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 @pytest.mark.parametrize(
     argnames=["create_service", "module_path", "service_config_name"],
     argvalues=[
-        [DataLayerRpcClient.create_as_context, "chia.server.start_data_layer", "data_layer"],
-        [FarmerRpcClient.create_as_context, "chia.server.start_farmer", "farmer"],
-        [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
-        [HarvesterRpcClient.create_as_context, "chia.server.start_harvester", "harvester"],
-        [WalletRpcClient.create_as_context, "chia.server.start_wallet", "wallet"],
-        [None, "chia.server.start_introducer", "introducer"],
+        [DataLayerRpcClient.create_as_context, "chia.data_layer.start_data_layer", "data_layer"],
+        [FarmerRpcClient.create_as_context, "chia.farmer.start_farmer", "farmer"],
+        [FullNodeRpcClient.create_as_context, "chia.full_node.start_full_node", "full_node"],
+        [HarvesterRpcClient.create_as_context, "chia.harvester.start_harvester", "harvester"],
+        [WalletRpcClient.create_as_context, "chia.wallet.start_wallet", "wallet"],
+        [None, "chia.introducer.start_introducer", "introducer"],
         # TODO: fails...  make it not do that
         # [None, "chia.seeder.start_crawler", "crawler"],
-        [None, "chia.server.start_timelord", "timelord"],
+        [None, "chia.timelord.start_timelord", "timelord"],
         pytest.param(
             None,
             "chia.timelord.timelord_launcher",

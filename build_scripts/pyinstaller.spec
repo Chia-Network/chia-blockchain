@@ -25,15 +25,6 @@ version_data = [
 
 block_cipher = None
 
-SERVERS = [
-    "data_layer",
-    "wallet",
-    "full_node",
-    "harvester",
-    "farmer",
-    "introducer",
-    "timelord",
-]
 
 if THIS_IS_WINDOWS:
     hidden_imports_for_windows = ["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
@@ -172,8 +163,23 @@ COLLECT_ARGS = []
 add_binary("chia", f"{ROOT}/chia/cmds/chia.py", COLLECT_ARGS)
 add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
 
+
+
+
+
+
+SERVERS = [
+    "data_layer",
+    "harvester",
+    "farmer",
+    "timelord",
+    "introducer",
+    "wallet",
+    "full_node",
+]
+
 for server in SERVERS:
-    add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
+    add_binary(f"start_{server}", f"{ROOT}/chia/{server}/start_{server}.py", COLLECT_ARGS)
 
 add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
 add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)

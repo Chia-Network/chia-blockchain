@@ -21,7 +21,6 @@ from chia.protocols import wallet_protocol
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.server.aliases import WalletService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator import simulator_protocol
 from chia.simulator.block_tools import BlockTools
@@ -30,6 +29,7 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.hash import std_hash
+from chia.wallet.wallet_service import WalletService
 
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()

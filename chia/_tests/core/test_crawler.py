@@ -16,8 +16,8 @@ from chia.protocols.full_node_protocol import NewPeak
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
+from chia.seeder.crawler_service import CrawlerService
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.server.aliases import CrawlerService
 from chia.types.peer_info import PeerInfo
 
 
