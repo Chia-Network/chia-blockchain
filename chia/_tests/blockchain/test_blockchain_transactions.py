@@ -92,7 +92,7 @@ class TestBlockchainTransactions:
         for coin in added_coins:
             unspent = await full_node_1.coin_store.get_coin_record(coin.name())
             assert unspent is not None
-            assert not unspent.spent()
+            assert not unspent.spent
             assert not unspent.coinbase
 
     @pytest.mark.anyio
