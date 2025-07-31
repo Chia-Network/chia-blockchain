@@ -420,7 +420,7 @@ class Wallet:
         assert len(transaction) > 0
         spend_bundle = WalletSpendBundle(transaction, G2Element())
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
 
@@ -449,7 +449,7 @@ class Wallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )

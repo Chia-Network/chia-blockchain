@@ -1001,14 +1001,14 @@ class FullNodeAPI:
             )
 
             # The block's timestamp must be greater than the previous transaction block's timestamp
-            timestamp = uint64(int(time.time()))
+            timestamp = uint64(time.time())
             curr: Optional[BlockRecord] = prev_b
             while curr is not None and not curr.is_transaction_block and curr.height != 0:
                 curr = self.full_node.blockchain.try_block_record(curr.prev_hash)
             if curr is not None:
                 assert curr.timestamp is not None
                 if timestamp <= curr.timestamp:
-                    timestamp = uint64(int(curr.timestamp + 1))
+                    timestamp = uint64(curr.timestamp + 1)
 
             self.log.info("Starting to make the unfinished block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(

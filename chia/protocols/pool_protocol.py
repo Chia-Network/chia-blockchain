@@ -168,7 +168,7 @@ class ErrorResponse(Streamable):
 
 # Get the current authentication token according to "Farmer authentication" in SPECIFICATION.md
 def get_current_authentication_token(timeout: uint8) -> uint64:
-    return uint64(int(int(time.time() / 60) / timeout))
+    return uint64(int(time.time() / 60) / timeout)
 
 
 # Validate a given authentication token against our local time

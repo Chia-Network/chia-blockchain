@@ -459,7 +459,7 @@ REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
     trade_id=None,
     type=uint32(0),
     name=bytes32.zeros,
-    memos=[],
+    memos={},
     valid_times=ConditionValidTimes(),
 )
 
@@ -1283,13 +1283,13 @@ class WalletRpcApi:
         return wallet_balance
 
     async def get_wallet_balance(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(int(request["wallet_id"]))
+        wallet_id = uint32(request["wallet_id"])
         wallet_balance = await self._get_wallet_balance(wallet_id)
         return {"wallet_balance": wallet_balance}
 
     async def get_wallet_balances(self, request: dict[str, Any]) -> EndpointResult:
         try:
-            wallet_ids: list[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
+            wallet_ids: list[uint32] = [uint32(wallet_id) for wallet_id in request["wallet_ids"]]
         except (TypeError, KeyError):
             wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
         wallet_balances: dict[uint32, dict[str, Any]] = {}
@@ -1562,7 +1562,7 @@ class WalletRpcApi:
             create_new = True
         else:
             create_new = False
-        wallet_id = uint32(int(request["wallet_id"]))
+        wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
