@@ -62,7 +62,6 @@ from chia.server.aliases import (
     WalletService,
 )
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_services import (
     setup_crawler,
@@ -790,7 +789,7 @@ async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def one_node(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[list[Service], list[FullNodeSimulator], BlockTools]]:
+) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
     async with setup_simulators_and_wallets_service(1, 0, blockchain_constants) as _:
         yield _
 
@@ -887,7 +886,7 @@ async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> Async
 @pytest.fixture(scope="function")
 async def farmer_one_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[tuple[list[Service], Service]]:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
 
@@ -895,7 +894,7 @@ async def farmer_one_harvester_not_started(
 @pytest.fixture(scope="function")
 async def farmer_two_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[tuple[list[Service], Service]]:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
 
@@ -903,7 +902,7 @@ async def farmer_two_harvester_not_started(
 @pytest.fixture(scope="function")
 async def farmer_three_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[tuple[list[Service], Service]]:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
 

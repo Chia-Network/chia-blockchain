@@ -92,10 +92,14 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
         current_path = config.get("beta", {}).get("path")
         current_path = None if current_path is None else Path(current_path)
 
-        if path is None and current_path is None:
-            beta_root_path = prompt_for_beta_path(current_path or default_beta_root_path())
+        path_to_use: Optional[Path] = None if path is None else Path(path)
+        if path_to_use is None:
+            path_to_use = current_path
+
+        if path_to_use is None:
+            beta_root_path = prompt_for_beta_path(default_beta_root_path())
         else:
-            beta_root_path = Path(path or current_path)
+            beta_root_path = path_to_use
             validate_beta_path(beta_root_path)
 
         update_beta_config(True, beta_root_path, metrics_log_interval_default, config)

@@ -548,6 +548,7 @@ async def test_signage_points(
 
         # Signage point is no longer in the blockchain
         res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
+        assert res is not None
         assert res["reverted"]
         assert res["signage_point"] == sp
         assert "eos" not in res
