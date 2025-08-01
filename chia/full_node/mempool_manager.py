@@ -640,7 +640,7 @@ class MempoolManager:
                 assert eligibility_info.ff_puzzle_hash is not None
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(eligibility_info.ff_puzzle_hash)
                 if lineage_info is None:
-                    return Err.DOUBLE_SPEND, None, []
+                    mark_as_fast_forward = False
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=supports_dedup,
