@@ -6,7 +6,6 @@ import sqlite3
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Optional
 
-import aiosqlite
 import typing_extensions
 import zstd
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSegments
