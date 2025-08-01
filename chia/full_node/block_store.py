@@ -478,8 +478,7 @@ class BlockStore:
         No orphan blocks.
         """
 
-        if self.db_wrapper.db_version != 2:
-            raise RuntimeError("get_block_bytes_in_range requires DB version 2")
+        assert self.db_wrapper.db_version == 2
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? AND in_main_chain=1",
