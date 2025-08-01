@@ -109,7 +109,7 @@ def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block(
         test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
     )
-    assert conditions[0]["block_spends"] == []
+    assert conditions["block_spends"] == []
 
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
