@@ -38,7 +38,7 @@ def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnect
 
 
 def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyncIdentifier:
-    return PlotSyncIdentifier(uint64(int(time.time())), current_sync_id, message_id)
+    return PlotSyncIdentifier(uint64(time.time()), current_sync_id, message_id)
 
 
 @contextlib.asynccontextmanager

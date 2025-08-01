@@ -139,8 +139,11 @@ class RCATWallet(CATWallet):
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: dict[AssetType, Any] = {},
+        potential_subclasses: Optional[dict[AssetType, Any]] = None,
     ) -> Any:
+        if potential_subclasses is None:
+            potential_subclasses = {}
+
         rev_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if rev_layer is None:
             raise ValueError("create_from_puzzle_info called on RCATWallet with a non R-CAT puzzle driver")
@@ -184,7 +187,8 @@ class RCATWallet(CATWallet):
         replace_self.wallet_info = updated_wallet_info
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
-        result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+        await cat_wallet.wallet_state_manager.puzzle_store.delete_wallet(cat_wallet.id())
+        result = await cat_wallet.wallet_state_manager.create_more_puzzle_hashes()
         await result.commit(cat_wallet.wallet_state_manager)
         return True
 

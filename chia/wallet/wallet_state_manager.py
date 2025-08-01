@@ -963,7 +963,7 @@ class WalletStateManager:
         assert len(clawback_coins) > 0
         coin_spends: list[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
-        now: uint64 = uint64(int(time.time()))
+        now: uint64 = uint64(time.time())
         derivation_record: Optional[DerivationRecord] = None
         amount: uint64 = uint64(0)
         for coin, metadata in clawback_coins.items():
@@ -988,7 +988,7 @@ class WalletStateManager:
                 assert derivation_record is not None
                 amount = uint64(amount + coin.amount)
                 # Remove the clawback hint since it is unnecessary for the XCH coin
-                memos: list[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
+                memos: list[bytes] = [] if len(incoming_tx.memos) == 0 else next(iter(incoming_tx.memos.items()))[1][1:]
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
@@ -1065,7 +1065,7 @@ class WalletStateManager:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_CLAWBACK),
             name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
         async with action_scope.use() as interface:
@@ -1569,7 +1569,7 @@ class WalletStateManager:
                         trade_id=None,
                         type=uint32(TransactionType.OUTGOING_CLAWBACK),
                         name=clawback_spend_bundle.name(),
-                        memos=list(compute_memos(clawback_spend_bundle).items()),
+                        memos=compute_memos(clawback_spend_bundle),
                         valid_times=ConditionValidTimes(),
                     )
                     await self.tx_store.add_transaction_record(tx_record)
@@ -1611,7 +1611,7 @@ class WalletStateManager:
                 ),
                 # Use coin ID as the TX ID to mapping with the coin table
                 name=coin_record.coin.name(),
-                memos=list(memos.items()),
+                memos=memos,
                 valid_times=ConditionValidTimes(),
             )
             await self.tx_store.add_transaction_record(tx_record)
@@ -1810,7 +1810,7 @@ class WalletStateManager:
                                     trade_id=None,
                                     type=uint32(tx_type),
                                     name=bytes32.secret(),
-                                    memos=[],
+                                    memos={},
                                     valid_times=ConditionValidTimes(),
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
@@ -1878,7 +1878,7 @@ class WalletStateManager:
                                         to_puzzle_hash=(
                                             await self.convert_puzzle_hash(wallet_identifier.id, to_puzzle_hash)
                                         ),
-                                        amount=uint64(int(amount)),
+                                        amount=uint64(amount),
                                         fee_amount=uint64(fee),
                                         confirmed=True,
                                         sent=uint32(0),
@@ -1890,7 +1890,7 @@ class WalletStateManager:
                                         trade_id=None,
                                         type=uint32(TransactionType.OUTGOING_TX.value),
                                         name=tx_name,
-                                        memos=[],
+                                        memos={},
                                         valid_times=ConditionValidTimes(),
                                     )
 
@@ -2215,7 +2215,7 @@ class WalletStateManager:
                 trade_id=None,
                 type=uint32(tx_type),
                 name=coin_name,
-                memos=[],
+                memos={},
                 valid_times=ConditionValidTimes(),
             )
             if tx_record.amount > 0:

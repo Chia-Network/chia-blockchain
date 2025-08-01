@@ -73,7 +73,7 @@ class FarmerAPI:
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
 
         max_pos_per_sp = 5
 
@@ -170,14 +170,14 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
                 )
-                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
+                self.farmer.cache_add_time[computed_quality_string] = uint64(time.time())
 
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
 
@@ -558,7 +558,7 @@ class FarmerAPI:
 
                     pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
         missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
         self.farmer.state_changed(

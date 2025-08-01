@@ -45,7 +45,7 @@ tr1 = TransactionRecord(
     bytes32(bytes32.random(module_seeded_random)),  # trade_id
     uint32(TransactionType.OUTGOING_TX),  # type
     bytes32(bytes32.random(module_seeded_random)),  # name
-    [],  # list[tuple[bytes32, list[bytes]]] memos
+    {},  # memos
     ConditionValidTimes(),
 )
 
@@ -859,7 +859,7 @@ async def test_valid_times_migration() -> None:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32.zeros,
-            memos=[],
+            memos={},
         )
 
         async with db_wrapper.writer_maybe_transaction() as conn:
@@ -910,7 +910,7 @@ async def test_large_tx_record_query() -> None:
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
                 name=name,
-                memos=[],
+                memos={},
             )
             tx_records_to_insert.append(
                 (

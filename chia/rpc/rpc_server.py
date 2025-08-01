@@ -292,7 +292,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def open_connection(self, request: dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
-        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(int(port)))
+        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(port))
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect

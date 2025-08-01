@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional
 import aiohttp
 import click
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.cmd_helpers import WalletClientInfo
 from chia.cmds.cmds_util import (
@@ -43,11 +43,13 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    GetWallets,
     PWAbsorbRewards,
     PWJoinPool,
     PWSelfPool,
     PWStatus,
     TransactionEndpointResponse,
+    WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
@@ -194,15 +196,15 @@ async def pprint_pool_wallet_state(
 
 async def pprint_all_pool_wallet_state(
     wallet_client: WalletRpcClient,
-    get_wallets_response: list[dict[str, Any]],
+    get_wallets_response: list[WalletInfoResponse],
     address_prefix: str,
     pool_state_dict: dict[bytes32, dict[str, Any]],
 ) -> None:
     print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
     for wallet_info in get_wallets_response:
-        pool_wallet_id = wallet_info["id"]
-        typ = WalletType(int(wallet_info["type"]))
+        pool_wallet_id = wallet_info.id
+        typ = WalletType(int(wallet_info.type))
         if typ == WalletType.POOLING_WALLET:
             pool_wallet_info = (await wallet_client.pw_status(PWStatus(uint32(pool_wallet_id)))).state
             await pprint_pool_wallet_state(
@@ -220,7 +222,7 @@ async def show(
     root_path: Path,
     wallet_id_passed_in: Optional[int],
 ) -> None:
-    summaries_response = await wallet_info.client.get_wallets()
+    summaries_response = await wallet_info.client.get_wallets(GetWallets())
     config = wallet_info.config
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     pool_state_dict: dict[bytes32, dict[str, Any]] = dict()
@@ -247,10 +249,12 @@ async def show(
                 )
             else:
                 await pprint_all_pool_wallet_state(
-                    wallet_info.client, summaries_response, address_prefix, pool_state_dict
+                    wallet_info.client, summaries_response.wallets, address_prefix, pool_state_dict
                 )
     except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
-        await pprint_all_pool_wallet_state(wallet_info.client, summaries_response, address_prefix, pool_state_dict)
+        await pprint_all_pool_wallet_state(
+            wallet_info.client, summaries_response.wallets, address_prefix, pool_state_dict
+        )
 
 
 async def get_login_link(launcher_id: bytes32, root_path: Path) -> None:
@@ -296,7 +300,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
     selected_wallet_id: int
 
     # absent network errors, this should not fail with an error
-    pool_wallets = await wallet_client.get_wallets(wallet_type=WalletType.POOLING_WALLET)
+    pool_wallets = (await wallet_client.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))).wallets
 
     if wallet_id is None:
         if len(pool_wallets) == 0:
@@ -305,11 +309,11 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
             )
         if len(pool_wallets) > 1:
             raise CliRpcConnectionError("More than one pool wallet found. Use -i to specify pool wallet id.")
-        selected_wallet_id = pool_wallets[0]["id"]
+        selected_wallet_id = pool_wallets[0].id
     else:
         selected_wallet_id = wallet_id
 
-    if not any(wallet["id"] == selected_wallet_id for wallet in pool_wallets):
+    if not any(wallet.id == selected_wallet_id for wallet in pool_wallets):
         raise CliRpcConnectionError(f"Wallet with id: {selected_wallet_id} is not a pool wallet.")
 
     return selected_wallet_id

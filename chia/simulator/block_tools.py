@@ -772,7 +772,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
+                timestamp=(uint64(time.time()) if genesis_timestamp is None else genesis_timestamp),
             )
             self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -1311,7 +1311,7 @@ class BlockTools:
         skip_slots: int = 0,
     ) -> FullBlock:
         if timestamp is None:
-            timestamp = uint64(int(time.time()))
+            timestamp = uint64(time.time())
 
         finished_sub_slots: list[EndOfSubSlotBundle] = []
         unfinished_block: Optional[UnfinishedBlock] = None
@@ -1734,7 +1734,8 @@ def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = Tr
     if not automated_testing:  # make sure we don't accidentally stack directories.
         root_dir = (
             root_dir.parent
-            if root_dir.parts[-1] == plot_dir_name.split("/")[0] or root_dir.parts[-1] == plot_dir_name.split("\\")[0]
+            if root_dir.parts[-1] == plot_dir_name.split("/", maxsplit=1)[0]
+            or root_dir.parts[-1] == plot_dir_name.split("\\", maxsplit=1)[0]
             else root_dir
         )
     cache_path = root_dir.joinpath(plot_dir_name)

@@ -10,7 +10,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.streamable import Streamable, streamable
 
 
 def make_spend(
@@ -34,13 +33,6 @@ def make_spend(
         raise ValueError("Only [SerializedProgram, Program] supported for solution")
 
     return CoinSpend(coin, pr, sol)
-
-
-@streamable
-@dataclass(frozen=True)
-class SpendInfo(Streamable):
-    puzzle: SerializedProgram
-    solution: SerializedProgram
 
 
 @dataclass(frozen=True)

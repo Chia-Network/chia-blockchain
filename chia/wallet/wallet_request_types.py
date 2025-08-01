@@ -31,6 +31,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
+from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -196,6 +197,28 @@ class GetTimestampForHeight(Streamable):
 @dataclass(frozen=True)
 class GetTimestampForHeightResponse(Streamable):
     timestamp: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWallets(Streamable):
+    type: Optional[uint16] = None
+    include_data: bool = True
+
+
+# utility for GetWalletsResponse
+@streamable
+@dataclass(frozen=True)
+class WalletInfoResponse(WalletInfo):
+    authorized_providers: list[bytes32] = field(default_factory=list)
+    flags_needed: list[str] = field(default_factory=list)
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletsResponse(Streamable):
+    wallets: list[WalletInfoResponse]
+    fingerprint: Optional[uint32] = None
 
 
 @streamable
@@ -368,23 +391,6 @@ class DIDGetPubkeyResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class DIDGetRecoveryInfo(Streamable):
-    wallet_id: uint32
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDGetRecoveryInfoResponse(Streamable):
-    wallet_id: uint32
-    my_did: str
-    coin_name: bytes32
-    newpuzhash: Optional[bytes32]
-    pubkey: Optional[G1Element]
-    backup_dids: list[bytes32]
-
-
-@streamable
-@dataclass(frozen=True)
 class DIDGetCurrentCoinInfo(Streamable):
     wallet_id: uint32
 
@@ -424,20 +430,6 @@ class DIDGetDIDResponse(Streamable):
     wallet_id: uint32
     my_did: str
     coin_id: Optional[bytes32] = None
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDGetRecoveryList(Streamable):
-    wallet_id: uint32
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDGetRecoveryListResponse(Streamable):
-    wallet_id: uint32
-    recovery_list: list[str]
-    num_required: uint16
 
 
 @streamable
@@ -978,20 +970,6 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
-class DIDUpdateRecoveryIDs(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    new_list: list[str] = field(default_factory=default_raise)
-    num_verifications_required: Optional[uint64] = None
-
-
-@streamable
-@dataclass(frozen=True)
-class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
-    pass
-
-
-@streamable
-@kw_only_dataclass
 class DIDMessageSpend(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     coin_announcements: list[bytes] = field(default_factory=list)
@@ -1024,6 +1002,11 @@ class DIDTransferDID(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     inner_address: str = field(default_factory=default_raise)
     with_recovery_info: bool = True
+
+    def __post_init__(self) -> None:
+        if self.with_recovery_info is False:
+            raise ValueError("Recovery related options are no longer supported. `with_recovery` must always be true.")
+        return super().__post_init__()
 
 
 @streamable

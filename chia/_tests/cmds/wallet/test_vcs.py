@@ -16,6 +16,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.vc_wallet.vc_drivers import VCLineageProof, VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_request_types import (
+    GetWallets,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -395,6 +396,6 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: tuple[TestRpcC
                 test_condition_valid_times,
             )
         ],
-        "get_wallets": [(None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
