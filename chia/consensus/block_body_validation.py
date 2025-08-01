@@ -12,6 +12,7 @@ from chia_rs import (
     FullBlock,
     SpendBundleConditions,
     UnfinishedBlock,
+    check_time_locks,
     compute_merkle_set_root,
     is_canonical_serialization,
 )
@@ -21,7 +22,6 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.coin_record import CoinRecord
@@ -566,7 +566,8 @@ async def validate_block_body(
             prev_transaction_block_timestamp,
         )
         if error is not None:
-            return error
+            # TODO: standardise errors across Rust and Python so cast is not necesary here
+            return Err(error)
 
     # 22. Verify aggregated signature is done in pre-validation
     if not block.transactions_info.aggregated_signature:
