@@ -609,7 +609,7 @@ class MempoolManager:
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been melted, the
                 # fast forward spend will never become valid.
-                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(bytes32(spend_conds.puzzle_hash))
+                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
                 if lineage_info is None:
                     return Err.DOUBLE_SPEND, None, []
 

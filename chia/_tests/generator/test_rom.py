@@ -146,7 +146,7 @@ class TestROM:
             before_seconds_relative=None,
             birth_height=None,
             birth_seconds=None,
-            create_coin=[(bytes([0] * 31 + [1]), 500, None)],
+            create_coin=[(bytes32([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
             agg_sig_parent=[],
             agg_sig_puzzle=[],

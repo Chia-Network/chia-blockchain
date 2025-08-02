@@ -481,10 +481,9 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        spends: list[dict[str, list[CoinSpend]]] = []
         block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
-            return {"block_spends": spends}
+            return {"block_spends": []}
 
         spends = get_spends_for_trusted_block(
             self.service.constants,
@@ -493,9 +492,7 @@ class FullNodeRpcApi:
             get_flags_for_height_and_constants(full_block.height, self.service.constants),
         )
 
-        # chia_rs returning a list is a mistake that will be fixed in the next release
-        # it ought to be returning a dict of {"block_spends": [spends]}
-        return spends[0]
+        return spends
 
     async def get_block_spends_with_conditions(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:

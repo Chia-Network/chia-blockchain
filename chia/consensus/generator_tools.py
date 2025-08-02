@@ -65,6 +65,6 @@ def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> tuple
     for spend in results.spends:
         removals.append(bytes32(spend.coin_id))
         for puzzle_hash, amount, _ in spend.create_coin:
-            additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount)))
+            additions.append(Coin(spend.coin_id, puzzle_hash, uint64(amount)))
 
     return removals, additions
