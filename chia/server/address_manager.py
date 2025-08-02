@@ -129,8 +129,8 @@ class ExtendedPeerInfo:
     def from_string(cls, peer_str: str) -> ExtendedPeerInfo:
         blobs = peer_str.split(" ")
         assert len(blobs) == 5
-        peer_info = TimestampedPeerInfo(blobs[0], uint16(int(blobs[1])), uint64(int(blobs[2])))
-        src_peer = PeerInfo(blobs[3], uint16(int(blobs[4])))
+        peer_info = TimestampedPeerInfo(blobs[0], uint16(blobs[1]), uint64(blobs[2]))
+        src_peer = PeerInfo(blobs[3], uint16(blobs[4]))
         return cls(peer_info, src_peer)
 
     def get_tried_bucket(self, key: int) -> int:

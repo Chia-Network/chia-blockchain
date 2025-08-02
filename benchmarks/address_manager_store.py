@@ -22,7 +22,7 @@ from chia.util.files import write_file_async
 
 
 def generate_random_ip(rand: random.Random) -> str:
-    return str(IPv4Address(rand.getrandbits(32)))
+    return str(IPv4Address(rand.randbytes(4)))
 
 
 def populate_address_manager(num_new: int = 500000, num_tried: int = 200000) -> AddressManager:

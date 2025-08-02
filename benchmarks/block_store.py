@@ -25,7 +25,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import (
     clvm_generator,
-    rand_bytes,
     rand_class_group_element,
     rand_g1,
     rand_g2,
@@ -110,7 +109,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 rand_hash() if not has_pool_pk else None,
                 rand_g1(),  # plot_public_key
                 uint8(32),
-                rand_bytes(8 * 32),
+                random.randbytes(8 * 32),
             )
 
             reward_chain_block = RewardChainBlock(

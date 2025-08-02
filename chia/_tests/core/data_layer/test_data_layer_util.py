@@ -162,13 +162,6 @@ def test_internal_hash(seeded_random: Random) -> None:
             assert definition(left_hash=left_hash, right_hash=right_hash) == reference
 
 
-def get_random_bytes(length: int, r: Random) -> bytes:
-    if length == 0:
-        return b""
-
-    return r.getrandbits(length * 8).to_bytes(length, "big")
-
-
 def test_leaf_hash(seeded_random: Random) -> None:
     def definition(key: bytes, value: bytes) -> bytes32:
         return SerializedProgram.to((key, value)).get_tree_hash()
@@ -180,13 +173,13 @@ def test_leaf_hash(seeded_random: Random) -> None:
         else:
             length = seeded_random.randrange(100)
 
-        key = get_random_bytes(length=length, r=seeded_random)
+        key = seeded_random.randbytes(length)
 
         if cycle in {1, 2}:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        value = get_random_bytes(length=length, r=seeded_random)
+        value = seeded_random.randbytes(length)
         reference = definition(key=key, value=value)
         data.append((key, value, reference))
 
@@ -209,7 +202,7 @@ def test_key_hash(seeded_random: Random) -> None:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        key = get_random_bytes(length=length, r=seeded_random)
+        key = seeded_random.randbytes(length)
         reference = definition(key=key)
         data.append((key, reference))
 

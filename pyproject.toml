@@ -2,7 +2,8 @@
 name = "chia-blockchain"
 dynamic = [ "dependencies", "version" ]
 description = "Chia blockchain full node, farmer, timelord, and wallet."
-requires-python = ">=3.9, <4"
+# banning 3.9.0 and 3.9.1 for simplicity aligning with https://github.com/pyca/cryptography/pull/12045
+requires-python = ">=3.9, <4, !=3.9.0, !=3.9.1"
 authors = [
     {name="Mariano Sorgente", email="mariano@chia.net"}
 ]
@@ -13,7 +14,7 @@ homepage = "https://chia.net/"
 
 [tool.poetry]
 # see [tool.poetry-dynamic-versioning]
-packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
+packages = [{ include = "chia"}]
 version = "0.0.0"
 
 [project.scripts]
@@ -102,14 +103,14 @@ types-cryptography = { version = ">=3.3.23.2", optional = true }
 types-pyyaml = { version = ">=6.0.12.20240917", optional = true }
 types-setuptools = { version = ">=75.5.0.20241122", optional = true }
 lxml = { version = ">=5.2.2", optional = true }
-miniupnpc = {version = ">=2.3.2, <3", optional = true}
+miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
 # 	{version="<=1.24.4", python = "<3.9", optional = true},
 # 	{version=">=1.26.4", python = ">=3.9", optional = true}]
 ruff = { version = ">=0.8.1", optional = true }
 
-[tool.poetry.extras]
+[project.optional-dependencies]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "lxml"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]

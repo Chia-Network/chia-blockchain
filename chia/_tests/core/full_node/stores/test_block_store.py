@@ -18,10 +18,10 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_block_utils import GeneratorBlockInfo
@@ -369,16 +369,10 @@ async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_ver
 async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
-    def rand_bytes(num: int) -> bytes:
-        ret = bytearray(num)
-        for i in range(num):
-            ret[i] = random.getrandbits(8)
-        return bytes(ret)
-
     def rand_vdf_proof() -> VDFProof:
         return VDFProof(
             uint8(1),  # witness_type
-            rand_bytes(32),  # witness
+            random.randbytes(32),  # witness
             bool(random.randint(0, 1)),  # normalized_to_identity
         )
 

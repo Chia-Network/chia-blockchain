@@ -20,7 +20,6 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     AddKey,
@@ -53,10 +52,6 @@ from chia.wallet.wallet_request_types import (
     DIDGetMetadataResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
-    DIDGetRecoveryInfo,
-    DIDGetRecoveryInfoResponse,
-    DIDGetRecoveryList,
-    DIDGetRecoveryListResponse,
     DIDGetWalletName,
     DIDGetWalletNameResponse,
     DIDMessageSpend,
@@ -67,8 +62,6 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDIDResponse,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
-    DIDUpdateRecoveryIDs,
-    DIDUpdateRecoveryIDsResponse,
     DLDeleteMirror,
     DLDeleteMirrorResponse,
     DLGetMirrors,
@@ -107,6 +100,8 @@ from chia.wallet.wallet_request_types import (
     GetTimestampForHeightResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    GetWallets,
+    GetWalletsResponse,
     LogIn,
     LogInResponse,
     NFTAddURI,
@@ -257,14 +252,8 @@ class WalletRpcClient(RpcClient):
         return AutoClaimSettings.from_json_dict(await self.fetch("get_auto_claim", {}))
 
     # Wallet Management APIs
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Any]]:
-        if wallet_type is None:
-            request = {}
-        else:
-            request = {"type": wallet_type}
-        response = await self.fetch("get_wallets", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(list[dict[str, Any]], response["wallets"])
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+        return GetWalletsResponse.from_json_dict(await self.fetch("get_wallets", request.to_json_dict()))
 
     # Wallet APIs
     async def get_wallet_balance(self, wallet_id: int) -> dict[str, Any]:
@@ -548,25 +537,6 @@ class WalletRpcClient(RpcClient):
             await self.fetch("did_create_backup_file", request.to_json_dict())
         )
 
-    async def update_did_recovery_list(
-        self,
-        request: DIDUpdateRecoveryIDs,
-        tx_config: TXConfig,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> DIDUpdateRecoveryIDsResponse:
-        return DIDUpdateRecoveryIDsResponse.from_json_dict(
-            await self.fetch(
-                "did_update_recovery_ids",
-                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
-            )
-        )
-
-    async def get_did_recovery_list(self, request: DIDGetRecoveryList) -> DIDGetRecoveryListResponse:
-        return DIDGetRecoveryListResponse.from_json_dict(
-            await self.fetch("did_get_recovery_list", request.to_json_dict())
-        )
-
     async def did_message_spend(
         self,
         request: DIDMessageSpend,
@@ -609,42 +579,10 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def did_create_attest(
-        self,
-        wallet_id: int,
-        coin_name: str,
-        pubkey: str,
-        puzhash: str,
-        file_name: str,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> dict[str, Any]:
-        request = {
-            "wallet_id": wallet_id,
-            "coin_name": coin_name,
-            "pubkey": pubkey,
-            "puzhash": puzhash,
-            "filename": file_name,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("did_create_attest", request)
-        return response
-
-    async def did_get_recovery_info(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
-        return DIDGetRecoveryInfoResponse.from_json_dict(
-            await self.fetch("did_get_information_needed_for_recovery", request.to_json_dict())
-        )
-
     async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
         return DIDGetCurrentCoinInfoResponse.from_json_dict(
             await self.fetch("did_get_current_coin_info", request.to_json_dict())
         )
-
-    async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id, "attest_filenames": attest_filenames}
-        response = await self.fetch("did_recovery_spend", request)
-        return response
 
     async def did_transfer_did(
         self,
@@ -767,10 +705,10 @@ class WalletRpcClient(RpcClient):
         request = {"asset_id": asset_id.hex()}
         try:
             res = await self.fetch("cat_asset_id_to_name", request)
-        except ValueError:
+        except ValueError:  # This happens if the asset_id is unknown
             return None
 
-        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(int(res["wallet_id"]))
+        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(res["wallet_id"])
         return wallet_id, res["name"]
 
     async def get_cat_name(self, wallet_id: int) -> str:

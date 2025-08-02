@@ -119,7 +119,7 @@ class FullNodeDiscovery:
             timestamped_peer_info = TimestampedPeerInfo(
                 peer.peer_info.host,
                 peer.peer_server_port,
-                uint64(int(time.time())),
+                uint64(time.time()),
             )
             await self.address_manager.add_to_new_table([timestamped_peer_info], peer.get_peer_info(), 0)
             if self.relay_queue is not None:
@@ -247,7 +247,7 @@ class FullNodeDiscovery:
         dns_server_index: int = 0
         tried_all_dns_servers: bool = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
-        last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        last_timestamp_local_info: uint64 = uint64(time.time())
         last_collision_timestamp = 0
 
         if self.initial_wait > 0:
@@ -372,7 +372,7 @@ class FullNodeDiscovery:
                         continue
                     if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
                         local_peerinfo = await self.server.get_peer_info()
-                        last_timestamp_local_info = uint64(int(time.time()))
+                        last_timestamp_local_info = uint64(time.time())
                     if local_peerinfo is not None and addr == local_peerinfo:
                         continue
                     got_peer = True
@@ -465,7 +465,7 @@ class FullNodeDiscovery:
                 current_peer = TimestampedPeerInfo(
                     peer.host,
                     peer.port,
-                    uint64(int(time.time() - 5 * 24 * 60 * 60)),
+                    uint64(time.time() - 5 * 24 * 60 * 60),
                 )
             else:
                 current_peer = peer
@@ -534,7 +534,7 @@ class FullNodePeers(FullNodeDiscovery):
                     TimestampedPeerInfo(
                         peer.host,
                         peer.port,
-                        uint64(int(time.time())),
+                        uint64(time.time()),
                     )
                 ]
                 msg = make_msg(
