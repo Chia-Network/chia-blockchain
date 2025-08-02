@@ -481,7 +481,6 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        spends: dict[str, list[CoinSpend]]
         block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": []}
