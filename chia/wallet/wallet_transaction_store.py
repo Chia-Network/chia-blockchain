@@ -22,6 +22,7 @@ from chia.wallet.transaction_record import (
     minimum_send_attempts,
 )
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 
@@ -491,7 +492,7 @@ class WalletTransactionStore:
                 ),
                 to_address=encode_puzzle_hash(
                     record.to_puzzle_hash,
-                    self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"],
+                    AddressType.XCH.hrp(self.config),
                 ),
             )
             for record in old_records
