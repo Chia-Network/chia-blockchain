@@ -2777,6 +2777,4 @@ class WalletStateManager:
         await self.puzzle_store.delete_wallet(wallet_id)
 
     def encode_puzzle_hash(self, puzzle_hash: bytes32) -> str:
-        return encode_puzzle_hash(
-            puzzle_hash, self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
-        )
+        return encode_puzzle_hash(puzzle_hash, AddressType.XCH.hrp(self.config))
