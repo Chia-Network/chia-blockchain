@@ -477,7 +477,7 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
 @pytest.mark.anyio
 async def test_foreign_key_pragma_controlled_by_writer(initial: bool, forced: bool) -> None:
     async with DBConnection(2, foreign_keys=initial) as db_wrapper:
-        async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+        async with db_wrapper.writer_outside_transaction() as writer_no_transaction:
             async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                 async with db_wrapper.writer() as writer:
                     async with writer.execute("PRAGMA foreign_keys") as cursor:
@@ -518,7 +518,7 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 
         # make sure the writer raises a foreign key error on exit
         with pytest.raises(ForeignKeyError):
-            async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+            async with db_wrapper.writer_outside_transaction() as writer_no_transaction:
                 async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                     async with db_wrapper.writer() as writer:
                         async with writer.execute("DELETE FROM people WHERE id = 1"):
@@ -579,7 +579,7 @@ async def test_foreign_key_check_failure_error_message(case: RowFactoryCase) -> 
 
         # make sure the writer raises a foreign key error on exit
         with pytest.raises(ForeignKeyError) as error:
-            async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+            async with db_wrapper.writer_outside_transaction() as writer_no_transaction:
                 async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                     async with db_wrapper.writer() as writer:
                         async with writer.execute("DELETE FROM people WHERE id = 1"):
@@ -606,7 +606,7 @@ async def test_delayed_foreign_key_request_fails_when_nested(initial: bool) -> N
     async with DBConnection(2, foreign_keys=initial) as db_wrapper:
         async with db_wrapper.writer():
             with pytest.raises(NestedForeignKeyDelayedRequestError):
-                async with db_wrapper.writer_no_transaction() as writer_no_transaction:
+                async with db_wrapper.writer_outside_transaction() as writer_no_transaction:
                     async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                         async with db_wrapper.writer():
                             pass  # pragma: no cover

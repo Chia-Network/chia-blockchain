@@ -199,7 +199,7 @@ class DataStore:
 
         version = "v1.0"
         log.info(f"Initiating migration to version {version}")
-        async with self.db_wrapper.writer_no_transaction() as writer_no_transaction:
+        async with self.db_wrapper.writer_outside_transaction() as writer_no_transaction:
             async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                 async with self.db_wrapper.writer() as writer:
                     await writer.execute(
@@ -1432,7 +1432,7 @@ class DataStore:
         """
         params = {"pending_status": Status.PENDING.value, "pending_batch_status": Status.PENDING_BATCH.value}
         if writer is None:
-            async with self.db_wrapper.writer_no_transaction() as writer_no_transaction:
+            async with self.db_wrapper.writer_outside_transaction() as writer_no_transaction:
                 async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                     async with self.db_wrapper.writer() as writer:
                         await writer.execute(query, params)
@@ -2071,7 +2071,7 @@ class DataStore:
                 )
 
     async def delete_store_data(self, store_id: bytes32) -> None:
-        async with self.db_wrapper.writer_no_transaction() as writer_no_transaction:
+        async with self.db_wrapper.writer_outside_transaction() as writer_no_transaction:
             async with writer_no_transaction.delay(foreign_key_enforcement_enabled=False):
                 async with self.db_wrapper.writer() as writer:
                     await self.clean_node_table(writer)

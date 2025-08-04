@@ -128,15 +128,13 @@ class Transactioner(Generic[TConnection, TUntransactionedConnection]):
         return name
 
     @contextlib.asynccontextmanager
-    async def writer_no_transaction(self) -> AsyncIterator[TUntransactionedConnection]:
+    async def writer_outside_transaction(self) -> AsyncIterator[TUntransactionedConnection]:
         """
-        Initiates a new, possibly nested, transaction. If this task is already
-        in a transaction, none of the changes made as part of this transaction
-        will become visible to others until that top level transaction commits.
-        If this transaction fails (by exiting the context manager with an
-        exception) this transaction will be rolled back, but the next outer
-        transaction is not necessarily cancelled. It would also need to exit
-        with an exception to be cancelled.
+        Provides a connection without any active transaction.  These connection
+        objects are generally made to be very limited.  An Sqlite specific example
+        usage is to execute pragmas related to controlling foreign key enforcement
+        which must be executed outside of a transaction.  If this task is already
+        in a transaction, an error is raised immediately.
         """
         task = asyncio.current_task()
         assert task is not None
