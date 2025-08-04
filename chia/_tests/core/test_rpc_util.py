@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pytest
+from chia_rs.sized_ints import uint32
 
 from chia.rpc.util import marshal
-from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.clvm_streamable import clvm_streamable
 
@@ -29,7 +28,7 @@ class TestRequestType(Streamable):
 @streamable
 @dataclass(frozen=True)
 class TestResponseObject(Streamable):
-    qat: List[str]
+    qat: list[str]
     sub: SubObject
 
 
@@ -81,7 +80,7 @@ async def test_clvm_streamable_marshalling() -> None:
     assert await test_rpc_endpoint(
         None,
         {
-            "sub": "ff81ff80",
+            "sub": "ffff83717578818180",
             "CHIP-0029": True,
         },
-    ) == {"sub": "ff81ff80"}
+    ) == {"sub": "ffff83717578818180"}

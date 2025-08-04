@@ -3,23 +3,26 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import anyio
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.environments.full_node import FullNodeEnvironment
 from chia._tests.environments.wallet import WalletEnvironment
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -37,17 +40,15 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
-OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
-SimulatorsAndWalletsServices = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
+OldSimulatorsAndWallets = tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]
+SimulatorsAndWalletsServices = tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
 
 
 @dataclass(frozen=True)
@@ -64,8 +65,8 @@ class FullSystem:
 
 @dataclass
 class SimulatorsAndWallets:
-    simulators: List[FullNodeEnvironment]
-    wallets: List[WalletEnvironment]
+    simulators: list[FullNodeEnvironment]
+    wallets: list[WalletEnvironment]
     bt: BlockTools
 
 
@@ -79,12 +80,12 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def setup_two_nodes(
     consensus_constants: ConsensusConstants, db_version: int, self_hostname: str
-) -> AsyncIterator[Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
+) -> AsyncIterator[tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
 
-    config_overrides = {"full_node.max_sync_wait": 0}
+    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         bt1 = await create_block_tools_async(
             constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
@@ -116,11 +117,11 @@ async def setup_two_nodes(
 @asynccontextmanager
 async def setup_n_nodes(
     consensus_constants: ConsensusConstants, n: int, db_version: int, self_hostname: str
-) -> AsyncIterator[List[FullNodeAPI]]:
+) -> AsyncIterator[list[FullNodeAPI]]:
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
-    config_overrides = {"full_node.max_sync_wait": 0}
+    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     with ExitStack() as stack:
         keychains = [stack.enter_context(TempKeyring(populate=True)) for _ in range(n)]
         async with AsyncExitStack() as async_exit_stack:
@@ -154,8 +155,8 @@ async def setup_simulators_and_wallets(
     key_seed: Optional[bytes32] = None,
     initial_num_public_keys: int = 5,
     db_version: int = 2,
-    config_overrides: Optional[Dict[str, int]] = None,
-    disable_capabilities: Optional[List[Capability]] = None,
+    config_overrides: Optional[dict[str, int]] = None,
+    disable_capabilities: Optional[list[Capability]] = None,
 ) -> AsyncIterator[SimulatorsAndWallets]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if config_overrides is None:
@@ -175,7 +176,7 @@ async def setup_simulators_and_wallets(
             disable_capabilities,
         ) as (bt_tools, simulators, wallets_services):
             async with contextlib.AsyncExitStack() as exit_stack:
-                wallets: List[WalletEnvironment] = []
+                wallets: list[WalletEnvironment] = []
                 for service in wallets_services:
                     assert service.rpc_server is not None
 
@@ -207,9 +208,9 @@ async def setup_simulators_and_wallets_service(
     key_seed: Optional[bytes32] = None,
     initial_num_public_keys: int = 5,
     db_version: int = 2,
-    config_overrides: Optional[Dict[str, int]] = None,
-    disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncIterator[Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]]:
+    config_overrides: Optional[dict[str, int]] = None,
+    disable_capabilities: Optional[list[Capability]] = None,
+) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_simulators_and_wallets_inner(
             db_version,
@@ -240,25 +241,26 @@ async def setup_simulators_and_wallets_inner(
     spam_filter_after_n_txs: int,
     wallet_count: int,
     xch_spam_amount: int,
-    config_overrides: Optional[Dict[str, int]],
-    disable_capabilities: Optional[List[Capability]],
-) -> AsyncIterator[Tuple[List[BlockTools], List[SimulatorFullNodeService], List[WalletService]]]:
+    config_overrides: Optional[dict[str, int]],
+    disable_capabilities: Optional[list[Capability]],
+) -> AsyncIterator[tuple[list[BlockTools], list[SimulatorFullNodeService], list[WalletService]]]:
     if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
         config_overrides["full_node.max_sync_wait"] = 0
+        config_overrides["full_node.log_coins"] = True
     async with AsyncExitStack() as async_exit_stack:
-        bt_tools: List[BlockTools] = [
+        bt_tools: list[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
-            for _ in range(0, simulator_count)
+            for _ in range(simulator_count)
         ]
         if wallet_count > simulator_count:
-            for _ in range(0, wallet_count - simulator_count):
+            for _ in range(wallet_count - simulator_count):
                 bt_tools.append(
                     await create_block_tools_async(
                         consensus_constants, keychain=keychain2, config_overrides=config_overrides
                     )
                 )
 
-        simulators: List[SimulatorFullNodeService] = [
+        simulators: list[SimulatorFullNodeService] = [
             await async_exit_stack.enter_async_context(
                 # Passing simulator=True gets us this type guaranteed
                 setup_full_node(  # type: ignore[arg-type]
@@ -271,10 +273,10 @@ async def setup_simulators_and_wallets_inner(
                     disable_capabilities=disable_capabilities,
                 )
             )
-            for index in range(0, simulator_count)
+            for index in range(simulator_count)
         ]
 
-        wallets: List[WalletService] = [
+        wallets: list[WalletService] = [
             await async_exit_stack.enter_async_context(
                 setup_wallet_node(
                     bt_tools[index].config["self_hostname"],
@@ -287,7 +289,7 @@ async def setup_simulators_and_wallets_inner(
                     initial_num_public_keys=initial_num_public_keys,
                 )
             )
-            for index in range(0, wallet_count)
+            for index in range(wallet_count)
         ]
 
         yield bt_tools, simulators, wallets
@@ -301,7 +303,7 @@ async def setup_farmer_multi_harvester(
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
-) -> AsyncIterator[Tuple[List[HarvesterService], FarmerService, BlockTools]]:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
             setup_farmer(
@@ -327,7 +329,7 @@ async def setup_farmer_multi_harvester(
                     start_service=start_services,
                 )
             )
-            for i in range(0, harvester_count)
+            for i in range(harvester_count)
         ]
 
         yield harvester_services, farmer_service, block_tools
@@ -359,7 +361,7 @@ async def setup_full_system_inner(
     keychain2: Keychain,
     shared_b_tools: BlockTools,
 ) -> AsyncIterator[FullSystem]:
-    config_overrides = {"full_node.max_sync_wait": 0}
+    config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     if b_tools is None:
         b_tools = await create_block_tools_async(
             constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
@@ -388,6 +390,7 @@ async def setup_full_system_inner(
         introducer_service = await async_exit_stack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
+        introducer.introducer.dns_servers = []
 
         # Then start the full node so we can use the port for the farmer and timelord
         node_1 = await async_exit_stack.enter_async_context(

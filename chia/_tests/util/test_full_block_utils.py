@@ -1,37 +1,47 @@
 from __future__ import annotations
 
 import random
-from typing import Generator, Iterator, List, Optional
+from collections.abc import Generator, Iterator
+from typing import Optional
 
 import pytest
-from chia_rs import G1Element, G2Element
-
-from chia._tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import (
+from chia_rs import (
     ChallengeChainSubSlot,
+    EndOfSubSlotBundle,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    G2Element,
+    HeaderBlock,
     InfusedChallengeChainSubSlot,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlock,
     RewardChainSubSlot,
     SubSlotProofs,
+    TransactionsInfo,
 )
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.util.full_block_utils import block_info_from_block, generator_from_block, header_block_from_block
-from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-test_g2s: List[G2Element] = [rand_g2() for _ in range(10)]
-test_g1s: List[G1Element] = [rand_g1() for _ in range(10)]
-test_hashes: List[bytes32] = [rand_hash() for _ in range(100)]
-test_vdfs: List[VDFInfo] = [rand_vdf() for _ in range(100)]
-test_vdf_proofs: List[VDFProof] = [rand_vdf_proof() for _ in range(100)]
+from chia._tests.util.benchmarks import rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
+from chia.consensus.generator_tools import get_block_header
+from chia.full_node.full_block_utils import (
+    block_info_from_block,
+    generator_from_block,
+    get_height_and_tx_status_from_block,
+    header_block_from_block,
+)
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+
+test_g2s: list[G2Element] = [rand_g2() for _ in range(10)]
+test_g1s: list[G1Element] = [rand_g1() for _ in range(10)]
+test_hashes: list[bytes32] = [rand_hash() for _ in range(100)]
+test_vdfs: list[VDFInfo] = [rand_vdf() for _ in range(100)]
+test_vdf_proofs: list[VDFProof] = [rand_vdf_proof() for _ in range(100)]
 
 
 def g2() -> G2Element:
@@ -63,7 +73,7 @@ def get_proof_of_space() -> Generator[ProofOfSpace, None, None]:
                 plot_hash,
                 g1(),  # plot_public_key
                 uint8(32),
-                rand_bytes(8 * 32),
+                random.randbytes(8 * 32),
             )
 
 
@@ -200,12 +210,12 @@ def get_end_of_sub_slot() -> Generator[EndOfSubSlotBundle, None, None]:
                     )
 
 
-def get_finished_sub_slots() -> Generator[List[EndOfSubSlotBundle], None, None]:
+def get_finished_sub_slots() -> Generator[list[EndOfSubSlotBundle], None, None]:
     yield []
     yield [s for s in get_end_of_sub_slot()]
 
 
-def get_ref_list() -> Generator[List[uint32], None, None]:
+def get_ref_list() -> Generator[list[uint32], None, None]:
     yield []
     yield [uint32(1), uint32(2), uint32(3), uint32(4)]
     yield [uint32(256)]
@@ -244,7 +254,6 @@ def get_full_blocks() -> Iterator[FullBlock]:
 
 
 @pytest.mark.anyio
-@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_parser():
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
@@ -252,8 +261,15 @@ async def test_parser():
     # correctly
     for block in get_full_blocks():
         block_bytes = bytes(block)
+        height, is_tx_block = get_height_and_tx_status_from_block(block_bytes)
+        assert height == block.height
+        assert is_tx_block == (block.transactions_info is not None)
         gen = generator_from_block(block_bytes)
-        assert gen == block.transactions_generator
+        if gen is None:
+            assert block.transactions_generator is None
+        else:
+            assert block.transactions_generator is not None
+            assert gen == bytes(block.transactions_generator)
         bi = block_info_from_block(block_bytes)
         assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash
@@ -266,6 +282,6 @@ async def test_parser():
 @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_header_block():
     for block in get_full_blocks():
-        hb: HeaderBlock = get_block_header(block, [], [])
+        hb: HeaderBlock = get_block_header(block)
         hb_bytes = header_block_from_block(memoryview(bytes(block)))
         assert HeaderBlock.from_bytes(hb_bytes) == hb

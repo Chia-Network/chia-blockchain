@@ -4,10 +4,12 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Any, Callable, List, Tuple, Type, Union
+from typing import Any, Callable, Union
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.plot_sync.util import get_dummy_connection
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
@@ -24,9 +26,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64
+from chia.protocols.outbound_message import NodeType
 from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class SyncStepData:
     args: Any
 
     def __init__(
-        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any
+        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: type[_T_Streamable], *args: Any
     ) -> None:
         self.state = state
         self.function = function
@@ -89,7 +89,7 @@ def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
     assert response.error.code == error_code.value
 
 
-def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
+def pre_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) is Plot
@@ -108,7 +108,7 @@ def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]]
             assert path not in receiver.duplicates()
 
 
-def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
+def post_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) is Plot
@@ -131,13 +131,13 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
 async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
-    # For the the list types invoke the trigger function in batches
-    if sync_step.payload_type == PlotSyncPlotList or sync_step.payload_type == PlotSyncPathList:
+    # For the list types invoke the trigger function in batches
+    if sync_step.payload_type in {PlotSyncPlotList, PlotSyncPathList}:
         step_data, _ = sync_step.args
         assert len(step_data) == 10
         # Invoke batches of: 1, 2, 3, 4 items and validate the data against plot store before and after
         indexes = [0, 1, 3, 6, 10]
-        for i in range(0, len(indexes) - 1):
+        for i in range(len(indexes) - 1):
             plots_processed_before = receiver.current_sync().plots_processed
             invoke_data = step_data[indexes[i] : indexes[i + 1]]
             pre_function_validate(receiver, invoke_data, sync_step.state)
@@ -161,12 +161,12 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
         assert receiver._last_sync.time_done == last_sync_time_before
 
 
-def plot_sync_setup(seeded_random: random.Random) -> Tuple[Receiver, List[SyncStepData]]:
+def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncStepData]]:
     harvester_connection = get_dummy_connection(NodeType.HARVESTER, bytes32.random(seeded_random))
     receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
 
     # Create example plot data
-    path_list = [str(x) for x in range(0, 40)]
+    path_list = [str(x) for x in range(40)]
     plot_info_list = [
         Plot(
             filename=str(x),
@@ -188,7 +188,7 @@ def plot_sync_setup(seeded_random: random.Random) -> Tuple[Receiver, List[SyncSt
     receiver._total_effective_plot_size = int(
         sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
     )
-    sync_steps: List[SyncStepData] = [
+    sync_steps: list[SyncStepData] = [
         SyncStepData(
             State.idle,
             receiver.sync_started,
@@ -223,7 +223,7 @@ def test_default_values(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_reset(seeded_random: random.Random) -> None:
-    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
+    receiver, _sync_steps = plot_sync_setup(seeded_random=seeded_random)
     connection_before = receiver.connection()
     # Assign some dummy values
     receiver._current_sync.state = State.done
@@ -289,7 +289,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     for state in State:
         await run_sync_step(receiver, sync_steps[state])
 
-        if state != State.idle and state != State.removed and state != State.done:
+        if state not in {State.idle, State.removed, State.done}:
             expected_plot_files_processed += len(sync_steps[state].args[0])
 
         sync_data = receiver.to_dict()["syncing"]

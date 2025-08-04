@@ -1,0 +1,41 @@
+name: Update Mozilla cert.pem Nightly
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  update_cert:
+    name: Update Mozilla cert.pem Nightly
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download latest Mozilla CA cert.pem
+        run: |
+          curl --silent --show-error --location https://curl.se/ca/cacert.pem -o chia/ssl/cacert.pem
+
+      - name: Set up commit signing
+        uses: Chia-Network/actions/commit-sign/gpg@main
+        with:
+          gpg_private_key: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_KEY }}
+          passphrase: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_PASSPHRASE }}
+
+      - name: Create Pull Request if cacert.pem changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Update cacert.pem from Mozilla CA bundle"
+          title: "Update cacert.pem from Mozilla CA bundle"
+          body: "Automated update of cacert.pem from https://curl.se/ca/cacert.pem."
+          branch: update-cacert-pem
+          add-paths: chia/ssl/cacert.pem

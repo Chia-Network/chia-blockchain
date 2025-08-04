@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH
 
-LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 
@@ -40,19 +40,19 @@ class NFTInfo(Streamable):
 
     royalty_puzzle_hash: Optional[bytes32]
     """Puzzle hash where royalty will be sent to"""
-    data_uris: List[str]
+    data_uris: list[str]
     """ A list of content URIs"""
 
     data_hash: bytes
     """Hash of the content"""
 
-    metadata_uris: List[str]
+    metadata_uris: list[str]
     """A list of metadata URIs"""
 
     metadata_hash: bytes
     """Hash of the metadata"""
 
-    license_uris: List[str]
+    license_uris: list[str]
     """A list of license URIs"""
 
     license_hash: bytes
@@ -85,7 +85,7 @@ class NFTInfo(Streamable):
     minter_did: Optional[bytes32] = None
     """DID of the NFT minter"""
 
-    launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
+    launcher_puzhash: bytes32 = SINGLETON_LAUNCHER_PUZZLE_HASH
     """Puzzle hash of the singleton launcher in hex"""
 
     off_chain_metadata: Optional[str] = None

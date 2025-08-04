@@ -1,24 +1,38 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Optional, Tuple
+from collections.abc import Iterator
+from typing import Optional
+
+from chia_puzzles_py.programs import (
+    P2_SINGLETON,
+    P2_SINGLETON_OR_DELAYED_PUZHASH,
+    SINGLETON_TOP_LAYER_V1_1,
+    SINGLETON_TOP_LAYER_V1_1_HASH,
+)
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES,
+)
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
+)
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clsp")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+SINGLETON_MOD = Program.from_bytes(SINGLETON_TOP_LAYER_V1_1)
+SINGLETON_MOD_HASH = bytes32(SINGLETON_TOP_LAYER_V1_1_HASH)
+P2_SINGLETON_MOD = Program.from_bytes(P2_SINGLETON)
+P2_SINGLETON_OR_DELAYED_MOD = Program.from_bytes(P2_SINGLETON_OR_DELAYED_PUZHASH)
+SINGLETON_LAUNCHER = Program.from_bytes(SINGLETON_LAUNCHER_BYTES)
+SINGLETON_LAUNCHER_HASH = bytes32(SINGLETON_LAUNCHER_HASH_BYTES)
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 
@@ -160,7 +174,7 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 
 
-def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, Iterator[Program]]:
+def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, Iterator[Program]]:
     if puzzle.mod == SINGLETON_MOD:
         return True, puzzle.args.as_iter()
     else:
@@ -176,9 +190,9 @@ def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
 def launch_conditions_and_coinsol(
     coin: Coin,
     inner_puzzle: Program,
-    comment: List[Tuple[str, str]],
+    comment: list[tuple[str, str]],
     amount: uint64,
-) -> Tuple[List[Program], CoinSpend]:
+) -> tuple[list[Program], CoinSpend]:
     if (amount % 2) == 0:
         raise ValueError("Coin amount cannot be even. Subtract one mojo.")
 
@@ -309,7 +323,7 @@ def claim_p2_singleton(
     launcher_id: bytes32,
     delay_time: Optional[uint64] = None,
     delay_ph: Optional[bytes32] = None,
-) -> Tuple[Program, Program, CoinSpend]:
+) -> tuple[Program, Program, CoinSpend]:
     assertion = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(p2_singleton_coin.name() + b"$")])
     announcement = Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin.name()])
     if delay_time is None or delay_ph is None:

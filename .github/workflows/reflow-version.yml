@@ -2,7 +2,15 @@ name: identify version
 
 on:
   workflow_call:
+    inputs:
+      release_type:
+        description: "Tagged release testing scenario"
+        required: false
+        type: string
+        default: ""
     outputs:
+      chia-dev-version:
+        value: ${{ jobs.version.outputs.chia-dev-version }}
       chia-installer-version:
         value: ${{ jobs.version.outputs.chia-installer-version }}
       tag-type:
@@ -14,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
       chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
       tag-type: ${{ steps.tag-type.outputs.tag-type }}
 
@@ -40,9 +49,16 @@ jobs:
 
       - name: Create installer version number
         id: version-number
+        # TODO figure out better way to handle versioning
         run: |
           python3 -m venv ../venv
           . ../venv/bin/activate
-          pip install setuptools_scm
-          echo "chia-installer-version=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
+          python -m pip install --upgrade pip
+          pip install poetry "poetry-dynamic-versioning[plugin]"
+
+          VERSION=$(poetry version -s)
+          echo "chia-installer-version=${VERSION}" >> "$GITHUB_OUTPUT"
+          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+          echo "chia-dev-version=${VERSION}-${GIT_SHORT_HASH}" >> "$GITHUB_OUTPUT"
+
           deactivate

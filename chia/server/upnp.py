@@ -3,9 +3,10 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from queue import Queue
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from typing_extensions import Literal
 
@@ -15,8 +16,7 @@ try:
     import miniupnpc
 except ImportError:
     log.info(
-        "importing miniupnpc failed."
-        " This is not required to run chia, it allows incoming connections from other peers."
+        "importing miniupnpc failed. This is not required to run chia, it allows incoming connections from other peers."
     )
     miniupnpc = None
 
@@ -24,13 +24,13 @@ except ImportError:
 @dataclass
 class UPnP:
     _thread: Optional[threading.Thread] = None
-    _queue: Queue[Union[Tuple[Literal["remap", "release"], int], Tuple[Literal["shutdown"]]]] = field(
+    _queue: Queue[Union[tuple[Literal["remap", "release"], int], tuple[Literal["shutdown"]]]] = field(
         default_factory=Queue,
     )
     _upnp: Optional[miniupnpc.UPnP] = None
 
     @contextlib.contextmanager
-    def manage(self, ports: List[int]) -> Iterator[None]:
+    def manage(self, ports: list[int]) -> Iterator[None]:
         self.setup()
         try:
             for port in ports:

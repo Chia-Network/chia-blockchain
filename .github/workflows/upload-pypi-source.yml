@@ -17,8 +17,7 @@ on:
       - "**"
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -27,9 +26,9 @@ permissions:
 
 jobs:
   mypy:
-    name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -44,8 +43,8 @@ jobs:
             matrix: macos
             emoji: 🍎
             runs-on:
-              intel: macos-12
-              arm: [macos, arm64]
+              intel: macos-13
+              arm: macos-13-arm64
           - name: Windows
             matrix: windows
             emoji: 🪟
@@ -53,11 +52,12 @@ jobs:
               intel: windows-latest
         arch:
           - name: ARM64
+            emoji: 💪
             matrix: arm
           - name: Intel
+            emoji: 🌀
             matrix: intel
         python:
-          - major_dot_minor: "3.8"
           - major_dot_minor: "3.9"
           - major_dot_minor: "3.10"
           - major_dot_minor: "3.11"
@@ -69,12 +69,6 @@ jobs:
               python manage-mypy.py build-mypy-ini
               mypy
         exclude:
-          - os:
-              matrix: macos
-            arch:
-              matrix: arm
-            python:
-              major_dot_minor: "3.8"
           - os:
               matrix: windows
             arch:
@@ -109,7 +103,7 @@ jobs:
   check:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -126,16 +120,24 @@ jobs:
         python:
           - major_dot_minor: "3.10"
         check:
-          - name: black
-            command: black --check --diff .
-          - name: flake8
-            command: flake8 benchmarks build_scripts chia tools *.py
-          - name: pylint
-            command: pylint benchmarks build_scripts chia tools *.py
+          - name: ruff
+            command: ruff format --check --diff .
           - name: generated protocol tests
             command: |
               python3 -m chia._tests.util.build_network_protocol_files
               git diff --exit-code
+          - name: poetry
+            command: |
+              .penv/bin/poetry check
+          - name: actionlint
+            command: |
+              bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+              echo ==== shellcheck version
+              shellcheck --version
+              echo ==== actionlint version
+              ./actionlint --version
+              echo ==== running actionlint
+              ./actionlint -color -shellcheck shellcheck
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
@@ -165,11 +167,17 @@ jobs:
 
   upload_source_dist:
     name: Lint and Upload source distribution
-    runs-on: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     needs:
       - mypy
       - check
+    strategy:
+      matrix:
+        python:
+          - major_dot_minor: "3.10"
+        os: [ubuntu-latest]
+
     steps:
       - name: Add safe git directory
         uses: chia-network/actions/git-mark-workspace-safe@main
@@ -183,7 +191,7 @@ jobs:
       - uses: Chia-Network/actions/setup-python@main
         name: Install Python
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python.major_dot_minor }}
 
       - uses: ./.github/actions/install
         with:
@@ -194,7 +202,7 @@ jobs:
 
       - name: Build source distribution
         run: |
-          python -m build --sdist --outdir dist .
+          python -m build --outdir dist .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -3,15 +3,21 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import random
 import time
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, cast
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+import dns.asyncresolver
+from chia_rs.sized_ints import uint16, uint64
+
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.ints import uint64
+from chia.types.peer_info import TimestampedPeerInfo
+from chia.util.task_referencer import create_referenced_task
 
 
 class Introducer:
@@ -29,16 +35,19 @@ class Introducer:
 
         return self._server
 
-    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int):
+    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int, default_port: int, dns_servers: list[str]):
         self.max_peers_to_send = max_peers_to_send
         self.recent_peer_threshold = recent_peer_threshold
+        self.default_port = uint16(default_port)
+        self.dns_servers = dns_servers
+        self.resolver = dns.asyncresolver.Resolver()
         self._shut_down = False
         self._server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        self._vetting_task = asyncio.create_task(self._vetting_loop())
+        self._vetting_task = create_referenced_task(self._vetting_loop())
         try:
             yield
         finally:
@@ -53,7 +62,7 @@ class Introducer:
         # TODO: fill this out?
         pass
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def set_server(self, server: ChiaServer):
@@ -99,13 +108,13 @@ class Introducer:
                         peer.last_attempt = uint64(time.time())
 
                         self.log.info(f"Vetting peer {peer.host} {peer.port}")
-                        r, w = await asyncio.wait_for(
+                        _r, w = await asyncio.wait_for(
                             asyncio.open_connection(peer.host, int(peer.port)),
                             timeout=3,
                         )
                         w.close()
                     except Exception as e:
-                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{str(e)}")
+                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{e!s}")
                         peer.vetted = min(peer.vetted - 1, -1)
 
                         # if we have failed 6 times in a row, remove the peer
@@ -118,3 +127,24 @@ class Introducer:
                     peer.vetted = max(peer.vetted + 1, 1)
             except Exception as e:
                 self.log.error(e)
+
+    async def get_peers_from_dns(self, num_peers: int) -> list[TimestampedPeerInfo]:
+        if len(self.dns_servers) == 0:
+            return []
+
+        peers: list[TimestampedPeerInfo] = []
+        dns_address = random.choice(self.dns_servers)
+        for rdtype in ("A", "AAAA"):
+            result = await self.resolver.resolve(qname=dns_address, rdtype=rdtype, lifetime=30)
+            for ip in result:
+                peers.append(
+                    TimestampedPeerInfo(
+                        ip.to_text(),
+                        self.default_port,
+                        uint64(0),
+                    )
+                )
+            if len(peers) > num_peers:
+                break
+
+        return peers

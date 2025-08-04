@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -18,20 +18,20 @@ usage() {
   echo "${USAGE_TEXT}"
 }
 
-EXTRAS=
+EXTRAS='--extras upnp'
 PLOTTER_INSTALL=
-EDITABLE='-e'
+EDITABLE=1
 
 while getopts adilpsh flag; do
   case "${flag}" in
   # automated
   a) : ;;
   # development
-  d) EXTRAS=${EXTRAS}dev, ;;
+  d) EXTRAS="${EXTRAS} --extras dev" ;;
   # non-editable
-  i) EDITABLE='' ;;
+  i) EDITABLE= ;;
   # legacy keyring
-  l) EXTRAS=${EXTRAS}legacy-keyring, ;;
+  l) EXTRAS="${EXTRAS} --extras legacy-keyring" ;;
   p) PLOTTER_INSTALL=1 ;;
   # simple install
   s) : ;;
@@ -57,11 +57,9 @@ if [ "$(uname -m)" = "armv7l" ]; then
   echo "Exiting."
   exit 1
 fi
-# Get submodules
-git submodule update --init mozilla-ca
 
 # You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
-# e.g. `export INSTALL_PYTHON_VERSION=3.8`
+# e.g. `export INSTALL_PYTHON_VERSION=3.9`
 INSTALL_PYTHON_PATH=
 PYTHON_MAJOR_VER=
 PYTHON_MINOR_VER=
@@ -74,7 +72,7 @@ OPENSSL_VERSION_INT=
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 312 3.12 311 3.11 310 3.10 39 3.9 38 3.8 3; do
+  for V in 312 3.12 311 3.11 310 3.10 39 3.9 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
@@ -138,7 +136,7 @@ if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
 fi
 
 if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "13" ]; then
-  echo "Chia requires Python version >= 3.8 and  < 3.13.0" >&2
+  echo "Chia requires Python version >= 3.9 and  < 3.13.0" >&2
   echo "Current Python version = $INSTALL_PYTHON_VERSION" >&2
   # If Arch, direct to Arch Wiki
   if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
@@ -166,48 +164,40 @@ echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
 if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
   echo "WARNING: OpenSSL versions before 3.0.2, 1.1.1n, or 1.0.2zd are vulnerable to CVE-2022-0778"
   echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
-  echo "We recommend updating to the latest version of OpenSSL available for your OS"
 fi
 
-# If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version
-VENV_CLEAR=""
-if [ -e venv/bin/python ]; then
-  VENV_PYTHON_VER=$(venv/bin/python -V)
-  TARGET_PYTHON_VER=$($INSTALL_PYTHON_PATH -V)
-  if [ "$VENV_PYTHON_VER" != "$TARGET_PYTHON_VER" ]; then
-    echo "existing python version in venv is $VENV_PYTHON_VER while target python version is $TARGET_PYTHON_VER"
-    echo "Refreshing venv modules..."
-    VENV_CLEAR="--clear"
+./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
+
+.penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
+# shellcheck disable=SC2086
+.penv/bin/poetry sync ${EXTRAS}
+
+if [ -e venv ]; then
+  if [ -d venv ] && [ ! -L venv ]; then
+    echo "The 'venv' directory already exists. Please delete it before installing."
+    exit 1
+  elif [ -L venv ]; then
+    ln -sfn .venv venv
   fi
+else
+  ln -s .venv venv
 fi
 
-$INSTALL_PYTHON_PATH -m venv venv $VENV_CLEAR
 if [ ! -f "activate" ]; then
-  ln -s venv/bin/activate .
+  ln -s .venv/bin/activate .
 fi
 
-EXTRAS=${EXTRAS%,}
-if [ -n "${EXTRAS}" ]; then
-  EXTRAS=[${EXTRAS}]
+if [ -z "$EDITABLE" ]; then
+  .venv/bin/python -m pip install --no-deps .
 fi
-
-# shellcheck disable=SC1091
-. ./activate
-# pip 20.x+ supports Linux binary wheels
-python -m pip install --upgrade pip
-python -m pip install wheel
-#if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
-# This remains in case there is a diversion of binary wheels
-python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-python -m pip install ${EDITABLE} ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
-  PREV_VENV="$VIRTUAL_ENV"
-  export VIRTUAL_ENV="venv"
+  # shellcheck disable=SC1091
+  . .venv/bin/activate
   ./install-plotter.sh bladebit
   ./install-plotter.sh madmax
-  export VIRTUAL_ENV="$PREV_VENV"
+  deactivate
   set -e
 fi
 
@@ -217,7 +207,7 @@ echo "For assistance join us on Discord in the #support chat channel:"
 echo "https://discord.gg/chia"
 echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
-echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+echo "https://docs.chia.net/introduction"
 echo ""
 echo "To install the GUI run '. ./activate' then 'sh install-gui.sh'."
 echo ""

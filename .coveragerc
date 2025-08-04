@@ -13,7 +13,7 @@ parallel=True
 [paths]
 source =
   chia/
-  venv/**/site-packages/chia/
+  .venv/**/site-packages/chia/
 
 [report]
 precision = 1

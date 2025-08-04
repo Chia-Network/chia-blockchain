@@ -5,16 +5,16 @@ import random
 from hashlib import sha256
 from itertools import permutations
 from random import Random
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
 
@@ -93,7 +93,7 @@ async def test_merkle_set_duplicate() -> None:
 async def test_merkle_set_0() -> None:
     merkle_set = MerkleSet([])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([]))
-    assert merkle_set.get_root() == bytes32([0] * 32)
+    assert merkle_set.get_root() == bytes32.zeros
 
 
 @pytest.mark.anyio
@@ -155,7 +155,7 @@ async def test_merkle_set_4() -> None:
 
 @pytest.mark.anyio
 async def test_merkle_set_5() -> None:
-    BLANK = bytes32([0] * 32)
+    BLANK = bytes32.zeros
 
     a = bytes32([0x58] + [0] * 31)
     b = bytes32([0x23] + [0] * 31)
@@ -202,7 +202,7 @@ async def test_merkle_set_5() -> None:
 
 @pytest.mark.anyio
 async def test_merkle_left_edge() -> None:
-    BLANK = bytes32([0] * 32)
+    BLANK = bytes32.zeros
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0] * 31 + [1])
     c = bytes32([0] * 31 + [2])
@@ -241,7 +241,7 @@ async def test_merkle_left_edge() -> None:
 
 @pytest.mark.anyio
 async def test_merkle_right_edge() -> None:
-    BLANK = bytes32([0] * 32)
+    BLANK = bytes32.zeros
     a = bytes32([0x40] + [0] * 31)
     b = bytes32([0xFF] * 31 + [0xFF])
     c = bytes32([0xFF] * 31 + [0xFE])
@@ -279,10 +279,7 @@ async def test_merkle_right_edge() -> None:
 
 
 def rand_hash(rng: random.Random) -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = rng.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random(r=rng)
 
 
 @pytest.mark.anyio
@@ -292,7 +289,7 @@ async def test_merkle_set_random_regression() -> None:
     rng.seed(123456)
     for i in range(100):
         size = rng.randint(0, 4000)
-        values: List[bytes32] = [rand_hash(rng) for _ in range(size)]
+        values: list[bytes32] = [rand_hash(rng) for _ in range(size)]
         print(f"iter: {i}/100 size: {size}")
 
         for _ in range(10):
@@ -304,7 +301,7 @@ async def test_merkle_set_random_regression() -> None:
             assert rust_root == python_root
 
 
-def make_test_coins(n: int, rng: Random) -> List[Coin]:
+def make_test_coins(n: int, rng: Random) -> list[Coin]:
     return [Coin(bytes32.random(rng), bytes32.random(rng), uint64(rng.randint(0, 10000000))) for i in range(n)]
 
 
@@ -314,7 +311,7 @@ def test_validate_removals_full_list(num_coins: int, seeded_random: Random) -> N
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    coin_map: List[Tuple[bytes32, Optional[Coin]]] = []
+    coin_map: list[tuple[bytes32, Optional[Coin]]] = []
     removals_merkle_set = MerkleSet([coin.name() for coin in coins])
     for coin in coins:
         coin_map.append((coin.name(), coin))
@@ -330,8 +327,8 @@ def test_validate_additions_full_list(num_coins: int, batch_size: int, seeded_ra
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    additions: List[Tuple[bytes32, List[Coin]]] = []
-    leafs: List[bytes32] = []
+    additions: list[tuple[bytes32, list[Coin]]] = []
+    leafs: list[bytes32] = []
     for coin_batch in to_batches(coins, batch_size):
         puzzle_hash = bytes32.random(seeded_random)
         additions.append((puzzle_hash, coin_batch.entries))

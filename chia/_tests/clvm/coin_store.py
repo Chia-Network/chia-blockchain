@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, Optional
+from typing import Optional
 
-from chia.consensus.constants import ConsensusConstants
+from chia_rs import ConsensusConstants, SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
+from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 MAX_COST = 11000000000
 
@@ -30,8 +32,8 @@ class CoinTimestamp:
 
 class CoinStore:
     def __init__(self, constants: ConsensusConstants, reward_mask: int = 0):
-        self._db: Dict[bytes32, CoinRecord] = dict()
-        self._ph_index: Dict = defaultdict(list)
+        self._db: dict[bytes32, CoinRecord] = dict()
+        self._ph_index: dict = defaultdict(list)
         self._reward_mask = reward_mask
         self._constants = constants
 
@@ -40,7 +42,7 @@ class CoinStore:
         puzzle_hash: bytes32,
         birthday: CoinTimestamp,
         amount: int = 1024,
-        prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),  # noqa
+        prefix=bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000"),
     ) -> Coin:
         parent = bytes32(
             [
@@ -81,7 +83,7 @@ class CoinStore:
                     uint64(now.seconds),
                 )
 
-        err = mempool_check_time_locks(
+        err = check_time_locks(
             ephemeral_db,
             result.conds,
             # TODO: this is technically not right, it's supposed to be the

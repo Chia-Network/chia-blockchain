@@ -6,10 +6,13 @@ import dataclasses
 import functools
 import signal
 import sys
+from collections.abc import AsyncIterator
 from types import FrameType
-from typing import AsyncIterator, List, Optional, final
+from typing import Optional, final
 
 from typing_extensions import Protocol
+
+from chia.util.task_referencer import create_referenced_task
 
 
 class Handler(Protocol):
@@ -33,7 +36,7 @@ class AsyncHandler(Protocol):
 @final
 @dataclasses.dataclass
 class SignalHandlers:
-    tasks: List[asyncio.Task[None]] = dataclasses.field(default_factory=list)
+    tasks: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -58,7 +61,7 @@ class SignalHandlers:
     ) -> None:
         self.remove_done_handlers()
 
-        task = asyncio.create_task(
+        task = create_referenced_task(
             handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
         )
         self.tasks.append(task)

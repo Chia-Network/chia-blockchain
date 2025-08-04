@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs import BlockRecord
 
 from chia._tests.environments.wallet import (
     BalanceCheckingError,
@@ -18,7 +19,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
             "num_environments": 2,
             "config_overrides": {
                 "foo": "bar",  # A config value that never exists
-                "min_mainnet_k_size": 2,  # A config value overriden
+                "min_mainnet_k_size": 2,  # A config value overridden
             },
             "blocks_needed": [1, 0],
         }
@@ -30,7 +31,7 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     env_0: WalletEnvironment = wallet_environments.environments[0]
     env_1: WalletEnvironment = wallet_environments.environments[1]
 
-    assert await env_0.rpc_client.get_logged_in_fingerprint() is not None
+    assert (await env_0.rpc_client.get_logged_in_fingerprint()).fingerprint is not None
     # assert await env_1.rpc_client.get_logged_in_fingerprint() is not None
 
     assert await env_0.xch_wallet.get_confirmed_balance() == 2_000_000_000_000
@@ -43,6 +44,8 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     assert env_0.node.config["min_mainnet_k_size"] == 2
     assert env_0.wallet_state_manager.config["min_mainnet_k_size"] == 2
     assert wallet_environments.full_node.full_node.config["min_mainnet_k_size"] == 2
+
+    assert isinstance(await wallet_environments.full_node_rpc_client.get_block_record_by_height(1), BlockRecord)
 
 
 @pytest.mark.parametrize(

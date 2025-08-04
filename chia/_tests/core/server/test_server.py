@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Tuple, cast
+from typing import Callable, ClassVar, cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint32
 from packaging.version import Version
 
 from chia import __version__
@@ -13,38 +15,37 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_wallet import create_wallet_service
 from chia.server.ws_connection import WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.api_decorators import api_request
 from chia.util.errors import ApiError, Err
-from chia.util.ints import int16, uint32
 
 
 @dataclass
 class TestAPI:
     log: logging.Logger = logging.getLogger(__name__)
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def ready(self) -> bool:
         return True
 
     # API call from FullNodeAPI
-    @api_request()
+    @metadata.request()
     async def request_transaction(self, request: RequestTransaction) -> None:
         raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", b"ab")
 
 
 @pytest.mark.anyio
 async def test_duplicate_client_connection(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
     assert await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
@@ -54,7 +55,7 @@ async def test_duplicate_client_connection(
 @pytest.mark.anyio
 @pytest.mark.parametrize("method", [repr, str])
 async def test_connection_string_conversion(
-    two_nodes_one_block: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    two_nodes_one_block: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     self_hostname: str,
     method: Callable[[object], str],
 ) -> None:
@@ -178,7 +179,7 @@ async def test_error_receive(
 
 @pytest.mark.anyio
 async def test_call_api_of_specific(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
     assert await server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
@@ -193,7 +194,7 @@ async def test_call_api_of_specific(
 
 @pytest.mark.anyio
 async def test_call_api_of_specific_for_missing_peer(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
 

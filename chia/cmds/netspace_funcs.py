@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
+from chia_rs.sized_bytes import bytes32
+
 from chia.cmds.cmds_util import format_bytes, get_any_service_client
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
-async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, start: str) -> None:
+async def netstorge_async(root_path: Path, rpc_port: Optional[int], delta_block_height: str, start: str) -> None:
     """
     Calculates the estimated space on the network given two block header hashes.
     """
-    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         if delta_block_height:
             if start == "":
                 blockchain_state = await client.get_blockchain_state()

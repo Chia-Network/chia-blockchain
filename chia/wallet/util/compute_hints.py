@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Optional
+
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint64
 
 
 @dataclass(frozen=True)
@@ -24,16 +25,16 @@ def compute_spend_hints_and_additions(
     cs: CoinSpend,
     *,
     max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-) -> Tuple[Dict[bytes32, HintedCoin], int]:
-    cost, result_program = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
+) -> tuple[dict[bytes32, HintedCoin], int]:
+    cost, result_program = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
 
-    hinted_coins: Dict[bytes32, HintedCoin] = {}
+    hinted_coins: dict[bytes32, HintedCoin] = {}
     for condition in result_program.as_iter():
         if cost > max_cost:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_spend_hints_and_additions() for CoinSpend")
         atoms = condition.as_iter()
         op = next(atoms).atom
-        if op in [
+        if op in {
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
             ConditionOpcode.AGG_SIG_AMOUNT,
@@ -42,7 +43,7 @@ def compute_spend_hints_and_additions(
             ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
             ConditionOpcode.AGG_SIG_UNSAFE,
             ConditionOpcode.AGG_SIG_ME,
-        ]:
+        }:
             cost += ConditionCost.AGG_SIG.value
             continue
         if op != ConditionOpcode.CREATE_COIN.value:

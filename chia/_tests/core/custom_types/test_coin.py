@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 
 
 def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes):
@@ -65,7 +63,7 @@ def test_serialization():
         (0x7FFFFFFFFFFFFFFF, [0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
     ],
 )
-def test_name(amount: int, clvm: List[int]) -> None:
+def test_name(amount: int, clvm: list[int]) -> None:
     H1 = bytes32(b"a" * 32)
     H2 = bytes32(b"b" * 32)
 

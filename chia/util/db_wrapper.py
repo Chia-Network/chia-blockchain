@@ -1,3 +1,5 @@
+# Package: utils
+
 from __future__ import annotations
 
 import asyncio
@@ -6,10 +8,11 @@ import functools
 import secrets
 import sqlite3
 import sys
+from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, TextIO, Tuple, Type, Union
+from typing import Any, Optional, TextIO, Union
 
 import aiosqlite
 import anyio
@@ -29,8 +32,8 @@ class DBWrapperError(Exception):
 
 
 class ForeignKeyError(DBWrapperError):
-    def __init__(self, violations: Iterable[Union[aiosqlite.Row, Tuple[str, object, str, object]]]) -> None:
-        self.violations: List[Dict[str, object]] = []
+    def __init__(self, violations: Iterable[Union[aiosqlite.Row, tuple[str, object, str, object]]]) -> None:
+        self.violations: list[dict[str, object]] = []
 
         for violation in violations:
             if isinstance(violation, tuple):
@@ -49,6 +52,13 @@ class NestedForeignKeyDelayedRequestError(DBWrapperError):
 
 class InternalError(DBWrapperError):
     pass
+
+
+class PurposefulAbort(DBWrapperError):
+    obj: object
+
+    def __init__(self, obj: object) -> None:
+        self.obj = obj
 
 
 def generate_in_memory_db_uri() -> str:
@@ -71,7 +81,8 @@ async def _create_connection(
     log_file: Optional[TextIO] = None,
     name: Optional[str] = None,
 ) -> aiosqlite.Connection:
-    connection = await aiosqlite.connect(database=database, uri=uri)
+    # To avoid https://github.com/python/cpython/issues/118172
+    connection = await aiosqlite.connect(database=database, uri=uri, cached_statements=0)
 
     if log_file is not None:
         await connection.set_trace_callback(functools.partial(sql_trace_callback, file=log_file, name=name))
@@ -111,8 +122,7 @@ def get_host_parameter_limit() -> int:
     if sys.version_info >= (3, 11):
         connection = sqlite3.connect(":memory:")
 
-        # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
-        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=E1101
+        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
         host_parameter_limit = connection.getlimit(limit_number)
     else:
         # guessing based on defaults, seems you can't query
@@ -136,7 +146,7 @@ class DBWrapper2:
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0
-    _in_use: Dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
+    _in_use: dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
     _current_writer: Optional[asyncio.Task[object]] = None
     _savepoint_name: int = 0
 
@@ -160,7 +170,7 @@ class DBWrapper2:
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
         foreign_keys: Optional[bool] = None,
-        row_factory: Optional[Type[aiosqlite.Row]] = None,
+        row_factory: Optional[type[aiosqlite.Row]] = None,
     ) -> AsyncIterator[DBWrapper2]:
         if foreign_keys is None:
             foreign_keys = False
@@ -217,7 +227,7 @@ class DBWrapper2:
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
         foreign_keys: bool = False,
-        row_factory: Optional[Type[aiosqlite.Row]] = None,
+        row_factory: Optional[type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
         # WARNING: please use .managed() instead
         if log_path is None:
@@ -270,7 +280,7 @@ class DBWrapper2:
         await self._write_connection.execute(f"SAVEPOINT {name}")
         try:
             yield
-        except:  # noqa E722
+        except:
             await self._write_connection.execute(f"ROLLBACK TO {name}")
             raise
         finally:
@@ -304,7 +314,7 @@ class DBWrapper2:
                 #       probably skip the nested foreign key check when exiting since
                 #       we don't have many foreign key errors and so it is likely ok
                 #       to save the extra time checking twice.
-                raise NestedForeignKeyDelayedRequestError()
+                raise NestedForeignKeyDelayedRequestError
             async with self._savepoint_ctx():
                 yield self._write_connection
             return

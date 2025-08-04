@@ -4,13 +4,13 @@ import asyncio
 import logging
 import random
 from dataclasses import dataclass
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 
-from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueFull
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.transaction_queue_entry import TransactionQueueEntry
+from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry, TransactionQueueFull
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ async def test_one_peer_and_await(seeded_random: random.Random) -> None:
             assert list_txs[i - 20] == resulting_txs[i]
 
     # now we validate that the pop command is blocking
-    task = asyncio.create_task(transaction_queue.pop())
+    task = create_referenced_task(transaction_queue.pop())
     with pytest.raises(asyncio.InvalidStateError):  # task is not done, so we expect an error when getting result
         task.result()
     # add a tx to test task completion
@@ -90,7 +90,7 @@ async def test_lots_of_peers(seeded_random: random.Random) -> None:
     num_peers = 1000
     num_txs = 100
     total_txs = num_txs * num_peers
-    peer_ids: List[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
+    peer_ids: list[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
 
     # 100 txs per peer
     list_txs = [get_transaction_queue_entry(peer_id, i) for peer_id in peer_ids for i in range(num_txs)]
@@ -112,7 +112,7 @@ async def test_full_queue(seeded_random: random.Random) -> None:
     num_peers = 100
     num_txs = 1000
     total_txs = num_txs * num_peers
-    peer_ids: List[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
+    peer_ids: list[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
 
     # 999 txs per peer then 1 to fail later
     list_txs = [get_transaction_queue_entry(peer_id, i) for peer_id in peer_ids for i in range(num_txs)]

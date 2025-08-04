@@ -1,25 +1,25 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.cmds.wallet_funcs import print_offer_summary
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 
 TEST_DUCKSAUCE_ASSET_ID = "1000000000000000000000000000000000000000000000000000000000000001"
 TEST_CRUNCHBERRIES_ASSET_ID = "1000000000000000000000000000000000000000000000000000000000000002"
 TEST_UNICORNTEARS_ASSET_ID = "1000000000000000000000000000000000000000000000000000000000000003"
 
-TEST_ASSET_ID_NAME_MAPPING: Dict[bytes32, Tuple[uint32, str]] = {
+TEST_ASSET_ID_NAME_MAPPING: dict[bytes32, tuple[uint32, str]] = {
     bytes32.from_hexstr(TEST_DUCKSAUCE_ASSET_ID): (uint32(2), "DuckSauce"),
     bytes32.from_hexstr(TEST_CRUNCHBERRIES_ASSET_ID): (uint32(3), "CrunchBerries"),
     bytes32.from_hexstr(TEST_UNICORNTEARS_ASSET_ID): (uint32(4), "UnicornTears"),
 }
 
 
-async def cat_name_resolver(asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
+async def cat_name_resolver(asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
     return TEST_ASSET_ID_NAME_MAPPING.get(asset_id)
 
 

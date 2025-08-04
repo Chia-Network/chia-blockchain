@@ -1,0 +1,7 @@
+[virtualenvs]
+in-project = true
+
+[keyring]
+# avoiding silent hangs with no indication
+# https://github.com/python-poetry/poetry/issues/8623
+enabled = false

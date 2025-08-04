@@ -4,10 +4,12 @@ import asyncio
 import logging
 import time
 import traceback
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, Iterable, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
+from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -23,17 +25,17 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.batches import to_batches
-from chia.util.ints import int16, uint32, uint64
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
 
-def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
-    converted: List[Plot] = []
+def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
+    converted: list[Plot] = []
     for plot_info in plot_infos:
         converted.append(
             Plot(
@@ -44,7 +46,7 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
-                time_modified=uint64(int(plot_info.time_modified)),
+                time_modified=uint64(plot_info.time_modified),
                 compression_level=plot_info.prover.get_compression_level(),
             )
         )
@@ -66,11 +68,11 @@ class MessageGenerator(Generic[T]):
     sync_id: uint64
     message_type: ProtocolMessageTypes
     message_id: uint64
-    payload_type: Type[T]
+    payload_type: type[T]
     args: Iterable[object]
 
-    def generate(self) -> Tuple[PlotSyncIdentifier, T]:
-        identifier = PlotSyncIdentifier(uint64(int(time.time())), self.sync_id, self.message_id)
+    def generate(self) -> tuple[PlotSyncIdentifier, T]:
+        identifier = PlotSyncIdentifier(uint64(time.time()), self.sync_id, self.message_id)
         payload = self.payload_type(identifier, *self.args)
         return identifier, payload
 
@@ -93,7 +95,7 @@ class Sender:
     _connection: Optional[WSChiaConnection]
     _sync_id: uint64
     _next_message_id: uint64
-    _messages: List[MessageGenerator[PayloadType]]
+    _messages: list[MessageGenerator[PayloadType]]
     _last_sync_id: uint64
     _stop_requested = False
     _task: Optional[asyncio.Task[None]]
@@ -119,11 +121,11 @@ class Sender:
         if self._task is not None and self._stop_requested:
             await self.await_closed()
         if self._task is None:
-            self._task = asyncio.create_task(self._run())
+            self._task = create_referenced_task(self._run())
             if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:
-            raise AlreadyStartedError()
+            raise AlreadyStartedError
 
     def stop(self) -> None:
         self._stop_requested = True
@@ -161,7 +163,8 @@ class Sender:
     async def _wait_for_response(self) -> bool:
         start = time.time()
         assert self._response is not None
-        while time.time() - start < Constants.message_timeout and self._response.message is None:
+        # TODO: switch to event driven code
+        while time.time() - start < Constants.message_timeout and self._response.message is None:  # noqa: ASYNC110
             await asyncio.sleep(0.1)
         return self._response.message is not None
 
@@ -249,7 +252,7 @@ class Sender:
 
         return True
 
-    def _add_list_batched(self, message_type: ProtocolMessageTypes, payload_type: Any, data: List[Any]) -> None:
+    def _add_list_batched(self, message_type: ProtocolMessageTypes, payload_type: Any, data: list[Any]) -> None:
         if len(data) == 0:
             self._add_message(message_type, payload_type, [], True)
             return
@@ -266,7 +269,7 @@ class Sender:
         sync_id = int(time.time())
         # Make sure we have unique sync-id's even if we restart refreshing within a second (i.e. in tests)
         if sync_id == self._last_sync_id:
-            sync_id = sync_id + 1
+            sync_id += 1
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
         self._add_message(
@@ -274,17 +277,17 @@ class Sender:
             PlotSyncStart,
             initial,
             self._last_sync_id,
-            uint32(int(count)),
+            uint32(count),
             self._harvesting_mode,
         )
 
-    def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
+    def process_batch(self, loaded: list[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
             converted = _convert_plot_info_list(loaded)
             self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
 
-    def sync_done(self, removed: List[Path], duration: float) -> None:
+    def sync_done(self, removed: list[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
         removed_list = [str(x) for x in removed]
         self._add_list_batched(

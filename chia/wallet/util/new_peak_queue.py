@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from enum import IntEnum
-from typing import Any, List
+from typing import Any
+
+from chia_rs.sized_bytes import bytes32
 
 from chia.protocols.wallet_protocol import CoinStateUpdate, NewPeakWallet
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 class NewPeakQueueTypes(IntEnum):
@@ -57,11 +58,11 @@ class NewPeakQueue:
         self._inner_queue: asyncio.PriorityQueue = inner_queue
         self._pending_data_process_items: int = 0
 
-    async def subscribe_to_coin_ids(self, coin_ids: List[bytes32]):
+    async def subscribe_to_coin_ids(self, coin_ids: list[bytes32]):
         self._pending_data_process_items += 1
         await self._inner_queue.put(NewPeakItem(NewPeakQueueTypes.COIN_ID_SUBSCRIPTION, coin_ids))
 
-    async def subscribe_to_puzzle_hashes(self, puzzle_hashes: List[bytes32]):
+    async def subscribe_to_puzzle_hashes(self, puzzle_hashes: list[bytes32]):
         self._pending_data_process_items += 1
         await self._inner_queue.put(NewPeakItem(NewPeakQueueTypes.PUZZLE_HASH_SUBSCRIPTION, puzzle_hashes))
 

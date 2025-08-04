@@ -2,36 +2,40 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
-from chia_rs import AugSchemeMPL
+from chia_rs import (
+    AugSchemeMPL,
+    BlockRecord,
+    ChallengeChainSubSlot,
+    ConsensusConstants,
+    EndOfSubSlotBundle,
+    HeaderBlock,
+    RewardChainSubSlot,
+    SubSlotProofs,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
+from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge, prev_tx_block
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
-    calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
+    validate_pospace_and_get_required_iters,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -39,15 +43,14 @@ log = logging.getLogger(__name__)
 # noinspection PyCallByClass
 def validate_unfinished_header_block(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
-    expected_difficulty: uint64,
-    expected_sub_slot_iters: uint64,
+    expected_vs: ValidationState,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
@@ -59,6 +62,15 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation must be set to True. This will skip validation of end of slots, sub-epochs,
     and lead to other small tweaks in validation.
     """
+
+    # some of the checks numbers may be out of order this is because all
+    # checks need to be valid regardless of order and the numbers are reflecting the numbers as written in the chia docs
+
+    # 6. check signage point index
+    # no need to check negative values as this is uint 8
+    if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
     # 1. Check that the previous block exists in the blockchain, or that it is correct
 
     prev_b = blocks.try_block_record(header_block.prev_header_hash)
@@ -68,7 +80,7 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        if final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters):
+        if final_eos_is_already_included(header_block, blocks, expected_vs.ssi):
             skip_overflow_last_ss_validation = False
             finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
         else:
@@ -82,8 +94,8 @@ def validate_unfinished_header_block(
     can_finish_epoch: bool = False
     if genesis_block:
         height: uint32 = uint32(0)
-        assert expected_difficulty == constants.DIFFICULTY_STARTING
-        assert expected_sub_slot_iters == constants.SUB_SLOT_ITERS_STARTING
+        assert expected_vs.difficulty == constants.DIFFICULTY_STARTING
+        assert expected_vs.ssi == constants.SUB_SLOT_ITERS_STARTING
     else:
         assert prev_b is not None
         height = uint32(prev_b.height + 1)
@@ -95,6 +107,7 @@ def validate_unfinished_header_block(
                 prev_b.prev_hash,
                 prev_b.deficit,
                 prev_b.sub_epoch_summary_included is not None,
+                prev_ses_block=expected_vs.prev_ses_block,
             )
         else:
             can_finish_se = False
@@ -259,9 +272,9 @@ def validate_unfinished_header_block(
 
             if can_finish_epoch and sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 # 2m. Check new difficulty and ssi
-                if sub_slot.challenge_chain.new_sub_slot_iters != expected_sub_slot_iters:
+                if sub_slot.challenge_chain.new_sub_slot_iters != expected_vs.ssi:
                     return None, ValidationError(Err.INVALID_NEW_SUB_SLOT_ITERS)
-                if sub_slot.challenge_chain.new_difficulty != expected_difficulty:
+                if sub_slot.challenge_chain.new_difficulty != expected_vs.difficulty:
                     return None, ValidationError(Err.INVALID_NEW_DIFFICULTY)
             else:
                 # 2n. Check new difficulty and ssi are None if we don't finish epoch
@@ -280,7 +293,7 @@ def validate_unfinished_header_block(
                     ),
                 )
 
-            eos_vdf_iters: uint64 = expected_sub_slot_iters
+            eos_vdf_iters: uint64 = expected_vs.ssi
             cc_start_element: ClassgroupElement = ClassgroupElement.get_default_element()
             cc_eos_vdf_challenge: bytes32 = challenge_hash
             if genesis_block:
@@ -335,7 +348,7 @@ def validate_unfinished_header_block(
                 if finished_sub_slot_n == 0:
                     cc_eos_vdf_info_iters = prev_b.sub_slot_iters
                 else:
-                    cc_eos_vdf_info_iters = expected_sub_slot_iters
+                    cc_eos_vdf_info_iters = expected_vs.ssi
             # Check that the modified data is correct
             if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
                 number_of_iterations=cc_eos_vdf_info_iters
@@ -420,8 +433,9 @@ def validate_unfinished_header_block(
                         blocks,
                         height,
                         blocks.block_record(prev_b.prev_hash),
-                        expected_difficulty if can_finish_epoch else None,
-                        expected_sub_slot_iters if can_finish_epoch else None,
+                        expected_vs.difficulty if can_finish_epoch else None,
+                        expected_vs.ssi if can_finish_epoch else None,
+                        expected_vs.prev_ses_block,
                     )
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
@@ -485,28 +499,21 @@ def validate_unfinished_header_block(
     else:
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
-        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=height
+    required_iters = validate_pospace_and_get_required_iters(
+        constants,
+        header_block.reward_chain_block.proof_of_space,
+        challenge,
+        cc_sp_hash,
+        height,
+        expected_vs.difficulty,
+        expected_vs.ssi,
+        prev_tx_block(blocks, prev_b),
     )
-    if q_str is None:
+    if required_iters is None:
         return None, ValidationError(Err.INVALID_POSPACE)
 
-    # 6. check signage point index
-    # no need to check negative values as this is uint 8
-    if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
-        return None, ValidationError(Err.INVALID_SP_INDEX)
-
-    # Note that required iters might be from the previous slot (if we are in an overflow block)
-    required_iters: uint64 = calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        header_block.reward_chain_block.proof_of_space.size,
-        expected_difficulty,
-        cc_sp_hash,
-    )
-
     # 7. check required iters
-    if required_iters >= calculate_sp_interval_iters(constants, expected_sub_slot_iters):
+    if required_iters >= calculate_sp_interval_iters(constants, expected_vs.ssi):
         return None, ValidationError(Err.INVALID_REQUIRED_ITERS)
 
     # 8a. check signage point index 0 has no cc sp
@@ -523,13 +530,13 @@ def validate_unfinished_header_block(
 
     sp_iters: uint64 = calculate_sp_iters(
         constants,
-        expected_sub_slot_iters,
+        expected_vs.ssi,
         header_block.reward_chain_block.signage_point_index,
     )
 
     ip_iters: uint64 = calculate_ip_iters(
         constants,
-        expected_sub_slot_iters,
+        expected_vs.ssi,
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
@@ -545,7 +552,7 @@ def validate_unfinished_header_block(
 
     # 10. Check total iters
     if genesis_block:
-        total_iters: uint128 = uint128(expected_sub_slot_iters * finished_sub_slots_since_prev)
+        total_iters: uint128 = uint128(expected_vs.ssi * finished_sub_slots_since_prev)
     else:
         assert prev_b is not None
         if new_sub_slot:
@@ -553,7 +560,7 @@ def validate_unfinished_header_block(
             # Add the rest of the slot of prev_b
             total_iters = uint128(total_iters + prev_b.sub_slot_iters - prev_b.ip_iters(constants))
             # Add other empty slots
-            total_iters = uint128(total_iters + (expected_sub_slot_iters * (finished_sub_slots_since_prev - 1)))
+            total_iters = uint128(total_iters + (expected_vs.ssi * (finished_sub_slots_since_prev - 1)))
         else:
             # Slot iters is guaranteed to be the same for header_block and prev_b
             # This takes the beginning of the slot, and adds ip_iters
@@ -568,20 +575,20 @@ def validate_unfinished_header_block(
             ),
         )
 
-    sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_sub_slot_iters if overflow else 0))
+    sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_vs.ssi if overflow else 0))
     if overflow and skip_overflow_last_ss_validation:
         dummy_vdf_info = VDFInfo(
-            bytes32([0] * 32),
+            bytes32.zeros,
             uint64(1),
             ClassgroupElement.get_default_element(),
         )
         dummy_sub_slot = EndOfSubSlotBundle(
             ChallengeChainSubSlot(dummy_vdf_info, None, None, None, None),
             None,
-            RewardChainSubSlot(dummy_vdf_info, bytes32([0] * 32), None, uint8(0)),
+            RewardChainSubSlot(dummy_vdf_info, bytes32.zeros, None, uint8(0)),
             SubSlotProofs(VDFProof(uint8(0), b"", False), None, VDFProof(uint8(0), b"", False)),
         )
-        sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]
+        sub_slots_to_pass_in = [*header_block.finished_sub_slots, dummy_sub_slot]
     else:
         sub_slots_to_pass_in = header_block.finished_sub_slots
     (
@@ -699,7 +706,7 @@ def validate_unfinished_header_block(
 
         # The first block to have an sp > the last tx block's infusion iters, is a tx block
         if overflow:
-            our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - expected_sub_slot_iters)
+            our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - expected_vs.ssi)
         else:
             our_sp_total_iters = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage.foliage_transaction_block_hash is not None):
@@ -823,18 +830,17 @@ def validate_unfinished_header_block(
             assert prev_transaction_b.timestamp is not None
             if header_block.foliage_transaction_block.timestamp <= prev_transaction_b.timestamp:
                 return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
-    return required_iters, None  # Valid unfinished header block
+    return required_iters, None
 
 
 def validate_finished_header_block(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     header_block: HeaderBlock,
     check_filter: bool,
-    expected_difficulty: uint64,
-    expected_sub_slot_iters: uint64,
+    expected_vs: ValidationState,
     check_sub_epoch_summary: bool = True,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
@@ -854,8 +860,7 @@ def validate_finished_header_block(
         blocks,
         unfinished_header_block,
         check_filter,
-        expected_difficulty,
-        expected_sub_slot_iters,
+        expected_vs,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
     )
@@ -875,7 +880,7 @@ def validate_finished_header_block(
 
     ip_iters: uint64 = calculate_ip_iters(
         constants,
-        expected_sub_slot_iters,
+        expected_vs.ssi,
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
@@ -886,8 +891,8 @@ def validate_finished_header_block(
             return None, ValidationError(Err.INVALID_HEIGHT)
 
         # 28. Check weight
-        if header_block.weight != prev_b.weight + expected_difficulty:
-            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_difficulty}")
+        if header_block.weight != prev_b.weight + expected_vs.difficulty:
+            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_vs.difficulty}")
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
         # 27b. Check genesis block height, weight, and prev block hash

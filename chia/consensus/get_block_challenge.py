@@ -1,24 +1,21 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Union
+from typing import Optional, Union
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
 
 def final_eos_is_already_included(
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     sub_slot_iters: uint64,
 ) -> bool:
     """
@@ -56,7 +53,7 @@ def final_eos_is_already_included(
 def get_block_challenge(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     genesis_block: bool,
     overflow: bool,
     skip_overflow_last_ss_validation: bool,
@@ -89,7 +86,7 @@ def get_block_challenge(
                     challenges_to_look_for = 2
             else:
                 challenges_to_look_for = 1
-            reversed_challenge_hashes: List[bytes32] = []
+            reversed_challenge_hashes: list[bytes32] = []
             curr: BlockRecord = blocks.block_record(header_block.prev_header_hash)
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
@@ -104,3 +101,30 @@ def get_block_challenge(
                 curr = blocks.block_record(curr.prev_hash)
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     return challenge
+
+
+def prev_tx_block(
+    blocks: BlockRecordsProtocol,
+    prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]],
+) -> uint32:
+    # todo add check to make sure we dont return tx block from same sp as block we are validating
+    if prev_b is None:
+        return uint32(0)
+    if isinstance(prev_b, BlockRecord):
+        if prev_b.prev_transaction_block_hash is not None:
+            return prev_b.height
+        else:
+            curr = prev_b
+    elif isinstance(prev_b, FullBlock):
+        if prev_b.foliage_transaction_block is not None:
+            return prev_b.height
+        else:
+            curr = blocks.block_record(prev_b.header_hash)
+    elif isinstance(prev_b, HeaderBlock):
+        if prev_b.foliage_transaction_block is not None:
+            return prev_b.height
+        else:
+            curr = blocks.block_record(prev_b.header_hash)
+    while curr.is_transaction_block is False and curr.height > 0:
+        curr = blocks.block_record(curr.prev_hash)
+    return curr.height

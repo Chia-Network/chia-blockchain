@@ -5,19 +5,23 @@ import contextlib
 import copy
 import enum
 import json
+import logging
 import os
 import random
 import sqlite3
 import sys
 import time
+from collections.abc import AsyncIterator
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import anyio
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -38,6 +42,8 @@ from chia.cmds.data_funcs import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
+from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
 from chia.data_layer.data_layer_util import (
     HashOnlyProof,
     OfferStore,
@@ -49,33 +55,32 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
+from chia.server.aliases import DataLayerService, WalletService
 from chia.server.start_data_layer import create_data_layer_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.aliases import DataLayerService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import DLLatestSingleton
+from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 pytestmark = pytest.mark.data_layer
-nodes = Tuple[WalletNode, FullNodeSimulator]
-nodes_with_port_bt_ph = Tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
-wallet_and_port_tuple = Tuple[WalletNode, uint16]
-two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
+nodes = tuple[WalletNode, FullNodeSimulator]
+nodes_with_port_bt_ph = tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
+wallet_and_port_tuple = tuple[WalletNode, uint16]
+two_wallets_with_port = tuple[tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
 
 
 class InterfaceLayer(enum.Enum):
@@ -94,6 +99,7 @@ async def init_data_layer_service(
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
     enable_batch_autoinsert: bool = True,
+    group_files_by_store: bool = False,
 ) -> AsyncIterator[DataLayerService]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -103,6 +109,7 @@ async def init_data_layer_service(
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["manage_data_interval"] = 5
     config["data_layer"]["enable_batch_autoinsert"] = enable_batch_autoinsert
+    config["data_layer"]["group_files_by_store"] = group_files_by_store
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
@@ -124,9 +131,17 @@ async def init_data_layer(
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
+    group_files_by_store: bool = False,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, maximum_full_file_count
+        wallet_rpc_port,
+        bt,
+        db_path,
+        wallet_service,
+        manage_data_interval,
+        maximum_full_file_count,
+        True,
+        group_files_by_store,
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
@@ -147,7 +162,8 @@ async def init_wallet_and_node(
     wallet_node = wallet_service._node
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
@@ -165,7 +181,7 @@ async def farm_block_check_singleton(
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(10, check_singleton_confirmed, True, data_layer, store_id)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet, timeout=10)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet, timeout=20)
 
 
 async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
@@ -200,7 +216,7 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
 
 
 async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
-    return await dl.wallet_rpc.dl_latest_singleton(store_id, True) is not None
+    return (await dl.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton is not None
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
@@ -250,10 +266,10 @@ async def test_create_insert_get(
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
@@ -308,7 +324,7 @@ async def test_create_insert_get(
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        assert wallet_root["hash"] == bytes32([0] * 32)
+        assert wallet_root["hash"] == bytes32.zeros
         assert local_root["hash"] is None
 
         # test empty changelist
@@ -329,7 +345,7 @@ async def test_upsert(
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [
+        changelist: list[dict[str, str]] = [
             {"action": "delete", "key": key.hex()},
             {"action": "insert", "key": key.hex(), "value": value.hex()},
         ]
@@ -358,11 +374,11 @@ async def test_create_double_insert(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -396,11 +412,11 @@ async def test_keys_values_ancestors(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -471,17 +487,17 @@ async def test_get_roots(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id1 = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id1, wallet=wallet_rpc_api.service)
 
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id2 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id2 = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id2, wallet=wallet_rpc_api.service)
 
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -493,7 +509,7 @@ async def test_get_roots(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
-        assert roots["root_hashes"][1]["hash"] == bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] == bytes32.zeros
         assert roots["root_hashes"][1]["confirmed"] is True
         assert roots["root_hashes"][1]["timestamp"] > 0
         key4 = b"d"
@@ -508,7 +524,7 @@ async def test_get_roots(
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
         assert roots["root_hashes"][1]["hash"] is not None
-        assert roots["root_hashes"][1]["hash"] != bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] != bytes32.zeros
         assert roots["root_hashes"][1]["confirmed"] is True
         assert roots["root_hashes"][1]["timestamp"] > 0
 
@@ -524,11 +540,11 @@ async def test_get_root_history(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id1 = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id1, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -540,10 +556,10 @@ async def test_get_root_history(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         history1 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
         assert len(history1["root_history"]) == 2
-        assert history1["root_history"][0]["root_hash"] == bytes32([0] * 32)
+        assert history1["root_history"][0]["root_hash"] == bytes32.zeros
         assert history1["root_history"][0]["confirmed"] is True
         assert history1["root_history"][0]["timestamp"] > 0
-        assert history1["root_history"][1]["root_hash"] != bytes32([0] * 32)
+        assert history1["root_history"][1]["root_hash"] != bytes32.zeros
         assert history1["root_history"][1]["confirmed"] is True
         assert history1["root_history"][1]["timestamp"] > 0
         key4 = b"d"
@@ -557,7 +573,7 @@ async def test_get_root_history(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         history2 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
         assert len(history2["root_history"]) == 3
-        assert history2["root_history"][0]["root_hash"] == bytes32([0] * 32)
+        assert history2["root_history"][0]["root_hash"] == bytes32.zeros
         assert history2["root_history"][0]["confirmed"] is True
         assert history2["root_history"][0]["timestamp"] > 0
         assert history2["root_history"][1]["root_hash"] == history1["root_history"][1]["root_hash"]
@@ -578,11 +594,11 @@ async def test_get_kv_diff(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id1 = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id1, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -596,7 +612,7 @@ async def test_get_kv_diff(
         diff_res = await data_rpc_api.get_kv_diff(
             {
                 "id": store_id1.hex(),
-                "hash_1": bytes32([0] * 32).hex(),
+                "hash_1": bytes32.zeros.hex(),
                 "hash_2": history["root_history"][1]["root_hash"].hex(),
             }
         )
@@ -645,12 +661,12 @@ async def test_batch_update_matches_single_operations(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -676,7 +692,7 @@ async def test_batch_update_matches_single_operations(
 
         root_1 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         expected_res_hash = root_1["root_hashes"][0]["hash"]
-        assert expected_res_hash != bytes32([0] * 32)
+        assert expected_res_hash != bytes32.zeros
 
         changelist = [{"action": "delete", "key": key_2.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
@@ -690,7 +706,7 @@ async def test_batch_update_matches_single_operations(
 
         root_2 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         hash_2 = root_2["root_hashes"][0]["hash"]
-        assert hash_2 == bytes32([0] * 32)
+        assert hash_2 == bytes32.zeros
 
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         changelist.append({"action": "insert", "key": key_2.hex(), "value": value_2.hex()})
@@ -717,8 +733,9 @@ async def test_get_owned_stores(
     wallet_rpc_port = wallet_service.rpc_server.listen_port
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
-    for i in range(0, num_blocks):
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
+    for i in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
@@ -736,7 +753,7 @@ async def test_get_owned_stores(
             expected_store_ids.append(launcher_id)
 
         await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
-        for i in range(0, num_blocks):
+        for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.5)
 
@@ -813,7 +830,7 @@ async def offer_setup_fixture(
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     enable_batch_autoinsertion_settings = getattr(request, "param", (True, True))
     full_node_api = full_node_service._api
-    wallets: List[Wallet] = []
+    wallets: list[Wallet] = []
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None
@@ -825,7 +842,7 @@ async def offer_setup_fixture(
         await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet, timeout=60)
 
     async with contextlib.AsyncExitStack() as exit_stack:
-        store_setups: List[StoreSetup] = []
+        store_setups: list[StoreSetup] = []
         for enable_batch_autoinsert, wallet_service in zip(enable_batch_autoinsertion_settings, wallet_services):
             assert wallet_service.rpc_server is not None
             port = wallet_service.rpc_server.listen_port
@@ -855,7 +872,7 @@ async def offer_setup_fixture(
                 StoreSetup(
                     api=data_rpc_api,
                     id=bytes32.from_hexstr(create_response["id"]),
-                    original_hash=bytes32([0] * 32),
+                    original_hash=bytes32.zeros,
                     data_layer=data_layer,
                     data_rpc_client=data_rpc_client,
                 )
@@ -917,7 +934,7 @@ async def offer_setup_fixture(
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
     if count > 0:
-        setups: Tuple[Tuple[StoreSetup, bytes], Tuple[StoreSetup, bytes]] = (
+        setups: tuple[tuple[StoreSetup, bytes], tuple[StoreSetup, bytes]] = (
             (offer_setup.maker, b"\x01"),
             (offer_setup.taker, b"\x02"),
         )
@@ -1003,11 +1020,11 @@ async def process_for_data_layer_keys(
 @dataclass(frozen=True)
 class MakeAndTakeReference:
     entries_to_insert: int
-    make_offer_response: Dict[str, Any]
-    maker_inclusions: List[Dict[str, Any]]
-    maker_root_history: List[bytes32]
-    taker_inclusions: List[Dict[str, Any]]
-    taker_root_history: List[bytes32]
+    make_offer_response: dict[str, Any]
+    maker_inclusions: list[dict[str, Any]]
+    maker_root_history: list[bytes32]
+    taker_inclusions: list[dict[str, Any]]
+    taker_root_history: list[bytes32]
     trade_id: str
 
 
@@ -1638,13 +1655,13 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     assert [generation["confirmed"] for generation in maker_history] == [True] * len(maker_history)
     assert [generation["root_hash"] for generation in maker_history] == [
-        bytes32([0] * 32),
+        bytes32.zeros,
         *reference.maker_root_history,
     ]
 
     assert [generation["confirmed"] for generation in taker_history] == [True] * len(taker_history)
     assert [generation["root_hash"] for generation in taker_history] == [
-        bytes32([0] * 32),
+        bytes32.zeros,
         *reference.taker_root_history,
     ]
 
@@ -1741,7 +1758,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
                 "inclusions": reference.maker_inclusions,
             },
             {
-                "store_id": bytes32([0] * 32).hex(),
+                "store_id": bytes32.zeros.hex(),
                 "inclusions": [],
             },
         ],
@@ -1993,7 +2010,7 @@ async def test_get_sync_status(
 
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -2042,7 +2059,7 @@ async def test_clear_pending_roots(
     layer: InterfaceLayer,
     bt: BlockTools,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
@@ -2082,7 +2099,7 @@ async def test_clear_pending_roots(
                 root_path=bt.root_path,
             )
         elif layer == InterfaceLayer.cli:
-            args: List[str] = [
+            args: list[str] = [
                 sys.executable,
                 "-m",
                 "chia",
@@ -2113,17 +2130,13 @@ async def test_clear_pending_roots(
                 # https://github.com/python/cpython/issues/92841
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 cleared_root = await client.clear_pending_roots(store_id=store_id)
-            finally:
-                client.close()
-                await client.await_closed()
         else:
             assert False, "unhandled parametrization"
 
@@ -2135,7 +2148,7 @@ async def test_clear_pending_roots(
 async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    wallet_rpc_api, full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
 
@@ -2183,17 +2196,20 @@ async def test_issue_15955_deadlock(
         while time.monotonic() < end:
             with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
-                    *(asyncio.create_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
+                    *(create_referenced_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
                 )
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     maximum_full_file_count: int,
+    group_files_by_store: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2205,10 +2221,11 @@ async def test_maximum_full_file_count(
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
         maximum_full_file_count=maximum_full_file_count,
+        group_files_by_store=group_files_by_store,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
-        root_hashes: List[bytes32] = []
+        root_hashes: list[bytes32] = []
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
@@ -2223,23 +2240,49 @@ async def test_maximum_full_file_count(
             await asyncio.sleep(manage_data_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
-            with os.scandir(data_layer.server_files_location) as entries:
+            expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
+            server_files_location = (
+                data_layer.server_files_location.joinpath(f"{store_id}")
+                if group_files_by_store
+                else data_layer.server_files_location
+            )
+            with os.scandir(server_files_location) as entries:
                 filenames = {entry.name for entry in entries}
-                expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
-
                 assert len(filenames) == expected_files_count
+            for generation, hash in enumerate(root_hashes):
+                delta_path = get_delta_filename_path(
+                    data_layer.server_files_location,
+                    store_id,
+                    hash,
+                    generation + 1,
+                    group_files_by_store,
+                )
+                assert delta_path.exists()
+                full_file_path = get_full_tree_filename_path(
+                    data_layer.server_files_location,
+                    store_id,
+                    hash,
+                    generation + 1,
+                    group_files_by_store,
+                )
+                if generation + 1 > batch_count - maximum_full_file_count:
+                    assert full_file_path.exists()
+                else:
+                    assert not full_file_path.exists()
 
-                for generation, hash in enumerate(root_hashes):
-                    filename = get_delta_filename(store_id, hash, generation + 1)
-                    assert filename in filenames
-                    filename = get_full_tree_filename(store_id, hash, generation + 1)
-                    if generation + 1 > batch_count - maximum_full_file_count:
-                        assert filename in filenames
-                    else:
-                        assert filename not in filenames
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_unsubscribe_unknown(
+    bare_data_layer_api: DataLayerRpcApi,
+    seeded_random: random.Random,
+) -> None:
+    with pytest.raises(RuntimeError, match="No subscription found for the given store_id."):
+        await bare_data_layer_api.unsubscribe(request={"id": bytes32.random(seeded_random).hex(), "retain": False})
 
 
 @pytest.mark.parametrize("retain", [True, False])
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_unsubscribe_removes_files(
@@ -2247,6 +2290,7 @@ async def test_unsubscribe_removes_files(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     retain: bool,
+    group_files_by_store: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2258,14 +2302,17 @@ async def test_unsubscribe_removes_files(
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
         maximum_full_file_count=100,
+        group_files_by_store=group_files_by_store,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
-        root_hashes: List[bytes32] = []
+        root_hashes: list[bytes32] = []
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
+        # subscribe to ourselves
+        await data_rpc_api.subscribe(request={"id": store_id.hex()})
         update_count = 10
         for batch_count in range(update_count):
             key = batch_count.to_bytes(2, "big")
@@ -2278,18 +2325,37 @@ async def test_unsubscribe_removes_files(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
-        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        store_path = (
+            data_layer.server_files_location.joinpath(f"{store_id}")
+            if group_files_by_store
+            else data_layer.server_files_location
+        )
+        filenames = {path.name for path in store_path.iterdir()}
         assert len(filenames) == 2 * update_count
         for generation, hash in enumerate(root_hashes):
-            assert get_delta_filename(store_id, hash, generation + 1) in filenames
-            assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
+            path = get_delta_filename_path(
+                data_layer.server_files_location,
+                store_id,
+                hash,
+                generation + 1,
+                group_files_by_store,
+            )
+            assert path.exists()
+            path = get_full_tree_filename_path(
+                data_layer.server_files_location,
+                store_id,
+                hash,
+                generation + 1,
+                group_files_by_store,
+            )
+            assert path.exists()
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
 
         # wait for unsubscribe to be processed
         await asyncio.sleep(manage_data_interval * 3)
 
-        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        filenames = {path.name for path in store_path.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
 
 
@@ -2301,7 +2367,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     layer: InterfaceLayer,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
@@ -2327,17 +2393,13 @@ async def test_wallet_log_in_changes_active_fingerprint(
         if layer == InterfaceLayer.direct:
             await data_rpc_api.wallet_log_in({"fingerprint": secondary_fingerprint})
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 await client.wallet_log_in(fingerprint=secondary_fingerprint)
-            finally:
-                client.close()
-                await client.await_closed()
         elif layer == InterfaceLayer.funcs:
             await wallet_log_in_cmd(rpc_port=rpc_port, fingerprint=secondary_fingerprint, root_path=bt.root_path)
         elif layer == InterfaceLayer.cli:
@@ -2371,7 +2433,7 @@ async def test_mirrors(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         urls = ["http://127.0.0.1/8000", "http://127.0.0.1/8001"]
@@ -2398,8 +2460,8 @@ async def test_mirrors(
 @dataclass(frozen=True)
 class ProofReference:
     entries_to_insert: int
-    keys_to_prove: List[str]
-    verify_proof_response: Dict[str, Any]
+    keys_to_prove: list[str]
+    verify_proof_response: dict[str, Any]
 
 
 def populate_reference(count: int, keys_to_prove: int) -> ProofReference:
@@ -2466,7 +2528,7 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
         taker=StoreSetup(
             api=offer_setup.taker.api,
             id=offer_setup.taker.id,
-            original_hash=bytes32([0] * 32),
+            original_hash=bytes32.zeros,
             data_layer=offer_setup.taker.data_layer,
             data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
@@ -2548,7 +2610,7 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     assert verify == reference.verify_proof_response
 
     # test InterfaceLayer.cli
-    key_args: List[str] = []
+    key_args: list[str] = []
     for key in reference.keys_to_prove:
         key_args.append("--key")
         key_args.append(key)
@@ -2596,7 +2658,7 @@ async def test_dl_proof_errors(
         fakeroot = bytes32([4] * 32)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         with pytest.raises(ValueError, match="no root"):
@@ -2605,7 +2667,7 @@ async def test_dl_proof_errors(
         with pytest.raises(Exception, match="No generations found"):
             await data_rpc_api.get_proof(request={"store_id": store_id.hex(), "keys": [b"4".hex()]})
 
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": b"a".hex(), "value": b"\x00\x01".hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": b"a".hex(), "value": b"\x00\x01".hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -2677,7 +2739,7 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
 
     key = b"a"
     value = b"\x00\x01"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+    changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
     await offer_setup.maker.api.batch_update({"id": offer_setup.maker.id.hex(), "changelist": changelist})
 
     await process_for_data_layer_keys(
@@ -2705,13 +2767,13 @@ async def test_pagination_rpcs(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         key1 = b"aa"
         value1 = b"\x01\x02"
         key1_hash = key_hash(key1)
         leaf_hash1 = leaf_hash(key1, value1)
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"ba"
         value2 = b"\x03\x02"
         key2_hash = key_hash(key2)
@@ -2971,7 +3033,7 @@ async def test_pagination_cmds(
 
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         key = b"aa"
@@ -2988,7 +3050,7 @@ async def test_pagination_cmds(
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        hash_1 = bytes32([0] * 32)
+        hash_1 = bytes32.zeros
         hash_2 = local_root["hash"]
         # `InterfaceLayer.direct` is not tested here since test `test_pagination_rpcs` extensively use it.
         if layer == InterfaceLayer.funcs:
@@ -3022,8 +3084,8 @@ async def test_pagination_cmds(
             )
         elif layer == InterfaceLayer.cli:
             for command in ("get_keys", "get_keys_values", "get_kv_diff"):
-                if command == "get_keys" or command == "get_keys_values":
-                    args: List[str] = [
+                if command in {"get_keys", "get_keys_values"}:
+                    args: list[str] = [
                         sys.executable,
                         "-m",
                         "chia",
@@ -3081,13 +3143,12 @@ async def test_pagination_cmds(
                     # https://github.com/python/cpython/issues/92841
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 keys = await client.get_keys(
                     store_id=store_id,
                     root_hash=None,
@@ -3107,9 +3168,6 @@ async def test_pagination_cmds(
                     page=0,
                     max_page_size=max_page_size,
                 )
-            finally:
-                client.close()
-                await client.await_closed()
         else:
             assert False, "unhandled parametrization"
         if max_page_size is None or max_page_size == 100:
@@ -3207,12 +3265,12 @@ async def test_unsubmitted_batch_update(
         res = await data_rpc_api.create_data_store({})
         assert res is not None
 
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         to_insert = [(b"a", b"\x00\x01"), (b"b", b"\x00\x02"), (b"c", b"\x00\x03")]
         for key, value in to_insert:
-            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
 
             if layer == InterfaceLayer.direct:
                 res = await data_rpc_api.batch_update(
@@ -3231,7 +3289,7 @@ async def test_unsubmitted_batch_update(
                 )
                 assert res == {"success": True}
             elif layer == InterfaceLayer.cli:
-                args: List[str] = [
+                args: list[str] = [
                     sys.executable,
                     "-m",
                     "chia",
@@ -3265,13 +3323,12 @@ async def test_unsubmitted_batch_update(
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
                 assert res == {"success": True}
             elif layer == InterfaceLayer.client:
-                client = await DataLayerRpcClient.create(
+                async with DataLayerRpcClient.create_as_context(
                     self_hostname=self_hostname,
                     port=rpc_port,
                     root_path=bt.root_path,
                     net_config=bt.config,
-                )
-                try:
+                ) as client:
                     res = await client.update_data_store(
                         store_id=store_id,
                         changelist=changelist,
@@ -3279,9 +3336,6 @@ async def test_unsubmitted_batch_update(
                         submit_on_chain=False,
                     )
                     assert res == {"success": True}
-                finally:
-                    client.close()
-                    await client.await_closed()
             else:
                 assert False, "unhandled parametrization"
 
@@ -3408,18 +3462,14 @@ async def test_unsubmitted_batch_update(
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 res = await client.submit_pending_root(store_id=store_id, fee=None)
                 update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
-            finally:
-                client.close()
-                await client.await_closed()
         else:
             assert False, "unhandled parametrization"
 
@@ -3471,7 +3521,7 @@ async def test_multistore_update(
         data_store = data_layer.data_store
         data_rpc_api = DataLayerRpcApi(data_layer)
 
-        store_ids: List[bytes32] = []
+        store_ids: list[bytes32] = []
         store_ids_count = 5
 
         for _ in range(store_ids_count):
@@ -3481,10 +3531,10 @@ async def test_multistore_update(
             await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
             store_ids.append(store_id)
 
-        store_updates: List[Dict[str, Any]] = []
+        store_updates: list[dict[str, Any]] = []
         key_offset = 1000
         for index, store_id in enumerate(store_ids):
-            changelist: List[Dict[str, str]] = []
+            changelist: list[dict[str, str]] = []
             key = index.to_bytes(2, "big")
             value = index.to_bytes(2, "big")
             changelist.append({"action": "insert", "key": key.hex(), "value": value.hex()})
@@ -3661,7 +3711,7 @@ async def test_unsubmitted_batch_db_migration(
             res = await data_rpc_api.create_data_store({})
             assert res is not None
 
-            store_id = bytes32(hexstr_to_bytes(res["id"]))
+            store_id = bytes32.from_hexstr(res["id"])
             await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
             m.setattr("chia.data_layer.data_layer_util.Status", OldStatus)
@@ -3670,7 +3720,7 @@ async def test_unsubmitted_batch_db_migration(
 
             key = b"0000"
             value = b"0000"
-            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec0 = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -3712,3 +3762,90 @@ async def test_unsubmitted_batch_db_migration(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         keys = await data_rpc_api.get_keys({"id": store_id.hex()})
         assert keys == {"keys": ["0x30303031", "0x30303030"]}
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@boolean_datacases(name="auto_subscribe_to_local_stores", false="do not auto subscribe", true="auto subscribe")
+@pytest.mark.anyio
+async def test_auto_subscribe_to_local_stores(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    auto_subscribe_to_local_stores: bool,
+) -> None:
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    fake_store = bytes32([1] * 32)
+
+    async def mock_get_store_ids(self: Any) -> set[bytes32]:
+        return {fake_store}
+
+    async def mock_dl_track_new(self: Any, request: dict[str, Any]) -> dict[str, Any]:
+        # ignore and just return empty response
+        return {}
+
+    with monkeypatch.context() as m:
+        m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+
+        config = bt.config
+        config["data_layer"]["auto_subscribe_to_local_stores"] = auto_subscribe_to_local_stores
+        bt.change_config(new_config=config)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=manage_data_interval,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            data_rpc_api = DataLayerRpcApi(data_layer)
+
+            await asyncio.sleep(manage_data_interval)
+
+            response = await data_rpc_api.subscriptions(request={})
+
+            if auto_subscribe_to_local_stores:
+                assert fake_store.hex() in response["store_ids"]
+            else:
+                assert fake_store.hex() not in response["store_ids"]
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_local_store_exception(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    fake_store = bytes32([1] * 32)
+
+    async def mock_get_store_ids(self: Any) -> set[bytes32]:
+        return {fake_store}
+
+    with monkeypatch.context() as m, caplog.at_level(logging.INFO):
+        m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
+
+        config = bt.config
+        config["data_layer"]["auto_subscribe_to_local_stores"] = True
+        bt.change_config(new_config=config)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=manage_data_interval,
+            maximum_full_file_count=100,
+        ):
+            await asyncio.sleep(manage_data_interval)
+
+            assert f"Can't subscribe to local store {fake_store.hex()}:" in caplog.text

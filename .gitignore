@@ -41,12 +41,16 @@ build_scripts/build
 
 # pyenv
 .python-version
+.penv*/
+.venv*/
 venv*/
+venv*
 activate
 
 # Editors
 .vscode
 .idea
+.vs
 
 # Packaging
 chia-blockchain.tar.gz

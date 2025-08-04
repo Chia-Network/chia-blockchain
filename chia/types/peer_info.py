@@ -4,8 +4,9 @@ import ipaddress
 from dataclasses import dataclass
 from typing import Union
 
-from chia.util.ints import uint16, uint64
-from chia.util.network import IPAddress
+from chia_rs.sized_ints import uint16, uint64
+
+from chia.util.ip_address import IPAddress
 from chia.util.streamable import Streamable, streamable
 
 

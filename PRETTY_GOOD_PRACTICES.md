@@ -115,7 +115,6 @@ def use_open_directly(path: Path):
         return file.read()
 ```
 
-
 ### Context managers for single use scenarios
 
 Even when no reuse is necessary there are still reasons to use context managers.
@@ -146,12 +145,10 @@ def f(x, y, z):
             z.process(x, y)
 ```
 
-
 ### Examples
 
 - https://github.com/Chia-Network/chia-blockchain/pull/11467
 - https://github.com/Chia-Network/chia-blockchain/pull/10166
-
 
 ## Classes
 
@@ -200,7 +197,7 @@ How about a couple examples.
 ```python
 import json
 from dataclasses import dataclass
-from typing import Type, TypeVar
+from typing import TypeVar
 
 
 _T_Coin = TypeVar("_T_Coin", bound="Coin")
@@ -284,7 +281,6 @@ If it is hard to deal with the knock on complaints from mypy triggered by the hi
 ### Basic hints
 
 ```python
-from typing import List
 
 def sum_bigger_values(values: List[int], minimum: int) -> int:
     return sum(value for value in values if value > minimum)
@@ -398,7 +394,7 @@ bother_waterfowl(fowl=Goose(), aggressiveness=3)
 
 When hinting based on a Protocol there can often be unexpected complexities.
 Consider passing in an instance of a class with an attribute hinted `str` while the protocol hints it as `Union[str, int]`.
-It is common to expect that `str` satisfies `Union[str, int]` and to be throughly confused by mypy's complaint that it does not.
+It is common to expect that `str` satisfies `Union[str, int]` and to be thoroughly confused by mypy's complaint that it does not.
 The hazard here is that since the function receiving the object thinks the attribute can be either a `str` or an `int` it may decide to assign an `int` to it.
 The protocol says this is ok.
 A good solution for many cases is to hint that attribute as being read only on the protocol.
@@ -436,7 +432,6 @@ class ThreeIntAdder(Protocol):
 
 Another option for additional expressivity around hinting a callable with a protocol is to use overloads to narrow the possible combinations of calls.
 It is often better to just avoid overload situations, but as we retrofit hints to existing code we may prefer this option sometimes.
-
 
 ### Type variables
 
@@ -501,7 +496,7 @@ Without writing an implementation, let's see what part of a cache leveraging gen
 
 ```python
 from dataclasses import dataclass, field
-from typing import Dict, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 KT = TypeVar("KT")
 VT = TypeVar("VT")
@@ -617,8 +612,10 @@ class SomeWallet:
 
 ## Tests
 
-- Do not import `test_*` modules.  Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
-- Do not import fixtures.  Fixtures are shared by locating them in `conftest.py` files at whatever directory layer you want them to be recursively available from.
+- Do not import `test_*` modules.
+  Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
+- Do not import fixtures.
+  Fixtures are shared by locating them in `conftest.py` files at whatever directory layer you want them to be recursively available from.
 - Do not use test classes.
   `unittest` requires that tests be held in a class.
   pytest does not.
@@ -647,7 +644,7 @@ class SomeWallet:
 
 ## Idioms
 
-- Avoid use of non-booleans as booleans such as `if the_list:`.  If you mean `if len(the_list) > 0:` write that, if you mean `if an_optional_thing is not None:` write that.
+- Avoid use of non-booleans as booleans such as `if the_list:`. If you mean `if len(the_list) > 0:` write that, if you mean `if an_optional_thing is not None:` write that.
 
 ## Exceptions
 
@@ -664,7 +661,6 @@ Consider that if you have made a typo such as `pint("something")` (note the `r` 
 You want the code to fail quickly and clearly with a `NameError`, not silently continue on to doing other things as if some miscellaneous network connection error occurred, for example.
 This is why linters discourage bare `except:` and overly broad `except Exception:` clauses.
 Especially don't `except BaseException:` as that can consume even shutdown requests.
-
 
 ```python
 from datetime import datetime

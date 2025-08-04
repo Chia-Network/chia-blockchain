@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import contextlib
 import os
-import pickle
+import pickle  # noqa: S403  # TODO: use explicit serialization instead of pickle
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator, List, Optional, Tuple
+from typing import Optional
 
+from chia_rs import ConsensusConstants, FullBlock
+from chia_rs.sized_ints import uint64
+
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -19,12 +22,14 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 @contextlib.asynccontextmanager
 async def create_blockchain(
     constants: ConsensusConstants, db_version: int
-) -> AsyncIterator[Tuple[Blockchain, DBWrapper2]]:
+) -> AsyncIterator[tuple[Blockchain, DBWrapper2]]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)
         store = await BlockStore.create(wrapper)
-        bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True)
+        path = Path(".")
+        height_map = await BlockHeightMap.create(path, wrapper)
+        bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper
@@ -43,11 +48,11 @@ def persistent_blocks(
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
-    block_list_input: Optional[List[FullBlock]] = None,
+    block_list_input: Optional[list[FullBlock]] = None,
     time_per_block: Optional[float] = None,
     dummy_block_references: bool = False,
     include_transactions: bool = False,
-) -> List[FullBlock]:
+) -> list[FullBlock]:
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     if block_list_input is None:
@@ -65,12 +70,14 @@ def persistent_blocks(
         print(f"File found at: {file_path}")
         try:
             bytes_list = file_path.read_bytes()
-            block_bytes_list: List[bytes] = pickle.loads(bytes_list)
-            blocks: List[FullBlock] = []
+            # TODO: use explicit serialization instead of pickle
+            block_bytes_list: list[bytes] = pickle.loads(bytes_list)  # noqa: S301
+            blocks: list[FullBlock] = []
             for block_bytes in block_bytes_list:
                 blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
             if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
+
                 return blocks
         except EOFError:
             print("\n error reading db file")
@@ -101,7 +108,7 @@ def new_test_db(
     seed: bytes,
     empty_sub_slots: int,
     bt: BlockTools,
-    block_list_input: List[FullBlock],
+    block_list_input: list[FullBlock],
     time_per_block: Optional[float],
     *,
     normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
@@ -110,9 +117,9 @@ def new_test_db(
     normalized_to_identity_cc_ip: bool = False,  # CC_IP
     dummy_block_references: bool = False,
     include_transactions: bool = False,
-) -> List[FullBlock]:
+) -> list[FullBlock]:
     print(f"create {path} with {num_of_blocks} blocks with ")
-    blocks: List[FullBlock] = bt.get_consecutive_blocks(
+    blocks: list[FullBlock] = bt.get_consecutive_blocks(
         num_of_blocks,
         block_list_input=block_list_input,
         time_per_block=time_per_block,
@@ -124,8 +131,9 @@ def new_test_db(
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
         dummy_block_references=dummy_block_references,
         include_transactions=include_transactions,
+        genesis_timestamp=uint64(1234567890),
     )
-    block_bytes_list: List[bytes] = []
+    block_bytes_list: list[bytes] = []
     for block in blocks:
         block_bytes_list.append(bytes(block))
     bytes_fn = pickle.dumps(block_bytes_list)

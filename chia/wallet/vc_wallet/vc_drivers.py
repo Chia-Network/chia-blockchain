@@ -1,18 +1,38 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import Any, Optional
+
+from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
+from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
+from chia_puzzles_py.programs import COVENANT_LAYER_HASH as COVENANT_LAYER_HASH_BYTES
+from chia_puzzles_py.programs import EML_COVENANT_MORPHER as EML_COVENANT_MORPHER_BYTES
+from chia_puzzles_py.programs import EML_COVENANT_MORPHER_HASH as EML_COVENANT_MORPHER_HASH_BYTES
+from chia_puzzles_py.programs import EML_TRANSFER_PROGRAM_COVENANT_ADAPTER as EML_TP_COVENANT_ADAPTER_BYTES
+from chia_puzzles_py.programs import EML_TRANSFER_PROGRAM_COVENANT_ADAPTER_HASH as EML_TP_COVENANT_ADAPTER_HASH_BYTES
+from chia_puzzles_py.programs import EML_UPDATE_METADATA_WITH_DID as EML_DID_TP_BYTES
+from chia_puzzles_py.programs import EXIGENT_METADATA_LAYER as EXIGENT_METADATA_LAYER_BYTES
+from chia_puzzles_py.programs import EXIGENT_METADATA_LAYER_HASH as EXIGENT_METADATA_LAYER_HASH_BYTES
+from chia_puzzles_py.programs import P2_ANNOUNCED_DELEGATED_PUZZLE as P2_ANNOUNCED_DELEGATED_PUZZLE_BYTES
+from chia_puzzles_py.programs import P2_ANNOUNCED_DELEGATED_PUZZLE_HASH as P2_ANNOUNCED_DELEGATED_PUZZLE_HASH_BYTES
+from chia_puzzles_py.programs import REVOCATION_LAYER as REVOCATION_LAYER_BYTES
+from chia_puzzles_py.programs import REVOCATION_LAYER_HASH as REVOCATION_LAYER_HASH_BYTES
+from chia_puzzles_py.programs import STANDARD_VC_REVOCATION_PUZZLE as STANDARD_VC_REVOCATION_PUZZLE_BYTES
+from chia_puzzles_py.programs import STD_PARENT_MORPHER as STD_PARENT_MORPHER_BYTES
+from chia_puzzles_py.programs import STD_PARENT_MORPHER_HASH as STD_PARENT_MORPHER_HASH_BYTES
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
+from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, CreatePuzzleAnnouncement
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
     SINGLETON_LAUNCHER_HASH,
@@ -23,69 +43,35 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     solution_for_singleton,
 )
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.util.compute_additions import compute_additions
 
 # Mods
-EXTIGENT_METADATA_LAYER = load_clvm_maybe_recompile(
-    "exigent_metadata_layer.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-)
-P2_ANNOUNCED_DELEGATED_PUZZLE: Program = load_clvm_maybe_recompile(
-    "p2_announced_delegated_puzzle.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-)
-COVENANT_LAYER: Program = load_clvm_maybe_recompile(
-    "covenant_layer.clsp", package_or_requirement="chia.wallet.vc_wallet.vc_puzzles", include_standard_libraries=True
-)
-STD_COVENANT_PARENT_MORPHER: Program = load_clvm_maybe_recompile(
-    "std_parent_morpher.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-)
-EML_TP_COVENANT_ADAPTER: Program = load_clvm_maybe_recompile(
-    "eml_transfer_program_covenant_adapter.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-)
-EML_DID_TP: Program = load_clvm_maybe_recompile(
-    "eml_update_metadata_with_DID.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-)
-EXTIGENT_METADATA_LAYER_COVENANT_MORPHER: Program = load_clvm_maybe_recompile(
-    "eml_covenant_morpher.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-)
-VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
-    "viral_backdoor.clsp", package_or_requirement="chia.wallet.vc_wallet.vc_puzzles", include_standard_libraries=True
-)
-# (mod (METADATA conditions . solution) (if solution solution (list METADATA () ())))
-# (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
-ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
-
+EXTIGENT_METADATA_LAYER = Program.from_bytes(EXIGENT_METADATA_LAYER_BYTES)
+P2_ANNOUNCED_DELEGATED_PUZZLE: Program = Program.from_bytes(P2_ANNOUNCED_DELEGATED_PUZZLE_BYTES)
+COVENANT_LAYER: Program = Program.from_bytes(COVENANT_LAYER_BYTES)
+STD_COVENANT_PARENT_MORPHER: Program = Program.from_bytes(STD_PARENT_MORPHER_BYTES)
+EML_TP_COVENANT_ADAPTER: Program = Program.from_bytes(EML_TP_COVENANT_ADAPTER_BYTES)
+EML_DID_TP: Program = Program.from_bytes(EML_DID_TP_BYTES)
+EXTIGENT_METADATA_LAYER_COVENANT_MORPHER: Program = Program.from_bytes(EML_COVENANT_MORPHER_BYTES)
+REVOCATION_LAYER: Program = Program.from_bytes(REVOCATION_LAYER_BYTES)
+ACS_TRANSFER_PROGRAM: Program = Program.from_bytes(ACS_TRANSFER_PROGRAM_BYTES)
 
 # Hashes
-EXTIGENT_METADATA_LAYER_HASH = EXTIGENT_METADATA_LAYER.get_tree_hash()
-P2_ANNOUNCED_DELEGATED_PUZZLE_HASH: bytes32 = P2_ANNOUNCED_DELEGATED_PUZZLE.get_tree_hash()
-COVENANT_LAYER_HASH: bytes32 = COVENANT_LAYER.get_tree_hash()
-STD_COVENANT_PARENT_MORPHER_HASH: bytes32 = STD_COVENANT_PARENT_MORPHER.get_tree_hash()
-EML_TP_COVENANT_ADAPTER_HASH: bytes32 = EML_TP_COVENANT_ADAPTER.get_tree_hash()
-EXTIGENT_METADATA_LAYER_COVENANT_MORPHER_HASH: bytes32 = EXTIGENT_METADATA_LAYER_COVENANT_MORPHER.get_tree_hash()
-VIRAL_BACKDOOR_HASH: bytes32 = VIRAL_BACKDOOR.get_tree_hash()
+EXTIGENT_METADATA_LAYER_HASH = bytes32(EXIGENT_METADATA_LAYER_HASH_BYTES)
+P2_ANNOUNCED_DELEGATED_PUZZLE_HASH: bytes32 = bytes32(P2_ANNOUNCED_DELEGATED_PUZZLE_HASH_BYTES)
+COVENANT_LAYER_HASH: bytes32 = bytes32(COVENANT_LAYER_HASH_BYTES)
+STD_COVENANT_PARENT_MORPHER_HASH: bytes32 = bytes32(STD_PARENT_MORPHER_HASH_BYTES)
+EML_TP_COVENANT_ADAPTER_HASH: bytes32 = bytes32(EML_TP_COVENANT_ADAPTER_HASH_BYTES)
+EXTIGENT_METADATA_LAYER_COVENANT_MORPHER_HASH: bytes32 = bytes32(EML_COVENANT_MORPHER_HASH_BYTES)
+REVOCATION_LAYER_HASH: bytes32 = bytes32(REVOCATION_LAYER_HASH_BYTES)
 
 
 # Standard brick puzzle uses the mods above
-STANDARD_BRICK_PUZZLE: Program = load_clvm_maybe_recompile(
-    "standard_vc_backdoor_puzzle.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.vc_puzzles",
-    include_standard_libraries=True,
-).curry(
+STANDARD_BRICK_PUZZLE: Program = Program.from_bytes(STANDARD_VC_REVOCATION_PUZZLE_BYTES).curry(
     SINGLETON_MOD_HASH,
     Program.to(SINGLETON_LAUNCHER_HASH).get_tree_hash(),
     EXTIGENT_METADATA_LAYER_HASH,
-    VIRAL_BACKDOOR_HASH,
+    REVOCATION_LAYER_HASH,
     ACS_TRANSFER_PROGRAM.get_tree_hash(),
 )
 STANDARD_BRICK_PUZZLE_HASH: bytes32 = STANDARD_BRICK_PUZZLE.get_tree_hash()
@@ -103,7 +89,7 @@ def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program,
     )
 
 
-def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, Program, Program]]:
+def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, Program, Program]]:
     if uncurried_puzzle.mod == COVENANT_LAYER:
         return (
             bytes32(uncurried_puzzle.args.at("f").as_atom()),
@@ -166,7 +152,7 @@ def create_did_tp(
 EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
 
 
-def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
+def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[()]]:
     if uncurried_puzzle.mod == EML_DID_TP:
         return ()
     else:
@@ -190,22 +176,22 @@ def solve_did_tp(
 ##############################
 # P2 Puzzle or Hidden Puzzle #
 ##############################
-def create_viral_backdoor(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes32) -> Program:
-    return VIRAL_BACKDOOR.curry(
-        VIRAL_BACKDOOR_HASH,
+def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes32) -> Program:
+    return REVOCATION_LAYER.curry(
+        REVOCATION_LAYER_HASH,
         hidden_puzzle_hash,
         inner_puzzle_hash,
     )
 
 
-def match_viral_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, bytes32]]:
-    if uncurried_puzzle.mod == VIRAL_BACKDOOR:
+def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, bytes32]]:
+    if uncurried_puzzle.mod == REVOCATION_LAYER:
         return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
     else:
         return None  # pragma: no cover
 
 
-def solve_viral_backdoor(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
+def solve_revocation_layer(puzzle_reveal: Program, inner_solution: Program, hidden: bool = False) -> Program:
     solution: Program = Program.to(
         [
             hidden,
@@ -306,7 +292,6 @@ OWNERSHIP_LAYER_LAUNCHER_HASH = OWNERSHIP_LAYER_LAUNCHER.get_tree_hash()
 ########################
 # Verified Credentials #
 ########################
-_T_VerifiedCredential = TypeVar("_T_VerifiedCredential", bound="VerifiedCredential")
 
 
 @streamable
@@ -328,14 +313,14 @@ class VerifiedCredential(Streamable):
 
     @classmethod
     def launch(
-        cls: Type[_T_VerifiedCredential],
-        origin_coins: List[Coin],
+        cls,
+        origin_coins: list[Coin],
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
-        memos: List[bytes32],
+        memos: list[bytes32],
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[List[Program], List[CoinSpend], _T_VerifiedCredential]:
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> tuple[list[Program], list[CoinSpend], Self]:
         """
         Launch a VC.
 
@@ -371,7 +356,7 @@ class VerifiedCredential(Streamable):
                 inner_transfer_program,
             )
         )
-        wrapped_inner_puzzle_hash: bytes32 = create_viral_backdoor(
+        wrapped_inner_puzzle_hash: bytes32 = create_revocation_layer(
             STANDARD_BRICK_PUZZLE_HASH,
             new_inner_puzzle_hash,
         ).get_tree_hash()
@@ -414,7 +399,7 @@ class VerifiedCredential(Streamable):
         )
 
         primary_dpuz: Program = Program.to((1, create_launcher_conditions))
-        additional_dpuzs: List[Program] = [Program.to((1, [[61, second_launcher_announcement_hash]]))]
+        additional_dpuzs: list[Program] = [Program.to((1, [[61, second_launcher_announcement_hash]]))]
         return (
             [primary_dpuz, *additional_dpuzs],
             [
@@ -485,7 +470,7 @@ class VerifiedCredential(Streamable):
         )
 
     def wrap_inner_with_backdoor(self) -> Program:
-        return create_viral_backdoor(
+        return create_revocation_layer(
             self.hidden_puzzle().get_tree_hash(),
             self.inner_puzzle_hash,
         )
@@ -496,7 +481,7 @@ class VerifiedCredential(Streamable):
     ####################################################################################################################
 
     @staticmethod
-    def is_vc(puzzle_reveal: UncurriedPuzzle) -> Tuple[bool, str]:
+    def is_vc(puzzle_reveal: UncurriedPuzzle) -> tuple[bool, str]:
         """
         This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a VC and an error
         message for if the puzzle is a mismatch. Returns True for VC launcher spends.
@@ -543,7 +528,7 @@ class VerifiedCredential(Streamable):
 
         # ...and layer below EML
         layer_below_eml: UncurriedPuzzle = uncurry_puzzle(layer_below_singleton.args.at("rrrrf"))
-        if layer_below_eml.mod != VIRAL_BACKDOOR:
+        if layer_below_eml.mod != REVOCATION_LAYER:
             return False, "VC did not have a provider backdoor"  # pragma: no cover
         hidden_puzzle_hash = bytes32(layer_below_eml.args.at("rf").as_atom())
         if hidden_puzzle_hash != STANDARD_BRICK_PUZZLE_HASH:
@@ -555,7 +540,7 @@ class VerifiedCredential(Streamable):
         return True, ""
 
     @classmethod
-    def get_next_from_coin_spend(cls: Type[_T_VerifiedCredential], parent_spend: CoinSpend) -> _T_VerifiedCredential:
+    def get_next_from_coin_spend(cls, parent_spend: CoinSpend) -> Self:
         """
         Given a coin spend, this will return the next VC that was create as an output of that spend. This is the main
         method to use when syncing. If a spend has been identified as having a VC puzzle reveal, running this method
@@ -566,10 +551,9 @@ class VerifiedCredential(Streamable):
 
         # BEGIN CODE
         parent_coin: Coin = parent_spend.coin
-        puzzle: Program = parent_spend.puzzle_reveal.to_program()
-        solution: Program = parent_spend.solution.to_program()
+        solution = Program.from_serialized(parent_spend.solution)
 
-        singleton: UncurriedPuzzle = uncurry_puzzle(puzzle)
+        singleton: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
         launcher_id: bytes32 = bytes32(singleton.args.at("frf").as_atom())
         layer_below_singleton: Program = singleton.args.at("rf")
         singleton_lineage_proof: LineageProof = LineageProof(
@@ -586,7 +570,7 @@ class VerifiedCredential(Streamable):
             dpuz: Program = solution.at("rrf").at("f").at("f")
             dsol: Program = solution.at("rrf").at("f").at("rf")
 
-            conditions: List[Program] = list(dpuz.run(dsol).as_iter())
+            conditions: list[Program] = list(dpuz.run(dsol).as_iter())
             remark_condition: Program = next(c for c in conditions if c.at("f").as_int() == 1)
             inner_puzzle_hash = bytes32(remark_condition.at("rf").as_atom())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
@@ -617,7 +601,7 @@ class VerifiedCredential(Streamable):
             parent_proof_hash: bytes32 = metadata_layer.args.at("rf").get_tree_hash()
             eml_lineage_proof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info,
-                inner_puzzle_hash=create_viral_backdoor(
+                inner_puzzle_hash=create_revocation_layer(
                     STANDARD_BRICK_PUZZLE_HASH,
                     bytes32(uncurry_puzzle(metadata_layer.args.at("rrrrf")).args.at("rrf").as_atom()),
                 ).get_tree_hash(),
@@ -625,7 +609,7 @@ class VerifiedCredential(Streamable):
                 parent_proof_hash=None if parent_proof_hash == Program.to(None) else parent_proof_hash,
             )
 
-        new_vc: _T_VerifiedCredential = cls(
+        new_vc: Self = cls(
             coin,
             singleton_lineage_proof,
             eml_lineage_proof,
@@ -708,7 +692,7 @@ class VerifiedCredential(Streamable):
         inner_solution: Program,
         new_proof_hash: Optional[bytes32] = None,
         new_proof_provider: Optional[bytes32] = None,
-    ) -> Tuple[Optional[CreatePuzzleAnnouncement], CoinSpend, VerifiedCredential]:
+    ) -> tuple[Optional[CreatePuzzleAnnouncement], CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
         Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
@@ -721,7 +705,7 @@ class VerifiedCredential(Streamable):
             uint64(self.coin.amount),
             Program.to(
                 [  # solve EML
-                    solve_viral_backdoor(
+                    solve_revocation_layer(
                         inner_puzzle,
                         inner_solution,
                     ),
@@ -761,7 +745,7 @@ class VerifiedCredential(Streamable):
 
     def activate_backdoor(
         self, provider_innerpuzhash: bytes32, announcement_nonce: Optional[bytes32] = None
-    ) -> Tuple[CreatePuzzleAnnouncement, CoinSpend]:
+    ) -> tuple[CreatePuzzleAnnouncement, CoinSpend]:
         """
         Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
 
@@ -774,7 +758,7 @@ class VerifiedCredential(Streamable):
             uint64(self.coin.amount),
             Program.to(
                 [  # solve EML
-                    solve_viral_backdoor(
+                    solve_revocation_layer(
                         self.hidden_puzzle(),
                         solve_std_vc_backdoor(
                             self.launcher_id,
@@ -811,7 +795,7 @@ class VerifiedCredential(Streamable):
         Private method that creates the next VC class instance.
         """
         slightly_incomplete_vc: VerifiedCredential = VerifiedCredential(
-            Coin(self.coin.name(), bytes32([0] * 32), next_amount),
+            Coin(self.coin.name(), bytes32.zeros, next_amount),
             LineageProof(
                 self.coin.parent_coin_info,
                 self.construct_exigent_metadata_layer().get_tree_hash(),
@@ -837,3 +821,42 @@ class VerifiedCredential(Streamable):
                 slightly_incomplete_vc.coin.amount,
             ),
         )
+
+
+# This class is sort of unparadigmatic as an outer puzzle.
+# It lives somewhere between outer puzzle and inner puzzle, but the most convenient
+# way to present it in this wallet is as an outer puzzle.
+# This may lead to some peculiarities if use cases are to be expanded beyond simply using this
+# inside of a CAT.
+@dataclass(frozen=True)
+class RevocationOuterPuzzle:
+    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+        args = match_revocation_layer(puzzle)
+        if args is None:
+            return None
+        hidden_puzzle_hash, _ = args
+        constructor_dict: dict[str, Any] = {
+            "type": "revocation layer",
+            "hidden_puzzle_hash": "0x" + hidden_puzzle_hash.hex(),
+        }
+        return PuzzleInfo(constructor_dict)
+
+    def get_inner_puzzle(
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+    ) -> Optional[Program]:
+        if solution is None:
+            raise ValueError("Cannot get_inner_puzzle of revocation layer without solution")
+
+        return solution.at("rf")
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+        return solution.at("rrf")
+
+    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+        return bytes32(constructor["hidden_puzzle_hash"])
+
+    def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
+        return create_revocation_layer(constructor["hidden_puzzle_hash"], inner_puzzle.get_tree_hash())
+
+    def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
+        return solve_revocation_layer(inner_puzzle, inner_solution)  # deliberately no support for hidden puzzle spends

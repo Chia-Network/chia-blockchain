@@ -4,14 +4,16 @@ from __future__ import annotations
 import copy
 import dataclasses
 import functools
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 
-compose_rate_limits_cache: Dict[int, Dict[str, Any]] = {}
+compose_rate_limits_cache: dict[int, dict[str, Any]] = {}
 
 
+# this class is used to configure the *rate* limit for a message type. The
+# limits are counts and size per 60 seconds.
 @dataclasses.dataclass(frozen=True)
 class RLSettings:
     frequency: int  # Max request per time period (ie 1 min)
@@ -19,7 +21,15 @@ class RLSettings:
     max_total_size: Optional[int] = None  # Max cumulative size of all requests in that period
 
 
-def get_rate_limits_to_use(our_capabilities: List[Capability], peer_capabilities: List[Capability]) -> Dict[str, Any]:
+# this class is used to indicate that a message type is not subject to a rate
+# limit, but just a per-message size limit. This may be appropriate for response
+# messages that are implicitly limited by their corresponding request message
+@dataclasses.dataclass(frozen=True)
+class Unlimited:
+    max_size: int  # Max size of each request
+
+
+def get_rate_limits_to_use(our_capabilities: list[Capability], peer_capabilities: list[Capability]) -> dict[str, Any]:
     # This will use the newest possible rate limits that both peers support. At this time there are only two
     # options, v1 and v2.
 
@@ -35,14 +45,14 @@ def get_rate_limits_to_use(our_capabilities: List[Capability], peer_capabilities
         return rate_limits[1]
 
 
-def compose_rate_limits(old_rate_limits: Dict[str, Any], new_rate_limits: Dict[str, Any]) -> Dict[str, Any]:
+def compose_rate_limits(old_rate_limits: dict[str, Any], new_rate_limits: dict[str, Any]) -> dict[str, Any]:
     # Composes two rate limits dicts, so that the newer values override the older values
-    final_rate_limits: Dict[str, Any] = copy.deepcopy(new_rate_limits)
-    categories: List[str] = ["rate_limits_tx", "rate_limits_other"]
-    all_new_msgs_lists: List[List[ProtocolMessageTypes]] = [
+    final_rate_limits: dict[str, Any] = copy.deepcopy(new_rate_limits)
+    categories: list[str] = ["rate_limits_tx", "rate_limits_other"]
+    all_new_msgs_lists: list[list[ProtocolMessageTypes]] = [
         list(new_rate_limits[category].keys()) for category in categories
     ]
-    all_new_msgs: List[ProtocolMessageTypes] = functools.reduce(lambda a, b: a + b, all_new_msgs_lists)
+    all_new_msgs: list[ProtocolMessageTypes] = functools.reduce(lambda a, b: a + b, all_new_msgs_lists)
     for old_cat, mapping in old_rate_limits.items():
         if old_cat in categories:
             for old_protocol_msg, old_rate_limit_value in mapping.items():
@@ -94,11 +104,11 @@ rate_limits = {
             ProtocolMessageTypes.request_proof_of_weight: RLSettings(5, 100),
             ProtocolMessageTypes.respond_proof_of_weight: RLSettings(5, 50 * 1024 * 1024, 100 * 1024 * 1024),
             ProtocolMessageTypes.request_block: RLSettings(200, 100),
-            ProtocolMessageTypes.reject_block: RLSettings(200, 100),
+            ProtocolMessageTypes.reject_block: Unlimited(100),
             ProtocolMessageTypes.request_blocks: RLSettings(500, 100),
-            ProtocolMessageTypes.respond_blocks: RLSettings(100, 50 * 1024 * 1024, 5 * 50 * 1024 * 1024),
-            ProtocolMessageTypes.reject_blocks: RLSettings(100, 100),
-            ProtocolMessageTypes.respond_block: RLSettings(200, 2 * 1024 * 1024, 10 * 2 * 1024 * 1024),
+            ProtocolMessageTypes.respond_blocks: Unlimited(50 * 1024 * 1024),
+            ProtocolMessageTypes.reject_blocks: Unlimited(100),
+            ProtocolMessageTypes.respond_block: Unlimited(2 * 1024 * 1024),
             ProtocolMessageTypes.new_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.request_unfinished_block: RLSettings(200, 100),
             ProtocolMessageTypes.new_unfinished_block2: RLSettings(200, 100),
@@ -144,10 +154,10 @@ rate_limits = {
             ProtocolMessageTypes.plot_sync_done: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.plot_sync_response: RLSettings(3000, 100 * 1024 * 1024),
             ProtocolMessageTypes.coin_state_update: RLSettings(1000, 100 * 1024 * 1024),
-            ProtocolMessageTypes.register_interest_in_puzzle_hash: RLSettings(1000, 100 * 1024 * 1024),
-            ProtocolMessageTypes.respond_to_ph_update: RLSettings(1000, 100 * 1024 * 1024),
-            ProtocolMessageTypes.register_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
-            ProtocolMessageTypes.respond_to_coin_update: RLSettings(1000, 100 * 1024 * 1024),
+            ProtocolMessageTypes.register_for_ph_updates: RLSettings(1000, 100 * 1024 * 1024),
+            ProtocolMessageTypes.respond_to_ph_updates: RLSettings(1000, 100 * 1024 * 1024),
+            ProtocolMessageTypes.register_for_coin_updates: RLSettings(1000, 100 * 1024 * 1024),
+            ProtocolMessageTypes.respond_to_coin_updates: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.request_remove_puzzle_subscriptions: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.respond_remove_puzzle_subscriptions: RLSettings(1000, 100 * 1024 * 1024),
             ProtocolMessageTypes.request_remove_coin_subscriptions: RLSettings(1000, 100 * 1024 * 1024),

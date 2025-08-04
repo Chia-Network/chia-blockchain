@@ -5,19 +5,33 @@ import gc
 import logging
 import signal
 import sqlite3
-import time
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from types import FrameType
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
+
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 
 from chia.cmds.init_funcs import init
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
-from chia.server.outbound_message import NodeType
+from chia.server.aliases import (
+    CrawlerService,
+    FarmerService,
+    FullNodeService,
+    HarvesterService,
+    IntroducerService,
+    TimelordService,
+    WalletService,
+)
+from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
@@ -31,29 +45,19 @@ from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_pri
 from chia.simulator.start_simulator import SimulatorFullNodeService, create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
-from chia.types.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    IntroducerService,
-    TimelordService,
-    WalletService,
-)
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
 
 @contextmanager
-def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[Dict[str, Any]]:
+def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[dict[str, Any]]:
     init(None, root_path)
     init(certs_path, root_path)
     path = config_path_for_filename(root_path=root_path, filename="config.yaml")
@@ -63,7 +67,7 @@ def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[D
         yield config
 
 
-def get_capability_overrides(node_type: NodeType, disabled_capabilities: List[Capability]) -> List[Tuple[uint16, str]]:
+def get_capability_overrides(node_type: NodeType, disabled_capabilities: list[Capability]) -> list[tuple[uint16, str]]:
     return [
         (
             capability
@@ -102,7 +106,7 @@ async def setup_full_node(
     sanitize_weight_proof_only: bool = False,
     connect_to_daemon: bool = False,
     db_version: int = 1,
-    disable_capabilities: Optional[List[Capability]] = None,
+    disable_capabilities: Optional[list[Capability]] = None,
     *,
     reuse_db: bool = False,
 ) -> AsyncGenerator[Union[FullNodeService, SimulatorFullNodeService], None]:
@@ -169,7 +173,7 @@ async def setup_full_node(
 
 @asynccontextmanager
 async def setup_crawler(
-    root_path_populated_with_config: Path, database_uri: str
+    root_path_populated_with_config: Path, database_uri: str, start_crawler_loop: bool = True
 ) -> AsyncGenerator[CrawlerService, None]:
     create_all_ssl(
         root_path=root_path_populated_with_config,
@@ -193,6 +197,7 @@ async def setup_crawler(
         config,
         updated_constants,
         connect_to_daemon=False,
+        start_crawler_loop=start_crawler_loop,
     )
     async with service.manage():
         if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
@@ -308,11 +313,10 @@ async def setup_wallet_node(
                         break
                     except PermissionError as e:
                         print(f"db_path.unlink(): {e}")
-                        time.sleep(0.1)
+                        await asyncio.sleep(0.1)
                         # filesystem operations are async on windows
                         # [WinError 32] The process cannot access the file because it is
                         # being used by another process
-                        pass
             keychain.delete_all_keys()
 
 
@@ -412,7 +416,7 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Introduc
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
     find_vdf_client()  # raises FileNotFoundError if not found
     process_mgr = VDFClientProcessMgr()
-    vdf_task_1 = asyncio.create_task(
+    vdf_task_1 = create_referenced_task(
         spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
         name="vdf_client_1",
     )
@@ -446,7 +450,7 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
     prefer_ipv6 = bt.config.get("prefer_ipv6", False)
     for i in range(1, 4):
         tasks.append(
-            asyncio.create_task(
+            create_referenced_task(
                 spawn_process(
                     host=self_hostname, port=port, counter=i, process_mgr=process_mgr, prefer_ipv6=prefer_ipv6
                 ),
@@ -481,7 +485,7 @@ async def setup_timelord(
     full_node_port: int,
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[TimelordService, None]:

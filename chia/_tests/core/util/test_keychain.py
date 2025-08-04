@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import json
 import random
-from dataclasses import replace
-from typing import Callable, List, Optional, Tuple
+from dataclasses import dataclass, replace
+from typing import Callable, Optional
 
 import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 import chia._tests.util
 from chia.simulator.keyring import TempKeyring
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainFingerprintExists,
     KeychainFingerprintNotFound,
@@ -20,7 +21,6 @@ from chia.util.errors import (
     KeychainLabelInvalid,
     KeychainSecretsMissing,
 )
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,
@@ -32,21 +32,55 @@ from chia.util.keychain import (
     mnemonic_to_seed,
 )
 
-mnemonic = (
-    "rapid this oven common drive ribbon bulb urban uncover napkin kitten usage enforce uncle unveil scene "
-    "apart wire mystery torch peanut august flee fantasy"
+
+@dataclass
+class KeyInfo:
+    mnemonic: str
+    entropy: bytes
+    private_key: PrivateKey
+    fingerprint: uint32
+    public_key: G1Element
+    bech32: str
+
+
+_24keyinfo = KeyInfo(
+    mnemonic=(
+        "rapid this oven common drive ribbon bulb urban uncover napkin kitten usage enforce uncle unveil scene "
+        "apart wire mystery torch peanut august flee fantasy"
+    ),
+    entropy=bytes.fromhex("b1fc1a7717343572077f7aecb25ded77c4a3d93b9e040a5f8649f2aa1e1e5632"),
+    private_key=PrivateKey.from_bytes(
+        bytes.fromhex("6c6bb4cc3dae03b8d0b327dd6765834464a883f7ca7df134970842055efe8afc")
+    ),
+    fingerprint=uint32(1310648153),
+    public_key=G1Element.from_bytes(
+        bytes.fromhex(
+            "b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4"
+        )
+    ),
+    bech32="bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7",
 )
-entropy = bytes.fromhex("b1fc1a7717343572077f7aecb25ded77c4a3d93b9e040a5f8649f2aa1e1e5632")
-private_key = PrivateKey.from_bytes(bytes.fromhex("6c6bb4cc3dae03b8d0b327dd6765834464a883f7ca7df134970842055efe8afc"))
-fingerprint = uint32(1310648153)
-public_key = G1Element.from_bytes(
-    bytes.fromhex("b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4")
+_12keyinfo = KeyInfo(
+    mnemonic=("steak rely trumpet cake banner easy consider cream marriage harvest truly shrimp"),
+    entropy=bytes.fromhex("d516afa61021248b8bd197884d2fa5e3"),
+    private_key=PrivateKey.from_bytes(
+        bytes.fromhex("3aaec6598281320c4918a2d6ebf4c2bacabad5f85a45569fc3ba5159e13f94bf")
+    ),
+    fingerprint=uint32(688295223),
+    public_key=G1Element.from_bytes(
+        bytes.fromhex(
+            "a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1"
+        )
+    ),
+    bech32="bls12381148n99j64r4vh320wfda222jwsfs83f2tpz3ajq7rscguhz5qf2dznjfxunu9fyc55pu7qnkduyxvzqskawt",
 )
-bech32_pubkey = "bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7"
 
 
 class TestKeychain:
-    def test_basic_add_delete(self, empty_temp_file_keyring: TempKeyring, seeded_random: random.Random):
+    @pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
+    def test_basic_add_delete(
+        self, key_info: KeyInfo, empty_temp_file_keyring: TempKeyring, seeded_random: random.Random
+    ):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
@@ -55,7 +89,7 @@ class TestKeychain:
         assert kc.get_first_private_key() is None
         assert kc.get_first_public_key() is None
 
-        mnemonic = generate_mnemonic()
+        mnemonic = key_info.mnemonic
         entropy = bytes_from_mnemonic(mnemonic)
         assert bytes_to_mnemonic(entropy) == mnemonic
         mnemonic_2 = generate_mnemonic()
@@ -96,10 +130,10 @@ class TestKeychain:
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
 
-        kc.add_key(bech32_pubkey, label=None, private=False)
+        kc.add_key(key_info.bech32, label=None, private=False)
         all_pks = kc.get_all_public_keys()
         assert len(all_pks) == 1
-        assert all_pks[0] == public_key
+        assert all_pks[0] == key_info.public_key
         kc.delete_all_keys()
 
         kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
@@ -146,7 +180,11 @@ class TestKeychain:
 
         # All added keys should still be valid with their label
         assert all(
-            key_data in [key_data_0, key_data_1, key_data_2] for key_data in keychain.get_keys(include_secrets=True)
+            # This must be compared to a tuple because the `.mnemonic` property is a list which makes the
+            # class unhashable. We should eventually add support in streamable for varadic tuples and maybe remove
+            # support for the mutable `list`.
+            key_data in (key_data_0, key_data_1, key_data_2)  # noqa: PLR6201
+            for key_data in keychain.get_keys(include_secrets=True)
         )
 
     def test_bip39_eip2333_test_vector(self, empty_temp_file_keyring: TempKeyring):
@@ -195,7 +233,7 @@ class TestKeychain:
         # Test code from trezor:
         # Copyright (c) 2013 Pavol Rusnak
         # Copyright (c) 2017 mruddy
-        # https://github.com/trezor/python-mnemonic/blob/master/test_mnemonic.py
+        # https://github.com/trezor/python-mnemonic/blob/master/tests/test_mnemonic.py
         # The same sentence in various UTF-8 forms
         words_nfkd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # noqa: E501
         words_nfc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # noqa: E501
@@ -219,14 +257,17 @@ def test_key_data_secrets_generate() -> None:
 
 
 @pytest.mark.parametrize(
-    "input_data, from_method", [(mnemonic, KeyDataSecrets.from_mnemonic), (entropy, KeyDataSecrets.from_entropy)]
+    "get_item, from_method", [("mnemonic", KeyDataSecrets.from_mnemonic), ("entropy", KeyDataSecrets.from_entropy)]
 )
-def test_key_data_secrets_creation(input_data: object, from_method: Callable[..., KeyDataSecrets]) -> None:
-    secrets = from_method(input_data)
-    assert secrets.mnemonic == mnemonic.split()
-    assert secrets.mnemonic_str() == mnemonic
-    assert secrets.entropy == entropy
-    assert secrets.private_key == private_key
+@pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
+def test_key_data_secrets_creation(
+    key_info: KeyInfo, get_item: str, from_method: Callable[..., KeyDataSecrets]
+) -> None:
+    secrets = from_method(getattr(key_info, get_item))
+    assert secrets.mnemonic == key_info.mnemonic.split()
+    assert secrets.mnemonic_str() == key_info.mnemonic
+    assert secrets.entropy == key_info.entropy
+    assert secrets.private_key == key_info.private_key
 
 
 @pytest.mark.parametrize("label", [None, "key"])
@@ -241,21 +282,23 @@ def test_key_data_generate(label: Optional[str]) -> None:
 
 @pytest.mark.parametrize("label", [None, "key"])
 @pytest.mark.parametrize(
-    "input_data, from_method", [(mnemonic, KeyData.from_mnemonic), (entropy, KeyData.from_entropy)]
+    "get_item, from_method", [("mnemonic", KeyData.from_mnemonic), ("entropy", KeyData.from_entropy)]
 )
-def test_key_data_creation(input_data: object, from_method: Callable[..., KeyData], label: Optional[str]) -> None:
-    key_data = from_method(input_data, label)
-    assert key_data.fingerprint == fingerprint
-    assert key_data.public_key == public_key
-    assert key_data.mnemonic == mnemonic.split()
-    assert key_data.mnemonic_str() == mnemonic
-    assert key_data.entropy == entropy
-    assert key_data.private_key == private_key
+@pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
+def test_key_data_creation(label: str, key_info: KeyInfo, get_item: str, from_method: Callable[..., KeyData]) -> None:
+    key_data = from_method(getattr(key_info, get_item), label)
+    assert key_data.fingerprint == key_info.fingerprint
+    assert key_data.public_key == key_info.public_key
+    assert key_data.mnemonic == key_info.mnemonic.split()
+    assert key_data.mnemonic_str() == key_info.mnemonic
+    assert key_data.entropy == key_info.entropy
+    assert key_data.private_key == key_info.private_key
     assert key_data.label == label
 
 
-def test_key_data_without_secrets() -> None:
-    key_data = KeyData(fingerprint, public_key, None, None)
+@pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
+def test_key_data_without_secrets(key_info: KeyInfo) -> None:
+    key_data = KeyData(key_info.fingerprint, key_info.public_key, None, None)
     assert key_data.secrets is None
 
     with pytest.raises(KeychainSecretsMissing):
@@ -274,12 +317,12 @@ def test_key_data_without_secrets() -> None:
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        ((mnemonic.split()[:-1], entropy, private_key), "mnemonic"),
-        ((mnemonic.split(), KeyDataSecrets.generate().entropy, private_key), "entropy"),
-        ((mnemonic.split(), entropy, KeyDataSecrets.generate().private_key), "private_key"),
+        ((_24keyinfo.mnemonic.split()[:-1], _24keyinfo.entropy, _24keyinfo.private_key), "mnemonic"),
+        ((_24keyinfo.mnemonic.split(), KeyDataSecrets.generate().entropy, _24keyinfo.private_key), "entropy"),
+        ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().private_key), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: tuple[list[str], bytes, PrivateKey], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
@@ -287,12 +330,20 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        ((fingerprint, G1Element(), None, KeyDataSecrets(mnemonic.split(), entropy, private_key)), "public_key"),
-        ((fingerprint, G1Element(), None, None), "fingerprint"),
+        (
+            (
+                _24keyinfo.fingerprint,
+                G1Element(),
+                None,
+                KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, _24keyinfo.private_key),
+            ),
+            "public_key",
+        ),
+        ((_24keyinfo.fingerprint, G1Element(), None, None), "fingerprint"),
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)
@@ -304,7 +355,7 @@ async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:
@@ -334,7 +385,7 @@ async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
     expected_keys = []
     # Add 10 keys and validate the result of `get_keys` after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:
@@ -380,7 +431,11 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain.set_label(fingerprint=key_data_1.fingerprint, label=key_data_1.label)
     assert key_data_0 == keychain.get_key(fingerprint=key_data_0.fingerprint, include_secrets=True)
     # All added keys should still be valid with their label
-    assert all(key_data in [key_data_0, key_data_1] for key_data in keychain.get_keys(include_secrets=True))
+
+    # This must be compared to a tuple because the `.mnemonic` property is a list which makes the
+    # class unhashable. We should eventually add support in streamable for varadic tuples and maybe remove
+    # support for the mutable `list`.
+    assert all(key_data in (key_data_0, key_data_1) for key_data in keychain.get_keys(include_secrets=True))  # noqa: PLR6201
 
 
 @pytest.mark.parametrize(
@@ -454,14 +509,14 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
         keychain.add_key(mnemonic_or_pk=key_data.mnemonic_str(), label=key_data.label)
         assert key_data == keychain.get_key(key_data.fingerprint, include_secrets=True)
         assert key_data.label is not None
-        assert keychain.keyring_wrapper.get_label(key_data.fingerprint) == key_data.label
+        assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) == key_data.label
     if delete_all:
         # Delete the keys via `delete_all` and make sure no labels are left
         keychain.delete_all_keys()
         for key_data in keys:
-            assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
+            assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) is None
     else:
         # Delete the keys via fingerprint and make sure the label gets dropped
         for key_data in keys:
             keychain.delete_key_by_fingerprint(key_data.fingerprint)
-            assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
+            assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) is None
