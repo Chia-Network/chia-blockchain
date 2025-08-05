@@ -17,6 +17,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
+from chia._tests.connection_utils import add_dummy_connection_wsc
 from chia._tests.plot_sync.test_delta import dummy_plot
 from chia._tests.util.misc import assert_rpc_error
 from chia._tests.util.rpc import validate_get_routes
@@ -34,6 +35,7 @@ from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
+from chia.protocols.outbound_message import NodeType
 from chia.simulator.block_tools import get_plot_dir
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -133,7 +135,13 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
     sp = farmer_protocol.NewSignagePoint(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
     )
-    await farmer_api.new_signage_point(sp)
+
+    farmer_server = farmer_service._server
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, farmer_service.self_hostname, 8444, NodeType.FULL_NODE, []
+    )
+
+    await farmer_api.new_signage_point(sp, node_connection)
 
     await time_out_assert(5, have_signage_points, True)
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is not None
@@ -243,7 +251,13 @@ async def test_farmer_get_pool_state(
     sp = farmer_protocol.NewSignagePoint(
         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
     )
-    await farmer_api.new_signage_point(sp)
+
+    farmer_server = farmer_service._server
+    node_connection, _ = await add_dummy_connection_wsc(
+        farmer_server, farmer_service.self_hostname, 8444, NodeType.FULL_NODE, []
+    )
+
+    await farmer_api.new_signage_point(sp, node_connection)
     client_pool_state = await farmer_rpc_client.get_pool_state()
     for pool_dict in client_pool_state["pool_state"]:
         for key in ["points_found_24h", "points_acknowledged_24h"]:

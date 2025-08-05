@@ -37,6 +37,7 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.server.node_discovery import FarmerPeers
 from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -129,6 +130,10 @@ class Farmer:
         consensus_constants: ConsensusConstants,
         local_keychain: Optional[Keychain] = None,
     ):
+        self.farmer_peers: Optional[FarmerPeers] = None
+
+        self.peer_with_sps: set[bytes32] = set()
+
         self.keychain_proxy: Optional[KeychainProxy] = None
         self.local_keychain = local_keychain
         self._root_path = root_path
@@ -154,6 +159,8 @@ class Farmer:
 
         self.cache_clear_task: Optional[asyncio.Task[None]] = None
         self.update_pool_state_task: Optional[asyncio.Task[None]] = None
+        self.sp_task: Optional[asyncio.Task[None]] = None
+
         self.constants = consensus_constants
         self._shut_down = False
         self.server: Any = None
@@ -179,6 +186,88 @@ class Farmer:
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
+    async def _sp_task_handler(self) -> None:
+        log.debug("WJB _sp_task_handler")
+
+        while True:
+            await asyncio.sleep(120)
+
+            if self.farmer_peers is None:
+                continue
+
+            allgood = False
+            found = False
+            count = 0
+            ngcloseit = []
+            goodcloseit = []
+
+            for peer in self.server.get_connections(NodeType.FULL_NODE):
+                if peer in self.farmer_peers.farm_list:
+                    goodcloseit.append(peer)
+                else:
+                    if peer.peer_node_id in self.peer_with_sps:
+                        allgood = True
+                        found = True
+                    count += 1
+                    continue
+                if not found and peer.peer_node_id in self.peer_with_sps:
+                    found = True
+                    count += 1
+                    continue
+                ngcloseit.append(peer)
+
+            untrusted = len(self.farmer_peers.farm_list)
+            log.debug(f"WJB _sp_task_handler allgood {allgood} found {found} count {count} untrusted {untrusted}")
+
+            self.peer_with_sps = set()
+
+            if found:
+                count = 0
+            else:
+                count += 1
+
+            if allgood:
+                count = 0
+                for peer in goodcloseit:
+                    await peer.close()
+            else:
+                for peer in ngcloseit:
+                    await peer.close()
+
+            removepeer = []
+            for peer in self.farmer_peers.farm_list:
+                if peer.closed:
+                    removepeer.append(peer)
+            for peer in removepeer:
+                self.farmer_peers.farm_list.remove(peer)
+
+            self.farmer_peers.target_outbound_count = count
+
+    def initialize_farmer_peers(self) -> None:
+        log.debug("WJB initialize_farmer_peers")
+        network_name = self.config["selected_network"]
+        try:
+            default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        except KeyError:
+            self.log.info("Default port field not found in config.")
+            default_port = None
+        connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
+        testing = self.config.get("testing", False)
+        if self.farmer_peers is None and connect_to_unknown_peers and not testing:
+            self.farmer_peers = FarmerPeers(
+                server=self.server,
+                target_outbound_count=0,
+                peers_file_path=self._root_path
+                / Path(self.config.get("farmer_peers_file_path", "farmer/db/farmer_peers.dat")),
+                introducer_info=self.config["introducer_peer"],
+                dns_servers=self.config.get("dns_servers", ["dns-introducer.chia.net"]),
+                peer_connect_interval=self.config["peer_connect_interval"],
+                selected_network=network_name,
+                default_port=default_port,
+                log=self.log,
+            )
+            create_referenced_task(self.farmer_peers.start())
+
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
         async def start_task() -> None:
@@ -188,7 +277,9 @@ class Farmer:
                 if await self.setup_keys():
                     self.update_pool_state_task = create_referenced_task(self._periodically_update_pool_state_task())
                     self.cache_clear_task = create_referenced_task(self._periodically_clear_cache_and_refresh_task())
+                    self.sp_task = create_referenced_task(self._sp_task_handler())
                     log.debug("start_task: initialized")
+
                     self.started = True
                     return
                 await asyncio.sleep(1)
@@ -209,6 +300,12 @@ class Farmer:
                 await self.cache_clear_task
             if self.update_pool_state_task is not None:
                 await self.update_pool_state_task
+            if self.sp_task is not None:
+                await self.sp_task
+            if self.farmer_peers is not None:
+                await self.farmer_peers.ensure_is_closed()
+            self.farmer_peers = None
+
             if self.keychain_proxy is not None:
                 proxy = self.keychain_proxy
                 self.keychain_proxy = None
@@ -308,12 +405,16 @@ class Farmer:
             await peer.send_message(msg)
             self.harvester_handshake_task = None
 
-        if peer.connection_type is NodeType.HARVESTER:
+        if peer.connection_type == NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
             self.harvester_handshake_task = create_referenced_task(handshake_task())
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
+        try:
+            self.initialize_farmer_peers()
+        except Exception:
+            self.log.debug("WJB self.initialize_farmer_peers failed")
 
     def state_changed(self, change: str, data: dict[str, Any]) -> None:
         if self.state_changed_callback is not None:
