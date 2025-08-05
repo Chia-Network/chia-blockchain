@@ -1453,24 +1453,13 @@ class FullNodeAPI:
 
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-        if self.full_node.block_store.db_wrapper.db_version == 2:
-            try:
-                blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
-                    request.start_height, request.end_height
-                )
-            except ValueError:
-                return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        try:
+            blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
+                request.start_height, request.end_height
+            )
+        except ValueError:
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
 
-        else:
-            height_to_hash = self.full_node.blockchain.height_to_hash
-            header_hashes: list[bytes32] = []
-            for i in range(request.start_height, request.end_height + 1):
-                header_hash: Optional[bytes32] = height_to_hash(uint32(i))
-                if header_hash is None:
-                    return make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
-                header_hashes.append(header_hash)
-
-            blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter

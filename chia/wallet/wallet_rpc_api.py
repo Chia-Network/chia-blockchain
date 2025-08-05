@@ -1109,7 +1109,7 @@ class WalletRpcApi:
                         metadata = request["metadata"]
 
                 async with self.service.wallet_state_manager.lock:
-                    did_wallet_name: str = request.get("wallet_name", None)
+                    did_wallet_name: Optional[str] = request.get("wallet_name", None)
                     if did_wallet_name is not None:
                         did_wallet_name = did_wallet_name.strip()
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -3520,12 +3520,18 @@ class WalletRpcApi:
         fee_amount = 0
         blocks_won = 0
         last_height_farmed = uint32(0)
+
+        include_pool_rewards = request.get("include_pool_rewards", False)
+
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
             if record.type == TransactionType.COINBASE_REWARD.value:
-                if self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET:
-                    # Don't add pool rewards for pool wallets.
+                if (
+                    not include_pool_rewards
+                    and self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET
+                ):
+                    # Don't add pool rewards for pool wallets unless explicitly requested
                     continue
                 pool_reward_amount += record.amount
             height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
