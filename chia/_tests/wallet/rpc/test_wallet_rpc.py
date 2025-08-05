@@ -406,7 +406,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         },
     )
     assert response["success"]
-    tx = TransactionRecord.from_json_dict_convenience(response["transactions"][0])
+    tx = TransactionRecord.from_json_dict(response["transactions"][0])
     [
         byte_deserialize_clvm_streamable(
             bytes.fromhex(utx), UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
@@ -458,9 +458,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
         PushTransactions(transactions=[tx], fee=uint64(10)),
         DEFAULT_TX_CONFIG,
     )
-    resp = await client.fetch(
-        "push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)], "fee": 10}
-    )
+    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
     resp = await client.fetch("push_transactions", {"transactions": [bytes(tx).hex()], "fee": 10})
     assert resp["success"]
@@ -914,7 +912,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 2
     for _tx in resp["transactions"]:
-        clawback_tx = TransactionRecord.from_json_dict_convenience(_tx)
+        clawback_tx = TransactionRecord.from_json_dict(_tx)
         if clawback_tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 10, full_node_api.full_node.mempool_manager.get_spendbundle, clawback_tx.spend_bundle.name()

@@ -232,7 +232,7 @@ class WalletStateManager:
             self.initial_num_public_keys = min_num_public_keys
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
-        self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
+        self.tx_store = await WalletTransactionStore.create(self.db_wrapper, self.config)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
         self.user_store = await WalletUserStore.create(self.db_wrapper)
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
@@ -1053,6 +1053,7 @@ class WalletStateManager:
             confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=derivation_record.puzzle_hash,
+            to_address=self.encode_puzzle_hash(derivation_record.puzzle_hash),
             amount=amount,
             fee_amount=uint64(fee),
             confirmed=False,
@@ -1549,14 +1550,16 @@ class WalletStateManager:
                 clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                 clawback_spend_bundle = WalletSpendBundle([clawback_coin_spend], G2Element())
                 if await self.puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
+                    to_ph = (
+                        metadata.sender_puzzle_hash
+                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                        else metadata.recipient_puzzle_hash
+                    )
                     tx_record = TransactionRecord(
                         confirmed_at_height=uint32(coin_state.spent_height),
                         created_at_time=created_timestamp,
-                        to_puzzle_hash=(
-                            metadata.sender_puzzle_hash
-                            if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
-                            else metadata.recipient_puzzle_hash
-                        ),
+                        to_puzzle_hash=to_ph,
+                        to_address=self.encode_puzzle_hash(to_ph),
                         amount=uint64(coin_state.coin.amount),
                         fee_amount=uint64(0),
                         confirmed=True,
@@ -1594,6 +1597,7 @@ class WalletStateManager:
                 confirmed_at_height=uint32(coin_state.created_height),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
+                to_address=self.encode_puzzle_hash(metadata.recipient_puzzle_hash),
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
                 confirmed=spent_height != 0,
@@ -1790,14 +1794,14 @@ class WalletStateManager:
                                 created_timestamp = await self.wallet_node.get_timestamp_for_height(
                                     uint32(coin_state.created_height)
                                 )
+                                to_ph = await self.convert_puzzle_hash(
+                                    wallet_identifier.id, coin_state.coin.puzzle_hash
+                                )
                                 tx_record = TransactionRecord(
                                     confirmed_at_height=uint32(coin_state.created_height),
                                     created_at_time=uint64(created_timestamp),
-                                    to_puzzle_hash=(
-                                        await self.convert_puzzle_hash(
-                                            wallet_identifier.id, coin_state.coin.puzzle_hash
-                                        )
-                                    ),
+                                    to_puzzle_hash=to_ph,
+                                    to_address=self.encode_puzzle_hash(to_ph),
                                     amount=uint64(coin_state.coin.amount),
                                     fee_amount=uint64(0),
                                     confirmed=True,
@@ -1872,12 +1876,12 @@ class WalletStateManager:
                                     for added_coin in additions:
                                         tx_name += bytes(added_coin.name())
                                     tx_name = std_hash(tx_name)
+                                    to_ph = await self.convert_puzzle_hash(wallet_identifier.id, to_puzzle_hash)
                                     tx_record = TransactionRecord(
                                         confirmed_at_height=uint32(coin_state.spent_height),
                                         created_at_time=uint64(spent_timestamp),
-                                        to_puzzle_hash=(
-                                            await self.convert_puzzle_hash(wallet_identifier.id, to_puzzle_hash)
-                                        ),
+                                        to_puzzle_hash=to_ph,
+                                        to_address=self.encode_puzzle_hash(to_ph),
                                         amount=uint64(amount),
                                         fee_amount=uint64(fee),
                                         confirmed=True,
@@ -2199,10 +2203,12 @@ class WalletStateManager:
         clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
         if coinbase or clawback or (not coin_confirmed_transaction and not change):
+            to_ph = await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),
-                to_puzzle_hash=await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash),
+                to_puzzle_hash=to_ph,
+                to_address=self.encode_puzzle_hash(to_ph),
                 amount=uint64(coin.amount),
                 fee_amount=uint64(0),
                 confirmed=True,
@@ -2769,3 +2775,6 @@ class WalletStateManager:
     async def delete_wallet(self, wallet_id: uint32) -> None:
         await self.user_store.delete_wallet(wallet_id)
         await self.puzzle_store.delete_wallet(wallet_id)
+
+    def encode_puzzle_hash(self, puzzle_hash: bytes32) -> str:
+        return encode_puzzle_hash(puzzle_hash, AddressType.XCH.hrp(self.config))

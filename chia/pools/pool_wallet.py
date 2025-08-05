@@ -527,6 +527,7 @@ class PoolWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_full_puzzle.get_tree_hash(),
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(new_full_puzzle.get_tree_hash()),
                     amount=uint64(1),
                     fee_amount=fee,
                     confirmed=False,
@@ -800,6 +801,7 @@ class PoolWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=current_time,
                     to_puzzle_hash=current_state.current.target_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(current_state.current.target_puzzle_hash),
                     amount=uint64(total_amount),
                     fee_amount=fee,  # This will not be double counted in self.standard_wallet
                     confirmed=False,

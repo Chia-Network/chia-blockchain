@@ -920,10 +920,7 @@ class PushTransactions(TransactionEndpointRequest):
             if isinstance(transaction_hexstr_or_json, str):
                 tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
             else:
-                try:
-                    tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
-                except AttributeError:
-                    tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
+                tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
             transactions.append(tx)
 
         json_dict["transactions"] = [tx.to_json_dict() for tx in transactions]
