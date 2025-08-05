@@ -3197,7 +3197,9 @@ def test_dedup_by_fee(old: bool) -> None:
 
 def test_get_puzzle_and_solution_for_coin_failure() -> None:
     with pytest.raises(
-        ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
+        ValueError,
+        match=f"Failed to get puzzle and solution for coin {TEST_COIN}, "
+        "error: \\('InvalidOperatorArg: coin not found', '80'\\)",
     ):
         try:
             get_puzzle_and_solution_for_coin(
