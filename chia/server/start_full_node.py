@@ -75,15 +75,13 @@ async def create_full_node_service(
     )
 
 
-async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml")
-    config[SERVICE_NAME] = service_config
+async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
+    service_config: dict[str, Any] = config[SERVICE_NAME]
+
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
     updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
-    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
     service = await create_full_node_service(root_path, config, updated_constants)
     async with SignalHandlers.manage() as signal_handlers:
@@ -97,10 +95,15 @@ def main() -> int:
     freeze_support()
     root_path = resolve_root_path(override=None)
 
+    # TODO: refactor to avoid the double load
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
+    config[SERVICE_NAME] = service_config
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
         target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
             "target_outbound_peer_count", 8
         )
@@ -108,7 +111,8 @@ def main() -> int:
             target_peer_count = None
         if not service_config.get("use_chia_loop_policy", True):
             target_peer_count = None
-        return async_run(coro=async_main(service_config, root_path=root_path), connection_limit=target_peer_count)
+
+        return async_run(coro=async_main(root_path=root_path, config=config), connection_limit=target_peer_count)
 
 
 if __name__ == "__main__":

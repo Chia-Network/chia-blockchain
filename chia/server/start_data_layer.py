@@ -92,17 +92,7 @@ def create_data_layer_service(
     )
 
 
-async def async_main(root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml", fill_missing_services=True)
-    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
-    config[SERVICE_NAME] = service_config
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=root_path,
-    )
-
+async def async_main(root_path: pathlib.Path, config: dict[str, Any]) -> int:
     create_all_ssl(
         root_path=root_path,
         private_node_names=["data_layer"],
@@ -142,10 +132,20 @@ async def async_main(root_path: pathlib.Path) -> int:
 def main() -> int:
     root_path = resolve_root_path(override=None)
 
+    # TODO: refactor to avoid the double load
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME, fill_missing_services=True)
+    config[SERVICE_NAME] = service_config
+    initialize_logging(
+        service_name=SERVICE_NAME,
+        logging_config=service_config["logging"],
+        root_path=root_path,
+    )
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        return async_run(coro=async_main(root_path=root_path))
+        return async_run(coro=async_main(root_path=root_path, config=config))
 
 
 if __name__ == "__main__":
