@@ -9,7 +9,7 @@ import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -41,11 +41,14 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    BalanceResponse,
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
     FungibleAsset,
     GetHeightInfoResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
     GetWallets,
     GetWalletsResponse,
     NFTCalculateRoyalties,
@@ -131,6 +134,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                     confirmed_at_height=uint32(1 + i),
                     created_at_time=uint64(1234 + i),
                     to_puzzle_hash=bytes32([1 + i] * 32),
+                    to_address=encode_puzzle_hash(bytes32([1 + i] * 32), "xch"),
                     amount=uint64(12345678 + i),
                     fee_amount=uint64(1234567 + i),
                     confirmed=False,
@@ -242,19 +246,23 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             self.add_to_log("get_height_info", ())
             return GetHeightInfoResponse(uint32(10))
 
-        async def get_wallet_balance(self, wallet_id: int) -> dict[str, uint64]:
-            self.add_to_log("get_wallet_balance", (wallet_id,))
-            if wallet_id == 1:
-                amount = uint64(1000000000)
-            elif wallet_id == 2:
-                amount = uint64(2000000000)
+        async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+            self.add_to_log("get_wallet_balance", (request,))
+            if request.wallet_id == 1:
+                amount = uint128(1000000000)
+            elif request.wallet_id == 2:
+                amount = uint128(2000000000)
             else:
-                amount = uint64(1)
-            return {
-                "confirmed_wallet_balance": amount,
-                "spendable_balance": amount,
-                "unconfirmed_wallet_balance": uint64(0),
-            }
+                amount = uint128(1)
+            return GetWalletBalanceResponse(
+                BalanceResponse(
+                    wallet_id=request.wallet_id,
+                    wallet_type=uint8(0),  # Doesn't matter
+                    confirmed_wallet_balance=amount,
+                    spendable_balance=amount,
+                    unconfirmed_wallet_balance=uint128(0),
+                )
+            )
 
         async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
             self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
@@ -307,7 +315,12 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         ],
         "get_sync_status": [(), ()],
         "get_height_info": [(), ()],
-        "get_wallet_balance": [(1,), (2,), (3,), (2,)],
+        "get_wallet_balance": [
+            (GetWalletBalance(wallet_id=uint32(1)),),
+            (GetWalletBalance(wallet_id=uint32(2)),),
+            (GetWalletBalance(wallet_id=uint32(3)),),
+            (GetWalletBalance(wallet_id=uint32(2)),),
+        ],
         "get_nft_wallet_did": [(3,)],
         "get_connections": [(None,), (None,)],
     }
@@ -340,6 +353,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 confirmed_at_height=uint32(1),
                 created_at_time=uint64(1234),
                 to_puzzle_hash=get_bytes32(1),
+                to_address=encode_puzzle_hash(get_bytes32(1), "xch"),
                 amount=uint64(12345678),
                 fee_amount=uint64(1234567),
                 confirmed=False,
@@ -529,14 +543,7 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
             tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
             return {
                 "transaction_ids": tx_hex_list,
-                "transactions": [
-                    STD_TX.to_json_dict_convenience(
-                        {
-                            "selected_network": "mainnet",
-                            "network_overrides": {"config": {"mainnet": {"address_prefix": "xch"}}},
-                        }
-                    )
-                ],
+                "transactions": [STD_TX.to_json_dict()],
             }
 
     inst_rpc_client = ClawbackWalletRpcClient()

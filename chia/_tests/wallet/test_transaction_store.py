@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import Err
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
@@ -32,7 +33,7 @@ coin_3 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded
 tr1 = TransactionRecord(
     uint32(0),  # confirmed height
     uint64(1000),  # created_at_time
-    bytes32(bytes32.random(module_seeded_random)),  # to_puzzle_hash
+    bytes32(bytes32.zeros),  # to_puzzle_hash
     uint64(1234),  # amount
     uint64(12),  # fee_amount
     False,  # confirmed
@@ -47,13 +48,19 @@ tr1 = TransactionRecord(
     bytes32(bytes32.random(module_seeded_random)),  # name
     {},  # memos
     ConditionValidTimes(),
+    encode_puzzle_hash(bytes32(bytes32.zeros), "txch"),
 )
+
+MINIMUM_CONFIG = {
+    "network_overrides": {"config": {"testnet": {"address_prefix": "txch"}}},
+    "selected_network": "testnet",
+}
 
 
 @pytest.mark.anyio
 async def test_add() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         assert await store.get_transaction_record(tr1.name) is None
         await store.add_transaction_record(tr1)
@@ -63,7 +70,7 @@ async def test_add() -> None:
 @pytest.mark.anyio
 async def test_delete() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         await store.add_transaction_record(tr1)
         assert await store.get_transaction_record(tr1.name) == tr1
@@ -74,7 +81,7 @@ async def test_delete() -> None:
 @pytest.mark.anyio
 async def test_set_confirmed() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         await store.add_transaction_record(tr1)
         await store.set_confirmed(tr1.name, uint32(100))
@@ -87,7 +94,7 @@ async def test_set_confirmed() -> None:
 @pytest.mark.anyio
 async def test_increment_sent_noop(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         assert (
             await store.increment_sent(
@@ -100,7 +107,7 @@ async def test_increment_sent_noop(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_increment_sent() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         await store.add_transaction_record(tr1)
         tr = await store.get_transaction_record(tr1.name)
@@ -126,7 +133,7 @@ async def test_increment_sent() -> None:
 @pytest.mark.anyio
 async def test_increment_sent_error() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         await store.add_transaction_record(tr1)
         tr = await store.get_transaction_record(tr1.name)
@@ -156,7 +163,7 @@ def test_filter_ok_mempool_status() -> None:
 @pytest.mark.anyio
 async def test_tx_reorged_update() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr = dataclasses.replace(tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
         await store.add_transaction_record(tr)
@@ -173,7 +180,7 @@ async def test_tx_reorged_update() -> None:
 @pytest.mark.anyio
 async def test_tx_reorged_add() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr = dataclasses.replace(tr1, sent=uint32(2), sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
 
@@ -187,7 +194,7 @@ async def test_tx_reorged_add() -> None:
 @pytest.mark.anyio
 async def test_get_tx_record(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
         tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
@@ -212,7 +219,7 @@ async def test_get_tx_record(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_get_farming_rewards(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         test_trs: list[TransactionRecord] = []
         # tr1 is type OUTGOING_TX
@@ -249,7 +256,7 @@ async def test_get_farming_rewards(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(
             tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(100)
@@ -263,7 +270,7 @@ async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_get_unconfirmed_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(
             tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(100)
@@ -282,7 +289,7 @@ async def test_get_unconfirmed_for_wallet(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_transaction_count_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=uint32(2))
 
@@ -322,7 +329,7 @@ async def test_transaction_count_for_wallet(seeded_random: random.Random) -> Non
 @pytest.mark.anyio
 async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         test_trs: list[TransactionRecord] = []
         for wallet_id in [1, 2]:
@@ -373,7 +380,7 @@ def cmp(lhs: list[Any], rhs: list[Any]) -> bool:
 @pytest.mark.anyio
 async def test_get_all_transactions(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         test_trs: list[TransactionRecord] = []
         assert await store.get_all_transactions() == []
@@ -390,7 +397,7 @@ async def test_get_all_transactions(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_get_transaction_above(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         test_trs: list[TransactionRecord] = []
         assert await store.get_transaction_above(uint32(0)) == []
@@ -410,7 +417,7 @@ async def test_get_transaction_above(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_get_tx_by_trade_id(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), trade_id=bytes32.random(seeded_random))
         tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), trade_id=bytes32.random(seeded_random))
@@ -442,7 +449,7 @@ async def test_get_tx_by_trade_id(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_rollback_to_block(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         test_trs: list[TransactionRecord] = []
         for height in range(10):
@@ -465,7 +472,7 @@ async def test_rollback_to_block(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_delete_unconfirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed=True)
         tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed=True, wallet_id=uint32(2))
@@ -493,7 +500,7 @@ async def test_delete_unconfirmed(seeded_random: random.Random) -> None:
 @pytest.mark.anyio
 async def test_get_transactions_between_confirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(
             tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1)
@@ -585,7 +592,7 @@ async def test_get_transactions_between_confirmed(seeded_random: random.Random) 
 @pytest.mark.anyio
 async def test_get_transactions_between_relevance(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         t1 = dataclasses.replace(
             tr1,
@@ -716,22 +723,24 @@ async def test_get_transactions_between_relevance(seeded_random: random.Random) 
 @pytest.mark.anyio
 async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         ph1 = bytes32.random(seeded_random)
+        ad1 = encode_puzzle_hash(ph1, "txch")
         ph2 = bytes32.random(seeded_random)
+        ad2 = encode_puzzle_hash(ph2, "txch")
 
         tr2 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(1), to_puzzle_hash=ph1
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(1), to_puzzle_hash=ph1, to_address=ad1
         )
         tr3 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(2), to_puzzle_hash=ph1
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(2), to_puzzle_hash=ph1, to_address=ad1
         )
         tr4 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(3), to_puzzle_hash=ph2
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(3), to_puzzle_hash=ph2, to_address=ad2
         )
         tr5 = dataclasses.replace(
-            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(4), to_puzzle_hash=ph2
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(4), to_puzzle_hash=ph2, to_address=ad2
         )
 
         await store.add_transaction_record(tr1)
@@ -762,7 +771,7 @@ async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Ran
 @pytest.mark.anyio
 async def test_get_not_sent(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
 
         tr2 = dataclasses.replace(
             tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1)
@@ -881,7 +890,7 @@ async def test_valid_times_migration() -> None:
                 ),
             )
 
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
         rec = await store.get_transaction_record(old_record.name)
         assert rec is not None
         assert rec.valid_times == ConditionValidTimes()
@@ -890,7 +899,7 @@ async def test_valid_times_migration() -> None:
 @pytest.mark.anyio
 async def test_large_tx_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
-        store = await WalletTransactionStore.create(db_wrapper)
+        store = await WalletTransactionStore.create(db_wrapper, MINIMUM_CONFIG)
         tx_records_to_insert = []
         for _ in range(db_wrapper.host_parameter_limit + 1):
             name = bytes32.random()

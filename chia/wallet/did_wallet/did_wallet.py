@@ -648,12 +648,12 @@ class DIDWallet:
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
+        to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(time.time()),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
+            to_puzzle_hash=to_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -734,12 +734,12 @@ class DIDWallet:
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
+        to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(time.time()),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
+            to_puzzle_hash=to_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             amount=uint64(coin.amount),
             fee_amount=fee,
             confirmed=False,
@@ -819,6 +819,7 @@ class DIDWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(time.time()),
             to_puzzle_hash=p2_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(p2_ph),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -1024,13 +1025,13 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
 
+        to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(time.time()),
             amount=uint64(amount),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
+            to_puzzle_hash=to_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             fee_amount=fee,
             confirmed=False,
             sent=uint32(0),

@@ -8,7 +8,7 @@ import logging
 import random
 from collections.abc import AsyncIterator
 from operator import attrgetter
-from typing import Any, Optional, cast
+from typing import Any, Optional
 from unittest.mock import patch
 
 import aiosqlite
@@ -123,6 +123,8 @@ from chia.wallet.wallet_request_types import (
     GetPrivateKey,
     GetSyncStatusResponse,
     GetTimestampForHeight,
+    GetWalletBalance,
+    GetWalletBalances,
     GetWallets,
     LogIn,
     NFTCalculateRoyalties,
@@ -191,7 +193,9 @@ async def farm_transaction(
 
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1) -> int:
     wallet_id = 1
-    initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(wallet_id)
+    initial_balances = (
+        await wallet_bundle.rpc_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
+    ).wallet_balance
     ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(wallet_id, True))
     generated_funds = 0
     for _ in range(num_blocks):
@@ -203,8 +207,8 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
     # Farm a dummy block to confirm the created funds
     await farm_transaction_block(full_node_api, wallet_bundle.node)
 
-    expected_confirmed = initial_balances["confirmed_wallet_balance"] + generated_funds
-    expected_unconfirmed = initial_balances["unconfirmed_wallet_balance"] + generated_funds
+    expected_confirmed = initial_balances.confirmed_wallet_balance + generated_funds
+    expected_unconfirmed = initial_balances.unconfirmed_wallet_balance + generated_funds
     await time_out_assert(20, get_confirmed_balance, expected_confirmed, wallet_bundle.rpc_client, wallet_id)
     await time_out_assert(20, get_unconfirmed_balance, expected_unconfirmed, wallet_bundle.rpc_client, wallet_id)
     await time_out_assert(20, check_client_synced, True, wallet_bundle.rpc_client)
@@ -326,13 +330,18 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
 async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNode, wallet: WalletProtocol[Any]) -> None:
     expected_balance = await wallet_node.get_balance(wallet.id())
     expected_balance_dict = expected_balance.to_json_dict()
+    expected_balance_dict.setdefault("pending_approval_balance", None)
     expected_balance_dict["wallet_id"] = wallet.id()
     expected_balance_dict["wallet_type"] = wallet.type()
     expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
     if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
-        expected_balance_dict["asset_id"] = wallet.get_asset_id()
-    assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
+        expected_balance_dict["asset_id"] = "0x" + wallet.get_asset_id()
+    else:
+        expected_balance_dict["asset_id"] = None
+    assert (
+        await rpc_client.get_wallet_balance(GetWalletBalance(wallet.id()))
+    ).wallet_balance.to_json_dict() == expected_balance_dict
 
 
 async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32) -> bool:
@@ -341,15 +350,15 @@ async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32) -> boo
 
 
 async def get_confirmed_balance(client: WalletRpcClient, wallet_id: int) -> uint128:
-    balance = await client.get_wallet_balance(wallet_id)
-    # TODO: casting due to lack of type checked deserialization
-    return cast(uint128, balance["confirmed_wallet_balance"])
+    return (
+        await client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
+    ).wallet_balance.confirmed_wallet_balance
 
 
 async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int) -> uint128:
-    balance = await client.get_wallet_balance(wallet_id)
-    # TODO: casting due to lack of type checked deserialization
-    return cast(uint128, balance["unconfirmed_wallet_balance"])
+    return (
+        await client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
+    ).wallet_balance.unconfirmed_wallet_balance
 
 
 @pytest.mark.anyio
@@ -406,7 +415,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         },
     )
     assert response["success"]
-    tx = TransactionRecord.from_json_dict_convenience(response["transactions"][0])
+    tx = TransactionRecord.from_json_dict(response["transactions"][0])
     [
         byte_deserialize_clvm_streamable(
             bytes.fromhex(utx), UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
@@ -458,9 +467,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
         PushTransactions(transactions=[tx], fee=uint64(10)),
         DEFAULT_TX_CONFIG,
     )
-    resp = await client.fetch(
-        "push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)], "fee": 10}
-    )
+    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
     resp = await client.fetch("push_transactions", {"transactions": [bytes(tx).hex()], "fee": 10})
     assert resp["success"]
@@ -914,7 +921,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 2
     for _tx in resp["transactions"]:
-        clawback_tx = TransactionRecord.from_json_dict_convenience(_tx)
+        clawback_tx = TransactionRecord.from_json_dict(_tx)
         if clawback_tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 10, full_node_api.full_node.mempool_manager.get_spendbundle, clawback_tx.spend_bundle.name()
@@ -1133,13 +1140,13 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         "cat1",
     )
 
-    cat_0_id = env_0.wallet_aliases["cat0"]
+    cat_0_id = uint32(env_0.wallet_aliases["cat0"])
     # The RPC response contains more than just the balance info but all the
     # balance info should match. We're leveraging the `<=` operator to check
     # for subset on `dict` `.items()`.
     assert (
         env_0.wallet_states[uint32(env_0.wallet_aliases["cat0"])].balance.to_json_dict().items()
-        <= (await env_0.rpc_client.get_wallet_balance(cat_0_id)).items()
+        <= (await env_0.rpc_client.get_wallet_balance(GetWalletBalance(cat_0_id))).wallet_balance.to_json_dict().items()
     )
     asset_id = await env_0.rpc_client.get_cat_asset_id(cat_0_id)
     assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == wallet_type.default_wallet_name_for_unknown_cat(
@@ -3011,15 +3018,15 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment) ->
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)
     await time_out_assert(20, check_client_synced, True, client)
-    bal = await client.get_wallet_balances()
-    assert len(bal) == 3
-    assert bal["1"]["confirmed_wallet_balance"] == 1999999999880
-    assert bal["2"]["confirmed_wallet_balance"] == 100
-    assert bal["3"]["confirmed_wallet_balance"] == 20
-    bal_ids = await client.get_wallet_balances([3, 2])
-    assert len(bal_ids) == 2
-    assert bal["2"]["confirmed_wallet_balance"] == 100
-    assert bal["3"]["confirmed_wallet_balance"] == 20
+    bals_response = await client.get_wallet_balances(GetWalletBalances())
+    assert len(bals_response.wallet_balances) == 3
+    assert bals_response.wallet_balances[uint32(1)].confirmed_wallet_balance == 1999999999880
+    assert bals_response.wallet_balances[uint32(2)].confirmed_wallet_balance == 100
+    assert bals_response.wallet_balances[uint32(3)].confirmed_wallet_balance == 20
+    bals_response = await client.get_wallet_balances(GetWalletBalances([uint32(3), uint32(2)]))
+    assert len(bals_response.wallet_balances) == 2
+    assert bals_response.wallet_balances[uint32(2)].confirmed_wallet_balance == 100
+    assert bals_response.wallet_balances[uint32(3)].confirmed_wallet_balance == 20
 
 
 @pytest.mark.parametrize(

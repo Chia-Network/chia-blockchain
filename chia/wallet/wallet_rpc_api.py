@@ -111,6 +111,7 @@ from chia.wallet.wallet_request_types import (
     AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
+    BalanceResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
     CombineCoins,
@@ -178,6 +179,10 @@ from chia.wallet.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
+    GetWalletBalances,
+    GetWalletBalancesResponse,
     GetWallets,
     GetWalletsResponse,
     LogIn,
@@ -340,10 +345,7 @@ def tx_endpoint(
             else:
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
 
-            response["transactions"] = [
-                TransactionRecord.to_json_dict_convenience(tx, self.service.config)
-                for tx in action_scope.side_effects.transactions
-            ]
+            response["transactions"] = [tx.to_json_dict() for tx in action_scope.side_effects.transactions]
 
             # Some backwards compatibility code here because transaction information being returned was not uniform
             # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
@@ -447,6 +449,7 @@ REPLACEABLE_TRANSACTION_RECORD = TransactionRecord(
     confirmed_at_height=uint32(0),
     created_at_time=uint64(0),
     to_puzzle_hash=bytes32.zeros,
+    to_address=encode_puzzle_hash(bytes32.zeros, "replace"),
     amount=uint64(0),
     fee_amount=uint64(0),
     confirmed=False,
@@ -1265,7 +1268,7 @@ class WalletRpcApi:
     # Wallet
     ##########################################################################################
 
-    async def _get_wallet_balance(self, wallet_id: uint32) -> dict[str, Any]:
+    async def _get_wallet_balance(self, wallet_id: uint32) -> BalanceResponse:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await self.service.get_balance(wallet_id)
         wallet_balance = balance.to_json_dict()
@@ -1280,22 +1283,21 @@ class WalletRpcApi:
                 assert isinstance(wallet, CRCATWallet)
                 wallet_balance["pending_approval_balance"] = await wallet.get_pending_approval_balance()
 
-        return wallet_balance
+        return BalanceResponse.from_json_dict(wallet_balance)
 
-    async def get_wallet_balance(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet_balance = await self._get_wallet_balance(wallet_id)
-        return {"wallet_balance": wallet_balance}
+    @marshal
+    async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+        return GetWalletBalanceResponse(await self._get_wallet_balance(request.wallet_id))
 
-    async def get_wallet_balances(self, request: dict[str, Any]) -> EndpointResult:
-        try:
-            wallet_ids: list[uint32] = [uint32(wallet_id) for wallet_id in request["wallet_ids"]]
-        except (TypeError, KeyError):
+    @marshal
+    async def get_wallet_balances(self, request: GetWalletBalances) -> GetWalletBalancesResponse:
+        if request.wallet_ids is not None:
+            wallet_ids = request.wallet_ids
+        else:
             wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
-        wallet_balances: dict[uint32, dict[str, Any]] = {}
-        for wallet_id in wallet_ids:
-            wallet_balances[wallet_id] = await self._get_wallet_balance(wallet_id)
-        return {"wallet_balances": wallet_balances}
+        return GetWalletBalancesResponse(
+            {wallet_id: await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids}
+        )
 
     async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
         transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
@@ -1304,7 +1306,7 @@ class WalletRpcApi:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
         return {
-            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
+            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict(),
             "transaction_id": tr.name,
         }
 
@@ -1518,7 +1520,7 @@ class WalletRpcApi:
         tx_list = []
         # Format for clawback transactions
         for tr in transactions:
-            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict()
             tx_list.append(tx)
             if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
                 continue
@@ -1654,7 +1656,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": transaction,
-            "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
+            "transaction_id": TransactionRecord.from_json_dict(transaction).name,
             "transactions": transactions,
             "unsigned_transactions": response["unsigned_transactions"],
         }

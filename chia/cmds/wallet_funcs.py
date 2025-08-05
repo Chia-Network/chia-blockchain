@@ -54,6 +54,7 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
+    GetWalletBalance,
     GetWallets,
     NFTAddURI,
     NFTCalculateRoyalties,
@@ -944,14 +945,14 @@ async def print_balances(
                 # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
                 asset_id = summary.data[:64]
                 wallet_id = summary.id
-                balances = await wallet_client.get_wallet_balance(wallet_id)
+                balances = (await wallet_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))).wallet_balance
                 typ = WalletType(int(summary.type))
                 address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-                total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+                total_balance: str = print_balance(balances.confirmed_wallet_balance, scale, address_prefix)
                 unconfirmed_wallet_balance: str = print_balance(
-                    balances["unconfirmed_wallet_balance"], scale, address_prefix
+                    balances.unconfirmed_wallet_balance, scale, address_prefix
                 )
-                spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+                spendable_balance: str = print_balance(balances.spendable_balance, scale, address_prefix)
                 my_did: Optional[str] = None
                 ljust = 23
                 if typ == WalletType.CRCAT:
@@ -960,9 +961,10 @@ async def print_balances(
                 print(f"{summary.name}:")
                 print(f"{indent}{'-Total Balance:'.ljust(ljust)} {total_balance}")
                 if typ == WalletType.CRCAT:
+                    assert balances.pending_approval_balance is not None
                     print(
                         f"{indent}{'-Balance Pending VC Approval:'.ljust(ljust)} "
-                        f"{print_balance(balances['pending_approval_balance'], scale, address_prefix)}"
+                        f"{print_balance(balances.pending_approval_balance, scale, address_prefix)}"
                     )
                 print(f"{indent}{'-Pending Total Balance:'.ljust(ljust)} {unconfirmed_wallet_balance}")
                 print(f"{indent}{'-Spendable:'.ljust(ljust)} {spendable_balance}")
@@ -1157,7 +1159,7 @@ async def transfer_did(
             if push:
                 print(f"Successfully transferred DID to {target_address}")
             print(f"Transaction ID: {response.transaction_id.hex()}")
-            print(f"Transaction: {response.transaction.to_json_dict_convenience(config)}")
+            print(f"Transaction: {response.transaction.to_json_dict()}")
             return response.transactions
         except Exception as e:
             print(f"Failed to transfer DID: {e}")
@@ -1656,7 +1658,7 @@ async def spend_clawback(
             timelock_info=condition_valid_times,
         )
         print(str(response))
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+        return [TransactionRecord.from_json_dict(tx) for tx in response["transactions"]]
 
 
 async def mint_vc(

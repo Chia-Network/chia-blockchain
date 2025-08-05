@@ -172,10 +172,12 @@ class CATWallet:
             raise ValueError("Internal Error, unable to generate new CAT coin")
         cat_pid: bytes32 = cat_coin.parent_coin_info
 
+        converted_ph = await self.convert_puzzle_hash(cat_coin.puzzle_hash)
         cat_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(time.time()),
-            to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
+            to_puzzle_hash=converted_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(converted_ph),
             amount=uint64(cat_coin.amount),
             fee_amount=fee,
             confirmed=False,
@@ -796,6 +798,7 @@ class CATWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(time.time()),
                     to_puzzle_hash=puzzle_hashes[0],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                     amount=uint64(payment_sum),
                     fee_amount=fee,
                     confirmed=False,
