@@ -290,12 +290,28 @@ class GetTransactions(Streamable):
 
 
 # utility for GetTransactionsResponse
+# this class cannot be a dataclass because if it is, streamable will assume it knows how to serialize it
 # TODO: We should put some thought into deprecating this and separating the metadata more reasonably
-@dataclass(frozen=True)
 class TransactionRecordMetadata:
     content: dict[str, Any]
     coin_id: bytes32
     spent: bool
+
+    def __init__(self, content: dict[str, Any], coin_id: bytes32, spent: bool) -> None:
+        self.content = content
+        self.coin_id = coin_id
+        self.spent = spent
+
+    def __eq__(self, other: object) -> bool:
+        if (
+            isinstance(other, TransactionRecordMetadata)
+            and other.content == self.content
+            and other.coin_id == self.coin_id
+            and other.spent == self.spent
+        ):
+            return True
+        else:
+            return False
 
     def __bytes__(self) -> bytes:
         raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
