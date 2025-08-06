@@ -789,13 +789,13 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
     assert await nft_wallet_taker.get_nft_count() == 0
 
     # Create two new CATs and wallets for maker and taker
-    cats_to_mint = 10000
+    cats_to_mint = uint64(10000)
     cat_wallet_maker = await mint_cat(
         wallet_environments,
         env_0,
         "xch",
         "maker cat",
-        uint64(cats_to_mint),
+        cats_to_mint,
         wallet_type,
         "maker cat",
     )
@@ -805,7 +805,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
         env_1,
         "xch",
         "taker cat",
-        uint64(cats_to_mint),
+        cats_to_mint,
         wallet_type,
         "taker cat",
     )
@@ -1428,13 +1428,13 @@ async def test_nft_offer_nft0_and_xch_for_cat(
 
     assert await nft_wallet_taker.get_nft_count() == 0
     # Create two new CATs and wallets for maker and taker
-    cats_to_mint = 10000
+    cats_to_mint = uint64(10000)
     cat_wallet_maker = await mint_cat(
         wallet_environments,
         env_0,
         "xch",
         "maker cat",
-        uint64(cats_to_mint),
+        cats_to_mint,
         CATWallet,
         "maker cat",
     )
@@ -1444,7 +1444,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
         env_1,
         "xch",
         "taker cat",
-        uint64(cats_to_mint),
+        cats_to_mint,
         CATWallet,
         "taker cat",
     )

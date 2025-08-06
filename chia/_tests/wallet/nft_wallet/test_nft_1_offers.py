@@ -915,14 +915,14 @@ async def test_nft_offer_sell_nft_for_cat(
 
     # Create new CAT and wallets for maker and taker
     # Trade them between maker and taker to ensure multiple coins for each cat
-    cats_to_mint = 100000
+    cats_to_mint = uint64(100000)
     cats_to_trade = uint64(10000)
     cat_wallet_maker = await mint_cat(
         wallet_environments,
         env_maker,
         "xch",
         "cat",
-        uint64(cats_to_mint),
+        cats_to_mint,
         wallet_type,
         "cat",
     )
@@ -1241,14 +1241,14 @@ async def test_nft_offer_request_nft_for_cat(
 
     # Create new CAT and wallets for maker and taker
     # Trade them between maker and taker to ensure multiple coins for each cat
-    cats_to_mint = 100000
+    cats_to_mint = uint64(100000)
     cats_to_trade = uint64(20000)
     cat_wallet_maker = await mint_cat(
         wallet_environments,
         env_maker,
         "xch",
         "cat",
-        uint64(cats_to_mint),
+        cats_to_mint,
         wallet_type,
         "cat",
     )
