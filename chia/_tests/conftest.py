@@ -50,17 +50,13 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
+from chia.harvester.harvester_service import HarvesterService
+from chia.seeder.crawler_service import CrawlerService
 from chia.seeder.dns_server import DNSServer
-from chia.server.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    TimelordService,
-    WalletService,
-)
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_services import (
@@ -73,6 +69,7 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
@@ -81,6 +78,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 
 # TODO: review how this is now after other imports and before some stdlib imports...  :[
 # Set spawn after stdlib imports, but before other imports

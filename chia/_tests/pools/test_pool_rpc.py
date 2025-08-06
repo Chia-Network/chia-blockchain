@@ -24,7 +24,6 @@ from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.server.aliases import WalletService
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -50,6 +49,7 @@ from chia.wallet.wallet_request_types import (
     PWStatus,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 # TODO: Compare deducted fees in all tests against reported total_fee

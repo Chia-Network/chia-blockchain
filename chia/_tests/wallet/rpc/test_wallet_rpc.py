@@ -52,7 +52,6 @@ from chia.cmds.param_types import CliAmount
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.server.aliases import WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -142,6 +141,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)
