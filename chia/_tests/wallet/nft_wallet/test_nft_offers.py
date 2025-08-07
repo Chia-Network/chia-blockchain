@@ -5,11 +5,14 @@ from typing import Optional, Union
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
+from typing_extensions import Any
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
+from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -696,8 +699,9 @@ async def test_nft_offer_with_metadata_update(wallet_environments: WalletTestFra
 
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_maker = env_0.xch_wallet
@@ -785,72 +789,41 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework) -
     assert await nft_wallet_taker.get_nft_count() == 0
 
     # Create two new CATs and wallets for maker and taker
-    cats_to_mint = 10000
-    async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            env_0.wallet_state_manager,
-            wallet_maker,
-            {"identifier": "genesis_by_id"},
-            uint64(cats_to_mint),
-            action_scope,
-        )
-
-    async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        cat_wallet_taker = await CATWallet.create_new_cat_wallet(
-            env_1.wallet_state_manager,
-            wallet_taker,
-            {"identifier": "genesis_by_id"},
-            uint64(cats_to_mint),
-            action_scope,
-        )
-
-    # mostly set_remainder here as minting CATs is tested elsewhere
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "taker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "taker cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-        ]
+    cats_to_mint = uint64(10000)
+    cat_wallet_maker = await mint_cat(
+        wallet_environments,
+        env_0,
+        "xch",
+        "maker cat",
+        cats_to_mint,
+        wallet_type,
+        "maker cat",
     )
 
-    wallet_maker_for_taker_cat: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
-        env_0.wallet_state_manager, wallet_maker, cat_wallet_taker.get_asset_id()
+    cat_wallet_taker = await mint_cat(
+        wallet_environments,
+        env_1,
+        "xch",
+        "taker cat",
+        cats_to_mint,
+        wallet_type,
+        "taker cat",
     )
 
-    await CATWallet.get_or_create_wallet_for_cat(
-        env_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+    if wallet_type is RCATWallet:
+        extra_args: Any = (bytes32.zeros,)
+    else:
+        extra_args = tuple()
+    wallet_maker_for_taker_cat: CATWallet = await wallet_type.get_or_create_wallet_for_cat(
+        env_0.wallet_state_manager, wallet_maker, cat_wallet_taker.get_asset_id(), *extra_args
     )
+
+    await wallet_type.get_or_create_wallet_for_cat(
+        env_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id(), *extra_args
+    )
+
+    await env_0.change_balances({"taker cat": {"init": True}})
+    await env_1.change_balances({"maker cat": {"init": True}})
 
     # MAKE FIRST TRADE: 1 NFT for 10 taker cats
     nft_to_offer = coins_maker[0]
@@ -902,9 +875,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework) -
                         "<=#max_send_amount": -maker_fee,
                         "pending_coin_removal_count": 1,
                     },
-                    "taker cat": {
-                        "init": True,
-                    },
+                    "taker cat": {},
                     "nft": {
                         "pending_coin_removal_count": 1,
                     },
@@ -940,9 +911,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework) -
                         ">=#pending_change": 1,
                         "pending_coin_removal_count": 1,
                     },
-                    "maker cat": {
-                        "init": True,
-                    },
+                    "maker cat": {},
                     "taker cat": {
                         "unconfirmed_wallet_balance": -taker_cat_offered,
                         "<=#spendable_balance": -taker_cat_offered,
@@ -1367,8 +1336,11 @@ async def test_nft_offer_nft_for_nft(wallet_environments: WalletTestFramework) -
 
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize("wallet_type", [CATWallet, RCATWallet])
 @pytest.mark.anyio
-async def test_nft_offer_nft0_and_xch_for_cat(wallet_environments: WalletTestFramework) -> None:
+async def test_nft_offer_nft0_and_xch_for_cat(
+    wallet_environments: WalletTestFramework, wallet_type: type[CATWallet]
+) -> None:
     env_0 = wallet_environments.environments[0]
     env_1 = wallet_environments.environments[1]
     wallet_maker = env_0.xch_wallet
@@ -1456,80 +1428,41 @@ async def test_nft_offer_nft0_and_xch_for_cat(wallet_environments: WalletTestFra
 
     assert await nft_wallet_taker.get_nft_count() == 0
     # Create two new CATs and wallets for maker and taker
-    cats_to_mint = 10000
-    async with wallet_maker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            env_0.wallet_state_manager,
-            wallet_maker,
-            {"identifier": "genesis_by_id"},
-            uint64(cats_to_mint),
-            action_scope,
-        )
+    cats_to_mint = uint64(10000)
+    cat_wallet_maker = await mint_cat(
+        wallet_environments,
+        env_0,
+        "xch",
+        "maker cat",
+        cats_to_mint,
+        CATWallet,
+        "maker cat",
+    )
 
-    async with wallet_taker.wallet_state_manager.new_action_scope(
-        wallet_environments.tx_config, push=True
-    ) as action_scope:
-        cat_wallet_taker = await CATWallet.create_new_cat_wallet(
-            env_1.wallet_state_manager,
-            wallet_taker,
-            {"identifier": "genesis_by_id"},
-            uint64(cats_to_mint),
-            action_scope,
-        )
+    cat_wallet_taker = await mint_cat(
+        wallet_environments,
+        env_1,
+        "xch",
+        "taker cat",
+        cats_to_mint,
+        CATWallet,
+        "taker cat",
+    )
 
+    if wallet_type is RCATWallet:
+        extra_args: Any = (bytes32.zeros,)
+    else:
+        extra_args = tuple()
     wallet_maker_for_taker_cat: CATWallet = await CATWallet.get_or_create_wallet_for_cat(
-        env_0.wallet_state_manager, wallet_maker, cat_wallet_taker.get_asset_id()
+        env_0.wallet_state_manager, wallet_maker, cat_wallet_taker.get_asset_id(), *extra_args
     )
 
     await CATWallet.get_or_create_wallet_for_cat(
-        env_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id()
+        env_1.wallet_state_manager, wallet_taker, cat_wallet_maker.get_asset_id(), *extra_args
     )
 
-    # mostly set_remainder here as minting CATs is tested elsewhere
-    await wallet_environments.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                    "taker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "maker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                    "taker cat": {
-                        "init": True,
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    "xch": {"set_remainder": True},
-                    "taker cat": {
-                        "set_remainder": True,
-                    },
-                },
-            ),
-        ]
-    )
+    await env_0.change_balances({"taker cat": {"init": True}})
+    await env_1.change_balances({"maker cat": {"init": True}})
 
     # MAKE FIRST TRADE: 1 NFT for 10 taker cats
     nft_to_offer = coins_maker[0]
