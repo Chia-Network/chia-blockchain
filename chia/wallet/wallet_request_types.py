@@ -285,7 +285,7 @@ class GetTransactions(Streamable):
     confirmed: Optional[bool] = None
 
     def __post_init__(self) -> None:
-        if self.sort_key is not None and self.sort_key not in SortKey.__members__:
+        if self.sort_key is not None and not hasattr(SortKey, self.sort_key):
             raise ValueError(f"There is no known sort {self.sort_key}")
 
 
