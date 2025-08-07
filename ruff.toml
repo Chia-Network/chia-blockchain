@@ -61,7 +61,6 @@ ignore = [
     # Should probably fix these
     "PLR6301", # no-self-use
     "PLR2004", # magic-value-comparison
-    "PLR1704", # redefined-argument-from-local
     "PLR5501", # collapsible-else-if
 
     # Pylint warning

@@ -179,7 +179,7 @@ async def get_unit_name_for_wallet_id(
 async def get_transaction(
     *, root_path: pathlib.Path, wallet_rpc_port: Optional[int], fingerprint: Optional[int], tx_id: str, verbose: int
 ) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, _, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
         tx: TransactionRecord = await wallet_client.get_transaction(transaction_id=transaction_id)
@@ -1865,7 +1865,7 @@ async def approve_r_cats(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fp, config):
         if wallet_client is None:
             return
         txs = await wallet_client.crcat_approve_pending(
@@ -1876,7 +1876,7 @@ async def approve_r_cats(
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 reuse_puzhash=reuse,
-            ).to_tx_config(units["cat"], config, fingerprint),
+            ).to_tx_config(units["cat"], config, fp),
             push=push,
             timelock_info=condition_valid_times,
         )
