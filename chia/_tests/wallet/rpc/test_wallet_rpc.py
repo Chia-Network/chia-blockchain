@@ -1022,6 +1022,9 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
         1, uint64(1), encode_puzzle_hash(puzhash, "txch"), DEFAULT_TX_CONFIG
     )  # Create a pending tx
 
+    with pytest.raises(ValueError, match="There is no known sort foo"):
+        await client.get_transactions(GetTransactions(uint32(1), sort_key="foo"))
+
     all_transactions = (
         await client.get_transactions(GetTransactions(uint32(1), sort_key=SortKey.RELEVANCE.name))
     ).transactions
