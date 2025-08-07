@@ -787,7 +787,7 @@ class MempoolManager:
             f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        if duration > 2:
+        if duration > 3:
             log.warning("validating spend took too long, rejecting")
             return Err.INVALID_SPEND_BUNDLE, None, []
 
