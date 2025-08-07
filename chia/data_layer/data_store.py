@@ -1172,8 +1172,8 @@ class DataStore:
         )
 
         if status == Status.COMMITTED:
-            for left_hash, right_hash, store_id in insert_ancestors_cache:
-                await self._insert_ancestor_table(left_hash, right_hash, store_id, new_generation)
+            for left_hash, right_hash, cache_store_id in insert_ancestors_cache:
+                await self._insert_ancestor_table(left_hash, right_hash, cache_store_id, new_generation)
 
         return new_root
 
@@ -1329,8 +1329,8 @@ class DataStore:
                 generation=new_generation,
             )
             if status == Status.COMMITTED:
-                for left_hash, right_hash, store_id in insert_ancestors_cache:
-                    await self._insert_ancestor_table(left_hash, right_hash, store_id, new_generation)
+                for left_hash, right_hash, cache_store_id in insert_ancestors_cache:
+                    await self._insert_ancestor_table(left_hash, right_hash, cache_store_id, new_generation)
 
         return new_root
 
@@ -1428,8 +1428,8 @@ class DataStore:
         """
         params = {"pending_status": Status.PENDING.value, "pending_batch_status": Status.PENDING_BATCH.value}
         if writer is None:
-            async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
-                await writer.execute(query, params)
+            async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as sub_writer:
+                await sub_writer.execute(query, params)
         else:
             await writer.execute(query, params)
 
