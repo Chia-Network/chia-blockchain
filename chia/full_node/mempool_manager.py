@@ -834,7 +834,7 @@ class MempoolManager:
             # rebasing a fast forward spend is more expensive than to just
             # evict the item. So, any FF spend we may need to rebase, defer
             # them until after we've gone through all spends
-            deferred_ff_items: set[tuple[bytes32, bytes32]] = set()
+            deferred_ff_items: set[tuple[bytes32, MempoolItem]] = set()
 
             for spend in spent_coins:
                 items = self.mempool.get_items_by_coin_id(spend)
@@ -857,7 +857,7 @@ class MempoolManager:
                         spendbundle_ids_to_remove.add(item_name)
                         continue
 
-                    deferred_ff_items.add((spend, item_name))
+                    deferred_ff_items.add((spend, item))
 
             # fast forward spends are indexed under the latest singleton coin ID
             # if it's spent, we need to update the index in the mempool. This
@@ -865,7 +865,8 @@ class MempoolManager:
             # new_coin_id, current_coin_id, mempool item name
             spends_to_update: list[tuple[bytes32, bytes32, bytes32]] = []
 
-            for spend, item_name in deferred_ff_items:
+            for spend, item in deferred_ff_items:
+                item_name = item.spend_bundle_name
                 if item_name in spendbundle_ids_to_remove:
                     continue
                 # there may be multiple matching spends in the mempool
