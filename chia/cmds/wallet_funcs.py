@@ -265,7 +265,9 @@ async def get_transactions(
                     if len(coin_records["coin_records"]) > 0:
                         coin_record = coin_records["coin_records"][0]
                     else:
-                        j -= 1
+                        # Ignoring this because it seems useful to the loop
+                        # But we should probably consider a better loop
+                        j -= 1  # noqa: PLW2901
                         skipped += 1
                         continue
                 print_transaction(

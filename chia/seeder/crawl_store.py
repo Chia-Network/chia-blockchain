@@ -341,9 +341,6 @@ class CrawlStore:
         handshake = {}
 
         for host, record in self.host_to_records.items():
-            if host not in self.host_to_records:
-                continue
-            record = self.host_to_records[host]
             if record.version == "undefined":
                 continue
             if record.handshake_time < time.time() - 5 * 24 * 3600:

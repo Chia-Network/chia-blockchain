@@ -65,7 +65,6 @@ ignore = [
     # Pylint warning
     "PLW1641", # eq-without-hash
     # Should probably fix these
-    "PLW2901", # redefined-loop-name
     "PLW1514", # unspecified-encoding
     "PLW0603", # global-statement
 

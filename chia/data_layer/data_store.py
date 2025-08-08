@@ -1876,8 +1876,12 @@ class DataStore:
             hash_to_node: dict[bytes32, Node] = {}
             for node in reversed(nodes):
                 if isinstance(node, InternalNode):
-                    node = replace(node, left=hash_to_node[node.left_hash], right=hash_to_node[node.right_hash])
-                hash_to_node[node.hash] = node
+                    node_entry: Node = replace(
+                        node, left=hash_to_node[node.left_hash], right=hash_to_node[node.right_hash]
+                    )
+                else:
+                    node_entry = node
+                hash_to_node[node_entry.hash] = node_entry
 
             root_node = hash_to_node[root_node.hash]
 

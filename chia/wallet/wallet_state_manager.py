@@ -1945,8 +1945,8 @@ class WalletStateManager:
                                         # No more singleton (maybe destroyed?)
                                         break
 
-                                    coin_name = new_singleton_coin.name()
-                                    existing = await self.coin_store.get_coin_record(coin_name)
+                                    new_singleton_name = new_singleton_coin.name()
+                                    existing = await self.coin_store.get_coin_record(new_singleton_name)
                                     if existing is None:
                                         await self.coin_added(
                                             new_singleton_coin,
@@ -1955,7 +1955,7 @@ class WalletStateManager:
                                             uint32(record.wallet_id),
                                             record.wallet_type,
                                             peer,
-                                            coin_name,
+                                            new_singleton_name,
                                             coin_data,
                                         )
                                     await self.coin_store.set_spent(
@@ -1963,7 +1963,7 @@ class WalletStateManager:
                                     )
                                     await self.add_interested_coin_ids([new_singleton_coin.name()])
                                     new_coin_state: list[CoinState] = await self.wallet_node.get_coin_state(
-                                        [coin_name], peer=peer, fork_height=fork_height
+                                        [new_singleton_name], peer=peer, fork_height=fork_height
                                     )
                                     assert len(new_coin_state) == 1
                                     curr_coin_state = new_coin_state[0]
@@ -2039,8 +2039,8 @@ class WalletStateManager:
                             launcher_spend_additions = compute_additions(launcher_spend)
                             assert len(launcher_spend_additions) == 1
                             coin_added = launcher_spend_additions[0]
-                            coin_name = coin_added.name()
-                            existing = await self.coin_store.get_coin_record(coin_name)
+                            coin_added_name = coin_added.name()
+                            existing = await self.coin_store.get_coin_record(coin_added_name)
                             if existing is None:
                                 await self.coin_added(
                                     coin_added,
@@ -2049,10 +2049,10 @@ class WalletStateManager:
                                     pool_wallet.id(),
                                     pool_wallet.type(),
                                     peer,
-                                    coin_name,
+                                    coin_added_name,
                                     coin_data,
                                 )
-                            await self.add_interested_coin_ids([coin_name])
+                            await self.add_interested_coin_ids([coin_added_name])
 
                     else:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
