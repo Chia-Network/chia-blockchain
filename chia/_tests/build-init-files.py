@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Create missing `__init__.py` files in the source code folders (in "chia/").
 #
