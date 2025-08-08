@@ -77,10 +77,6 @@ ignore = [
     # flake8-implicit-str-concat
     "ISC003", # explicit-string-concatenation
 
-    # pyupgrade
-    # Should probably fix these
-    "UP006", # non-pep585-annotation
-
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
