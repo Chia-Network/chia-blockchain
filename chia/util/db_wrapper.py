@@ -124,15 +124,14 @@ def get_host_parameter_limit() -> int:
 
         limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
         host_parameter_limit = connection.getlimit(limit_number)
-    else:
-        # guessing based on defaults, seems you can't query
+    # guessing based on defaults, seems you can't query
 
-        # https://www.sqlite.org/changes.html#version_3_32_0
-        # Increase the default upper bound on the number of parameters from 999 to 32766.
-        if sqlite3.sqlite_version_info >= (3, 32, 0):
-            host_parameter_limit = 32766
-        else:
-            host_parameter_limit = 999
+    # https://www.sqlite.org/changes.html#version_3_32_0
+    # Increase the default upper bound on the number of parameters from 999 to 32766.
+    elif sqlite3.sqlite_version_info >= (3, 32, 0):
+        host_parameter_limit = 32766
+    else:
+        host_parameter_limit = 999
     return host_parameter_limit
 
 

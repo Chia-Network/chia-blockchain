@@ -117,10 +117,9 @@ class PlotRefreshTester:
                                 if plot_info.prover.get_filename() == value.prover.get_filename():
                                     values_found += 1
                                     continue
-                        else:
-                            if value in expected_list:
-                                values_found += 1
-                                continue
+                        elif value in expected_list:
+                            values_found += 1
+                            continue
                     if values_found != len(expected_list):
                         log.error(f"{name} invalid: values_found {values_found} expected {len(expected_list)}")
                         return

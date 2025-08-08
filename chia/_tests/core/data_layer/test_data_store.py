@@ -2385,11 +2385,10 @@ async def test_get_leaf_at_minimum_height(
                 if isinstance(node, InternalNode):
                     heights[node.left_hash] = heights[node.hash] + 1
                     heights[node.right_hash] = heights[node.hash] + 1
+                elif min_leaf_height is not None:
+                    min_leaf_height = min(min_leaf_height, heights[node.hash])
                 else:
-                    if min_leaf_height is not None:
-                        min_leaf_height = min(min_leaf_height, heights[node.hash])
-                    else:
-                        min_leaf_height = heights[node.hash]
+                    min_leaf_height = heights[node.hash]
 
             assert min_leaf_height is not None
             if pre > 0:

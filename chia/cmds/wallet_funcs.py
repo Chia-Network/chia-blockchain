@@ -1244,9 +1244,8 @@ async def mint_nft(
                     raise ValueError("Disabling DID ownership is not supported for this NFT wallet, it does have a DID")
                 else:
                     did_id = None
-            else:
-                if not wallet_has_did:
-                    did_id = ""
+            elif not wallet_has_did:
+                did_id = ""
 
             mint_response = await wallet_client.mint_nft(
                 request=NFTMintNFTRequest(

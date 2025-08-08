@@ -898,11 +898,10 @@ class BlockTools:
                                 # address, so continue until a proof of space tied to a pk is found
                                 continue
                             pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        elif pool_reward_puzzle_hash is not None:
+                            pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                         else:
-                            if pool_reward_puzzle_hash is not None:
-                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
-                            else:
-                                pool_target = PoolTarget(self.pool_ph, uint32(0))
+                            pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         new_gen = self.setup_new_gen(
                             tx_block_heights,
@@ -1193,11 +1192,10 @@ class BlockTools:
                                 # address, so continue until a proof of space tied to a pk is found
                                 continue
                             pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        elif pool_reward_puzzle_hash is not None:
+                            pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                         else:
-                            if pool_reward_puzzle_hash is not None:
-                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
-                            else:
-                                pool_target = PoolTarget(self.pool_ph, uint32(0))
+                            pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         new_gen = self.setup_new_gen(
                             tx_block_heights,

@@ -1497,16 +1497,15 @@ class DataStore:
             pending_root = await self.get_pending_root(store_id=store_id)
             if pending_root is None:
                 latest_local_root: Optional[Root] = old_root
-            else:
-                if pending_root.status == Status.PENDING_BATCH:
-                    # We have an unfinished batch, continue the current batch on top of it.
-                    if pending_root.generation != old_root.generation + 1:
-                        raise Exception("Internal error")
-                    await self.change_root_status(pending_root, Status.COMMITTED)
-                    await self.build_ancestor_table_for_latest_root(store_id=store_id)
-                    latest_local_root = pending_root
-                else:
+            elif pending_root.status == Status.PENDING_BATCH:
+                # We have an unfinished batch, continue the current batch on top of it.
+                if pending_root.generation != old_root.generation + 1:
                     raise Exception("Internal error")
+                await self.change_root_status(pending_root, Status.COMMITTED)
+                await self.build_ancestor_table_for_latest_root(store_id=store_id)
+                latest_local_root = pending_root
+            else:
+                raise Exception("Internal error")
 
             assert latest_local_root is not None
 
@@ -1548,11 +1547,10 @@ class DataStore:
 
                                 if old_node is None:
                                     pending_autoinsert_hashes.append(terminal_node_hash)
+                                elif key_hash_frequency[hash] == 1:
+                                    raise Exception(f"Key already present: {key.hex()}")
                                 else:
-                                    if key_hash_frequency[hash] == 1:
-                                        raise Exception(f"Key already present: {key.hex()}")
-                                    else:
-                                        pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
+                                    pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                                 continue
                         insert_result = await self.autoinsert(
                             key, value, store_id, True, Status.COMMITTED, root=latest_local_root
@@ -2228,13 +2226,12 @@ class DataStore:
                         )
                     else:
                         subscriptions.append(Subscription(store_id, []))
-                else:
-                    if url is not None and num_consecutive_failures is not None and ignore_till is not None:
-                        new_servers_info = subscription.servers_info
-                        new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
-                        new_subscription = replace(subscription, servers_info=new_servers_info)
-                        subscriptions.remove(subscription)
-                        subscriptions.append(new_subscription)
+                elif url is not None and num_consecutive_failures is not None and ignore_till is not None:
+                    new_servers_info = subscription.servers_info
+                    new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
+                    new_subscription = replace(subscription, servers_info=new_servers_info)
+                    subscriptions.remove(subscription)
+                    subscriptions.append(new_subscription)
 
         return subscriptions
 

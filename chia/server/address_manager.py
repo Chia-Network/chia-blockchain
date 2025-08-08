@@ -371,9 +371,8 @@ class AddressManager:
         if value == -1:
             if (row, col) in self.used_new_matrix_positions:
                 self.used_new_matrix_positions.remove((row, col))
-        else:
-            if (row, col) not in self.used_new_matrix_positions:
-                self.used_new_matrix_positions.add((row, col))
+        elif (row, col) not in self.used_new_matrix_positions:
+            self.used_new_matrix_positions.add((row, col))
 
     # Use only this method for modifying tried matrix.
     def _set_tried_matrix(self, row: int, col: int, value: int) -> None:
@@ -381,9 +380,8 @@ class AddressManager:
         if value == -1:
             if (row, col) in self.used_tried_matrix_positions:
                 self.used_tried_matrix_positions.remove((row, col))
-        else:
-            if (row, col) not in self.used_tried_matrix_positions:
-                self.used_tried_matrix_positions.add((row, col))
+        elif (row, col) not in self.used_tried_matrix_positions:
+            self.used_tried_matrix_positions.add((row, col))
 
     def load_used_table_positions(self) -> None:
         self.used_new_matrix_positions = set()
@@ -587,10 +585,9 @@ class AddressManager:
                 info.ref_count += 1
                 if node_id is not None:
                     self._set_new_matrix(new_bucket, new_bucket_pos, node_id)
-            else:
-                if info.ref_count == 0:
-                    if node_id is not None:
-                        self.delete_new_entry_(node_id)
+            elif info.ref_count == 0:
+                if node_id is not None:
+                    self.delete_new_entry_(node_id)
         return is_unique
 
     def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
