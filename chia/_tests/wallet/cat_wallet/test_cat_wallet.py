@@ -1153,7 +1153,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
 
     # 3) Generate transaction that is greater than limit
-    with pytest.raises(ValueError, match="Can't select amount higher than our spendable balance."):
+    with pytest.raises(ValueError, match="Can't select amount higher than our spendable balance"):
         async with cat_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
         ) as action_scope:
