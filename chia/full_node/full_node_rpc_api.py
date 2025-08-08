@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
@@ -89,6 +90,8 @@ async def get_average_block_time(
 
 
 class FullNodeRpcApi:
+    executor: ThreadPoolExecutor
+
     if TYPE_CHECKING:
         from chia.rpc.rpc_server import RpcApiProtocol
 
@@ -98,6 +101,7 @@ class FullNodeRpcApi:
         self.service = service
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[dict[str, Any]] = None
+        self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="node-rpc-")
 
     def get_routes(self) -> dict[str, Endpoint]:
         return {
@@ -485,11 +489,14 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": []}
 
-        spends = get_spends_for_trusted_block(
+        flags = get_flags_for_height_and_constants(full_block.height, self.service.constants)
+        spends = await asyncio.get_running_loop().run_in_executor(
+            self.executor,
+            get_spends_for_trusted_block,
             self.service.constants,
             block_generator.program,
             block_generator.generator_refs,
-            get_flags_for_height_and_constants(full_block.height, self.service.constants),
+            flags,
         )
 
         return spends
@@ -506,11 +513,14 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
-        spends_with_conditions = get_spends_for_trusted_block_with_conditions(
+        flags = get_flags_for_height_and_constants(full_block.height, self.service.constants)
+        spends_with_conditions = await asyncio.get_running_loop().run_in_executor(
+            self.executor,
+            get_spends_for_trusted_block_with_conditions,
             self.service.constants,
             block_generator.program,
             block_generator.generator_refs,
-            get_flags_for_height_and_constants(full_block.height, self.service.constants),
+            flags,
         )
         return {"block_spends_with_conditions": spends_with_conditions}
 
@@ -885,7 +895,7 @@ class FullNodeRpcApi:
             if maybe_gen is not None:
                 # this also validates the signature
                 err, conds = await asyncio.get_running_loop().run_in_executor(
-                    self.service.blockchain.pool,
+                    self.executor,
                     run_block_generator2,
                     bytes(gen.program),
                     gen.generator_refs,
