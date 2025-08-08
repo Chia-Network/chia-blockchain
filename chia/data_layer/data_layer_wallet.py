@@ -590,15 +590,14 @@ class DataLayerWallet:
         if coins is None or len(coins) == 0:
             if launcher_id is None:
                 raise ValueError("Not enough info to know which DL coin to send")
+        elif len(coins) != 1:
+            raise ValueError("The wallet can only send one DL coin at a time")
         else:
-            if len(coins) != 1:
-                raise ValueError("The wallet can only send one DL coin at a time")
+            record = await self.wallet_state_manager.dl_store.get_singleton_record(next(iter(coins)).name())
+            if record is None:
+                raise ValueError("The specified coin is not a tracked DL")
             else:
-                record = await self.wallet_state_manager.dl_store.get_singleton_record(next(iter(coins)).name())
-                if record is None:
-                    raise ValueError("The specified coin is not a tracked DL")
-                else:
-                    launcher_id = record.launcher_id
+                launcher_id = record.launcher_id
 
         if len(amounts) != 1 or len(puzzle_hashes) != 1:
             raise ValueError("The wallet can only send one DL coin to one place at a time")
