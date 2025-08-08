@@ -230,8 +230,8 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
 @pytest.fixture(scope="session", name="bt")
 async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    _shared_block_tools = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
-    return _shared_block_tools
+    shared_block_tools = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
+    return shared_block_tools
 
 
 # if you have a system that has an unusual hostname for localhost and you want

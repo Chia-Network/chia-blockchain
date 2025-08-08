@@ -262,10 +262,9 @@ class WalletTransactionStore:
                 if time_submitted < current_time - (60 * 10):
                     records.append(record)
                     self.tx_submitted[record.name] = current_time, 1
-                else:
-                    if count < minimum_send_attempts:
-                        records.append(record)
-                        self.tx_submitted[record.name] = time_submitted, (count + 1)
+                elif count < minimum_send_attempts:
+                    records.append(record)
+                    self.tx_submitted[record.name] = time_submitted, (count + 1)
             else:
                 records.append(record)
                 self.tx_submitted[record.name] = current_time, 1

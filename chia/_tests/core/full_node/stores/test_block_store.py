@@ -418,8 +418,8 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
         store = await BlockStore.create(db_wrapper, use_cache=use_cache)
 
         new_blocks = []
-        for i, block in enumerate(blocks):
-            block = block.replace(transactions_generator=generator(i))
+        for i, original_block in enumerate(blocks):
+            block = original_block.replace(transactions_generator=generator(i))
             block_record = header_block_to_sub_block_record(
                 DEFAULT_CONSTANTS, uint64(0), block, uint64(0), False, uint8(0), uint32(max(0, block.height - 1)), None
             )

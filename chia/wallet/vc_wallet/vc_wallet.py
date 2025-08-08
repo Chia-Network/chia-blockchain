@@ -455,12 +455,10 @@ class VCWallet:
                     crcat_spends.append(crcat_spend)
                     if spend in offer._bundle.coin_spends:
                         spends_to_fix[spend.coin.name()] = spend
-                else:
-                    if spend in offer._bundle.coin_spends:  # pragma: no cover
-                        other_spends.append(spend)
-            else:
-                if spend in offer._bundle.coin_spends:
+                elif spend in offer._bundle.coin_spends:  # pragma: no cover
                     other_spends.append(spend)
+            elif spend in offer._bundle.coin_spends:
+                other_spends.append(spend)
 
         # Figure out what VC announcements are needed
         announcements_to_make: dict[bytes32, list[CreatePuzzleAnnouncement]] = {}

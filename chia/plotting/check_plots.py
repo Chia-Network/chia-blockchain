@@ -170,9 +170,9 @@ def check_plots(
                 challenge = std_hash(i.to_bytes(32, "big"))
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
-                    quality_start_time = int(round(time() * 1000))
+                    quality_start_time = round(time() * 1000)
                     for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
-                        quality_spent_time = int(round(time() * 1000)) - quality_start_time
+                        quality_spent_time = round(time() * 1000) - quality_start_time
                         if quality_spent_time > 8000:
                             log.warning(
                                 f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
@@ -183,9 +183,9 @@ def check_plots(
 
                         # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                         try:
-                            proof_start_time = int(round(time() * 1000))
+                            proof_start_time = round(time() * 1000)
                             proof = pr.get_full_proof(challenge, index, parallel_read)
-                            proof_spent_time = int(round(time() * 1000)) - proof_start_time
+                            proof_spent_time = round(time() * 1000) - proof_start_time
                             if proof_spent_time > 15000:
                                 log.warning(
                                     f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
@@ -207,7 +207,7 @@ def check_plots(
                                 f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
                             )
                             caught_exception = True
-                        quality_start_time = int(round(time() * 1000))
+                        quality_start_time = round(time() * 1000)
                 except KeyboardInterrupt:
                     log.warning("Interrupted, closing")
                     return

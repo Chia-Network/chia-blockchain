@@ -65,15 +65,14 @@ class PuzzleInfo:
                 return True
             else:
                 return False
-        else:
-            if self.type() == types[0]:
-                types.pop(0)
-                if self.also():
-                    return self.also().check_type(types)  # type: ignore
-                else:
-                    return self.check_type(types)
+        elif self.type() == types[0]:
+            types.pop(0)
+            if self.also():
+                return self.also().check_type(types)  # type: ignore
             else:
-                return False
+                return self.check_type(types)
+        else:
+            return False
 
 
 @dataclass(frozen=True)

@@ -83,10 +83,9 @@ class PlotKeysResolver:
                 if self.pool_contract_address is not None:
                     raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
                 pool_public_key = G1Element.from_bytes(bytes.fromhex(self.pool_public_key))
-            else:
-                if self.pool_contract_address is None:
-                    # If nothing is set, farms to the provided key (or the first key)
-                    pool_public_key = await self.get_pool_public_key(keychain_proxy)
+            elif self.pool_contract_address is None:
+                # If nothing is set, farms to the provided key (or the first key)
+                pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
             self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
         finally:

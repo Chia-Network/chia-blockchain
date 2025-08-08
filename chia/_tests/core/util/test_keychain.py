@@ -220,9 +220,9 @@ class TestKeychain:
         test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
         all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
-        for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
+        for idx, [entropy_hex, full_mnemonic, seed_hex, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)
-            seed = bytes.fromhex(seed)
+            seed = bytes.fromhex(seed_hex)
 
             assert mnemonic_from_short_words(short_mnemonic) == full_mnemonic
             assert bytes_from_mnemonic(short_mnemonic) == entropy_bytes

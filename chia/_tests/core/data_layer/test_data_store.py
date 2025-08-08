@@ -594,7 +594,7 @@ async def test_ancestor_table_unique_inserts(data_store: DataStore, store_id: by
     hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
     await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
     await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
-    with pytest.raises(Exception, match="^Requested insertion of ancestor"):
+    with pytest.raises(Exception, match=r"^Requested insertion of ancestor"):
         await data_store._insert_ancestor_table(hash_1, hash_1, store_id, 2)
     await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
 
@@ -2385,11 +2385,10 @@ async def test_get_leaf_at_minimum_height(
                 if isinstance(node, InternalNode):
                     heights[node.left_hash] = heights[node.hash] + 1
                     heights[node.right_hash] = heights[node.hash] + 1
+                elif min_leaf_height is not None:
+                    min_leaf_height = min(min_leaf_height, heights[node.hash])
                 else:
-                    if min_leaf_height is not None:
-                        min_leaf_height = min(min_leaf_height, heights[node.hash])
-                    else:
-                        min_leaf_height = heights[node.hash]
+                    min_leaf_height = heights[node.hash]
 
             assert min_leaf_height is not None
             if pre > 0:

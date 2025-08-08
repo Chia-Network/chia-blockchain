@@ -68,8 +68,7 @@ def test_steady_fee_pressure() -> None:
     estimates_during = []
     start_from = 250
     for height in range(start, end):
-        height = uint32(height)
-        items = make_block(height, 1, cost, fee, num_blocks_wait_in_mempool)
+        items = make_block(uint32(height), 1, cost, fee, num_blocks_wait_in_mempool)
         estimator.new_block(FeeBlockInfo(uint32(height), items))
         if height >= start_from:
             estimation = estimator.estimate_fee_rate(time_offset_seconds=time_offset_seconds * (height - start_from))

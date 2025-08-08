@@ -160,20 +160,19 @@ class Timelord:
         slow_bluebox = self.config.get("slow_bluebox", False)
         if not self.bluebox_mode:
             self.main_loop = create_referenced_task(self._manage_chains())
+        elif os.name == "nt" or slow_bluebox:
+            # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
+            workers = self.config.get("slow_bluebox_process_count", 1)
+            self._executor_shutdown_tempfile = _create_shutdown_file()
+            self.bluebox_pool = ThreadPoolExecutor(
+                max_workers=workers,
+                thread_name_prefix="blue-box-",
+            )
+            self.main_loop = create_referenced_task(
+                self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
+            )
         else:
-            if os.name == "nt" or slow_bluebox:
-                # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
-                workers = self.config.get("slow_bluebox_process_count", 1)
-                self._executor_shutdown_tempfile = _create_shutdown_file()
-                self.bluebox_pool = ThreadPoolExecutor(
-                    max_workers=workers,
-                    thread_name_prefix="blue-box-",
-                )
-                self.main_loop = create_referenced_task(
-                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
-                )
-            else:
-                self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
+            self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
         log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
         try:
             yield

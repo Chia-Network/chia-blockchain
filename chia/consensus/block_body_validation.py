@@ -334,9 +334,8 @@ async def validate_block_body(
     if block.transactions_generator is not None:
         if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
             return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
-    else:
-        if block.transactions_info.generator_root != bytes([0] * 32):
-            return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+    elif block.transactions_info.generator_root != bytes([0] * 32):
+        return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
     # 8a. The generator_ref_list must be the hash of the serialized bytes of
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)

@@ -195,11 +195,10 @@ class CrawlStore:
             counter += 1
             if reliability.ignore_till < now and reliability.ban_till < now:
                 add = True
-            else:
-                if reliability.ban_till >= now:
-                    self.banned_peers += 1
-                elif reliability.ignore_till >= now:
-                    self.ignored_peers += 1
+            elif reliability.ban_till >= now:
+                self.banned_peers += 1
+            elif reliability.ignore_till >= now:
+                self.ignored_peers += 1
             record = self.host_to_records[peer_id]
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
                 add = True
@@ -342,9 +341,6 @@ class CrawlStore:
         handshake = {}
 
         for host, record in self.host_to_records.items():
-            if host not in self.host_to_records:
-                continue
-            record = self.host_to_records[host]
             if record.version == "undefined":
                 continue
             if record.handshake_time < time.time() - 5 * 24 * 3600:

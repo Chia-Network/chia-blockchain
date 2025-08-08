@@ -228,12 +228,11 @@ class FullNodeDiscovery:
             if self.server.is_duplicate_or_self_connection(addr):
                 # Mark it as a softer attempt, without counting the failures.
                 await self.address_manager.attempt(addr, False)
+            elif client_connected is True:
+                await self.address_manager.mark_good(addr)
+                await self.address_manager.connect(addr)
             else:
-                if client_connected is True:
-                    await self.address_manager.mark_good(addr)
-                    await self.address_manager.connect(addr)
-                else:
-                    await self.address_manager.attempt(addr, True)
+                await self.address_manager.attempt(addr, True)
             self.pending_outbound_connections.remove(addr.host)
         except Exception as e:
             if addr.host in self.pending_outbound_connections:

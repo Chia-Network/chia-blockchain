@@ -1373,9 +1373,8 @@ class WebSocketServer:
                 "service": service,
                 "queue": self.extract_plot_queue(),
             }
-        else:
-            if self.ping_job is None:
-                self.ping_job = create_referenced_task(self.ping_task())
+        elif self.ping_job is None:
+            self.ping_job = create_referenced_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response

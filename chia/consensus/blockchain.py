@@ -708,9 +708,8 @@ class Blockchain:
             if block.transactions_generator is not None:
                 if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
                     return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
-            else:
-                if block.transactions_info.generator_root != bytes([0] * 32):
-                    return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+            elif block.transactions_info.generator_root != bytes([0] * 32):
+                return None, Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
             if (
                 block.foliage_transaction_block is None
