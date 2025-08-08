@@ -395,7 +395,7 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 1
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
-        assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
+        assert txs["transactions"][0]["metadata"]["coin_id"] == "0x" + merkle_coin.name().hex()
         with pytest.raises(ValueError):
             await api_0.spend_clawback_coins({})
 

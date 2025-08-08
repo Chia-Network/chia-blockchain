@@ -35,6 +35,8 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     GetSyncStatusResponse,
+    GetTransaction,
+    GetTransactionResponse,
     GetWallets,
     GetWalletsResponse,
     NFTCalculateRoyalties,
@@ -115,27 +117,30 @@ class TestWalletRpcClient(TestRpcClient):
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return GetWalletsResponse([WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")])
 
-    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (transaction_id,))
-        return TransactionRecord(
-            confirmed_at_height=uint32(1),
-            created_at_time=uint64(1234),
-            to_puzzle_hash=bytes32([1] * 32),
-            to_address=encode_puzzle_hash(bytes32([1] * 32), "xch"),
-            amount=uint64(12345678),
-            fee_amount=uint64(1234567),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=WalletSpendBundle([], G2Element()),
-            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-            wallet_id=uint32(1),
-            sent_to=[("aaaaa", uint8(1), None)],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32([2] * 32),
-            memos={bytes32([3] * 32): [bytes([4] * 32)]},
-            valid_times=ConditionValidTimes(),
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        self.add_to_log("get_transaction", (request,))
+        return GetTransactionResponse(
+            TransactionRecord(
+                confirmed_at_height=uint32(1),
+                created_at_time=uint64(1234),
+                to_puzzle_hash=bytes32([1] * 32),
+                to_address=encode_puzzle_hash(bytes32([1] * 32), "xch"),
+                amount=uint64(12345678),
+                fee_amount=uint64(1234567),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+                wallet_id=uint32(1),
+                sent_to=[("aaaaa", uint8(1), None)],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=bytes32([2] * 32),
+                memos={bytes32([3] * 32): [bytes([4] * 32)]},
+                valid_times=ConditionValidTimes(),
+            ),
+            bytes32([2] * 32),
         )
 
     async def get_cat_name(self, wallet_id: int) -> str:
