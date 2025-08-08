@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
+from itertools import chain
 from pathlib import Path
 from typing import Any, Optional
 
@@ -18,6 +20,8 @@ from chia.util.path import path_from_root
 from chia.util.task_referencer import create_referenced_task
 
 DEFAULT_PIPELINE_DEPTH: int = 10
+log = logging.getLogger("validate_rpcs")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s")
 
 
 def get_height_to_hash_filename(root_path: Path, config: dict[str, Any]) -> Path:
@@ -154,9 +158,11 @@ async def node_spends_with_conditions(
     height: int,
 ) -> None:
     try:
-        await node_client.get_block_spends_with_conditions(block_hash)
+        res = await node_client.get_block_spends_with_conditions(block_hash)
+        for c in res:
+            c.coin_spend.get_hash()  # Ensure CoinSpend is valid
     except Exception as e:
-        print(f"ERROR: [{height}] get_block_spends_with_conditions returned invalid result")
+        log.error(f"ERROR: [{height}] get_block_spends_with_conditions returned invalid result")
         raise e
 
 
@@ -166,9 +172,11 @@ async def node_block_spends(
     height: int,
 ) -> None:
     try:
-        await node_client.get_block_spends(block_hash)
+        res = await node_client.get_block_spends(block_hash)
+        for c in res:
+            c.get_hash()  # Ensure CoinSpend is valid
     except Exception as e:
-        print(f"ERROR: [{height}] get_block_spends returned invalid result")
+        log.error(f"ERROR: [{height}] get_block_spends returned invalid result")
         raise e
 
 
@@ -178,9 +186,12 @@ async def node_additions_removals(
     height: int,
 ) -> None:
     try:
-        await node_client.get_additions_and_removals(block_hash)
+        add, rem = await node_client.get_additions_and_removals(block_hash)
+        for coin in chain(add, rem):
+            coin.get_hash()
+
     except Exception as e:
-        print(f"ERROR: [{height}] get_additions_and_removals returned invalid result")
+        log.error(f"ERROR: [{height}] get_additions_and_removals returned invalid result")
         raise e
 
 
@@ -212,7 +223,7 @@ async def cli_async(
 
         height_to_hash_bytes: bytes = await get_height_to_hash_bytes(root_path=root_path, config=config)
 
-        print("block header hashes loaded from height-to-hash file.")
+        log.info("block header hashes loaded from height-to-hash file.")
 
         # Set initial values for the loop
 
@@ -244,7 +255,7 @@ async def cli_async(
                 now = time.monotonic()
                 if cycle_start + 5 < now:
                     time_taken = now - cycle_start
-                    print(
+                    log.info(
                         f"Processed {completed_requests} RPCs in {time_taken:.2f}s, "
                         f"{time_taken / completed_requests:.4f}s per RPC "
                         f"({i - start_height} Blocks completed out of {end_height - start_height})"
@@ -253,7 +264,7 @@ async def cli_async(
                     cycle_start = now
 
         # Wait for any remaining tasks to complete
-        print(f"Waiting for {len(pipeline)} remaining tasks to complete...")
+        log.info(f"Waiting for {len(pipeline)} remaining tasks to complete...")
         if pipeline:
             await asyncio.gather(*pipeline)
 
