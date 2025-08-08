@@ -1428,14 +1428,16 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            _new_did_id = get_new_owner_did(uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution))
+            parsed_did_id = get_new_owner_did(
+                uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution)
+            )
             old_did_id = uncurried_nft.owner_did
-            if _new_did_id is None:
+            if parsed_did_id is None:
                 new_did_id = old_did_id
-            elif _new_did_id == b"":
+            elif parsed_did_id == b"":
                 new_did_id = None
             else:
-                new_did_id = _new_did_id
+                new_did_id = parsed_did_id
         self.log.debug(
             "Handling NFT: %s, old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
@@ -2614,17 +2616,17 @@ class WalletStateManager:
     async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
         pks: list[bytes] = []
         signing_targets: list[SigningTarget] = []
-        for coin_spend in coin_spends:
-            _coin_spend = coin_spend.as_coin_spend()
+        for spend in coin_spends:
+            coin_spend = spend.as_coin_spend()
             # Get AGG_SIG conditions
             conditions_dict = conditions_dict_for_solution(
-                Program.from_serialized(_coin_spend.puzzle_reveal),
-                Program.from_serialized(_coin_spend.solution),
+                Program.from_serialized(coin_spend.puzzle_reveal),
+                Program.from_serialized(coin_spend.solution),
                 self.constants.MAX_BLOCK_COST_CLVM,
             )
             # Create signature
             for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                conditions_dict, coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 pk_bytes = bytes(pk)
                 pks.append(pk_bytes)

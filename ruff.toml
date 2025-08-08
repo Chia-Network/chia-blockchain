@@ -90,7 +90,6 @@ ignore = [
     "RUF056", # falsy-dict-get-fallback
     # Should probably fix this
     "RUF029", # unused-async
-    "RUF052", # used-dummy-variable
 
     # Security linter
     "S603", # subprocess-without-shell-equals-true
