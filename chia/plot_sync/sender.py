@@ -37,10 +37,13 @@ log = logging.getLogger(__name__)
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     converted: list[Plot] = []
     for plot_info in plot_infos:
+        # TODO: todo_v2_plots support v2 plots
+        k = plot_info.prover.get_size().size_v1
+        assert k is not None
         converted.append(
             Plot(
                 filename=plot_info.prover.get_filename(),
-                size=plot_info.prover.get_size(),
+                size=k,
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,

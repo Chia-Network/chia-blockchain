@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
-from chia_rs import G1Element, PlotSize, ProofOfSpace
+from chia_rs import G1Element, PlotSize
 from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint8, uint32
 
@@ -15,6 +15,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_difficulty,
     calculate_prefix_bits,
     check_plot_size,
+    make_pos,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -24,7 +25,7 @@ from chia.types.blockchain_format.proof_of_space import (
 class ProofOfSpaceCase:
     id: str
     pos_challenge: bytes32
-    plot_size: uint8
+    plot_size: PlotSize
     plot_public_key: G1Element
     pool_public_key: Optional[G1Element] = None
     pool_contract_puzzle_hash: Optional[bytes32] = None
@@ -46,14 +47,14 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Neither pool public key nor pool contract puzzle hash",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(0),
+        plot_size=PlotSize.make_v1(0),
         plot_public_key=G1Element(),
         expected_error="Expected pool public key or pool contract puzzle hash but got neither",
     ),
     ProofOfSpaceCase(
         id="Both pool public key and pool contract puzzle hash",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(0),
+        plot_size=PlotSize.make_v1(0),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
@@ -62,7 +63,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Lower than minimum plot size",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(31),
+        plot_size=PlotSize.make_v1(31),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         expected_error="Plot size is lower than the minimum",
@@ -70,7 +71,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Higher than maximum plot size",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(51),
+        plot_size=PlotSize.make_v1(51),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         expected_error="Plot size is higher than the maximum",
@@ -78,7 +79,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Different challenge",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(42),
+        plot_size=PlotSize.make_v1(42),
         pool_public_key=G1Element(),
         plot_public_key=G1Element(),
         expected_error="Calculated pos challenge doesn't match the provided one",
@@ -86,7 +87,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Not passing the plot filter with size 9",
         pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
-        plot_size=uint8(42),
+        plot_size=PlotSize.make_v1(42),
         pool_public_key=g1(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -99,7 +100,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Passing the plot filter with size 8",
         pos_challenge=b32("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
-        plot_size=uint8(42),
+        plot_size=PlotSize.make_v1(42),
         pool_public_key=g1(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -111,7 +112,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="v2 plot size 0",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(0x80),
+        plot_size=PlotSize.make_v2(0),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         expected_error="Plot size is lower than the minimum",
@@ -119,7 +120,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="v2 plot size 34",
         pos_challenge=bytes32(b"1" * 32),
-        plot_size=uint8(0x80 | 34),
+        plot_size=PlotSize.make_v2(34),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
         expected_error="Plot size is higher than the maximum",
@@ -127,7 +128,7 @@ def b32(key: str) -> bytes32:
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
         pos_challenge=b32("3d29ea79d19b3f7e99ebf764ae53697cbe143603909873946af6ab1ece606861"),
-        plot_size=uint8(0x80 | 32),
+        plot_size=PlotSize.make_v2(32),
         pool_public_key=g1(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -138,7 +139,7 @@ def b32(key: str) -> bytes32:
     ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
-    pos = ProofOfSpace(
+    pos = make_pos(
         challenge=case.pos_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
@@ -160,7 +161,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 @datacases(
     ProofOfSpaceCase(
         id="v2 plot are not implemented",
-        plot_size=uint8(0x80 | 30),
+        plot_size=PlotSize.make_v2(30),
         pos_challenge=b32("47deb938e145d25d7b3b3c85ca9e3972b76c01aeeb78a02fe5d3b040d282317e"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
@@ -172,7 +173,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     ),
 )
 def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
-    pos = ProofOfSpace(
+    pos = make_pos(
         challenge=case.pos_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,

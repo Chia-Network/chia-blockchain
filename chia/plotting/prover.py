@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
+from chia_rs import PlotSize
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from chiapos import DiskProver
@@ -20,7 +21,7 @@ class PlotVersion(IntEnum):
 
 class ProverProtocol(Protocol):
     def get_filename(self) -> str: ...
-    def get_size(self) -> uint8: ...
+    def get_size(self) -> PlotSize: ...
     def get_memo(self) -> bytes: ...
     def get_compression_level(self) -> uint8: ...
     def get_version(self) -> PlotVersion: ...
@@ -45,7 +46,7 @@ class V2Prover:
     def get_filename(self) -> str:
         return str(self._filename)
 
-    def get_size(self) -> uint8:
+    def get_size(self) -> PlotSize:
         # TODO: todo_v2_plots get k size from plot
         raise NotImplementedError("V2 plot format is not yet implemented")
 
@@ -94,8 +95,8 @@ class V1Prover:
     def get_filename(self) -> str:
         return str(self._disk_prover.get_filename())
 
-    def get_size(self) -> uint8:
-        return uint8(self._disk_prover.get_size())
+    def get_size(self) -> PlotSize:
+        return PlotSize.make_v1(uint8(self._disk_prover.get_size()))
 
     def get_memo(self) -> bytes:
         return bytes(self._disk_prover.get_memo())

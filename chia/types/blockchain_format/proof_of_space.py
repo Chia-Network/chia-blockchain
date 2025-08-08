@@ -14,6 +14,33 @@ from chia.util.hash import std_hash
 log = logging.getLogger(__name__)
 
 
+def make_pos(
+    challenge: bytes32,
+    pool_public_key: Optional[G1Element],
+    pool_contract_puzzle_hash: Optional[bytes32],
+    plot_public_key: G1Element,
+    version_and_size: PlotSize,
+    proof: bytes,
+) -> ProofOfSpace:
+    k: int
+    if version_and_size.size_v1 is not None:
+        k = version_and_size.size_v1
+    else:
+        assert version_and_size.size_v2 is not None
+        k = version_and_size.size_v2
+        assert k is not None
+        k |= 0x80
+
+    return ProofOfSpace(
+        challenge,
+        pool_public_key,
+        pool_contract_puzzle_hash,
+        plot_public_key,
+        uint8(k),
+        proof,
+    )
+
+
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
     assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
     if pos.pool_public_key is None:
