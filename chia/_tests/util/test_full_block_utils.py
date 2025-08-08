@@ -67,14 +67,15 @@ def vdf_proof() -> VDFProof:
 def get_proof_of_space() -> Generator[ProofOfSpace, None, None]:
     for pool_pk in [g1(), None]:
         for plot_hash in [hsh(), None]:
-            yield ProofOfSpace(
-                hsh(),  # challenge
-                pool_pk,
-                plot_hash,
-                g1(),  # plot_public_key
-                uint8(32),
-                random.randbytes(8 * 32),
-            )
+            for pos_version in [0, 0x80]:
+                yield ProofOfSpace(
+                    hsh(),  # challenge
+                    pool_pk,
+                    plot_hash,
+                    g1(),  # plot_public_key
+                    uint8(pos_version | 32),  # this is version and k-size
+                    random.randbytes(8 * 32),
+                )
 
 
 def get_reward_chain_block(height: uint32) -> Generator[RewardChainBlock, None, None]:
