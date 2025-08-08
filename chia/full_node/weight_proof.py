@@ -1532,10 +1532,10 @@ def _get_last_ses_hash(
 ) -> tuple[Optional[bytes32], uint32]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
         if (block.reward_chain_block.height % constants.SUB_EPOCH_BLOCKS) == 0:
-            idx = len(recent_reward_chain) - 1 - idx  # reverse
+            reversed_idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
-            while idx < len(recent_reward_chain):
-                curr = recent_reward_chain[idx]
+            while reversed_idx < len(recent_reward_chain):
+                curr = recent_reward_chain[reversed_idx]
                 if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
                         if slot.challenge_chain.subepoch_summary_hash is not None:
@@ -1543,7 +1543,7 @@ def _get_last_ses_hash(
                                 slot.challenge_chain.subepoch_summary_hash,
                                 curr.reward_chain_block.height,
                             )
-                idx += 1
+                reversed_idx += 1
     return None, uint32(0)
 
 

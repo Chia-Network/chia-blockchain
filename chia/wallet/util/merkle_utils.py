@@ -39,9 +39,9 @@ def build_merkle_tree_from_binary_tree(tuples: TupleTree) -> tuple[bytes32, dict
         proof.append(right_root)
         new_proofs[name] = (path, proof)
     for name, (path, proof) in right_proofs.items():
-        path |= 1 << len(proof)
+        appended_path = path | (1 << len(proof))
         proof.append(left_root)
-        new_proofs[name] = (path, proof)
+        new_proofs[name] = (appended_path, proof)
     return new_root, new_proofs
 
 

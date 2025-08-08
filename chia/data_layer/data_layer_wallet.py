@@ -1137,8 +1137,9 @@ class DataLayerWallet:
                             ]
                         )
                     )
-                    new_spend: CoinSpend = spend.replace(solution=new_solution.to_serialized())
-                    spend = new_spend
+                    new_spends.append(spend.replace(solution=new_solution.to_serialized()))
+                else:
+                    new_spends.append(spend)
             new_spends.append(spend)
 
         return Offer({}, WalletSpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
