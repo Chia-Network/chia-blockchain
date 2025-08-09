@@ -165,28 +165,33 @@ class Cache:
                     #       it's here to filter invalid cache entries coming from bladebit RAM plotting.
                     #       Related: - https://github.com/Chia-Network/chia-blockchain/issues/13084
                     #                - https://github.com/Chia-Network/chiapos/pull/337
-                    k = new_entry.prover.get_size()
-                    if k not in estimated_c2_sizes:
-                        estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
-                    memo_size = len(new_entry.prover.get_memo())
-                    prover_size = len(cache_entry.prover_data)
-                    # Estimated C2 size + memo size + 2000 (static data + path)
-                    # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
-                    # path: up to ~1870, all above will lead to false positive.
-                    # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
+                    ps = new_entry.prover.get_size()
+                    if ps.size_v1 is not None:
+                        k = ps.size_v1
+                        if k not in estimated_c2_sizes:
+                            estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
+                        memo_size = len(new_entry.prover.get_memo())
+                        prover_size = len(cache_entry.prover_data)
+                        # Estimated C2 size + memo size + 2000 (static data + path)
+                        # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
+                        # path: up to ~1870, all above will lead to false positive.
+                        # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
 
-                    # Use experimental measurements if more than estimates
-                    # https://github.com/Chia-Network/chia-blockchain/issues/16063
-                    check_size = estimated_c2_sizes[k] + memo_size + 2000
-                    if k in measured_sizes:
-                        check_size = max(check_size, measured_sizes[k])
+                        # Use experimental measurements if more than estimates
+                        # https://github.com/Chia-Network/chia-blockchain/issues/16063
+                        check_size = estimated_c2_sizes[k] + memo_size + 2000
+                        if k in measured_sizes:
+                            check_size = max(check_size, measured_sizes[k])
 
-                    if prover_size > check_size:
-                        log.warning(
-                            "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
-                            f"{self._path}, restart. Entry: size {prover_size}, path {path}"
-                        )
-                    else:
+                        if prover_size > check_size:
+                            log.warning(
+                                "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
+                                f"{self._path}, restart. Entry: size {prover_size}, path {path}"
+                            )
+                        else:
+                            self._data[Path(path)] = new_entry
+                    elif ps.size_v2 is not None:
+                        # TODO: todo_v2_plots validate prover size
                         self._data[Path(path)] = new_entry
 
                 log.info(f"Parsed {len(self._data)} cache entries in {time.time() - start:.2f}s")
