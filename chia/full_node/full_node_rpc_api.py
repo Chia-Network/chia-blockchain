@@ -27,6 +27,7 @@ from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.full_node.full_block_utils import GeneratorBlockInfo, get_height_and_tx_status_from_block
 from chia.full_node.full_node import FullNode
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
@@ -481,15 +482,15 @@ class FullNodeRpcApi:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
-        full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-        if full_block is None:
+        block_info: Optional[GeneratorBlockInfo] = await self.service.block_store.get_block_info(header_hash)
+        if block_info is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
+        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, block_info)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": []}
 
-        flags = get_flags_for_height_and_constants(full_block.height, self.service.constants)
+        flags = get_flags_for_height_and_constants(block_info.height, self.service.constants)
         spends = await asyncio.get_running_loop().run_in_executor(
             self.executor,
             get_spends_for_trusted_block,
@@ -505,15 +506,15 @@ class FullNodeRpcApi:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
-        full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-        if full_block is None:
+        block_info: Optional[GeneratorBlockInfo] = await self.service.block_store.get_block_info(header_hash)
+        if block_info is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
+        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, block_info)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
-        flags = get_flags_for_height_and_constants(full_block.height, self.service.constants)
+        flags = get_flags_for_height_and_constants(block_info.height, self.service.constants)
         spends_with_conditions = await asyncio.get_running_loop().run_in_executor(
             self.executor,
             get_spends_for_trusted_block_with_conditions,
@@ -792,7 +793,9 @@ class FullNodeRpcApi:
         assert block_generator is not None
 
         try:
-            puzzle, solution = get_puzzle_and_solution_for_coin(
+            puzzle, solution = await asyncio.get_running_loop().run_in_executor(
+                self.executor,
+                get_puzzle_and_solution_for_coin,
                 block_generator.program,
                 block_generator.generator_refs,
                 self.service.constants.MAX_BLOCK_COST_CLVM,
@@ -807,16 +810,18 @@ class FullNodeRpcApi:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
-
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-        if block is None:
+        block_bytes: Optional[bytes] = await self.service.block_store.get_full_block_bytes(header_hash)
+        if block_bytes is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
+        block_view = memoryview(block_bytes)
+        height, _is_tx_block = get_height_and_tx_status_from_block(block_view)
+
         async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
-            if self.service.blockchain.height_to_hash(block.height) != header_hash:
+            if self.service.blockchain.height_to_hash(height) != header_hash:
                 raise ValueError(f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)")
-            additions: list[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
-            removals: list[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
+            additions: list[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(height)
+            removals: list[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(height)
 
         return {
             "additions": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in additions],
