@@ -444,7 +444,10 @@ class BlockTools:
             assert rng is not None
             bundle, additions = make_spend_bundle(available_coins, wallet, rng)
             removals = bundle.removals()
-            program = simple_solution_generator(bundle).program
+            if curr.height >= self.constants.HARD_FORK_HEIGHT:
+                program = simple_solution_generator_backrefs(bundle).program
+            else:
+                program = simple_solution_generator(bundle).program
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
                 program,

@@ -14,7 +14,7 @@ import aiosqlite
 import zstd
 from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16
+from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
@@ -140,7 +140,8 @@ async def run_sync_test(
         config = load_config(root_path, "config.yaml")
 
         if test_constants:
-            constants = TEST_CONSTANTS
+            # this allows all blocks have compressed generators
+            constants = TEST_CONSTANTS.replace(HARD_FORK_HEIGHT=uint32(0))
         else:
             overrides = config["network_overrides"]["constants"][config["selected_network"]]
             constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
