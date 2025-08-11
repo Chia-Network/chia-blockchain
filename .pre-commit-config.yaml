@@ -54,7 +54,7 @@ repos:
       - id: shfmt
         args: ["--diff", "--write", "-i", "2"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
       - id: mixed-line-ending
