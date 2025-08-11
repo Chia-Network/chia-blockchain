@@ -50,6 +50,9 @@ def check_plot_size(constants: ConsensusConstants, ps: PlotSize) -> bool:
     if size_v2 > constants.MAX_PLOT_SIZE_V2:
         log.error("Plot size is higher than the maximum")
         return False
+    if (size_v2 & 1) == 1:
+        log.error("Plot size is odd")
+        return False
     return True
 
 
