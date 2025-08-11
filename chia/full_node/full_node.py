@@ -887,7 +887,7 @@ class FullNode:
 
     async def synced(self, block_is_current_at: Optional[uint64] = None) -> bool:
         if block_is_current_at is None:
-            block_is_current_at = uint64(int(time.time() - 60 * 7))
+            block_is_current_at = uint64(time.time() - 60 * 7)
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1623,6 +1623,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
+            assert pre_validation_results[i].error is None
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             # when adding blocks in batches, we won't have any overlapping

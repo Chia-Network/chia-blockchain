@@ -20,7 +20,9 @@ from chia_rs.sized_ints import int16, uint8, uint64
 from chia._tests.plot_sync.util import start_harvester_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -30,7 +32,6 @@ from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.aliases import FarmerService, HarvesterService
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.util.batches import to_batches
@@ -141,7 +142,7 @@ class TestData:
             assert plot_info.pool_contract_puzzle_hash == synced_plot.pool_contract_puzzle_hash
             assert plot_info.plot_public_key == synced_plot.plot_public_key
             assert plot_info.file_size == synced_plot.file_size
-            assert uint64(int(plot_info.time_modified)) == synced_plot.time_modified
+            assert uint64(plot_info.time_modified) == synced_plot.time_modified
         for plot_info in self.invalid:
             assert plot_info.prover.get_filename() not in self.plot_sync_receiver.plots()
             assert plot_info.prover.get_filename() in self.plot_sync_receiver.invalid()

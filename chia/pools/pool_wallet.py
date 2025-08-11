@@ -525,8 +525,9 @@ class PoolWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_full_puzzle.get_tree_hash(),
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(new_full_puzzle.get_tree_hash()),
                     amount=uint64(1),
                     fee_amount=fee,
                     confirmed=False,
@@ -537,7 +538,7 @@ class PoolWallet:
                     wallet_id=self.id(),
                     sent_to=[],
                     trade_id=None,
-                    memos=[],
+                    memos={},
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=unsigned_spend_bundle.name(),
                     valid_times=ConditionValidTimes(),
@@ -792,7 +793,7 @@ class PoolWallet:
                 ),
             )
 
-        current_time = uint64(int(time.time()))
+        current_time = uint64(time.time())
         # The claim spend, minus the fee amount from the main wallet
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -800,6 +801,7 @@ class PoolWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=current_time,
                     to_puzzle_hash=current_state.current.target_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(current_state.current.target_puzzle_hash),
                     amount=uint64(total_amount),
                     fee_amount=fee,  # This will not be double counted in self.standard_wallet
                     confirmed=False,
@@ -809,7 +811,7 @@ class PoolWallet:
                     removals=claim_spend.removals(),
                     wallet_id=uint32(self.wallet_id),
                     sent_to=[],
-                    memos=[],
+                    memos={},
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=claim_spend.name(),

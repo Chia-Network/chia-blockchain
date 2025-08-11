@@ -253,6 +253,7 @@ class CRCATWallet(CATWallet):
                     confirmed_at_height=height,
                     created_at_time=uint64(created_timestamp),
                     to_puzzle_hash=hint_dict[coin.name()],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(hint_dict[coin.name()]),
                     amount=uint64(coin.amount),
                     fee_amount=uint64(0),
                     confirmed=True,
@@ -265,7 +266,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_CRCAT_PENDING),
                     name=coin.name(),
-                    memos=list(memos.items()),
+                    memos=memos,
                     valid_times=ConditionValidTimes(),
                 )
                 await self.wallet_state_manager.tx_store.add_transaction_record(tx_record)
@@ -660,8 +661,9 @@ class CRCATWallet(CATWallet):
             tx_list = [
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=payment.puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(payment.puzzle_hash),
                     amount=payment.amount,
                     fee_amount=fee,
                     confirmed=False,
@@ -674,7 +676,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
                 for i, payment in enumerate(payments)
@@ -791,8 +793,9 @@ class CRCATWallet(CATWallet):
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=to_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(to_puzzle_hash),
                     amount=uint64(sum(c.amount for c in coins)),
                     fee_amount=fee,
                     confirmed=False,
@@ -805,7 +808,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=claim_bundle.name(),
-                    memos=list(compute_memos(claim_bundle).items()),
+                    memos=compute_memos(claim_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )

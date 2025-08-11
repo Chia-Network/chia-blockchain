@@ -481,10 +481,9 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        spends: list[dict[str, list[CoinSpend]]] = []
         block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
-            return {"block_spends": spends}
+            return {"block_spends": []}
 
         spends = get_spends_for_trusted_block(
             self.service.constants,
@@ -493,9 +492,7 @@ class FullNodeRpcApi:
             get_flags_for_height_and_constants(full_block.height, self.service.constants),
         )
 
-        # chia_rs returning a list is a mistake that will be fixed in the next release
-        # it ought to be returning a dict of {"block_spends": [spends]}
-        return spends[0]
+        return spends
 
     async def get_block_spends_with_conditions(self, request: dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
@@ -521,7 +518,7 @@ class FullNodeRpcApi:
         if "height" not in request:
             raise ValueError("No height in request")
         height = request["height"]
-        header_height = uint32(int(height))
+        header_height = uint32(height)
         peak_height = self.service.blockchain.get_peak_height()
         if peak_height is None or header_height > peak_height:
             raise ValueError(f"Block height {height} not found in chain")
@@ -610,7 +607,7 @@ class FullNodeRpcApi:
             * additional_difficulty_constant
             * eligible_plots_filter_multiplier
         )
-        return {"space": uint128(int(network_space_bytes_estimate))}
+        return {"space": uint128(network_space_bytes_estimate)}
 
     async def get_coin_records_by_puzzle_hash(self, request: dict[str, Any]) -> EndpointResult:
         """
@@ -1004,6 +1001,7 @@ class FullNodeRpcApi:
             while last_tx_block is None or last_peak_timestamp is None:
                 peak_with_timestamp -= 1
                 last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+                assert last_tx_block.timestamp is not None  # mypy
                 last_peak_timestamp = last_tx_block.timestamp
 
             assert last_tx_block is not None  # mypy

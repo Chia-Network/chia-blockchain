@@ -615,8 +615,9 @@ class NFTWallet:
             }
             tx = TransactionRecord(
                 confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
+                created_at_time=uint64(time.time()),
                 to_puzzle_hash=puzzle_hashes[0],
+                to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                 amount=uint64(payment_sum),
                 fee_amount=fee,
                 confirmed=False,
@@ -629,7 +630,7 @@ class NFTWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
+                memos=compute_memos(spend_bundle),
                 valid_times=parse_timelock_info(extra_conditions),
             )
 
@@ -1404,8 +1405,9 @@ class NFTWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=innerpuz.get_tree_hash(),
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(innerpuz.get_tree_hash()),
                     amount=uint64(1),
                     fee_amount=fee,
                     confirmed=False,
@@ -1418,7 +1420,7 @@ class NFTWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=unsigned_spend_bundle.name(),
-                    memos=list(compute_memos(unsigned_spend_bundle).items()),
+                    memos=compute_memos(unsigned_spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )

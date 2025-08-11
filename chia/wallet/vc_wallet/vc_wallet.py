@@ -200,7 +200,7 @@ class VCWallet:
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
         vc_record: VCRecord = VCRecord(vc, uint32(0))
@@ -210,6 +210,7 @@ class VCWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=inner_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(inner_puzzle_hash),
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -222,7 +223,7 @@ class VCWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
@@ -339,7 +340,7 @@ class VCWallet:
                 )  # pragma: no cover
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -347,6 +348,7 @@ class VCWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=puzzle_hashes[0],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -359,7 +361,7 @@ class VCWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
@@ -400,11 +402,6 @@ class VCWallet:
             )
             return
 
-        recovery_info: Optional[tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
-        if recovery_info is None:
-            raise RuntimeError("DID could not currently be accessed while trying to revoke VC")  # pragma: no cover
-        _, provider_inner_puzhash, _ = recovery_info
-
         # Generate spend specific nonce
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
@@ -421,7 +418,10 @@ class VCWallet:
             )
 
         # Assemble final bundle
-        expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
+        assert did_wallet.did_info.current_inner is not None
+        expected_did_announcement, vc_spend = vc.activate_backdoor(
+            did_wallet.did_info.current_inner.get_tree_hash(), announcement_nonce=nonce
+        )
         await did_wallet.create_message_spend(
             action_scope,
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),

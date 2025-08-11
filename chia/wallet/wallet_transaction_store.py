@@ -8,8 +8,10 @@ from typing import Optional
 import aiosqlite
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
+from typing_extensions import Any
 
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.wallet.conditions import ConditionValidTimes
@@ -20,6 +22,7 @@ from chia.wallet.transaction_record import (
     minimum_send_attempts,
 )
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 
@@ -44,11 +47,13 @@ class WalletTransactionStore:
     tx_submitted: dict[bytes32, tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_txs: list[LightTransactionRecord]  # tx_id: [time submitted: count]
     last_wallet_tx_resend_time: int  # Epoch time in seconds
+    config: dict[str, Any]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2, config: dict[str, Any]):
         self = cls()
 
+        self.config = config
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -484,6 +489,10 @@ class WalletTransactionStore:
                 memos=record.memos,
                 valid_times=(
                     tx_id_to_valid_times[record.name] if record.name in tx_id_to_valid_times else empty_valid_times
+                ),
+                to_address=encode_puzzle_hash(
+                    record.to_puzzle_hash,
+                    AddressType.XCH.hrp(self.config),
                 ),
             )
             for record in old_records

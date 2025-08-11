@@ -536,8 +536,9 @@ class DataLayerWallet:
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=new_puz_hash,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(new_puz_hash),
             amount=uint64(singleton_record.lineage_proof.amount),
             fee_amount=fee,
             confirmed=False,
@@ -545,7 +546,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -731,8 +732,9 @@ class DataLayerWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_puzhash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(new_puzhash),
                     amount=uint64(mirror_coin.amount),
                     fee_amount=fee,
                     confirmed=False,
@@ -740,7 +742,7 @@ class DataLayerWallet:
                     spend_bundle=mirror_bundle,
                     additions=mirror_bundle.additions(),
                     removals=mirror_bundle.removals(),
-                    memos=list(compute_memos(mirror_bundle).items()),
+                    memos=compute_memos(mirror_bundle),
                     wallet_id=self.id(),  # This is being called before the wallet is created so we're using a ID of 0
                     sent_to=[],
                     trade_id=None,

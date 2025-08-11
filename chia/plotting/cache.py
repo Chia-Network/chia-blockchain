@@ -116,7 +116,7 @@ class Cache:
                     cache_entry.pool_public_key,
                     cache_entry.pool_contract_puzzle_hash,
                     cache_entry.plot_public_key,
-                    uint64(int(cache_entry.last_use)),
+                    uint64(cache_entry.last_use),
                 )
                 for path, cache_entry in self.items()
             }

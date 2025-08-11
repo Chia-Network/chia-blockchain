@@ -587,7 +587,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert next(iter(txs["transactions"][0]["memos"].values())) == b"Test".hex()
+        assert "0x" + b"Test".hex() in next(iter(txs["transactions"][0]["memos"].values()))
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -1721,6 +1721,7 @@ class TestWalletSimulator:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(0),
             to_puzzle_hash=bytes32(32 * b"0"),
+            to_address=encode_puzzle_hash(bytes32(32 * b"0"), "txch"),
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
@@ -1733,7 +1734,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])

@@ -54,6 +54,8 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     FungibleAsset,
     GetNotifications,
+    GetWalletBalance,
+    GetWallets,
     NFTAddURI,
     NFTCalculateRoyalties,
     NFTCalculateRoyaltiesResponse,
@@ -143,10 +145,10 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
 
 
 async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> WalletType:
-    summaries_response = await wallet_client.get_wallets()
-    for summary in summaries_response:
-        summary_id: int = summary["id"]
-        summary_type: int = summary["type"]
+    summaries_response = await wallet_client.get_wallets(GetWallets())
+    for summary in summaries_response.wallets:
+        summary_id: int = summary.id
+        summary_type: int = summary.type
         if wallet_id == summary_id:
             return WalletType(summary_type)
 
@@ -434,13 +436,18 @@ async def add_token(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         existing_info: Optional[tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id)
-        if existing_info is None or existing_info[0] is None:
+        if existing_info is None:
+            wallet_id = None
+            old_name = None
+        else:
+            wallet_id, old_name = existing_info
+
+        if wallet_id is None:
             response = await wallet_client.create_wallet_for_existing_cat(asset_id)
             wallet_id = response["wallet_id"]
             await wallet_client.set_cat_name(wallet_id, token_name)
             print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
         else:
-            wallet_id, old_name = existing_info
             await wallet_client.set_cat_name(wallet_id, token_name)
             print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
 
@@ -524,7 +531,7 @@ async def make_offer(
                             assert hrp is not None
                             unit = units[hrp]
                     except ValueError:
-                        id = uint32(int(name))
+                        id = uint32(name)
                         if id == 1:
                             name = "XCH"
                             unit = units["chia"]
@@ -913,7 +920,7 @@ async def print_balances(
     root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        summaries_response = await wallet_client.get_wallets(wallet_type)
+        summaries_response = await wallet_client.get_wallets(GetWallets(uint16.construct_optional(wallet_type)))
         address_prefix = selected_network_address_prefix(config)
 
         sync_response = await wallet_client.get_sync_status()
@@ -927,36 +934,37 @@ async def print_balances(
             print("Sync status: Not synced")
 
         if not sync_response.syncing and sync_response.synced:
-            if len(summaries_response) == 0:
+            if len(summaries_response.wallets) == 0:
                 type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
                 print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")
             else:
                 print(f"Balances, fingerprint: {fingerprint}")
-            for summary in summaries_response:
+            for summary in summaries_response.wallets:
                 indent: str = "   "
                 # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
                 # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
-                asset_id = summary["data"][:64]
-                wallet_id = summary["id"]
-                balances = await wallet_client.get_wallet_balance(wallet_id)
-                typ = WalletType(int(summary["type"]))
+                asset_id = summary.data[:64]
+                wallet_id = summary.id
+                balances = (await wallet_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))).wallet_balance
+                typ = WalletType(int(summary.type))
                 address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-                total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+                total_balance: str = print_balance(balances.confirmed_wallet_balance, scale, address_prefix)
                 unconfirmed_wallet_balance: str = print_balance(
-                    balances["unconfirmed_wallet_balance"], scale, address_prefix
+                    balances.unconfirmed_wallet_balance, scale, address_prefix
                 )
-                spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+                spendable_balance: str = print_balance(balances.spendable_balance, scale, address_prefix)
                 my_did: Optional[str] = None
                 ljust = 23
                 if typ == WalletType.CRCAT:
                     ljust = 36
                 print()
-                print(f"{summary['name']}:")
+                print(f"{summary.name}:")
                 print(f"{indent}{'-Total Balance:'.ljust(ljust)} {total_balance}")
                 if typ == WalletType.CRCAT:
+                    assert balances.pending_approval_balance is not None
                     print(
                         f"{indent}{'-Balance Pending VC Approval:'.ljust(ljust)} "
-                        f"{print_balance(balances['pending_approval_balance'], scale, address_prefix)}"
+                        f"{print_balance(balances.pending_approval_balance, scale, address_prefix)}"
                     )
                 print(f"{indent}{'-Pending Total Balance:'.ljust(ljust)} {unconfirmed_wallet_balance}")
                 print(f"{indent}{'-Spendable:'.ljust(ljust)} {spendable_balance}")
@@ -1151,7 +1159,7 @@ async def transfer_did(
             if push:
                 print(f"Successfully transferred DID to {target_address}")
             print(f"Transaction ID: {response.transaction_id.hex()}")
-            print(f"Transaction: {response.transaction.to_json_dict_convenience(config)}")
+            print(f"Transaction: {response.transaction.to_json_dict()}")
             return response.transactions
         except Exception as e:
             print(f"Failed to transfer DID: {e}")
@@ -1650,7 +1658,7 @@ async def spend_clawback(
             timelock_info=condition_valid_times,
         )
         print(str(response))
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+        return [TransactionRecord.from_json_dict(tx) for tx in response["transactions"]]
 
 
 async def mint_vc(

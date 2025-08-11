@@ -57,8 +57,6 @@ if [ "$(uname -m)" = "armv7l" ]; then
   echo "Exiting."
   exit 1
 fi
-# Get submodules
-git submodule update --init mozilla-ca
 
 # You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
 # e.g. `export INSTALL_PYTHON_VERSION=3.9`

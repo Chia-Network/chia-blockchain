@@ -83,7 +83,7 @@ def database_peers() -> dict[str, PeerReliability]:
             uint64(0),
             uint32(0),
             uint64(0),
-            uint64(int(time.time())),
+            uint64(time.time()),
             uint64(0),
             "undefined",
             uint64(0),

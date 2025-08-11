@@ -13,7 +13,6 @@ from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX
 from chia.types.blockchain_format.program import NIL, Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config
 from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
@@ -421,14 +420,10 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
         "150",
     ]
     # these are various things that should be in the output
-    config = load_config(
-        root_dir,
-        "config.yaml",
-    )
     assert_list = [
         f"Successfully transferred DID to {t_address}",
         f"Transaction ID: {get_bytes32(2).hex()}",
-        f"Transaction: {STD_TX.to_json_dict_convenience(config)}",
+        f"Transaction: {STD_TX.to_json_dict()}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
