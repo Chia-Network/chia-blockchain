@@ -90,7 +90,7 @@ from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
-from chia.wallet.util.query_filter import FilterMode, HashFilter, TransactionTypeFilter
+from chia.wallet.util.query_filter import FilterMode, HashFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -180,6 +180,8 @@ from chia.wallet.wallet_request_types import (
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
     GetTransaction,
+    GetTransactionCount,
+    GetTransactionCountResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     GetTransactionResponse,
@@ -1538,18 +1540,15 @@ class WalletRpcApi:
             wallet_id=request.wallet_id,
         )
 
-    async def get_transaction_count(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
-        type_filter = None
-        if "type_filter" in request:
-            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+    @marshal
+    async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
         count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            wallet_id, confirmed=request.get("confirmed", None), type_filter=type_filter
+            request.wallet_id, confirmed=request.confirmed, type_filter=request.type_filter
         )
-        return {
-            "count": count,
-            "wallet_id": wallet_id,
-        }
+        return GetTransactionCountResponse(
+            request.wallet_id,
+            uint16(count),
+        )
 
     async def get_next_address(self, request: dict[str, Any]) -> EndpointResult:
         """

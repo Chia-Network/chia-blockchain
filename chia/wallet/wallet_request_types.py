@@ -404,6 +404,21 @@ class GetTransactionMemoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetTransactionCount(Streamable):
+    wallet_id: uint32
+    confirmed: Optional[bool] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCountResponse(Streamable):
+    wallet_id: uint32
+    count: uint16
+
+
+@streamable
+@dataclass(frozen=True)
 class GetOffersCountResponse(Streamable):
     total: uint16
     my_offers_count: uint16
