@@ -41,6 +41,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    GetTransactions,
     GetWalletBalance,
     GetWallets,
     PWAbsorbRewards,
@@ -605,7 +606,7 @@ class TestPoolWalletRpc:
                     PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
                 )
 
-            tx1 = await client.get_transactions(1)
+            tx1 = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
             assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
 
     @pytest.mark.anyio

@@ -179,6 +179,10 @@ from chia.wallet.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetTransaction,
+    GetTransactionResponse,
+    GetTransactions,
+    GetTransactionsResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWalletBalances,
@@ -232,6 +236,7 @@ from chia.wallet.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    TransactionRecordWithMetadata,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -1299,16 +1304,18 @@ class WalletRpcApi:
             {wallet_id: await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids}
         )
 
-    async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
-        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
-        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+    @marshal
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(
+            request.transaction_id
+        )
         if tr is None:
-            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
+            raise ValueError(f"Transaction 0x{request.transaction_id.hex()} not found")
 
-        return {
-            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict(),
-            "transaction_id": tr.name,
-        }
+        return GetTransactionResponse(
+            await self._convert_tx_puzzle_hash(tr),
+            tr.name,
+        )
 
     async def get_transaction_memo(self, request: dict[str, Any]) -> EndpointResult:
         transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
@@ -1491,31 +1498,21 @@ class WalletRpcApi:
 
         return CombineCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
-    async def get_transactions(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
-
-        start = request.get("start", 0)
-        end = request.get("end", 50)
-        sort_key = request.get("sort_key", None)
-        reverse = request.get("reverse", False)
-
-        to_address = request.get("to_address", None)
+    @marshal
+    async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
         to_puzzle_hash: Optional[bytes32] = None
-        if to_address is not None:
-            to_puzzle_hash = decode_puzzle_hash(to_address)
-        type_filter = None
-        if "type_filter" in request:
-            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+        if request.to_address is not None:
+            to_puzzle_hash = decode_puzzle_hash(request.to_address)
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id,
-            start,
-            end,
-            sort_key=sort_key,
-            reverse=reverse,
+            wallet_id=request.wallet_id,
+            start=uint16(0) if request.start is None else request.start,
+            end=uint16(50) if request.end is None else request.end,
+            sort_key=request.sort_key,
+            reverse=request.reverse,
             to_puzzle_hash=to_puzzle_hash,
-            type_filter=type_filter,
-            confirmed=request.get("confirmed", None),
+            type_filter=request.type_filter,
+            confirmed=request.confirmed,
         )
         tx_list = []
         # Format for clawback transactions
@@ -1538,10 +1535,10 @@ class WalletRpcApi:
                 continue
             tx["metadata"]["coin_id"] = coin.name().hex()
             tx["metadata"]["spent"] = record.spent
-        return {
-            "transactions": tx_list,
-            "wallet_id": wallet_id,
-        }
+        return GetTransactionsResponse(
+            transactions=[TransactionRecordWithMetadata.from_json_dict(tx) for tx in tx_list],
+            wallet_id=request.wallet_id,
+        )
 
     async def get_transaction_count(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
