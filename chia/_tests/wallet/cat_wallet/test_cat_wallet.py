@@ -377,9 +377,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
         if tx_record.spend_bundle is not None:
             tx_id = tx_record.name
     assert tx_id is not None
-    memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
-    assert len(memos.coins_with_memos) == 2
-    assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
+    memo_response = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+    assert len(memo_response.memo_dict) == 2
+    assert cat_2_hash in {memos[0] for memos in memo_response.memo_dict.values()}
 
     await wallet_environments.process_pending_states(
         [
@@ -454,9 +454,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
     assert len(coins) == 1
     coin = coins.pop()
     tx_id = coin.name()
-    memos = await env_2.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
-    assert len(memos.coins_with_memos) == 2
-    assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
+    memo_response = await env_2.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+    assert len(memo_response.memo_dict) == 2
+    assert cat_2_hash in {memos[0] for memos in memo_response.memo_dict.values()}
     async with cat_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:

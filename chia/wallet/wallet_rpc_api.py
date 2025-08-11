@@ -180,6 +180,8 @@ from chia.wallet.wallet_request_types import (
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
     GetTransaction,
+    GetTransactionMemo,
+    GetTransactionMemoResponse,
     GetTransactionResponse,
     GetTransactions,
     GetTransactionsResponse,
@@ -1317,8 +1319,9 @@ class WalletRpcApi:
             tr.name,
         )
 
-    async def get_transaction_memo(self, request: dict[str, Any]) -> EndpointResult:
-        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
+    @marshal
+    async def get_transaction_memo(self, request: GetTransactionMemo) -> GetTransactionMemoResponse:
+        transaction_id: bytes32 = request.transaction_id
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
@@ -1336,12 +1339,7 @@ class WalletRpcApi:
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
         assert tr.spend_bundle is not None
-        memos: dict[bytes32, list[bytes]] = compute_memos(tr.spend_bundle)
-        response = {}
-        # Convert to hex string
-        for coin_id, memo_list in memos.items():
-            response[coin_id.hex()] = [memo.hex() for memo in memo_list]
-        return {transaction_id.hex(): response}
+        return GetTransactionMemoResponse({transaction_id: compute_memos(tr.spend_bundle)})
 
     @tx_endpoint(push=False)
     @marshal
