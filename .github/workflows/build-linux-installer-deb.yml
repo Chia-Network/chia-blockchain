@@ -254,7 +254,7 @@ jobs:
       matrix:
         os:
           - runs-on:
-              arm: [linux, arm64]
+              arm: [ubuntu-24.04-arm]
               intel: [ubuntu-latest]
         distribution:
           - name: debian:bookworm
