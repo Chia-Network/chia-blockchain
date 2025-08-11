@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -15,7 +15,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.farmer_protocol import DeclareProofOfSpace, SignedValues
+from chia.protocols.farmer_protocol import DeclareProofOfSpace, SignedValues, SolutionResponse
 from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
@@ -24,6 +24,7 @@ from chia.protocols.harvester_protocol import (
     PoolDifficulty,
     SignatureRequestSourceData,
     SigningDataKind,
+    V2Qualities,
 )
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
@@ -33,6 +34,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.solver_protocol import SolverInfo
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -73,7 +75,7 @@ class FarmerAPI:
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
         max_pos_per_sp = 5
 
@@ -170,14 +172,14 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
                 )
-                self.farmer.cache_add_time[computed_quality_string] = uint64(time.time())
+                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
 
@@ -478,6 +480,92 @@ class FarmerAPI:
 
                 return
 
+    @metadata.request(peer_required=True)
+    async def v2_qualities(self, quality_collection: V2Qualities, peer: WSChiaConnection) -> None:
+        """
+        This is a response from the harvester for V2 plots, containing only qualities.
+        We store these qualities and will later use solver service to generate proofs when needed.
+        """
+        if quality_collection.sp_hash not in self.farmer.number_of_responses:
+            self.farmer.number_of_responses[quality_collection.sp_hash] = 0
+            self.farmer.cache_add_time[quality_collection.sp_hash] = uint64(int(time.time()))
+
+        if quality_collection.sp_hash not in self.farmer.sps:
+            self.farmer.log.warning(
+                f"Received V2 quality collection for a signage point that we do not have {quality_collection.sp_hash}"
+            )
+            return None
+
+        self.farmer.cache_add_time[quality_collection.sp_hash] = uint64(int(time.time()))
+
+        self.farmer.log.info(
+            f"Received V2 quality collection with {len(quality_collection.qualities)} qualities "
+            f"for plot {quality_collection.plot_identifier[:10]}... from {peer.peer_node_id}"
+        )
+
+        # Process each quality through solver service to get full proofs
+        for quality in quality_collection.qualities:
+            solver_info = SolverInfo(
+                plot_size=quality_collection.plot_size,
+                plot_diffculty=quality_collection.difficulty,  # Note: typo in SolverInfo field name
+                quality_string=quality,
+            )
+
+            # Call solver service to get proof
+            # TODO: Add proper solver service node connection to farmer
+            # For now, assume solver service is available via server connections
+            proof_bytes = None
+
+            # Try to call solver service - this requires farmer to have solver connections configured
+            try:
+                # Send solve request to solver service
+                # This would work if farmer is connected to a solver service node
+                solver_response = await self.farmer.server.send_to_all_and_wait_first(
+                    [make_msg(ProtocolMessageTypes.solve, solver_info)],
+                    NodeType.FARMER,  # TODO: Need SOLVER node type
+                )
+
+                if solver_response is not None and isinstance(solver_response, SolutionResponse):
+                    proof_bytes = solver_response.proof
+                    self.farmer.log.debug(f"Received {len(proof_bytes)} byte proof from solver")
+                else:
+                    self.farmer.log.warning(f"No valid solver response for quality {quality.hex()[:10]}...")
+
+            except Exception as e:
+                self.farmer.log.error(f"Failed to call solver service for quality {quality.hex()[:10]}...: {e}")
+
+            # Fall back to stub if solver service unavailable
+            if proof_bytes is None:
+                self.farmer.log.warning("Using stub proof - solver service not available")
+                proof_bytes = b"stub_proof_from_solver"
+
+            # Create ProofOfSpace object using solver response and plot metadata
+            # Need to calculate sp_challenge_hash for ProofOfSpace constructor
+            # TODO: We need plot_id to calculate this properly - may need to add to V2Qualities
+            sp_challenge_hash = quality_collection.challenge_hash  # Approximation for now
+
+            # Create a NewProofOfSpace object that can go through existing flow
+            new_proof_of_space = harvester_protocol.NewProofOfSpace(
+                quality_collection.challenge_hash,
+                quality_collection.sp_hash,
+                quality_collection.plot_identifier,
+                ProofOfSpace(
+                    sp_challenge_hash,
+                    quality_collection.pool_public_key,
+                    quality_collection.pool_contract_puzzle_hash,
+                    quality_collection.plot_public_key,
+                    quality_collection.plot_size,
+                    proof_bytes,
+                ),
+                quality_collection.signage_point_index,
+                include_source_signature_data=False,
+                farmer_reward_address_override=None,
+                fee_info=None,
+            )
+
+            # Route through existing new_proof_of_space flow
+            await self.new_proof_of_space(new_proof_of_space, peer)
+
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
         request = self._process_respond_signatures(response)
@@ -558,7 +646,7 @@ class FarmerAPI:
 
                     pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
-        now = uint64(time.time())
+        now = uint64(int(time.time()))
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
         missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
         self.farmer.state_changed(

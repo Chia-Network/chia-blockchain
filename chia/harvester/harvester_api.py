@@ -15,10 +15,11 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
 )
 from chia.harvester.harvester import Harvester
+from chia.plotting.prover import PlotVersion
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
+from chia.protocols.harvester_protocol import Plot, PlotSyncResponse, V2Qualities
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -95,6 +96,69 @@ class HarvesterAPI:
         assert len(new_challenge.challenge_hash) == 32
 
         loop = asyncio.get_running_loop()
+
+        def blocking_lookup_v2_qualities(filename: Path, plot_info: PlotInfo) -> Optional[V2Qualities]:
+            # Uses the V2 Prover object to lookup qualities only. No full proofs generated.
+            try:
+                plot_id = plot_info.prover.get_id()
+                sp_challenge_hash = calculate_pos_challenge(
+                    plot_id,
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
+                )
+                try:
+                    quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                except Exception as e:
+                    self.harvester.log.error(f"Exception fetching qualities for V2 plot {filename}. {e}")
+                    return None
+
+                if quality_strings is not None and len(quality_strings) > 0:
+                    # Get the appropriate difficulty for this plot
+                    difficulty = new_challenge.difficulty
+                    sub_slot_iters = new_challenge.sub_slot_iters
+                    if plot_info.pool_contract_puzzle_hash is not None:
+                        # Check for pool-specific difficulty
+                        for pool_difficulty in new_challenge.pool_difficulties:
+                            if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
+                                difficulty = pool_difficulty.difficulty
+                                sub_slot_iters = pool_difficulty.sub_slot_iters
+                                break
+
+                    # Filter qualities that pass the required_iters check (same as V1 flow)
+                    good_qualities = []
+                    sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
+
+                    for quality_str in quality_strings:
+                        required_iters: uint64 = calculate_iterations_quality(
+                            self.harvester.constants,
+                            quality_str,
+                            PlotSize.make_v1(plot_info.prover.get_size()),  # TODO: todo_v2_plots update for V2
+                            difficulty,
+                            new_challenge.sp_hash,
+                            sub_slot_iters,
+                            new_challenge.last_tx_height,
+                        )
+
+                        if required_iters < sp_interval_iters:
+                            good_qualities.append(quality_str)
+
+                    if len(good_qualities) > 0:
+                        return V2Qualities(
+                            new_challenge.challenge_hash,
+                            new_challenge.sp_hash,
+                            good_qualities[0].hex() + str(filename.resolve()),
+                            good_qualities,
+                            new_challenge.signage_point_index,
+                            plot_info.prover.get_size(),
+                            difficulty,
+                            plot_info.pool_public_key,
+                            plot_info.pool_contract_puzzle_hash,
+                            plot_info.plot_public_key,
+                        )
+                return None
+            except Exception as e:
+                self.harvester.log.error(f"Unknown error in V2 quality lookup: {e}")
+                return None
 
         def blocking_lookup(filename: Path, plot_info: PlotInfo) -> list[tuple[bytes32, ProofOfSpace]]:
             # Uses the Prover object to lookup qualities. This is a blocking call,
@@ -215,6 +279,15 @@ class HarvesterAPI:
                 self.harvester.log.error(f"Unknown error: {e}")
                 return []
 
+        async def lookup_v2_qualities(filename: Path, plot_info: PlotInfo) -> tuple[Path, Optional[V2Qualities]]:
+            # Executes V2 quality lookup in a thread pool
+            if self.harvester._shut_down:
+                return filename, None
+            v2_quality_collection: Optional[V2Qualities] = await loop.run_in_executor(
+                self.harvester.executor, blocking_lookup_v2_qualities, filename, plot_info
+            )
+            return filename, v2_quality_collection
+
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
         ) -> tuple[Path, list[harvester_protocol.NewProofOfSpace]]:
@@ -241,6 +314,7 @@ class HarvesterAPI:
             return filename, all_responses
 
         awaitables = []
+        v2_awaitables = []
         passed = 0
         total = 0
         with self.harvester.plot_manager:
@@ -249,28 +323,32 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-
-                # TODO: todo_v2_plots support v2 plots in PlotManager
-                filter_prefix_bits = uint8(
-                    calculate_prefix_bits(
+                if try_plot_info.prover.get_version() == PlotVersion.V2:
+                    # TODO: todo_v2_plots need to check v2 filter
+                    v2_awaitables.append(lookup_v2_qualities(try_plot_filename, try_plot_info))
+                    passed += 1
+                else:
+                    filter_prefix_bits = calculate_prefix_bits(
                         self.harvester.constants,
                         new_challenge.peak_height,
                         PlotSize.make_v1(try_plot_info.prover.get_size()),
                     )
-                )
-                if passes_plot_filter(
-                    filter_prefix_bits,
-                    try_plot_info.prover.get_id(),
-                    new_challenge.challenge_hash,
-                    new_challenge.sp_hash,
-                ):
-                    passed += 1
-                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+                    if passes_plot_filter(
+                        filter_prefix_bits,
+                        try_plot_info.prover.get_id(),
+                        new_challenge.challenge_hash,
+                        new_challenge.sp_hash,
+                    ):
+                        passed += 1
+                        awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.monotonic() - start
         total_proofs_found = 0
+        total_v2_qualities_found = 0
+
+        # Process V1 plot responses (existing flow)
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
             time_taken = time.monotonic() - start
@@ -287,7 +365,21 @@ class HarvesterAPI:
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                 await peer.send_message(msg)
 
-        now = uint64(time.time())
+        # Process V2 plot quality collections (new flow)
+        for filename_quality_awaitable in asyncio.as_completed(v2_awaitables):
+            filename, v2_quality_collection = await filename_quality_awaitable
+            time_taken = time.monotonic() - start
+            if time_taken > 8:
+                self.harvester.log.warning(
+                    f"Looking up V2 qualities on {filename} took: {time_taken}. This should be below 8 seconds"
+                    f" to minimize risk of losing rewards."
+                )
+            if v2_quality_collection is not None:
+                total_v2_qualities_found += len(v2_quality_collection.qualities)
+                msg = make_msg(ProtocolMessageTypes.v2_qualities, v2_quality_collection)
+                await peer.send_message(msg)
+
+        now = uint64(int(time.time()))
 
         farming_info = FarmingInfo(
             new_challenge.challenge_hash,
@@ -302,9 +394,10 @@ class HarvesterAPI:
         await peer.send_message(pass_msg)
 
         self.harvester.log.info(
-            f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
-            f" Found {total_proofs_found} proofs. Time: {time_taken:.5f} s. "
-            f"Total {self.harvester.plot_manager.plot_count()} plots"
+            f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]} ..."
+            f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge"
+            f"Found {total_proofs_found} V1 proofs and {total_v2_qualities_found} V2 qualities."
+            f" Time: {time_taken:.5f} s. Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
             "farming_info",
@@ -312,7 +405,8 @@ class HarvesterAPI:
                 "challenge_hash": new_challenge.challenge_hash.hex(),
                 "total_plots": self.harvester.plot_manager.plot_count(),
                 "found_proofs": total_proofs_found,
-                "eligible_plots": len(awaitables),
+                "found_v2_qualities": total_v2_qualities_found,
+                "eligible_plots": len(awaitables) + len(v2_awaitables),
                 "time": time_taken,
             },
         )
