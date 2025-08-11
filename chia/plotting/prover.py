@@ -74,7 +74,7 @@ class V2Prover:
 
     def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
         # TODO: todo_v2_plots Implement plot proof generation
-        raise NotImplementedError("V2 plot format is not yet implemented")
+        raise NotImplementedError("V2 plot format require solver to get full proof")
 
     @classmethod
     def from_bytes(cls, data: bytes) -> V2Prover:

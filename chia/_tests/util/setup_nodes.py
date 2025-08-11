@@ -475,10 +475,9 @@ async def setup_full_system_inner(
                 await asyncio.sleep(backoff)
 
         setup_solver(
-            b_tools,
             shared_b_tools.root_path / "harvester",
-            UnresolvedPeerInfo(self_hostname, farmer_service._server.get_port()),
             consensus_constants,
+            True,
         )
         # solver_service = await async_exit_stack.enter_async_context(
 

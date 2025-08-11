@@ -28,19 +28,37 @@ class SolverAPI:
     def ready(self) -> bool:
         return self.solver.started
 
-    @metadata.request()
+    @metadata.request(peer_required=False, reply_types=[ProtocolMessageTypes.solution_response])
     async def solve(
         self,
         request: SolverInfo,
     ) -> Optional[Message]:
+        """
+        Solve a V2 plot quality to get the full proof of space.
+        This is called by the farmer when it receives V2 qualities from harvester.
+        """
         if not self.solver.started:
-            raise RuntimeError("Solver is not started")
-
-        proof = self.solver.solve(request)
-        if proof is None:
+            self.log.error("Solver is not started")
             return None
 
-        response: SolutionResponse = SolutionResponse(
-            proof=proof,
+        self.log.debug(
+            f"Solving quality {request.quality_string.hex()[:10]}... "
+            f"for plot size {request.plot_size} with difficulty {request.plot_diffculty}"
         )
-        return make_msg(ProtocolMessageTypes.solution_resonse, response)
+
+        try:
+            proof = self.solver.solve(request)
+            if proof is None:
+                self.log.warning(f"Solver returned no proof for quality {request.quality_string.hex()[:10]}...")
+                return None
+
+            response: SolutionResponse = SolutionResponse(
+                proof=proof,
+            )
+
+            self.log.debug(f"Successfully solved quality, returning {len(proof)} byte proof")
+            return make_msg(ProtocolMessageTypes.solution_response, response)
+
+        except Exception as e:
+            self.log.error(f"Error solving quality {request.quality_string.hex()[:10]}...: {e}")
+            return None

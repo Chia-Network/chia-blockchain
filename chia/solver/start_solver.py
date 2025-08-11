@@ -12,13 +12,13 @@ from chia_rs.sized_ints import uint16
 from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
-from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import SolverService
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
 from chia.solver.solver import Solver
 from chia.solver.solver_api import SolverAPI
+from chia.solver.solver_rpc_api import SolverRpcApi
+from chia.solver.solver_service import SolverService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -48,8 +48,9 @@ def create_solver_service(
     peer_api = SolverAPI(node)
     network_id = service_config["selected_network"]
 
+    rpc_info = None
     if service_config.get("start_rpc_server", True):
-        rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
+        rpc_info = (SolverRpcApi, service_config["rpc_port"])
 
     return Service(
         root_path=root_path,

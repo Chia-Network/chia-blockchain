@@ -138,7 +138,7 @@ class ProtocolMessageTypes(Enum):
     respond_cost_info = 107
 
     # new farmer protocol messages
-    solution_resonse = 108
+    solution_response = 108
 
     # solver protocol
     solve = 109

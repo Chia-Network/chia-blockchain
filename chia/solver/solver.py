@@ -46,24 +46,34 @@ class Solver:
         self.log = log
         self.root_path = root_path
         self._shut_down = False
+        num_threads = config["num_threads"]
+        self.log.info(f"Initializing solver with {num_threads} threads")
         self.executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=config["num_threads"], thread_name_prefix="solver-"
+            max_workers=num_threads, thread_name_prefix="solver-"
         )
         self._server = None
         self.constants = constants
         self.state_changed_callback: Optional[StateChangedProtocol] = None
+        self.log.info("Solver initialization complete")
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
         try:
+            self.log.info("Starting solver service")
             self.started = True
+            self.log.info("Solver service started successfully")
             yield
         finally:
+            self.log.info("Shutting down solver service")
             self._shut_down = True
+            self.executor.shutdown(wait=True)
+            self.log.info("Solver service shutdown complete")
 
     def solve(self, info: SolverInfo) -> Optional[bytes]:
-        self.log.debug(f"Solve called with SolverInfo: {info}")
-        return None
+        self.log.debug(f"Solve request: plot_size={info.plot_size}, difficulty={info.plot_diffculty}, quality={info.quality_string.hex()}")
+        # stub implementation - always returns None
+        self.log.debug("Solve completed (stub implementation)")
+        return None #todo implement actualy calling the solver
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)

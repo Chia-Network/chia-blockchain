@@ -12,6 +12,7 @@ SERVICES_FOR_GROUP: dict[str, list[str]] = {
         "chia_wallet",
         "chia_data_layer",
         "chia_data_layer_http",
+        "chia_solver",
     ],
     "daemon": [],
     # TODO: should this be `data_layer`?
@@ -31,6 +32,7 @@ SERVICES_FOR_GROUP: dict[str, list[str]] = {
     "crawler": ["chia_crawler"],
     "seeder": ["chia_crawler", "chia_seeder"],
     "seeder-only": ["chia_seeder"],
+    "solver": ["chia_solver"],
 }
 
 
