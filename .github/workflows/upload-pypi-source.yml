@@ -38,7 +38,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
           - name: macOS
             matrix: macos
             emoji: 🍎
@@ -113,7 +113,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
         arch:
           - name: Intel
             matrix: intel
