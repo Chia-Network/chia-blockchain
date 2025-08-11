@@ -14,8 +14,8 @@ from typing_extensions import final
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
+from chia.util import sqlite_wrapper
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.db_wrapper import DBWrapper2
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
@@ -77,7 +77,7 @@ def get_hashes_for_page(page: int, lengths: dict[bytes32, int], max_page_size: i
     return PaginationData(current_page + 1, total_bytes, hashes)
 
 
-async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
+async def _debug_dump(db: sqlite_wrapper.SqliteTransactioner, description: str = "") -> None:
     async with db.reader() as reader:
         cursor = await reader.execute("SELECT name FROM sqlite_master WHERE type='table';")
         print("-" * 50, description, flush=True)
