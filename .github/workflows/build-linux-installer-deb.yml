@@ -59,7 +59,7 @@ jobs:
             madmax-suffix: "x86-64"
             bladebit-suffix: "ubuntu-x86-64.tar.gz"
             arch-artifact-name: intel
-          - runs-on: [Linux, ARM64]
+          - runs-on: ubuntu-24.04-arm
             arch: arm64
             madmax-suffix: "arm64"
             bladebit-suffix: "ubuntu-arm64.tar.gz"
@@ -254,7 +254,7 @@ jobs:
       matrix:
         os:
           - runs-on:
-              arm: [linux, arm64]
+              arm: [ubuntu-24.04-arm]
               intel: [ubuntu-latest]
         distribution:
           - name: debian:bookworm
