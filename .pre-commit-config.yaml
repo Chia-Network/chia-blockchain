@@ -49,7 +49,7 @@ repos:
       - id: prettier
         types_or: [ini, json, toml, yaml, markdown]
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.8.0-1
+    rev: v3.12.0-2
     hooks:
       - id: shfmt
         args: ["--diff", "--write", "-i", "2"]
