@@ -1,10 +1,10 @@
 $ErrorActionPreference = "Stop"
 
-Write-Output "we're inside python.ps1"
+Write-Output "we're inside python3.ps1"
 
 exit 1
 
 $parameters = [System.Collections.ArrayList]$args
-& python3 @parameters
+& python @parameters
 
 exit $LASTEXITCODE
