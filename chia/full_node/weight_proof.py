@@ -411,17 +411,16 @@ class WeightProofHandler:
             while not curr_sub_rec.sub_epoch_summary_included:
                 curr_sub_rec = blocks[curr_sub_rec.prev_hash]
             first_rc_end_of_slot_vdf = self.first_rc_end_of_slot_vdf(header_block, blocks, header_blocks)
+        elif header_block_sub_rec.overflow and header_block_sub_rec.first_in_sub_slot:
+            sub_slots_num = 2
+            while sub_slots_num > 0 and curr_sub_rec.height > 0:
+                if curr_sub_rec.first_in_sub_slot:
+                    assert curr_sub_rec.finished_challenge_slot_hashes is not None
+                    sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
+                curr_sub_rec = blocks[curr_sub_rec.prev_hash]
         else:
-            if header_block_sub_rec.overflow and header_block_sub_rec.first_in_sub_slot:
-                sub_slots_num = 2
-                while sub_slots_num > 0 and curr_sub_rec.height > 0:
-                    if curr_sub_rec.first_in_sub_slot:
-                        assert curr_sub_rec.finished_challenge_slot_hashes is not None
-                        sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
-                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
-            else:
-                while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
-                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+            while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
+                curr_sub_rec = blocks[curr_sub_rec.prev_hash]
 
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: list[SubSlotData] = []
@@ -1533,10 +1532,10 @@ def _get_last_ses_hash(
 ) -> tuple[Optional[bytes32], uint32]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
         if (block.reward_chain_block.height % constants.SUB_EPOCH_BLOCKS) == 0:
-            idx = len(recent_reward_chain) - 1 - idx  # reverse
+            original_idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
-            while idx < len(recent_reward_chain):
-                curr = recent_reward_chain[idx]
+            while original_idx < len(recent_reward_chain):
+                curr = recent_reward_chain[original_idx]
                 if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
                         if slot.challenge_chain.subepoch_summary_hash is not None:
@@ -1544,7 +1543,7 @@ def _get_last_ses_hash(
                                 slot.challenge_chain.subepoch_summary_hash,
                                 curr.reward_chain_block.height,
                             )
-                idx += 1
+                original_idx += 1
     return None, uint32(0)
 
 

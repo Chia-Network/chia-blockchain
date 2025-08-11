@@ -61,13 +61,10 @@ ignore = [
     # Should probably fix these
     "PLR6301", # no-self-use
     "PLR2004", # magic-value-comparison
-    "PLR1704", # redefined-argument-from-local
-    "PLR5501", # collapsible-else-if
 
     # Pylint warning
     "PLW1641", # eq-without-hash
     # Should probably fix these
-    "PLW2901", # redefined-loop-name
     "PLW1514", # unspecified-encoding
     "PLW0603", # global-statement
 
@@ -80,10 +77,6 @@ ignore = [
     # flake8-implicit-str-concat
     "ISC003", # explicit-string-concatenation
 
-    # pyupgrade
-    # Should probably fix these
-    "UP006", # non-pep585-annotation
-
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
@@ -93,9 +86,6 @@ ignore = [
     "RUF056", # falsy-dict-get-fallback
     # Should probably fix this
     "RUF029", # unused-async
-    "RUF043", # pytest-raises-ambiguous-pattern
-    "RUF046", # unnecessary-cast-to-int
-    "RUF052", # used-dummy-variable
 
     # Security linter
     "S603", # subprocess-without-shell-equals-true

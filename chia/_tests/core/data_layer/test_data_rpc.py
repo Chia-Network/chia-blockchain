@@ -2278,7 +2278,7 @@ async def test_unsubscribe_unknown(
     bare_data_layer_api: DataLayerRpcApi,
     seeded_random: random.Random,
 ) -> None:
-    with pytest.raises(RuntimeError, match="No subscription found for the given store_id."):
+    with pytest.raises(RuntimeError, match="No subscription found for the given store_id"):
         await bare_data_layer_api.unsubscribe(request={"id": bytes32.random(seeded_random).hex(), "retain": False})
 
 

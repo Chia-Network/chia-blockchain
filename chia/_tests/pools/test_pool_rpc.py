@@ -1260,7 +1260,7 @@ class TestPoolWalletRpc:
         mock.return_value = False
 
         # Test joining the same pool via the RPC client
-        with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced."):
+        with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced"):
             await wallet_rpc.pw_join_pool(
                 PWJoinPool(
                     wallet_id=uint32(wallet_id),

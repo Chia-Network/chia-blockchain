@@ -79,7 +79,7 @@ def test_process_fast_forward_spends_unknown_ff() -> None:
     singleton_ff = SingletonFastForward()
     # We have no fast forward records yet, so we'll process this coin for the
     # first time here, but the item's latest singleton lineage returns None
-    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward."):
+    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward"):
         singleton_ff.process_fast_forward_spends(
             mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
         )

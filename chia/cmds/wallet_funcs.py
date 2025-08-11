@@ -181,7 +181,7 @@ async def get_unit_name_for_wallet_id(
 async def get_transaction(
     *, root_path: pathlib.Path, wallet_rpc_port: Optional[int], fingerprint: Optional[int], tx_id: str, verbose: int
 ) -> None:
-    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, _, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
         tx: TransactionRecord = (
@@ -278,7 +278,9 @@ async def get_transactions(
                     if len(coin_records["coin_records"]) > 0:
                         coin_record = coin_records["coin_records"][0]
                     else:
-                        j -= 1
+                        # Ignoring this because it seems useful to the loop
+                        # But we should probably consider a better loop
+                        j -= 1  # noqa: PLW2901
                         skipped += 1
                         continue
                 print_transaction(
@@ -1257,9 +1259,8 @@ async def mint_nft(
                     raise ValueError("Disabling DID ownership is not supported for this NFT wallet, it does have a DID")
                 else:
                     did_id = None
-            else:
-                if not wallet_has_did:
-                    did_id = ""
+            elif not wallet_has_did:
+                did_id = ""
 
             mint_response = await wallet_client.mint_nft(
                 request=NFTMintNFTRequest(
@@ -1878,7 +1879,7 @@ async def approve_r_cats(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fp, config):
         if wallet_client is None:
             return
         txs = await wallet_client.crcat_approve_pending(
@@ -1889,7 +1890,7 @@ async def approve_r_cats(
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 reuse_puzhash=reuse,
-            ).to_tx_config(units["cat"], config, fingerprint),
+            ).to_tx_config(units["cat"], config, fp),
             push=push,
             timelock_info=condition_valid_times,
         )

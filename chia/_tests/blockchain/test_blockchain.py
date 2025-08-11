@@ -4,6 +4,7 @@ import asyncio
 import copy
 import logging
 import random
+import re
 import time
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
@@ -4158,24 +4159,24 @@ async def test_lookup_block_generators(
     # make sure we don't cross the forks
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(516)})
 
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(503)})
 
     # make sure we fail when looking up a non-transaction block from the main
     # chain, regardless of which chain we start at
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(8)})
 
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(8)})
 
     # if we try to look up generators starting from a disconnected block, we

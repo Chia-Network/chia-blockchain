@@ -446,8 +446,10 @@ async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, 
     for pool_config in old_configs:
         if pool_config.launcher_id == launcher_id:
             id_found = True
-            pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
-        new_pool_configs.append(pool_config)
+            new_pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
+        else:
+            new_pool_config = pool_config
+        new_pool_configs.append(new_pool_config)
     if id_found:
         print(f"Launcher Id: {launcher_id.hex()} Found, Updating Config.")
         await update_pool_config(root_path, new_pool_configs)
