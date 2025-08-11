@@ -2613,10 +2613,10 @@ class WalletStateManager:
             [path_hint for pk in pks for path_hint in (await self.path_hint_for_pubkey(pk),) if path_hint is not None],
         )
 
-    async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
+    async def gather_signing_info(self, spends: list[Spend]) -> SigningInstructions:
         pks: list[bytes] = []
         signing_targets: list[SigningTarget] = []
-        for spend in coin_spends:
+        for spend in spends:
             coin_spend = spend.as_coin_spend()
             # Get AGG_SIG conditions
             conditions_dict = conditions_dict_for_solution(

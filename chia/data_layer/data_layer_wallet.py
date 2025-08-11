@@ -1089,12 +1089,13 @@ class DataLayerWallet:
         # Create all of the new solutions
         new_spends: list[CoinSpend] = []
         for spend in offer.coin_spends():
+            spend_to_add = spend
             solution = Program.from_serialized(spend.solution)
             if match_dl_singleton(spend.puzzle_reveal)[0]:
                 try:
                     graftroot: Program = solution.at("rrffrf")
                 except EvalError:
-                    new_spends.append(spend)
+                    new_spends.append(spend_to_add)
                     continue
                 mod, curried_args_prg = graftroot.uncurry()
                 if mod == GRAFTROOT_DL_OFFERS:
@@ -1137,11 +1138,9 @@ class DataLayerWallet:
                             ]
                         )
                     )
-                    new_spends.append(spend.replace(solution=new_solution.to_serialized()))
-                else:
-                    new_spends.append(spend)
-            else:
-                new_spends.append(spend)
+                    spend_to_add = spend.replace(solution=new_solution.to_serialized())
+
+            new_spends.append(spend_to_add)
 
         return Offer({}, WalletSpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
 
