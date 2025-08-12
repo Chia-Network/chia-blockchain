@@ -44,6 +44,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMute
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
+from chia.consensus.consensus_store import ConsensusStore
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
@@ -268,12 +269,11 @@ class FullNode:
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
             selected_network = self.config.get("selected_network")
-            height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
+            height_map = await BlockHeightMap.create(self.db_path.parent, self.db_wrapper, selected_network)
+            consensus_store = await ConsensusStore.create(self.block_store, self.coin_store, height_map)
             self._blockchain = await Blockchain.create(
-                coin_store=self.coin_store,
-                block_store=self.block_store,
+                consensus_store=consensus_store,
                 consensus_constants=self.constants,
-                height_map=height_map,
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
