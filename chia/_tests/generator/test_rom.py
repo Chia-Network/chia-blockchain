@@ -159,6 +159,7 @@ class TestROM:
             # execution cost, just in run_block_generator2()
             execution_cost=0 if softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT else 44,
             condition_cost=1800000,
+            fingerprint=b"",
         )
 
         assert npc_result.conds.spends == [spend]
