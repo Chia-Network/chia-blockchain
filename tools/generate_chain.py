@@ -17,7 +17,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.util.constants import test_constants
 from chia.simulator.block_tools import create_block_tools
 from chia.simulator.keyring import TempKeyring
-from chia.types.blockchain_format.coin import Coin
 from chia.util.chia_logging import initialize_logging
 
 
@@ -36,13 +35,6 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 @click.command()
 @click.option("--length", type=int, default=None, required=False, help="the number of blocks to generate")
-@click.option(
-    "--fill-rate",
-    type=int,
-    default=100,
-    required=False,
-    help="the transaction fill rate of blocks. Specified in percent of max block cost",
-)
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profile at the end")
 @click.option(
     "--block-refs",
@@ -54,11 +46,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 @click.option(
     "--output", type=str, required=False, default=None, help="the filename to write the resulting sqlite database to"
 )
-def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: str | None) -> None:
-    if fill_rate < 0 or fill_rate > 100:
-        print("fill-rate must be within [0, 100]")
-        sys.exit(1)
-
+def main(length: int, profile: bool, block_refs: bool, output: str | None) -> None:
     if not length:
         if block_refs:
             # we won't have full reflist until after 512 transaction blocks
@@ -73,20 +61,21 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
         sys.exit(1)
 
     if output is None:
-        output = f"stress-test-blockchain-{length}-{fill_rate}{'-refs' if block_refs else ''}.sqlite"
+        output = f"stress-test-blockchain-{length}{'-refs' if block_refs else ''}.sqlite"
 
     root_path = Path("./test-chain").resolve()
     root_path.mkdir(parents=True, exist_ok=True)
+    tc = test_constants.replace(HARD_FORK_HEIGHT=uint32(0))
     with (
         TempKeyring() as keychain,
-        create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain) as bt,
+        create_block_tools(constants=tc, root_path=root_path, keychain=keychain) as bt,
     ):
         initialize_logging(
             "generate_chain", {"log_level": "DEBUG", "log_stdout": False, "log_syslog": False}, root_path=root_path
         )
         farmer_puzzlehash: bytes32 = bt.farmer_ph
         pool_puzzlehash: bytes32 = bt.farmer_ph
-        unspent_coins: set[Coin] = bt.available_coins
+        num_unspent: int = 0
         num_spends: int = bt.prev_num_spends
         num_additions: int = bt.prev_num_additions
 
@@ -144,8 +133,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                         farmer_reward_puzzle_hash=farmer_puzzlehash,
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
-                        include_transactions=True,
-                        block_fillrate=fill_rate,
+                        include_transactions=2,
                         block_refs=block_references,
                     )
                     prev_tx_block = b
@@ -156,13 +144,11 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                     transaction_blocks.append(height)
                     num_spends += bt.prev_num_spends
                     num_additions += bt.prev_num_additions
+                    num_unspent = num_unspent + num_additions - num_spends
 
                     if b.transactions_info:
-                        actual_fill_rate = b.transactions_info.cost / test_constants.MAX_BLOCK_COST_CLVM
-                        if b.transactions_info.cost > test_constants.MAX_BLOCK_COST_CLVM:
+                        if b.transactions_info.cost > tc.MAX_BLOCK_COST_CLVM:
                             print(f"COST EXCEEDED: {b.transactions_info.cost}")
-                    else:
-                        actual_fill_rate = 0
 
                     end_time = time.monotonic()
                     if prev_tx_block is not None:
@@ -176,9 +162,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                         f"height: {b.height} "
                         f"spends: {num_spends} "
                         f"refs: {len(block_references)} "
-                        f"fill_rate: {actual_fill_rate * 100:.1f}% "
                         f"new coins: {num_additions} "
-                        f"unspent: {len(unspent_coins)} "
+                        f"unspent: {num_unspent} "
                         f"difficulty: {b.weight - prev_block.weight} "
                         f"timestamp: {ts} "
                         f"time: {end_time - start_time:0.2f}s "
