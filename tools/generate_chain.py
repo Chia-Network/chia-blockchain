@@ -11,7 +11,7 @@ from pathlib import Path
 
 import click
 import zstd
-from chia_rs import SpendBundle
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.constants import test_constants
@@ -84,6 +84,11 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
         initialize_logging(
             "generate_chain", {"log_level": "DEBUG", "log_stdout": False, "log_syslog": False}, root_path=root_path
         )
+        farmer_puzzlehash: bytes32 = bt.farmer_ph
+        pool_puzzlehash: bytes32 = bt.farmer_ph
+        unspent_coins: set[Coin] = bt.available_coins
+        num_spends: int = bt.prev_num_spends
+        num_additions: int = bt.prev_num_additions
 
         print(f"writing blockchain to {output}")
         with closing(sqlite3.connect(output)) as db:
@@ -96,9 +101,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                 "block blob)"
             )
 
-            wallet = bt.get_farmer_wallet_tool()
-            farmer_puzzlehash = wallet.get_new_puzzlehash()
-            pool_puzzlehash = wallet.get_new_puzzlehash()
             transaction_blocks: list[uint32] = []
 
             blocks = bt.get_consecutive_blocks(
@@ -109,12 +111,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                 genesis_timestamp=uint64(1234567890),
             )
 
-            unspent_coins: list[Coin] = []
-
             for b in blocks:
-                for coin in b.get_included_reward_coins():
-                    if coin.puzzle_hash in {farmer_puzzlehash, pool_puzzlehash}:
-                        unspent_coins.append(coin)
                 db.execute(
                     "INSERT INTO full_blocks VALUES(?, ?, ?, ?, ?)",
                     (
@@ -129,23 +126,9 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
 
             b = blocks[-1]
 
-            num_tx_per_block = int(1010 * fill_rate / 100)
-
             while True:
                 with enable_profiler(profile, b.height):
                     start_time = time.monotonic()
-
-                    new_coins: list[Coin] = []
-                    spend_bundles: list[SpendBundle] = []
-                    i = 0
-                    for i in range(num_tx_per_block):
-                        if unspent_coins == []:
-                            break
-                        c = unspent_coins.pop(random.randrange(len(unspent_coins)))
-                        receiver = wallet.get_new_puzzlehash()
-                        bundle = wallet.generate_signed_transaction(uint64(c.amount // 2), receiver, c)
-                        new_coins.extend(bundle.additions())
-                        spend_bundles.append(bundle)
 
                     block_references: list[uint32]
                     if block_refs:
@@ -154,8 +137,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                     else:
                         block_references = []
 
-                    farmer_puzzlehash = wallet.get_new_puzzlehash()
-                    pool_puzzlehash = wallet.get_new_puzzlehash()
                     prev_num_blocks = len(blocks)
                     blocks = bt.get_consecutive_blocks(
                         1,
@@ -163,7 +144,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                         farmer_reward_puzzle_hash=farmer_puzzlehash,
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
-                        transaction_data=SpendBundle.aggregate(spend_bundles),
+                        include_transactions=True,
+                        block_fillrate=fill_rate,
                         block_refs=block_references,
                     )
                     prev_tx_block = b
@@ -172,11 +154,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
                     height = b.height
                     assert b.is_transaction_block()
                     transaction_blocks.append(height)
-
-                    for bl in blocks[prev_num_blocks:]:
-                        for coin in bl.get_included_reward_coins():
-                            unspent_coins.append(coin)
-                    unspent_coins.extend(new_coins)
+                    num_spends += bt.prev_num_spends
+                    num_additions += bt.prev_num_additions
 
                     if b.transactions_info:
                         actual_fill_rate = b.transactions_info.cost / test_constants.MAX_BLOCK_COST_CLVM
@@ -195,10 +174,10 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: s
 
                     print(
                         f"height: {b.height} "
-                        f"spends: {i + 1} "
+                        f"spends: {num_spends} "
                         f"refs: {len(block_references)} "
                         f"fill_rate: {actual_fill_rate * 100:.1f}% "
-                        f"new coins: {len(new_coins)} "
+                        f"new coins: {num_additions} "
                         f"unspent: {len(unspent_coins)} "
                         f"difficulty: {b.weight - prev_block.weight} "
                         f"timestamp: {ts} "
