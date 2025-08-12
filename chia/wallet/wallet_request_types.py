@@ -393,6 +393,11 @@ class GetTransactionMemoResponse(Streamable):
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> GetTransactionMemoResponse:
         return super().from_json_dict(
+            # We have to filter out the "success" key here
+            # because it doesn't match our `transaction_memos` hint
+            #
+            # We do this by only allowing the keys with "0x"
+            # which we can assume exist because we serialize all responses
             {"transaction_memos": {key: value for key, value in json_dict.items() if key.startswith("0x")}}
         )
 
