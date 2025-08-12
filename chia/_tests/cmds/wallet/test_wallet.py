@@ -47,6 +47,8 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     FungibleAsset,
     GetHeightInfoResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetTransaction,
     GetTransactions,
     GetTransactionsResponse,
@@ -493,11 +495,11 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
 
     # set RPC Client
     class GetAddressWalletRpcClient(TestWalletRpcClient):
-        async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-            self.add_to_log("get_next_address", (wallet_id, new_address))
-            if new_address:
-                return encode_puzzle_hash(get_bytes32(3), "xch")
-            return encode_puzzle_hash(get_bytes32(4), "xch")
+        async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+            self.add_to_log("get_next_address", (request.wallet_id, request.new_address))
+            if request.new_address:
+                return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(3), "xch"))
+            return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(4), "xch"))
 
     inst_rpc_client = GetAddressWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

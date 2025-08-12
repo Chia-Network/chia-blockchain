@@ -34,6 +34,8 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    GetNextAddress,
+    GetNextAddressResponse,
     GetSyncStatusResponse,
     GetTransaction,
     GetTransactionResponse,
@@ -250,13 +252,13 @@ class TestWalletRpcClient(TestRpcClient):
         unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
         return confirmed_records, unconfirmed_removals, unconfirmed_additions
 
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        self.add_to_log("get_next_address", (wallet_id, new_address))
+    async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+        self.add_to_log("get_next_address", (request.wallet_id, request.new_address))
         addr = encode_puzzle_hash(bytes32([self.wallet_index] * 32), "xch")
         self.wallet_index += 1
         if self.wallet_index > 254:
             self.wallet_index = 1
-        return addr
+        return GetNextAddressResponse(request.wallet_id, addr)
 
     async def send_transaction_multi(
         self,

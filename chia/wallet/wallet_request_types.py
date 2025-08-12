@@ -419,6 +419,21 @@ class GetTransactionCountResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetNextAddress(Streamable):
+    wallet_id: uint32
+    new_address: bool = False
+    save_derivations: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddressResponse(Streamable):
+    wallet_id: uint32
+    address: str
+
+
+@streamable
+@dataclass(frozen=True)
 class GetOffersCountResponse(Streamable):
     total: uint16
     my_offers_count: uint16

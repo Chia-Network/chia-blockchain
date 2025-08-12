@@ -170,6 +170,8 @@ from chia.wallet.wallet_request_types import (
     GenerateMnemonicResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
     GetPrivateKey,
@@ -1550,33 +1552,29 @@ class WalletRpcApi:
             uint16(count),
         )
 
-    async def get_next_address(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
         """
         Returns a new address
         """
-        if request["new_address"] is True:
-            create_new = True
-        else:
-            create_new = False
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
         if wallet.type() in {WalletType.STANDARD_WALLET, WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             async with self.service.wallet_state_manager.new_action_scope(
-                DEFAULT_TX_CONFIG, push=request.get("save_derivations", True)
+                DEFAULT_TX_CONFIG, push=request.save_derivations
             ) as action_scope:
                 raw_puzzle_hash = await action_scope.get_puzzle_hash(
-                    self.service.wallet_state_manager, override_reuse_puzhash_with=not create_new
+                    self.service.wallet_state_manager, override_reuse_puzhash_with=not request.new_address
                 )
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
 
-        return {
-            "wallet_id": wallet_id,
-            "address": address,
-        }
+        return GetNextAddressResponse(
+            request.wallet_id,
+            address,
+        )
 
     @tx_endpoint(push=True)
     async def send_transaction(
