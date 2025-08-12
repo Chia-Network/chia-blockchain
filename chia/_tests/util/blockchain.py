@@ -13,6 +13,7 @@ from filelock import FileLock
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.consensus_store import ConsensusStore
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
@@ -26,11 +27,12 @@ async def create_blockchain(
 ) -> AsyncIterator[tuple[Blockchain, DBWrapper2]]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
+
+        block_store = await BlockStore.create(wrapper)
         coin_store = await CoinStore.create(wrapper)
-        store = await BlockStore.create(wrapper)
-        path = Path(".")
-        height_map = await BlockHeightMap.create(path, wrapper)
-        bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)
+        height_map = await BlockHeightMap.create(Path("."), wrapper, None)
+        consensus_store = await ConsensusStore.create(block_store, coin_store, height_map)
+        bc1 = await Blockchain.create(consensus_store, constants, 3, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper
