@@ -9,6 +9,7 @@ from chia_rs import ConsensusConstants
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.consensus_store import ConsensusStore
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.util.db_wrapper import DBWrapper2
@@ -23,7 +24,8 @@ async def create_ram_blockchain(
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
-        blockchain = await Blockchain.create(coin_store, block_store, height_map, consensus_constants, 2)
+        consensus_store = await ConsensusStore.create(block_store, coin_store, height_map)
+        blockchain = await Blockchain.create(consensus_store, consensus_constants, 2)
         try:
             yield db_wrapper, blockchain
         finally:
