@@ -119,6 +119,7 @@ from chia.wallet.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDCreateBackupFileResponse,
     DIDFindLostDID,
@@ -1714,20 +1715,20 @@ class WalletRpcApi:
             "transactions": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def delete_unconfirmed_transactions(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        if wallet_id not in self.service.wallet_state_manager.wallets:
-            raise ValueError(f"Wallet id {wallet_id} does not exist")
+    @marshal
+    async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> Empty:
+        if request.wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet id {request.wallet_id} does not exist")
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
         async with self.service.wallet_state_manager.db_wrapper.writer():
-            await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
-            wallet = self.service.wallet_state_manager.wallets[wallet_id]
+            await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(request.wallet_id)
+            wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
             if wallet.type() == WalletType.POOLING_WALLET.value:
                 assert isinstance(wallet, PoolWallet)
                 wallet.target_state = None
-            return {}
+            return Empty()
 
     async def select_coins(
         self,

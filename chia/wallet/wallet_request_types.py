@@ -434,6 +434,12 @@ class GetNextAddressResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DeleteUnconfirmedTransactions(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class GetOffersCountResponse(Streamable):
     total: uint16
     my_offers_count: uint16

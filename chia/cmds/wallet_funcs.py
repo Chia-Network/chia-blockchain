@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DeleteUnconfirmedTransactions,
     DIDFindLostDID,
     DIDGetDID,
     DIDGetInfo,
@@ -427,7 +428,7 @@ async def delete_unconfirmed_transactions(
     root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        await wallet_client.delete_unconfirmed_transactions(wallet_id)
+        await wallet_client.delete_unconfirmed_transactions(DeleteUnconfirmedTransactions(uint32(wallet_id)))
         print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
 

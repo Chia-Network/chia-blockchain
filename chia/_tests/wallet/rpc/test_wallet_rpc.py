@@ -108,6 +108,7 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     DefaultCAT,
     DeleteKey,
+    DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDGetDID,
     DIDGetMetadata,
@@ -2169,7 +2170,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     await time_out_assert(20, tx_in_mempool, True, client, created_tx.name)
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
-    await client.delete_unconfirmed_transactions(1)
+    await client.delete_unconfirmed_transactions(DeleteUnconfirmedTransactions(uint32(1)))
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
     sk_resp = await client.get_private_key(GetPrivateKey(pks[0]))

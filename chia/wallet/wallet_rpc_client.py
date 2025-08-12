@@ -36,6 +36,7 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
+    DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDCreateBackupFileResponse,
     DIDFindLostDID,
@@ -365,8 +366,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("spend_clawback_coins", request)
         return response
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
-        await self.fetch("delete_unconfirmed_transactions", {"wallet_id": wallet_id})
+    async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
+        await self.fetch("delete_unconfirmed_transactions", request.to_json_dict())
 
     async def get_current_derivation_index(self) -> str:
         response = await self.fetch("get_current_derivation_index", {})

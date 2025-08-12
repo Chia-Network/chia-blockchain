@@ -45,6 +45,7 @@ from chia.wallet.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
+    DeleteUnconfirmedTransactions,
     FungibleAsset,
     GetHeightInfoResponse,
     GetNextAddress,
@@ -571,8 +572,8 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
 
     # set RPC Client
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
-        async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
-            self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
+        async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
+            self.add_to_log("delete_unconfirmed_transactions", (request.wallet_id,))
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
