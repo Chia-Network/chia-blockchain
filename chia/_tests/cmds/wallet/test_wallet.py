@@ -47,6 +47,7 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     DeleteUnconfirmedTransactions,
     FungibleAsset,
+    GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNextAddressResponse,
@@ -597,9 +598,9 @@ def test_get_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRp
 
     # set RPC Client
     class GetDerivationIndexRpcClient(TestWalletRpcClient):
-        async def get_current_derivation_index(self) -> str:
+        async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
             self.add_to_log("get_current_derivation_index", ())
-            return str(520)
+            return GetCurrentDerivationIndexResponse(uint32(520))
 
     inst_rpc_client = GetDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
