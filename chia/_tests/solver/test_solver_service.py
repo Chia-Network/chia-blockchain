@@ -21,12 +21,9 @@ from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_s
 
 @pytest.mark.anyio
 async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_path: Path) -> None:
-    """Test solver api protocol methods with real requests."""
     async with setup_solver(tmp_path, blockchain_constants) as solver_service:
         solver = solver_service._node
         solver_api = solver_service._api
-
-        # test api ready state
         assert solver_api.ready() is True
 
         # test solve with real SolverInfo
@@ -108,7 +105,6 @@ async def test_solver_with_real_blocks_and_signage_points(
 async def test_solver_error_handling_and_edge_cases(
     blockchain_constants: ConsensusConstants, self_hostname: str, tmp_path: Path
 ) -> None:
-    """Test solver error handling with invalid requests and edge cases."""
     async with setup_solver(tmp_path, blockchain_constants) as solver_service:
         assert solver_service.rpc_server is not None
         solver_rpc_client = await SolverRpcClient.create(
@@ -123,7 +119,7 @@ async def test_solver_error_handling_and_edge_cases(
             pass  # expected
 
         # test edge case parameters
-        valid_quality = "1234567890abcdef" * 4  # valid 32-byte hex
+        valid_quality = "1234567890abcdef" * 4
 
         # test with edge case plot sizes and difficulties
         edge_cases = [
