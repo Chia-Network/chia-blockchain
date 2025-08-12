@@ -86,6 +86,7 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
     GetCATListResponse,
+    GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -369,10 +370,8 @@ class WalletRpcClient(RpcClient):
     async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
         await self.fetch("delete_unconfirmed_transactions", request.to_json_dict())
 
-    async def get_current_derivation_index(self) -> str:
-        response = await self.fetch("get_current_derivation_index", {})
-        index = response["index"]
-        return str(index)
+    async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
+        return GetCurrentDerivationIndexResponse.from_json_dict(await self.fetch("get_current_derivation_index", {}))
 
     async def extend_derivation_index(self, index: int) -> str:
         response = await self.fetch("extend_derivation_index", {"index": index})

@@ -435,7 +435,7 @@ async def delete_unconfirmed_transactions(
 async def get_derivation_index(root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int]) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.get_current_derivation_index()
-        print(f"Last derivation index: {res}")
+        print(f"Last derivation index: {res.index}")
 
 
 async def update_derivation_index(

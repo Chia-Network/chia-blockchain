@@ -440,6 +440,12 @@ class DeleteUnconfirmedTransactions(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetCurrentDerivationIndexResponse(Streamable):
+    index: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
 class GetOffersCountResponse(Streamable):
     total: uint16
     my_offers_count: uint16

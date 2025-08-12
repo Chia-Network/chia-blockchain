@@ -169,6 +169,7 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -1870,12 +1871,13 @@ class WalletRpcApi:
 
         return {"coin_records": [cr.to_json_dict() for cr in coin_records]}
 
-    async def get_current_derivation_index(self, request: dict[str, Any]) -> dict[str, Any]:
+    @marshal
+    async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:
         assert self.service.wallet_state_manager is not None
 
         index: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
-        return {"success": True, "index": index}
+        return GetCurrentDerivationIndexResponse(index)
 
     async def extend_derivation_index(self, request: dict[str, Any]) -> dict[str, Any]:
         assert self.service.wallet_state_manager is not None
