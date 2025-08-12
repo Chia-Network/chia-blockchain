@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from chia_rs import ProofOfSpace
+from chia_rs import ConsensusConstants, FullBlock, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
@@ -14,18 +14,12 @@ from chia.plotting.util import PlotInfo
 from chia.protocols import harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.block_tools import BlockTools
 
 
-def signage_point_from_block(bt: BlockTools) -> harvester_protocol.NewSignagePointHarvester:
-    """Create a real NewSignagePointHarvester from actual blockchain blocks."""
-    # generate real blocks using BlockTools
-    blocks = bt.get_consecutive_blocks(
-        num_blocks=3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=bt.farmer_ph,
-    )
-    block = blocks[-1]  # always use the last block
+def signage_point_from_block(
+    block: FullBlock, constants: ConsensusConstants
+) -> harvester_protocol.NewSignagePointHarvester:
+    """Create a real NewSignagePointHarvester from a blockchain block."""
     # extract real signage point data from the block
     sp_index = block.reward_chain_block.signage_point_index
     challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
@@ -37,8 +31,8 @@ def signage_point_from_block(bt: BlockTools) -> harvester_protocol.NewSignagePoi
 
     return harvester_protocol.NewSignagePointHarvester(
         challenge_hash=challenge_hash,
-        difficulty=uint64(bt.constants.DIFFICULTY_STARTING),
-        sub_slot_iters=uint64(bt.constants.SUB_SLOT_ITERS_STARTING),
+        difficulty=uint64(constants.DIFFICULTY_STARTING),
+        sub_slot_iters=uint64(constants.SUB_SLOT_ITERS_STARTING),
         signage_point_index=sp_index,
         sp_hash=sp_hash,
         pool_difficulties=[],
@@ -63,21 +57,25 @@ def create_plot_info() -> PlotInfo:
 
 
 @pytest.mark.anyio
-async def test_new_signage_point_harvester(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
+async def test_new_signage_point_harvester(
+    harvester_farmer_environment: HarvesterFarmerEnvironment,
+    default_400_blocks: list[FullBlock],
+    blockchain_constants: ConsensusConstants,
+) -> None:
     """Test successful signage point processing with real blockchain data."""
-    _, _, harvester_service, _, bt = harvester_farmer_environment
+    _, _, harvester_service, _, _ = harvester_farmer_environment
     harvester_api = harvester_service._server.api
     assert isinstance(harvester_api, HarvesterAPI)
     # use real signage point data from actual block
-    new_challenge = signage_point_from_block(bt)
+    block = default_400_blocks[2]  # use a transaction block
+    new_challenge = signage_point_from_block(block, blockchain_constants)
     # harvester doesn't accept incoming connections, so use mock peer like other tests
     mock_peer = MagicMock(spec=WSChiaConnection)
     # create realistic plot info for testing
     mock_plot_info = create_plot_info()
-    plot_path = Path("/fake/plot.plot")
 
     with patch.object(harvester_api.harvester.plot_manager, "public_keys_available", return_value=True):
-        with patch.object(harvester_api.harvester.plot_manager, "plots", {plot_path: mock_plot_info}):
+        with patch.object(harvester_api.harvester.plot_manager, "plots", {"tmp_path": mock_plot_info}):
             # let passes_plot_filter, calculate_pos_challenge, and calculate_sp_interval_iters use real implementations
             with patch("chia.harvester.harvester_api.calculate_iterations_quality", return_value=uint64(1000)):
                 with patch.object(mock_plot_info.prover, "get_full_proof") as mock_get_proof:
@@ -89,9 +87,12 @@ async def test_new_signage_point_harvester(harvester_farmer_environment: Harvest
 @pytest.mark.anyio
 async def test_new_signage_point_harvester_pool_difficulty(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
+    default_400_blocks: list[FullBlock],
+    tmp_path: Path,
+    blockchain_constants: ConsensusConstants,
 ) -> None:
     """Test pool difficulty overrides with real blockchain signage points."""
-    _, _, harvester_service, _, bt = harvester_farmer_environment
+    _, _, harvester_service, _, _ = harvester_farmer_environment
     harvester_api = harvester_service._server.api
     assert isinstance(harvester_api, HarvesterAPI)
 
@@ -102,7 +103,6 @@ async def test_new_signage_point_harvester_pool_difficulty(
     # create realistic plot info for testing
     mock_plot_info = create_plot_info()
     mock_plot_info.pool_contract_puzzle_hash = pool_puzzle_hash
-    plot_path = Path("/fake/pool_plot.plot")
     pool_difficulty = PoolDifficulty(
         pool_contract_puzzle_hash=pool_puzzle_hash,
         difficulty=uint64(500),  # lower than main difficulty
@@ -110,7 +110,8 @@ async def test_new_signage_point_harvester_pool_difficulty(
     )
 
     # create signage point from real block with pool difficulty
-    new_challenge = signage_point_from_block(bt)
+    block = default_400_blocks[2]  # use a transaction block
+    new_challenge = signage_point_from_block(block, blockchain_constants)
     new_challenge = harvester_protocol.NewSignagePointHarvester(
         challenge_hash=new_challenge.challenge_hash,
         difficulty=new_challenge.difficulty,
@@ -123,7 +124,7 @@ async def test_new_signage_point_harvester_pool_difficulty(
     )
 
     with patch.object(harvester_api.harvester.plot_manager, "public_keys_available", return_value=True):
-        with patch.object(harvester_api.harvester.plot_manager, "plots", {plot_path: mock_plot_info}):
+        with patch.object(harvester_api.harvester.plot_manager, "plots", {tmp_path: mock_plot_info}):
             # mock passes_plot_filter to return True so we can test pool difficulty logic
             with patch("chia.harvester.harvester_api.passes_plot_filter", return_value=True):
                 with patch("chia.harvester.harvester_api.calculate_iterations_quality") as mock_calc_iter:
@@ -141,23 +142,26 @@ async def test_new_signage_point_harvester_pool_difficulty(
 @pytest.mark.anyio
 async def test_new_signage_point_harvester_prover_error(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
+    default_400_blocks: list[FullBlock],
+    tmp_path: Path,
+    blockchain_constants: ConsensusConstants,
 ) -> None:
     """Test error handling when prover fails using real blockchain data."""
-    _, _, harvester_service, _, bt = harvester_farmer_environment
+    _, _, harvester_service, _, _ = harvester_farmer_environment
     harvester_api = harvester_service._server.api
     assert isinstance(harvester_api, HarvesterAPI)
 
     # create signage point from real block
-    new_challenge = signage_point_from_block(bt)
+    block = default_400_blocks[2]  # use a transaction block
+    new_challenge = signage_point_from_block(block, blockchain_constants)
 
     mock_peer = MagicMock(spec=WSChiaConnection)
 
     # create realistic plot info for testing
     mock_plot_info = create_plot_info()
-    plot_path = Path("/fake/plot.plot")
 
     with patch.object(harvester_api.harvester.plot_manager, "public_keys_available", return_value=True):
-        with patch.object(harvester_api.harvester.plot_manager, "plots", {plot_path: mock_plot_info}):
+        with patch.object(harvester_api.harvester.plot_manager, "plots", {tmp_path: mock_plot_info}):
             # let passes_plot_filter and calculate_pos_challenge use real implementations
             # make the prover fail during quality check
             with patch.object(

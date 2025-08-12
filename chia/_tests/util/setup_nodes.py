@@ -43,6 +43,7 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.solver.solver_service import SolverService
 from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
@@ -65,6 +66,7 @@ class FullSystem:
     introducer: IntroducerAPI
     timelord: TimelordService
     timelord_bluebox: TimelordService
+    solver: SolverService
     daemon: WebSocketServer
 
 
@@ -474,14 +476,13 @@ async def setup_full_system_inner(
 
                 await asyncio.sleep(backoff)
 
-        setup_solver(
-            shared_b_tools.root_path / "harvester",
-            consensus_constants,
-            True,
+        solver_service = await async_exit_stack.enter_async_context(
+            setup_solver(
+                shared_b_tools.root_path / "solver",
+                consensus_constants,
+                True,
+            )
         )
-        # solver_service = await async_exit_stack.enter_async_context(
-
-        # )
 
         full_system = FullSystem(
             node_1=node_1,
@@ -491,6 +492,7 @@ async def setup_full_system_inner(
             introducer=introducer,
             timelord=timelord,
             timelord_bluebox=timelord_bluebox_service,
+            solver=solver_service,
             daemon=daemon_ws,
         )
         yield full_system

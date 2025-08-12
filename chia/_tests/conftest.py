@@ -65,12 +65,10 @@ from chia.simulator.setup_services import (
     setup_full_node,
     setup_introducer,
     setup_seeder,
-    setup_solver,
     setup_timelord,
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-from chia.solver.solver_service import SolverService
 from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
@@ -1112,12 +1110,6 @@ async def crawler_service_no_loop(
 async def seeder_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[DNSServer]:
     async with setup_seeder(root_path_populated_with_config, database_uri) as seeder:
         yield seeder
-
-
-@pytest.fixture(scope="function")
-async def solver_service(bt: BlockTools) -> AsyncIterator[SolverService]:
-    async with setup_solver(bt.root_path, bt.constants) as _:
-        yield _
 
 
 @pytest.fixture(scope="function")

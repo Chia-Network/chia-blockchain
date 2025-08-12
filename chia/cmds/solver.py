@@ -27,7 +27,7 @@ def get_state_cmd(
     solver_rpc_port: Optional[int],
 ) -> None:
     import asyncio
-    
+
     from chia.cmds.solver_funcs import get_state
 
     asyncio.run(get_state(ChiaCliContext.set_default(ctx), solver_rpc_port))
@@ -36,7 +36,7 @@ def get_state_cmd(
 @solver_cmd.command("solve", help="Solve a quality string")
 @click.option(
     "-sp",
-    "--solver-rpc-port", 
+    "--solver-rpc-port",
     help="Set the port where the Solver is hosting the RPC interface. See the rpc_port under solver in config.yaml",
     type=int,
     default=None,
@@ -74,7 +74,7 @@ def solve_cmd(
     difficulty: int,
 ) -> None:
     import asyncio
-    
+
     from chia.cmds.solver_funcs import solve_quality
 
     asyncio.run(solve_quality(ChiaCliContext.set_default(ctx), solver_rpc_port, quality, plot_size, difficulty))

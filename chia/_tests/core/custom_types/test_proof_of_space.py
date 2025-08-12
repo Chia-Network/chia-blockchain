@@ -223,7 +223,7 @@ def test_calculate_plot_difficulty(height: uint32, difficulty: uint8) -> None:
 
 class TestProofOfSpace:
     @pytest.mark.parametrize("prefix_bits", [DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V1, 8, 7, 6, 5, 1, 0])
-    def test_can_create_proof(self, prefix_bits: uint8, seeded_random: random.Random) -> None:
+    def test_can_create_proof(self, prefix_bits: int, seeded_random: random.Random) -> None:
         """
         Tests that the change of getting a correct proof is exactly 1/target_filter.
         """

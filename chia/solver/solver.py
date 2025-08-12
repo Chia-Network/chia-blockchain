@@ -48,9 +48,7 @@ class Solver:
         self._shut_down = False
         num_threads = config["num_threads"]
         self.log.info(f"Initializing solver with {num_threads} threads")
-        self.executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=num_threads, thread_name_prefix="solver-"
-        )
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=num_threads, thread_name_prefix="solver-")
         self._server = None
         self.constants = constants
         self.state_changed_callback: Optional[StateChangedProtocol] = None
@@ -70,10 +68,11 @@ class Solver:
             self.log.info("Solver service shutdown complete")
 
     def solve(self, info: SolverInfo) -> Optional[bytes]:
-        self.log.debug(f"Solve request: plot_size={info.plot_size}, difficulty={info.plot_diffculty}, quality={info.quality_string.hex()}")
+        self.log.debug(f"Solve request: quality={info.quality_string.hex()}")
         # stub implementation - always returns None
         self.log.debug("Solve completed (stub implementation)")
-        return None #todo implement actualy calling the solver
+        # todo implement actualy calling the solver
+        return None
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)

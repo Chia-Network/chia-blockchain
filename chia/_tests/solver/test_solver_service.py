@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 from unittest.mock import patch
 
 import pytest
+from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
@@ -12,18 +14,15 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols.solver_protocol import SolverInfo
-from chia.simulator.block_tools import BlockTools
 from chia.simulator.setup_services import setup_solver
 from chia.solver.solver_rpc_client import SolverRpcClient
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 
 
 @pytest.mark.anyio
-async def test_solver_api_methods(bt: BlockTools) -> None:
+async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_path: Path) -> None:
     """Test solver api protocol methods with real requests."""
-    solver_temp_dir = bt.root_path / "solver_farmer_test"
-    solver_temp_dir.mkdir(exist_ok=True)
-    async with setup_solver(solver_temp_dir, bt.constants) as solver_service:
+    async with setup_solver(tmp_path, blockchain_constants) as solver_service:
         solver = solver_service._node
         solver_api = solver_service._api
 
@@ -56,31 +55,20 @@ async def test_solver_api_methods(bt: BlockTools) -> None:
 
 
 @pytest.mark.anyio
-async def test_non_overflow_genesis(empty_blockchain: Blockchain, bt: BlockTools) -> None:
-    blocks = bt.get_consecutive_blocks(
-        num_blocks=3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=bt.farmer_ph,
-    )
-    for block in blocks:
-        await _validate_and_add_block(empty_blockchain, block)
-
-
-@pytest.mark.anyio
 async def test_solver_with_real_blocks_and_signage_points(
-    bt: BlockTools, empty_blockchain: Blockchain, self_hostname: str
+    blockchain_constants: ConsensusConstants,
+    default_400_blocks: list[FullBlock],
+    empty_blockchain: Blockchain,
+    self_hostname: str,
+    tmp_path: Path,
 ) -> None:
     blockchain = empty_blockchain
-    blocks = bt.get_consecutive_blocks(
-        num_blocks=3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=bt.farmer_ph,
-    )
+    blocks = default_400_blocks[:3]
     for block in blocks:
         await _validate_and_add_block(empty_blockchain, block)
     block = blocks[-1]  # always use the last block
-    overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
-    challenge = get_block_challenge(bt.constants, block, blockchain, False, overflow, False)
+    overflow = is_overflow_block(blockchain_constants, block.reward_chain_block.signage_point_index)
+    challenge = get_block_challenge(blockchain_constants, block, blockchain, False, overflow, False)
     assert block.reward_chain_block.pos_ss_cc_challenge_hash == challenge
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
         challenge_chain_sp: bytes32 = challenge
@@ -91,7 +79,7 @@ async def test_solver_with_real_blocks_and_signage_points(
     # calculate real quality string from proof of space data
     quality_string: Optional[bytes32] = verify_and_get_quality_string(
         block.reward_chain_block.proof_of_space,
-        bt.constants,
+        blockchain_constants,
         challenge,
         challenge_chain_sp,
         height=block.reward_chain_block.height,
@@ -104,9 +92,7 @@ async def test_solver_with_real_blocks_and_signage_points(
     plot_size = pos.size()
     k_size = plot_size.size_v1 if plot_size.size_v1 is not None else plot_size.size_v2
     assert k_size is not None
-    solver_temp_dir = bt.root_path / "solver_farmer_test"
-    solver_temp_dir.mkdir(exist_ok=True)
-    async with setup_solver(solver_temp_dir, bt.constants) as solver_service:
+    async with setup_solver(tmp_path, blockchain_constants) as solver_service:
         assert solver_service.rpc_server is not None
         solver_rpc_client = await SolverRpcClient.create(
             self_hostname, solver_service.rpc_server.listen_port, solver_service.root_path, solver_service.config
@@ -119,11 +105,11 @@ async def test_solver_with_real_blocks_and_signage_points(
 
 
 @pytest.mark.anyio
-async def test_solver_error_handling_and_edge_cases(bt: BlockTools, self_hostname: str) -> None:
+async def test_solver_error_handling_and_edge_cases(
+    blockchain_constants: ConsensusConstants, self_hostname: str, tmp_path: Path
+) -> None:
     """Test solver error handling with invalid requests and edge cases."""
-    solver_temp_dir = bt.root_path / "solver_farmer_test"
-    solver_temp_dir.mkdir(exist_ok=True)
-    async with setup_solver(solver_temp_dir, bt.constants) as solver_service:
+    async with setup_solver(tmp_path, blockchain_constants) as solver_service:
         assert solver_service.rpc_server is not None
         solver_rpc_client = await SolverRpcClient.create(
             self_hostname, solver_service.rpc_server.listen_port, solver_service.root_path, solver_service.config

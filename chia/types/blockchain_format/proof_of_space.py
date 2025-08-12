@@ -103,7 +103,7 @@ def verify_and_get_quality_string(
 
 
 def passes_plot_filter(
-    prefix_bits: uint8,
+    prefix_bits: int,
     plot_id: bytes32,
     challenge_hash: bytes32,
     signage_point: bytes32,
@@ -119,7 +119,7 @@ def passes_plot_filter(
     return cast(bool, plot_filter[:prefix_bits].uint == 0)
 
 
-def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_size: PlotSize) -> uint8:
+def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_size: PlotSize) -> int:
     # v2 plots have a constant plot filter size
     if plot_size.size_v2 is not None:
         return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
@@ -134,7 +134,7 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_si
     elif height >= constants.HARD_FORK_HEIGHT:
         prefix_bits -= 1
 
-    return uint8(max(0, prefix_bits))
+    return max(0, prefix_bits)
 
 
 def calculate_plot_difficulty(constants: ConsensusConstants, height: uint32) -> uint8:
