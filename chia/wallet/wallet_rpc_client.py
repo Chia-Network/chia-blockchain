@@ -82,6 +82,8 @@ from chia.wallet.wallet_request_types import (
     DLUpdateRootResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
+    ExtendDerivationIndex,
+    ExtendDerivationIndexResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
@@ -373,10 +375,10 @@ class WalletRpcClient(RpcClient):
     async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
         return GetCurrentDerivationIndexResponse.from_json_dict(await self.fetch("get_current_derivation_index", {}))
 
-    async def extend_derivation_index(self, index: int) -> str:
-        response = await self.fetch("extend_derivation_index", {"index": index})
-        updated_index = response["index"]
-        return str(updated_index)
+    async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
+        return ExtendDerivationIndexResponse.from_json_dict(
+            await self.fetch("extend_derivation_index", request.to_json_dict())
+        )
 
     async def get_farmed_amount(self, include_pool_rewards: bool = False) -> dict[str, Any]:
         return await self.fetch("get_farmed_amount", {"include_pool_rewards": include_pool_rewards})

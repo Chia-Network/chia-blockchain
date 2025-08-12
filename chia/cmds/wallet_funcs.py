@@ -53,6 +53,7 @@ from chia.wallet.wallet_request_types import (
     DIDSetWalletName,
     DIDTransferDID,
     DIDUpdateMetadata,
+    ExtendDerivationIndex,
     FungibleAsset,
     GetNextAddress,
     GetNotifications,
@@ -443,8 +444,8 @@ async def update_derivation_index(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         print("Updating derivation index... This may take a while.")
-        res = await wallet_client.extend_derivation_index(index)
-        print(f"Updated derivation index: {res}")
+        res = await wallet_client.extend_derivation_index(ExtendDerivationIndex(uint32(index)))
+        print(f"Updated derivation index: {res.index}")
         print("Your balances may take a while to update.")
 
 

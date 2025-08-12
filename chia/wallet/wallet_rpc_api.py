@@ -166,6 +166,8 @@ from chia.wallet.wallet_request_types import (
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
+    ExtendDerivationIndex,
+    ExtendDerivationIndexResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
@@ -1879,19 +1881,15 @@ class WalletRpcApi:
 
         return GetCurrentDerivationIndexResponse(index)
 
-    async def extend_derivation_index(self, request: dict[str, Any]) -> dict[str, Any]:
+    @marshal
+    async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
         assert self.service.wallet_state_manager is not None
-
-        # Require a new max derivation index
-        if "index" not in request:
-            raise ValueError("Derivation index is required")
 
         # Require that the wallet is fully synced
         synced = await self.service.wallet_state_manager.synced()
         if synced is False:
             raise ValueError("Wallet needs to be fully synced before extending derivation index")
 
-        index = uint32(request["index"])
         current: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
         # Additional sanity check that the wallet is synced
@@ -1899,10 +1897,10 @@ class WalletRpcApi:
             raise ValueError("No current derivation record found, unable to extend index")
 
         # Require that the new index is greater than the current index
-        if index <= current:
+        if request.index <= current:
             raise ValueError(f"New derivation index must be greater than current index: {current}")
 
-        if index - current > MAX_DERIVATION_INDEX_DELTA:
+        if request.index - current > MAX_DERIVATION_INDEX_DELTA:
             raise ValueError(
                 "Too many derivations requested. "
                 f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}"
@@ -1912,14 +1910,13 @@ class WalletRpcApi:
         # to preserve the current last used index, so we call create_more_puzzle_hashes with
         # mark_existing_as_used=False
         result = await self.service.wallet_state_manager.create_more_puzzle_hashes(
-            from_zero=False, mark_existing_as_used=False, up_to_index=index, num_additional_phs=0
+            from_zero=False, mark_existing_as_used=False, up_to_index=request.index, num_additional_phs=0
         )
         await result.commit(self.service.wallet_state_manager)
 
-        updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
-        updated_index = updated if updated is not None else None
+        updated_index = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
-        return {"success": True, "index": updated_index}
+        return ExtendDerivationIndexResponse(updated_index)
 
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:

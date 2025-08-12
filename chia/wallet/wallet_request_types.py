@@ -446,6 +446,18 @@ class GetCurrentDerivationIndexResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class ExtendDerivationIndex(Streamable):
+    index: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class ExtendDerivationIndexResponse(Streamable):
+    index: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
 class GetOffersCountResponse(Streamable):
     total: uint16
     my_offers_count: uint16
