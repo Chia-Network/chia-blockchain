@@ -11,10 +11,12 @@ from typing import Callable, Optional, TypeVar
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
+    MEMPOOL_MODE,
     BLSCache,
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -440,13 +442,14 @@ class MempoolManager:
 
         self._worker_queue_size += 1
         try:
+            flags = get_flags_for_height_and_constants(self.peak.height, self.constants)
             sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
                 spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
-                self.peak.height,
+                flags | MEMPOOL_MODE,
             )
         # validate_clvm_and_signature raises a TypeError with an error code
         except Exception as e:
