@@ -28,10 +28,7 @@ class TestStructStream(unittest.TestCase):
 
 
 def rand_hash(rng: random.Random) -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = rng.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random(r=rng)
 
 
 def create_spends(num: int) -> tuple[list[CoinSpend], list[Coin]]:

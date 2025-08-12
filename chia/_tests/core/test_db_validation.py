@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -14,10 +13,10 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import test_constants
@@ -25,10 +24,7 @@ from chia.util.db_wrapper import DBWrapper2
 
 
 def rand_hash() -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = random.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random()
 
 
 def make_version(conn: sqlite3.Connection, version: int) -> None:

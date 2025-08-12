@@ -46,7 +46,7 @@ def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
-                time_modified=uint64(int(plot_info.time_modified)),
+                time_modified=uint64(plot_info.time_modified),
                 compression_level=plot_info.prover.get_compression_level(),
             )
         )
@@ -72,7 +72,7 @@ class MessageGenerator(Generic[T]):
     args: Iterable[object]
 
     def generate(self) -> tuple[PlotSyncIdentifier, T]:
-        identifier = PlotSyncIdentifier(uint64(int(time.time())), self.sync_id, self.message_id)
+        identifier = PlotSyncIdentifier(uint64(time.time()), self.sync_id, self.message_id)
         payload = self.payload_type(identifier, *self.args)
         return identifier, payload
 
@@ -277,7 +277,7 @@ class Sender:
             PlotSyncStart,
             initial,
             self._last_sync_id,
-            uint32(int(count)),
+            uint32(count),
             self._harvesting_mode,
         )
 

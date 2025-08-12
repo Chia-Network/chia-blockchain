@@ -116,9 +116,9 @@ class ForkInfo:
             timestamp = block.foliage_transaction_block.timestamp
             for spend in conds.spends:
                 spend_coin_id = bytes32(spend.coin_id)
-                self.removals_since_fork[spend_coin_id] = ForkRem(bytes32(spend.puzzle_hash), block.height)
+                self.removals_since_fork[spend_coin_id] = ForkRem(spend.puzzle_hash, block.height)
                 for puzzle_hash, amount, hint in spend.create_coin:
-                    coin = Coin(spend_coin_id, bytes32(puzzle_hash), uint64(amount))
+                    coin = Coin(spend_coin_id, puzzle_hash, uint64(amount))
                     same_as_parent = coin.puzzle_hash == spend.puzzle_hash and amount == spend.coin_amount
                     self.additions_since_fork[coin.name()] = ForkAdd(
                         coin, block.height, timestamp, hint=hint, is_coinbase=False, same_as_parent=same_as_parent
@@ -128,7 +128,7 @@ class ForkInfo:
     def include_block(
         self,
         additions: list[tuple[Coin, Optional[bytes]]],
-        removals: list[Coin],
+        removals: list[tuple[bytes32, Coin]],
         block: FullBlock,
         header_hash: bytes32,
     ) -> None:
@@ -136,10 +136,9 @@ class ForkInfo:
         if block.foliage_transaction_block is not None:
             timestamp = block.foliage_transaction_block.timestamp
             spent_coins: dict[bytes32, Coin] = {}
-            for spend in removals:
-                spend_id = bytes32(spend.name())
+            for spend_id, spend in removals:
                 spent_coins[spend_id] = spend
-                self.removals_since_fork[spend_id] = ForkRem(bytes32(spend.puzzle_hash), block.height)
+                self.removals_since_fork[spend_id] = ForkRem(spend.puzzle_hash, block.height)
             for coin, hint in additions:
                 parent = spent_coins.get(coin.parent_coin_info)
                 assert parent is not None
@@ -335,9 +334,8 @@ async def validate_block_body(
     if block.transactions_generator is not None:
         if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
             return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
-    else:
-        if block.transactions_info.generator_root != bytes([0] * 32):
-            return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+    elif block.transactions_info.generator_root != bytes([0] * 32):
+        return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
     # 8a. The generator_ref_list must be the hash of the serialized bytes of
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
@@ -383,9 +381,9 @@ async def validate_block_body(
 
         for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))
-            removals_puzzle_dic[bytes32(spend.coin_id)] = bytes32(spend.puzzle_hash)
+            removals_puzzle_dic[spend.coin_id] = spend.puzzle_hash
             for puzzle_hash, amount, _ in spend.create_coin:
-                c = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
+                c = Coin(spend.coin_id, puzzle_hash, uint64(amount))
                 additions.append((c, c.name()))
     else:
         assert conds is None

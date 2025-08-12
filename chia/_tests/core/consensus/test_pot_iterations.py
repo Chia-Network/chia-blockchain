@@ -7,7 +7,6 @@ from pytest import raises
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
-    PHASE_OUT_PERIOD,
     calculate_ip_iters,
     calculate_iterations_quality,
     calculate_phase_out,
@@ -68,7 +67,7 @@ class TestPotIterations:
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
-        required_iters = uint64(int(ssi * 4 / 300))
+        required_iters = uint64(ssi * 4 / 300)
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
         assert sp_iters < ip_iters
@@ -135,14 +134,16 @@ class TestPotIterations:
         # after HARD_FORK2_HEIGHT, should return value = delta/phase_out_period * sp_interval
         assert (
             calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + 1)
-            == sp_interval // PHASE_OUT_PERIOD
+            == sp_interval // constants.PLOT_V1_PHASE_OUT
         )
         assert (
-            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + PHASE_OUT_PERIOD // 2)
+            calculate_phase_out(
+                constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT // 2
+            )
             == sp_interval // 2
         )
         assert (
-            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + PHASE_OUT_PERIOD)
+            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT)
             == sp_interval
         )
 

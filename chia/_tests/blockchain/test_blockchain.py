@@ -4,6 +4,7 @@ import asyncio
 import copy
 import logging
 import random
+import re
 import time
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
@@ -3647,7 +3648,7 @@ class TestReorgs:
             heights.append(block.height)
             await _validate_and_add_block(b, block)
 
-        blocks = await b.get_block_records_at(heights, batch_size=2)
+        blocks = await b.get_block_records_at(heights)
         assert blocks
         assert len(blocks) == 200
         assert blocks[-1].height == 199
@@ -4158,24 +4159,24 @@ async def test_lookup_block_generators(
     # make sure we don't cross the forks
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(516)})
 
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(503)})
 
     # make sure we fail when looking up a non-transaction block from the main
     # chain, regardless of which chain we start at
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(8)})
 
     if clear_cache:
         b.clean_block_records()
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(8)})
 
     # if we try to look up generators starting from a disconnected block, we
@@ -4334,6 +4335,8 @@ async def test_include_spends_same_as_parent(
                 [],
                 [],
                 0,
+                0,
+                0,
             )
         ],
         0,
@@ -4388,7 +4391,10 @@ async def test_include_block_same_as_parent_coins(
     test_setup = ForkInfoTestSetup.create(same_ph_as_parent, same_amount_as_parent)
     # Now let's run the test
     test_setup.fork_info.include_block(
-        [(test_setup.child_coin, None)], [test_setup.coin], test_setup.test_block, test_setup.test_block.header_hash
+        [(test_setup.child_coin, None)],
+        [(test_setup.coin.name(), test_setup.coin)],
+        test_setup.test_block,
+        test_setup.test_block.header_hash,
     )
     # Let's make sure the results are as expected
     expected_same_as_parent_additions = (

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -68,6 +68,8 @@ class CRCATWallet(CATWallet):
     wallet_info: WalletInfo
     info: CRCATInfo
     standard_wallet: Wallet
+    wallet_type: ClassVar[WalletType] = WalletType.CRCAT
+    wallet_info_type: ClassVar[type[CRCATInfo]] = CRCATInfo
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
@@ -119,7 +121,7 @@ class CRCATWallet(CATWallet):
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.info = CRCATInfo(tail_hash, None, authorized_providers, proofs_checker)
+        self.info = cls.wallet_info_type(tail_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
 
@@ -134,8 +136,11 @@ class CRCATWallet(CATWallet):
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: dict[AssetType, Any] = {},
+        potential_subclasses: Optional[dict[AssetType, Any]] = None,
     ) -> Any:
+        if potential_subclasses is None:
+            potential_subclasses = {}
+
         cr_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if cr_layer is None:  # pragma: no cover
             raise ValueError("create_from_puzzle_info called on CRCATWallet with a non CR-CAT puzzle driver")
@@ -160,7 +165,7 @@ class CRCATWallet(CATWallet):
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        self.info = CRCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.info = self.wallet_info_type.from_bytes(hexstr_to_bytes(self.wallet_info.data))
         return self
 
     @classmethod
@@ -175,7 +180,7 @@ class CRCATWallet(CATWallet):
         replace_self.log = logging.getLogger(cat_wallet.get_name())
         replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to CR-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
-        replace_self.info = CRCATInfo(
+        replace_self.info = cls.wallet_info_type(
             cat_wallet.cat_info.limitations_program_hash, None, authorized_providers, proofs_checker
         )
         await cat_wallet.wallet_state_manager.user_store.update_wallet(
@@ -197,7 +202,7 @@ class CRCATWallet(CATWallet):
         return self.wallet_info.id
 
     def get_asset_id(self) -> str:
-        return self.info.limitations_program_hash.hex()
+        return bytes(self.info.limitations_program_hash).hex()
 
     async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
         raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
@@ -248,6 +253,7 @@ class CRCATWallet(CATWallet):
                     confirmed_at_height=height,
                     created_at_time=uint64(created_timestamp),
                     to_puzzle_hash=hint_dict[coin.name()],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(hint_dict[coin.name()]),
                     amount=uint64(coin.amount),
                     fee_amount=uint64(0),
                     confirmed=True,
@@ -260,7 +266,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_CRCAT_PENDING),
                     name=coin.name(),
-                    memos=list(memos.items()),
+                    memos=memos,
                     valid_times=ConditionValidTimes(),
                 )
                 await self.wallet_state_manager.tx_store.add_transaction_record(tx_record)
@@ -655,8 +661,9 @@ class CRCATWallet(CATWallet):
             tx_list = [
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=payment.puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(payment.puzzle_hash),
                     amount=payment.amount,
                     fee_amount=fee,
                     confirmed=False,
@@ -669,7 +676,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
                 for i, payment in enumerate(payments)
@@ -786,8 +793,9 @@ class CRCATWallet(CATWallet):
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=to_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(to_puzzle_hash),
                     amount=uint64(sum(c.amount for c in coins)),
                     fee_amount=fee,
                     confirmed=False,
@@ -800,7 +808,7 @@ class CRCATWallet(CATWallet):
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=claim_bundle.name(),
-                    memos=list(compute_memos(claim_bundle).items()),
+                    memos=compute_memos(claim_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )

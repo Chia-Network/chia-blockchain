@@ -22,7 +22,7 @@ async def check_block_store_invariant(bc: Blockchain):
 
     in_chain = set()
     max_height = -1
-    async with db_wrapper.writer_maybe_transaction() as conn:
+    async with bc.block_store.transaction() as conn:
         async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
             rows = await cursor.fetchall()
             for row in rows:
@@ -116,11 +116,10 @@ async def _validate_and_add_block(
         if err is not None:
             # Got an error
             raise AssertionError(err)
-    else:
-        # Here we will enforce checking of the exact error
-        if err != expected_error:
-            # Did not get the right error, or did not get an error
-            raise AssertionError(f"Expected {expected_error} but got {err}")
+    # Here we will enforce checking of the exact error
+    elif err != expected_error:
+        # Did not get the right error, or did not get an error
+        raise AssertionError(f"Expected {expected_error} but got {err}")
 
     if expected_result is not None and expected_result != result:
         raise AssertionError(f"Expected {expected_result} but got {result}")

@@ -25,7 +25,7 @@ jobs:
             matrix: linux
             runs-on:
               intel: ubuntu-latest
-              arm: ubuntu-22.04-arm
+              arm: ubuntu-24.04-arm
           - name: macOS
             matrix: macos
             runs-on:

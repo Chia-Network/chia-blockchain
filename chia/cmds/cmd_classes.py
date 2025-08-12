@@ -181,10 +181,10 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
     needs_context: bool = False
 
     hints = get_type_hints(cls)
-    _fields = fields(cls)  # type: ignore[arg-type]
+    cls_fields = fields(cls)  # type: ignore[arg-type]
 
-    for _field in _fields:
-        field_name = _field.name
+    for cls_field in cls_fields:
+        field_name = cls_field.name
         if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
             members[field_name] = _generate_command_parser(hints[field_name])
         elif field_name == "context":
@@ -193,9 +193,9 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
             else:
                 needs_context = True
                 kwarg_names.append(field_name)
-        elif "option_args" in _field.metadata:
+        elif "option_args" in cls_field.metadata:
             option_args: dict[str, Any] = {"multiple": False, "required": False}
-            option_args.update(_field.metadata["option_args"])
+            option_args.update(cls_field.metadata["option_args"])
 
             if "type" not in option_args:
                 origin = get_origin(hints[field_name])

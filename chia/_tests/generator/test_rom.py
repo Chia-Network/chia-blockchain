@@ -146,7 +146,7 @@ class TestROM:
             before_seconds_relative=None,
             birth_height=None,
             birth_seconds=None,
-            create_coin=[(bytes([0] * 31 + [1]), 500, None)],
+            create_coin=[(bytes32([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
             agg_sig_parent=[],
             agg_sig_puzzle=[],
@@ -155,6 +155,10 @@ class TestROM:
             agg_sig_parent_amount=[],
             agg_sig_parent_puzzle=[],
             flags=0,
+            # in run_block_generator() we don't have access to separate
+            # execution cost, just in run_block_generator2()
+            execution_cost=0 if softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT else 44,
+            condition_cost=1800000,
         )
 
         assert npc_result.conds.spends == [spend]

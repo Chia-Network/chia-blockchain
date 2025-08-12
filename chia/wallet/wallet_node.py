@@ -911,14 +911,13 @@ class WalletNode:
         ):
             # only one peer told us to rollback so only clear for that peer
             await self.perform_atomic_rollback(fork_height, cache=cache)
-        else:
-            if fork_height is not None:
-                # only one peer told us to rollback so only clear for that peer
-                cache.clear_after_height(fork_height)
-                self.log.info(f"clear_after_height {fork_height} for peer {peer}")
-                if not trusted:
-                    # Rollback race_cache not in clear_after_height to avoid applying rollbacks from new peak processing
-                    cache.rollback_race_cache(fork_height=fork_height)
+        elif fork_height is not None:
+            # only one peer told us to rollback so only clear for that peer
+            cache.clear_after_height(fork_height)
+            self.log.info(f"clear_after_height {fork_height} for peer {peer}")
+            if not trusted:
+                # Rollback race_cache not in clear_after_height to avoid applying rollbacks from new peak processing
+                cache.rollback_race_cache(fork_height=fork_height)
 
         all_tasks: list[asyncio.Task[None]] = []
         target_concurrent_tasks: int = 30
@@ -989,18 +988,17 @@ class WalletNode:
                     )
                     if not await self.wallet_state_manager.add_coin_states(batch.entries, peer, fork_height):
                         return False
+            elif fork_height is not None:
+                cache.add_states_to_race_cache(batch.entries)
             else:
-                if fork_height is not None:
-                    cache.add_states_to_race_cache(batch.entries)
-                else:
-                    while len(all_tasks) >= target_concurrent_tasks:
-                        all_tasks = [task for task in all_tasks if not task.done()]
-                        await asyncio.sleep(0.1)
-                        if self._shut_down:
-                            self.log.info("Terminating receipt and validation due to shut down request")
-                            await asyncio.gather(*all_tasks)
-                            return False
-                    all_tasks.append(create_referenced_task(validate_and_add(batch.entries, idx)))
+                while len(all_tasks) >= target_concurrent_tasks:
+                    all_tasks = [task for task in all_tasks if not task.done()]
+                    await asyncio.sleep(0.1)
+                    if self._shut_down:
+                        self.log.info("Terminating receipt and validation due to shut down request")
+                        await asyncio.gather(*all_tasks)
+                        return False
+                all_tasks.append(create_referenced_task(validate_and_add(batch.entries, idx)))
             idx += len(batch.entries)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
@@ -1158,9 +1156,8 @@ class WalletNode:
             await self.new_peak_from_trusted(
                 new_peak_hb, latest_timestamp, peer, new_peak.fork_point_with_previous_peak
             )
-        else:
-            if not await self.new_peak_from_untrusted(new_peak_hb, peer):
-                return
+        elif not await self.new_peak_from_untrusted(new_peak_hb, peer):
+            return
 
         # todo why do we call this if there was an exception / the sync is not finished
         async with self.wallet_state_manager.lock:
@@ -1272,10 +1269,9 @@ class WalletNode:
                 )
                 if success:
                     self.synced_peers.add(peer.peer_node_id)
-            else:
-                if peak_hb is not None and new_peak_hb.weight <= peak_hb.weight:
-                    # Don't process blocks at the same weight
-                    return False
+            elif peak_hb is not None and new_peak_hb.weight <= peak_hb.weight:
+                # Don't process blocks at the same weight
+                return False
 
             # For every block, we need to apply the cache from race_cache
             for potential_height in range(backtrack_fork_height + 1, new_peak_hb.height + 1):
@@ -1663,10 +1659,9 @@ class WalletNode:
                     if not prev_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
                         self.log.error("Failed validation 7")
                         return False
-                else:
-                    if not prev_block_rc_hash == reward_chain_hash:
-                        self.log.error("Failed validation 8")
-                        return False
+                elif not prev_block_rc_hash == reward_chain_hash:
+                    self.log.error("Failed validation 8")
+                    return False
                 blocks_to_cache.append((reward_chain_hash, en_block.height))
 
         agg_sig: G2Element = AugSchemeMPL.aggregate([sig for (_, _, sig) in pk_m_sig])

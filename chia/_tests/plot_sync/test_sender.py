@@ -14,6 +14,7 @@ from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 
 
@@ -37,11 +38,11 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
     # Test invalid NodeType values
     for connection_type in NodeType:
         if connection_type != NodeType.FARMER:
-            pytest.raises(
-                InvalidConnectionTypeError,
-                sender.set_connection,
-                get_dummy_connection(connection_type, farmer_connection.peer_node_id),
-            )
+            with pytest.raises(InvalidConnectionTypeError):
+                dummy_connection: WSChiaConnection = get_dummy_connection(
+                    connection_type, farmer_connection.peer_node_id
+                )  # type: ignore[assignment]
+                sender.set_connection(dummy_connection)
     # Test setting a valid connection works
     sender.set_connection(farmer_connection)  # type:ignore[arg-type]
     assert sender._connection is not None
@@ -74,7 +75,7 @@ def test_set_response(bt: BlockTools) -> None:
 
     def new_response_message(sync_id: int, message_id: int, message_type: ProtocolMessageTypes) -> PlotSyncResponse:
         return PlotSyncResponse(
-            plot_sync_identifier(uint64(sync_id), uint64(message_id)), int16(int(message_type.value)), None
+            plot_sync_identifier(uint64(sync_id), uint64(message_id)), int16(message_type.value), None
         )
 
     response_message = new_response_message(0, 1, ProtocolMessageTypes.plot_sync_start)
@@ -96,7 +97,7 @@ def test_set_response(bt: BlockTools) -> None:
         expected_response.identifier.sync_id,
         expected_response.identifier.message_id,
     )
-    expired_message = PlotSyncResponse(expired_identifier, int16(int(ProtocolMessageTypes.plot_sync_start.value)), None)
+    expired_message = PlotSyncResponse(expired_identifier, int16(ProtocolMessageTypes.plot_sync_start.value), None)
     assert not sender.set_response(expired_message)
     # Test invalid sync-id
     sender._response = new_expected_response(2, 0, ProtocolMessageTypes.plot_sync_start)

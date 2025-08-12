@@ -528,7 +528,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
     # Test an error case
-    with pytest.raises(ResponseFailureError, match="The NFT doesn't support setting a DID."):
+    with pytest.raises(ResponseFailureError, match="The NFT doesn't support setting a DID"):
         await env_1.rpc_client.set_nft_did(
             NFTSetNFTDID(
                 wallet_id=uint32(env_1.wallet_aliases["nft"]),
@@ -659,7 +659,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     # test counts
     assert (await env.rpc_client.count_nfts(NFTCountNFTs(uint32(env.wallet_aliases["nft"])))).count == 2
     assert (await env.rpc_client.count_nfts(NFTCountNFTs())).count == 2
-    with pytest.raises(ResponseFailureError, match="Wallet 50 not found."):
+    with pytest.raises(ResponseFailureError, match="Wallet 50 not found"):
         await env.rpc_client.count_nfts(NFTCountNFTs(uint32(50)))
 
 
@@ -1284,7 +1284,7 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     async with did_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await did_wallet.transfer_did(wallet_1_ph, uint64(0), True, action_scope)
+        await did_wallet.transfer_did(wallet_1_ph, uint64(0), action_scope)
 
     await wallet_environments.process_pending_states(
         [

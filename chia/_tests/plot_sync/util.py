@@ -11,11 +11,12 @@ from chia_rs.sized_ints import uint16, uint64
 
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.protocols.outbound_message import Message, NodeType
-from chia.server.aliases import FarmerService, HarvesterService
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 
 
@@ -38,7 +39,7 @@ def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnect
 
 
 def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyncIdentifier:
-    return PlotSyncIdentifier(uint64(int(time.time())), current_sync_id, message_id)
+    return PlotSyncIdentifier(uint64(time.time()), current_sync_id, message_id)
 
 
 @contextlib.asynccontextmanager
