@@ -27,7 +27,7 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
         assert solver_api.ready() is True
 
         # test solve with real SolverInfo
-        test_info = SolverInfo(plot_size=uint8(32), plot_diffculty=uint64(1500), quality_string=bytes32([42] * 32))
+        test_info = SolverInfo(plot_size=uint8(32), plot_difficulty=uint64(1500), quality_string=bytes32([42] * 32))
 
         # test normal solve operation (stub returns None)
         result = solver.solve(test_info)
@@ -134,7 +134,7 @@ async def test_solver_error_handling_and_edge_cases(
 
         # test solver handles exception in solve method
         solver = solver_service._node
-        test_info = SolverInfo(plot_size=uint8(32), plot_diffculty=uint64(1000), quality_string=bytes32.zeros)
+        test_info = SolverInfo(plot_size=uint8(32), plot_difficulty=uint64(1000), quality_string=bytes32.zeros)
 
         with patch.object(solver, "solve", side_effect=RuntimeError("test error")):
             # solver api should handle exceptions gracefully

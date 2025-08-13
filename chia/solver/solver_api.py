@@ -43,7 +43,7 @@ class SolverAPI:
 
         self.log.debug(
             f"Solving quality {request.quality_string.hex()[:10]}... "
-            f"for plot size {request.plot_size} with difficulty {request.plot_diffculty}"
+            f"for plot size {request.plot_size} with difficulty {request.plot_difficulty}"
         )
 
         try:
@@ -52,12 +52,8 @@ class SolverAPI:
                 self.log.warning(f"Solver returned no proof for quality {request.quality_string.hex()[:10]}...")
                 return None
 
-            response: SolutionResponse = SolutionResponse(
-                proof=proof,
-            )
-
             self.log.debug(f"Successfully solved quality, returning {len(proof)} byte proof")
-            return make_msg(ProtocolMessageTypes.solution_response, response)
+            return make_msg(ProtocolMessageTypes.solution_response, SolutionResponse(proof=proof))
 
         except Exception as e:
             self.log.error(f"Error solving quality {request.quality_string.hex()[:10]}...: {e}")

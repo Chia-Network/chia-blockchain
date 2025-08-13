@@ -12,5 +12,5 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class SolverInfo(Streamable):
     plot_size: uint8
-    plot_diffculty: uint64
+    plot_difficulty: uint64
     quality_string: bytes32

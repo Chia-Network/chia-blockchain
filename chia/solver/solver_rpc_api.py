@@ -39,7 +39,7 @@ class SolverRpcApi:
         # create complete SolverInfo object with all provided data
         solver_info = SolverInfo(
             plot_size=uint8(plot_size),
-            plot_diffculty=uint64(plot_difficulty),
+            plot_difficulty=uint64(plot_difficulty),
             quality_string=bytes32.from_hexstr(quality_string),
         )
 

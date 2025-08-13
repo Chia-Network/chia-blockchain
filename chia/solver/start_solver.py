@@ -19,6 +19,7 @@ from chia.solver.solver import Solver
 from chia.solver.solver_api import SolverAPI
 from chia.solver.solver_rpc_api import SolverRpcApi
 from chia.solver.solver_service import SolverService
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -34,6 +35,7 @@ def create_solver_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
     consensus_constants: ConsensusConstants,
+    farmer_peers: set[UnresolvedPeerInfo] = set(),
     connect_to_daemon: bool = True,
     override_capabilities: Optional[list[tuple[uint16, str]]] = None,
 ) -> SolverService:
@@ -62,6 +64,7 @@ def create_solver_service(
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
         on_connect_callback=node.on_connect,
+        connect_peers=farmer_peers,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
@@ -96,13 +99,6 @@ def main() -> int:
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
         service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
-        # target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
-        #     "target_outbound_peer_count", 8
-        # )
-        # if target_peer_count < 0:
-        #     target_peer_count = None
-        # if not service_config.get("use_chia_loop_policy", True):
-        #     target_peer_count = None
         return async_run(coro=async_main(service_config, root_path=root_path))
 
 

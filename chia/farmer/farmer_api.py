@@ -507,64 +507,84 @@ class FarmerAPI:
         for quality in quality_collection.qualities:
             solver_info = SolverInfo(
                 plot_size=quality_collection.plot_size,
-                plot_diffculty=quality_collection.difficulty,  # Note: typo in SolverInfo field name
+                plot_difficulty=quality_collection.difficulty,
                 quality_string=quality,
             )
 
-            # Call solver service to get proof
-            # TODO: Add proper solver service node connection to farmer
-            # For now, assume solver service is available via server connections
-            proof_bytes = None
-
-            # Try to call solver service - this requires farmer to have solver connections configured
             try:
-                # Send solve request to solver service
-                # This would work if farmer is connected to a solver service node
-                solver_response = await self.farmer.server.send_to_all_and_wait_first(
-                    [make_msg(ProtocolMessageTypes.solve, solver_info)],
-                    NodeType.FARMER,  # TODO: Need SOLVER node type
-                )
+                # store pending request data for matching with response
+                request_key = quality.hex()
+                self.farmer.pending_solver_requests[request_key] = {
+                    "quality_collection": quality_collection,
+                    "peer": peer,
+                    "quality": quality,
+                }
 
-                if solver_response is not None and isinstance(solver_response, SolutionResponse):
-                    proof_bytes = solver_response.proof
-                    self.farmer.log.debug(f"Received {len(proof_bytes)} byte proof from solver")
-                else:
-                    self.farmer.log.warning(f"No valid solver response for quality {quality.hex()[:10]}...")
+                # send solve request to all solver connections
+                msg = make_msg(ProtocolMessageTypes.solve, solver_info)
+                await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
+                self.farmer.log.debug(f"Sent solve request for quality {quality.hex()[:10]}...")
 
             except Exception as e:
                 self.farmer.log.error(f"Failed to call solver service for quality {quality.hex()[:10]}...: {e}")
+                # clean up pending request
+                if request_key in self.farmer.pending_solver_requests:
+                    del self.farmer.pending_solver_requests[request_key]
 
-            # Fall back to stub if solver service unavailable
-            if proof_bytes is None:
-                self.farmer.log.warning("Using stub proof - solver service not available")
-                proof_bytes = b"stub_proof_from_solver"
+    @metadata.request()
+    async def solution_response(self, response: SolutionResponse, peer: WSChiaConnection) -> None:
+        """
+        Handle solution response from solver service.
+        This is called when a solver responds to a solve request.
+        """
+        self.farmer.log.debug(f"Received solution response: {len(response.proof)} bytes from {peer.peer_node_id}")
 
-            # Create ProofOfSpace object using solver response and plot metadata
-            # Need to calculate sp_challenge_hash for ProofOfSpace constructor
-            # TODO: We need plot_id to calculate this properly - may need to add to V2Qualities
-            sp_challenge_hash = quality_collection.challenge_hash  # Approximation for now
+        # find the matching pending request
+        request_key = None
+        for key, request_data in self.farmer.pending_solver_requests.items():
+            # match by quality since SolutionResponse doesn't include the original quality
+            # this is a simple implementation - could be improved with better matching
+            if len(self.farmer.pending_solver_requests) == 1:  # for now, assume single request
+                request_key = key
+                break
 
-            # Create a NewProofOfSpace object that can go through existing flow
-            new_proof_of_space = harvester_protocol.NewProofOfSpace(
-                quality_collection.challenge_hash,
-                quality_collection.sp_hash,
-                quality_collection.plot_identifier,
-                ProofOfSpace(
-                    sp_challenge_hash,
-                    quality_collection.pool_public_key,
-                    quality_collection.pool_contract_puzzle_hash,
-                    quality_collection.plot_public_key,
-                    quality_collection.plot_size,
-                    proof_bytes,
-                ),
-                quality_collection.signage_point_index,
-                include_source_signature_data=False,
-                farmer_reward_address_override=None,
-                fee_info=None,
-            )
+        if request_key is None:
+            self.farmer.log.warning("Received solver response but no matching pending request found")
+            return
 
-            # Route through existing new_proof_of_space flow
-            await self.new_proof_of_space(new_proof_of_space, peer)
+        # get the original request data
+        request_data = self.farmer.pending_solver_requests.pop(request_key)
+        quality_collection = request_data["quality_collection"]
+        original_peer = request_data["peer"]
+        quality = request_data["quality"]
+
+        # create the proof of space with the solver's proof
+        proof_bytes = response.proof
+        if proof_bytes is None or len(proof_bytes) == 0:
+            self.farmer.log.warning(f"Received empty proof from solver for quality {quality.hex()[:10]}...")
+            return
+
+        sp_challenge_hash = quality_collection.challenge_hash
+        new_proof_of_space = harvester_protocol.NewProofOfSpace(
+            quality_collection.challenge_hash,
+            quality_collection.sp_hash,
+            quality_collection.plot_identifier,
+            ProofOfSpace(
+                sp_challenge_hash,
+                quality_collection.pool_public_key,
+                quality_collection.pool_contract_puzzle_hash,
+                quality_collection.plot_public_key,
+                quality_collection.plot_size,
+                proof_bytes,
+            ),
+            quality_collection.signage_point_index,
+            include_source_signature_data=False,
+            farmer_reward_address_override=None,
+            fee_info=None,
+        )
+
+        # process the proof of space
+        await self.new_proof_of_space(new_proof_of_space, original_peer)
 
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:

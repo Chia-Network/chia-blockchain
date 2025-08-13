@@ -513,6 +513,7 @@ async def setup_solver(
     root_path: Path,
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
+    farmer_peers: set[UnresolvedPeerInfo] = set(),
 ) -> AsyncGenerator[SolverService, None]:
     with create_lock_and_load_config(root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
@@ -526,6 +527,7 @@ async def setup_solver(
         root_path,
         config,
         consensus_constants,
+        farmer_peers,
     )
 
     async with service.manage(start=start_service):

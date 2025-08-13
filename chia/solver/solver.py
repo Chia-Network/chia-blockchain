@@ -69,8 +69,6 @@ class Solver:
 
     def solve(self, info: SolverInfo) -> Optional[bytes]:
         self.log.debug(f"Solve request: quality={info.quality_string.hex()}")
-        # stub implementation - always returns None
-        self.log.debug("Solve completed (stub implementation)")
         # todo implement actualy calling the solver
         return None
 
