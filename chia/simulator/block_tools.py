@@ -438,6 +438,7 @@ class BlockTools:
             # we also use BlockBuilder to compress these transactions as well.
             assert wallet is not None
             assert rng is not None
+            assert curr.height >= self.constants.HARD_FORK_HEIGHT  # we need new compression for BlockBuilder
             # function constants
             adjusted_max_cost: uint64 = uint64(self.constants.MAX_BLOCK_COST_CLVM * block_fillrate / 100)
             static_cost: uint64 = uint64(4839648)  # cond + exec cost per sb
