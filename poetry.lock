@@ -3391,14 +3391,14 @@ files = [
 
 [[package]]
 name = "types-setuptools"
-version = "80.9.0.20250801"
+version = "80.9.0.20250809"
 description = "Typing stubs for setuptools"
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "types_setuptools-80.9.0.20250801-py3-none-any.whl", hash = "sha256:ec908f825134af3964932e6b011dce90f54c291015139cd9cdf79741b7d31b3c"},
-    {file = "types_setuptools-80.9.0.20250801.tar.gz", hash = "sha256:e1e92682fa07226415396bb4e2d31f116a16ffbe583b05b01f9910fcdea3b7e8"},
+    {file = "types_setuptools-80.9.0.20250809-py3-none-any.whl", hash = "sha256:7c6539b4c7ac7b4ab4db2be66d8a58fb1e28affa3ee3834be48acafd94f5976a"},
+    {file = "types_setuptools-80.9.0.20250809.tar.gz", hash = "sha256:e986ba37ffde364073d76189e1d79d9928fb6f5278c7d07589cde353d0218864"},
 ]
 
 [[package]]
