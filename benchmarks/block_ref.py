@@ -15,11 +15,11 @@ from chia_rs.sized_ints import uint32
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.consensus_store import ConsensusStore
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.get_block_generator import get_block_generator
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper2
@@ -71,7 +71,7 @@ async def main(db_path: Path) -> None:
         # make configurable
         reserved_cores = 4
         height_map = await BlockHeightMap.create(db_path.parent, db_wrapper)
-        consensus_store = await ConsensusStore.create(block_store, coin_store, height_map)
+        consensus_store = await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
         blockchain = await Blockchain.create(consensus_store, DEFAULT_CONSTANTS, reserved_cores)
 
         peak = blockchain.get_peak()

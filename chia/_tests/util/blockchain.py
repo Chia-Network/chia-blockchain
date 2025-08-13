@@ -13,9 +13,9 @@ from filelock import FileLock
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.consensus_store import ConsensusStore
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.simulator.block_tools import BlockTools
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -31,7 +31,7 @@ async def create_blockchain(
         block_store = await BlockStore.create(wrapper)
         coin_store = await CoinStore.create(wrapper)
         height_map = await BlockHeightMap.create(Path("."), wrapper, None)
-        consensus_store = await ConsensusStore.create(block_store, coin_store, height_map)
+        consensus_store = await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
         bc1 = await Blockchain.create(consensus_store, constants, 3, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
