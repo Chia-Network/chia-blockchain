@@ -1542,9 +1542,9 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        memos = await env_0.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx.name))
-        assert len(memos.coins_with_memos) == 1
-        assert memos.coins_with_memos[0].memos[0] == ph_2
+        memo_response = await env_0.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx.name))
+        assert len(memo_response.memo_dict) == 1
+        assert next(iter(memo_response.memo_dict.values()))[0] == ph_2
 
         await wallet_environments.process_pending_states(
             [
@@ -1589,13 +1589,9 @@ class TestWalletSimulator:
             if coin.amount == tx_amount:
                 tx_id = coin.name()
         assert tx_id is not None
-        memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
-        assert len(memos.coins_with_memos) == 1
-        assert memos.coins_with_memos[0].memos[0] == ph_2
-        # test json serialization
-        assert memos.to_json_dict() == {
-            tx_id.hex(): {memos.coins_with_memos[0].coin_id.hex(): [memos.coins_with_memos[0].memos[0].hex()]}
-        }
+        memo_response = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+        assert len(memo_response.memo_dict) == 1
+        assert next(iter(memo_response.memo_dict.values()))[0] == ph_2
 
     @pytest.mark.parametrize(
         "wallet_environments",

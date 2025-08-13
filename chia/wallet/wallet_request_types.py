@@ -376,36 +376,29 @@ class GetTransactionMemo(Streamable):
     transaction_id: bytes32
 
 
-# utility type for GetTransactionMemoResponse
-@streamable
-@dataclass(frozen=True)
-class CoinIDWithMemos(Streamable):
-    coin_id: bytes32
-    memos: list[bytes]
-
-
 @streamable
 @dataclass(frozen=True)
 class GetTransactionMemoResponse(Streamable):
-    transaction_id: bytes32
-    coins_with_memos: list[CoinIDWithMemos]
+    transaction_memos: dict[bytes32, dict[bytes32, list[bytes]]]
+
+    @property
+    def memo_dict(self) -> dict[bytes32, list[bytes]]:
+        return next(iter(self.transaction_memos.values()))
 
     # TODO: deprecate the kinda silly format of this RPC and delete these functions
     def to_json_dict(self) -> dict[str, Any]:
-        return {
-            self.transaction_id.hex(): {
-                cwm.coin_id.hex(): [memo.hex() for memo in cwm.memos] for cwm in self.coins_with_memos
-            }
-        }
+        # This is semantically guaranteed but mypy can't know that
+        return super().to_json_dict()["transaction_memos"]  # type: ignore[no-any-return]
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> GetTransactionMemoResponse:
-        return cls(
-            bytes32.from_hexstr(next(iter(json_dict.keys()))),
-            [
-                CoinIDWithMemos(bytes32.from_hexstr(coin_id), [bytes32.from_hexstr(memo) for memo in memos])
-                for coin_id, memos in next(iter(json_dict.values())).items()
-            ],
+        return super().from_json_dict(
+            # We have to filter out the "success" key here
+            # because it doesn't match our `transaction_memos` hint
+            #
+            # We do this by only allowing the keys with "0x"
+            # which we can assume exist because we serialize all responses
+            {"transaction_memos": {key: value for key, value in json_dict.items() if key.startswith("0x")}}
         )
 
 
