@@ -340,9 +340,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
                         assert record.confirmed_block_index == block.height
                         assert record.spent_block_index == 0
 
-            blocks_reorg_chain = bt.get_consecutive_blocks(
-                reorg_length, blocks[: initial_block_count - 10], seed=b"2"
-            )
+            blocks_reorg_chain = bt.get_consecutive_blocks(reorg_length, blocks[: initial_block_count - 10], seed=b"2")
 
             fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
             for reorg_block in blocks_reorg_chain:

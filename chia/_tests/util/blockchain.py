@@ -27,7 +27,6 @@ async def create_blockchain(
 ) -> AsyncIterator[tuple[Blockchain, DBWrapper2]]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
-
         block_store = await BlockStore.create(wrapper)
         coin_store = await CoinStore.create(wrapper)
         height_map = await BlockHeightMap.create(Path("."), wrapper, None)

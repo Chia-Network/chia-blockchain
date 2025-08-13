@@ -4219,9 +4219,7 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     counter = 0
     start = time.monotonic()
     for height in range(fork_info.fork_height + 1, block.height):
-        fork_block: Optional[FullBlock] = await blockchain.consensus_store.get_full_block(
-            fork_chain[uint32(height)]
-        )
+        fork_block: Optional[FullBlock] = await blockchain.consensus_store.get_full_block(fork_chain[uint32(height)])
         assert fork_block is not None
         assert fork_block.height - 1 == fork_info.peak_height
         assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
