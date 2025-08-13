@@ -6,7 +6,7 @@ import time
 from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar, Union
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
@@ -734,7 +734,7 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        tl_error: Optional[Err] = check_time_locks(
+        tl_error: Optional[Union[int, Err]] = check_time_locks(
             removal_record_dict,
             conds,
             self.peak.height,
