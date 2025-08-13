@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, cast
 
-from chia_rs import BlockRecord, Coin, G2Element
+from chia_rs import BlockRecord, Coin, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -46,6 +46,8 @@ from chia.wallet.wallet_request_types import (
     NFTGetInfo,
     NFTGetInfoResponse,
     SendTransactionMultiResponse,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -149,12 +151,12 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("get_cat_name", (wallet_id,))
         return "test" + str(wallet_id)
 
-    async def sign_message_by_address(self, address: str, message: str) -> tuple[str, str, str]:
-        self.add_to_log("sign_message_by_address", (address, message))
-        pubkey = bytes([3] * 48).hex()
-        signature = bytes([6] * 576).hex()
+    async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
+        self.add_to_log("sign_message_by_address", (request.address, request.message))
+        pubkey = G1Element.from_bytes(bytes([3] * 48))
+        signature = G2Element.from_bytes(bytes([6] * 576))
         signing_mode = SigningMode.CHIP_0002.value
-        return pubkey, signature, signing_mode
+        return SignMessageByAddressResponse(pubkey, signature, signing_mode)
 
     async def sign_message_by_id(self, id: str, message: str) -> tuple[str, str, str]:
         self.add_to_log("sign_message_by_id", (id, message))

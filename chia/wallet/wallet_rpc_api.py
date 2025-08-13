@@ -243,6 +243,8 @@ from chia.wallet.wallet_request_types import (
     PWStatus,
     PWStatusResponse,
     SetWalletResyncOnStartup,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -2021,35 +2023,29 @@ class WalletRpcApi:
         else:
             return VerifySignatureResponse(isValid=False, error="Signature is invalid.")
 
-    async def sign_message_by_address(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         """
         Given a derived P2 address, sign the message by its private key.
         :param request:
         :return:
         """
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        is_hex: bool = request.get("is_hex", False)
-        if isinstance(is_hex, str):
-            is_hex = True if is_hex.lower() == "true" else False
-        safe_mode: bool = request.get("safe_mode", True)
-        if isinstance(safe_mode, str):
-            safe_mode = True if safe_mode.lower() == "true" else False
+        puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
         mode: SigningMode = SigningMode.CHIP_0002
-        if is_hex and safe_mode:
+        if request.is_hex and request.safe_mode:
             mode = SigningMode.CHIP_0002_HEX_INPUT
-        elif not is_hex and not safe_mode:
+        elif not request.is_hex and not request.safe_mode:
             mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
-        elif is_hex and not safe_mode:
+        elif request.is_hex and not request.safe_mode:
             mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request["message"], puzzle_hash, mode
+            request.message, puzzle_hash, mode
         )
-        return {
-            "success": True,
-            "pubkey": str(pubkey),
-            "signature": str(signature),
-            "signing_mode": mode.value,
-        }
+        return SignMessageByAddressResponse(
+            pubkey=pubkey,
+            signature=signature,
+            signing_mode=mode.value,
+        )
 
     async def sign_message_by_id(self, request: dict[str, Any]) -> EndpointResult:
         """

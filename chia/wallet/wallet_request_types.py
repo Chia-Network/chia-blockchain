@@ -378,6 +378,23 @@ class VerifySignatureResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class SignMessageByAddress(Streamable):
+    address: str
+    message: str
+    is_hex: bool = False
+    safe_mode: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByAddressResponse(Streamable):
+    pubkey: G1Element
+    signature: G2Element
+    signing_mode: str
+
+
+@streamable
+@dataclass(frozen=True)
 class GetTransactionMemo(Streamable):
     transaction_id: bytes32
 

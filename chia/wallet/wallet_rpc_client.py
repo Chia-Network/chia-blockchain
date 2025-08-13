@@ -160,6 +160,8 @@ from chia.wallet.wallet_request_types import (
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -1144,9 +1146,10 @@ class WalletRpcClient(RpcClient):
         )
         return TransactionRecord.from_json_dict(response["tx"])
 
-    async def sign_message_by_address(self, address: str, message: str) -> tuple[str, str, str]:
-        response = await self.fetch("sign_message_by_address", {"address": address, "message": message})
-        return response["pubkey"], response["signature"], response["signing_mode"]
+    async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
+        return SignMessageByAddressResponse.from_json_dict(
+            await self.fetch("sign_message_by_address", request.to_json_dict())
+        )
 
     async def sign_message_by_id(
         self, id: str, message: str, is_hex: bool = False, safe_mode: bool = True

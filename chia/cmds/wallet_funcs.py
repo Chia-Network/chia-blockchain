@@ -73,6 +73,7 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     RoyaltyAsset,
     SendTransactionResponse,
+    SignMessageByAddress,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -1626,9 +1627,12 @@ async def sign_message(
             if address is None:
                 print("Address is required for XCH address type.")
                 return
-            pubkey, signature, signing_mode = await wallet_client.sign_message_by_address(
-                address.original_address, message
+            response = await wallet_client.sign_message_by_address(
+                SignMessageByAddress(address.original_address, message)
             )
+            pubkey = str(response.pubkey)
+            signature = str(response.signature)
+            signing_mode = response.signing_mode
         elif addr_type == AddressType.DID:
             if did_id is None:
                 print("DID id is required for DID address type.")
