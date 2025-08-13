@@ -512,7 +512,7 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper_2)
-        consensus_store = await ConsensusStore.create(store_2, coin_store_2, height_map)
+        consensus_store = await ConsensusStoreSQLite3.create(store_2, coin_store_2, height_map)
         bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         await BlockStore.create(db_wrapper_2)
