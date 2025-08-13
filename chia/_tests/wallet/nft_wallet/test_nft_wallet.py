@@ -2791,7 +2791,7 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
 
     assert AugSchemeMPL.verify(
         sign_by_id_res.pubkey,
-        puzzle.get_tree_hash(),
+        bytes(message, "utf-8"),
         sign_by_id_res.signature,
     )
     # Test BLS sign hex
@@ -2807,6 +2807,6 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
 
     assert AugSchemeMPL.verify(
         sign_by_id_res.pubkey,
-        puzzle.get_tree_hash(),
+        bytes.fromhex(message),
         sign_by_id_res.signature,
     )
