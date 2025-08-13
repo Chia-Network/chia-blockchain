@@ -245,6 +245,8 @@ from chia.wallet.wallet_request_types import (
     SetWalletResyncOnStartup,
     SignMessageByAddress,
     SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -2047,28 +2049,23 @@ class WalletRpcApi:
             signing_mode=mode.value,
         )
 
-    async def sign_message_by_id(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
         """
         Given a NFT/DID ID, sign the message by the P2 private key.
         :param request:
         :return:
         """
-        entity_id: bytes32 = decode_puzzle_hash(request["id"])
+        entity_id: bytes32 = decode_puzzle_hash(request.id)
         selected_wallet: Optional[WalletProtocol[Any]] = None
-        is_hex: bool = request.get("is_hex", False)
-        if isinstance(is_hex, str):
-            is_hex = True if is_hex.lower() == "true" else False
-        safe_mode: bool = request.get("safe_mode", True)
-        if isinstance(safe_mode, str):
-            safe_mode = True if safe_mode.lower() == "true" else False
         mode: SigningMode = SigningMode.CHIP_0002
-        if is_hex and safe_mode:
+        if request.is_hex and request.safe_mode:
             mode = SigningMode.CHIP_0002_HEX_INPUT
-        elif not is_hex and not safe_mode:
+        elif not request.is_hex and not request.safe_mode:
             mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
-        elif is_hex and not safe_mode:
+        elif request.is_hex and not request.safe_mode:
             mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
+        if is_valid_address(request.id, {AddressType.DID}, self.service.config):
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.DECENTRALIZED_ID.value:
                     assert isinstance(wallet, DIDWallet)
@@ -2077,11 +2074,11 @@ class WalletRpcApi:
                         selected_wallet = wallet
                         break
             if selected_wallet is None:
-                return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
+                raise ValueError(f"DID for {entity_id.hex()} doesn't exist.")
             assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], mode)
+            pubkey, signature = await selected_wallet.sign_message(request.message, mode)
             latest_coin_id = (await selected_wallet.get_coin()).name()
-        elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
+        elif is_valid_address(request.id, {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.NFT.value:
@@ -2092,21 +2089,20 @@ class WalletRpcApi:
                         target_nft = nft
                         break
             if selected_wallet is None or target_nft is None:
-                return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
+                raise ValueError(f"NFT for {entity_id.hex()} doesn't exist.")
 
             assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, mode)
+            pubkey, signature = await selected_wallet.sign_message(request.message, target_nft, mode)
             latest_coin_id = target_nft.coin.name()
         else:
-            return {"success": False, "error": f"Unknown ID type, {request['id']}"}
+            raise ValueError(f"Unknown ID type, {request.id}")
 
-        return {
-            "success": True,
-            "pubkey": str(pubkey),
-            "signature": str(signature),
-            "latest_coin_id": latest_coin_id.hex() if latest_coin_id is not None else None,
-            "signing_mode": mode.value,
-        }
+        return SignMessageByIDResponse(
+            pubkey=pubkey,
+            signature=signature,
+            latest_coin_id=latest_coin_id,
+            signing_mode=mode.value,
+        )
 
     ##########################################################################################
     # CATs and Trading

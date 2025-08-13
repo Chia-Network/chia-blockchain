@@ -74,6 +74,9 @@ from chia.wallet.wallet_request_types import (
     RoyaltyAsset,
     SendTransactionResponse,
     SignMessageByAddress,
+    SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -1627,30 +1630,27 @@ async def sign_message(
             if address is None:
                 print("Address is required for XCH address type.")
                 return
-            response = await wallet_client.sign_message_by_address(
-                SignMessageByAddress(address.original_address, message)
-            )
-            pubkey = str(response.pubkey)
-            signature = str(response.signature)
-            signing_mode = response.signing_mode
+            response: Union[
+                SignMessageByAddressResponse, SignMessageByIDResponse
+            ] = await wallet_client.sign_message_by_address(SignMessageByAddress(address.original_address, message))
         elif addr_type == AddressType.DID:
             if did_id is None:
                 print("DID id is required for DID address type.")
                 return
-            pubkey, signature, signing_mode = await wallet_client.sign_message_by_id(did_id.original_address, message)
+            response = await wallet_client.sign_message_by_id(SignMessageByID(did_id.original_address, message))
         elif addr_type == AddressType.NFT:
             if nft_id is None:
                 print("NFT id is required for NFT address type.")
                 return
-            pubkey, signature, signing_mode = await wallet_client.sign_message_by_id(nft_id.original_address, message)
+            response = await wallet_client.sign_message_by_id(SignMessageByID(nft_id.original_address, message))
         else:
             print("Invalid wallet type.")
             return
         print("")
         print(f"Message: {message}")
-        print(f"Public Key: {pubkey}")
-        print(f"Signature: {signature}")
-        print(f"Signing Mode: {signing_mode}")
+        print(f"Public Key: {response.pubkey!s}")
+        print(f"Signature: {response.signature!s}")
+        print(f"Signing Mode: {response.signing_mode}")
 
 
 async def spend_clawback(

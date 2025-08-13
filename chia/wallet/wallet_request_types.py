@@ -395,6 +395,24 @@ class SignMessageByAddressResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class SignMessageByID(Streamable):
+    id: str
+    message: str
+    is_hex: bool = False
+    safe_mode: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByIDResponse(Streamable):
+    pubkey: G1Element
+    signature: G2Element
+    latest_coin_id: bytes32
+    signing_mode: str
+
+
+@streamable
+@dataclass(frozen=True)
 class GetTransactionMemo(Streamable):
     transaction_id: bytes32
 

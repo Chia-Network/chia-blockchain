@@ -48,6 +48,8 @@ from chia.wallet.wallet_request_types import (
     SendTransactionMultiResponse,
     SignMessageByAddress,
     SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -167,12 +169,21 @@ class TestWalletRpcClient(TestRpcClient):
         signing_mode = SigningMode.CHIP_0002.value
         return SignMessageByAddressResponse(pubkey, signature, signing_mode)
 
-    async def sign_message_by_id(self, id: str, message: str) -> tuple[str, str, str]:
-        self.add_to_log("sign_message_by_id", (id, message))
-        pubkey = bytes([4] * 48).hex()
-        signature = bytes([7] * 576).hex()
+    async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
+        self.add_to_log("sign_message_by_id", (request.id, request.message))
+        pubkey = G1Element.from_bytes(
+            bytes.fromhex(
+                "a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1"
+            )
+        )
+        signature = G2Element.from_bytes(
+            bytes.fromhex(
+                "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            )
+        )
         signing_mode = SigningMode.CHIP_0002.value
-        return pubkey, signature, signing_mode
+        return SignMessageByIDResponse(pubkey, signature, bytes32.zeros, signing_mode)
 
     async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
         """
