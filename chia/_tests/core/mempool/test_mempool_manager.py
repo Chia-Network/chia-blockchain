@@ -434,7 +434,7 @@ class TestCheckTimeLocks:
         conds: SpendBundleConditions,
         expected: Err | None,
     ) -> None:
-        res = check_time_locks(
+        res: Optional[Union[int, Err]] = check_time_locks(
             dict(self.REMOVALS),
             conds,
             self.PREV_BLOCK_HEIGHT,
@@ -2347,7 +2347,13 @@ class TestCoins:
             self.lineage_info[ph] = UnspentLineageInfo(c.name(), c.parent_coin_info, bytes32([42] * 32))
 
     def spend_coin(self, coin_id: bytes32, height: uint32 = uint32(10)) -> None:
-        self.coin_records[coin_id] = dataclasses.replace(self.coin_records[coin_id], spent_block_index=height)
+        self.coin_records[coin_id] = CoinRecord(
+            self.coin_records[coin_id].coin,
+            self.coin_records[coin_id].confirmed_block_index,
+            height,
+            self.coin_records[coin_id].coinbase,
+            self.coin_records[coin_id].timestamp,
+        )
 
     def update_lineage(self, puzzle_hash: bytes32, coin: Coin | None) -> None:
         if coin is None:

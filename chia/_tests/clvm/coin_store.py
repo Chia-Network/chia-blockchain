@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from chia_rs import ConsensusConstants, SpendBundle, check_time_locks
 from chia_rs.sized_bytes import bytes32
@@ -112,8 +112,13 @@ class CoinStore:
             self._add_coin_entry(new_coin, now)
         for spent_coin in removals:
             coin_name = spent_coin.name()
-            coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=now.height)
+            self._db[coin_name] = CoinRecord(
+                self._db[coin_name].coin,
+                self._db[coin_name].confirmed_block_index,
+                now.height,
+                self._db[coin_name].coinbase,
+                self._db[coin_name].timestamp,
+            )
         return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:

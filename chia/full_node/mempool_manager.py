@@ -6,7 +6,7 @@ import time
 from collections.abc import Awaitable, Callable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import TypeVar
+from typing import Callable, Optional, TypeVar, Union
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
