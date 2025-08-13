@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia.consensus.coin_store_protocol import CoinStoreProtocol
+from chia.full_node.coin_store_protocol import CoinStoreProtocol
 from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2
 
