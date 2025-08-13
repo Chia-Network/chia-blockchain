@@ -153,8 +153,17 @@ class TestWalletRpcClient(TestRpcClient):
 
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         self.add_to_log("sign_message_by_address", (request.address, request.message))
-        pubkey = G1Element.from_bytes(bytes([3] * 48))
-        signature = G2Element.from_bytes(bytes([6] * 576))
+        pubkey = G1Element.from_bytes(
+            bytes.fromhex(
+                "b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4"
+            )
+        )
+        signature = G2Element.from_bytes(
+            bytes.fromhex(
+                "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            )
+        )
         signing_mode = SigningMode.CHIP_0002.value
         return SignMessageByAddressResponse(pubkey, signature, signing_mode)
 

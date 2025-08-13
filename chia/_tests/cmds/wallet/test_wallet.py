@@ -631,8 +631,9 @@ def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     # these are various things that should be in the output
     assert_list = [
         f"Message: {message.hex()}",
-        f"Public Key: {bytes([3] * 48).hex()}",
-        f"Signature: {bytes([6] * 576).hex()}",
+        "Public Key: b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4",
+        "Signature: c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-a{xch_addr}"], assert_list)
