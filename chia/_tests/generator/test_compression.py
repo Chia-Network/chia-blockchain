@@ -40,6 +40,10 @@ TEST_MULTIPLE = load_clvm(
     "test_multiple_generator_input_arguments.clsp", package_or_requirement="chia._tests.generator.puzzles"
 )
 
+NEW_THING = load_clvm(
+    "generator_generator.clsp", package_or_requirement="chia._tests.generator.puzzles"
+)
+
 Nil = Program.from_bytes(b"\x80")
 
 original_generator = hexstr_to_bytes(
@@ -76,6 +80,7 @@ class TestCompression:
 
 class TestDecompression:
     def test_deserialization(self) -> None:
+        breakpoint()
         _cost, out = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [bytes(Program.to("hello"))])
         assert out == Program.to("hello")
 
