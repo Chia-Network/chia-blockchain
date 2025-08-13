@@ -21,7 +21,7 @@ from chia.util.db_wrapper import DBWrapper2
 
 
 @dataclasses.dataclass
-class ConsensusStore(ConsensusStoreProtocol):
+class ConsensusStoreSQLite3(ConsensusStoreProtocol):
     """
     Consensus store that combines block_store, coin_store, and height_map functionality.
     """
@@ -36,7 +36,7 @@ class ConsensusStore(ConsensusStoreProtocol):
         block_store: BlockStore,
         coin_store: CoinStore,
         height_map: BlockHeightMap,
-    ) -> ConsensusStore:
+    ) -> ConsensusStoreSQLite3:
         """Create a new ConsensusStore instance from existing sub-stores.
 
         This factory does not create sub-stores. Construct BlockStore, CoinStore,
@@ -164,7 +164,7 @@ async def build_consensus_store(
     selected_network: Optional[str] = None,
     *,
     use_cache: bool = True,
-) -> ConsensusStore:
+) -> ConsensusStoreSQLite3:
     """Convenience utility to construct a ConsensusStore from DB and path.
 
     This keeps ConsensusStore.create minimal (only accepts sub-stores) while still
@@ -173,4 +173,8 @@ async def build_consensus_store(
     block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
     coin_store = await CoinStore.create(db_wrapper)
     height_map = await BlockHeightMap.create(blockchain_dir, db_wrapper, selected_network)
-    return await ConsensusStore.create(block_store, coin_store, height_map)
+    return await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
+
+
+# Backwards-compatible alias
+ConsensusStore = ConsensusStoreSQLite3
