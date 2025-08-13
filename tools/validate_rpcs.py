@@ -44,7 +44,7 @@ async def get_height_to_hash_bytes(root_path: Path, config: dict[str, Any]) -> b
         return await f.read()
 
 
-def get_block_hash_from_height(height: int, height_to_hash: bytes) -> bytes32:
+def get_block_hash_for_height(height: int, height_to_hash: bytes) -> bytes32:
     """
     Get the block header hash from the height-to-hash database.
     """
@@ -235,7 +235,7 @@ async def cli_async(
         start_time: float = cycle_start
 
         def add_tasks_for_height(height: int) -> None:
-            block_header_hash = get_block_hash_from_height(height, height_to_hash_bytes)
+            block_header_hash = get_block_hash_for_height(height, height_to_hash_bytes)
             # Create tasks for each RPC call based on the flags
             if spends_with_conditions:
                 pipeline.add(
@@ -249,7 +249,7 @@ async def cli_async(
         for i in range(start_height, end_height + 1):
             add_tasks_for_height(height=i)
             # Make Status Updates.
-            if len(pipeline) >= pipeline_depth:
+            while len(pipeline) >= pipeline_depth:
                 done, pipeline = await asyncio.wait(pipeline, return_when=asyncio.FIRST_COMPLETED)
                 completed_requests += len(done)
                 now = time.monotonic()
