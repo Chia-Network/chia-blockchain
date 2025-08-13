@@ -13,6 +13,7 @@ import anyio
 from chia_rs import (
     AugSchemeMPL,
     BlockRecord,
+    CoinRecord,
     CoinState,
     EndOfSubSlotBundle,
     FoliageBlockData,
@@ -67,7 +68,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo

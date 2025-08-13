@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
-from chia_rs import BlockRecord, Coin, G1Element, G2Element
+from chia_rs import BlockRecord, Coin, CoinRecord, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
