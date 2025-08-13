@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from chia_rs import FullBlock
+from chia_rs import CoinRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint128
 
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
-from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 
 

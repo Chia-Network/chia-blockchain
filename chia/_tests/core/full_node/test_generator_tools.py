@@ -46,6 +46,7 @@ spends: list[SpendConditions] = [
         0,
         execution_cost=0,
         condition_cost=0,
+        fingerprint=b"",
     ),
     SpendConditions(
         coin_ids[1],
@@ -73,6 +74,7 @@ spends: list[SpendConditions] = [
         0,
         execution_cost=0,
         condition_cost=0,
+        fingerprint=b"",
     ),
 ]
 

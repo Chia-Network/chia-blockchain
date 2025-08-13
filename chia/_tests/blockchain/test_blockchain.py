@@ -4337,6 +4337,7 @@ async def test_include_spends_same_as_parent(
                 0,
                 0,
                 0,
+                b"",
             )
         ],
         0,
