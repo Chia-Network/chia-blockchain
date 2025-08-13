@@ -154,12 +154,20 @@ class CoinStore:
         await self._set_spent(tx_removals, height)
 
         end = time.monotonic()
-        log.log(
-            logging.WARNING if end - start > 10 else logging.DEBUG,
+        took_too_long = end - start > 10
+
+        message = (
             f"Height {height}: It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
-            + f"{len(tx_removals)} removals to the coin store. Make sure "
-            + "blockchain database is on a fast drive",
+            + f"{len(tx_removals)} removals to the coin store."
         )
+
+        if took_too_long:
+            level = logging.WARNING
+            message += " Make sure blockchain database is on a fast drive"
+        else:
+            level = logging.DEBUG
+
+        log.log(level, message)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
