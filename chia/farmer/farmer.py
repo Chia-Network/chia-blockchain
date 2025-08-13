@@ -144,7 +144,7 @@ class Farmer:
         self.quality_str_to_identifiers: dict[bytes32, tuple[str, bytes32, bytes32, bytes32]] = {}
 
         # Track pending solver requests, keyed by quality string hex
-        self.pending_solver_requests: dict[str, dict[str, Any]] = {}
+        self.pending_solver_requests: dict[bytes32, dict[str, Any]] = {}
 
         # number of responses to each signage point
         self.number_of_responses: dict[bytes32, int] = {}

@@ -21,7 +21,7 @@ from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.harvester.harvester_service import HarvesterService
 from chia.plotting.util import PlotsRefreshParameter
-from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols import farmer_protocol, harvester_protocol, solver_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
@@ -446,14 +446,13 @@ async def test_solution_response_handler(
     harvester_peer.peer_node_id = "harvester_peer"
 
     # manually add pending request
-    farmer.pending_solver_requests[quality.hex()] = {
-        "quality_collection": v2_qualities,
+    farmer.pending_solver_requests[quality] = {
+        "quality_data": v2_qualities,
         "peer": harvester_peer,
-        "quality": quality,
     }
 
     # create solution response
-    solution_response = farmer_protocol.SolutionResponse(proof=b"test_proof_from_solver")
+    solution_response = solver_protocol.SolverResponse(quality_string=quality, proof=b"test_proof_from_solver")
     solver_peer = Mock()
     solver_peer.peer_node_id = "solver_peer"
 
@@ -470,4 +469,4 @@ async def test_solution_response_handler(
         assert original_peer == harvester_peer
 
         # verify pending request was removed
-        assert quality.hex() not in farmer.pending_solver_requests
+        assert quality not in farmer.pending_solver_requests

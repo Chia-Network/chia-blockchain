@@ -283,10 +283,10 @@ class HarvesterAPI:
             # Executes V2 quality lookup in a thread pool
             if self.harvester._shut_down:
                 return filename, None
-            v2_quality_collection: Optional[V2Qualities] = await loop.run_in_executor(
+            qualities: Optional[V2Qualities] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup_v2_qualities, filename, plot_info
             )
-            return filename, v2_quality_collection
+            return filename, qualities
 
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
@@ -367,16 +367,16 @@ class HarvesterAPI:
 
         # Process V2 plot quality collections (new flow)
         for filename_quality_awaitable in asyncio.as_completed(v2_awaitables):
-            filename, v2_quality_collection = await filename_quality_awaitable
+            filename, v2_qualities = await filename_quality_awaitable
             time_taken = time.monotonic() - start
             if time_taken > 8:
                 self.harvester.log.warning(
                     f"Looking up V2 qualities on {filename} took: {time_taken}. This should be below 8 seconds"
                     f" to minimize risk of losing rewards."
                 )
-            if v2_quality_collection is not None:
-                total_v2_qualities_found += len(v2_quality_collection.qualities)
-                msg = make_msg(ProtocolMessageTypes.v2_qualities, v2_quality_collection)
+            if v2_qualities is not None:
+                total_v2_qualities_found += len(v2_qualities.qualities)
+                msg = make_msg(ProtocolMessageTypes.v2_qualities, v2_qualities)
                 await peer.send_message(msg)
 
         now = uint64(int(time.time()))

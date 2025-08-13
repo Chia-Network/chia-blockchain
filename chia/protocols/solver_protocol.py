@@ -14,3 +14,10 @@ class SolverInfo(Streamable):
     plot_size: uint8
     plot_difficulty: uint64
     quality_string: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class SolverResponse(Streamable):
+    quality_string: bytes32
+    proof: bytes
