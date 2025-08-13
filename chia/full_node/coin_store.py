@@ -181,8 +181,7 @@ class CoinStore:
                 if row is not None:
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coinbase = False if row[2] == 0 else True
-                    return CoinRecord(coin, row[0], spent_index, coinbase, row[6])
+                    return CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6])
         return None
 
     async def get_coin_records(self, names: Collection[bytes32]) -> list[CoinRecord]:
@@ -208,8 +207,7 @@ class CoinStore:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coinbase = False if row[2] == 0 else True
-                    record = CoinRecord(coin, row[0], spent_index, coinbase, row[6])
+                    record = CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6])
                     coins.append(record)
 
         return coins
@@ -226,8 +224,7 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coinbase = False if row[2] == 0 else True
-                    coins.append(CoinRecord(coin, row[0], spent_index, coinbase, row[6]))
+                    coins.append(CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6]))
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
@@ -244,8 +241,7 @@ class CoinStore:
                 for row in await cursor.fetchall():
                     if row[1] > 0:
                         coin = self.row_to_coin(row)
-                        coinbase = False if row[2] == 0 else True
-                        coin_record = CoinRecord(coin, row[0], row[1], coinbase, row[6])
+                        coin_record = CoinRecord(coin, row[0], row[1], row[2] != 0, row[6])
                         coins.append(coin_record)
                 return coins
 
@@ -270,8 +266,7 @@ class CoinStore:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coinbase = False if row[2] == 0 else True
-                    coins.add(CoinRecord(coin, row[0], spent_index, coinbase, row[6]))
+                    coins.add(CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6]))
                 return list(coins)
 
     async def get_coin_records_by_puzzle_hashes(
@@ -300,8 +295,7 @@ class CoinStore:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coinbase = False if row[2] == 0 else True
-                    coins.add(CoinRecord(coin, row[0], spent_index, coinbase, row[6]))
+                    coins.add(CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6]))
                 return list(coins)
 
     async def get_coin_records_by_names(
@@ -328,8 +322,7 @@ class CoinStore:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                    coinbase = False if row[2] == 0 else True
-                    coins.add(CoinRecord(coin, row[0], spent_index, coinbase, row[6]))
+                    coins.add(CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6]))
 
         return list(coins)
 
@@ -400,8 +393,7 @@ class CoinStore:
                     async for row in cursor:
                         coin = self.row_to_coin(row)
                         spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                        coinbase = False if row[2] == 0 else True
-                        coins.add(CoinRecord(coin, row[0], spent_index, coinbase, row[6]))
+                        coins.add(CoinRecord(coin, row[0], spent_index, row[2] != 0, row[6]))
 
         return list(coins)
 
@@ -575,8 +567,7 @@ class CoinStore:
             for row in rows:
                 coin = self.row_to_coin(row)
                 spent_index = uint32(0) if row[1] <= 0 else uint32(row[1])
-                coinbase = False if row[2] == 0 else True
-                record = CoinRecord(coin, uint32(0), spent_index, coinbase, uint64(0))
+                record = CoinRecord(coin, uint32(0), spent_index, row[2] != 0, uint64(0))
                 coin_name = bytes32(row[7])
                 coin_changes[coin_name] = record
 
@@ -591,8 +582,7 @@ class CoinStore:
             )
             for row in rows:
                 coin = self.row_to_coin(row)
-                coinbase = False if row[2] == 0 else True
-                record = CoinRecord(coin, row[0], uint32(0), coinbase, row[6])
+                record = CoinRecord(coin, row[0], uint32(0), row[2] != 0, row[6])
                 coin_name = bytes32(row[7])
                 if coin_name not in coin_changes:
                     coin_changes[coin_name] = record
