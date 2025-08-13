@@ -825,6 +825,9 @@ class BlockTools:
         if time_per_block is None:
             time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
 
+        if farmer_reward_puzzle_hash is None:
+            farmer_reward_puzzle_hash = self.farmer_ph
+
         # award coins aren't available to spend until the transaction block
         # after the one they were created by, so we "stage" them here to move
         # them into available_coins at the next transaction block
@@ -839,13 +842,17 @@ class BlockTools:
             # these lists allow the tests to send all of the rewards to the farmer ph
             # this is especially important for benchmarks.
             assert farmer_reward_puzzle_hash in {self.farmer_ph, self.pool_ph}
-            assert pool_reward_puzzle_hash in {self.farmer_ph, self.pool_ph}
+            if pool_reward_puzzle_hash is None:
+                target_list = {self.farmer_ph}
+            else:
+                assert pool_reward_puzzle_hash in {self.farmer_ph, self.pool_ph}
+                target_list = {self.farmer_ph, self.pool_ph}
             assert transaction_data is None
 
             if len(self.available_coins) == 0:
                 for b in block_list:
                     for coin in b.get_included_reward_coins():
-                        if coin.puzzle_hash in {self.farmer_ph, self.pool_ph}:
+                        if coin.puzzle_hash in target_list:
                             self.available_coins.add(coin)  # duplicates will be discarded as its a set
             print(
                 f"found {len(self.available_coins)} reward coins in existing chain."
@@ -857,9 +864,6 @@ class BlockTools:
         else:
             # make sure we don't have anything in available_coins
             self.available_coins.clear()
-
-        if farmer_reward_puzzle_hash is None:
-            farmer_reward_puzzle_hash = self.farmer_ph
 
         if len(block_list) == 0:
             if force_plot_id is not None:
