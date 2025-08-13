@@ -70,8 +70,9 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     # these are various things that should be in the output
     assert_list = [
         f"Message: {message.hex()}",
-        f"Public Key: {bytes([4] * 48).hex()}",
-        f"Signature: {bytes([7] * 576).hex()}",
+        "Public Key: a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1",
+        "Signature: c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-i{did_id}"], assert_list)
