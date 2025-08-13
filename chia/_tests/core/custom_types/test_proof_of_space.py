@@ -14,6 +14,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_difficulty,
     calculate_prefix_bits,
+    check_plot_size,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -219,6 +220,34 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
 )
 def test_calculate_plot_difficulty(height: uint32, difficulty: uint8) -> None:
     assert calculate_plot_difficulty(DEFAULT_CONSTANTS, height) == difficulty
+
+
+@pytest.mark.parametrize(
+    "size, valid",
+    [
+        (PlotSize.make_v1(31), False),  # too small
+        (PlotSize.make_v1(32), True),
+        (PlotSize.make_v1(33), True),
+        (PlotSize.make_v1(34), True),
+        (PlotSize.make_v1(35), True),
+        (PlotSize.make_v1(36), True),
+        (PlotSize.make_v1(37), True),
+        (PlotSize.make_v1(49), True),
+        (PlotSize.make_v1(50), True),
+        (PlotSize.make_v1(51), False),  # too large
+        (PlotSize.make_v2(26), False),  # too small
+        (PlotSize.make_v2(27), False),  # too small (and odd)
+        (PlotSize.make_v2(28), True),
+        (PlotSize.make_v2(29), False),  # odd
+        (PlotSize.make_v2(30), True),
+        (PlotSize.make_v2(31), False),  # odd
+        (PlotSize.make_v2(32), True),
+        (PlotSize.make_v2(33), False),  # too large (and odd)
+        (PlotSize.make_v2(34), False),  # too large
+    ],
+)
+def test_check_plot_size(size: PlotSize, valid: bool) -> None:
+    assert check_plot_size(DEFAULT_CONSTANTS, size) == valid
 
 
 class TestProofOfSpace:
