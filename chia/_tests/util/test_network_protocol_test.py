@@ -137,7 +137,6 @@ def test_missing_messages() -> None:
         "NewSignagePoint",
         "RequestSignedValues",
         "SignedValues",
-        "SolutionResponse",
     }
 
     full_node_msgs = {
@@ -222,7 +221,7 @@ def test_missing_messages() -> None:
         "RespondCompactProofOfTime",
     }
 
-    solver_msgs = {"SolverInfo"}
+    solver_msgs = {"SolverInfo", "SolverResponse"}
 
     shared_msgs = {"Handshake", "Capability", "Error"}
 

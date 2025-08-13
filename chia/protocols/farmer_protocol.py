@@ -105,9 +105,3 @@ class SignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_signature: G2Element
     foliage_transaction_block_signature: G2Element
-
-
-@streamable
-@dataclass(frozen=True)
-class SolutionResponse(Streamable):
-    proof: bytes

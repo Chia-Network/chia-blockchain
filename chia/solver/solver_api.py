@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia.protocols.farmer_protocol import SolutionResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.solver_protocol import SolverInfo
+from chia.protocols.solver_protocol import SolverInfo, SolverResponse
 from chia.server.api_protocol import ApiMetadata
 from chia.solver.solver import Solver
 
@@ -53,7 +52,10 @@ class SolverAPI:
                 return None
 
             self.log.debug(f"Successfully solved quality, returning {len(proof)} byte proof")
-            return make_msg(ProtocolMessageTypes.solution_response, SolutionResponse(proof=proof))
+            return make_msg(
+                ProtocolMessageTypes.solution_response,
+                SolverResponse(proof=proof, quality_string=request.quality_string),
+            )
 
         except Exception as e:
             self.log.error(f"Error solving quality {request.quality_string.hex()[:10]}...: {e}")
