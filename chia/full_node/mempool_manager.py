@@ -13,6 +13,7 @@ from chia_rs import (
     ELIGIBLE_FOR_FF,
     MEMPOOL_MODE,
     BLSCache,
+    CoinRecord,
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
@@ -34,7 +35,6 @@ from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemov
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
