@@ -119,6 +119,7 @@ from chia.wallet.wallet_request_types import (
     CreateNewDL,
     CreateNewDLResponse,
     DeleteKey,
+    DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDCreateBackupFileResponse,
@@ -1935,16 +1936,16 @@ class WalletRpcApi:
 
         return GetNotificationsResponse(notifications)
 
-    async def delete_notifications(self, request: dict[str, Any]) -> EndpointResult:
-        ids: Optional[list[str]] = request.get("ids", None)
-        if ids is None:
+    @marshal
+    async def delete_notifications(self, request: DeleteNotifications) -> Empty:
+        if request.ids is None:
             await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
         else:
             await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
-                [bytes32.from_hexstr(id) for id in ids]
+                request.ids
             )
 
-        return {}
+        return Empty()
 
     @tx_endpoint(push=True)
     async def send_notification(

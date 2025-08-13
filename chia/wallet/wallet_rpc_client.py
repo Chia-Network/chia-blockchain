@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any, Optional, Union, cast
 
 from chia_rs.sized_bytes import bytes32
@@ -36,6 +35,7 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
+    DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDCreateBackupFileResponse,
@@ -1117,14 +1117,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("get_notifications", request.to_json_dict())
         return json_deserialize_with_clvm_streamable(response, GetNotificationsResponse)
 
-    async def delete_notifications(self, ids: Optional[Sequence[bytes32]] = None) -> bool:
-        request = {}
-        if ids is not None:
-            request["ids"] = [id.hex() for id in ids]
-        response = await self.fetch("delete_notifications", request)
-        # TODO: casting due to lack of type checked deserialization
-        result = cast(bool, response["success"])
-        return result
+    async def delete_notifications(self, request: DeleteNotifications) -> None:
+        await self.fetch("delete_notifications", request.to_json_dict())
 
     async def send_notification(
         self,

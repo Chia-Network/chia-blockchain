@@ -108,6 +108,7 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     DefaultCAT,
     DeleteKey,
+    DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDGetDID,
@@ -2559,7 +2560,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, uint32(1)))).notifications
     assert [] == (await client_2.get_notifications(GetNotifications(None, uint32(1), None))).notifications
     assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, None))).notifications
-    assert await client_2.delete_notifications()
+    await client_2.delete_notifications(DeleteNotifications())
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -2581,7 +2582,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
-    assert await client_2.delete_notifications([notification.id])
+    await client_2.delete_notifications(DeleteNotifications([notification.id]))
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
 

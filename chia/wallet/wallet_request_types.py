@@ -355,6 +355,12 @@ class GetNotificationsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DeleteNotifications(Streamable):
+    ids: Optional[list[bytes32]] = None
+
+
+@streamable
+@dataclass(frozen=True)
 class VerifySignature(Streamable):
     message: str
     pubkey: G1Element

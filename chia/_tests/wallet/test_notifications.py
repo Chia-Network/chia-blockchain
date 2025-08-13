@@ -17,6 +17,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.notification_store import NotificationStore
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import DeleteNotifications
 
 
 # For testing backwards compatibility with a DB change to add height
@@ -190,7 +191,9 @@ async def test_notifications(
     await notification_manager_2.notification_store.delete_all_notifications()
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications([n.id for n in notifications])
+    await notification_manager_2.notification_store.delete_notifications(
+        DeleteNotifications([n.id for n in notifications])
+    )
     assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
 
     assert not await func(*notification_manager_2.most_recent_args)

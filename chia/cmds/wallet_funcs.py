@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDFindLostDID,
     DIDGetDID,
@@ -1602,9 +1603,11 @@ async def delete_notifications(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         if delete_all:
-            print(f"Success: {await wallet_client.delete_notifications()}")
+            await wallet_client.delete_notifications(DeleteNotifications())
+            print("Success!")
         else:
-            print(f"Success: {await wallet_client.delete_notifications(ids=list(ids))}")
+            await wallet_client.delete_notifications(DeleteNotifications(ids=list(ids)))
+            print("Success!")
 
 
 async def sign_message(

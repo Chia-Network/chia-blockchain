@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -12,7 +12,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet_request_types import GetNotifications, GetNotificationsResponse
+from chia.wallet.wallet_request_types import DeleteNotifications, GetNotifications, GetNotificationsResponse
 
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
@@ -111,9 +111,8 @@ def test_notifications_delete(capsys: object, get_test_cli_clients: tuple[TestRp
 
     # set RPC Client
     class NotificationsDeleteRpcClient(TestWalletRpcClient):
-        async def delete_notifications(self, ids: Optional[list[bytes32]] = None) -> bool:
-            self.add_to_log("delete_notifications", (ids,))
-            return True
+        async def delete_notifications(self, request: DeleteNotifications) -> None:
+            self.add_to_log("delete_notifications", (request.ids,))
 
     inst_rpc_client = NotificationsDeleteRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
