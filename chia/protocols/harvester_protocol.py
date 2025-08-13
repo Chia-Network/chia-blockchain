@@ -63,6 +63,21 @@ class NewProofOfSpace(Streamable):
     fee_info: Optional[ProofOfSpaceFeeInfo]
 
 
+@streamable
+@dataclass(frozen=True)
+class V2Qualities(Streamable):
+    challenge_hash: bytes32
+    sp_hash: bytes32
+    plot_identifier: str
+    qualities: list[bytes32]
+    signage_point_index: uint8
+    plot_size: uint8
+    difficulty: uint64
+    pool_public_key: Optional[G1Element]
+    pool_contract_puzzle_hash: Optional[bytes32]
+    plot_public_key: G1Element
+
+
 # Source data corresponding to the hash that is sent to the Harvester for signing
 class SigningDataKind(IntEnum):
     FOLIAGE_BLOCK_DATA = 1

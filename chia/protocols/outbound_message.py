@@ -18,6 +18,7 @@ class NodeType(IntEnum):
     INTRODUCER = 5
     WALLET = 6
     DATA_LAYER = 7
+    SOLVER = 8
 
 
 @streamable

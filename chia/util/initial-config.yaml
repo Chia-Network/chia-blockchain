@@ -629,6 +629,34 @@ wallet:
 
   auto_sign_txs: True
 
+solver:
+  # The solver server will run on this port
+  port: 8666
+
+  # Enable or disable UPnP port forwarding
+  enable_upnp: False
+
+  # Logging configuration
+  logging: *logging
+
+  # Network overrides and selected network
+  network_overrides: *network_overrides
+  selected_network: *selected_network
+
+  # Number of threads for solver operations
+  num_threads: 4
+
+  # RPC server configuration
+  rpc_port: 8667
+  start_rpc_server: True
+
+  # SSL configuration
+  ssl:
+    private_crt: "config/ssl/solver/private_solver.crt"
+    private_key: "config/ssl/solver/private_solver.key"
+    public_crt: "config/ssl/solver/public_solver.crt"
+    public_key: "config/ssl/solver/public_solver.key"
+
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections

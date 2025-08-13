@@ -24,6 +24,7 @@ from chia.cmds.plots import plots_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
+from chia.cmds.solver import solver_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
@@ -127,6 +128,7 @@ cli.add_command(configure_cmd)
 cli.add_command(init_cmd)
 cli.add_command(rpc_cmd)
 cli.add_command(show_cmd)
+cli.add_command(solver_cmd)
 cli.add_command(start_cmd)
 cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)

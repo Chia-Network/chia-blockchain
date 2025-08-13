@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -24,6 +24,7 @@ from chia.protocols.harvester_protocol import (
     PoolDifficulty,
     SignatureRequestSourceData,
     SigningDataKind,
+    V2Qualities,
 )
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
@@ -33,6 +34,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.solver_protocol import SolverInfo, SolverResponse
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -73,7 +75,7 @@ class FarmerAPI:
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
         max_pos_per_sp = 5
 
@@ -170,14 +172,14 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
                 )
-                self.farmer.cache_add_time[computed_quality_string] = uint64(time.time())
+                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
 
@@ -478,6 +480,103 @@ class FarmerAPI:
 
                 return
 
+    @metadata.request(peer_required=True)
+    async def v2_qualities(self, quality_data: V2Qualities, peer: WSChiaConnection) -> None:
+        """
+        This is a response from the harvester for V2 plots, containing only qualities.
+        We store these qualities and will later use solver service to generate proofs when needed.
+        """
+        if quality_data.sp_hash not in self.farmer.number_of_responses:
+            self.farmer.number_of_responses[quality_data.sp_hash] = 0
+            self.farmer.cache_add_time[quality_data.sp_hash] = uint64(int(time.time()))
+
+        if quality_data.sp_hash not in self.farmer.sps:
+            self.farmer.log.warning(
+                f"Received V2 quality collection for a signage point that we do not have {quality_data.sp_hash}"
+            )
+            return None
+
+        self.farmer.cache_add_time[quality_data.sp_hash] = uint64(int(time.time()))
+
+        self.farmer.log.info(
+            f"Received V2 quality collection with {len(quality_data.qualities)} qualities "
+            f"for plot {quality_data.plot_identifier[:10]}... from {peer.peer_node_id}"
+        )
+
+        # Process each quality through solver service to get full proofs
+        for quality in quality_data.qualities:
+            solver_info = SolverInfo(
+                plot_size=quality_data.plot_size,
+                plot_difficulty=quality_data.difficulty,
+                quality_string=quality,
+            )
+
+            try:
+                # store pending request data for matching with response
+                self.farmer.pending_solver_requests[quality] = {
+                    "quality_data": quality_data,
+                    "peer": peer,
+                }
+
+                # send solve request to all solver connections
+                msg = make_msg(ProtocolMessageTypes.solve, solver_info)
+                await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
+                self.farmer.log.debug(f"Sent solve request for quality {quality.hex()[:10]}...")
+
+            except Exception as e:
+                self.farmer.log.error(f"Failed to call solver service for quality {quality.hex()[:10]}...: {e}")
+                # clean up pending request
+                if quality in self.farmer.pending_solver_requests:
+                    del self.farmer.pending_solver_requests[quality]
+
+    @metadata.request()
+    async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
+        """
+        Handle solution response from solver service.
+        This is called when a solver responds to a solve request.
+        """
+        self.farmer.log.debug(f"Received solution response: {len(response.proof)} bytes from {peer.peer_node_id}")
+
+        # find the matching pending request using quality_string
+
+        if response.quality_string not in self.farmer.pending_solver_requests:
+            self.farmer.log.warning(f"Received solver response for unknown quality {response.quality_string}")
+            return
+
+        # get the original request data
+        request_data = self.farmer.pending_solver_requests.pop(response.quality_string)
+        quality_data = request_data["quality_data"]
+        original_peer = request_data["peer"]
+        quality = response.quality_string
+
+        # create the proof of space with the solver's proof
+        proof_bytes = response.proof
+        if proof_bytes is None or len(proof_bytes) == 0:
+            self.farmer.log.warning(f"Received empty proof from solver for quality {quality.hex()[:10]}...")
+            return
+
+        sp_challenge_hash = quality_data.challenge_hash
+        new_proof_of_space = harvester_protocol.NewProofOfSpace(
+            quality_data.challenge_hash,
+            quality_data.sp_hash,
+            quality_data.plot_identifier,
+            ProofOfSpace(
+                sp_challenge_hash,
+                quality_data.pool_public_key,
+                quality_data.pool_contract_puzzle_hash,
+                quality_data.plot_public_key,
+                quality_data.plot_size,
+                proof_bytes,
+            ),
+            quality_data.signage_point_index,
+            include_source_signature_data=False,
+            farmer_reward_address_override=None,
+            fee_info=None,
+        )
+
+        # process the proof of space
+        await self.new_proof_of_space(new_proof_of_space, original_peer)
+
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
         request = self._process_respond_signatures(response)
@@ -558,7 +657,7 @@ class FarmerAPI:
 
                     pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
-        now = uint64(time.time())
+        now = uint64(int(time.time()))
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
         missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
         self.farmer.state_changed(
