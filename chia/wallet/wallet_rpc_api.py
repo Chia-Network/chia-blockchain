@@ -264,6 +264,8 @@ from chia.wallet.wallet_request_types import (
     VCRevokeResponse,
     VCSpend,
     VCSpendResponse,
+    VerifySignature,
+    VerifySignatureResponse,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -1965,63 +1967,59 @@ class WalletRpcApi:
 
         return {"tx": None, "transactions": None}  # tx_endpoint wrapper will take care of this
 
-    async def verify_signature(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
         """
         Given a public key, message and signature, verify if it is valid.
         :param request:
         :return:
         """
-        input_message: str = request["message"]
-        signing_mode_str: Optional[str] = request.get("signing_mode")
         # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
         # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        if signing_mode_str is None:
+        if request.signing_mode is None:
             signing_mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         else:
             try:
-                signing_mode = SigningMode(signing_mode_str)
+                signing_mode = SigningMode(request.signing_mode)
             except ValueError:
-                raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
+                raise ValueError(f"Invalid signing mode: {request.signing_mode!r}")
 
         if signing_mode in {SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS}:
             # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
-            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
+            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, request.message)).get_tree_hash()
         elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
             # Message is expected to be a hex string
-            message_to_verify = hexstr_to_bytes(input_message)
+            message_to_verify = hexstr_to_bytes(request.message)
         elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
             # Message is expected to be a UTF-8 string
-            message_to_verify = bytes(input_message, "utf-8")
+            message_to_verify = bytes(request.message, "utf-8")
         else:
-            raise ValueError(f"Unsupported signing mode: {signing_mode_str!r}")
+            raise ValueError(f"Unsupported signing mode: {request.signing_mode!r}")
 
         # Verify using the BLS message augmentation scheme
         is_valid = AugSchemeMPL.verify(
-            G1Element.from_bytes(hexstr_to_bytes(request["pubkey"])),
+            request.pubkey,
             message_to_verify,
-            G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
+            request.signature,
         )
-        address = request.get("address")
-        if address is not None:
+        if request.address is not None:
             # For signatures made by the sign_message_by_address/sign_message_by_id
             # endpoints, the "address" field should contain the p2_address of the NFT/DID
             # that was used to sign the message.
-            puzzle_hash: bytes32 = decode_puzzle_hash(address)
+            puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
             expected_puzzle_hash: Optional[bytes32] = None
             if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
-                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(hexstr_to_bytes(request["pubkey"])))
+                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(request.pubkey))
                 expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
             else:
-                expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(
-                    G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-                )
+                expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(request.pubkey)
             if puzzle_hash != expected_puzzle_hash:
-                return {"isValid": False, "error": "Public key doesn't match the address"}
+                return VerifySignatureResponse(isValid=False, error="Public key doesn't match the address")
         if is_valid:
-            return {"isValid": is_valid}
+            return VerifySignatureResponse(isValid=is_valid)
         else:
-            return {"isValid": False, "error": "Signature is invalid."}
+            return VerifySignatureResponse(isValid=False, error="Signature is invalid.")
 
     async def sign_message_by_address(self, request: dict[str, Any]) -> EndpointResult:
         """
