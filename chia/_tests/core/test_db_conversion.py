@@ -12,10 +12,10 @@ from chia.cmds.db_upgrade_func import convert_v1_to_v2
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.consensus_store import ConsensusStore
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
 from chia.util.db_wrapper import DBWrapper2
@@ -63,7 +63,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     await hint_store1.add_hints([(h[0], h[1])])
 
             height_map = await BlockHeightMap.create(Path("."), db_wrapper1)
-            consensus_store = await ConsensusStore.create(block_store1, coin_store1, height_map)
+            consensus_store = await ConsensusStoreSQLite3.create(block_store1, coin_store1, height_map)
             bc = await Blockchain.create(consensus_store, test_constants, reserved_cores=0)
             sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:
