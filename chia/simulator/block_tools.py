@@ -28,7 +28,6 @@ from chia_rs import (
     G1Element,
     G2Element,
     InfusedChallengeChainSubSlot,
-    PlotSize,
     PoolTarget,
     PrivateKey,
     ProofOfSpace,
@@ -94,6 +93,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
+    make_pos,
     passes_plot_filter,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -1504,8 +1504,7 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            # TODO: todo_v2_plots support v2 plots in the plot manager
-            prefix_bits = calculate_prefix_bits(constants, height, PlotSize.make_v1(plot_info.prover.get_size()))
+            prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_size())
             if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
@@ -1514,8 +1513,7 @@ class BlockTools:
                     required_iters = calculate_iterations_quality(
                         constants,
                         quality_str,
-                        # TODO: todo_v2_plots support v2 plots in the plot manager
-                        PlotSize.make_v1(plot_info.prover.get_size()),
+                        plot_info.prover.get_size(),
                         difficulty,
                         signage_point,
                         sub_slot_iters,
@@ -1538,7 +1536,7 @@ class BlockTools:
                             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
                             include_taproot = True
                         plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
-                        proof_of_space: ProofOfSpace = ProofOfSpace(
+                        proof_of_space: ProofOfSpace = make_pos(
                             new_challenge,
                             plot_info.pool_public_key,
                             plot_info.pool_contract_puzzle_hash,

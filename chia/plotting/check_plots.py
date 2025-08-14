@@ -133,14 +133,16 @@ def check_plots(
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
-    total_good_plots: Counter[uint8] = Counter()
+    total_good_plots_v1: Counter[uint8] = Counter()
+    total_good_plots_v2: Counter[uint8] = Counter()
     total_size = 0
     bad_plots_list: list[Path] = []
 
     with plot_manager:
 
         def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int, lock: Lock) -> None:
-            nonlocal total_good_plots
+            nonlocal total_good_plots_v1
+            nonlocal total_good_plots_v2
             nonlocal total_size
             nonlocal bad_plots_list
 
@@ -232,8 +234,16 @@ def check_plots(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
-                total_good_plots[pr.get_size()] += 1
-                total_size += plot_path.stat().st_size
+                version_and_size = pr.get_size()
+                if version_and_size.size_v1 is not None:
+                    k = version_and_size.size_v1
+                    total_good_plots_v1[k] += 1
+                    total_size += plot_path.stat().st_size
+                else:
+                    assert version_and_size.size_v2 is not None
+                    k = version_and_size.size_v2
+                    total_good_plots_v2[k] += 1
+                    total_size += plot_path.stat().st_size
             else:
                 log.error(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
@@ -255,10 +265,12 @@ def check_plots(
     log.info("")
     log.info("")
     log.info("Summary")
-    total_plots: int = sum(list(total_good_plots.values()))
+    total_plots: int = sum(list(total_good_plots_v1.values()) + list(total_good_plots_v2.values()))
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
-    for k, count in sorted(dict(total_good_plots).items()):
-        log.info(f"{count} plots of size {k}")
+    for k, count in sorted(dict(total_good_plots_v1).items()):
+        log.info(f"{count} v1 plots of size {k}")
+    for k, count in sorted(dict(total_good_plots_v2).items()):
+        log.info(f"{count} v2 plots of size {k}")
     grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")
