@@ -355,6 +355,12 @@ class GetNotificationsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DeleteNotifications(Streamable):
+    ids: Optional[list[bytes32]] = None
+
+
+@streamable
+@dataclass(frozen=True)
 class VerifySignature(Streamable):
     message: str
     pubkey: G1Element
@@ -368,6 +374,41 @@ class VerifySignature(Streamable):
 class VerifySignatureResponse(Streamable):
     isValid: bool
     error: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByAddress(Streamable):
+    address: str
+    message: str
+    is_hex: bool = False
+    safe_mode: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByAddressResponse(Streamable):
+    pubkey: G1Element
+    signature: G2Element
+    signing_mode: str
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByID(Streamable):
+    id: str
+    message: str
+    is_hex: bool = False
+    safe_mode: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByIDResponse(Streamable):
+    pubkey: G1Element
+    signature: G2Element
+    latest_coin_id: bytes32
+    signing_mode: str
 
 
 @streamable
@@ -400,6 +441,60 @@ class GetTransactionMemoResponse(Streamable):
             # which we can assume exist because we serialize all responses
             {"transaction_memos": {key: value for key, value in json_dict.items() if key.startswith("0x")}}
         )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCount(Streamable):
+    wallet_id: uint32
+    confirmed: Optional[bool] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCountResponse(Streamable):
+    wallet_id: uint32
+    count: uint16
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddress(Streamable):
+    wallet_id: uint32
+    new_address: bool = False
+    save_derivations: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddressResponse(Streamable):
+    wallet_id: uint32
+    address: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteUnconfirmedTransactions(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCurrentDerivationIndexResponse(Streamable):
+    index: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
+class ExtendDerivationIndex(Streamable):
+    index: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class ExtendDerivationIndexResponse(Streamable):
+    index: Optional[uint32]
 
 
 @streamable

@@ -45,6 +45,8 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    DeleteNotifications,
+    DeleteUnconfirmedTransactions,
     DIDFindLostDID,
     DIDGetDID,
     DIDGetInfo,
@@ -52,7 +54,9 @@ from chia.wallet.wallet_request_types import (
     DIDSetWalletName,
     DIDTransferDID,
     DIDUpdateMetadata,
+    ExtendDerivationIndex,
     FungibleAsset,
+    GetNextAddress,
     GetNotifications,
     GetTransaction,
     GetTransactions,
@@ -69,6 +73,10 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     RoyaltyAsset,
     SendTransactionResponse,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -418,7 +426,7 @@ async def get_address(
     root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
-        res = await wallet_client.get_next_address(wallet_id, new_address)
+        res = (await wallet_client.get_next_address(GetNextAddress(uint32(wallet_id), new_address))).address
         print(res)
 
 
@@ -426,14 +434,14 @@ async def delete_unconfirmed_transactions(
     root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        await wallet_client.delete_unconfirmed_transactions(wallet_id)
+        await wallet_client.delete_unconfirmed_transactions(DeleteUnconfirmedTransactions(uint32(wallet_id)))
         print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
 
 async def get_derivation_index(root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int]) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.get_current_derivation_index()
-        print(f"Last derivation index: {res}")
+        print(f"Last derivation index: {res.index}")
 
 
 async def update_derivation_index(
@@ -441,8 +449,8 @@ async def update_derivation_index(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         print("Updating derivation index... This may take a while.")
-        res = await wallet_client.extend_derivation_index(index)
-        print(f"Updated derivation index: {res}")
+        res = await wallet_client.extend_derivation_index(ExtendDerivationIndex(uint32(index)))
+        print(f"Updated derivation index: {res.index}")
         print("Your balances may take a while to update.")
 
 
@@ -1599,9 +1607,11 @@ async def delete_notifications(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
         if delete_all:
-            print(f"Success: {await wallet_client.delete_notifications()}")
+            await wallet_client.delete_notifications(DeleteNotifications())
+            print("Success!")
         else:
-            print(f"Success: {await wallet_client.delete_notifications(ids=list(ids))}")
+            await wallet_client.delete_notifications(DeleteNotifications(ids=list(ids)))
+            print("Success!")
 
 
 async def sign_message(
@@ -1616,31 +1626,32 @@ async def sign_message(
     nft_id: Optional[CliAddress] = None,
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
+        response: Union[SignMessageByAddressResponse, SignMessageByIDResponse]
         if addr_type == AddressType.XCH:
             if address is None:
                 print("Address is required for XCH address type.")
                 return
-            pubkey, signature, signing_mode = await wallet_client.sign_message_by_address(
-                address.original_address, message
+            response = await wallet_client.sign_message_by_address(
+                SignMessageByAddress(address.original_address, message)
             )
         elif addr_type == AddressType.DID:
             if did_id is None:
                 print("DID id is required for DID address type.")
                 return
-            pubkey, signature, signing_mode = await wallet_client.sign_message_by_id(did_id.original_address, message)
+            response = await wallet_client.sign_message_by_id(SignMessageByID(did_id.original_address, message))
         elif addr_type == AddressType.NFT:
             if nft_id is None:
                 print("NFT id is required for NFT address type.")
                 return
-            pubkey, signature, signing_mode = await wallet_client.sign_message_by_id(nft_id.original_address, message)
+            response = await wallet_client.sign_message_by_id(SignMessageByID(nft_id.original_address, message))
         else:
             print("Invalid wallet type.")
             return
         print("")
         print(f"Message: {message}")
-        print(f"Public Key: {pubkey}")
-        print(f"Signature: {signature}")
-        print(f"Signing Mode: {signing_mode}")
+        print(f"Public Key: {response.pubkey!s}")
+        print(f"Signature: {response.signature!s}")
+        print(f"Signing Mode: {response.signing_mode}")
 
 
 async def spend_clawback(

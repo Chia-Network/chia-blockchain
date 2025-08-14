@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any, Optional, Union, cast
 
 from chia_rs.sized_bytes import bytes32
@@ -17,7 +16,6 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
-from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
@@ -37,6 +35,8 @@ from chia.wallet.wallet_request_types import (
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
+    DeleteNotifications,
+    DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDCreateBackupFileResponse,
     DIDFindLostDID,
@@ -82,12 +82,17 @@ from chia.wallet.wallet_request_types import (
     DLUpdateRootResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
+    ExtendDerivationIndex,
+    ExtendDerivationIndexResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
     GetCATListResponse,
+    GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
@@ -98,6 +103,8 @@ from chia.wallet.wallet_request_types import (
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
     GetTransaction,
+    GetTransactionCount,
+    GetTransactionCountResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     GetTransactionResponse,
@@ -153,6 +160,10 @@ from chia.wallet.wallet_request_types import (
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -275,23 +286,13 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
         return GetTransactionsResponse.from_json_dict(await self.fetch("get_transactions", request.to_json_dict()))
 
-    async def get_transaction_count(
-        self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None
-    ) -> int:
-        request: dict[str, Any] = {"wallet_id": wallet_id}
-        if type_filter is not None:
-            request["type_filter"] = type_filter.to_json_dict()
-        if confirmed is not None:
-            request["confirmed"] = confirmed
-        res = await self.fetch("get_transaction_count", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(int, res["count"])
+    async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
+        return GetTransactionCountResponse.from_json_dict(
+            await self.fetch("get_transaction_count", request.to_json_dict())
+        )
 
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        request = {"wallet_id": wallet_id, "new_address": new_address}
-        response = await self.fetch("get_next_address", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(str, response["address"])
+    async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+        return GetNextAddressResponse.from_json_dict(await self.fetch("get_next_address", request.to_json_dict()))
 
     async def send_transaction(
         self,
@@ -372,18 +373,16 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("spend_clawback_coins", request)
         return response
 
-    async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
-        await self.fetch("delete_unconfirmed_transactions", {"wallet_id": wallet_id})
+    async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
+        await self.fetch("delete_unconfirmed_transactions", request.to_json_dict())
 
-    async def get_current_derivation_index(self) -> str:
-        response = await self.fetch("get_current_derivation_index", {})
-        index = response["index"]
-        return str(index)
+    async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
+        return GetCurrentDerivationIndexResponse.from_json_dict(await self.fetch("get_current_derivation_index", {}))
 
-    async def extend_derivation_index(self, index: int) -> str:
-        response = await self.fetch("extend_derivation_index", {"index": index})
-        updated_index = response["index"]
-        return str(updated_index)
+    async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
+        return ExtendDerivationIndexResponse.from_json_dict(
+            await self.fetch("extend_derivation_index", request.to_json_dict())
+        )
 
     async def get_farmed_amount(self, include_pool_rewards: bool = False) -> dict[str, Any]:
         return await self.fetch("get_farmed_amount", {"include_pool_rewards": include_pool_rewards})
@@ -1122,14 +1121,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("get_notifications", request.to_json_dict())
         return json_deserialize_with_clvm_streamable(response, GetNotificationsResponse)
 
-    async def delete_notifications(self, ids: Optional[Sequence[bytes32]] = None) -> bool:
-        request = {}
-        if ids is not None:
-            request["ids"] = [id.hex() for id in ids]
-        response = await self.fetch("delete_notifications", request)
-        # TODO: casting due to lack of type checked deserialization
-        result = cast(bool, response["success"])
-        return result
+    async def delete_notifications(self, request: DeleteNotifications) -> None:
+        await self.fetch("delete_notifications", request.to_json_dict())
 
     async def send_notification(
         self,
@@ -1155,17 +1148,13 @@ class WalletRpcClient(RpcClient):
         )
         return TransactionRecord.from_json_dict(response["tx"])
 
-    async def sign_message_by_address(self, address: str, message: str) -> tuple[str, str, str]:
-        response = await self.fetch("sign_message_by_address", {"address": address, "message": message})
-        return response["pubkey"], response["signature"], response["signing_mode"]
-
-    async def sign_message_by_id(
-        self, id: str, message: str, is_hex: bool = False, safe_mode: bool = True
-    ) -> tuple[str, str, str]:
-        response = await self.fetch(
-            "sign_message_by_id", {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode}
+    async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
+        return SignMessageByAddressResponse.from_json_dict(
+            await self.fetch("sign_message_by_address", request.to_json_dict())
         )
-        return response["pubkey"], response["signature"], response["signing_mode"]
+
+    async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
+        return SignMessageByIDResponse.from_json_dict(await self.fetch("sign_message_by_id", request.to_json_dict()))
 
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
         return VerifySignatureResponse.from_json_dict(await self.fetch("verify_signature", {**request.to_json_dict()}))

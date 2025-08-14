@@ -41,6 +41,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    DeleteUnconfirmedTransactions,
     GetTransactions,
     GetWalletBalance,
     GetWallets,
@@ -463,7 +464,7 @@ class TestPoolWalletRpc:
         def mempool_empty() -> bool:
             return full_node_api.full_node.mempool_manager.mempool.size() == 0
 
-        await client.delete_unconfirmed_transactions(1)
+        await client.delete_unconfirmed_transactions(DeleteUnconfirmedTransactions(uint32(1)))
         await full_node_api.process_all_wallet_transactions(wallet=wallet)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
