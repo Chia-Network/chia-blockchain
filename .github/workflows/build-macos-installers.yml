@@ -301,6 +301,10 @@ jobs:
             matrix: 14
             runs-on:
               arm: macos-14
+          - name: 15
+            matrix: 15
+            runs-on:
+              arm: macos-15
         arch:
           - name: ARM64
             matrix: arm
@@ -315,6 +319,10 @@ jobs:
               matrix: arm
           - os:
               matrix: 14
+            arch:
+              matrix: intel
+          - os:
+              matrix: 15
             arch:
               matrix: intel
 
