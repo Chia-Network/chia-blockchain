@@ -116,9 +116,26 @@ def test_notifications_delete(capsys: object, get_test_cli_clients: tuple[TestRp
 
     inst_rpc_client = NotificationsDeleteRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    # Try all first
     command_args = ["wallet", "notifications", "delete", FINGERPRINT_ARG, "--all"]
     # these are various things that should be in the output
     assert_list = ["Success!"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {"delete_notifications": [(None,)]}
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+    # Next try specifying IDs
+    command_args = [
+        "wallet",
+        "notifications",
+        "delete",
+        FINGERPRINT_ARG,
+        "--id",
+        bytes32.zeros.hex(),
+        "--id",
+        bytes32.zeros.hex(),
+    ]
+    # these are various things that should be in the output
+    assert_list = ["Success!"]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    expected_calls = {"delete_notifications": [([bytes32.zeros, bytes32.zeros],)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)

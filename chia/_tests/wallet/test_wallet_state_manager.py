@@ -286,6 +286,11 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     expected_state = await get_puzzle_hash_state()
 
+    # Quick test of this RPC
+    assert (
+        await wallet_environments.environments[0].rpc_client.get_current_derivation_index()
+    ).index == expected_state.highest_index
+
     # `create_more_puzzle_hashes`
     # No-op
     result = await wsm.create_more_puzzle_hashes()

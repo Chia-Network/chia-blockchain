@@ -64,9 +64,9 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
 
     inst_rpc_client = TestWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    did_id = encode_puzzle_hash(get_bytes32(1), "nft")
+    nft_id = encode_puzzle_hash(get_bytes32(1), "nft")
     message = b"hello nft world!!"
-    command_args = ["wallet", "did", "sign_message", FINGERPRINT_ARG, f"-m{message.hex()}"]
+    command_args = ["wallet", "nft", "sign_message", FINGERPRINT_ARG, f"-m{message.hex()}"]
     # these are various things that should be in the output
     assert_list = [
         f"Message: {message.hex()}",
@@ -75,9 +75,9 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
         "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
-    run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-i{did_id}"], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-i{nft_id}"], assert_list)
     expected_calls: logType = {
-        "sign_message_by_id": [(did_id, message.hex())],  # xch std
+        "sign_message_by_id": [(nft_id, message.hex())],  # xch std
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
