@@ -1626,13 +1626,14 @@ async def sign_message(
     nft_id: Optional[CliAddress] = None,
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, _, _):
+        response: Union[SignMessageByAddressResponse, SignMessageByIDResponse]
         if addr_type == AddressType.XCH:
             if address is None:
                 print("Address is required for XCH address type.")
                 return
-            response: Union[
-                SignMessageByAddressResponse, SignMessageByIDResponse
-            ] = await wallet_client.sign_message_by_address(SignMessageByAddress(address.original_address, message))
+            response = await wallet_client.sign_message_by_address(
+                SignMessageByAddress(address.original_address, message)
+            )
         elif addr_type == AddressType.DID:
             if did_id is None:
                 print("DID id is required for DID address type.")
