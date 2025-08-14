@@ -39,7 +39,7 @@ jobs:
           - name: macOS
             emoji: 🍎
             runs-on:
-              arm: macos-latest
+              arm: macos-15
               intel: macos-13
             matrix: macos
           - name: Windows

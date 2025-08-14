@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   dependency-review:
+    if: github.repository_owner == 'Chia-Network'
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"

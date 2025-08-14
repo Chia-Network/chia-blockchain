@@ -47,7 +47,7 @@ jobs:
 
   build:
     name: Benchmarks
-    runs-on: benchmark
+    runs-on: ${{ github.repository_owner == 'Chia-Network' && 'benchmark' || 'ubuntu-latest' }}
     needs:
       - setup
     container:
