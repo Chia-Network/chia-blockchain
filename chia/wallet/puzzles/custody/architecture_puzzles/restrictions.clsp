@@ -1,0 +1,37 @@
+(mod
+  (
+    MEMBER_VALIDATORS  ; programs that look at the conditions allowed OUT
+    DPUZ_VALIDATORS  ; programs that validate the delegated puzzle allowed IN
+    INNER_PUZZLE  ; the program that generates the conditions
+    delegated_puzzle_hash
+    member_val_solutions
+    dpuz_val_solutions
+    inner_solution
+  )
+
+  (defun run_validators (VALIDATORS val_solutions thing_to_check)
+    (if VALIDATORS
+        (i  ()  ; just using this as a hook to evaluate all children
+          (a (f VALIDATORS) (c thing_to_check (f val_solutions)))
+          (run_validators (r VALIDATORS) (r val_solutions) thing_to_check)
+        )
+        ; else
+        ()
+    )
+  )
+
+  (defun run_member_validators_and_return (MEMBER_VALIDATORS member_val_solutions inner_conditions)
+    (i  ()  ; just using this as a hook to evaluate all children
+      (run_validators MEMBER_VALIDATORS member_val_solutions inner_conditions)
+      inner_conditions  ; actually returned
+    )
+  )
+
+  (run_member_validators_and_return
+    MEMBER_VALIDATORS
+    member_val_solutions
+    (a INNER_PUZZLE (c delegated_puzzle_hash inner_solution))
+    ; not part of the function call but needs to run
+    (run_validators DPUZ_VALIDATORS dpuz_val_solutions delegated_puzzle_hash)
+  )
+)
