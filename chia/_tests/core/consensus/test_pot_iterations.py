@@ -83,20 +83,22 @@ class TestPotIterations:
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
-    # TODO: todo_v2_plots test this for v2 plots as well
     def test_win_percentage(self):
         """
         Tests that the percentage of blocks won is proportional to the space of each farmer,
         with the assumption that all farmers have access to the same VDF speed.
         """
         farmer_ks = {
-            uint8(32): 100,
-            uint8(33): 100,
-            uint8(34): 100,
-            uint8(35): 100,
-            uint8(36): 100,
+            PlotSize.make_v1(32): 100,
+            PlotSize.make_v1(33): 100,
+            PlotSize.make_v1(34): 100,
+            PlotSize.make_v1(35): 100,
+            PlotSize.make_v1(36): 100,
+            PlotSize.make_v2(28): 100,
+            PlotSize.make_v2(30): 100,
+            PlotSize.make_v2(32): 100,
         }
-        farmer_space = {k: _expected_plot_size(PlotSize.make_v1(k)) * count for k, count in farmer_ks.items()}
+        farmer_space = {k: _expected_plot_size(k) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
@@ -111,9 +113,12 @@ class TestPotIterations:
                 sp_hash = std_hash(slot_index.to_bytes(4, "big") + sp_index.to_bytes(4, "big"))
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
-                        quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
+                        plot_k_val = k.size_v1 if k.size_v2 is None else k.size_v2
+                        quality = std_hash(
+                            slot_index.to_bytes(4, "big") + plot_k_val.to_bytes(1, "big") + bytes(farmer_index)
+                        )
                         required_iters = calculate_iterations_quality(
-                            constants, quality, PlotSize.make_v1(k), difficulty, sp_hash, uint64(100000000), uint32(0)
+                            constants, quality, k, difficulty, sp_hash, uint64(100000000), uint32(0)
                         )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
