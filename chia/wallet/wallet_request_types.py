@@ -30,6 +30,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
@@ -1017,6 +1018,39 @@ class TransactionEndpointResponse(Streamable):
     transactions: list[TransactionRecord]
 
 
+# utility for SendTransaction
+@streamable
+@dataclass(frozen=True)
+class ClawbackPuzzleDecoratorOverride(Streamable):
+    decorator: str
+    clawback_timelock: uint64
+
+    def __post_init__(self) -> None:
+        if self.decorator != PuzzleDecoratorType.CLAWBACK.name:
+            raise ValueError("Invalid clawback puzzle decorator override specified")
+        super().__post_init__()
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransaction(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    address: str = field(default_factory=default_raise)
+    memos: list[str] = field(default_factory=list)
+    # Technically this value was meant to support many types here
+    # However, only one is supported right now and there are no plans to extend
+    # So, as a slight hack, we'll specify that only Clawback is supported
+    puzzle_decorator: Optional[list[ClawbackPuzzleDecoratorOverride]] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
 @streamable
 @dataclass(frozen=True)
 class PushTransactions(TransactionEndpointRequest):
@@ -1452,11 +1486,6 @@ class VCRevokeResponse(TransactionEndpointResponse):
 
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
-@streamable
-@dataclass(frozen=True)
-class SendTransactionResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable

@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     CATSpendResponse,
+    ClawbackPuzzleDecoratorOverride,
     DIDFindLostDID,
     DIDGetDID,
     DIDGetInfo,
@@ -68,6 +69,7 @@ from chia.wallet.wallet_request_types import (
     NFTSetNFTDID,
     NFTTransferNFT,
     RoyaltyAsset,
+    SendTransaction,
     SendTransactionResponse,
     VCAddProofs,
     VCGet,
@@ -327,7 +329,7 @@ async def send(
 ) -> list[TransactionRecord]:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if memo is None:
-            memos = None
+            memos = []
         else:
             memos = [memo]
 
@@ -356,23 +358,29 @@ async def send(
         if typ == WalletType.STANDARD_WALLET:
             print("Submitting transaction...")
             res: Union[CATSpendResponse, SendTransactionResponse] = await wallet_client.send_transaction(
-                wallet_id,
-                final_amount,
-                address.original_address,
-                CMDTXConfigLoader(
+                SendTransaction(
+                    wallet_id=uint32(wallet_id),
+                    amount=final_amount,
+                    address=address.original_address,
+                    fee=fee,
+                    memos=memos,
+                    push=push,
+                    puzzle_decorator=(
+                        [
+                            ClawbackPuzzleDecoratorOverride(
+                                PuzzleDecoratorType.CLAWBACK.name, clawback_timelock=uint64(clawback_time_lock)
+                            )
+                        ]
+                        if clawback_time_lock > 0
+                        else None
+                    ),
+                ),
+                tx_config=CMDTXConfigLoader(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
-                fee,
-                memos,
-                puzzle_decorator_override=(
-                    [{"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}]
-                    if clawback_time_lock > 0
-                    else None
-                ),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
