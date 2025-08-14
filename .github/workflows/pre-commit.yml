@@ -62,6 +62,8 @@ jobs:
           git config --global core.autocrlf false
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: Chia-Network/actions/setup-python@main
         with:
