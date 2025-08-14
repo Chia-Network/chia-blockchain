@@ -159,21 +159,16 @@ class TestPotIterations:
 
 
 def test_expected_plot_size_v1() -> None:
-    last_size = 4800000
+    last_size = 2_400_000
     for k in range(18, 50):
         plot_size = _expected_plot_size(PlotSize.make_v1(k))
-        assert plot_size > last_size
+        assert plot_size > last_size * 2
         last_size = plot_size
 
 
 def test_expected_plot_size_v2() -> None:
-    last_size = 1700000000
-    for k in range(18, 32, 2):
+    last_size = 100_000
+    for k in range(16, 32, 2):
         plot_size = _expected_plot_size(PlotSize.make_v2(k))
-        # TODO: todo_v2_plots remove this special case once we support smaller k-sizes
-        if k < 28:
-            assert plot_size == 0
-            continue
-
-        assert plot_size > last_size
+        assert plot_size > last_size * 2
         last_size = plot_size
