@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
-import aiosqlite
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -19,8 +18,7 @@ class ConsensusStoreProtocol(Protocol):
     the consensus-related data in the blockchain.
     """
 
-    # Block store methods
-    def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]: ...
+    def transaction(self) -> AbstractAsyncContextManager[Any]: ...
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int
@@ -46,7 +44,6 @@ class ConsensusStoreProtocol(Protocol):
     async def get_generator(self, header_hash: bytes32) -> Optional[bytes]: ...
     async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]: ...
 
-    # Coin store methods
     async def get_coin_records(self, names: Collection[bytes32]) -> list[CoinRecord]: ...
     async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]: ...
     async def new_block(
@@ -60,7 +57,6 @@ class ConsensusStoreProtocol(Protocol):
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]: ...
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]: ...
 
-    # Height map methods
     def get_ses_heights(self) -> list[uint32]: ...
     def get_ses(self, height: uint32) -> SubEpochSummary: ...
     def contains_height(self, height: uint32) -> bool: ...

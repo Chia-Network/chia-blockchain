@@ -3,25 +3,23 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager
-from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import aiosqlite
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
 from chia.consensus.block_height_map import BlockHeightMap
-from chia.consensus.consensus_store_protocol import ConsensusStoreProtocol
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2
 
 
 @dataclasses.dataclass
-class ConsensusStoreSQLite3(ConsensusStoreProtocol):
+class ConsensusStoreSQLite3:
     """
     Consensus store that combines block_store, coin_store, and height_map functionality.
     """
@@ -36,7 +34,7 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
         block_store: BlockStore,
         coin_store: CoinStore,
         height_map: BlockHeightMap,
-    ) -> ConsensusStoreSQLite3:
+    ) -> Self:
         """Create a new ConsensusStore instance from existing sub-stores.
 
         This factory does not create sub-stores. Construct BlockStore, CoinStore,
@@ -158,23 +156,12 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
         await self.height_map.maybe_flush()
 
 
-async def build_consensus_store(
-    db_wrapper: DBWrapper2,
-    blockchain_dir: Path,
-    selected_network: Optional[str] = None,
-    *,
-    use_cache: bool = True,
-) -> ConsensusStoreSQLite3:
-    """Convenience utility to construct a ConsensusStore from DB and path.
+if TYPE_CHECKING:
+    # here we validate that ConsensusStoreSQLite3 implements ConsensusStoreProtocol
+    from typing import cast
 
-    This keeps ConsensusStore.create minimal (only accepts sub-stores) while still
-    providing a one-stop helper for callers that need to create the sub-stores.
-    """
-    block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-    coin_store = await CoinStore.create(db_wrapper)
-    height_map = await BlockHeightMap.create(blockchain_dir, db_wrapper, selected_network)
-    return await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
+    from chia.consensus.consensus_store_protocol import ConsensusStoreProtocol
 
+    def _protocol_check(_: ConsensusStoreProtocol): ...
 
-# Backwards-compatible alias
-ConsensusStore = ConsensusStoreSQLite3
+    _protocol_check(cast(ConsensusStoreSQLite3, None))
