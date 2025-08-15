@@ -397,8 +397,6 @@ class TestWalletSimulator:
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == "0x" + merkle_coin.name().hex()
-        with pytest.raises(ValueError):
-            await api_0.spend_clawback_coins({})
 
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
@@ -408,7 +406,6 @@ class TestWalletSimulator:
                 **wallet_environments.tx_config.to_json_dict(),
             }
         )
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
         await wallet_environments.process_pending_states(
@@ -541,7 +538,6 @@ class TestWalletSimulator:
                 **wallet_environments.tx_config.to_json_dict(),
             }
         )
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
         await wallet_environments.process_pending_states(

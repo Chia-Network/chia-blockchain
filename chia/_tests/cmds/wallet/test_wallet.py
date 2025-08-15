@@ -559,7 +559,7 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     inst_rpc_client = ClawbackWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     tx_ids = [get_bytes32(3), get_bytes32(4), get_bytes32(5)]
-    r_tx_ids_hex = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
+    r_tx_ids_hex = ["0x" + get_bytes32(6).hex(), "0x" + get_bytes32(7).hex(), "0x" + get_bytes32(8).hex()]
     command_args = [
         "wallet",
         "clawback",
@@ -573,7 +573,7 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
         "--expires-at",
         "150",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", str(r_tx_ids_hex)])
+    run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", *r_tx_ids_hex])
     # these are various things that should be in the output
     expected_calls: logType = {
         "spend_clawback_coins": [(tx_ids, 500000000000, False, True, test_condition_valid_times)],
