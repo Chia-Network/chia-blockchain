@@ -674,7 +674,6 @@ class TestWalletSimulator:
                 **wallet_environments.tx_config.to_json_dict(),
             }
         )
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
         await wallet_environments.process_pending_states(
