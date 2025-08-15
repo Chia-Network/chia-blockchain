@@ -67,6 +67,8 @@ from chia.wallet.wallet_request_types import (
     RoyaltyAsset,
     SendTransaction,
     SendTransactionResponse,
+    SpendClawbackCoins,
+    SpendClawbackCoinsResponse,
     TakeOfferResponse,
     TransactionRecordWithMetadata,
     WalletInfoResponse,
@@ -539,18 +541,20 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     class ClawbackWalletRpcClient(TestWalletRpcClient):
         async def spend_clawback_coins(
             self,
-            coin_ids: list[bytes32],
-            fee: int = 0,
-            force: bool = False,
-            push: bool = True,
+            request: SpendClawbackCoins,
+            tx_config: TXConfig,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> dict[str, Any]:
-            self.add_to_log("spend_clawback_coins", (coin_ids, fee, force, push, timelock_info))
-            tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
-            return {
-                "transaction_ids": tx_hex_list,
-                "transactions": [STD_TX.to_json_dict()],
-            }
+        ) -> SpendClawbackCoinsResponse:
+            self.add_to_log(
+                "spend_clawback_coins", (request.coin_ids, request.fee, request.force, request.push, timelock_info)
+            )
+            tx_list = [get_bytes32(6), get_bytes32(7), get_bytes32(8)]
+            return SpendClawbackCoinsResponse(
+                transaction_ids=tx_list,
+                transactions=[STD_TX],
+                unsigned_transactions=[STD_UTX],
+            )
 
     inst_rpc_client = ClawbackWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

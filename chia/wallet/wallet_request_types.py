@@ -1148,6 +1148,20 @@ class SendTransactionResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(frozen=True)
+class SpendClawbackCoins(TransactionEndpointRequest):
+    coin_ids: list[bytes32] = field(default_factory=default_raise)
+    batch_size: Optional[uint16] = None
+    force: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class SpendClawbackCoinsResponse(TransactionEndpointResponse):
+    transaction_ids: list[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
 class PushTransactions(TransactionEndpointRequest):
     transactions: list[TransactionRecord] = field(default_factory=default_raise)
     push: Optional[bool] = True

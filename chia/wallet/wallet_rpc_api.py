@@ -249,6 +249,8 @@ from chia.wallet.wallet_request_types import (
     SignMessageByAddressResponse,
     SignMessageByID,
     SignMessageByIDResponse,
+    SpendClawbackCoins,
+    SpendClawbackCoinsResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -1655,12 +1657,13 @@ class WalletRpcApi:
         }
 
     @tx_endpoint(push=True, merge_spends=False)
+    @marshal
     async def spend_clawback_coins(
         self,
-        request: dict[str, Any],
+        request: SpendClawbackCoins,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> SpendClawbackCoinsResponse:
         """Spend clawback coins that were sent (to claw them back) or received (to claim them).
 
         :param coin_ids: list of coin ids to be spent
@@ -1668,21 +1671,19 @@ class WalletRpcApi:
         :param fee: transaction fee in mojos
         :return:
         """
-        if "coin_ids" not in request:
-            raise ValueError("Coin IDs are required.")
-        coin_ids: list[bytes32] = [bytes32.from_hexstr(coin) for coin in request["coin_ids"]]
-        tx_fee: uint64 = uint64(request.get("fee", 0))
         # Get inner puzzle
         coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
-            coin_id_filter=HashFilter.include(coin_ids),
+            coin_id_filter=HashFilter.include(request.coin_ids),
             coin_type=CoinType.CLAWBACK,
             wallet_type=WalletType.STANDARD_WALLET,
             spent_range=UInt32Range(stop=uint32(0)),
         )
 
         coins: dict[Coin, ClawbackMetadata] = {}
-        batch_size = request.get(
-            "batch_size", self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
+        batch_size = (
+            request.batch_size
+            if request.batch_size is not None
+            else self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
         )
         for coin_id, coin_record in coin_records.coin_id_to_record.items():
             try:
@@ -1692,9 +1693,9 @@ class WalletRpcApi:
                 if len(coins) >= batch_size:
                     await self.service.wallet_state_manager.spend_clawback_coins(
                         coins,
-                        tx_fee,
+                        request.fee,
                         action_scope,
-                        request.get("force", False),
+                        request.force,
                         extra_conditions=extra_conditions,
                     )
                     coins = {}
@@ -1703,17 +1704,14 @@ class WalletRpcApi:
         if len(coins) > 0:
             await self.service.wallet_state_manager.spend_clawback_coins(
                 coins,
-                tx_fee,
+                request.fee,
                 action_scope,
-                request.get("force", False),
+                request.force,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "success": True,
-            "transaction_ids": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will fill in the default values here
+        return SpendClawbackCoinsResponse([], [], transaction_ids=[])
 
     @marshal
     async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> Empty:
