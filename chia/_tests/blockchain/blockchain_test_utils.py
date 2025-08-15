@@ -15,14 +15,9 @@ from chia.util.errors import Err
 
 
 async def check_block_store_invariant(bc: Blockchain):
-    db_wrapper = bc.block_store.db_wrapper
-
-    if db_wrapper.db_version == 1:
-        return
-
     in_chain = set()
     max_height = -1
-    async with bc.block_store.transaction() as conn:
+    async with bc.consensus_store.transaction() as conn:
         async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
             rows = await cursor.fetchall()
             for row in rows:
