@@ -44,7 +44,7 @@ from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import GetTransactionMemo, PushTX
+from chia.wallet.wallet_request_types import GetTransactionMemo, PushTX, SendTransaction
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -1429,7 +1429,12 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
 
-    tx = (await env.rpc_client.send_transaction(1, cat_amount_0, addr, wallet_environments.tx_config)).transaction
+    tx = (
+        await env.rpc_client.send_transaction(
+            SendTransaction(wallet_id=uint32(1), amount=cat_amount_0, address=addr, push=True),
+            wallet_environments.tx_config,
+        )
+    ).transaction
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
