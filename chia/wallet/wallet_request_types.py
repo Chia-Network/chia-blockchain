@@ -15,7 +15,7 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
@@ -1006,7 +1006,7 @@ class TransactionEndpointRequest(Streamable):
         return {
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
-            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **self.to_json_dict(_avoid_ban=True),
         }
 

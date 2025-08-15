@@ -2992,7 +2992,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
 
     tx = (
         await client.send_transaction(
-            SendTransaction(wallet_id=uint32(1), amount=uint64(500), address=addr, push=True), DEFAULT_TX_CONFIG
+            SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True), DEFAULT_TX_CONFIG
         )
     ).transaction
     transaction_id = tx.name
