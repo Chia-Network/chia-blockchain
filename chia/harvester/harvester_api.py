@@ -107,47 +107,29 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 )
                 try:
-                    quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                    quality_chains = plot_info.prover.get_quality_chains_for_challenge(sp_challenge_hash)
                 except Exception as e:
-                    self.harvester.log.error(f"Exception fetching qualities for V2 plot {filename}. {e}")
+                    self.harvester.log.error(f"Exception fetching quality chains for V2 plot {filename}. {e}")
                     return None
 
-                if quality_strings is not None and len(quality_strings) > 0:
+                if quality_chains is not None and len(quality_chains) > 0:
                     # Get the appropriate difficulty for this plot
                     difficulty = new_challenge.difficulty
-                    sub_slot_iters = new_challenge.sub_slot_iters
                     if plot_info.pool_contract_puzzle_hash is not None:
                         # Check for pool-specific difficulty
                         for pool_difficulty in new_challenge.pool_difficulties:
                             if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
                                 difficulty = pool_difficulty.difficulty
-                                sub_slot_iters = pool_difficulty.sub_slot_iters
                                 break
 
-                    # Filter qualities that pass the required_iters check (same as V1 flow)
-                    good_qualities = []
-                    sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
+                    # Filter quality chains that pass the required_iters check
 
-                    for quality_str in quality_strings:
-                        required_iters: uint64 = calculate_iterations_quality(
-                            self.harvester.constants,
-                            quality_str,
-                            PlotSize.make_v1(plot_info.prover.get_size()),  # TODO: todo_v2_plots update for V2
-                            difficulty,
-                            new_challenge.sp_hash,
-                            sub_slot_iters,
-                            new_challenge.last_tx_height,
-                        )
-
-                        if required_iters < sp_interval_iters:
-                            good_qualities.append(quality_str)
-
-                    if len(good_qualities) > 0:
+                    if len(quality_chains) > 0:
                         return V2Qualities(
                             new_challenge.challenge_hash,
                             new_challenge.sp_hash,
-                            good_qualities[0].hex() + str(filename.resolve()),
-                            good_qualities,
+                            quality_chains[0].hex() + str(filename.resolve()),
+                            quality_chains,
                             new_challenge.signage_point_index,
                             plot_info.prover.get_size(),
                             difficulty,
@@ -375,7 +357,7 @@ class HarvesterAPI:
                     f" to minimize risk of losing rewards."
                 )
             if v2_qualities is not None:
-                total_v2_qualities_found += len(v2_qualities.qualities)
+                total_v2_qualities_found += len(v2_qualities.quality_chains)
                 msg = make_msg(ProtocolMessageTypes.v2_qualities, v2_qualities)
                 await peer.send_message(msg)
 
@@ -410,6 +392,14 @@ class HarvesterAPI:
                 "time": time_taken,
             },
         )
+
+    # def _derive_quality_string_from_chain(self, quality_chain: bytes) -> bytes32:
+    #     """Derive 32-byte quality string from quality chain (16 * k bits blob)."""
+    #     # TODO: todo_v2_plots implement actual quality string derivation algorithm
+    #     # For now, hash the quality chain to get a 32-byte result
+    #     from chia.util.hash import std_hash
+
+    #     return std_hash(quality_chain)
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:

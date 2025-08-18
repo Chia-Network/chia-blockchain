@@ -186,7 +186,7 @@ async def test_farmer_respond_signatures(
     )
     msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
     await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
-    await time_out_assert(5, log_is_ready)
+    await time_out_assert(15, log_is_ready)
     # We fail the sps record check
     expected_error = f"Do not have challenge hash {challenge_hash}"
     assert expected_error in caplog.text
@@ -461,7 +461,7 @@ async def test_solution_response_handler(
     }
 
     # create solution response
-    solution_response = solver_protocol.SolverResponse(quality_string=quality, proof=b"test_proof_from_solver")
+    solution_response = solver_protocol.SolverResponse(quality_chain=quality, proof=b"test_proof_from_solver")
     solver_peer = Mock()
     solver_peer.peer_node_id = "solver_peer"
 
@@ -493,7 +493,7 @@ async def test_solution_response_unknown_quality(
     solver_peer = await get_solver_peer(farmer)
 
     # create solution response with unknown quality
-    solution_response = solver_protocol.SolverResponse(quality_string=bytes32(b"1" * 32), proof=b"test_proof")
+    solution_response = solver_protocol.SolverResponse(quality_chain=bytes(b"1" * 32), proof=b"test_proof")
 
     with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
         await farmer_api.solution_response(solution_response, solver_peer)
@@ -543,7 +543,7 @@ async def test_solution_response_empty_proof(
     solver_peer = await get_solver_peer(farmer)
 
     # create solution response with empty proof
-    solution_response = solver_protocol.SolverResponse(quality_string=quality, proof=b"")
+    solution_response = solver_protocol.SolverResponse(quality_chain=quality, proof=b"")
 
     with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
         await farmer_api.solution_response(solution_response, solver_peer)

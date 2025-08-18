@@ -69,7 +69,7 @@ class V2Qualities(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str
-    qualities: list[bytes32]
+    quality_chains: list[bytes]  # 16 * k bits blobs instead of 32-byte quality strings
     signage_point_index: uint8
     plot_size: uint8
     difficulty: uint64

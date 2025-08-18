@@ -68,7 +68,7 @@ class Solver:
             self.log.info("Solver service shutdown complete")
 
     def solve(self, info: SolverInfo) -> Optional[bytes]:
-        self.log.debug(f"Solve request: quality={info.quality_string.hex()}")
+        self.log.debug(f"Solve request: quality={info.quality_chain.hex()}")
         # todo implement actualy calling the solver
         return None
 

@@ -499,21 +499,20 @@ class FarmerAPI:
         self.farmer.cache_add_time[quality_data.sp_hash] = uint64(int(time.time()))
 
         self.farmer.log.info(
-            f"Received V2 quality collection with {len(quality_data.qualities)} qualities "
+            f"Received V2 quality collection with {len(quality_data.quality_chains)} quality chains "
             f"for plot {quality_data.plot_identifier[:10]}... from {peer.peer_node_id}"
         )
 
-        # Process each quality through solver service to get full proofs
-        for quality in quality_data.qualities:
+        # Process each quality chain through solver service to get full proofs
+        for quality_chain in quality_data.quality_chains:
             solver_info = SolverInfo(
-                plot_size=quality_data.plot_size,
                 plot_difficulty=quality_data.difficulty,
-                quality_string=quality,
+                quality_chain=quality_chain,
             )
 
             try:
                 # store pending request data for matching with response
-                self.farmer.pending_solver_requests[quality] = {
+                self.farmer.pending_solver_requests[quality_chain] = {
                     "quality_data": quality_data,
                     "peer": peer,
                 }
@@ -521,13 +520,13 @@ class FarmerAPI:
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for quality {quality.hex()[:10]}...")
+                self.farmer.log.debug(f"Sent solve request for quality {quality_chain.hex()[:10]}...")
 
             except Exception as e:
-                self.farmer.log.error(f"Failed to call solver service for quality {quality.hex()[:10]}...: {e}")
+                self.farmer.log.error(f"Failed to call solver service for quality {quality_chain.hex()[:10]}...: {e}")
                 # clean up pending request
-                if quality in self.farmer.pending_solver_requests:
-                    del self.farmer.pending_solver_requests[quality]
+                if quality_chain in self.farmer.pending_solver_requests:
+                    del self.farmer.pending_solver_requests[quality_chain]
 
     @metadata.request()
     async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
@@ -539,20 +538,20 @@ class FarmerAPI:
 
         # find the matching pending request using quality_string
 
-        if response.quality_string not in self.farmer.pending_solver_requests:
-            self.farmer.log.warning(f"Received solver response for unknown quality {response.quality_string}")
+        if response.quality_chain not in self.farmer.pending_solver_requests:
+            self.farmer.log.warning(f"Received solver response for unknown quality {response.quality_chain.hex()}")
             return
 
         # get the original request data
-        request_data = self.farmer.pending_solver_requests.pop(response.quality_string)
+        request_data = self.farmer.pending_solver_requests.pop(response.quality_chain)
         quality_data = request_data["quality_data"]
         original_peer = request_data["peer"]
-        quality = response.quality_string
+        quality = response.quality_chain
 
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(f"Received empty proof from solver for quality {quality.hex()[:10]}...")
+            self.farmer.log.warning(f"Received empty proof from solver for quality {quality.hex()}...")
             return
 
         sp_challenge_hash = quality_data.challenge_hash
@@ -576,6 +575,14 @@ class FarmerAPI:
 
         # process the proof of space
         await self.new_proof_of_space(new_proof_of_space, original_peer)
+
+    def _derive_quality_string_from_chain(self, quality_chain: bytes) -> bytes32:
+        """Derive 32-byte quality string from quality chain (16 * k bits blob)."""
+        # TODO: todo_v2_plots implement actual quality string derivation algorithm
+        # For now, hash the quality chain to get a 32-byte result
+        from chia.util.hash import std_hash
+
+        return std_hash(quality_chain)
 
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:

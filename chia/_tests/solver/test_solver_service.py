@@ -7,13 +7,14 @@ from unittest.mock import patch
 import pytest
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.protocols.solver_protocol import SolverInfo
+from chia.simulator.block_tools import create_block_tools_async
 from chia.simulator.setup_services import setup_solver
 from chia.solver.solver_rpc_client import SolverRpcClient
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
@@ -21,13 +22,14 @@ from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_s
 
 @pytest.mark.anyio
 async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_path: Path) -> None:
-    async with setup_solver(tmp_path, blockchain_constants) as solver_service:
+    bt = await create_block_tools_async(constants=blockchain_constants)
+    async with setup_solver(tmp_path, bt, blockchain_constants) as solver_service:
         solver = solver_service._node
         solver_api = solver_service._api
         assert solver_api.ready() is True
 
         # test solve with real SolverInfo
-        test_info = SolverInfo(plot_size=uint8(32), plot_difficulty=uint64(1500), quality_string=bytes32([42] * 32))
+        test_info = SolverInfo(plot_difficulty=uint64(1500), quality_chain=b"test_quality_chain_42")
 
         # test normal solve operation (stub returns None)
         result = solver.solve(test_info)
@@ -89,7 +91,8 @@ async def test_solver_with_real_blocks_and_signage_points(
     plot_size = pos.size()
     k_size = plot_size.size_v1 if plot_size.size_v1 is not None else plot_size.size_v2
     assert k_size is not None
-    async with setup_solver(tmp_path, blockchain_constants) as solver_service:
+    bt = await create_block_tools_async(constants=blockchain_constants)
+    async with setup_solver(tmp_path, bt, blockchain_constants) as solver_service:
         assert solver_service.rpc_server is not None
         solver_rpc_client = await SolverRpcClient.create(
             self_hostname, solver_service.rpc_server.listen_port, solver_service.root_path, solver_service.config
@@ -105,7 +108,8 @@ async def test_solver_with_real_blocks_and_signage_points(
 async def test_solver_error_handling_and_edge_cases(
     blockchain_constants: ConsensusConstants, self_hostname: str, tmp_path: Path
 ) -> None:
-    async with setup_solver(tmp_path, blockchain_constants) as solver_service:
+    bt = await create_block_tools_async(constants=blockchain_constants)
+    async with setup_solver(tmp_path, bt, blockchain_constants) as solver_service:
         assert solver_service.rpc_server is not None
         solver_rpc_client = await SolverRpcClient.create(
             self_hostname, solver_service.rpc_server.listen_port, solver_service.root_path, solver_service.config
@@ -134,7 +138,7 @@ async def test_solver_error_handling_and_edge_cases(
 
         # test solver handles exception in solve method
         solver = solver_service._node
-        test_info = SolverInfo(plot_size=uint8(32), plot_difficulty=uint64(1000), quality_string=bytes32.zeros)
+        test_info = SolverInfo(plot_difficulty=uint64(1000), quality_chain=b"test_quality_chain_zeros")
 
         with patch.object(solver, "solve", side_effect=RuntimeError("test error")):
             # solver api should handle exceptions gracefully

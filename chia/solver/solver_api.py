@@ -40,23 +40,20 @@ class SolverAPI:
             self.log.error("Solver is not started")
             return None
 
-        self.log.debug(
-            f"Solving quality {request.quality_string.hex()[:10]}... "
-            f"for plot size {request.plot_size} with difficulty {request.plot_difficulty}"
-        )
+        self.log.debug(f"Solving quality {request.quality_chain.hex()}with difficulty {request.plot_difficulty}")
 
         try:
             proof = self.solver.solve(request)
             if proof is None:
-                self.log.warning(f"Solver returned no proof for quality {request.quality_string.hex()[:10]}...")
+                self.log.warning(f"Solver returned no proof for quality {request.quality_chain.hex()}")
                 return None
 
             self.log.debug(f"Successfully solved quality, returning {len(proof)} byte proof")
             return make_msg(
                 ProtocolMessageTypes.solution_response,
-                SolverResponse(proof=proof, quality_string=request.quality_string),
+                SolverResponse(proof=proof, quality_chain=request.quality_chain),
             )
 
         except Exception as e:
-            self.log.error(f"Error solving quality {request.quality_string.hex()[:10]}...: {e}")
+            self.log.error(f"Error solving quality {request.quality_chain.hex()}: {e}")
             return None

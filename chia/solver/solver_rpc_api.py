@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint64
 
 from chia.protocols.solver_protocol import SolverInfo
 from chia.rpc.rpc_server import Endpoint, EndpointResult
@@ -32,15 +31,13 @@ class SolverRpcApi:
 
     async def solve(self, request: dict[str, Any]) -> EndpointResult:
         # extract all required fields from request
-        quality_string = request["quality_string"]
-        plot_size = request.get("plot_size", 32)  # todo default ?
+        quality_chain = request["quality_chain"]
         plot_difficulty = request.get("plot_difficulty", 1000)  # todo default ?
 
         # create complete SolverInfo object with all provided data
         solver_info = SolverInfo(
-            plot_size=uint8(plot_size),
             plot_difficulty=uint64(plot_difficulty),
-            quality_string=bytes32.from_hexstr(quality_string),
+            quality_chain=bytes.fromhex(quality_chain),
         )
 
         proof = self.service.solve(solver_info)
