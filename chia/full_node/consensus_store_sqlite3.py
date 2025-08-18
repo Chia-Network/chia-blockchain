@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Collection
+from collections.abc import AsyncIterator, Collection
 from contextlib import AbstractAsyncContextManager
-from typing import Any, AsyncIterator, Optional, TYPE_CHECKING
 from types import TracebackType
+from typing import TYPE_CHECKING, Any, Optional
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -74,7 +74,7 @@ class ConsensusStoreSQLite3:
         block_store: BlockStore,
         coin_store: CoinStore,
         height_map: BlockHeightMap,
-    ) -> "ConsensusStoreSQLite3":
+    ) -> ConsensusStoreSQLite3:
         """Create a new ConsensusStore instance from existing sub-stores.
 
         This factory does not create sub-stores. Construct BlockStore, CoinStore,
@@ -212,6 +212,7 @@ class ConsensusStoreSQLite3:
 
 if TYPE_CHECKING:
     from typing import cast
+
     from chia.consensus.consensus_store_protocol import ConsensusStoreProtocol
 
     def _protocol_check(o: ConsensusStoreProtocol) -> None: ...
