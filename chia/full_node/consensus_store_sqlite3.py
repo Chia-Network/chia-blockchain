@@ -65,7 +65,7 @@ class ConsensusStoreSQLite3:
 
     # Writer context and writer facade for transactional writes (re-entrant via depth counter)
     _writer_ctx: Optional[AbstractAsyncContextManager[Any]] = None
-    _writer: Optional[Any] = None
+    _writer: Optional[ConsensusStoreSQLite3Writer] = None
     _txn_depth: int = 0
 
     @classmethod
@@ -90,7 +90,7 @@ class ConsensusStoreSQLite3:
     async def __aenter__(self) -> ConsensusStoreSQLite3Writer:
         # Re-entrant async context manager:
         # Begin a transaction only at the outermost level. CoinStore shares the same DB.
-        if self._txn_depth == 0:
+        if self._writer is None:
             self._writer_ctx = self.block_store.transaction()
             await self._writer_ctx.__aenter__()
             # Create writer facade bound to this transaction
