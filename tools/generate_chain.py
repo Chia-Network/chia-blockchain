@@ -79,7 +79,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
     root_path = Path("./test-chain").resolve()
     root_path.mkdir(parents=True, exist_ok=True)
     with TempKeyring() as keychain:
-        bt = create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain)
+        tc = test_constants.replace(HARD_FORK_HEIGHT=uint32(0))
+        bt = create_block_tools(constants=tc, root_path=root_path, keychain=keychain)
         initialize_logging(
             "generate_chain", {"log_level": "DEBUG", "log_stdout": False, "log_syslog": False}, root_path=root_path
         )
@@ -143,8 +144,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         farmer_reward_puzzle_hash=farmer_puzzlehash,
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
-                        include_transactions=True,
-                        block_fillrate=fill_rate,
+                        include_transactions=2,
                         block_refs=block_references,
                     )
                     prev_tx_block = b
@@ -157,8 +157,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                     num_additions += bt.prev_num_additions
 
                     if b.transactions_info:
-                        actual_fill_rate = b.transactions_info.cost / test_constants.MAX_BLOCK_COST_CLVM
-                        if b.transactions_info.cost > test_constants.MAX_BLOCK_COST_CLVM:
+                        actual_fill_rate = b.transactions_info.cost / tc.MAX_BLOCK_COST_CLVM
+                        if b.transactions_info.cost > tc.MAX_BLOCK_COST_CLVM:
                             print(f"COST EXCEEDED: {b.transactions_info.cost}")
                     else:
                         actual_fill_rate = 0

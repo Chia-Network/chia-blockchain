@@ -370,10 +370,9 @@ class BlockTools:
         *,
         prev_tx_height: uint32,
         dummy_block_references: bool,
-        include_transactions: bool,
+        include_transactions: int,
         transaction_data: Optional[SpendBundle],
         block_refs: list[uint32],
-        block_fillrate: Optional[int] = None,
     ) -> Optional[NewBlockGenerator]:
         # we don't know if the new block will be a transaction
         # block or not, so even though we prepare a block
@@ -411,7 +410,7 @@ class BlockTools:
                 cost,
             )
 
-        if include_transactions and block_fillrate is None:
+        if include_transactions == 1:  # some transactions mode
             # if the caller did not pass in specific
             # transactions, this parameter means we just want
             # some transactions
@@ -433,17 +432,17 @@ class BlockTools:
                 removals,
                 cost,
             )
-        if include_transactions and block_fillrate is not None:
+        elif include_transactions == 2:  # block fill mode
             # if the caller passed in a fill rate, we want to fill blocks up to that fill percentage
             # we also use BlockBuilder to compress these transactions as well.
             assert wallet is not None
             assert rng is not None
             assert curr.height >= self.constants.HARD_FORK_HEIGHT  # we need new compression for BlockBuilder
             # function constants
-            adjusted_max_cost: uint64 = uint64(self.constants.MAX_BLOCK_COST_CLVM * block_fillrate / 100)
+            adjusted_max_cost: uint64 = uint64(self.constants.MAX_BLOCK_COST_CLVM)
             static_cost: uint64 = uint64(4839648)  # cond + exec cost per sb
-            static_comp_cost: uint64 = uint64(7684000)  # byte cost per sb after compression
-            max_batch_size: int = int(1400 * 0.10 * block_fillrate / 100)  # 10% of the way done with the block
+            # first number is the avg byte cost of a spend bundle.
+            cost_per_sb: uint64 = uint64(7684000 + static_cost)
 
             # start building the block
             avail_coins: set[Coin] = available_coins.copy()  # don't modify the original set
@@ -457,8 +456,7 @@ class BlockTools:
             batch_removals: list[Coin] = []
             batch_additions: list[Coin] = []
             while len(avail_coins) > 0:
-                val_after_next_sb = (len(batch_bundles) + 1) * static_comp_cost + total_cost
-                if val_after_next_sb > adjusted_max_cost or len(batch_bundles) == max_batch_size:
+                if len(batch_bundles) * cost_per_sb + total_cost > adjusted_max_cost:
                     # max batch size used to allow the cost to better match reality
                     added, block_full = builder.add_spend_bundles(
                         batch_bundles, uint64(static_cost * len(batch_bundles)), self.constants
@@ -795,15 +793,12 @@ class BlockTools:
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
         dummy_block_references: bool = False,
-        include_transactions: bool = False,
+        include_transactions: int = 0,
         skip_overflow: bool = False,
         min_signage_point: int = -1,
-        block_fillrate: Optional[int] = None,
     ) -> list[FullBlock]:
         # make a copy to not have different invocations affect each other
         block_refs = block_refs.copy()
-        if block_fillrate is not None and include_transactions is False:
-            raise ValueError("block_fillrate can only be used when include_transactions is True")
         if include_transactions and transaction_data is not None:
             raise ValueError("Cannot specify transaction_data when include_transactions is True")
         assert num_blocks > 0
@@ -1018,7 +1013,6 @@ class BlockTools:
                                 transaction_data=transaction_data,
                                 include_transactions=include_transactions,
                                 block_refs=block_refs,
-                                block_fillrate=block_fillrate,
                             )
                         else:
                             new_gen = new_gen_cache
@@ -1321,7 +1315,6 @@ class BlockTools:
                                 transaction_data=transaction_data,
                                 include_transactions=include_transactions,
                                 block_refs=block_refs,
-                                block_fillrate=block_fillrate,
                             )
                         else:
                             new_gen = new_gen_cache
