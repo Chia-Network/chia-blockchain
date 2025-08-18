@@ -896,7 +896,7 @@ async def farmer_one_harvester_solver(
         bt,
     ):
         farmer_peer = UnresolvedPeerInfo(bt.config["self_hostname"], farmer_service._server.get_port())
-        async with setup_solver(tmp_path / "solver", bt.constants, farmer_peers={farmer_peer}) as solver_service:
+        async with setup_solver(tmp_path / "solver", bt, bt.constants, farmer_peer=farmer_peer) as solver_service:
             yield harvester_services, farmer_service, solver_service, bt
 
 

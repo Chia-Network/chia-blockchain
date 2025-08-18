@@ -42,6 +42,16 @@ async def get_harvester_peer(farmer: Farmer) -> Any:
     return farmer.server.get_connections(NodeType.HARVESTER)[0]
 
 
+async def get_solver_peer(farmer: Farmer) -> Any:
+    """wait for solver connection and return the peer"""
+
+    def has_solver_connection() -> bool:
+        return len(farmer.server.get_connections(NodeType.SOLVER)) > 0
+
+    await time_out_assert(60, has_solver_connection, True)
+    return farmer.server.get_connections(NodeType.SOLVER)[0]
+
+
 def farmer_is_started(farmer: Farmer) -> bool:
     return farmer.started
 
@@ -326,7 +336,7 @@ async def test_v2_qualities_new_sp_hash(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        qualities=[bytes32(b"3" * 32)],
+        quality_chains=[b"test_quality_chain_1"],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         difficulty=uint64(1000),
@@ -356,7 +366,7 @@ async def test_v2_qualities_missing_sp_hash(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        qualities=[bytes32(b"3" * 32)],
+        quality_chains=[b"test_quality_chain_1"],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         difficulty=uint64(1000),
@@ -399,7 +409,7 @@ async def test_v2_qualities_with_existing_sp(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        qualities=[bytes32(b"3" * 32), bytes32(b"5" * 32)],
+        quality_chains=[b"test_quality_chain_1", b"test_quality_chain_2"],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         difficulty=uint64(1000),
@@ -420,7 +430,7 @@ async def test_v2_qualities_with_existing_sp(
 async def test_solution_response_handler(
     farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
 ) -> None:
-    _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
+    _, farmer_service, _, _ = farmer_one_harvester_solver
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
 
@@ -433,7 +443,7 @@ async def test_solution_response_handler(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        qualities=[quality],
+        quality_chains=[b"test_quality_chain_for_quality"],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         difficulty=uint64(1000),
@@ -442,8 +452,7 @@ async def test_solution_response_handler(
         plot_public_key=G1Element(),
     )
 
-    harvester_peer = Mock()
-    harvester_peer.peer_node_id = "harvester_peer"
+    harvester_peer = await get_harvester_peer(farmer)
 
     # manually add pending request
     farmer.pending_solver_requests[quality] = {
@@ -469,4 +478,127 @@ async def test_solution_response_handler(
         assert original_peer == harvester_peer
 
         # verify pending request was removed
+        assert quality not in farmer.pending_solver_requests
+
+
+@pytest.mark.anyio
+async def test_solution_response_unknown_quality(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    # get real solver peer connection
+    solver_peer = await get_solver_peer(farmer)
+
+    # create solution response with unknown quality
+    solution_response = solver_protocol.SolverResponse(quality_string=bytes32(b"1" * 32), proof=b"test_proof")
+
+    with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
+        await farmer_api.solution_response(solution_response, solver_peer)
+        # verify new_proof_of_space was NOT called
+        mock_new_proof.assert_not_called()
+        # verify pending requests unchanged
+        assert len(farmer.pending_solver_requests) == 0
+
+
+@pytest.mark.anyio
+async def test_solution_response_empty_proof(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    """Test solution_response with empty proof (line 555-556)."""
+    _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    # set up a pending request
+    quality = bytes32(b"3" * 32)
+    sp_hash = bytes32(b"1" * 32)
+    challenge_hash = bytes32(b"2" * 32)
+
+    v2_qualities = harvester_protocol.V2Qualities(
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        quality_chains=[b"test_quality_chain_for_quality"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        difficulty=uint64(1000),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = Mock()
+    harvester_peer.peer_node_id = "harvester_peer"
+
+    # manually add pending request
+    farmer.pending_solver_requests[quality] = {
+        "quality_data": v2_qualities,
+        "peer": harvester_peer,
+    }
+
+    # get real solver peer connection
+    solver_peer = await get_solver_peer(farmer)
+
+    # create solution response with empty proof
+    solution_response = solver_protocol.SolverResponse(quality_string=quality, proof=b"")
+
+    with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
+        await farmer_api.solution_response(solution_response, solver_peer)
+
+        # verify new_proof_of_space was NOT called
+        mock_new_proof.assert_not_called()
+
+        # verify pending request was removed (cleanup still happens)
+        assert quality not in farmer.pending_solver_requests
+
+
+@pytest.mark.anyio
+async def test_v2_qualities_solver_exception(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    """Test v2_qualities with solver service exception (lines 526-527, 529-530)."""
+    _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    sp_hash = bytes32(b"1" * 32)
+    challenge_hash = bytes32(b"2" * 32)
+
+    sp = farmer_protocol.NewSignagePoint(
+        challenge_hash=challenge_hash,
+        challenge_chain_sp=sp_hash,
+        reward_chain_sp=std_hash(b"1"),
+        difficulty=uint64(1000),
+        sub_slot_iters=uint64(1000),
+        signage_point_index=uint8(0),
+        peak_height=uint32(1),
+        last_tx_height=uint32(0),
+    )
+
+    farmer.sps[sp_hash] = [sp]
+
+    v2_qualities = harvester_protocol.V2Qualities(
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        quality_chains=[b"test_quality_chain_1"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        difficulty=uint64(1000),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = await get_harvester_peer(farmer)
+
+    # Mock send_to_all to raise an exception
+    with unittest.mock.patch.object(farmer.server, "send_to_all", side_effect=Exception("Solver connection failed")):
+        await farmer_api.v2_qualities(v2_qualities, harvester_peer)
+
+        # verify pending request was cleaned up after exception
+        quality = bytes32(b"3" * 32)
         assert quality not in farmer.pending_solver_requests
