@@ -21,7 +21,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import PushTransactions
+from chia.wallet.wallet_request_types import ExtendDerivationIndex, PushTransactions
 from chia.wallet.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -286,6 +286,11 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     expected_state = await get_puzzle_hash_state()
 
+    # Quick test of this RPC
+    assert (
+        await wallet_environments.environments[0].rpc_client.get_current_derivation_index()
+    ).index == expected_state.highest_index
+
     # `create_more_puzzle_hashes`
     # No-op
     result = await wsm.create_more_puzzle_hashes()
@@ -420,7 +425,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
             (0,),
         )
     with pytest.raises(ValueError):
-        await rpc_client.extend_derivation_index(0)
+        await rpc_client.extend_derivation_index(ExtendDerivationIndex(uint32(0)))
 
     # Reset to a normal state
     await wsm.puzzle_store.delete_wallet(wsm.main_wallet.id())
@@ -431,15 +436,17 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test an index already created
     with pytest.raises(ValueError):
-        await rpc_client.extend_derivation_index(0)
+        await rpc_client.extend_derivation_index(ExtendDerivationIndex(uint32(0)))
 
     # Test an index too far in the future
     with pytest.raises(ValueError):
-        await rpc_client.extend_derivation_index(MAX_DERIVATION_INDEX_DELTA + expected_state.highest_index + 1)
+        await rpc_client.extend_derivation_index(
+            ExtendDerivationIndex(uint32(MAX_DERIVATION_INDEX_DELTA + expected_state.highest_index + 1))
+        )
 
     # Test the actual functionality
-    assert await rpc_client.extend_derivation_index(expected_state.highest_index + 5) == str(
-        expected_state.highest_index + 5
-    )
+    assert (
+        await rpc_client.extend_derivation_index(ExtendDerivationIndex(uint32(expected_state.highest_index + 5)))
+    ).index == expected_state.highest_index + 5
     expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
     assert await get_puzzle_hash_state() == expected_state
