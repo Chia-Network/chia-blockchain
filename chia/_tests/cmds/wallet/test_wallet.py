@@ -45,8 +45,14 @@ from chia.wallet.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
+    DeleteUnconfirmedTransactions,
+    ExtendDerivationIndex,
+    ExtendDerivationIndexResponse,
     FungibleAsset,
+    GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetTransaction,
     GetTransactions,
     GetTransactionsResponse,
@@ -493,11 +499,11 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
 
     # set RPC Client
     class GetAddressWalletRpcClient(TestWalletRpcClient):
-        async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-            self.add_to_log("get_next_address", (wallet_id, new_address))
-            if new_address:
-                return encode_puzzle_hash(get_bytes32(3), "xch")
-            return encode_puzzle_hash(get_bytes32(4), "xch")
+        async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+            self.add_to_log("get_next_address", (request.wallet_id, request.new_address))
+            if request.new_address:
+                return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(3), "xch"))
+            return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(4), "xch"))
 
     inst_rpc_client = GetAddressWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -569,8 +575,8 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
 
     # set RPC Client
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
-        async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
-            self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
+        async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
+            self.add_to_log("delete_unconfirmed_transactions", (request.wallet_id,))
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -594,9 +600,9 @@ def test_get_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRp
 
     # set RPC Client
     class GetDerivationIndexRpcClient(TestWalletRpcClient):
-        async def get_current_derivation_index(self) -> str:
+        async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
             self.add_to_log("get_current_derivation_index", ())
-            return str(520)
+            return GetCurrentDerivationIndexResponse(uint32(520))
 
     inst_rpc_client = GetDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -625,8 +631,9 @@ def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     # these are various things that should be in the output
     assert_list = [
         f"Message: {message.hex()}",
-        f"Public Key: {bytes([3] * 48).hex()}",
-        f"Signature: {bytes([6] * 576).hex()}",
+        "Public Key: b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4",
+        "Signature: c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-a{xch_addr}"], assert_list)
@@ -641,9 +648,9 @@ def test_update_derivation_index(capsys: object, get_test_cli_clients: tuple[Tes
 
     # set RPC Client
     class UpdateDerivationIndexRpcClient(TestWalletRpcClient):
-        async def extend_derivation_index(self, index: int) -> str:
-            self.add_to_log("extend_derivation_index", (index,))
-            return str(index)
+        async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
+            self.add_to_log("extend_derivation_index", (request.index,))
+            return ExtendDerivationIndexResponse(request.index)
 
     inst_rpc_client = UpdateDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

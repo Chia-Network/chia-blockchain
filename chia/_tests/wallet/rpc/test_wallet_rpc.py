@@ -108,6 +108,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoins,
     DefaultCAT,
     DeleteKey,
+    DeleteNotifications,
+    DeleteUnconfirmedTransactions,
     DIDCreateBackupFile,
     DIDGetDID,
     DIDGetMetadata,
@@ -118,11 +120,13 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDID,
     DIDUpdateMetadata,
     FungibleAsset,
+    GetNextAddress,
     GetNotifications,
     GetPrivateKey,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTransaction,
+    GetTransactionCount,
     GetTransactions,
     GetWalletBalance,
     GetWalletBalances,
@@ -194,11 +198,11 @@ async def farm_transaction(
 
 
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1) -> int:
-    wallet_id = 1
-    initial_balances = (
-        await wallet_bundle.rpc_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
-    ).wallet_balance
-    ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(wallet_id, True))
+    wallet_id = uint32(1)
+    initial_balances = (await wallet_bundle.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))).wallet_balance
+    ph: bytes32 = decode_puzzle_hash(
+        (await wallet_bundle.rpc_client.get_next_address(GetNextAddress(wallet_id, True))).address
+    )
     generated_funds = 0
     for _ in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1096,14 +1100,16 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
 
     all_transactions = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
     assert len(all_transactions) > 0
-    transaction_count = await client.get_transaction_count(1)
-    assert transaction_count == len(all_transactions)
-    transaction_count = await client.get_transaction_count(1, confirmed=False)
-    assert transaction_count == 0
-    transaction_count = await client.get_transaction_count(
-        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+    transaction_count_response = await client.get_transaction_count(GetTransactionCount(uint32(1)))
+    assert transaction_count_response.count == len(all_transactions)
+    transaction_count_response = await client.get_transaction_count(GetTransactionCount(uint32(1), confirmed=False))
+    assert transaction_count_response.count == 0
+    transaction_count_response = await client.get_transaction_count(
+        GetTransactionCount(
+            uint32(1), type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+        )
     )
-    assert transaction_count == 0
+    assert transaction_count_response.count == 0
 
 
 @pytest.mark.parametrize(
@@ -1210,8 +1216,8 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         ]
     )
 
-    addr_0 = await env_0.rpc_client.get_next_address(cat_0_id, False)
-    addr_1 = await env_1.rpc_client.get_next_address(cat_1_id, False)
+    addr_0 = (await env_0.rpc_client.get_next_address(GetNextAddress(cat_0_id, False))).address
+    addr_1 = (await env_1.rpc_client.get_next_address(GetNextAddress(cat_1_id, False))).address
 
     assert addr_0 != addr_1
 
@@ -1417,7 +1423,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await env_2.rpc_client.create_wallet_for_existing_cat(cat_asset_id)
-    wallet_2_address = await env_2.rpc_client.get_next_address(cat_wallet_id, False)
+    wallet_2_address = (await env_2.rpc_client.get_next_address(GetNextAddress(cat_wallet_id, False))).address
     adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
     tx_res = (
         await env_1.rpc_client.send_transaction_multi(
@@ -2146,7 +2152,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
 
-    address = await client.get_next_address(1, True)
+    address = (await client.get_next_address(GetNextAddress(uint32(1), True))).address
     assert len(address) > 10
 
     pks = (await client.get_public_keys()).pk_fingerprints
@@ -2165,7 +2171,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     await time_out_assert(20, tx_in_mempool, True, client, created_tx.name)
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
-    await client.delete_unconfirmed_transactions(1)
+    await client.delete_unconfirmed_transactions(DeleteUnconfirmedTransactions(uint32(1)))
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
     sk_resp = await client.get_private_key(GetPrivateKey(pks[0]))
@@ -2554,7 +2560,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, uint32(1)))).notifications
     assert [] == (await client_2.get_notifications(GetNotifications(None, uint32(1), None))).notifications
     assert [notification] == (await client_2.get_notifications(GetNotifications(None, None, None))).notifications
-    assert await client_2.delete_notifications()
+    await client_2.delete_notifications(DeleteNotifications())
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -2576,7 +2582,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
-    assert await client_2.delete_notifications([notification.id])
+    await client_2.delete_notifications(DeleteNotifications([notification.id]))
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
 
@@ -2790,7 +2796,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
 
     nft_wallet = await wc.create_new_nft_wallet(None)
     nft_wallet_id = nft_wallet["wallet_id"]
-    address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
+    address = (await wc.get_next_address(GetNextAddress(env.wallet_1.wallet.id(), True))).address
     await wc.mint_nft(
         request=NFTMintNFTRequest(
             wallet_id=nft_wallet_id,
