@@ -13,7 +13,7 @@ class ProtocolMessageTypes(Enum):
     new_proof_of_space = 5
     request_signatures = 6
     respond_signatures = 7
-    v2_qualities = 110
+    v2_quality_chains = 110
 
     # Farmer protocol (farmer <-> full_node)
     new_signage_point = 8

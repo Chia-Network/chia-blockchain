@@ -24,7 +24,7 @@ from chia.protocols.harvester_protocol import (
     PoolDifficulty,
     SignatureRequestSourceData,
     SigningDataKind,
-    V2Qualities,
+    V2QualityChains,
 )
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
@@ -481,10 +481,10 @@ class FarmerAPI:
                 return
 
     @metadata.request(peer_required=True)
-    async def v2_qualities(self, quality_data: V2Qualities, peer: WSChiaConnection) -> None:
+    async def v2_quality_chains(self, quality_data: V2QualityChains, peer: WSChiaConnection) -> None:
         """
-        This is a response from the harvester for V2 plots, containing only qualities.
-        We store these qualities and will later use solver service to generate proofs when needed.
+        This is a response from the harvester for V2 plots, containing only quality chains (partial proof bytes).
+        We send these to the solver service and wait for a response with the full proof.
         """
         if quality_data.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[quality_data.sp_hash] = 0

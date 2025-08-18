@@ -19,7 +19,7 @@ from chia.plotting.prover import PlotVersion
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot, PlotSyncResponse, V2Qualities
+from chia.protocols.harvester_protocol import Plot, PlotSyncResponse, V2QualityChains
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -98,8 +98,8 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup_v2_qualities(filename: Path, plot_info: PlotInfo) -> Optional[V2Qualities]:
-            # Uses the V2 Prover object to lookup qualities only. No full proofs generated.
+        def blocking_lookup_v2_quality_chains(filename: Path, plot_info: PlotInfo) -> Optional[V2QualityChains]:
+            # Uses the V2 Prover object to lookup qualitie_chains (partial proofs).
             try:
                 plot_id = plot_info.prover.get_id()
                 sp_challenge_hash = calculate_pos_challenge(
@@ -128,7 +128,7 @@ class HarvesterAPI:
                     if len(quality_chains) > 0:
                         size = plot_info.prover.get_size().size_v2
                         assert size is not None
-                        return V2Qualities(
+                        return V2QualityChains(
                             new_challenge.challenge_hash,
                             new_challenge.sp_hash,
                             quality_chains[0].hex() + str(filename.resolve()),
@@ -263,14 +263,6 @@ class HarvesterAPI:
                 self.harvester.log.error(f"Unknown error: {e}")
                 return []
 
-        async def lookup_v2_qualities(filename: Path, plot_info: PlotInfo) -> tuple[Path, Optional[V2Qualities]]:
-            # Executes V2 quality lookup in a thread pool
-            if self.harvester._shut_down:
-                return filename, None
-            qualities: Optional[V2Qualities] = await loop.run_in_executor(
-                self.harvester.executor, blocking_lookup_v2_qualities, filename, plot_info
-            )
-            return filename, qualities
 
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
@@ -309,7 +301,11 @@ class HarvesterAPI:
                 total += 1
                 if try_plot_info.prover.get_version() == PlotVersion.V2:
                     # TODO: todo_v2_plots need to check v2 filter
-                    v2_awaitables.append(lookup_v2_qualities(try_plot_filename, try_plot_info))
+                    v2_awaitables.append(
+                        loop.run_in_executor(
+                            self.harvester.executor, blocking_lookup_v2_quality_chains, try_plot_filename, try_plot_info
+                        )
+                    )
                     passed += 1
                 else:
                     filter_prefix_bits = calculate_prefix_bits(
@@ -330,7 +326,7 @@ class HarvesterAPI:
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.monotonic() - start
         total_proofs_found = 0
-        total_v2_qualities_found = 0
+        total_v2_quality_chains_found = 0
 
         # Process V1 plot responses (existing flow)
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
@@ -350,17 +346,11 @@ class HarvesterAPI:
                 await peer.send_message(msg)
 
         # Process V2 plot quality collections (new flow)
-        for filename_quality_awaitable in asyncio.as_completed(v2_awaitables):
-            filename, v2_qualities = await filename_quality_awaitable
-            time_taken = time.monotonic() - start
-            if time_taken > 8:
-                self.harvester.log.warning(
-                    f"Looking up V2 qualities on {filename} took: {time_taken}. This should be below 8 seconds"
-                    f" to minimize risk of losing rewards."
-                )
-            if v2_qualities is not None:
-                total_v2_qualities_found += len(v2_qualities.quality_chains)
-                msg = make_msg(ProtocolMessageTypes.v2_qualities, v2_qualities)
+        for quality_awaitable in asyncio.as_completed(v2_awaitables):
+            v2_quality_chains = await quality_awaitable
+            if v2_quality_chains is not None:
+                total_v2_quality_chains_found += len(v2_quality_chains.quality_chains)
+                msg = make_msg(ProtocolMessageTypes.v2_quality_chains, v2_quality_chains)
                 await peer.send_message(msg)
 
         now = uint64(time.time())
@@ -380,7 +370,7 @@ class HarvesterAPI:
         self.harvester.log.info(
             f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]} ..."
             f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge"
-            f"Found {total_proofs_found} V1 proofs and {total_v2_qualities_found} V2 qualities."
+            f"Found {total_proofs_found} V1 proofs and {total_v2_quality_chains_found} V2 qualities."
             f" Time: {time_taken:.5f} s. Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
@@ -389,7 +379,7 @@ class HarvesterAPI:
                 "challenge_hash": new_challenge.challenge_hash.hex(),
                 "total_plots": self.harvester.plot_manager.plot_count(),
                 "found_proofs": total_proofs_found,
-                "found_v2_qualities": total_v2_qualities_found,
+                "found_v2_quality_chains": total_v2_quality_chains_found,
                 "eligible_plots": len(awaitables) + len(v2_awaitables),
                 "time": time_taken,
             },

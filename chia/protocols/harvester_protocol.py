@@ -65,7 +65,7 @@ class NewProofOfSpace(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class V2Qualities(Streamable):
+class V2QualityChains(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str

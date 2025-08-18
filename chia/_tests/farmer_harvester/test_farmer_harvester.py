@@ -326,7 +326,7 @@ async def test_harvester_has_no_server(
 
 
 @pytest.mark.anyio
-async def test_v2_qualities_new_sp_hash(
+async def test_v2_quality_chains_new_sp_hash(
     farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
 ) -> None:
     _, farmer_service, _solver_service, _bt = farmer_one_harvester_solver
@@ -334,7 +334,7 @@ async def test_v2_qualities_new_sp_hash(
     farmer = farmer_api.farmer
 
     sp_hash = bytes32(b"1" * 32)
-    v2_qualities = harvester_protocol.V2Qualities(
+    v2_quality_chains = harvester_protocol.V2QualityChains(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
@@ -348,7 +348,7 @@ async def test_v2_qualities_new_sp_hash(
     )
 
     harvester_peer = await get_harvester_peer(farmer)
-    await farmer_api.v2_qualities(v2_qualities, harvester_peer)
+    await farmer_api.v2_quality_chains(v2_quality_chains, harvester_peer)
 
     assert sp_hash in farmer.number_of_responses
     assert farmer.number_of_responses[sp_hash] == 0
@@ -356,7 +356,7 @@ async def test_v2_qualities_new_sp_hash(
 
 
 @pytest.mark.anyio
-async def test_v2_qualities_missing_sp_hash(
+async def test_v2_quality_chains_missing_sp_hash(
     caplog: pytest.LogCaptureFixture,
     farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
 ) -> None:
@@ -364,7 +364,7 @@ async def test_v2_qualities_missing_sp_hash(
     farmer_api = farmer_service._api
 
     sp_hash = bytes32(b"1" * 32)
-    v2_qualities = harvester_protocol.V2Qualities(
+    v2_quality_chains = harvester_protocol.V2QualityChains(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
@@ -378,13 +378,13 @@ async def test_v2_qualities_missing_sp_hash(
     )
 
     harvester_peer = await get_harvester_peer(farmer_api.farmer)
-    await farmer_api.v2_qualities(v2_qualities, harvester_peer)
+    await farmer_api.v2_quality_chains(v2_quality_chains, harvester_peer)
 
     assert f"Received V2 quality collection for a signage point that we do not have {sp_hash}" in caplog.text
 
 
 @pytest.mark.anyio
-async def test_v2_qualities_with_existing_sp(
+async def test_v2_quality_chains_with_existing_sp(
     farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
 ) -> None:
     _, farmer_service, _, _ = farmer_one_harvester_solver
@@ -407,7 +407,7 @@ async def test_v2_qualities_with_existing_sp(
 
     farmer.sps[sp_hash] = [sp]
 
-    v2_qualities = harvester_protocol.V2Qualities(
+    v2_quality_chains = harvester_protocol.V2QualityChains(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
@@ -421,7 +421,7 @@ async def test_v2_qualities_with_existing_sp(
     )
 
     harvester_peer = await get_harvester_peer(farmer)
-    await farmer_api.v2_qualities(v2_qualities, harvester_peer)
+    await farmer_api.v2_quality_chains(v2_quality_chains, harvester_peer)
 
     # should store 2 pending requests (one per quality)
     assert len(farmer.pending_solver_requests) == 2
@@ -441,7 +441,7 @@ async def test_solution_response_handler(
     sp_hash = bytes32(b"1" * 32)
     challenge_hash = bytes32(b"2" * 32)
 
-    v2_qualities = harvester_protocol.V2Qualities(
+    v2_quality_chains = harvester_protocol.V2QualityChains(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
@@ -458,7 +458,7 @@ async def test_solution_response_handler(
 
     # manually add pending request
     farmer.pending_solver_requests[quality] = {
-        "quality_data": v2_qualities,
+        "quality_data": v2_quality_chains,
         "peer": harvester_peer,
     }
 
@@ -509,7 +509,7 @@ async def test_solution_response_unknown_quality(
 async def test_solution_response_empty_proof(
     farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
 ) -> None:
-    """Test solution_response with empty proof (line 555-556)."""
+    """Test solution_response with empty proof."""
     _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
@@ -519,7 +519,7 @@ async def test_solution_response_empty_proof(
     sp_hash = bytes32(b"1" * 32)
     challenge_hash = bytes32(b"2" * 32)
 
-    v2_qualities = harvester_protocol.V2Qualities(
+    v2_quality_chains = harvester_protocol.V2QualityChains(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
@@ -537,7 +537,7 @@ async def test_solution_response_empty_proof(
 
     # manually add pending request
     farmer.pending_solver_requests[quality] = {
-        "quality_data": v2_qualities,
+        "quality_data": v2_quality_chains,
         "peer": harvester_peer,
     }
 
@@ -558,10 +558,10 @@ async def test_solution_response_empty_proof(
 
 
 @pytest.mark.anyio
-async def test_v2_qualities_solver_exception(
+async def test_v2_quality_chains_solver_exception(
     farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
 ) -> None:
-    """Test v2_qualities with solver service exception (lines 526-527, 529-530)."""
+    """Test v2_quality_chains with solver service exception."""
     _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
@@ -582,7 +582,7 @@ async def test_v2_qualities_solver_exception(
 
     farmer.sps[sp_hash] = [sp]
 
-    v2_qualities = harvester_protocol.V2Qualities(
+    v2_quality_chains = harvester_protocol.V2QualityChains(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
@@ -599,7 +599,7 @@ async def test_v2_qualities_solver_exception(
 
     # Mock send_to_all to raise an exception
     with unittest.mock.patch.object(farmer.server, "send_to_all", side_effect=Exception("Solver connection failed")):
-        await farmer_api.v2_qualities(v2_qualities, harvester_peer)
+        await farmer_api.v2_quality_chains(v2_quality_chains, harvester_peer)
 
         # verify pending request was cleaned up after exception
         quality = bytes32(b"3" * 32)
