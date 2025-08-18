@@ -413,9 +413,9 @@ class Blockchain:
 
         try:
             # Always add the block to the database
-            async with self.consensus_store.transaction():
+            async with self.consensus_store as writer:
                 # Perform the DB operations to update the state, and rollback if something goes wrong
-                await self.consensus_store.add_full_block(header_hash, block, block_record)
+                await writer.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
 
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
