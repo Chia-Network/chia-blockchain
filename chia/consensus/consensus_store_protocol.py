@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Collection
-from typing import AsyncIterator, Optional, Protocol
+from collections.abc import AsyncIterator, Collection
 from types import TracebackType
+from typing import Optional, Protocol
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
