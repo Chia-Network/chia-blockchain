@@ -87,7 +87,7 @@ class ConsensusStoreSQLite3:
         )
 
     # Async context manager yielding a writer for atomic writes
-    async def __aenter__(self):
+    async def __aenter__(self) -> ConsensusStoreSQLite3Writer:
         # Re-entrant async context manager:
         # Begin a transaction only at the outermost level. CoinStore shares the same DB.
         if self._txn_depth == 0:
@@ -172,7 +172,7 @@ class ConsensusStoreSQLite3:
         return await self.coin_store.get_coins_removed_at_height(height)
 
     def get_block_heights_in_main_chain(self) -> AsyncIterator[int]:
-        async def gen():
+        async def gen() -> AsyncIterator[int]:
             async with self.block_store.transaction() as conn:
                 async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
                     async for row in cursor:
