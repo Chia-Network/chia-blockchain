@@ -486,59 +486,59 @@ class Blockchain:
         if genesis and peak is not None:
             return [], None
 
-        if peak is not None:
-            if block_record.weight < peak.weight:
-                # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-                return [], None
-            if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
-                # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
-                return [], None
-            if block_record.weight == peak.weight:
-                log.info(
-                    f"block has equal weight as our peak ({peak.weight}), but fewer "
-                    f"total iterations {block_record.total_iters} "
-                    f"peak: {peak.total_iters} "
-                    f"peak-hash: {peak.header_hash}"
-                )
-
-            if block_record.prev_hash != peak.header_hash:
-                rolled_back_state = await self.consensus_store.rollback_to_block(fork_info.fork_height)
-                if self._log_coins and len(rolled_back_state) > 0:
-                    log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
-                    log.info(
-                        "removed: %s",
-                        ",".join(
-                            [
-                                name.hex()[0:6]
-                                for name, state in rolled_back_state.items()
-                                if state.confirmed_block_index == 0
-                            ]
-                        ),
-                    )
-                    log.info(
-                        "unspent: %s",
-                        ",".join(
-                            [
-                                name.hex()[0:6]
-                                for name, state in rolled_back_state.items()
-                                if state.confirmed_block_index != 0
-                            ]
-                        ),
-                    )
-
-        # Collects all blocks from fork point to new peak
-        records_to_add: list[BlockRecord] = []
-
-        if genesis:
-            records_to_add = [block_record]
-        elif fork_info.block_hashes == [block_record.header_hash]:
-            # in the common case, we just add a block on top of the chain. Check
-            # for that here to avoid an unnecessary database lookup.
-            records_to_add = [block_record]
-        else:
-            records_to_add = await self.consensus_store.get_block_records_by_hash(fork_info.block_hashes)
-
         async with self.consensus_store as writer:
+            if peak is not None:
+                if block_record.weight < peak.weight:
+                    # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+                    return [], None
+                if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
+                    # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
+                    return [], None
+                if block_record.weight == peak.weight:
+                    log.info(
+                        f"block has equal weight as our peak ({peak.weight}), but fewer "
+                        f"total iterations {block_record.total_iters} "
+                        f"peak: {peak.total_iters} "
+                        f"peak-hash: {peak.header_hash}"
+                    )
+
+                if block_record.prev_hash != peak.header_hash:
+                    rolled_back_state = await writer.rollback_to_block(fork_info.fork_height)
+                    if self._log_coins and len(rolled_back_state) > 0:
+                        log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
+                        log.info(
+                            "removed: %s",
+                            ",".join(
+                                [
+                                    name.hex()[0:6]
+                                    for name, state in rolled_back_state.items()
+                                    if state.confirmed_block_index == 0
+                                ]
+                            ),
+                        )
+                        log.info(
+                            "unspent: %s",
+                            ",".join(
+                                [
+                                    name.hex()[0:6]
+                                    for name, state in rolled_back_state.items()
+                                    if state.confirmed_block_index != 0
+                                ]
+                            ),
+                        )
+
+            # Collects all blocks from fork point to new peak
+            records_to_add: list[BlockRecord] = []
+
+            if genesis:
+                records_to_add = [block_record]
+            elif fork_info.block_hashes == [block_record.header_hash]:
+                # in the common case, we just add a block on top of the chain. Check
+                # for that here to avoid an unnecessary database lookup.
+                records_to_add = [block_record]
+            else:
+                records_to_add = await self.consensus_store.get_block_records_by_hash(fork_info.block_hashes)
+
             for fetched_block_record in records_to_add:
                 if not fetched_block_record.is_transaction_block:
                     # Coins are only created in TX blocks so there are no state updates for this block
@@ -981,7 +981,8 @@ class Blockchain:
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
-        await self.consensus_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
+        async with self.consensus_store as writer:
+            await writer.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
