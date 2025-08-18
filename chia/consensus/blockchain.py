@@ -538,56 +538,57 @@ class Blockchain:
         else:
             records_to_add = await self.consensus_store.get_block_records_by_hash(fork_info.block_hashes)
 
-        for fetched_block_record in records_to_add:
-            if not fetched_block_record.is_transaction_block:
-                # Coins are only created in TX blocks so there are no state updates for this block
-                continue
+        async with self.consensus_store as writer:
+            for fetched_block_record in records_to_add:
+                if not fetched_block_record.is_transaction_block:
+                    # Coins are only created in TX blocks so there are no state updates for this block
+                    continue
 
-            height = fetched_block_record.height
-            # We need to recompute the additions and removals, since they are
-            # not stored on DB. We have all the additions and removals in the
-            # fork_info object, we just need to pick the ones belonging to each
-            # individual block height
+                height = fetched_block_record.height
+                # We need to recompute the additions and removals, since they are
+                # not stored on DB. We have all the additions and removals in the
+                # fork_info object, we just need to pick the ones belonging to each
+                # individual block height
 
-            # Apply the coin store changes for each block that is now in the blockchain
-            included_reward_coins = [
-                fork_add.coin
-                for fork_add in fork_info.additions_since_fork.values()
-                if fork_add.confirmed_height == height and fork_add.is_coinbase
-            ]
-            tx_additions = [
-                (coin_id, fork_add.coin, fork_add.same_as_parent)
-                for coin_id, fork_add in fork_info.additions_since_fork.items()
-                if fork_add.confirmed_height == height and not fork_add.is_coinbase
-            ]
-            tx_removals = [
-                coin_id for coin_id, fork_rem in fork_info.removals_since_fork.items() if fork_rem.height == height
-            ]
-            assert fetched_block_record.timestamp is not None
-            await self.consensus_store.new_block(
-                height,
-                fetched_block_record.timestamp,
-                included_reward_coins,
-                tx_additions,
-                tx_removals,
-            )
-            if self._log_coins and (len(tx_removals) > 0 or len(tx_additions) > 0):
-                log.info(
-                    f"adding new block to coin_store "
-                    f"(hh: {fetched_block_record.header_hash} "
-                    f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
+                # Apply the coin store changes for each block that is now in the blockchain
+                included_reward_coins = [
+                    fork_add.coin
+                    for fork_add in fork_info.additions_since_fork.values()
+                    if fork_add.confirmed_height == height and fork_add.is_coinbase
+                ]
+                tx_additions = [
+                    (coin_id, fork_add.coin, fork_add.same_as_parent)
+                    for coin_id, fork_add in fork_info.additions_since_fork.items()
+                    if fork_add.confirmed_height == height and not fork_add.is_coinbase
+                ]
+                tx_removals = [
+                    coin_id for coin_id, fork_rem in fork_info.removals_since_fork.items() if fork_rem.height == height
+                ]
+                assert fetched_block_record.timestamp is not None
+                await writer.new_block(
+                    height,
+                    fetched_block_record.timestamp,
+                    included_reward_coins,
+                    tx_additions,
+                    tx_removals,
                 )
-                log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
-                log.info("additions: %s", ",".join([add[0].hex()[0:6] for add in tx_additions]))
-                log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
+                if self._log_coins and (len(tx_removals) > 0 or len(tx_additions) > 0):
+                    log.info(
+                        f"adding new block to coin_store "
+                        f"(hh: {fetched_block_record.header_hash} "
+                        f"height: {fetched_block_record.height}), {len(tx_removals)} spends"
+                    )
+                    log.info("rewards: %s", ",".join([add.name().hex()[0:6] for add in included_reward_coins]))
+                    log.info("additions: %s", ",".join([add[0].hex()[0:6] for add in tx_additions]))
+                    log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
-        # we made it to the end successfully
-        # Rollback sub_epoch_summaries
-        await self.consensus_store.rollback(fork_info.fork_height)
-        await self.consensus_store.set_in_chain([(br.header_hash,) for br in records_to_add])
+            # we made it to the end successfully
+            # Rollback sub_epoch_summaries
+            await writer.rollback(fork_info.fork_height)
+            await writer.set_in_chain([(br.header_hash,) for br in records_to_add])
 
-        # Changes the peak to be the new peak
-        await self.consensus_store.set_peak(block_record.header_hash)
+            # Changes the peak to be the new peak
+            await writer.set_peak(block_record.header_hash)
 
         return records_to_add, StateChangeSummary(
             block_record,
