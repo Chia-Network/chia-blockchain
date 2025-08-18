@@ -4,6 +4,7 @@ import dataclasses
 from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager
 from typing import Any, AsyncIterator, Optional, TYPE_CHECKING
+from types import TracebackType
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -97,7 +98,12 @@ class ConsensusStoreSQLite3:
         self._txn_depth += 1
         return self._writer  # Return the same writer for nested contexts
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> Optional[bool]:
         try:
             # Check if we're at the outermost level before decrementing
             if self._txn_depth == 1:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from typing import AsyncIterator, Optional, Protocol
+from types import TracebackType
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -61,7 +62,12 @@ class ConsensusStoreProtocol(Protocol):
 
     # Async context manager methods
     async def __aenter__(self) -> ConsensusStoreWriteProtocol: ...
-    async def __aexit__(self, exc_type, exc, tb) -> Optional[bool]: ...
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> Optional[bool]: ...
 
     # Block store reads
     async def get_block_records_close_to_peak(
