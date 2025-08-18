@@ -83,6 +83,7 @@ class TestPotIterations:
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
+    # TODO: todo_v2_plots test this for v2 plots as well
     def test_win_percentage(self):
         """
         Tests that the percentage of blocks won is proportional to the space of each farmer,
@@ -95,7 +96,7 @@ class TestPotIterations:
             uint8(35): 100,
             uint8(36): 100,
         }
-        farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
+        farmer_space = {k: _expected_plot_size(PlotSize.make_v1(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
@@ -111,7 +112,6 @@ class TestPotIterations:
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        # TODO: todo_v2_plots
                         required_iters = calculate_iterations_quality(
                             constants, quality, PlotSize.make_v1(k), difficulty, sp_hash, uint64(100000000), uint32(0)
                         )
@@ -151,3 +151,24 @@ class TestPotIterations:
         max_uint32_height = uint32(0xFFFFFFFF)
         result_max_height = calculate_phase_out(constants, sub_slot_iters, max_uint32_height)
         assert result_max_height == sp_interval  # Should cap at sp_interval
+
+
+def test_expected_plot_size_v1() -> None:
+    last_size = 4800000
+    for k in range(18, 50):
+        plot_size = _expected_plot_size(PlotSize.make_v1(k))
+        assert plot_size > last_size
+        last_size = plot_size
+
+
+def test_expected_plot_size_v2() -> None:
+    last_size = 1700000000
+    for k in range(18, 32, 2):
+        plot_size = _expected_plot_size(PlotSize.make_v2(k))
+        # TODO: todo_v2_plots remove this special case once we support smaller k-sizes
+        if k < 28:
+            assert plot_size == 0
+            continue
+
+        assert plot_size > last_size
+        last_size = plot_size

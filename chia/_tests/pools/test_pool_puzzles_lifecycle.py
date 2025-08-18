@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from unittest import TestCase
 
 import pytest
@@ -31,6 +32,7 @@ from chia.pools.pool_wallet_info import PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
+from chia.util.errors import Err
 from chia.wallet.puzzles import singleton_top_layer
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -242,7 +244,8 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError,
+            match=re.escape(f"condition validation failure {Err.ASSERT_ANNOUNCE_CONSUMED_FAILED!s}"),
         ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -269,7 +272,8 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError,
+            match=re.escape(f"condition validation failure {Err.ASSERT_ANNOUNCE_CONSUMED_FAILED!s}"),
         ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol, bad_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -320,7 +324,10 @@ class TestPoolPuzzles(TestCase):
             (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it and hope it fails!
-        with pytest.raises(BadSpendBundleError, match="condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"):
+        with pytest.raises(
+            BadSpendBundleError,
+            match=re.escape(f"condition validation failure {Err.ASSERT_HEIGHT_RELATIVE_FAILED!s}"),
+        ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
             )

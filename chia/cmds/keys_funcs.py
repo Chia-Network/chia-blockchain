@@ -743,11 +743,10 @@ def derive_child_key(
         if non_observer_derivation:
             assert current_sk is not None  # semantics above guarantee this
             current_sk = _derive_path(current_sk, path_indices)
+        elif current_sk is not None:
+            current_sk = _derive_path_unhardened(current_sk, path_indices)
         else:
-            if current_sk is not None:
-                current_sk = _derive_path_unhardened(current_sk, path_indices)
-            else:
-                current_pk = _derive_pk_unhardened(current_pk, path_indices)
+            current_pk = _derive_pk_unhardened(current_pk, path_indices)
 
         derivation_root_sk = current_sk
         derivation_root_pk = current_pk
@@ -768,13 +767,12 @@ def derive_child_key(
             assert derivation_root_sk is not None  # semantics above guarantee this
             sk = _derive_path(derivation_root_sk, [i])
             pk = sk.get_g1()
+        elif derivation_root_sk is not None:
+            sk = _derive_path_unhardened(derivation_root_sk, [i])
+            pk = sk.get_g1()
         else:
-            if derivation_root_sk is not None:
-                sk = _derive_path_unhardened(derivation_root_sk, [i])
-                pk = sk.get_g1()
-            else:
-                sk = None
-                pk = _derive_pk_unhardened(derivation_root_pk, [i])
+            sk = None
+            pk = _derive_pk_unhardened(derivation_root_pk, [i])
         hd_path: str = (
             " (" + hd_path_root + str(i) + ("n" if non_observer_derivation else "") + ")" if show_hd_path else ""
         )

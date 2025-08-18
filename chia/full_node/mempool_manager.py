@@ -11,10 +11,12 @@ from typing import Callable, Optional, TypeVar
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
+    MEMPOOL_MODE,
     BLSCache,
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -257,7 +259,22 @@ def check_removals(
         for item in conflicting_items:
             if item in conflicts:
                 continue
-            conflict_bcs = item.bundle_coin_spends[coin_id]
+            conflict_bcs = item.bundle_coin_spends.get(coin_id)
+            if conflict_bcs is None:
+                # Check if this is an item that spends an older ff singleton
+                # version with a latest version that matches our coin ID.
+                conflict_bcs = next(
+                    (
+                        bcs
+                        for bcs in item.bundle_coin_spends.values()
+                        if bcs.latest_singleton_lineage is not None and bcs.latest_singleton_lineage.coin_id == coin_id
+                    ),
+                    None,
+                )
+                # We're not expected to get here but let's handle it gracefully
+                if conflict_bcs is None:
+                    log.warning(f"Coin ID {coin_id} expected but not found in mempool item {item.name}")
+                    return Err.INVALID_SPEND_BUNDLE, []
             # if the spend we're adding to the mempool is not DEDUP nor FF, it's
             # just a regular conflict
             if not coin_bcs.eligible_for_fast_forward and not coin_bcs.eligible_for_dedup:
@@ -440,13 +457,14 @@ class MempoolManager:
 
         self._worker_queue_size += 1
         try:
+            flags = get_flags_for_height_and_constants(self.peak.height, self.constants)
             sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
                 spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
-                self.peak.height,
+                flags | MEMPOOL_MODE,
             )
         # validate_clvm_and_signature raises a TypeError with an error code
         except Exception as e:

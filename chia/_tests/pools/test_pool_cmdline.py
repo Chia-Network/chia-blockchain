@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from io import StringIO
 from typing import Optional, cast
@@ -484,7 +485,7 @@ async def test_plotnft_cli_join(
     wallet_id = await create_new_plotnft(wallet_environments)
 
     # Test joining the same pool again
-    with pytest.raises(click.ClickException, match="already farming to pool http://pool.example.com"):
+    with pytest.raises(click.ClickException, match=re.escape("already farming to pool http://pool.example.com")):
         await JoinPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,

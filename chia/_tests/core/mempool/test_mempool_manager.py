@@ -359,6 +359,7 @@ def make_test_conds(
                 flags,
                 execution_cost=0,
                 condition_cost=0,
+                fingerprint=b"",
             )
             for coin_id, parent_id, puzzle_hash, amount, flags, create_coin in spend_info
         ],
@@ -3201,3 +3202,61 @@ async def test_new_peak_deferred_ff_items() -> None:
     latest_singleton_lineage2 = mi2.bundle_coin_spends[singleton2_id].latest_singleton_lineage
     assert latest_singleton_lineage2 is not None
     assert latest_singleton_lineage2.coin_id == singleton2_new_latest.name()
+
+
+@pytest.mark.anyio
+async def test_different_ff_versions() -> None:
+    """
+    Covers the case where we send an item with an older ff singleton version
+    while the mempool is aware of a newer lineage.
+    """
+    launcher_id = bytes32([1] * 32)
+    singleton_spend1 = make_singleton_spend(launcher_id, bytes32([2] * 32))
+    version1_id = singleton_spend1.coin.name()
+    singleton_spend2 = make_singleton_spend(launcher_id, bytes32([3] * 32))
+    version2_id = singleton_spend2.coin.name()
+    singleton_ph = singleton_spend2.coin.puzzle_hash
+    coins = TestCoins(
+        [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2], {singleton_ph: singleton_spend2.coin}
+    )
+    mempool_manager = await setup_mempool(coins)
+    mempool_items: list[MempoolItem] = []
+    for singleton_spend, regular_coin in [(singleton_spend1, TEST_COIN), (singleton_spend2, TEST_COIN2)]:
+        sb = SpendBundle([singleton_spend, mk_coin_spend(regular_coin)], G2Element())
+        sb_name = sb.name()
+        await mempool_manager.add_spend_bundle(
+            sb,
+            make_test_conds(spend_ids=[(singleton_spend.coin, ELIGIBLE_FOR_FF), (regular_coin, 0)], cost=1337),
+            sb_name,
+            uint32(1),
+        )
+        mi = mempool_manager.get_mempool_item(sb_name)
+        assert mi is not None
+        mempool_items.append(mi)
+    [mi1, mi2] = mempool_items
+    latest_lineage_id = version2_id
+    assert latest_lineage_id != version1_id
+    # Bundle coin spends key points to version 1 but the lineage is latest (v2)
+    latest_singleton_lineage1 = mi1.bundle_coin_spends[version1_id].latest_singleton_lineage
+    assert latest_singleton_lineage1 is not None
+    assert latest_singleton_lineage1.coin_id == latest_lineage_id
+    # Both the bundle coin spends key and the lineage point to latest (v2)
+    latest_singleton_lineage2 = mi2.bundle_coin_spends[version2_id].latest_singleton_lineage
+    assert latest_singleton_lineage2 is not None
+    assert latest_singleton_lineage2.coin_id == latest_lineage_id
+    # Let's update the lineage with a new version of the singleton
+    new_latest_lineage = Coin(version2_id, singleton_ph, singleton_spend2.coin.amount)
+    new_latest_lineage_id = new_latest_lineage.name()
+    coins.update_lineage(singleton_ph, new_latest_lineage)
+    await advance_mempool(mempool_manager, [version1_id, version2_id], use_optimization=True)
+    # Both items should get updated with the latest lineage
+    new_mi1 = mempool_manager.get_mempool_item(mi1.spend_bundle_name)
+    assert new_mi1 is not None
+    latest_singleton_lineage1 = new_mi1.bundle_coin_spends[version1_id].latest_singleton_lineage
+    assert latest_singleton_lineage1 is not None
+    assert latest_singleton_lineage1.coin_id == new_latest_lineage_id
+    new_mi2 = mempool_manager.get_mempool_item(mi2.spend_bundle_name)
+    assert new_mi2 is not None
+    latest_singleton_lineage2 = new_mi2.bundle_coin_spends[version2_id].latest_singleton_lineage
+    assert latest_singleton_lineage2 is not None
+    assert latest_singleton_lineage2.coin_id == new_latest_lineage_id

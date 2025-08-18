@@ -117,10 +117,11 @@ def calculate_iterations_quality(
                 int(difficulty)
                 * int(constants.DIFFICULTY_CONSTANT_FACTOR)
                 * int.from_bytes(sp_quality_string, "big", signed=False)
-                // (int(pow(2, 256)) * int(_expected_plot_size(size.size_v1)))
+                // (int(pow(2, 256)) * int(_expected_plot_size(size)))
             )
             + phase_out
         )
         return max(iters, uint64(1))
     else:
+        # TODO: todo_v2_plots support v2 plots
         raise NotImplementedError
