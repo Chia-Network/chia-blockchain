@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, AsyncIterator, Optional, TYPE_CHECKING
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -23,9 +23,6 @@ class ConsensusStoreSQLite3Writer:
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         await self._block_store.add_full_block(header_hash, block, block_record)
-
-    def rollback_cache_block(self, header_hash: bytes32) -> None:
-        self._block_store.rollback_cache_block(header_hash)
 
     async def rollback(self, height: int) -> None:
         await self._block_store.rollback(height)
@@ -54,6 +51,7 @@ class ConsensusStoreSQLite3Writer:
     ) -> None:
         await self._coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
 
+
 @dataclasses.dataclass
 class ConsensusStoreSQLite3:
     """
@@ -64,9 +62,10 @@ class ConsensusStoreSQLite3:
     coin_store: CoinStore
     height_map: BlockHeightMap
 
-    # Writer context and writer facade for transactional writes
+    # Writer context and writer facade for transactional writes (re-entrant via depth counter)
     _writer_ctx: Optional[AbstractAsyncContextManager[Any]] = None
     _writer: Optional[Any] = None
+    _txn_depth: int = 0
 
     @classmethod
     async def create(
@@ -88,22 +87,34 @@ class ConsensusStoreSQLite3:
 
     # Async context manager yielding a writer for atomic writes
     async def __aenter__(self):
-        # Begin a transaction via the block_store. CoinStore shares the same DB.
-        self._writer_ctx = self.block_store.transaction()
-        await self._writer_ctx.__aenter__()
-        # Create and return a writer facade bound to this transaction
-        self._writer = ConsensusStoreSQLite3Writer(self.block_store, self.coin_store)
-        return self._writer
+        # Re-entrant async context manager:
+        # Begin a transaction only at the outermost level. CoinStore shares the same DB.
+        if self._txn_depth == 0:
+            self._writer_ctx = self.block_store.transaction()
+            await self._writer_ctx.__aenter__()
+            # Create writer facade bound to this transaction
+            self._writer = ConsensusStoreSQLite3Writer(self.block_store, self.coin_store)
+        self._txn_depth += 1
+        return self._writer  # Return the same writer for nested contexts
 
     async def __aexit__(self, exc_type, exc, tb):
-        # Commit on success, rollback on exception handled by transaction manager
         try:
-            if self._writer_ctx is not None:
-                return await self._writer_ctx.__aexit__(exc_type, exc, tb)
-            return None
+            # Check if we're at the outermost level before decrementing
+            if self._txn_depth == 1:
+                # This is the outermost context, handle transaction exit
+                if self._writer_ctx is not None:
+                    return await self._writer_ctx.__aexit__(exc_type, exc, tb)
+                return None
+            else:
+                # This is a nested context, just return None (don't suppress exceptions)
+                return None
         finally:
-            self._writer_ctx = None
-            self._writer = None
+            # Always decrement depth and clean up if we're at the outermost level
+            if self._txn_depth > 0:
+                self._txn_depth -= 1
+            if self._txn_depth == 0:
+                self._writer_ctx = None
+                self._writer = None
 
     # Block store methods
 
@@ -154,6 +165,16 @@ class ConsensusStoreSQLite3:
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
         return await self.coin_store.get_coins_removed_at_height(height)
 
+    def get_block_heights_in_main_chain(self) -> AsyncIterator[int]:
+        async def gen():
+            async with self.block_store.transaction() as conn:
+                async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
+                    async for row in cursor:
+                        if row[1]:
+                            yield row[0]
+
+        return gen()
+
     # Height map methods
     def get_ses_heights(self) -> list[uint32]:
         return self.height_map.get_ses_heights()
@@ -179,9 +200,12 @@ class ConsensusStoreSQLite3:
         # BlockHeightMap.maybe_flush is asynchronous
         await self.height_map.maybe_flush()
 
-if TYPE_CHECKING:
+    def rollback_cache_block(self, header_hash: bytes32) -> None:
+        self.block_store.rollback_cache_block(header_hash)
 
-    from typing import  cast
+
+if TYPE_CHECKING:
+    from typing import cast
     from chia.consensus.consensus_store_protocol import ConsensusStoreProtocol
 
     def _protocol_check(o: ConsensusStoreProtocol) -> None: ...
