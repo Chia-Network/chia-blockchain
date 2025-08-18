@@ -263,7 +263,6 @@ class HarvesterAPI:
                 self.harvester.log.error(f"Unknown error: {e}")
                 return []
 
-
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
         ) -> tuple[Path, list[harvester_protocol.NewProofOfSpace]]:
