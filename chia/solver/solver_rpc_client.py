@@ -20,6 +20,4 @@ class SolverRpcClient(RpcClient):
     async def solve(self, quality_string: str, plot_size: int = 32, plot_difficulty: int = 1000) -> dict[str, Any]:
         """Solve a quality string with optional plot size and difficulty."""
         quality = bytes32.from_hexstr(quality_string)
-        return await self.fetch(
-            "solve", {"quality_string": quality.hex(), "plot_size": plot_size, "plot_difficulty": plot_difficulty}
-        )
+        return await self.fetch("solve", {"quality_chain": quality.hex(), "plot_difficulty": plot_difficulty})

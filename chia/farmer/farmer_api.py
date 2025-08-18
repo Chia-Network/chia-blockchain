@@ -75,7 +75,7 @@ class FarmerAPI:
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
 
         max_pos_per_sp = 5
 
@@ -172,14 +172,14 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
                 )
-                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
+                self.farmer.cache_add_time[computed_quality_string] = uint64(time.time())
 
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
 
@@ -488,7 +488,7 @@ class FarmerAPI:
         """
         if quality_data.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[quality_data.sp_hash] = 0
-            self.farmer.cache_add_time[quality_data.sp_hash] = uint64(int(time.time()))
+            self.farmer.cache_add_time[quality_data.sp_hash] = uint64(time.time())
 
         if quality_data.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
@@ -496,7 +496,7 @@ class FarmerAPI:
             )
             return None
 
-        self.farmer.cache_add_time[quality_data.sp_hash] = uint64(int(time.time()))
+        self.farmer.cache_add_time[quality_data.sp_hash] = uint64(time.time())
 
         self.farmer.log.info(
             f"Received V2 quality collection with {len(quality_data.quality_chains)} quality chains "
@@ -575,14 +575,6 @@ class FarmerAPI:
 
         # process the proof of space
         await self.new_proof_of_space(new_proof_of_space, original_peer)
-
-    def _derive_quality_string_from_chain(self, quality_chain: bytes) -> bytes32:
-        """Derive 32-byte quality string from quality chain (16 * k bits blob)."""
-        # TODO: todo_v2_plots implement actual quality string derivation algorithm
-        # For now, hash the quality chain to get a 32-byte result
-        from chia.util.hash import std_hash
-
-        return std_hash(quality_chain)
 
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
@@ -664,7 +656,7 @@ class FarmerAPI:
 
                     pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
         missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
         self.farmer.state_changed(

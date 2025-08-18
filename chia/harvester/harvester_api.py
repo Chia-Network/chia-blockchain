@@ -363,7 +363,7 @@ class HarvesterAPI:
                 msg = make_msg(ProtocolMessageTypes.v2_qualities, v2_qualities)
                 await peer.send_message(msg)
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
 
         farming_info = FarmingInfo(
             new_challenge.challenge_hash,
@@ -394,14 +394,6 @@ class HarvesterAPI:
                 "time": time_taken,
             },
         )
-
-    # def _derive_quality_string_from_chain(self, quality_chain: bytes) -> bytes32:
-    #     """Derive 32-byte quality string from quality chain (16 * k bits blob)."""
-    #     # TODO: todo_v2_plots implement actual quality string derivation algorithm
-    #     # For now, hash the quality chain to get a 32-byte result
-    #     from chia.util.hash import std_hash
-
-    #     return std_hash(quality_chain)
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:

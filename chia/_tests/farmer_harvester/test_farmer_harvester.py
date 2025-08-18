@@ -167,9 +167,6 @@ async def test_farmer_respond_signatures(
     # messages even though it didn't request them, to cover when the farmer doesn't know
     # about an sp_hash, so it fails at the sp record check.
 
-    def log_is_ready() -> bool:
-        return len(caplog.text) > 0
-
     _, _, harvester_service, _, _ = harvester_farmer_environment
     # We won't have an sp record for this one
     challenge_hash = bytes32(b"1" * 32)
@@ -184,11 +181,16 @@ async def test_farmer_respond_signatures(
         include_source_signature_data=False,
         farmer_reward_address_override=None,
     )
+
+    expected_error = f"Do not have challenge hash {challenge_hash}"
+
+    def expected_log_is_ready() -> bool:
+        return expected_error in caplog.text
+
     msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
     await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
-    await time_out_assert(15, log_is_ready)
-    # We fail the sps record check
-    expected_error = f"Do not have challenge hash {challenge_hash}"
+    await time_out_assert(10, expected_log_is_ready)
+    # We should find the error message
     assert expected_error in caplog.text
 
 

@@ -69,7 +69,7 @@ class Solver:
 
     def solve(self, info: SolverInfo) -> Optional[bytes]:
         self.log.debug(f"Solve request: quality={info.quality_chain.hex()}")
-        # todo implement actualy calling the solver
+        # TODO todo_v2_plots implement actualy calling the solver
         return None
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
