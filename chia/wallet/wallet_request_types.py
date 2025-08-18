@@ -32,7 +32,7 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
-from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
@@ -478,6 +478,43 @@ class GetNextAddressResponse(Streamable):
 @dataclass(frozen=True)
 class DeleteUnconfirmedTransactions(Streamable):
     wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class SelectCoins(CoinSelectionConfigLoader):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    excluded_coins: Optional[list[Coin]] = None
+    exclude_coins: Optional[list[Coin]] = None
+
+    def __post_init__(self) -> None:
+        if self.excluded_coin_ids is not None and (self.excluded_coins is not None or self.exclude_coins is not None):
+            raise ValueError(
+                "Cannot specify both excluded_coin_ids and exclude(d)_coins (the latter arguments are deprecated)"
+            )
+        elif self.excluded_coins is not None and self.exclude_coins is not None:
+            raise ValueError("Cannot specify both excluded_coins and exclude_coins (both are deprecated)")
+        super().__post_init__()
+
+    @classmethod
+    def from_coin_selection_config(
+        cls, wallet_id: uint32, amount: uint64, coin_selection_config: CoinSelectionConfig
+    ) -> Self:
+        return cls(
+            wallet_id=wallet_id,
+            amount=amount,
+            min_coin_amount=coin_selection_config.min_coin_amount,
+            max_coin_amount=coin_selection_config.max_coin_amount,
+            excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
+            excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class SelectCoinsResponse(Streamable):
+    coins: list[Coin]
 
 
 @streamable

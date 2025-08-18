@@ -242,6 +242,8 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
+    SelectCoins,
+    SelectCoinsResponse,
     SendTransaction,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -1728,36 +1730,41 @@ class WalletRpcApi:
                 wallet.target_state = None
             return Empty()
 
+    @marshal
     async def select_coins(
         self,
-        request: dict[str, Any],
-    ) -> EndpointResult:
+        request: SelectCoins,
+    ) -> SelectCoinsResponse:
         assert self.service.logged_in_fingerprint is not None
-        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
         # Some backwards compat fill-ins
-        if tx_config_loader.excluded_coin_ids is None:
-            excluded_coins: Optional[list[dict[str, Any]]] = request.get("excluded_coins", request.get("exclude_coins"))
-            if excluded_coins is not None:
-                tx_config_loader = tx_config_loader.override(
-                    excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
+        if request.excluded_coin_ids is None:
+            if request.excluded_coins is not None:
+                request = request.override(
+                    excluded_coin_ids=[c.name() for c in request.excluded_coins],
+                )
+            elif request.exclude_coins is not None:
+                request = request.override(
+                    excluded_coin_ids=[c.name() for c in request.exclude_coins],
                 )
 
-        tx_config: TXConfig = tx_config_loader.autofill(
-            constants=self.service.wallet_state_manager.constants,
+        # don't love this snippet of code
+        # but I think action scopes need to accept CoinSelectionConfigs
+        # instead of solely TXConfigs in order for this to be less ugly
+        tx_config = DEFAULT_TX_CONFIG.override(
+            **request.autofill(
+                constants=self.service.wallet_state_manager.constants,
+            ).to_json_dict()
         )
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
-        amount = uint64(request["amount"])
-        wallet_id = uint32(request["wallet_id"])
-
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
-            selected_coins = await wallet.select_coins(amount, action_scope)
+            selected_coins = await wallet.select_coins(request.amount, action_scope)
 
-        return {"coins": [coin.to_json_dict() for coin in selected_coins]}
+        return SelectCoinsResponse(coins=list(selected_coins))
 
     async def get_spendable_coins(self, request: dict[str, Any]) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:

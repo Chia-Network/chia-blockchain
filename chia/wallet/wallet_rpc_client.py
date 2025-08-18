@@ -157,6 +157,8 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
+    SelectCoins,
+    SelectCoinsResponse,
     SendTransaction,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -405,10 +407,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_signed_transaction", request)
         return json_deserialize_with_clvm_streamable(response, CreateSignedTransactionsResponse)
 
-    async def select_coins(self, amount: int, wallet_id: int, coin_selection_config: CoinSelectionConfig) -> list[Coin]:
-        request = {"amount": amount, "wallet_id": wallet_id, **coin_selection_config.to_json_dict()}
-        response = await self.fetch("select_coins", request)
-        return [Coin.from_json_dict(coin) for coin in response["coins"]]
+    async def select_coins(self, request: SelectCoins) -> SelectCoinsResponse:
+        return SelectCoinsResponse.from_json_dict(await self.fetch("select_coins", request.to_json_dict()))
 
     async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
         return await self.fetch("get_coin_records", request.to_json_dict())
