@@ -29,6 +29,7 @@ concurrency:
 
 jobs:
   analyze:
+    if: github.repository_owner == 'Chia-Network'
     name: Analyze
     runs-on: ubuntu-latest
 

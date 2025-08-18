@@ -105,8 +105,11 @@ class CATOuterPuzzle:
             parent_coin: Coin = parent_spend.coin
             also = constructor.also()
             if also is not None:
-                solution = self._solve(also, solver, puzzle, solution)
-                puzzle = self._construct(also, puzzle)
+                constructed_solution = self._solve(also, solver, puzzle, solution)
+                constructed_puzzle = self._construct(also, puzzle)
+            else:
+                constructed_solution = solution
+                constructed_puzzle = puzzle
             args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal))
             assert args is not None
             _, _, parent_inner_puzzle = args
@@ -114,8 +117,8 @@ class CATOuterPuzzle:
                 SpendableCAT(
                     coin,
                     tail_hash,
-                    puzzle,
-                    solution,
+                    constructed_puzzle,
+                    constructed_solution,
                     lineage_proof=LineageProof(
                         parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)
                     ),

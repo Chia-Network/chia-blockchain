@@ -24,7 +24,6 @@ from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.server.aliases import WalletService
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -42,6 +41,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    GetTransactions,
     GetWalletBalance,
     GetWallets,
     PWAbsorbRewards,
@@ -50,6 +50,7 @@ from chia.wallet.wallet_request_types import (
     PWStatus,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 # TODO: Compare deducted fees in all tests against reported total_fee
@@ -605,7 +606,7 @@ class TestPoolWalletRpc:
                     PWAbsorbRewards(wallet_id=uint32(2), fee=uint64(fee), push=True), DEFAULT_TX_CONFIG
                 )
 
-            tx1 = await client.get_transactions(1)
+            tx1 = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
             assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
 
     @pytest.mark.anyio
@@ -1259,7 +1260,7 @@ class TestPoolWalletRpc:
         mock.return_value = False
 
         # Test joining the same pool via the RPC client
-        with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced."):
+        with pytest.raises(ResponseFailureError, match="Wallet needs to be fully synced"):
             await wallet_rpc.pw_join_pool(
                 PWJoinPool(
                     wallet_id=uint32(wallet_id),

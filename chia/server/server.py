@@ -260,9 +260,8 @@ class ChiaServer:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:
                             to_remove.append(connection)
-                    else:
-                        if time.time() - connection.last_message_time > 1800:
-                            to_remove.append(connection)
+                    elif time.time() - connection.last_message_time > 1800:
+                        to_remove.append(connection)
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_info.host} due to inactivity")
                 if connection.closed:

@@ -190,10 +190,17 @@ class Harvester:
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
+                size = prover.get_size()
+                if size.size_v1 is not None:
+                    k = size.size_v1
+                else:
+                    assert size.size_v2 is not None
+                    k = size.size_v2
+                    # TODO: todo_v2_plots support v2 plots in RPC response
                 response_plots.append(
                     {
                         "filename": str(path),
-                        "size": prover.get_size(),
+                        "size": k,
                         "plot_id": prover.get_id(),
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,

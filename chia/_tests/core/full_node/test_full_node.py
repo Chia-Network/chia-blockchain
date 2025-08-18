@@ -2678,16 +2678,15 @@ async def test_long_reorg_nodes(
             blocks = default_10000_blocks[: 1600 - chain_length]
             reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
             reorg_height = 2000
-    else:
-        if fork_point == 1500:
-            blocks = default_10000_blocks[: 1900 - chain_length]
-            reorg_blocks = test_long_reorg_1500_blocks[: 1900 - chain_length]
-            reorg_height = 2300
-        else:  # pragma: no cover
-            pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
-            blocks = default_10000_blocks[: 1100 - chain_length]
-            # reorg_blocks = test_long_reorg_blocks[: 1100 - chain_length]
-            reorg_height = 1600
+    elif fork_point == 1500:
+        blocks = default_10000_blocks[: 1900 - chain_length]
+        reorg_blocks = test_long_reorg_1500_blocks[: 1900 - chain_length]
+        reorg_height = 2300
+    else:  # pragma: no cover
+        pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
+        blocks = default_10000_blocks[: 1100 - chain_length]
+        # reorg_blocks = test_long_reorg_blocks[: 1100 - chain_length]
+        reorg_height = 1600
 
     # this is a pre-requisite for a reorg to happen
     assert default_10000_blocks[reorg_height].weight > reorg_blocks[-1].weight
@@ -3163,15 +3162,14 @@ async def declare_pos_unfinished_block(
         challenge_chain_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     if block.reward_chain_block.reward_chain_sp_vdf is not None:
         reward_chain_sp = block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+    elif len(block.finished_sub_slots) > 0:
+        reward_chain_sp = block.finished_sub_slots[-1].reward_chain.get_hash()
     else:
-        if len(block.finished_sub_slots) > 0:
-            reward_chain_sp = block.finished_sub_slots[-1].reward_chain.get_hash()
-        else:
-            curr = blockchain.block_record(block.prev_header_hash)
-            while not curr.first_in_sub_slot:
-                curr = blockchain.block_record(curr.prev_hash)
-            assert curr.finished_reward_slot_hashes is not None
-            reward_chain_sp = curr.finished_reward_slot_hashes[-1]
+        curr = blockchain.block_record(block.prev_header_hash)
+        while not curr.first_in_sub_slot:
+            curr = blockchain.block_record(curr.prev_hash)
+        assert curr.finished_reward_slot_hashes is not None
+        reward_chain_sp = curr.finished_reward_slot_hashes[-1]
     farmer_reward_address = block.foliage.foliage_block_data.farmer_reward_puzzle_hash
     pool_target = block.foliage.foliage_block_data.pool_target
     pool_target_signature = block.foliage.foliage_block_data.pool_signature

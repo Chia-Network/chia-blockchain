@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   mypy:
+    if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -38,7 +39,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
           - name: macOS
             matrix: macos
             emoji: 🍎
@@ -102,6 +103,7 @@ jobs:
           ${{ matrix.check.command }}
 
   check:
+    if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -114,7 +116,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
         arch:
           - name: Intel
             matrix: intel
@@ -167,6 +169,7 @@ jobs:
           ${{ matrix.check.command }}
 
   upload_source_dist:
+    if: github.repository_owner == 'Chia-Network'
     name: Lint and Upload source distribution
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30

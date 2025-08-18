@@ -65,10 +65,9 @@ def satisfies_hint(obj: T, type_hint: type[T]) -> bool:
                     object_hint_pairs.extend((v, args[1]) for v in obj.values())
                 else:
                     raise NotImplementedError(f"Type {origin} is not yet supported")
-        else:
-            # Handle concrete types
-            if type(obj) is not type_hint:
-                return False
+        # Handle concrete types
+        elif type(obj) is not type_hint:
+            return False
     return True
 
 

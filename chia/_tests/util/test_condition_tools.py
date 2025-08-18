@@ -51,6 +51,7 @@ def mk_agg_sig_conditions(
         flags=0,
         execution_cost=0,
         condition_cost=0,
+        fingerprint=b"",
     )
     return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0, False, 0, 0)
 

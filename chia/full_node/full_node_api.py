@@ -1393,14 +1393,11 @@ class FullNodeAPI:
             error_name = error.name if error is not None else None
             if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+            # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+            elif self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+                response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None)
             else:
-                # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
-                if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
-                    response = wallet_protocol.TransactionAck(
-                        spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
-                    )
-                else:
-                    response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+                response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
     @metadata.request()

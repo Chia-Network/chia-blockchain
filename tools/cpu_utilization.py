@@ -83,7 +83,6 @@ def main(pid: int, output: str, threads: bool) -> None:
                     out.write(f"   {(c[row].system_time - c[row - 1].system_time) * 100 / time_delta:6.2f}% ")
                 else:
                     out.write("     0.00%      0.00% ")
-            row += 1
             out.write("\n")
 
     with open("plot-cpu.gnuplot", "w+") as out:
