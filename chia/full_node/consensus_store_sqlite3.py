@@ -3,25 +3,59 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager
-from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, TYPE_CHECKING
 
-import aiosqlite
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_height_map import BlockHeightMap
-from chia.consensus.consensus_store_protocol import ConsensusStoreProtocol
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2
 
+
+class ConsensusStoreSQLite3Writer:
+    def __init__(self, block_store: BlockStore, coin_store: CoinStore):
+        self._block_store = block_store
+        self._coin_store = coin_store
+
+    async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
+        await self._block_store.add_full_block(header_hash, block, block_record)
+
+    def rollback_cache_block(self, header_hash: bytes32) -> None:
+        self._block_store.rollback_cache_block(header_hash)
+
+    async def rollback(self, height: int) -> None:
+        await self._block_store.rollback(height)
+
+    async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None:
+        await self._block_store.set_in_chain(header_hashes)
+
+    async def set_peak(self, header_hash: bytes32) -> None:
+        await self._block_store.set_peak(header_hash)
+
+    async def persist_sub_epoch_challenge_segments(
+        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
+    ) -> None:
+        await self._block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
+
+    async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]:
+        return await self._coin_store.rollback_to_block(block_index)
+
+    async def new_block(
+        self,
+        height: uint32,
+        timestamp: uint64,
+        included_reward_coins: Collection[Coin],
+        tx_additions: Collection[tuple[bytes32, Coin, bool]],
+        tx_removals: list[bytes32],
+    ) -> None:
+        await self._coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
 
 @dataclasses.dataclass
-class ConsensusStoreSQLite3(ConsensusStoreProtocol):
+class ConsensusStoreSQLite3:
     """
     Consensus store that combines block_store, coin_store, and height_map functionality.
     """
@@ -30,13 +64,17 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
     coin_store: CoinStore
     height_map: BlockHeightMap
 
+    # Writer context and writer facade for transactional writes
+    _writer_ctx: Optional[AbstractAsyncContextManager[Any]] = None
+    _writer: Optional[Any] = None
+
     @classmethod
     async def create(
         cls,
         block_store: BlockStore,
         coin_store: CoinStore,
         height_map: BlockHeightMap,
-    ) -> ConsensusStoreSQLite3:
+    ) -> "ConsensusStoreSQLite3":
         """Create a new ConsensusStore instance from existing sub-stores.
 
         This factory does not create sub-stores. Construct BlockStore, CoinStore,
@@ -48,9 +86,26 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
             height_map=height_map,
         )
 
+    # Async context manager yielding a writer for atomic writes
+    async def __aenter__(self):
+        # Begin a transaction via the block_store. CoinStore shares the same DB.
+        self._writer_ctx = self.block_store.transaction()
+        await self._writer_ctx.__aenter__()
+        # Create and return a writer facade bound to this transaction
+        self._writer = ConsensusStoreSQLite3Writer(self.block_store, self.coin_store)
+        return self._writer
+
+    async def __aexit__(self, exc_type, exc, tb):
+        # Commit on success, rollback on exception handled by transaction manager
+        try:
+            if self._writer_ctx is not None:
+                return await self._writer_ctx.__aexit__(exc_type, exc, tb)
+            return None
+        finally:
+            self._writer_ctx = None
+            self._writer = None
+
     # Block store methods
-    def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
-        return self.block_store.transaction()
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int
@@ -60,23 +115,8 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
-    async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
-        await self.block_store.add_full_block(header_hash, block, block_record)
-
-    def rollback_cache_block(self, header_hash: bytes32) -> None:
-        self.block_store.rollback_cache_block(header_hash)
-
     async def get_block_records_by_hash(self, header_hashes: list[bytes32]) -> list[BlockRecord]:
         return await self.block_store.get_block_records_by_hash(header_hashes)
-
-    async def rollback(self, height: int) -> None:
-        await self.block_store.rollback(height)
-
-    async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None:
-        await self.block_store.set_in_chain(header_hashes)
-
-    async def set_peak(self, header_hash: bytes32) -> None:
-        await self.block_store.set_peak(header_hash)
 
     async def get_block_records_in_range(self, start: int, stop: int) -> dict[bytes32, BlockRecord]:
         return await self.block_store.get_block_records_in_range(start, stop)
@@ -93,11 +133,6 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
     async def get_prev_hash(self, header_hash: bytes32) -> bytes32:
         return await self.block_store.get_prev_hash(header_hash)
 
-    async def persist_sub_epoch_challenge_segments(
-        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
-    ) -> None:
-        await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
-
     async def get_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32
     ) -> Optional[list[SubEpochChallengeSegment]]:
@@ -112,19 +147,6 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
     # Coin store methods
     async def get_coin_records(self, names: Collection[bytes32]) -> list[CoinRecord]:
         return await self.coin_store.get_coin_records(names)
-
-    async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]:
-        return await self.coin_store.rollback_to_block(block_index)
-
-    async def new_block(
-        self,
-        height: uint32,
-        timestamp: uint64,
-        included_reward_coins: Collection[Coin],
-        tx_additions: Collection[tuple[bytes32, Coin, bool]],
-        tx_removals: list[bytes32],
-    ) -> None:
-        await self.coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
 
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
         return await self.coin_store.get_coins_added_at_height(height)
@@ -157,24 +179,11 @@ class ConsensusStoreSQLite3(ConsensusStoreProtocol):
         # BlockHeightMap.maybe_flush is asynchronous
         await self.height_map.maybe_flush()
 
+if TYPE_CHECKING:
 
-async def build_consensus_store(
-    db_wrapper: DBWrapper2,
-    blockchain_dir: Path,
-    selected_network: Optional[str] = None,
-    *,
-    use_cache: bool = True,
-) -> ConsensusStoreSQLite3:
-    """Convenience utility to construct a ConsensusStore from DB and path.
+    from typing import  cast
+    from chia.consensus.consensus_store_protocol import ConsensusStoreProtocol
 
-    This keeps ConsensusStore.create minimal (only accepts sub-stores) while still
-    providing a one-stop helper for callers that need to create the sub-stores.
-    """
-    block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-    coin_store = await CoinStore.create(db_wrapper)
-    height_map = await BlockHeightMap.create(blockchain_dir, db_wrapper, selected_network)
-    return await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
+    def _protocol_check(o: ConsensusStoreProtocol) -> None: ...
 
-
-# Backwards-compatible alias
-ConsensusStore = ConsensusStoreSQLite3
+    _protocol_check(cast(ConsensusStoreSQLite3, None))
