@@ -110,18 +110,18 @@ def calculate_iterations_quality(
     """
     if size.size_v1 is not None:
         assert size.size_v2 is None
-        sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
         phase_out = calculate_phase_out(constants, ssi, prev_transaction_block_height)
-        iters = uint64(
-            (
-                int(difficulty)
-                * int(constants.DIFFICULTY_CONSTANT_FACTOR)
-                * int.from_bytes(sp_quality_string, "big", signed=False)
-                // (int(pow(2, 256)) * int(_expected_plot_size(size)))
-            )
-            + phase_out
-        )
-        return max(iters, uint64(1))
     else:
-        # TODO: todo_v2_plots support v2 plots
-        raise NotImplementedError
+        phase_out = uint64(0)
+
+    sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
+    iters = uint64(
+        (
+            int(difficulty)
+            * int(constants.DIFFICULTY_CONSTANT_FACTOR)
+            * int.from_bytes(sp_quality_string, "big", signed=False)
+            // (int(pow(2, 256)) * int(_expected_plot_size(size)))
+        )
+        + phase_out
+    )
+    return max(iters, uint64(1))
