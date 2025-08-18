@@ -17,24 +17,18 @@ from chia.util.errors import Err
 async def check_block_store_invariant(bc: Blockchain):
     in_chain = set()
     max_height = -1
-    async with bc.consensus_store.transaction() as conn:
-        async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
-            rows = await cursor.fetchall()
-            for row in rows:
-                height = row[0]
+    async for height in bc.consensus_store.get_block_heights_in_main_chain():
+        # if this block is in-chain, ensure we haven't found another block
+        # at this height that's also in chain. That would be an invariant
+        # violation
+        # make sure we don't have any duplicate heights. Each block
+        # height can only have a single block with in_main_chain set
+        assert height not in in_chain
+        in_chain.add(height)
+        max_height = max(max_height, height)
 
-                # if this block is in-chain, ensure we haven't found another block
-                # at this height that's also in chain. That would be an invariant
-                # violation
-                if row[1]:
-                    # make sure we don't have any duplicate heights. Each block
-                    # height can only have a single block with in_main_chain set
-                    assert height not in in_chain
-                    in_chain.add(height)
-                    max_height = max(max_height, height)
-
-            # make sure every height is represented in the set
-            assert len(in_chain) == max_height + 1
+    # make sure every height is represented in the set
+    assert len(in_chain) == max_height + 1
 
 
 async def _validate_and_add_block(
