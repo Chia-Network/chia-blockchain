@@ -52,6 +52,19 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
+    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester) -> bool:
+        filter_prefix_bits = calculate_prefix_bits(
+            self.harvester.constants,
+            challenge.peak_height,
+            plot_info.prover.get_size(),
+        )
+        return passes_plot_filter(
+            filter_prefix_bits,
+            plot_info.prover.get_id(),
+            challenge.challenge_hash,
+            challenge.sp_hash,
+        )
+
     @metadata.request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
@@ -318,26 +331,19 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-                if try_plot_info.prover.get_version() == PlotVersion.V2:
-                    # TODO: todo_v2_plots need to check v2 filter
-                    v2_awaitables.append(
-                        loop.run_in_executor(
-                            self.harvester.executor, blocking_lookup_v2_partial_proofs, try_plot_filename, try_plot_info
+                if self._plot_passes_filter(try_plot_info, new_challenge):
+                    if try_plot_info.prover.get_version() == PlotVersion.V2:
+                        # TODO: todo_v2_plots need to check v2 filter
+                        v2_awaitables.append(
+                            loop.run_in_executor(
+                                self.harvester.executor,
+                                blocking_lookup_v2_partial_proofs,
+                                try_plot_filename,
+                                try_plot_info,
+                            )
                         )
-                    )
-                    passed += 1
-                else:
-                    filter_prefix_bits = calculate_prefix_bits(
-                        self.harvester.constants,
-                        new_challenge.peak_height,
-                        try_plot_info.prover.get_size(),
-                    )
-                    if passes_plot_filter(
-                        filter_prefix_bits,
-                        try_plot_info.prover.get_id(),
-                        new_challenge.challenge_hash,
-                        new_challenge.sp_hash,
-                    ):
+                        passed += 1
+                    else:
                         passed += 1
                         awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
