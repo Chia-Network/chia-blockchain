@@ -26,9 +26,9 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_plot_strength,
     calculate_pos_challenge,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     generate_plot_public_key,
     make_pos,
     passes_plot_filter,
@@ -153,7 +153,7 @@ class HarvesterAPI:
         start = time.monotonic()
         assert len(new_challenge.challenge_hash) == 32
 
-        plot_strength = calculate_plot_strength(self.harvester.constants, new_challenge.last_tx_height)
+        plot_strength = calculate_required_plot_strength(self.harvester.constants, new_challenge.last_tx_height)
 
         loop = asyncio.get_running_loop()
 

@@ -142,7 +142,7 @@ def verify_and_get_quality_string(
         # === V2 plots ===
         assert plot_size.size_v2 is not None
 
-        plot_strength = calculate_plot_strength(constants, height)
+        plot_strength = calculate_required_plot_strength(constants, height)
         return validate_proof_v2(plot_id, plot_size.size_v2, plot_strength, pos.challenge, bytes(pos.proof))
 
 
@@ -181,7 +181,7 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_si
     return max(0, prefix_bits)
 
 
-def calculate_plot_strength(constants: ConsensusConstants, height: uint32) -> uint8:
+def calculate_required_plot_strength(constants: ConsensusConstants, height: uint32) -> uint8:
     if height < constants.PLOT_DIFFICULTY_4_HEIGHT:
         return constants.PLOT_DIFFICULTY_INITIAL
     if height < constants.PLOT_DIFFICULTY_5_HEIGHT:

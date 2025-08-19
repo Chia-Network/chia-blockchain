@@ -89,9 +89,9 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_plot_strength,
     calculate_pos_challenge,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     generate_plot_public_key,
     generate_taproot_sk,
     make_pos,
@@ -1502,7 +1502,7 @@ class BlockTools:
         rng = random.Random()
         rng.seed(seed)
 
-        plot_strength = calculate_plot_strength(constants, height)
+        plot_strength = calculate_required_plot_strength(constants, height)
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:

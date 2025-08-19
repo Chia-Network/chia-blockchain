@@ -12,8 +12,8 @@ from chia_rs.sized_ints import uint8, uint32
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_plot_strength,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     check_plot_size,
     make_pos,
     passes_plot_filter,
@@ -220,7 +220,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
     ],
 )
 def test_calculate_plot_strength(height: uint32, strength: uint8) -> None:
-    assert calculate_plot_strength(DEFAULT_CONSTANTS, height) == strength
+    assert calculate_required_plot_strength(DEFAULT_CONSTANTS, height) == strength
 
 
 @pytest.mark.parametrize(
