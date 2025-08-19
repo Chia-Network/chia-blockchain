@@ -485,16 +485,13 @@ class DeleteUnconfirmedTransactions(Streamable):
 class SelectCoins(CoinSelectionConfigLoader):
     wallet_id: uint32 = field(default_factory=default_raise)
     amount: uint64 = field(default_factory=default_raise)
-    excluded_coins: Optional[list[Coin]] = None
-    exclude_coins: Optional[list[Coin]] = None
+    exclude_coins: Optional[list[Coin]] = None  # for backwards compatibility
 
     def __post_init__(self) -> None:
-        if self.excluded_coin_ids is not None and (self.excluded_coins is not None or self.exclude_coins is not None):
+        if self.excluded_coin_ids is not None and self.exclude_coins is not None:
             raise ValueError(
-                "Cannot specify both excluded_coin_ids and exclude(d)_coins (the latter arguments are deprecated)"
+                "Cannot specify both excluded_coin_ids/excluded_coins and exclude_coins (the latter is deprecated)"
             )
-        elif self.excluded_coins is not None and self.exclude_coins is not None:
-            raise ValueError("Cannot specify both excluded_coins and exclude_coins (both are deprecated)")
         super().__post_init__()
 
     @classmethod

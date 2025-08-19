@@ -88,7 +88,7 @@ class CoinSelectionConfigLoader(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        if "excluded_coins" in json_dict:
+        if "excluded_coins" in json_dict and json_dict["excluded_coins"] is not None:
             excluded_coins: list[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
             excluded_coin_ids: list[str] = [c.name().hex() for c in excluded_coins]
             if "excluded_coin_ids" in json_dict:

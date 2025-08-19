@@ -1739,13 +1739,10 @@ class WalletRpcApi:
 
         # Some backwards compat fill-ins
         if request.excluded_coin_ids is None:
-            if request.excluded_coins is not None:
-                request = request.override(
-                    excluded_coin_ids=[c.name() for c in request.excluded_coins],
-                )
-            elif request.exclude_coins is not None:
+            if request.exclude_coins is not None:
                 request = request.override(
                     excluded_coin_ids=[c.name() for c in request.exclude_coins],
+                    exclude_coins=None,
                 )
 
         # don't love this snippet of code
@@ -1754,7 +1751,7 @@ class WalletRpcApi:
         tx_config = DEFAULT_TX_CONFIG.override(
             **request.autofill(
                 constants=self.service.wallet_state_manager.constants,
-            ).to_json_dict()
+            ).__dict__
         )
 
         if await self.service.wallet_state_manager.synced() is False:
