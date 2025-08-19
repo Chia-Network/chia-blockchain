@@ -49,6 +49,7 @@ from chia.wallet.wallet_request_types import (
     PWJoinPool,
     PWSelfPool,
     PWStatus,
+    SendTransaction,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_service import WalletService
@@ -591,7 +592,13 @@ class TestPoolWalletRpc:
 
             tr: TransactionRecord = (
                 await client.send_transaction(
-                    1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
+                    SendTransaction(
+                        wallet_id=uint32(1),
+                        amount=uint64(100),
+                        address=encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"),
+                        push=True,
+                    ),
+                    DEFAULT_TX_CONFIG,
                 )
             ).transaction
 

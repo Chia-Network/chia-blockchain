@@ -15,7 +15,7 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
@@ -30,6 +30,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
@@ -1100,7 +1101,7 @@ class TransactionEndpointRequest(Streamable):
         return {
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
-            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **self.to_json_dict(_avoid_ban=True),
         }
 
@@ -1110,6 +1111,39 @@ class TransactionEndpointRequest(Streamable):
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: list[UnsignedTransaction]
     transactions: list[TransactionRecord]
+
+
+# utility for SendTransaction
+@streamable
+@dataclass(frozen=True)
+class ClawbackPuzzleDecoratorOverride(Streamable):
+    decorator: str
+    clawback_timelock: uint64
+
+    def __post_init__(self) -> None:
+        if self.decorator != PuzzleDecoratorType.CLAWBACK.name:
+            raise ValueError("Invalid clawback puzzle decorator override specified")
+        super().__post_init__()
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransaction(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    address: str = field(default_factory=default_raise)
+    memos: list[str] = field(default_factory=list)
+    # Technically this value was meant to support many types here
+    # However, only one is supported right now and there are no plans to extend
+    # So, as a slight hack, we'll specify that only Clawback is supported
+    puzzle_decorator: Optional[list[ClawbackPuzzleDecoratorOverride]] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
 
 
 @streamable
@@ -1547,11 +1581,6 @@ class VCRevokeResponse(TransactionEndpointResponse):
 
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
-@streamable
-@dataclass(frozen=True)
-class SendTransactionResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable
