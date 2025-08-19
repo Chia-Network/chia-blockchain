@@ -17,9 +17,11 @@ all components.
 run 2.5.5 but later wish to downgrade to an earlier version, you will need to downgrade your database schema by
 running the following command:
 
-python -c "import sqlite3, sys, os; conn = sqlite3.connect(os.path.expanduser(sys.argv[1]));
-cursor = conn.execute('UPDATE coin_record SET spent_index = 0 WHERE spent_index = -1');
-print(f'Updated {cursor.rowcount} records'); conn.commit(); conn.close()" <path to the db>
+```
+python -c "import sqlite3, sys, os; conn = sqlite3.connect(os.path.expanduser(sys.argv[1])); cursor = conn.execute('UPDATE coin_record SET spent_index = 0 WHERE spent_index = -1'); print(f'Updated {cursor.rowcount} records'); conn.commit(); conn.close()" <path to the db>
+```
+
+Replacing `<path to the db>` with your actual database path.
 
 ## What's Changed
 
