@@ -9,11 +9,11 @@ for setuptools_scm/PEP 440 reasons.
 ## 2.5.5 Chia blockchain 2025-08-19
 
 Note that protocol changes between node, farmer, and harvester will require all entities to be upgraded
-at the same time to 2.5.5. On a simple one machine setup, this will be handled by the installer. 
+at the same time to 2.5.5. On a simple one machine setup, this will be handled by the installer.
 But if you have more complicated topologies with remote farmers or harvesters, you will need to upgrade
 all components.
 
-2.5.5 will also make changes to the blockchain database that are incompatible with previous versions. If you 
+2.5.5 will also make changes to the blockchain database that are incompatible with previous versions. If you
 run 2.5.5 but later wish to downgrade to an earlier version, you will need to downgrade your database schema by
 running the following command:
 
