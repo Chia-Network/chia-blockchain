@@ -130,8 +130,8 @@ class HarvesterAPI:
                     good_qualities = []
                     sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
 
-                    for quality in partial_proofs:
-                        quality_str = quality_for_partial_proof(quality, new_challenge.challenge_hash)
+                    for partial_proof in partial_proofs:
+                        quality_str = quality_for_partial_proof(partial_proof, new_challenge.challenge_hash)
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
                             quality_str,
@@ -143,7 +143,7 @@ class HarvesterAPI:
                         )
 
                         if required_iters < sp_interval_iters:
-                            good_qualities.append(quality)
+                            good_qualities.append(partial_proof)
 
                     if len(good_qualities) > 0:
                         size = plot_info.prover.get_size().size_v2
