@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent
 import contextlib
 import logging
 from collections.abc import AsyncIterator
@@ -48,7 +47,7 @@ class Solver:
         self._shut_down = False
         num_threads = config["num_threads"]
         self.log.info(f"Initializing solver with {num_threads} threads")
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=num_threads, thread_name_prefix="solver-")
+        self.executor = ThreadPoolExecutor(max_workers=num_threads, thread_name_prefix="solver-")
         self._server = None
         self.constants = constants
         self.state_changed_callback: Optional[StateChangedProtocol] = None

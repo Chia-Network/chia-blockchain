@@ -189,7 +189,7 @@ def test_missing_messages() -> None:
         "RequestSignatures",
         "RespondPlots",
         "RespondSignatures",
-        "V2QualityChains",
+        "PartialProofsData",
     }
 
     introducer_msgs = {"RequestPeersIntroducer", "RespondPeersIntroducer"}
