@@ -13,7 +13,7 @@ at the same time to 2.5.5. On a simple one machine setup, this will be handled b
 But if you have more complicated topologies with remote farmers or harvesters, you will need to upgrade
 all components.
 
-2.5.5 will also make changes to the node database that are incompatible with previous versions. If you 
+2.5.5 will also make changes to the blockchain database that are incompatible with previous versions. If you 
 run 2.5.5 but later wish to downgrade to an earlier version, you will need to repair your database by
 running the following command:
 
