@@ -89,6 +89,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_plot_strength,
     calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
@@ -1500,6 +1501,8 @@ class BlockTools:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
         rng.seed(seed)
+
+        plot_strength = calculate_plot_strength(constants, height)
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1509,7 +1512,7 @@ class BlockTools:
                 continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
-            qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
+            qualities = plot_info.prover.get_qualities_for_challenge(new_challenge, plot_strength)
 
             for proof_index, quality_str in enumerate(qualities):
                 required_iters = calculate_iterations_quality(
