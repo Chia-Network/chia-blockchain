@@ -23,7 +23,7 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
             solver = solver_service._node
             solver_api = solver_service._api
             assert solver_api.ready() is True
-            test_info = SolverInfo(plot_difficulty=uint64(1500), quality_chain=b"test_quality_chain_42")
+            test_info = SolverInfo(plot_difficulty=uint64(1500), partial_proof=b"test_partial_proof_42")
             expected_proof = b"test_proof_data_12345"
             with patch.object(solver, "solve", return_value=expected_proof):
                 api_result = await solver_api.solve(test_info)
@@ -49,7 +49,7 @@ async def test_solver_error_handling(
                 pass  # expected
             # test solver handles exception in solve method
             solver = solver_service._node
-            test_info = SolverInfo(plot_difficulty=uint64(1000), quality_chain=b"test_quality_chain_zeros")
+            test_info = SolverInfo(plot_difficulty=uint64(1000), partial_proof=b"test_partial_proof_zeros")
             with patch.object(solver, "solve", side_effect=RuntimeError("test error")):
                 # solver api should handle exceptions gracefully
                 result = await solver_service._api.solve(test_info)

@@ -11,11 +11,11 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class SolverInfo(Streamable):
     plot_difficulty: uint64
-    quality_chain: bytes  # 16 * k bits blob, k (plot size) can be derived from this
+    partial_proof: bytes  # 16 * k bits blob, k (plot size) can be derived from this
 
 
 @streamable
 @dataclass(frozen=True)
 class SolverResponse(Streamable):
-    quality_chain: bytes
+    partial_proof: bytes
     proof: bytes

@@ -10,6 +10,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.pos_quality import quality_for_partial_proof
 from chia.consensus.pot_iterations import (
     calculate_iterations_quality,
     calculate_sp_interval_iters,
@@ -19,7 +20,7 @@ from chia.plotting.prover import PlotVersion
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot, PlotSyncResponse, V2QualityChains
+from chia.protocols.harvester_protocol import PartialProofsData, Plot, PlotSyncResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -98,8 +99,8 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup_v2_quality_chains(filename: Path, plot_info: PlotInfo) -> Optional[V2QualityChains]:
-            # Uses the V2 Prover object to lookup qualitie_chains (partial proofs).
+        def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> Optional[PartialProofsData]:
+            # Uses the V2 Prover object to lookup qualities only. No full proofs generated.
             try:
                 plot_id = plot_info.prover.get_id()
                 sp_challenge_hash = calculate_pos_challenge(
@@ -108,31 +109,50 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 )
                 try:
-                    quality_chains = plot_info.prover.get_quality_chains_for_challenge(sp_challenge_hash)
+                    partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(sp_challenge_hash)
                 except Exception as e:
-                    self.harvester.log.error(f"Exception fetching quality chains for V2 plot {filename}. {e}")
+                    self.harvester.log.error(f"Exception fetching partial proof for V2 plot {filename}. {e}")
                     return None
 
-                if quality_chains is not None and len(quality_chains) > 0:
+                if partial_proofs is not None and len(partial_proofs) > 0:
                     # Get the appropriate difficulty for this plot
                     difficulty = new_challenge.difficulty
+                    sub_slot_iters = new_challenge.sub_slot_iters
                     if plot_info.pool_contract_puzzle_hash is not None:
                         # Check for pool-specific difficulty
                         for pool_difficulty in new_challenge.pool_difficulties:
                             if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
                                 difficulty = pool_difficulty.difficulty
+                                sub_slot_iters = pool_difficulty.sub_slot_iters
                                 break
 
-                    # Filter quality chains that pass the required_iters check
+                    # Filter qualities that pass the required_iters check (same as V1 flow)
+                    good_qualities = []
+                    sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
 
-                    if len(quality_chains) > 0:
+                    for quality in partial_proofs:
+                        quality_str = quality_for_partial_proof(quality, new_challenge.challenge_hash)
+                        required_iters: uint64 = calculate_iterations_quality(
+                            self.harvester.constants,
+                            quality_str,
+                            plot_info.prover.get_size(),  # TODO: todo_v2_plots update for V2
+                            difficulty,
+                            new_challenge.sp_hash,
+                            sub_slot_iters,
+                            new_challenge.last_tx_height,
+                        )
+
+                        if required_iters < sp_interval_iters:
+                            good_qualities.append(quality)
+
+                    if len(good_qualities) > 0:
                         size = plot_info.prover.get_size().size_v2
                         assert size is not None
-                        return V2QualityChains(
+                        return PartialProofsData(
                             new_challenge.challenge_hash,
                             new_challenge.sp_hash,
-                            quality_chains[0].hex() + str(filename.resolve()),
-                            quality_chains,
+                            good_qualities[0].hex() + str(filename.resolve()),
+                            good_qualities,
                             new_challenge.signage_point_index,
                             size,
                             difficulty,
@@ -302,7 +322,7 @@ class HarvesterAPI:
                     # TODO: todo_v2_plots need to check v2 filter
                     v2_awaitables.append(
                         loop.run_in_executor(
-                            self.harvester.executor, blocking_lookup_v2_quality_chains, try_plot_filename, try_plot_info
+                            self.harvester.executor, blocking_lookup_v2_partial_proofs, try_plot_filename, try_plot_info
                         )
                     )
                     passed += 1
@@ -325,7 +345,7 @@ class HarvesterAPI:
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.monotonic() - start
         total_proofs_found = 0
-        total_v2_quality_chains_found = 0
+        total_v2_partial_proofs_found = 0
 
         # Process V1 plot responses (existing flow)
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
@@ -346,10 +366,10 @@ class HarvesterAPI:
 
         # Process V2 plot quality collections (new flow)
         for quality_awaitable in asyncio.as_completed(v2_awaitables):
-            v2_quality_chains = await quality_awaitable
-            if v2_quality_chains is not None:
-                total_v2_quality_chains_found += len(v2_quality_chains.quality_chains)
-                msg = make_msg(ProtocolMessageTypes.v2_quality_chains, v2_quality_chains)
+            partial_proofs_data = await quality_awaitable
+            if partial_proofs_data is not None:
+                total_v2_partial_proofs_found += len(partial_proofs_data.partial_proofs)
+                msg = make_msg(ProtocolMessageTypes.partial_proofs, partial_proofs_data)
                 await peer.send_message(msg)
 
         now = uint64(time.time())
@@ -369,7 +389,7 @@ class HarvesterAPI:
         self.harvester.log.info(
             f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]} ..."
             f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge"
-            f"Found {total_proofs_found} V1 proofs and {total_v2_quality_chains_found} V2 qualities."
+            f"Found {total_proofs_found} V1 proofs and {total_v2_partial_proofs_found} V2 qualities."
             f" Time: {time_taken:.5f} s. Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
@@ -378,7 +398,7 @@ class HarvesterAPI:
                 "challenge_hash": new_challenge.challenge_hash.hex(),
                 "total_plots": self.harvester.plot_manager.plot_count(),
                 "found_proofs": total_proofs_found,
-                "found_v2_quality_chains": total_v2_quality_chains_found,
+                "found_v2_partial_proofs": total_v2_partial_proofs_found,
                 "eligible_plots": len(awaitables) + len(v2_awaitables),
                 "time": time_taken,
             },

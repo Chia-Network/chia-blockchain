@@ -17,6 +17,7 @@ from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.farmer_protocol import DeclareProofOfSpace, SignedValues
 from chia.protocols.harvester_protocol import (
+    PartialProofsData,
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
@@ -24,7 +25,6 @@ from chia.protocols.harvester_protocol import (
     PoolDifficulty,
     SignatureRequestSourceData,
     SigningDataKind,
-    V2QualityChains,
 )
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
@@ -481,52 +481,52 @@ class FarmerAPI:
                 return
 
     @metadata.request(peer_required=True)
-    async def v2_quality_chains(self, quality_data: V2QualityChains, peer: WSChiaConnection) -> None:
+    async def partial_proofs(self, partial_proof_data: PartialProofsData, peer: WSChiaConnection) -> None:
         """
-        This is a response from the harvester for V2 plots, containing only quality chains (partial proof bytes).
+        This is a response from the harvester for V2 plots, containing only partial proof data.
         We send these to the solver service and wait for a response with the full proof.
         """
-        if quality_data.sp_hash not in self.farmer.number_of_responses:
-            self.farmer.number_of_responses[quality_data.sp_hash] = 0
-            self.farmer.cache_add_time[quality_data.sp_hash] = uint64(time.time())
+        if partial_proof_data.sp_hash not in self.farmer.number_of_responses:
+            self.farmer.number_of_responses[partial_proof_data.sp_hash] = 0
+            self.farmer.cache_add_time[partial_proof_data.sp_hash] = uint64(time.time())
 
-        if quality_data.sp_hash not in self.farmer.sps:
+        if partial_proof_data.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(
-                f"Received V2 quality collection for a signage point that we do not have {quality_data.sp_hash}"
+                f"Received partial proofs for a signage point that we do not have {partial_proof_data.sp_hash}"
             )
             return None
 
-        self.farmer.cache_add_time[quality_data.sp_hash] = uint64(time.time())
+        self.farmer.cache_add_time[partial_proof_data.sp_hash] = uint64(time.time())
 
         self.farmer.log.info(
-            f"Received V2 quality collection with {len(quality_data.quality_chains)} quality chains "
-            f"for plot {quality_data.plot_identifier[:10]}... from {peer.peer_node_id}"
+            f"Received V2 partial proof collection with {len(partial_proof_data.partial_proofs)} partail proofs "
+            f"for plot {partial_proof_data.plot_identifier[:10]}... from {peer.peer_node_id}"
         )
 
         # Process each quality chain through solver service to get full proofs
-        for quality_chain in quality_data.quality_chains:
+        for partial_proof in partial_proof_data.partial_proofs:
             solver_info = SolverInfo(
-                plot_difficulty=quality_data.difficulty,
-                quality_chain=quality_chain,
+                plot_difficulty=partial_proof_data.difficulty,
+                partial_proof=partial_proof,
             )
 
             try:
                 # store pending request data for matching with response
-                self.farmer.pending_solver_requests[quality_chain] = {
-                    "quality_data": quality_data,
+                self.farmer.pending_solver_requests[partial_proof] = {
+                    "proof_data": partial_proof_data,
                     "peer": peer,
                 }
 
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for quality {quality_chain.hex()[:10]}...")
+                self.farmer.log.debug(f"Sent solve request for quality {partial_proof.hex()[:10]}...")
 
             except Exception as e:
-                self.farmer.log.error(f"Failed to call solver service for quality {quality_chain.hex()[:10]}...: {e}")
+                self.farmer.log.error(f"Failed to call solver service for quality {partial_proof.hex()[:10]}...: {e}")
                 # clean up pending request
-                if quality_chain in self.farmer.pending_solver_requests:
-                    del self.farmer.pending_solver_requests[quality_chain]
+                if partial_proof in self.farmer.pending_solver_requests:
+                    del self.farmer.pending_solver_requests[partial_proof]
 
     @metadata.request()
     async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
@@ -538,36 +538,36 @@ class FarmerAPI:
 
         # find the matching pending request using quality_string
 
-        if response.quality_chain not in self.farmer.pending_solver_requests:
-            self.farmer.log.warning(f"Received solver response for unknown quality {response.quality_chain.hex()}")
+        if response.partial_proof not in self.farmer.pending_solver_requests:
+            self.farmer.log.warning(f"Received solver response for unknown quality {response.partial_proof.hex()}")
             return
 
         # get the original request data
-        request_data = self.farmer.pending_solver_requests.pop(response.quality_chain)
-        quality_data = request_data["quality_data"]
+        request_data = self.farmer.pending_solver_requests.pop(response.partial_proof)
+        proof_data = request_data["proof_data"]
         original_peer = request_data["peer"]
-        quality = response.quality_chain
+        quality = response.partial_proof
 
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(f"Received empty proof from solver for quality {quality.hex()}...")
+            self.farmer.log.warning(f"Received empty proof from solver for proof {quality.hex()}...")
             return
 
-        sp_challenge_hash = quality_data.challenge_hash
+        sp_challenge_hash = proof_data.challenge_hash
         new_proof_of_space = harvester_protocol.NewProofOfSpace(
-            quality_data.challenge_hash,
-            quality_data.sp_hash,
-            quality_data.plot_identifier,
+            proof_data.challenge_hash,
+            proof_data.sp_hash,
+            proof_data.plot_identifier,
             ProofOfSpace(
                 sp_challenge_hash,
-                quality_data.pool_public_key,
-                quality_data.pool_contract_puzzle_hash,
-                quality_data.plot_public_key,
-                quality_data.plot_size,
+                proof_data.pool_public_key,
+                proof_data.pool_contract_puzzle_hash,
+                proof_data.plot_public_key,
+                proof_data.plot_size,
                 proof_bytes,
             ),
-            quality_data.signage_point_index,
+            proof_data.signage_point_index,
             include_source_signature_data=False,
             farmer_reward_address_override=None,
             fee_info=None,

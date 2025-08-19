@@ -65,11 +65,11 @@ class NewProofOfSpace(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class V2QualityChains(Streamable):
+class PartialProofsData(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str
-    quality_chains: list[bytes]  # 16 * k bits blobs instead of 32-byte quality strings
+    partial_proofs: list[bytes]  # 16 * k bits blobs instead of 32-byte quality strings
     signage_point_index: uint8
     plot_size: uint8
     difficulty: uint64

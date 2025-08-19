@@ -31,13 +31,13 @@ class SolverRpcApi:
 
     async def solve(self, request: dict[str, Any]) -> EndpointResult:
         # extract all required fields from request
-        quality_chain = request["quality_chain"]
+        partial_proof = request["partial_proof"]
         plot_difficulty = request.get("plot_difficulty", 1000)  # todo default ?
 
         # create complete SolverInfo object with all provided data
         solver_info = SolverInfo(
             plot_difficulty=uint64(plot_difficulty),
-            quality_chain=bytes.fromhex(quality_chain),
+            partial_proof=bytes.fromhex(partial_proof),
         )
 
         proof = self.service.solve(solver_info)
