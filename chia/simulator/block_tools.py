@@ -1500,6 +1500,7 @@ class BlockTools:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
         rng.seed(seed)
+
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
