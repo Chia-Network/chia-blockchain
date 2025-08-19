@@ -14,7 +14,7 @@ But if you have more complicated topologies with remote farmers or harvesters, y
 all components.
 
 2.5.5 will also make changes to the blockchain database that are incompatible with previous versions. If you 
-run 2.5.5 but later wish to downgrade to an earlier version, you will need to repair your database by
+run 2.5.5 but later wish to downgrade to an earlier version, you will need to downgrade your database schema by
 running the following command:
 
 python -c "import sqlite3, sys, os; conn = sqlite3.connect(os.path.expanduser(sys.argv[1]));
