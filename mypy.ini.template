@@ -41,6 +41,9 @@ ignore_missing_imports = True
 [mypy-chia_puzzles_py.*]
 ignore_missing_imports = True
 
+[mypy-chia_rs.*]
+ignore_missing_imports = True
+
 [mypy-chiabip158.*]
 ignore_missing_imports = True
 

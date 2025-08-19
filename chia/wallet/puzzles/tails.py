@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+if TYPE_CHECKING:
+    from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 from chia_puzzles_py.programs import (
     DELEGATED_TAIL,
@@ -48,12 +51,12 @@ class LimitationsProgram:
         raise NotImplementedError("Need to implement 'construct' on limitations programs")
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: Dict[str, Any]) -> Program:
         raise NotImplementedError("Need to implement 'solve' on limitations programs")
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, cat_tail_info: dict, amount: uint64, action_scope: WalletActionScope
+        cls, wallet: CATWallet, cat_tail_info: Dict[str, Any], amount: uint64, action_scope: WalletActionScope
     ) -> WalletSpendBundle:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
@@ -77,14 +80,14 @@ class GenesisById(LimitationsProgram):
         return GENESIS_BY_ID_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
-        return Program.to([])
+    def solve(args: list[Program], solution_dict: Dict[str, Any]) -> Program:
+        return Program.to([])  # type: ignore[no-any-return]
 
     @classmethod
     async def generate_issuance_bundle(
         cls,
-        wallet,
-        _: dict,
+        wallet: CATWallet,
+        _: Dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
@@ -162,9 +165,9 @@ class GenesisByPuzhash(LimitationsProgram):
         return GENESIS_BY_PUZHASH_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: Dict[str, Any]) -> Program:
         pid = hexstr_to_bytes(solution_dict["parent_coin_info"])
-        return Program.to([pid, solution_dict["amount"]])
+        return Program.to([pid, solution_dict["amount"]])  # type: ignore[no-any-return]
 
 
 class EverythingWithSig(LimitationsProgram):
@@ -185,8 +188,8 @@ class EverythingWithSig(LimitationsProgram):
         return EVERYTHING_WITH_SIG_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
-        return Program.to([])
+    def solve(args: list[Program], solution_dict: Dict[str, Any]) -> Program:
+        return Program.to([])  # type: ignore[no-any-return]
 
 
 class DelegatedLimitations(LimitationsProgram):
@@ -207,11 +210,11 @@ class DelegatedLimitations(LimitationsProgram):
         return DELEGATED_LIMITATIONS_MOD.curry(args[0])
 
     @staticmethod
-    def solve(args: list[Program], solution_dict: dict) -> Program:
+    def solve(args: list[Program], solution_dict: Dict[str, Any]) -> Program:
         signed_program = ALL_LIMITATIONS_PROGRAMS[solution_dict["signed_program"]["identifier"]]
         inner_program_args = [Program.fromhex(item) for item in solution_dict["signed_program"]["args"]]
         inner_solution_dict = solution_dict["program_arguments"]
-        return Program.to(
+        return Program.to(  # type: ignore[no-any-return]
             [
                 signed_program.construct(inner_program_args),
                 signed_program.solve(inner_program_args, inner_solution_dict),
