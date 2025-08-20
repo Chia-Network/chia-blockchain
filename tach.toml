@@ -88,7 +88,6 @@ depends_on = [
 [[modules]]
 path = "chia.apis"
 depends_on = [
-    { path = "chia.introducer", deprecated = false },
     { path = "chia.wallet", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.server", deprecated = false },

@@ -35,9 +35,7 @@ class FullNodeApiStub:
         return None
 
     @metadata.request(peer_required=True)
-    async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
-    ) -> None:
+    async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection) -> None:
         """Handle peer response."""
 
     @metadata.request(peer_required=True)
@@ -51,9 +49,7 @@ class FullNodeApiStub:
         """Handle new peak."""
 
     @metadata.request(peer_required=True)
-    async def new_transaction(
-        self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection
-    ) -> None:
+    async def new_transaction(self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection) -> None:
         """Handle new transaction."""
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
@@ -202,9 +198,7 @@ class FullNodeApiStub:
         """Handle proof of space declaration."""
 
     @metadata.request(peer_required=True)
-    async def signed_values(
-        self, farmer_request: farmer_protocol.SignedValues, peer: WSChiaConnection
-    ) -> None:
+    async def signed_values(self, farmer_request: farmer_protocol.SignedValues, peer: WSChiaConnection) -> None:
         """Handle signed values."""
 
     @metadata.request(peer_required=True)
