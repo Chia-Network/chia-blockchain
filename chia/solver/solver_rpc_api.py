@@ -32,11 +32,11 @@ class SolverRpcApi:
     async def solve(self, request: dict[str, Any]) -> EndpointResult:
         # extract all required fields from request
         partial_proof = request["partial_proof"]
-        plot_difficulty = request.get("plot_difficulty", 1000)  # todo default ?
+        plot_strength = request.get("plot_difficulty", 1000)  # todo default ?
 
         # create complete SolverInfo object with all provided data
         solver_info = SolverInfo(
-            plot_difficulty=uint64(plot_difficulty),
+            plot_strength == uint64(plot_strength),
             partial_proof=bytes.fromhex(partial_proof),
         )
 

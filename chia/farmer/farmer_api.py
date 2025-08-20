@@ -506,7 +506,7 @@ class FarmerAPI:
         # Process each quality chain through solver service to get full proofs
         for partial_proof in partial_proof_data.partial_proofs:
             solver_info = SolverInfo(
-                plot_difficulty=partial_proof_data.difficulty,
+                plot_strength=partial_proof_data.difficulty,
                 partial_proof=partial_proof,
             )
 

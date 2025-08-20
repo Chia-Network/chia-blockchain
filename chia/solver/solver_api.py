@@ -40,7 +40,7 @@ class SolverAPI:
             self.log.error("Solver is not started")
             return None
 
-        self.log.debug(f"Solving quality {request.partial_proof.hex()}with difficulty {request.plot_difficulty}")
+        self.log.debug(f"Solving quality {request.partial_proof.hex()}with difficulty {request.plot_strength}")
 
         try:
             proof = self.solver.solve(request)
