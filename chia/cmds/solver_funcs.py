@@ -21,17 +21,15 @@ async def get_state(
         print(f"Failed to get solver state: {e}")
 
 
-async def solve_quality(
+async def solve_partial_proof(
     ctx: ChiaCliContext,
     solver_rpc_port: Optional[int],
-    quality_hex: str,
-    plot_size: int = 32,
-    difficulty: int = 1000,
+    partial_proof: str,
 ) -> None:
-    """Solve a quality string via RPC."""
+    """Solve a partial proof via RPC."""
     try:
         async with get_any_service_client(SolverRpcClient, ctx.root_path, solver_rpc_port) as (client, _):
-            response = await client.solve(quality_hex)
+            response = await client.solve(partial_proof)
             print(json.dumps(response, indent=2))
     except Exception as e:
-        print(f"Failed to solve quality: {e}")
+        print(f"Failed to solve partial proof: {e}")

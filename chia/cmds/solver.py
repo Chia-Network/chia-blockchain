@@ -33,7 +33,7 @@ def get_state_cmd(
     asyncio.run(get_state(ChiaCliContext.set_default(ctx), solver_rpc_port))
 
 
-@solver_cmd.command("solve", help="Solve a quality string")
+@solver_cmd.command("solve", help="Solve a partial proof of space, turning it into a full proof")
 @click.option(
     "-sp",
     "--solver-rpc-port",
@@ -43,38 +43,20 @@ def get_state_cmd(
     show_default=True,
 )
 @click.option(
-    "-q",
-    "--quality",
-    help="Quality string to solve (hex format)",
+    "-p",
+    "--partial_proof",
+    help="partial proof string to solve (hex format)",
     type=str,
     required=True,
-)
-@click.option(
-    "-k",
-    "--plot-size",
-    help="Plot size (k value, default: 32)",
-    type=int,
-    default=32,
-    show_default=True,
-)
-@click.option(
-    "-d",
-    "--difficulty",
-    help="Plot difficulty (default: 1000)",
-    type=int,
-    default=1000,
-    show_default=True,
 )
 @click.pass_context
 def solve_cmd(
     ctx: click.Context,
     solver_rpc_port: Optional[int],
-    quality: str,
-    plot_size: int,
-    difficulty: int,
+    partial_proof: str,
 ) -> None:
     import asyncio
 
-    from chia.cmds.solver_funcs import solve_quality
+    from chia.cmds.solver_funcs import solve_partial_proof
 
-    asyncio.run(solve_quality(ChiaCliContext.set_default(ctx), solver_rpc_port, quality, plot_size, difficulty))
+    asyncio.run(solve_partial_proof(ChiaCliContext.set_default(ctx), solver_rpc_port, partial_proof))

@@ -43,7 +43,7 @@ class TestProver:
 
     def test_v2_prover_get_full_proof_raises_error(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format require solver to get full proof"):
+        with pytest.raises(AssertionError, match="V2 plot format require solver to get full proof"):
             prover.get_full_proof(bytes32(b"1" * 32), 0)
 
     def test_v2_prover_bytes_raises_error(self) -> None:
