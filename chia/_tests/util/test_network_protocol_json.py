@@ -18,6 +18,8 @@ def test_protocol_json() -> None:
     assert type(farming_info).from_json_dict(farming_info_json) == farming_info
     assert str(signed_values_json) == str(signed_values.to_json_dict())
     assert type(signed_values).from_json_dict(signed_values_json) == signed_values
+    assert str(partial_proof_json) == str(partial_proof.to_json_dict())
+    assert type(partial_proof).from_json_dict(partial_proof_json) == partial_proof
     assert str(new_peak_json) == str(new_peak.to_json_dict())
     assert type(new_peak).from_json_dict(new_peak_json) == new_peak
     assert str(new_transaction_json) == str(new_transaction.to_json_dict())
@@ -265,3 +267,7 @@ def test_protocol_json() -> None:
     assert type(error_without_data).from_json_dict(error_without_data_json) == error_without_data
     assert str(error_with_data_json) == str(error_with_data.to_json_dict())
     assert type(error_with_data).from_json_dict(error_with_data_json) == error_with_data
+    assert str(solver_info_json) == str(solver_info.to_json_dict())
+    assert type(solver_info).from_json_dict(solver_info_json) == solver_info
+    assert str(solver_response_json) == str(solver_response.to_json_dict())
+    assert type(solver_response).from_json_dict(solver_response_json) == solver_response
