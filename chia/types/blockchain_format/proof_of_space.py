@@ -79,9 +79,7 @@ def verify_and_get_quality_string(
     if new_challenge != pos.challenge:
         log.error("Calculated pos challenge doesn't match the provided one")
         return None
-
-    # we use different plot filter prefix sizes depending on v1 or v2 plots
-    prefix_bits = calculate_prefix_bits(constants, height, plot_size)
+    prefix_bits = calculate_prefix_bits(constants, height)
     if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
         log.error("Did not pass the plot filter")
         return None
@@ -119,11 +117,7 @@ def passes_plot_filter(
     return cast(bool, plot_filter[:prefix_bits].uint == 0)
 
 
-def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_size: PlotSize) -> int:
-    # v2 plots have a constant plot filter size
-    if plot_size.size_v2 is not None:
-        return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-
+def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
     prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V1)
     if height >= constants.PLOT_FILTER_32_HEIGHT:
         prefix_bits -= 4

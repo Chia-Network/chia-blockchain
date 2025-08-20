@@ -38,6 +38,7 @@ from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     get_plot_id,
@@ -114,8 +115,6 @@ class FarmerAPI:
                 new_proof_of_space.proof.size(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
-                sp.sub_slot_iters,
-                sp.last_tx_height,
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
@@ -223,8 +222,6 @@ class FarmerAPI:
                     new_proof_of_space.proof.size(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
-                    sp.sub_slot_iters,
-                    sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
@@ -535,8 +532,7 @@ class FarmerAPI:
                 new_signage_point.signage_point_index,
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
-                new_signage_point.peak_height,
-                new_signage_point.last_tx_height,
+                uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
             )
 
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)

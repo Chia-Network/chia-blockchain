@@ -228,7 +228,6 @@ async def test_missing_signage_point(
             uint64(1000000),
             uint8(index),
             uint32(1),
-            uint32(0),
         )
         return time, sp
 

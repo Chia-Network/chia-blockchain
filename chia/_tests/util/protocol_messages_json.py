@@ -12,7 +12,6 @@ new_signage_point_json: dict[str, Any] = {
     "sub_slot_iters": 8265724497259558930,
     "signage_point_index": 194,
     "peak_height": 1,
-    "last_tx_height": 0,
     "sp_source_data": None,
 }
 
@@ -2160,8 +2159,7 @@ new_signage_point_harvester_json: dict[str, Any] = {
             "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
         }
     ],
-    "peak_height": 0,
-    "last_tx_height": 0,
+    "filter_prefix_bits": 9,
 }
 
 new_proof_of_space_json: dict[str, Any] = {

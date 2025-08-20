@@ -114,7 +114,7 @@ class TestPotIterations:
                         quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
                         # TODO: todo_v2_plots
                         required_iters = calculate_iterations_quality(
-                            constants, quality, PlotSize.make_v1(k), difficulty, sp_hash, uint64(100000000), uint32(0)
+                            constants, quality, PlotSize.make_v1(k), difficulty, sp_hash
                         )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
