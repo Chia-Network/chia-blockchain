@@ -261,14 +261,20 @@ jobs:
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
+            skip: gui
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
             url: "docker://ubuntu:jammy"
+            skip: gui
           - name: ubuntu:noble (24.04)
             type: ubuntu
             # https://packages.ubuntu.com/noble/python3 (24.04, 3.12)
             url: "docker://ubuntu:noble"
+            skip: gui
+          - name: webtop:ubuntu-kde
+            type: ubuntu
+            url: lscr.io/linuxserver/webtop:ubuntu-kde
         mode:
           - name: GUI
             matrix: gui
@@ -285,6 +291,15 @@ jobs:
           - name: Intel
             matrix: intel
             artifact-name: intel
+        exclude:
+          - mode:
+              matrix: gui
+            distribution:
+              skip: gui
+          - mode:
+              matrix: cli
+            distribution:
+              skip: cli
 
     env:
       DEBIAN_FRONTEND: noninteractive
