@@ -33,4 +33,4 @@ class IntroducerApiStub:
         peer: WSChiaConnection,
     ) -> Optional[Message]:
         """Handle request for peers from other nodes."""
-        return None
+        raise NotImplementedError("Stub method should not be called")

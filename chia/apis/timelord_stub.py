@@ -28,13 +28,16 @@ class TimelordApiStub:
     @metadata.request()
     async def new_peak_timelord(self, new_peak: NewPeakTimelord) -> None:
         """Handle new peak from full node."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request()
     async def new_unfinished_block_timelord(
         self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord
     ) -> None:
         """Handle new unfinished block from full node."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request()
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime) -> None:
         """Handle request for compact proof of time."""
+        raise NotImplementedError("Stub method should not be called")

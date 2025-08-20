@@ -33,17 +33,19 @@ class HarvesterApiStub:
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ) -> None:
         """Handshake between the harvester and farmer."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ) -> None:
         """Handle new signage point from farmer."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """Handle signature request from farmer."""
-        return None
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request()
     async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
@@ -53,3 +55,4 @@ class HarvesterApiStub:
     @metadata.request()
     async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         """Handle plot sync response."""
+        raise NotImplementedError("Stub method should not be called")

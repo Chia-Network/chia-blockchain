@@ -38,14 +38,17 @@ class FarmerApiStub:
         self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
     ) -> None:
         """Handle new proof of space from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
         """Handle signature response from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request()
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
         """Handle new signage point from full node."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request()
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Optional[Message]:
@@ -55,35 +58,44 @@ class FarmerApiStub:
     @metadata.request(peer_required=True)
     async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: WSChiaConnection) -> None:
         """Handle farming info from full node."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def respond_plots(self, _: RespondPlots, peer: WSChiaConnection) -> None:
         """Handle plot response from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
         """Handle plot sync start from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
         """Handle plot sync loaded from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         """Handle plot sync removed from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_invalid(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         """Handle plot sync invalid from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         """Handle plot sync keys missing from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         """Handle plot sync duplicates from harvester."""
+        raise NotImplementedError("Stub method should not be called")
 
     @metadata.request(peer_required=True)
     async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
         """Handle plot sync done from harvester."""
+        raise NotImplementedError("Stub method should not be called")
