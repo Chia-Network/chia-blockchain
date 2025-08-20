@@ -186,6 +186,7 @@ def check_plots(
                         # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                         try:
                             proof_start_time = round(time() * 1000)
+                            # TODO : todo_v2_plots handle v2 plots
                             proof = pr.get_full_proof(challenge, index, parallel_read)
                             proof_spent_time = round(time() * 1000) - proof_start_time
                             if proof_spent_time > 15000:
