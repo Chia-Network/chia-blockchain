@@ -124,7 +124,7 @@ class HarvesterAPI:
                 partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(sp_challenge_hash)
 
                 # If no partial proofs are found, return None
-                if partial_proofs is None or len(partial_proofs) == 0:
+                if len(partial_proofs) == 0:
                     return None
 
                 # Get the appropriate difficulty for this plot

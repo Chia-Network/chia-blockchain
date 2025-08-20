@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from chia_rs import ConsensusConstants
 
 from chia.protocols.outbound_message import NodeType
-from chia.protocols.solver_protocol import SolverInfo
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -66,8 +65,8 @@ class Solver:
             self.executor.shutdown(wait=True)
             self.log.info("Solver service shutdown complete")
 
-    def solve(self, info: SolverInfo) -> Optional[bytes]:
-        self.log.debug(f"Solve request: quality={info.partial_proof.hex()}")
+    def solve(self, partial_proof: bytes) -> Optional[bytes]:
+        self.log.debug(f"Solve request: quality={partial_proof.hex()}")
         # TODO todo_v2_plots implement actualy calling the solver
         return None
 

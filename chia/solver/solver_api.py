@@ -33,27 +33,27 @@ class SolverAPI:
         request: SolverInfo,
     ) -> Optional[Message]:
         """
-        Solve a V2 plot quality to get the full proof of space.
-        This is called by the farmer when it receives V2 qualities from harvester.
+        Solve a V2 plot partial proof to get the full proof of space.
+        This is called by the farmer when it receives V2 parital proofs from harvester.
         """
         if not self.solver.started:
             self.log.error("Solver is not started")
             return None
 
-        self.log.debug(f"Solving quality {request.partial_proof.hex()}with difficulty {request.plot_strength}")
+        self.log.debug(f"Solving partial {request.partial_proof.hex()}")
 
         try:
-            proof = self.solver.solve(request)
+            proof = self.solver.solve(request.partial_proof)
             if proof is None:
-                self.log.warning(f"Solver returned no proof for quality {request.partial_proof.hex()}")
+                self.log.warning(f"Solver returned no proof for parital {request.partial_proof.hex()}")
                 return None
 
-            self.log.debug(f"Successfully solved quality, returning {len(proof)} byte proof")
+            self.log.debug(f"Successfully solved partial proof, returning {len(proof)} byte proof")
             return make_msg(
                 ProtocolMessageTypes.solution_response,
                 SolverResponse(proof=proof, partial_proof=request.partial_proof),
             )
 
         except Exception as e:
-            self.log.error(f"Error solving quality {request.partial_proof.hex()}: {e}")
+            self.log.error(f"Error solving parital {request.partial_proof.hex()}: {e}")
             return None

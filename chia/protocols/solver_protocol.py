@@ -2,15 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia_rs.sized_ints import uint64
-
 from chia.util.streamable import Streamable, streamable
 
 
 @streamable
 @dataclass(frozen=True)
 class SolverInfo(Streamable):
-    plot_strength: uint64
     partial_proof: bytes  # 16 * k bits blob, k (plot size) can be derived from this
 
 

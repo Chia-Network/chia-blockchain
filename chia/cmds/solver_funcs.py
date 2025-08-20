@@ -31,7 +31,7 @@ async def solve_quality(
     """Solve a quality string via RPC."""
     try:
         async with get_any_service_client(SolverRpcClient, ctx.root_path, solver_rpc_port) as (client, _):
-            response = await client.solve(quality_hex, plot_size, difficulty)
+            response = await client.solve(quality_hex)
             print(json.dumps(response, indent=2))
     except Exception as e:
         print(f"Failed to solve quality: {e}")

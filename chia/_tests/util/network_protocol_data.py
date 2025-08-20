@@ -1106,6 +1106,6 @@ respond_compact_proof_of_time = timelord_protocol.RespondCompactProofOfTime(
 )
 
 # SOLVER PROTOCOL
-solver_info = solver_protocol.SolverInfo(uint64(2), b"partial-proof")
+solver_info = solver_protocol.SolverInfo(partial_proof=b"partial-proof")
 
 solver_response = solver_protocol.SolverResponse(b"partial-proof", b"full-proof")

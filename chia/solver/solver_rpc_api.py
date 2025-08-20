@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs.sized_ints import uint64
-
-from chia.protocols.solver_protocol import SolverInfo
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.solver.solver import Solver
 from chia.util.ws_message import WsRpcMessage
@@ -30,17 +27,8 @@ class SolverRpcApi:
         return []
 
     async def solve(self, request: dict[str, Any]) -> EndpointResult:
-        # extract all required fields from request
         partial_proof = request["partial_proof"]
-        plot_strength = request.get("plot_difficulty", 1000)  # todo default ?
-
-        # create complete SolverInfo object with all provided data
-        solver_info = SolverInfo(
-            plot_strength == uint64(plot_strength),
-            partial_proof=bytes.fromhex(partial_proof),
-        )
-
-        proof = self.service.solve(solver_info)
+        proof = self.service.solve(bytes.fromhex(partial_proof))
         return {"proof": proof.hex() if proof else None}
 
     async def get_state(self, _: dict[str, Any]) -> EndpointResult:

@@ -2715,7 +2715,7 @@ error_without_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "dat
 
 error_with_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}
 
-solver_info_json: dict[str, Any] = {"plot_strength": 2, "partial_proof": "0x7061727469616c2d70726f6f66"}
+solver_info_json: dict[str, Any] = {"partial_proof": "0x7061727469616c2d70726f6f66"}
 
 solver_response_json: dict[str, Any] = {
     "partial_proof": "0x7061727469616c2d70726f6f66",
