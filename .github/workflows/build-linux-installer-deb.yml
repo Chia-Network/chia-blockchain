@@ -329,7 +329,12 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}" ${{ matrix.mode.matrix == 'gui' && '--gui-command chia-blockchain' || '' }}
+          USERNAME=testuser
+          USER_UID=2001
+          USER_GID=${USER_UID}
+          groupadd --gid $USER_GID $USERNAME
+          useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+          su $USERNAME -c 'chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}" ${{ matrix.mode.matrix == 'gui' && '--gui-command chia-blockchain' || '' }}'
 
       - name: Verify /opt/chia present
         run: |
