@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from chia.apis.harvester_stub import HarvesterApiStub
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.introducer.introducer_api import IntroducerAPI
-from chia.protocols.harvester_api_protocol import HarvesterApiStub
 from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiProtocol
 from chia.solver.solver_api import SolverAPI
