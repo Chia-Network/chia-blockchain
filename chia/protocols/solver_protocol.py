@@ -10,7 +10,7 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclass(frozen=True)
 class SolverInfo(Streamable):
-    plot_difficulty: uint64
+    plot_strength: uint64
     partial_proof: bytes  # 16 * k bits blob, k (plot size) can be derived from this
 
 

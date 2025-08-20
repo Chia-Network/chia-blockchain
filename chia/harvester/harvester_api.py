@@ -121,61 +121,62 @@ class HarvesterAPI:
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
-                try:
-                    partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(sp_challenge_hash)
-                except Exception as e:
-                    self.harvester.log.error(f"Exception fetching partial proof for V2 plot {filename}. {e}")
+                partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(sp_challenge_hash)
+
+                # If no partial proofs are found, return None
+                if partial_proofs is None or len(partial_proofs) == 0:
                     return None
 
-                if partial_proofs is not None and len(partial_proofs) > 0:
-                    # Get the appropriate difficulty for this plot
-                    difficulty = new_challenge.difficulty
-                    sub_slot_iters = new_challenge.sub_slot_iters
-                    if plot_info.pool_contract_puzzle_hash is not None:
-                        # Check for pool-specific difficulty
-                        for pool_difficulty in new_challenge.pool_difficulties:
-                            if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
-                                difficulty = pool_difficulty.difficulty
-                                sub_slot_iters = pool_difficulty.sub_slot_iters
-                                break
+                # Get the appropriate difficulty for this plot
+                difficulty = new_challenge.difficulty
+                sub_slot_iters = new_challenge.sub_slot_iters
+                if plot_info.pool_contract_puzzle_hash is not None:
+                    # Check for pool-specific difficulty
+                    for pool_difficulty in new_challenge.pool_difficulties:
+                        if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
+                            difficulty = pool_difficulty.difficulty
+                            sub_slot_iters = pool_difficulty.sub_slot_iters
+                            break
 
-                    # Filter qualities that pass the required_iters check (same as V1 flow)
-                    good_qualities = []
-                    sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
+                # Filter qualities that pass the required_iters check (same as V1 flow)
+                good_qualities = []
+                sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
 
-                    for partial_proof in partial_proofs:
-                        quality_str = quality_for_partial_proof(partial_proof, new_challenge.challenge_hash)
-                        required_iters: uint64 = calculate_iterations_quality(
-                            self.harvester.constants,
-                            quality_str,
-                            plot_info.prover.get_size(),  # TODO: todo_v2_plots update for V2
-                            difficulty,
-                            new_challenge.sp_hash,
-                            sub_slot_iters,
-                            new_challenge.last_tx_height,
-                        )
+                for partial_proof in partial_proofs:
+                    quality_str = quality_for_partial_proof(partial_proof, new_challenge.challenge_hash)
+                    required_iters: uint64 = calculate_iterations_quality(
+                        self.harvester.constants,
+                        quality_str,
+                        plot_info.prover.get_size(),  # TODO: todo_v2_plots update for V2
+                        difficulty,
+                        new_challenge.sp_hash,
+                        sub_slot_iters,
+                        new_challenge.last_tx_height,
+                    )
 
-                        if required_iters < sp_interval_iters:
-                            good_qualities.append(partial_proof)
+                    if required_iters < sp_interval_iters:
+                        good_qualities.append(partial_proof)
 
-                    if len(good_qualities) > 0:
-                        size = plot_info.prover.get_size().size_v2
-                        assert size is not None
-                        return PartialProofsData(
-                            new_challenge.challenge_hash,
-                            new_challenge.sp_hash,
-                            good_qualities[0].hex() + str(filename.resolve()),
-                            good_qualities,
-                            new_challenge.signage_point_index,
-                            size,
-                            difficulty,
-                            plot_info.pool_public_key,
-                            plot_info.pool_contract_puzzle_hash,
-                            plot_info.plot_public_key,
-                        )
+                if len(good_qualities) == 0:
+                    return None
+
+                size = plot_info.prover.get_size().size_v2
+                assert size is not None
+                return PartialProofsData(
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
+                    good_qualities[0].hex() + str(filename.resolve()),
+                    good_qualities,
+                    new_challenge.signage_point_index,
+                    size,
+                    difficulty,
+                    plot_info.pool_public_key,
+                    plot_info.pool_contract_puzzle_hash,
+                    plot_info.plot_public_key,
+                )
                 return None
-            except Exception as e:
-                self.harvester.log.error(f"Unknown error in V2 quality lookup: {e}")
+            except Exception:
+                self.harvester.log.exception("Failed V2 partial proof lookup")
                 return None
 
         def blocking_lookup(filename: Path, plot_info: PlotInfo) -> list[tuple[bytes32, ProofOfSpace]]:
@@ -331,21 +332,21 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-                if self._plot_passes_filter(try_plot_info, new_challenge):
-                    if try_plot_info.prover.get_version() == PlotVersion.V2:
-                        # TODO: todo_v2_plots need to check v2 filter
-                        v2_awaitables.append(
-                            loop.run_in_executor(
-                                self.harvester.executor,
-                                blocking_lookup_v2_partial_proofs,
-                                try_plot_filename,
-                                try_plot_info,
-                            )
+                if not self._plot_passes_filter(try_plot_info, new_challenge):
+                    continue
+                if try_plot_info.prover.get_version() == PlotVersion.V2:
+                    v2_awaitables.append(
+                        loop.run_in_executor(
+                            self.harvester.executor,
+                            blocking_lookup_v2_partial_proofs,
+                            try_plot_filename,
+                            try_plot_info,
                         )
-                        passed += 1
-                    else:
-                        passed += 1
-                        awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+                    )
+                    passed += 1
+                else:
+                    passed += 1
+                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
