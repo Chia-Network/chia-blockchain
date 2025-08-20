@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Optional, Union
+
+from chia_rs.sized_ints import uint8
 
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.ints import uint8
 from chia.util.streamable import Streamable, streamable
 
 
@@ -21,7 +22,7 @@ class MempoolSubmissionStatus(Streamable):
     inclusion_status: uint8  # MempoolInclusionStatus
     error_msg: Optional[str]
 
-    def to_json_dict_convenience(self) -> Dict[str, Union[str, MempoolInclusionStatus, Optional[str]]]:
+    def to_json_dict_convenience(self) -> dict[str, Union[str, MempoolInclusionStatus, None]]:
         formatted = self.to_json_dict()
         formatted["inclusion_status"] = MempoolInclusionStatus(self.inclusion_status).name
         return formatted

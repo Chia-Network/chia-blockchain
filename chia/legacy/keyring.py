@@ -6,14 +6,13 @@ helper it's required to install the `legacy_keyring` extra dependency which can 
 from __future__ import annotations
 
 import sys
-from typing import Callable, List, Union, cast
+from typing import Callable, Union, cast
 
 import click
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
-
-from chia.util.ints import uint32
 
 try:
     from keyrings.cryptfile.cryptfile import CryptFileKeyring
@@ -23,7 +22,6 @@ except ImportError:
     CryptFileKeyring = None
 
 
-from chia.cmds.cmds_util import prompt_yes_no
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
 
@@ -85,8 +83,8 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
     )
 
 
-def get_keys(keyring: LegacyKeyring) -> List[KeyData]:
-    keys: List[KeyData] = []
+def get_keys(keyring: LegacyKeyring) -> list[KeyData]:
+    keys: list[KeyData] = []
     for index in range(MAX_KEYS):
         try:
             keys.append(get_key_data(keyring, index))
@@ -144,7 +142,9 @@ def clear() -> None:
 
     print_keys(keyring)
 
-    if not prompt_yes_no("\nDo you really want to remove all the keys from the legacy keyring? This can't be undone."):
+    if not click.confirm(
+        "\nDo you really want to remove all the keys from the legacy keyring? This can't be undone.", default=None
+    ):
         raise click.ClickException("Aborted!")
 
     remove_keys(keyring)

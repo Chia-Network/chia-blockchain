@@ -3,31 +3,29 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
-from chia_rs import Coin
+from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
+from chia_rs import Coin, ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.constants import ConsensusConstants
+from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
-DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
-)
+DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
 
 @dataclass
 class NPC:
     coin_name: bytes32
     puzzle_hash: bytes32
-    conditions: List[Tuple[ConditionOpcode, List[ConditionWithArgs]]]
+    conditions: list[tuple[ConditionOpcode, list[ConditionWithArgs]]]
 
 
 @dataclass
@@ -36,23 +34,23 @@ class CAT:
     memo: str
     npc: NPC
 
-    def cat_to_dict(self) -> Dict[str, Any]:
+    def cat_to_dict(self) -> dict[str, Any]:
         return {"asset_id": self.asset_id, "memo": self.memo, "npc": npc_to_dict(self.npc)}
 
 
-def condition_with_args_to_dict(condition_with_args: ConditionWithArgs) -> Dict[str, Any]:
+def condition_with_args_to_dict(condition_with_args: ConditionWithArgs) -> dict[str, Any]:
     return {
         "condition_opcode": condition_with_args.opcode.name,
         "arguments": [arg.hex() for arg in condition_with_args.vars],
     }
 
 
-def condition_list_to_dict(condition_list: Tuple[ConditionOpcode, List[ConditionWithArgs]]) -> List[Dict[str, Any]]:
+def condition_list_to_dict(condition_list: tuple[ConditionOpcode, list[ConditionWithArgs]]) -> list[dict[str, Any]]:
     assert all([condition_list[0] == cwa.opcode for cwa in condition_list[1]])
     return [condition_with_args_to_dict(cwa) for cwa in condition_list[1]]
 
 
-def npc_to_dict(npc: NPC) -> Dict[str, Any]:
+def npc_to_dict(npc: NPC) -> dict[str, Any]:
     return {
         "coin_name": npc.coin_name.hex(),
         "conditions": [{"condition_type": c[0].name, "conditions": condition_list_to_dict(c)} for c in npc.conditions],
@@ -60,13 +58,13 @@ def npc_to_dict(npc: NPC) -> Dict[str, Any]:
     }
 
 
-def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
-    block_args = [bytes(a) for a in block_generator.generator_refs]
-    cost, block_result = block_generator.program.run_with_cost(max_cost, [DESERIALIZE_MOD, block_args])
+def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> list[CAT]:
+    block_args = block_generator.generator_refs
+    _cost, block_result = run_with_cost(block_generator.program, max_cost, [DESERIALIZE_MOD, block_args])
 
     coin_spends = block_result.first()
 
-    cat_list: List[CAT] = []
+    cat_list: list[CAT] = []
     for spend in coin_spends.as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         args = match_cat_puzzle(uncurry_puzzle(puzzle))
@@ -79,7 +77,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
 
         puzzle_result = puzzle.run(solution)
 
-        conds: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
+        conds: dict[ConditionOpcode, list[ConditionWithArgs]] = {}
 
         for condition in puzzle_result.as_python():
             op = ConditionOpcode(condition[0])
@@ -126,21 +124,23 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     return cat_list
 
 
-def ref_list_to_args(ref_list: List[uint32], root_path: Path) -> List[SerializedProgram]:
+def ref_list_to_args(ref_list: list[uint32], root_path: Path) -> list[bytes]:
     args = []
     for height in ref_list:
         with open(root_path / f"{height}.json", "rb") as f:
             program_str = json.load(f)["block"]["transactions_generator"]
-            args.append(SerializedProgram.fromhex(program_str))
+            # we need to SerializedProgram to handle possible leading 0x in the
+            # hex string
+            args.append(bytes(SerializedProgram.fromhex(program_str)))
     return args
 
 
 def run_generator_with_args(
     generator_program_hex: str,
-    generator_args: List[SerializedProgram],
+    generator_args: list[bytes],
     constants: ConsensusConstants,
     cost: uint64,
-) -> List[CAT]:
+) -> list[CAT]:
     if not generator_program_hex:
         return []
     generator_program = SerializedProgram.fromhex(generator_program_hex)
@@ -148,11 +148,11 @@ def run_generator_with_args(
     return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 
-def run_json_block(full_block: Dict[str, Any], parent: Path, constants: ConsensusConstants) -> List[CAT]:
+def run_json_block(full_block: dict[str, Any], parent: Path, constants: ConsensusConstants) -> list[CAT]:
     ref_list = full_block["block"]["transactions_generator_ref_list"]
-    tx_info: Dict[str, Any] = full_block["block"]["transactions_info"]
+    tx_info: dict[str, Any] = full_block["block"]["transactions_info"]
     generator_program_hex: str = full_block["block"]["transactions_generator"]
-    cat_list: List[CAT] = []
+    cat_list: list[CAT] = []
     if tx_info and generator_program_hex:
         cost = tx_info["cost"]
         args = ref_list_to_args(ref_list, parent)

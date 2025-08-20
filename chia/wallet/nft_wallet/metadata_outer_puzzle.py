@@ -1,23 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
-from chia.types.blockchain_format.coin import Coin
+from chia_rs.sized_bytes import bytes32
+
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
+from chia.wallet.nft_wallet.nft_puzzles import (
+    NFT_STATE_LAYER_MOD,
+    NFT_STATE_LAYER_MOD_HASH,
+)
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
-NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile(
-    "nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
-)
-NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 
-
-def match_metadata_layer_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_metadata_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == NFT_STATE_LAYER_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []
@@ -27,8 +24,8 @@ def puzzle_for_metadata_layer(metadata: Program, updater_hash: bytes32, inner_pu
     return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, updater_hash, inner_puzzle)
 
 
-def solution_for_metadata_layer(amount: uint64, inner_solution: Program) -> Program:
-    return Program.to([inner_solution, amount])
+def solution_for_metadata_layer(inner_solution: Program) -> Program:
+    return Program.to([inner_solution])
 
 
 @dataclass(frozen=True)
@@ -36,7 +33,7 @@ class MetadataOuterPuzzle:
     _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
     def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
@@ -65,13 +62,15 @@ class MetadataOuterPuzzle:
             inner_puzzle = self._construct(also, inner_puzzle)
         return puzzle_for_metadata_layer(constructor["metadata"], constructor["updater_hash"], inner_puzzle)
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
+    def get_inner_puzzle(
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
+    ) -> Optional[Program]:
         matched, curried_args = match_metadata_layer_puzzle(puzzle_reveal)
         if matched:
             _, _, _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle))
+                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
                 return deep_inner_puzzle
             else:
                 return inner_puzzle
@@ -88,12 +87,7 @@ class MetadataOuterPuzzle:
             return my_inner_solution
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        coin_bytes: bytes = solver["coin"]
-        coin: Coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
         also = constructor.also()
         if also is not None:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
-        return solution_for_metadata_layer(
-            uint64(coin.amount),
-            inner_solution,
-        )
+        return solution_for_metadata_layer(inner_solution)

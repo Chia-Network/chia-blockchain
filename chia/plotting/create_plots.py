@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -15,7 +16,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_pk,
     generate_plot_public_key,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
@@ -83,10 +83,9 @@ class PlotKeysResolver:
                 if self.pool_contract_address is not None:
                     raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
                 pool_public_key = G1Element.from_bytes(bytes.fromhex(self.pool_public_key))
-            else:
-                if self.pool_contract_address is None:
-                    # If nothing is set, farms to the provided key (or the first key)
-                    pool_public_key = await self.get_pool_public_key(keychain_proxy)
+            elif self.pool_contract_address is None:
+                # If nothing is set, farms to the provided key (or the first key)
+                pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
             self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
         finally:
@@ -105,7 +104,7 @@ class PlotKeysResolver:
             except Exception as e:
                 log.error(f"Keychain proxy failed with error: {e}")
         else:
-            sk_ent: Optional[Tuple[PrivateKey, bytes]] = None
+            sk_ent: Optional[tuple[PrivateKey, bytes]] = None
             keychain: Keychain = Keychain()
             if self.alt_fingerprint is not None:
                 sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
@@ -151,8 +150,8 @@ async def create_plots(
     args: Params,
     keys: PlotKeys,
     use_datetime: bool = True,
-    test_private_keys: Optional[List[PrivateKey]] = None,
-) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
+    test_private_keys: Optional[list[PrivateKey]] = None,
+) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
@@ -182,8 +181,8 @@ async def create_plots(
 
     args.final_dir.mkdir(parents=True, exist_ok=True)
 
-    created_plots: Dict[bytes32, Path] = {}
-    existing_plots: Dict[bytes32, Path] = {}
+    created_plots: dict[bytes32, Path] = {}
+    existing_plots: dict[bytes32, Path] = {}
     for i in range(num):
         # Generate a random master secret key
         if test_private_keys is not None:

@@ -6,9 +6,10 @@ from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
-from typing import List, Optional
+from typing import Optional
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
@@ -25,7 +26,6 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.cpu import available_logical_cores
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
@@ -103,7 +103,7 @@ def check_plots(
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
     if list_duplicates:
-        all_filenames: List[Path] = []
+        all_filenames: list[Path] = []
         for paths in get_plot_filenames(root_path).values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
@@ -133,14 +133,16 @@ def check_plots(
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
-    total_good_plots: Counter[str] = Counter()
+    total_good_plots_v1: Counter[uint8] = Counter()
+    total_good_plots_v2: Counter[uint8] = Counter()
     total_size = 0
-    bad_plots_list: List[Path] = []
+    bad_plots_list: list[Path] = []
 
     with plot_manager:
 
         def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int, lock: Lock) -> None:
-            nonlocal total_good_plots
+            nonlocal total_good_plots_v1
+            nonlocal total_good_plots_v2
             nonlocal total_size
             nonlocal bad_plots_list
 
@@ -148,7 +150,7 @@ def check_plots(
 
             # Look up local_sk from plot to save locked memory
             (
-                pool_public_key_or_puzzle_hash,
+                _pool_public_key_or_puzzle_hash,
                 farmer_public_key,
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
@@ -161,8 +163,8 @@ def check_plots(
                 if plot_info.pool_contract_puzzle_hash is not None:
                     pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
                     log.info(f"\t{'Pool contract address:':<23} {pca}")
-                log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
-                log.info(f"\t{'Local sk:' :<23} {local_sk}")
+                log.info(f"\t{'Farmer public key:':<23} {farmer_public_key}")
+                log.info(f"\t{'Local sk:':<23} {local_sk}")
 
             total_proofs = 0
             caught_exception: bool = False
@@ -170,9 +172,9 @@ def check_plots(
                 challenge = std_hash(i.to_bytes(32, "big"))
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
-                    quality_start_time = int(round(time() * 1000))
+                    quality_start_time = round(time() * 1000)
                     for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
-                        quality_spent_time = int(round(time() * 1000)) - quality_start_time
+                        quality_spent_time = round(time() * 1000) - quality_start_time
                         if quality_spent_time > 8000:
                             log.warning(
                                 f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
@@ -183,9 +185,9 @@ def check_plots(
 
                         # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                         try:
-                            proof_start_time = int(round(time() * 1000))
+                            proof_start_time = round(time() * 1000)
                             proof = pr.get_full_proof(challenge, index, parallel_read)
-                            proof_spent_time = int(round(time() * 1000)) - proof_start_time
+                            proof_spent_time = round(time() * 1000) - proof_start_time
                             if proof_spent_time > 15000:
                                 log.warning(
                                     f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
@@ -207,7 +209,7 @@ def check_plots(
                                 f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
                             )
                             caught_exception = True
-                        quality_start_time = int(round(time() * 1000))
+                        quality_start_time = round(time() * 1000)
                 except KeyboardInterrupt:
                     log.warning("Interrupted, closing")
                     return
@@ -229,19 +231,29 @@ def check_plots(
 
             if total_proofs > 0 and caught_exception is False:
                 log.info(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}. "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
-                total_good_plots[pr.get_size()] += 1
-                total_size += plot_path.stat().st_size
+                version_and_size = pr.get_size()
+                if version_and_size.size_v1 is not None:
+                    k = version_and_size.size_v1
+                    total_good_plots_v1[k] += 1
+                    total_size += plot_path.stat().st_size
+                else:
+                    assert version_and_size.size_v2 is not None
+                    k = version_and_size.size_v2
+                    total_good_plots_v2[k] += 1
+                    total_size += plot_path.stat().st_size
             else:
                 log.error(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)} "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
                     f"Filepath: {plot_path}"
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, context_count)) as executor:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=max(1, context_count), thread_name_prefix="check-plots-"
+        ) as executor:
             logger_lock = Lock()
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():
@@ -253,10 +265,12 @@ def check_plots(
     log.info("")
     log.info("")
     log.info("Summary")
-    total_plots: int = sum(list(total_good_plots.values()))
+    total_plots: int = sum(list(total_good_plots_v1.values()) + list(total_good_plots_v2.values()))
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
-    for k, count in sorted(dict(total_good_plots).items()):
-        log.info(f"{count} plots of size {k}")
+    for k, count in sorted(dict(total_good_plots_v1).items()):
+        log.info(f"{count} v1 plots of size {k}")
+    for k, count in sorted(dict(total_good_plots_v2).items()):
+        log.info(f"{count} v2 plots of size {k}")
     grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")

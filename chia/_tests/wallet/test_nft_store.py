@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
@@ -29,7 +28,7 @@ def get_dummy_nft(random_: random.Random) -> NFTCoinInfo:
 @dataclass
 class DummyNFTs:
     seeded_random: random.Random
-    nfts_per_wallet: Dict[uint32, List[NFTCoinInfo]] = field(default_factory=dict)
+    nfts_per_wallet: dict[uint32, list[NFTCoinInfo]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         nfts = self.nfts_per_wallet.setdefault(uint32(wallet_id), [])

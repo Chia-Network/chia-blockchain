@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Collection
 from dataclasses import dataclass
 from time import monotonic
-from typing import Collection, Dict, List, Optional
+from typing import Optional
 
-from chia_rs import G2Element
-from clvm.casts import int_to_bytes
+from chia_rs import CoinSpend, G2Element, SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
+from chia.types.mempool_item import UnspentLineageInfo
+from chia.util.casts import int_to_bytes
 
 # this is one week worth of blocks
 NUM_ITERS = 32256
@@ -79,19 +79,25 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 
 
 async def run_mempool_benchmark() -> None:
-    coin_records: Dict[bytes32, CoinRecord] = {}
+    coin_records: dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_record(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
-        ret: List[CoinRecord] = []
+    async def get_coin_record(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
+        ret: list[CoinRecord] = []
         for name in coin_ids:
             r = coin_records.get(name)
             if r is not None:
                 ret.append(r)
         return ret
 
+    # We currently don't need to keep track of these for our purpose
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+        assert False
+
     timestamp = uint64(1631794488)
 
-    mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=True)
+    mempool = MempoolManager(
+        get_coin_record, get_unspent_lineage_info_for_puzzle_hash, DEFAULT_CONSTANTS, single_threaded=True
+    )
 
     print("\nrunning add_spend_bundle() + new_peak()")
 
@@ -114,7 +120,7 @@ async def run_mempool_benchmark() -> None:
                 coin.name(): CoinRecord(coin, uint32(height // 2), uint32(0), False, uint64(timestamp // 2))
             }
             spend_bundle_id = sb.name()
-            sbc = await mempool.pre_validate_spendbundle(sb, None, spend_bundle_id)
+            sbc = await mempool.pre_validate_spendbundle(sb, spend_bundle_id)
             assert sbc is not None
             await mempool.add_spend_bundle(sb, sbc, spend_bundle_id, uint32(height))
 

@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Optional, Tuple
+from typing import Optional
 
-from chia.server.outbound_message import NodeType
-from chia.util.ints import int16, uint8, uint16
+from chia_rs.sized_ints import int16, uint8, uint16
+
+from chia.protocols.outbound_message import NodeType
 from chia.util.streamable import Streamable, streamable
 
 protocol_version = {
     NodeType.FULL_NODE: "0.0.36",
-    NodeType.HARVESTER: "0.0.36",
-    NodeType.FARMER: "0.0.36",
+    NodeType.HARVESTER: "0.0.37",
+    NodeType.FARMER: "0.0.37",
     NodeType.TIMELORD: "0.0.36",
     NodeType.INTRODUCER: "0.0.36",
     NodeType.WALLET: "0.0.38",
@@ -47,7 +48,7 @@ class Capability(IntEnum):
 
 # These are the default capabilities used in all outgoing handshakes.
 # "1" means the capability is supported and enabled.
-_capabilities: List[Tuple[uint16, str]] = [
+_capabilities: list[tuple[uint16, str]] = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
@@ -75,7 +76,7 @@ class Handshake(Streamable):
     software_version: str
     server_port: uint16
     node_type: uint8
-    capabilities: List[Tuple[uint16, str]]
+    capabilities: list[tuple[uint16, str]]
 
 
 @streamable

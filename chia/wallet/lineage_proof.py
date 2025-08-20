@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 
@@ -24,8 +25,8 @@ class LineageProof(Streamable):
     amount: Optional[uint64] = None
 
     @classmethod
-    def from_program(cls, program: Program, fields: List[LineageProofField]) -> LineageProof:
-        lineage_proof_info: Dict[str, Any] = {}
+    def from_program(cls, program: Program, fields: list[LineageProofField]) -> LineageProof:
+        lineage_proof_info: dict[str, Any] = {}
         field_iter = iter(fields)
         program_iter = program.as_iter()
         for program_value in program_iter:
@@ -45,7 +46,7 @@ class LineageProof(Streamable):
         return LineageProof(**lineage_proof_info)
 
     def to_program(self) -> Program:
-        final_list: List[Any] = []
+        final_list: list[Any] = []
         if self.parent_name is not None:
             final_list.append(self.parent_name)
         if self.inner_puzzle_hash is not None:

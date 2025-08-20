@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import Coin, Spend
 from chia.wallet.util.clvm_streamable import (
@@ -78,14 +78,14 @@ def test_nested_serialization() -> None:
 @dataclasses.dataclass(frozen=True)
 class Compound(Streamable):
     optional: Optional[BasicCLVMStreamable]
-    list: List[BasicCLVMStreamable]
+    list: list[BasicCLVMStreamable]
 
 
 @clvm_streamable
 @dataclasses.dataclass(frozen=True)
 class CompoundCLVM(Streamable):
     optional: Optional[BasicCLVMStreamable]
-    list: List[BasicCLVMStreamable]
+    list: list[BasicCLVMStreamable]
 
 
 def test_compound_type_serialization() -> None:
@@ -153,7 +153,7 @@ def test_compound_type_serialization() -> None:
         @clvm_streamable
         @dataclasses.dataclass(frozen=True)
         class DoesntWork(Streamable):
-            tuples_are_not_supported: Tuple[str]
+            tuples_are_not_supported: tuple[str]
 
 
 @clvm_streamable
@@ -190,7 +190,7 @@ def test_translation_layer() -> None:
         ]
     )
 
-    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     spend = Spend(
         coin,
         Program.to("puzzle"),

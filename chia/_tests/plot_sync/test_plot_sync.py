@@ -3,13 +3,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.plot_sync.util import start_harvester_service
 from chia._tests.plotting.test_plot_manager import Directory, MockPlotInfo
@@ -17,7 +20,9 @@ from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
@@ -27,10 +32,7 @@ from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
 
 
@@ -43,7 +45,7 @@ def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bo
     )
 
 
-def assert_path_list_matches(expected_list: List[str], actual_list: List[str]) -> None:
+def assert_path_list_matches(expected_list: list[str], actual_list: list[str]) -> None:
     assert len(expected_list) == len(actual_list)
     for item in expected_list:
         assert str(item) in actual_list
@@ -61,12 +63,12 @@ class ExpectedResult:
     duplicates_delta: PathListDelta = field(default_factory=PathListDelta)
     callback_passed: bool = False
 
-    def add_valid(self, list_plots: List[MockPlotInfo]) -> None:
+    def add_valid(self, list_plots: list[MockPlotInfo]) -> None:
         def create_mock_plot(info: MockPlotInfo) -> Plot:
             return Plot(
                 info.prover.get_filename(),
                 uint8(0),
-                bytes32(b"\x00" * 32),
+                bytes32.zeros,
                 None,
                 None,
                 G1Element(),
@@ -78,31 +80,31 @@ class ExpectedResult:
         self.valid_count += len(list_plots)
         self.valid_delta.additions.update({x.prover.get_filename(): create_mock_plot(x) for x in list_plots})
 
-    def remove_valid(self, list_paths: List[Path]) -> None:
+    def remove_valid(self, list_paths: list[Path]) -> None:
         self.valid_count -= len(list_paths)
         self.valid_delta.removals += [str(x) for x in list_paths]
 
-    def add_invalid(self, list_paths: List[Path]) -> None:
+    def add_invalid(self, list_paths: list[Path]) -> None:
         self.invalid_count += len(list_paths)
         self.invalid_delta.additions += [str(x) for x in list_paths]
 
-    def remove_invalid(self, list_paths: List[Path]) -> None:
+    def remove_invalid(self, list_paths: list[Path]) -> None:
         self.invalid_count -= len(list_paths)
         self.invalid_delta.removals += [str(x) for x in list_paths]
 
-    def add_keys_missing(self, list_paths: List[Path]) -> None:
+    def add_keys_missing(self, list_paths: list[Path]) -> None:
         self.keys_missing_count += len(list_paths)
         self.keys_missing_delta.additions += [str(x) for x in list_paths]
 
-    def remove_keys_missing(self, list_paths: List[Path]) -> None:
+    def remove_keys_missing(self, list_paths: list[Path]) -> None:
         self.keys_missing_count -= len(list_paths)
         self.keys_missing_delta.removals += [str(x) for x in list_paths]
 
-    def add_duplicates(self, list_paths: List[Path]) -> None:
+    def add_duplicates(self, list_paths: list[Path]) -> None:
         self.duplicates_count += len(list_paths)
         self.duplicates_delta.additions += [str(x) for x in list_paths]
 
-    def remove_duplicates(self, list_paths: List[Path]) -> None:
+    def remove_duplicates(self, list_paths: list[Path]) -> None:
         self.duplicates_count -= len(list_paths)
         self.duplicates_delta.removals += [str(x) for x in list_paths]
 
@@ -110,9 +112,9 @@ class ExpectedResult:
 @dataclass
 class Environment:
     root_path: Path
-    harvester_services: List[HarvesterService]
+    harvester_services: list[HarvesterService]
     farmer_service: FarmerService
-    harvesters: List[Harvester]
+    harvesters: list[Harvester]
     farmer: Farmer
     dir_1: Directory
     dir_2: Directory
@@ -121,9 +123,9 @@ class Environment:
     dir_invalid: Directory
     dir_keys_missing: Directory
     dir_duplicates: Directory
-    expected: List[ExpectedResult]
+    expected: list[ExpectedResult]
     split_farmer_service_manager: SplitAsyncManager[FarmerService]
-    split_harvester_managers: List[SplitAsyncManager[Harvester]]
+    split_harvester_managers: list[SplitAsyncManager[Harvester]]
 
     def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
         for harvester in self.harvesters:
@@ -193,7 +195,8 @@ class Environment:
             plot = harvester.plot_manager.plots.get(Path(path), None)
             assert plot is not None
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
-            assert plot.prover.get_size() == delta.valid.additions[path].size
+            # TODO: todo_v2_plots support v2 plots
+            assert plot.prover.get_size().size_v1 == delta.valid.additions[path].size
             assert plot.prover.get_id() == delta.valid.additions[path].plot_id
             assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
@@ -218,7 +221,7 @@ class Environment:
     async def run_sync_test(self) -> None:
         plot_manager: PlotManager
         assert len(self.harvesters) == len(self.expected)
-        last_sync_ids: List[uint64] = []
+        last_sync_ids: list[uint64] = []
         # Run the test in two steps, first trigger the refresh on both harvesters
         for harvester in self.harvesters:
             plot_manager = harvester.plot_manager
@@ -254,7 +257,8 @@ class Environment:
             for path, plot_info in plot_manager.plots.items():
                 assert str(path) in receiver.plots()
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
-                assert plot_info.prover.get_size() == receiver.plots()[str(path)].size
+                # TODO: todo_v2_plots support v2 plots
+                assert plot_info.prover.get_size().size_v1 == receiver.plots()[str(path)].size
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
                 assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
@@ -279,16 +283,16 @@ class Environment:
 @pytest.fixture(scope="function")
 async def environment(
     tmp_path: Path,
-    farmer_two_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_two_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> AsyncIterator[Environment]:
-    def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
+    def new_test_dir(name: str, plot_list: list[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
 
-    plots: List[Path] = get_test_plots()
-    plots_invalid: List[Path] = get_test_plots()[0:3]
-    plots_keys_missing: List[Path] = get_test_plots("not_in_keychain")
+    plots: list[Path] = get_test_plots()
+    plots_invalid: list[Path] = get_test_plots()[0:3]
+    plots_keys_missing: list[Path] = get_test_plots("not_in_keychain")
     # Create 4 directories where: dir_n contains n plots
-    directories: List[Directory] = []
+    directories: list[Directory] = []
     offset: int = 0
     while len(directories) < 4:
         dir_number = len(directories) + 1
@@ -535,8 +539,8 @@ async def test_farmer_restart(environment: Environment) -> None:
     env: Environment = environment
     # Load all directories for both harvesters
     await add_and_validate_all_directories(env)
-    last_sync_ids: List[uint64] = []
-    for i in range(0, len(env.harvesters)):
+    last_sync_ids: list[uint64] = []
+    for i in range(len(env.harvesters)):
         last_sync_ids.append(env.harvesters[i].plot_sync_sender._last_sync_id)
     # Stop the farmer and make sure both receivers get dropped and refreshing gets stopped on the harvesters
     await env.split_farmer_service_manager.exit()
@@ -550,7 +554,7 @@ async def test_farmer_restart(environment: Environment) -> None:
         assert len(env.farmer.plot_sync_receivers) == 2
         # Do not use run_sync_test here, to have a more realistic test scenario just
         # wait for the harvesters to be synced.  The handshake should trigger re-sync.
-        for i in range(0, len(env.harvesters)):
+        for i in range(len(env.harvesters)):
             harvester: Harvester = env.harvesters[i]
             assert harvester.server is not None
             receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]
@@ -569,7 +573,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.anyio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from hashlib import sha256
-from typing import Callable, List, Sequence
+from typing import Callable
 
-from clvm.casts import int_to_bytes
+from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.casts import int_to_bytes
 
 CurryHashFunction = Callable[..., bytes32]
 
@@ -56,7 +57,7 @@ def shatree_int(val: int) -> bytes32:
 # `1` if R is 0
 
 
-def curried_values_tree_hash(arguments: List[bytes32]) -> bytes32:
+def curried_values_tree_hash(arguments: list[bytes32]) -> bytes32:
     if len(arguments) == 0:
         return ONE_TREEHASH
 

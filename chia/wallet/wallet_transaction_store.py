@@ -3,25 +3,33 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import aiosqlite
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
+from typing_extensions import Any
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
-from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
+from chia.wallet.transaction_record import (
+    LightTransactionRecord,
+    TransactionRecord,
+    TransactionRecordOld,
+    minimum_send_attempts,
+)
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 
 log = logging.getLogger(__name__)
 
 
-def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
+def filter_ok_mempool_status(sent_to: list[tuple[str, uint8, Optional[str]]]) -> list[tuple[str, uint8, Optional[str]]]:
     """Remove SUCCESS and PENDING status records from a TransactionRecord sent_to field"""
     new_sent_to = []
     for peer, status, err in sent_to:
@@ -36,13 +44,16 @@ class WalletTransactionStore:
     """
 
     db_wrapper: DBWrapper2
-    tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
+    tx_submitted: dict[bytes32, tuple[int, int]]  # tx_id: [time submitted: count]
+    unconfirmed_txs: list[LightTransactionRecord]  # tx_id: [time submitted: count]
     last_wallet_tx_resend_time: int  # Epoch time in seconds
+    config: dict[str, Any]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2, config: dict[str, Any]):
         self = cls()
 
+        self.config = config
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -83,7 +94,7 @@ class WalletTransactionStore:
             try:
                 await conn.execute("CREATE TABLE tx_times(txid blob PRIMARY KEY, valid_times blob)")
                 async with await conn.execute("SELECT bundle_id from transaction_record") as cursor:
-                    txids: List[bytes32] = [bytes32(row[0]) for row in await cursor.fetchall()]
+                    txids: list[bytes32] = [bytes32(row[0]) for row in await cursor.fetchall()]
                     await conn.executemany(
                         "INSERT INTO tx_times (txid, valid_times) VALUES(?, ?)",
                         [(id, bytes(ConditionValidTimes())) for id in txids],
@@ -93,6 +104,7 @@ class WalletTransactionStore:
 
         self.tx_submitted = {}
         self.last_wallet_tx_resend_time = int(time.time())
+        await self.load_unconfirmed()
         return self
 
     async def add_transaction_record(self, record: TransactionRecord) -> None:
@@ -138,6 +150,9 @@ class WalletTransactionStore:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
             )
+            ltx = get_light_transaction_record(record)
+            if record.confirmed is False and ltx not in self.unconfirmed_txs:
+                self.unconfirmed_txs.append(ltx)
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -154,6 +169,7 @@ class WalletTransactionStore:
             return
         tx: TransactionRecord = dataclasses.replace(current, confirmed_at_height=height, confirmed=True)
         await self.add_transaction_record(tx)
+        self.unconfirmed_txs.remove(get_light_transaction_record(current))
 
     async def increment_sent(
         self,
@@ -222,7 +238,7 @@ class WalletTransactionStore:
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.
     # also, the current time should be passed in as a parameter
-    async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
+    async def get_not_sent(self, *, include_accepted_txs=False) -> list[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.
         """
@@ -246,17 +262,16 @@ class WalletTransactionStore:
                 if time_submitted < current_time - (60 * 10):
                     records.append(record)
                     self.tx_submitted[record.name] = current_time, 1
-                else:
-                    if count < minimum_send_attempts:
-                        records.append(record)
-                        self.tx_submitted[record.name] = time_submitted, (count + 1)
+                elif count < minimum_send_attempts:
+                    records.append(record)
+                    self.tx_submitted[record.name] = time_submitted, (count + 1)
             else:
                 records.append(record)
                 self.tx_submitted[record.name] = current_time, 1
 
         return records
 
-    async def get_farming_rewards(self) -> List[TransactionRecord]:
+    async def get_farming_rewards(self) -> list[TransactionRecord]:
         """
         Returns the list of all farming rewards.
         """
@@ -269,15 +284,22 @@ class WalletTransactionStore:
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def get_all_unconfirmed(self) -> List[TransactionRecord]:
+    async def get_all_unconfirmed(self) -> list[LightTransactionRecord]:
         """
         Returns the list of all transaction that have not yet been confirmed.
         """
+        return self.unconfirmed_txs
+
+    async def load_unconfirmed(self) -> None:
+        """
+        loads the list of all transaction that have not yet been confirmed into the cache.
+        """
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE confirmed=0")
-        return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
+        records = [TransactionRecordOld.from_bytes(row[0]) for row in rows]
+        self.unconfirmed_txs = [get_light_transaction_record(rec) for rec in records]
 
-    async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
+    async def get_unconfirmed_for_wallet(self, wallet_id: int) -> list[TransactionRecord]:
         """
         Returns the list of transaction that have not yet been confirmed.
         """
@@ -297,7 +319,7 @@ class WalletTransactionStore:
         confirmed: Optional[bool] = None,
         to_puzzle_hash: Optional[bytes32] = None,
         type_filter: Optional[TransactionTypeFilter] = None,
-    ) -> List[TransactionRecord]:
+    ) -> list[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
@@ -366,7 +388,9 @@ class WalletTransactionStore:
             )
         return 0 if len(rows) == 0 else rows[0][0]
 
-    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
+    async def get_all_transactions_for_wallet(
+        self, wallet_id: int, type: Optional[int] = None
+    ) -> list[TransactionRecord]:
         """
         Returns all stored transactions.
         """
@@ -385,7 +409,7 @@ class WalletTransactionStore:
                 )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def get_all_transactions(self) -> List[TransactionRecord]:
+    async def get_all_transactions(self) -> list[TransactionRecord]:
         """
         Returns all stored transactions.
         """
@@ -393,7 +417,7 @@ class WalletTransactionStore:
             rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record")
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def get_transaction_above(self, height: int) -> List[TransactionRecord]:
+    async def get_transaction_above(self, height: int) -> list[TransactionRecord]:
         # Can be -1 (get all tx)
 
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -402,7 +426,7 @@ class WalletTransactionStore:
             )
         return await self._get_new_tx_records_from_old([TransactionRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> list[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,)
@@ -428,11 +452,11 @@ class WalletTransactionStore:
                 )
             ).close()
 
-    async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
-        tx_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
+    async def _get_new_tx_records_from_old(self, old_records: list[TransactionRecordOld]) -> list[TransactionRecord]:
+        tx_id_to_valid_times: dict[bytes, ConditionValidTimes] = {}
         empty_valid_times = ConditionValidTimes()
         async with self.db_wrapper.reader_no_transaction() as conn:
-            chunked_records: List[List[TransactionRecordOld]] = [
+            chunked_records: list[list[TransactionRecordOld]] = [
                 old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
                 for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
             ]
@@ -465,6 +489,16 @@ class WalletTransactionStore:
                 valid_times=(
                     tx_id_to_valid_times[record.name] if record.name in tx_id_to_valid_times else empty_valid_times
                 ),
+                to_address=encode_puzzle_hash(
+                    record.to_puzzle_hash,
+                    AddressType.XCH.hrp(self.config),
+                ),
             )
             for record in old_records
         ]
+
+
+def get_light_transaction_record(rec: TransactionRecordOld) -> LightTransactionRecord:
+    return LightTransactionRecord(
+        name=rec.name, additions=rec.additions, removals=rec.removals, type=rec.type, spend_bundle=rec.spend_bundle
+    )

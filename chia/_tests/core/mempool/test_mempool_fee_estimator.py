@@ -3,6 +3,7 @@ from __future__ import annotations
 from random import Random
 
 import pytest
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.consensus.test_pot_iterations import test_constants
 from chia._tests.util.db_connection import DBConnection
@@ -13,7 +14,6 @@ from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
-from chia.util.ints import uint32, uint64
 
 
 @pytest.mark.anyio
@@ -23,7 +23,6 @@ async def test_basics() -> None:
 
     cost = uint64(5000000)
     for i in range(300, 700):
-        i = uint32(i)
         items = []
         for _ in range(2, 100):
             fee = uint64(10000000)
@@ -50,7 +49,7 @@ async def test_basics() -> None:
             )
             items.append(mempool_item2)
 
-        fee_tracker.process_block(i, items)
+        fee_tracker.process_block(uint32(i), items)
 
     short, med, long = fee_tracker.estimate_fees()
 
@@ -63,16 +62,17 @@ async def test_basics() -> None:
 async def test_fee_increase() -> None:
     async with DBConnection(db_version=2) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        mempool_manager = MempoolManager(coin_store.get_coin_records, test_constants)
+        mempool_manager = MempoolManager(
+            coin_store.get_coin_records, coin_store.get_unspent_lineage_info_for_puzzle_hash, test_constants
+        )
         assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
         btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
         fee_tracker = btc_fee_estimator.get_tracker()
         estimator = SmartFeeEstimator(fee_tracker, uint64(test_constants.MAX_BLOCK_COST_CLVM))
         random = Random(x=1)
         for i in range(300, 700):
-            i = uint32(i)
             items = []
-            for _ in range(0, 20):
+            for _ in range(20):
                 fee = uint64(0)
                 included_height = uint32(random.randint(i - 60, i - 1))
                 cost = uint64(5000000)
@@ -83,7 +83,7 @@ async def test_fee_increase() -> None:
                 )
                 items.append(mempool_item)
 
-            fee_tracker.process_block(i, items)
+            fee_tracker.process_block(uint32(i), items)
 
         short, med, long = fee_tracker.estimate_fees()
         mempool_info = mempool_manager.mempool.fee_estimator.get_mempool_info()

@@ -5,12 +5,11 @@ import time
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord, TradeRecordOld
 from chia.wallet.trading.offer import Offer
@@ -19,6 +18,7 @@ from chia.wallet.trading.trade_store import TradeStore, migrate_coin_of_interest
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 module_seeded_random = random.Random()
 module_seeded_random.seed(a=0, version=2)
@@ -132,8 +132,8 @@ async def test_valid_times_migration() -> None:
                 " is_my_offer tinyint)"
             )
 
-        fake_offer = Offer({}, SpendBundle([], G2Element()), {})
-        fake_coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+        fake_offer = Offer({}, WalletSpendBundle([], G2Element()), {})
+        fake_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
         old_record = TradeRecordOld(
             confirmed_at_index=uint32(0),
             accepted_at_time=None,
@@ -143,7 +143,7 @@ async def test_valid_times_migration() -> None:
             offer=bytes(fake_offer),
             taken_offer=None,
             coins_of_interest=[fake_coin],
-            trade_id=bytes32([0] * 32),
+            trade_id=bytes32.zeros,
             status=uint32(TradeStatus.PENDING_ACCEPT.value),
             sent_to=[],
         )

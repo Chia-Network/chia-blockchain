@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Union
 
+from chia_rs import PlotSize
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
@@ -29,11 +33,9 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
+from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -82,10 +84,10 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: Dict[str, Plot]
-    _invalid: List[str]
-    _keys_missing: List[str]
-    _duplicates: List[str]
+    _plots: dict[str, Plot]
+    _invalid: list[str]
+    _keys_missing: list[str]
+    _duplicates: list[str]
     _total_plot_size: int
     _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
@@ -138,16 +140,16 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> Dict[str, Plot]:
+    def plots(self) -> dict[str, Plot]:
         return self._plots
 
-    def invalid(self) -> List[str]:
+    def invalid(self) -> list[str]:
         return self._invalid
 
-    def keys_missing(self) -> List[str]:
+    def keys_missing(self) -> list[str]:
         return self._keys_missing
 
-    def duplicates(self) -> List[str]:
+    def duplicates(self) -> list[str]:
         return self._duplicates
 
     def total_plot_size(self) -> int:
@@ -245,7 +247,7 @@ class Receiver:
         state: State,
         next_state: State,
         target: Collection[str],
-        delta: List[str],
+        delta: list[str],
         paths: PlotSyncPathList,
         is_removal: bool = False,
     ) -> None:
@@ -348,7 +350,11 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
         self._total_effective_plot_size = int(
-            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in self._plots.values())
+            # TODO: todo_v2_plots support v2 plots
+            sum(
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+                for plot in self._plots.values()
+            )
         )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync
@@ -359,7 +365,7 @@ class Receiver:
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
-    def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
+    def to_dict(self, counts_only: bool = False) -> dict[str, Any]:
         syncing = None
         if self._current_sync.in_progress():
             syncing = {

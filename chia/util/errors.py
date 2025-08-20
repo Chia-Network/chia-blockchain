@@ -1,8 +1,10 @@
+# Package: utils
+
 from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from click import ClickException
 
@@ -192,6 +194,9 @@ class Err(Enum):
     INVALID_COIN_ID = 146
     # message not sent/received
     MESSAGE_NOT_SENT_OR_RECEIVED = 147
+    # the transactions generator uses overlong encoding of CLVM atoms in its
+    # serialization
+    INVALID_TRANSACTIONS_GENERATOR_ENCODING = 148
 
 
 class ValidationError(Exception):
@@ -208,14 +213,14 @@ class TimestampError(Exception):
 
 
 class ConsensusError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 
 
 class ProtocolError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
@@ -347,5 +352,3 @@ class CliRpcConnectionError(ClickException):
     """
     This error is raised when a rpc server cant be reached by the cli async generator
     """
-
-    pass

@@ -5,40 +5,41 @@ import logging
 import operator
 import sys
 import time
+from collections.abc import Awaitable
 from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
-from typing import Any, Awaitable, Callable, Dict, List, Union, cast
+from typing import Any, Callable, Union, cast
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plot_sync.test_delta import dummy_plot
 from chia._tests.util.misc import assert_rpc_error
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
-from chia.plot_sync.receiver import Receiver, get_list_or_len
-from chia.plotting.util import add_plot_directory
-from chia.protocols import farmer_protocol
-from chia.protocols.harvester_protocol import Plot
-from chia.rpc.farmer_rpc_api import (
+from chia.farmer.farmer_rpc_api import (
     FilterItem,
     PaginatedRequestData,
     PlotInfoRequestData,
     PlotPathRequestData,
     plot_matches_filter,
 )
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.plot_sync.receiver import Receiver, get_list_or_len
+from chia.plotting.util import add_plot_directory
+from chia.protocols import farmer_protocol
+from chia.protocols.harvester_protocol import Plot
 from chia.simulator.block_tools import get_plot_dir
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ log = logging.getLogger(__name__)
 async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) -> None:
     def wait() -> bool:
         current_last_sync_id = receiver.last_sync().sync_id
-        return current_last_sync_id != 0 and current_last_sync_id != previous_last_sync_id
+        return current_last_sync_id not in {0, previous_last_sync_id}
 
     await time_out_assert(30, wait)
 
@@ -130,7 +131,7 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
         return len(await farmer_rpc_client.get_signage_points()) > 0
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
+        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
     )
     await farmer_api.new_signage_point(sp)
 
@@ -149,8 +150,8 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
     targets_2 = await farmer_rpc_client.get_reward_targets(True, 2)
     assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
 
-    new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(2)).get_g1())
-    new_ph_2: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.pool_master_sk, uint32(7)).get_g1())
+    new_ph: bytes32 = puzzle_hash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(2)).get_g1())
+    new_ph_2: bytes32 = puzzle_hash_for_pk(master_sk_to_wallet_sk(bt.pool_master_sk, uint32(7)).get_g1())
 
     await farmer_rpc_client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
     targets_3 = await farmer_rpc_client.get_reward_targets(True, 10)
@@ -163,10 +164,10 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment: Harv
     assert not targets_4["have_pool_sk"] and targets_4["have_farmer_sk"]
 
     # check observer addresses
-    observer_farmer: bytes32 = create_puzzlehash_for_pk(
+    observer_farmer: bytes32 = puzzle_hash_for_pk(
         master_sk_to_wallet_sk_unhardened(bt.farmer_master_sk, uint32(2)).get_g1()
     )
-    observer_pool: bytes32 = create_puzzlehash_for_pk(
+    observer_pool: bytes32 = puzzle_hash_for_pk(
         master_sk_to_wallet_sk_unhardened(bt.pool_master_sk, uint32(7)).get_g1()
     )
     await farmer_rpc_client.set_reward_targets(
@@ -240,7 +241,7 @@ async def test_farmer_get_pool_state(
             pool_dict[key].insert(0, before_24h)
 
     sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1)
+        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2), uint32(1), uint32(0)
     )
     await farmer_api.new_signage_point(sp)
     client_pool_state = await farmer_rpc_client.get_pool_state()
@@ -358,8 +359,8 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
-    endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
-    filtering: Union[List[FilterItem], List[str]],
+    endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[dict[str, Any]]],
+    filtering: Union[list[FilterItem], list[str]],
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
@@ -378,12 +379,12 @@ async def test_farmer_get_harvester_plots_endpoints(
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         request = PlotInfoRequestData(
-            harvester_id, uint32(0), uint32(0), cast(List[FilterItem], filtering), sort_key, reverse
+            harvester_id, uint32(0), uint32(0), cast(list[FilterItem], filtering), sort_key, reverse
         )
     else:
-        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(List[str], filtering), reverse)
+        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(list[str], filtering), reverse)
 
-    def add_plot_directories(prefix: str, count: int) -> List[Path]:
+    def add_plot_directories(prefix: str, count: int) -> list[Path]:
         new_paths = []
         for i in range(count):
             new_paths.append(harvester.root_path / f"{prefix}_{i}")
@@ -396,7 +397,7 @@ async def test_farmer_get_harvester_plots_endpoints(
         plots = harvester_plots
     elif endpoint == FarmerRpcClient.get_harvester_plots_invalid:
         invalid_paths = add_plot_directories("invalid", 3)
-        for dir_index, r in [(0, range(0, 6)), (1, range(6, 8)), (2, range(8, 13))]:
+        for dir_index, r in [(0, range(6)), (1, range(6, 8)), (2, range(8, 13))]:
             plots += [str(invalid_paths[dir_index] / f"{i}.plot") for i in r]
         for plot in plots:
             with open(plot, "w"):
@@ -411,7 +412,7 @@ async def test_farmer_get_harvester_plots_endpoints(
 
     elif endpoint == FarmerRpcClient.get_harvester_plots_duplicates:
         duplicate_paths = add_plot_directories("duplicates", 2)
-        for dir_index, r in [(0, range(0, 3)), (1, range(3, 7))]:
+        for dir_index, r in [(0, range(3)), (1, range(3, 7))]:
             for i in r:
                 plot_path = Path(harvester_plots[i]["filename"])
                 plots.append(str(duplicate_paths[dir_index] / plot_path.name))

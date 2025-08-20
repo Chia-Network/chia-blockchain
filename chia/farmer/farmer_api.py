@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
@@ -23,6 +25,7 @@ from chia.protocols.harvester_protocol import (
     SignatureRequestSourceData,
     SigningDataKind,
 )
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.pool_protocol import (
     PoolErrorCode,
     PostPartialPayload,
@@ -30,26 +33,27 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     get_plot_id,
     verify_and_get_quality_string,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 
 class FarmerAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("FarmerAPI", None)
+
     log: logging.Logger
     farmer: Farmer
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, farmer: Farmer) -> None:
         self.log = logging.getLogger(__name__)
@@ -58,7 +62,7 @@ class FarmerAPI:
     def ready(self) -> bool:
         return self.farmer.started
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_proof_of_space(
         self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
     ) -> None:
@@ -69,7 +73,7 @@ class FarmerAPI:
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
 
         max_pos_per_sp = 5
 
@@ -105,11 +109,13 @@ class FarmerAPI:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
             required_iters: uint64 = calculate_iterations_quality(
-                self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
+                self.farmer.constants,
                 computed_quality_string,
-                new_proof_of_space.proof.size,
+                new_proof_of_space.proof.size(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
+                sp.sub_slot_iters,
+                sp.last_tx_height,
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
@@ -117,7 +123,7 @@ class FarmerAPI:
                 if new_proof_of_space.farmer_reward_address_override is not None:
                     self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
 
-                sp_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+                sp_src_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
                 if (
                     new_proof_of_space.include_source_signature_data
                     or new_proof_of_space.farmer_reward_address_override is not None
@@ -164,14 +170,14 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(time.time())
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
                 )
-                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
+                self.farmer.cache_add_time[computed_quality_string] = uint64(time.time())
 
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signatures, request))
 
@@ -182,7 +188,7 @@ class FarmerAPI:
                 if p2_singleton_puzzle_hash not in self.farmer.pool_state:
                     self.farmer.log.info(f"Did not find pool info for {p2_singleton_puzzle_hash}")
                     return
-                pool_state_dict: Dict[str, Any] = self.farmer.pool_state[p2_singleton_puzzle_hash]
+                pool_state_dict: dict[str, Any] = self.farmer.pool_state[p2_singleton_puzzle_hash]
                 pool_url = pool_state_dict["pool_config"].pool_url
                 if pool_url == "":
                     # `pool_url == ""` means solo plotNFT farming
@@ -212,11 +218,13 @@ class FarmerAPI:
                     return
 
                 required_iters = calculate_iterations_quality(
-                    self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
+                    self.farmer.constants,
                     computed_quality_string,
-                    new_proof_of_space.proof.size,
+                    new_proof_of_space.proof.size(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
+                    sp.sub_slot_iters,
+                    sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
@@ -268,7 +276,7 @@ class FarmerAPI:
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
                 m_to_sign = payload.get_hash()
-                m_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+                m_src_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
 
                 if (  # pragma: no cover
                     new_proof_of_space.include_source_signature_data
@@ -374,12 +382,11 @@ class FarmerAPI:
                                 )
                                 return
 
-                            pool_response: Dict[str, Any] = json.loads(await resp.text())
+                            pool_response: dict[str, Any] = json.loads(await resp.text())
                             self.farmer.log.info(f"Pool response: {pool_response}")
                             if "error_code" in pool_response:
                                 self.farmer.log.error(
-                                    f"Error in pooling: "
-                                    f"{pool_response['error_code'], pool_response['error_message']}"
+                                    f"Error in pooling: {pool_response['error_code'], pool_response['error_message']}"
                                 )
 
                                 increment_pool_stats(
@@ -471,7 +478,7 @@ class FarmerAPI:
 
                 return
 
-    @api_request()
+    @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
         request = self._process_respond_signatures(response)
         if request is None:
@@ -489,7 +496,7 @@ class FarmerAPI:
     FARMER PROTOCOL (FARMER <-> FULL NODE)
     """
 
-    @api_request()
+    @metadata.request()
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
@@ -501,7 +508,7 @@ class FarmerAPI:
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
 
         try:
-            pool_difficulties: List[PoolDifficulty] = []
+            pool_difficulties: list[PoolDifficulty] = []
             for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
                 if pool_dict["pool_config"].pool_url == "":
                     # Self pooling
@@ -528,7 +535,8 @@ class FarmerAPI:
                 new_signage_point.signage_point_index,
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
-                uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
+                new_signage_point.peak_height,
+                new_signage_point.last_tx_height,
             )
 
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
@@ -550,7 +558,7 @@ class FarmerAPI:
 
                     pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
         missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
         self.farmer.state_changed(
@@ -558,7 +566,7 @@ class FarmerAPI:
             {"sp_hash": new_signage_point.challenge_chain_sp, "missing_signage_points": missing_signage_points},
         )
 
-    @api_request()
+    @metadata.request()
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Optional[Message]:
         if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
@@ -568,7 +576,7 @@ class FarmerAPI:
             full_node_request.quality_string
         ]
 
-        message_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+        message_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
 
         if full_node_request.foliage_block_data is not None:
             message_data = [
@@ -607,7 +615,7 @@ class FarmerAPI:
 
         return make_msg(ProtocolMessageTypes.signed_values, signed_values)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: WSChiaConnection) -> None:
         self.farmer.state_changed(
             "new_farming_info",
@@ -625,35 +633,35 @@ class FarmerAPI:
             },
         )
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: WSChiaConnection) -> None:
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_removed(message)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_invalid(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_invalid(message)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_keys_missing(message)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_duplicates(message)
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
@@ -20,7 +21,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import construct_cr_layer
 
 
 def test_cat_outer_puzzle() -> None:
-    authorized_providers: List[bytes32] = [bytes32([0] * 32), bytes32([0] * 32)]
+    authorized_providers: list[bytes32] = [bytes32.zeros, bytes32.zeros]
     proofs_checker: Program = Program.to(None)
     ACS: Program = Program.to(1)
     cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, ACS)
@@ -42,7 +43,7 @@ def test_cat_outer_puzzle() -> None:
     assert create_asset_id(cr_driver) is None
 
     # Set up for solve
-    coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    coin: Coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     coin_as_hex: str = (
         "0x" + coin.parent_coin_info.hex() + coin.puzzle_hash.hex() + uint64(coin.amount).stream_to_bytes().hex()
     )

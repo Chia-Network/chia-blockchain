@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
-from typing import AsyncContextManager, AsyncIterator, ContextManager, Generic, Iterator, List, TypeVar
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -10,13 +11,13 @@ T = TypeVar("T")
 @dataclass
 class SplitManager(Generic[T]):
     # NOTE: only for transitional testing use, please avoid usage
-    manager: ContextManager[object]
+    manager: contextlib.AbstractContextManager[object]
     object: T
     _entered: bool = False
     _exited: bool = False
 
     def enter(self) -> None:
-        messages: List[str] = []
+        messages: list[str] = []
         if self._entered:
             messages.append("already entered")
         if self._exited:
@@ -31,7 +32,7 @@ class SplitManager(Generic[T]):
         if if_needed and (not self._entered or self._exited):
             return
 
-        messages: List[str] = []
+        messages: list[str] = []
         if not self._entered:
             messages.append("not yet entered")
         if self._exited:
@@ -46,13 +47,13 @@ class SplitManager(Generic[T]):
 @dataclass
 class SplitAsyncManager(Generic[T]):
     # NOTE: only for transitional testing use, please avoid usage
-    manager: AsyncContextManager[object]
+    manager: contextlib.AbstractAsyncContextManager[object]
     object: T
     _entered: bool = False
     _exited: bool = False
 
     async def enter(self) -> None:
-        messages: List[str] = []
+        messages: list[str] = []
         if self._entered:
             messages.append("already entered")
         if self._exited:
@@ -67,7 +68,7 @@ class SplitAsyncManager(Generic[T]):
         if if_needed and (not self._entered or self._exited):
             return
 
-        messages: List[str] = []
+        messages: list[str] = []
         if not self._entered:
             messages.append("not yet entered")
         if self._exited:
@@ -80,7 +81,7 @@ class SplitAsyncManager(Generic[T]):
 
 
 @contextlib.contextmanager
-def split_manager(manager: ContextManager[object], object: T) -> Iterator[SplitManager[T]]:
+def split_manager(manager: contextlib.AbstractContextManager[object], object: T) -> Iterator[SplitManager[T]]:
     # NOTE: only for transitional testing use, please avoid usage
     split = SplitManager(manager=manager, object=object)
     try:
@@ -90,7 +91,9 @@ def split_manager(manager: ContextManager[object], object: T) -> Iterator[SplitM
 
 
 @contextlib.asynccontextmanager
-async def split_async_manager(manager: AsyncContextManager[object], object: T) -> AsyncIterator[SplitAsyncManager[T]]:
+async def split_async_manager(
+    manager: contextlib.AbstractAsyncContextManager[object], object: T
+) -> AsyncIterator[SplitAsyncManager[T]]:
     # NOTE: only for transitional testing use, please avoid usage
     split = SplitAsyncManager(manager=manager, object=object)
     try:

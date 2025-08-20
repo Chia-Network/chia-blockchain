@@ -3,15 +3,14 @@ from __future__ import annotations
 import logging
 import time
 from random import randrange
-from typing import List, Set
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import (
     check_for_exact_match,
     knapsack_coin_algorithm,
@@ -47,7 +46,7 @@ class TestCoinSelection:
         coins_to_append = 1000
         amounts = list(range(1, coins_to_append))
         amounts.sort(reverse=True)
-        coin_list: List[Coin] = [Coin(a_hash, a_hash, uint64(100000000 * a)) for a in amounts]
+        coin_list: list[Coin] = [Coin(a_hash, a_hash, uint64(100000000 * a)) for a in amounts]
         for i in range(tries):
             knapsack = knapsack_coin_algorithm(
                 coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 999999, seed=bytes([i])
@@ -58,7 +57,7 @@ class TestCoinSelection:
     def test_knapsack_coin_selection_2(self, a_hash: bytes32) -> None:
         coin_amounts = [6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_amounts.sort(reverse=True)
-        coin_list: List[Coin] = [Coin(a_hash, a_hash, uint64(a)) for a in coin_amounts]
+        coin_list: list[Coin] = [Coin(a_hash, a_hash, uint64(a)) for a in coin_amounts]
         # coin_list = set([coin for a in coin_amounts])
         for i in range(100):
             knapsack = knapsack_coin_algorithm(
@@ -81,12 +80,12 @@ class TestCoinSelection:
                 spendable_amount += c_amount
         spendable_amount = uint128(spendable_amount)
 
-        coin_list: List[WalletCoinRecord] = [
+        coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
         for target_amount in coin_amounts[:100]:  # select the first 100 values
-            result: Set[Coin] = await select_coins(
+            result: set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_COIN_SELECTION_CONFIG,
                 coin_list,
@@ -99,9 +98,27 @@ class TestCoinSelection:
             assert len(result) <= 500
 
     @pytest.mark.anyio
+    async def test_coin_selection_zero_coins(self, a_hash: bytes32) -> None:
+        coin_list: list[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(0)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for _ in range(100)
+        ]
+
+        result: set[Coin] = await select_coins(
+            uint128(0),
+            DEFAULT_COIN_SELECTION_CONFIG,
+            coin_list,
+            {},
+            logging.getLogger("test"),
+            uint128(0),
+        )
+
+        assert len(result) > 0
+
+    @pytest.mark.anyio
     async def test_coin_selection_with_dust(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000000000 + 10000)
-        coin_list: List[WalletCoinRecord] = [
+        coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(
                 Coin(a_hash, a_hash, uint64(5000000000000)), uint32(1), uint32(1), False, True, WalletType(0), 1
             )
@@ -121,7 +138,7 @@ class TestCoinSelection:
         # make sure coins are not identical.
         for target_amount in [10000, 9999]:
             print("Target amount: ", target_amount)
-            result: Set[Coin] = await select_coins(
+            result: set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_COIN_SELECTION_CONFIG,
                 coin_list,
@@ -147,7 +164,7 @@ class TestCoinSelection:
             )
         spendable_amount = uint128(spendable_amount + 2000 * 100)
         for target_amount in [50000, 25000, 15000, 10000, 9000, 3000]:  # select the first 100 values
-            dusty_result: Set[Coin] = await select_coins(
+            dusty_result: set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_COIN_SELECTION_CONFIG,
                 coin_list,
@@ -163,7 +180,7 @@ class TestCoinSelection:
 
         # test when we have multiple coins under target, and a lot of dust coins.
         spendable_amount = uint128(25000 + 10000)
-        new_coin_list: List[WalletCoinRecord] = []
+        new_coin_list: list[WalletCoinRecord] = []
         for i in range(5):
             new_coin_list.append(
                 WalletCoinRecord(
@@ -190,7 +207,7 @@ class TestCoinSelection:
                 )
             )
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
-            dusty_below_target: Set[Coin] = await select_coins(
+            dusty_below_target: set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_COIN_SELECTION_CONFIG,
                 new_coin_list,
@@ -208,7 +225,7 @@ class TestCoinSelection:
     async def test_dust_and_one_large_coin(self, a_hash: bytes32) -> None:
         # test when we have a lot of dust and 1 large coin
         spendable_amount = uint128(50000 + 10000)
-        new_coin_list: List[WalletCoinRecord] = [
+        new_coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(
                 Coin(a_hash, std_hash(b"123"), uint64(50000)), uint32(1), uint32(1), False, True, WalletType(0), 1
             )
@@ -227,7 +244,7 @@ class TestCoinSelection:
                 )
             )
         for target_amount in [50000, 10001, 10000, 9999]:
-            dusty_below_target: Set[Coin] = await select_coins(
+            dusty_below_target: set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_COIN_SELECTION_CONFIG,
                 new_coin_list,
@@ -242,7 +259,7 @@ class TestCoinSelection:
     @pytest.mark.anyio
     async def test_coin_selection_failure(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(10000)
-        coin_list: List[WalletCoinRecord] = []
+        coin_list: list[WalletCoinRecord] = []
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
@@ -282,7 +299,7 @@ class TestCoinSelection:
     @pytest.mark.anyio
     async def test_coin_selection(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
-        coin_list: List[WalletCoinRecord] = [
+        coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
@@ -290,7 +307,7 @@ class TestCoinSelection:
 
         # check for exact match
         target_amount = uint128(40)
-        exact_match_result: Set[Coin] = await select_coins(
+        exact_match_result: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
@@ -304,7 +321,7 @@ class TestCoinSelection:
 
         # check for match of 2
         target_amount = uint128(153)
-        match_2: Set[Coin] = await select_coins(
+        match_2: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
@@ -317,7 +334,7 @@ class TestCoinSelection:
         assert len(match_2) == 2
         # check for match of at least 3. it is random after all.
         target_amount = uint128(541)
-        match_3: Set[Coin] = await select_coins(
+        match_3: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
@@ -331,7 +348,7 @@ class TestCoinSelection:
 
         # check for match of all
         target_amount = spendable_amount
-        match_all: Set[Coin] = await select_coins(
+        match_all: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
@@ -345,13 +362,13 @@ class TestCoinSelection:
 
         # test smallest greater than target
         greater_coin_amounts = [1, 2, 5, 20, 400, 700]
-        greater_coin_list: List[WalletCoinRecord] = [
+        greater_coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in greater_coin_amounts
         ]
         greater_spendable_amount = uint128(sum(greater_coin_amounts))
         target_amount = uint128(625)
-        smallest_result: Set[Coin] = await select_coins(
+        smallest_result: set[Coin] = await select_coins(
             greater_spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             greater_coin_list,
@@ -364,12 +381,12 @@ class TestCoinSelection:
         assert len(smallest_result) == 1
 
         # test smallest greater than target with only 1 large coin.
-        single_greater_coin_list: List[WalletCoinRecord] = [
+        single_greater_coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(70000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
         ]
         single_greater_spendable_amount = uint128(70000)
         target_amount = uint128(50000)
-        single_greater_result: Set[Coin] = await select_coins(
+        single_greater_result: set[Coin] = await select_coins(
             single_greater_spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             single_greater_coin_list,
@@ -383,13 +400,13 @@ class TestCoinSelection:
 
         # test smallest greater than target with only multiple larger then target coins.
         multiple_greater_coin_amounts = [90000, 100000, 120000, 200000, 100000]
-        multiple_greater_coin_list: List[WalletCoinRecord] = [
+        multiple_greater_coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in multiple_greater_coin_amounts
         ]
         multiple_greater_spendable_amount = uint128(sum(multiple_greater_coin_amounts))
         target_amount = uint128(70000)
-        multiple_greater_result: Set[Coin] = await select_coins(
+        multiple_greater_result: set[Coin] = await select_coins(
             multiple_greater_spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             multiple_greater_coin_list,
@@ -406,7 +423,7 @@ class TestCoinSelection:
     async def test_coin_selection_difficult(self, a_hash: bytes32) -> None:
         num_coins = 40
         spendable_amount = uint128(num_coins * 1000)
-        coin_list: List[WalletCoinRecord] = [
+        coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(
                 Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(1000)),
                 uint32(1),
@@ -419,7 +436,7 @@ class TestCoinSelection:
             for i in range(num_coins)
         ]
         target_amount = spendable_amount - 1
-        result: Set[Coin] = await select_coins(
+        result: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
@@ -434,7 +451,7 @@ class TestCoinSelection:
 
     @pytest.mark.anyio
     async def test_smallest_coin_over_amount(self, a_hash: bytes32) -> None:
-        coin_list: List[Coin] = [
+        coin_list: list[Coin] = [
             Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((39 - i) * 1000)) for i in range(40)
         ]
         assert select_smallest_coin_over_target(uint128(100), coin_list) == coin_list[39 - 1]
@@ -446,7 +463,7 @@ class TestCoinSelection:
 
     @pytest.mark.anyio
     async def test_sum_largest_coins(self, a_hash: bytes32) -> None:
-        coin_list: List[Coin] = list(
+        coin_list: list[Coin] = list(
             reversed([Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)])
         )
         assert sum_largest_coins(uint128(40), coin_list) == {coin_list[0]}
@@ -456,7 +473,7 @@ class TestCoinSelection:
     @pytest.mark.anyio
     async def test_knapsack_perf(self, a_hash: bytes32) -> None:
         start = time.time()
-        coin_list: List[Coin] = [
+        coin_list: list[Coin] = [
             Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((200000 - i) * 1000)) for i in range(200000)
         ]
         knapsack_coin_algorithm(coin_list, uint128(2000000), 9999999999999999, 500)
@@ -467,7 +484,7 @@ class TestCoinSelection:
     @pytest.mark.anyio
     async def test_coin_selection_min_coin(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000 + 500 + 40050)
-        coin_list: List[WalletCoinRecord] = [
+        coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(5000000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
         ]
         for i in range(500):
@@ -497,7 +514,7 @@ class TestCoinSelection:
         # make sure coins are not identical.
         for target_amount in [500, 1000, 50000, 500000]:
             for min_coin_amount in [10, 100, 200, 300, 1000]:
-                result: Set[Coin] = await select_coins(
+                result: set[Coin] = await select_coins(
                     spendable_amount,
                     DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(min_coin_amount)),
                     coin_list,
@@ -529,7 +546,7 @@ class TestCoinSelection:
         ]
         excluded_coins = [Coin(a_hash, a_hash, uint64(3)), Coin(c_hash, c_hash, uint64(9))]
         # test that excluded coins are not included in the result
-        selected_coins: Set[Coin] = await select_coins(
+        selected_coins: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in excluded_coins]),
             spendable_wallet_coin_records,
@@ -541,7 +558,7 @@ class TestCoinSelection:
         assert selected_coins is not None
         assert sum(coin.amount for coin in selected_coins) >= target_amount
         assert len(selected_coins) == 1
-        assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
+        assert next(iter(selected_coins)) == Coin(b_hash, b_hash, uint64(6))
 
         excluded_all_coins = spendable_coins
         # make sure that a failure is raised if all coins are excluded.
@@ -558,7 +575,7 @@ class TestCoinSelection:
     @pytest.mark.anyio
     async def test_coin_selection_with_zero_amount(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
-        coin_list: List[WalletCoinRecord] = [
+        coin_list: list[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
@@ -566,7 +583,7 @@ class TestCoinSelection:
 
         # validate that a zero amount is handled correctly
         target_amount = uint128(0)
-        zero_amount_result: Set[Coin] = await select_coins(
+        zero_amount_result: set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,

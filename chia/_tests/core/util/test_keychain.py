@@ -3,15 +3,16 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 import chia._tests.util
 from chia.simulator.keyring import TempKeyring
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainFingerprintExists,
     KeychainFingerprintNotFound,
@@ -20,7 +21,6 @@ from chia.util.errors import (
     KeychainLabelInvalid,
     KeychainSecretsMissing,
 )
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,
@@ -180,7 +180,11 @@ class TestKeychain:
 
         # All added keys should still be valid with their label
         assert all(
-            key_data in [key_data_0, key_data_1, key_data_2] for key_data in keychain.get_keys(include_secrets=True)
+            # This must be compared to a tuple because the `.mnemonic` property is a list which makes the
+            # class unhashable. We should eventually add support in streamable for varadic tuples and maybe remove
+            # support for the mutable `list`.
+            key_data in (key_data_0, key_data_1, key_data_2)  # noqa: PLR6201
+            for key_data in keychain.get_keys(include_secrets=True)
         )
 
     def test_bip39_eip2333_test_vector(self, empty_temp_file_keyring: TempKeyring):
@@ -216,9 +220,9 @@ class TestKeychain:
         test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
         all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
-        for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
+        for idx, [entropy_hex, full_mnemonic, seed_hex, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)
-            seed = bytes.fromhex(seed)
+            seed = bytes.fromhex(seed_hex)
 
             assert mnemonic_from_short_words(short_mnemonic) == full_mnemonic
             assert bytes_from_mnemonic(short_mnemonic) == entropy_bytes
@@ -229,7 +233,7 @@ class TestKeychain:
         # Test code from trezor:
         # Copyright (c) 2013 Pavol Rusnak
         # Copyright (c) 2017 mruddy
-        # https://github.com/trezor/python-mnemonic/blob/master/test_mnemonic.py
+        # https://github.com/trezor/python-mnemonic/blob/master/tests/test_mnemonic.py
         # The same sentence in various UTF-8 forms
         words_nfkd = "Pr\u030ci\u0301s\u030cerne\u030c z\u030clut\u030couc\u030cky\u0301 ku\u030an\u030c u\u0301pe\u030cl d\u030ca\u0301belske\u0301 o\u0301dy za\u0301ker\u030cny\u0301 uc\u030cen\u030c be\u030cz\u030ci\u0301 pode\u0301l zo\u0301ny u\u0301lu\u030a"  # noqa: E501
         words_nfc = "P\u0159\xed\u0161ern\u011b \u017elu\u0165ou\u010dk\xfd k\u016f\u0148 \xfap\u011bl \u010f\xe1belsk\xe9 \xf3dy z\xe1ke\u0159n\xfd u\u010de\u0148 b\u011b\u017e\xed pod\xe9l z\xf3ny \xfal\u016f"  # noqa: E501
@@ -318,7 +322,7 @@ def test_key_data_without_secrets(key_info: KeyInfo) -> None:
         ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().private_key), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: tuple[list[str], bytes, PrivateKey], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
@@ -339,7 +343,7 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)
@@ -351,7 +355,7 @@ async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:
@@ -381,7 +385,7 @@ async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
     expected_keys = []
     # Add 10 keys and validate the result of `get_keys` after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:
@@ -427,7 +431,11 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain.set_label(fingerprint=key_data_1.fingerprint, label=key_data_1.label)
     assert key_data_0 == keychain.get_key(fingerprint=key_data_0.fingerprint, include_secrets=True)
     # All added keys should still be valid with their label
-    assert all(key_data in [key_data_0, key_data_1] for key_data in keychain.get_keys(include_secrets=True))
+
+    # This must be compared to a tuple because the `.mnemonic` property is a list which makes the
+    # class unhashable. We should eventually add support in streamable for varadic tuples and maybe remove
+    # support for the mutable `list`.
+    assert all(key_data in (key_data_0, key_data_1) for key_data in keychain.get_keys(include_secrets=True))  # noqa: PLR6201
 
 
 @pytest.mark.parametrize(

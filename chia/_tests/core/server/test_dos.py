@@ -1,21 +1,21 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
-from typing import List, Tuple
+from typing import Optional
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint64
 
 import chia.server.server
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Handshake
-from chia.server.outbound_message import Message, make_msg
+from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -23,7 +23,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.util.timing import adjusted_timeout
 from chia.wallet.wallet_node import WalletNode
 
@@ -34,26 +33,18 @@ def not_localhost(host: str) -> bool:
     return False
 
 
-async def get_block_path(full_node: FullNodeAPI):
-    blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
-    assert blocks_list[0] is not None
-    while blocks_list[0].height != 0:
-        b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
-        assert b is not None
-        blocks_list.insert(0, b)
-    return blocks_list
-
-
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg, capa, capb):
-        return True
+    def process_msg_and_check(
+        self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
+    ) -> Optional[str]:
+        return None
 
 
 class TestDos:
     @pytest.mark.anyio
     async def test_banned_host_can_not_connect(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -77,7 +68,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_large_message_disconnect_and_ban(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -112,7 +103,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -143,7 +134,11 @@ class TestDos:
         await ws.close()
 
     @pytest.mark.anyio
-    async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):
+    async def test_invalid_protocol_handshake(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -160,8 +155,8 @@ class TestDos:
         )
 
         # Construct an otherwise valid handshake message
-        handshake: Handshake = Handshake("test", "0.0.32", "1.0.0.0", 3456, 1, [(1, "1")])
-        outbound_handshake: Message = Message(2, None, bytes(handshake))  # 2 is an invalid ProtocolType
+        handshake: Handshake = Handshake("test", "0.0.32", "1.0.0.0", uint16(3456), uint8(1), [(uint16(1), "1")])
+        outbound_handshake: Message = Message(uint8(2), None, bytes(handshake))  # 2 is an invalid ProtocolType
         await ws.send_bytes(bytes(outbound_handshake))
 
         response: WSMessage = await ws.receive()
@@ -174,9 +169,13 @@ class TestDos:
         await asyncio.sleep(1)  # give some time for cleanup to work
 
     @pytest.mark.anyio
-    async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
+    async def test_spam_tx(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -184,15 +183,15 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
 
         new_tx_message = make_msg(
             ProtocolMessageTypes.new_transaction,
-            full_node_protocol.NewTransaction(bytes([9] * 32), uint64(0), uint64(0)),
+            full_node_protocol.NewTransaction(bytes32([9] * 32), uint64(0), uint64(0)),
         )
         for i in range(4000):
             await ws_con._send_message(new_tx_message)
@@ -216,22 +215,26 @@ class TestDos:
                 await asyncio.sleep(0)
         await asyncio.sleep(1)
 
-        def is_closed():
+        def is_closed() -> bool:
             return ws_con.closed
 
         await time_out_assert(15, is_closed)
 
         assert ws_con.closed
 
-        def is_banned():
+        def is_banned() -> bool:
             return "1.2.3.4" in server_2.banned_peers
 
         await time_out_assert(15, is_banned)
 
     @pytest.mark.anyio
-    async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
+    async def test_spam_message_non_tx(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -239,13 +242,13 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
 
-        def is_closed():
+        def is_closed() -> bool:
             return ws_con.closed
 
         new_message = make_msg(
@@ -272,15 +275,19 @@ class TestDos:
         await time_out_assert(15, is_closed)
 
         # Banned
-        def is_banned():
+        def is_banned() -> bool:
             return "1.2.3.4" in server_2.banned_peers
 
         await time_out_assert(15, is_banned)
 
     @pytest.mark.anyio
-    async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
+    async def test_spam_message_too_large(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -288,13 +295,13 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
 
-        def is_closed():
+        def is_closed() -> bool:
             return ws_con.closed
 
         new_message = make_msg(
@@ -308,13 +315,13 @@ class TestDos:
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
-        ws_con.outbound_rate_limiter = FakeRateLimiter()
+        ws_con.outbound_rate_limiter = FakeRateLimiter()  # type: ignore[assignment]
 
         await ws_con._send_message(new_message)
         await time_out_assert(15, is_closed)
 
         # Banned
-        def is_banned():
+        def is_banned() -> bool:
             return "1.2.3.4" in server_2.banned_peers
 
         await time_out_assert(15, is_banned)

@@ -7,6 +7,7 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 
 
@@ -34,7 +35,7 @@ def set_cmd(
     current_passphrase_file: Optional[TextIOWrapper],
     hint: Optional[str],
 ) -> None:
-    from .passphrase_funcs import (
+    from chia.cmds.passphrase_funcs import (
         async_update_daemon_passphrase_cache_if_running,
         read_passphrase_from_file,
         set_or_update_passphrase,
@@ -70,7 +71,7 @@ def set_cmd(
 
     if success:
         # Attempt to update the daemon's passphrase cache
-        root_path = ctx.obj["root_path"]
+        root_path = ChiaCliContext.set_default(ctx).root_path
         config = load_config(root_path, "config.yaml")
         sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
@@ -86,7 +87,7 @@ def set_cmd(
 )
 @click.pass_context
 def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapper]) -> None:
-    from .passphrase_funcs import (
+    from chia.cmds.passphrase_funcs import (
         async_update_daemon_passphrase_cache_if_running,
         read_passphrase_from_file,
         remove_passphrase,
@@ -98,7 +99,7 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
 
     if remove_passphrase(current_passphrase):
         # Attempt to update the daemon's passphrase cache
-        root_path = ctx.obj["root_path"]
+        root_path = ChiaCliContext.set_default(ctx).root_path
         config = load_config(root_path, "config.yaml")
         sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
@@ -110,7 +111,7 @@ def hint_cmd() -> None:
 
 @hint_cmd.command("display", help="Display the keyring passphrase hint")
 def display_hint() -> None:
-    from .passphrase_funcs import display_passphrase_hint
+    from chia.cmds.passphrase_funcs import display_passphrase_hint
 
     display_passphrase_hint()
 
@@ -118,13 +119,13 @@ def display_hint() -> None:
 @hint_cmd.command("set", help="Set or update the keyring passphrase hint")
 @click.argument("hint", nargs=1)
 def set_hint(hint: str) -> None:
-    from .passphrase_funcs import set_passphrase_hint
+    from chia.cmds.passphrase_funcs import set_passphrase_hint
 
     set_passphrase_hint(hint)
 
 
 @hint_cmd.command("remove", help="Remove the keyring passphrase hint")
 def remove_hint() -> None:
-    from .passphrase_funcs import remove_passphrase_hint
+    from chia.cmds.passphrase_funcs import remove_passphrase_hint
 
     remove_passphrase_hint()

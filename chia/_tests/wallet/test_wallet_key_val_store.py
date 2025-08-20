@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs import FullBlock, HeaderBlock
 
 from chia._tests.util.db_connection import DBConnection
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
+from chia.simulator.block_tools import BlockTools
 from chia.wallet.key_val_store import KeyValStore
 
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-async def test_store(bt):
+async def test_store(bt: BlockTools) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await KeyValStore.create(db_wrapper)
         blocks = bt.get_consecutive_blocks(20)

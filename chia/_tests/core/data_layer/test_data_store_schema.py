@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Dict
+from typing import Any
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import add_01234567_example, create_valid_node_values
 from chia.data_layer.data_layer_util import NodeType, Side, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer
 
@@ -35,7 +35,7 @@ async def test_node_hash_must_be_32(
     data_store: DataStore,
     store_id: bytes32,
     length: int,
-    valid_node_values: Dict[str, Any],
+    valid_node_values: dict[str, Any],
 ) -> None:
     valid_node_values["hash"] = bytes([0] * length)
 
@@ -54,7 +54,7 @@ async def test_node_hash_must_be_32(
 async def test_node_hash_must_not_be_null(
     data_store: DataStore,
     store_id: bytes32,
-    valid_node_values: Dict[str, Any],
+    valid_node_values: dict[str, Any],
 ) -> None:
     valid_node_values["hash"] = None
 
@@ -74,7 +74,7 @@ async def test_node_type_must_be_valid(
     data_store: DataStore,
     node_type: NodeType,
     bad_node_type: int,
-    valid_node_values: Dict[str, Any],
+    valid_node_values: dict[str, Any],
 ) -> None:
     valid_node_values["node_type"] = bad_node_type
 
@@ -212,7 +212,7 @@ async def test_root_generation_must_not_be_less_than_zero(
 ) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {
-        "tree_id": bytes32([0] * 32),
+        "tree_id": bytes32.zeros,
         "generation": generation,
         "node_hash": example.terminal_nodes[0],
         "status": Status.PENDING,
@@ -233,7 +233,7 @@ async def test_root_generation_must_not_be_less_than_zero(
 async def test_root_generation_must_not_be_null(data_store: DataStore, store_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {
-        "tree_id": bytes32([0] * 32),
+        "tree_id": bytes32.zeros,
         "generation": None,
         "node_hash": example.terminal_nodes[0],
         "status": Status.PENDING,
@@ -252,7 +252,7 @@ async def test_root_generation_must_not_be_null(data_store: DataStore, store_id:
 
 @pytest.mark.anyio
 async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
-    values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": bytes32([0] * 32), "status": Status.PENDING}
+    values = {"tree_id": bytes32.zeros, "generation": 0, "node_hash": bytes32.zeros, "status": Status.PENDING}
 
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^FOREIGN KEY constraint failed$"):
@@ -270,7 +270,7 @@ async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
 async def test_root_status_must_be_valid(data_store: DataStore, store_id: bytes32, bad_status: int) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {
-        "tree_id": bytes32([0] * 32),
+        "tree_id": bytes32.zeros,
         "generation": 0,
         "node_hash": example.terminal_nodes[0],
         "status": bad_status,
@@ -290,7 +290,7 @@ async def test_root_status_must_be_valid(data_store: DataStore, store_id: bytes3
 @pytest.mark.anyio
 async def test_root_status_must_not_be_null(data_store: DataStore, store_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
-    values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": example.terminal_nodes[0], "status": None}
+    values = {"tree_id": bytes32.zeros, "generation": 0, "node_hash": example.terminal_nodes[0], "status": None}
 
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.status$"):
@@ -334,7 +334,7 @@ async def test_ancestors_ancestor_must_be_32(
                 INSERT INTO ancestors(hash, ancestor, tree_id, generation)
                 VALUES(:hash, :ancestor, :tree_id, :generation)
                 """,
-                {"hash": node_hash, "ancestor": bytes([0] * length), "tree_id": bytes32([0] * 32), "generation": 0},
+                {"hash": node_hash, "ancestor": bytes([0] * length), "tree_id": bytes32.zeros, "generation": 0},
             )
 
 
@@ -353,7 +353,7 @@ async def test_ancestors_store_id_must_be_32(
                 INSERT INTO ancestors(hash, ancestor, tree_id, generation)
                 VALUES(:hash, :ancestor, :tree_id, :generation)
                 """,
-                {"hash": node_hash, "ancestor": bytes32([0] * 32), "tree_id": bytes([0] * length), "generation": 0},
+                {"hash": node_hash, "ancestor": bytes32.zeros, "tree_id": bytes([0] * length), "generation": 0},
             )
 
 

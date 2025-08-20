@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import AsyncIterator, final
+from typing import final
 
 import pytest
 
@@ -90,6 +91,9 @@ async def test_callbacks() -> None:
 
             interface.set_callback(callback)
 
+        async with action_scope.use():
+            pass  # Testing that callback stays put even through another .use()
+
     assert action_scope.side_effects.buf == b"bar"
 
 
@@ -131,7 +135,7 @@ async def test_no_callbacks_if_error() -> None:
             raise RuntimeError("This should prevent the callbacks from being called")
 
 
-# TODO: add suport, change this test to test it and add a test for nested transactionality
+# TODO: add support, change this test to test it and add a test for nested transactionality
 @pytest.mark.anyio
 async def test_nested_use_banned(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     async with action_scope.use():

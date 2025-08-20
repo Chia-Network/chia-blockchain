@@ -6,15 +6,17 @@ from typing import Optional
 import click
 import yaml
 
-from chia.server.outbound_message import NodeType
+from chia.cmds.cmd_classes import ChiaCliContext
+from chia.protocols.outbound_message import NodeType
+from chia.server.resolve_peer_info import set_peer_info
 from chia.util.config import (
     initial_config_file,
     load_defaults_for_missing_services,
     lock_and_load_config,
     save_config,
-    set_peer_info,
     str2bool,
 )
+from chia.util.network import parse_host_port
 
 
 def configure(
@@ -41,28 +43,20 @@ def configure(
         change_made = False
         if set_node_introducer:
             try:
-                if set_node_introducer.index(":"):
-                    host, port = (
-                        ":".join(set_node_introducer.split(":")[:-1]),
-                        set_node_introducer.split(":")[-1],
-                    )
-                    config["full_node"]["introducer_peer"]["host"] = host
-                    config["full_node"]["introducer_peer"]["port"] = int(port)
-                    config["introducer"]["port"] = int(port)
-                    print("Node introducer updated")
-                    change_made = True
+                host, port = parse_host_port(set_node_introducer)
+                config["full_node"]["introducer_peer"]["host"] = host
+                config["full_node"]["introducer_peer"]["port"] = port
+                config["introducer"]["port"] = port
+                print("Node introducer updated")
+                change_made = True
             except ValueError:
                 print("Node introducer address must be in format [IP:Port]")
         if set_farmer_peer:
             try:
-                if set_farmer_peer.index(":"):
-                    host, port = (
-                        ":".join(set_farmer_peer.split(":")[:-1]),
-                        set_farmer_peer.split(":")[-1],
-                    )
-                    set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=int(port))
-                    print("Farmer peer updated, make sure your harvester has the proper cert installed")
-                    change_made = True
+                host, port = parse_host_port(set_farmer_peer)
+                set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=port)
+                print("Farmer peer updated, make sure your harvester has the proper cert installed")
+                change_made = True
             except ValueError:
                 print("Farmer address must be in format [IP:Port]")
         if set_fullnode_port:
@@ -103,7 +97,7 @@ def configure(
             print("Target peer count updated")
             change_made = True
         if testnet:
-            if testnet == "true" or testnet == "t":
+            if testnet in {"true", "t"}:
                 print("Setting Testnet")
                 # check if network_overrides.constants.testnet11 exists
                 if (
@@ -167,7 +161,7 @@ def configure(
                 print("Default full node port, introducer and network setting updated")
                 change_made = True
 
-            elif testnet == "false" or testnet == "f":
+            elif testnet in {"false", "f"}:
                 print("Setting Mainnet")
                 mainnet_port = "8444"
                 mainnet_introducer = "introducer.chia.net"
@@ -313,7 +307,7 @@ def configure_cmd(
     seeder_nameserver: str,
 ) -> None:
     configure(
-        ctx.obj["root_path"],
+        ChiaCliContext.set_default(ctx).root_path,
         set_farmer_peer,
         set_node_introducer,
         set_fullnode_port,

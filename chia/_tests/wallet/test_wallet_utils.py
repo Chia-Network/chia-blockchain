@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Collection, Dict, List, Optional, Set, Tuple
+from collections.abc import Collection
+from typing import Optional
 
 import pytest
 from chia_rs import Coin, CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.wallet_sync_utils import sort_coin_states
 
@@ -22,7 +23,7 @@ coin_states = [
 ]
 
 
-def assert_race_cache(cache: PeerRequestCache, expected_entries: Dict[int, Set[CoinState]]) -> None:
+def assert_race_cache(cache: PeerRequestCache, expected_entries: dict[int, set[CoinState]]) -> None:
     for i in range(100):
         if i in expected_entries:
             assert cache.get_race_cache(i) == expected_entries[i], f"failed for {i}"
@@ -39,7 +40,7 @@ def dummy_coin_state(*, created_height: Optional[int], spent_height: Optional[in
     )
 
 
-def heights(coin_states: Collection[CoinState]) -> List[Tuple[Optional[int], Optional[int]]]:
+def heights(coin_states: Collection[CoinState]) -> list[tuple[Optional[int], Optional[int]]]:
     return [(coin_state.created_height, coin_state.spent_height) for coin_state in coin_states]
 
 
@@ -67,7 +68,7 @@ def test_sort_coin_states() -> None:
 
 def test_add_states_to_race_cache() -> None:
     cache = PeerRequestCache()
-    expected_entries: Dict[int, Set[CoinState]] = {}
+    expected_entries: dict[int, set[CoinState]] = {}
     assert_race_cache(cache, expected_entries)
 
     # Repeated adding of the same coin state should not have any impact

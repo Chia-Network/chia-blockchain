@@ -1,9 +1,11 @@
+# Package: utils
+
 from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import AsyncIterator
 
 from typing_extensions import final
 
@@ -29,7 +31,7 @@ class LimitedSemaphore:
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
         if self._available_count < 1:
-            raise LimitedSemaphoreFullError()
+            raise LimitedSemaphoreFullError
 
         self._available_count -= 1
         try:

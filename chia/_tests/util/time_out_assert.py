@@ -6,16 +6,42 @@ import json
 import logging
 import pathlib
 import time
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, Tuple, cast, final
+from collections.abc import Awaitable, Iterable
+from inspect import getframeinfo, stack
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar, cast, final
+
+from typing_extensions import Self
 
 import chia
 import chia._tests
 from chia._tests import ether
-from chia._tests.util.misc import DataTypeProtocol, caller_file_and_line
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
+
+
+T = TypeVar("T")
+
+
+@dataclasses.dataclass(frozen=True)
+class DataTypeProtocol(Protocol):
+    tag: ClassVar[str]
+
+    line: int
+    path: Path
+    label: str
+    duration: float
+    limit: float
+
+    __match_args__: ClassVar[tuple[str, ...]] = ()
+
+    @classmethod
+    def unmarshal(cls, marshalled: dict[str, Any]) -> Self: ...
+
+    def marshal(self) -> dict[str, Any]: ...
 
 
 @final
@@ -34,10 +60,10 @@ class TimeOutAssertData:
 
     label: str = ""
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TimeOutAssertData:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TimeOutAssertData:
         return cls(
             duration=marshalled["duration"],
             path=pathlib.Path(marshalled["path"]),
@@ -46,7 +72,7 @@ class TimeOutAssertData:
             timed_out=marshalled["timed_out"],
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "duration": self.duration,
             "path": self.path.as_posix(),
@@ -57,8 +83,14 @@ class TimeOutAssertData:
 
 
 async def time_out_assert_custom_interval(
-    timeout: float, interval, function, value=True, *args, stack_distance=0, **kwargs
-):
+    timeout: float,
+    interval: float,
+    function: Callable[..., Any],
+    value: object = True,
+    *args: object,
+    stack_distance: int = 0,
+    **kwargs: object,
+) -> None:
     __tracebackhide__ = True
 
     entry_file, entry_line = caller_file_and_line(
@@ -102,13 +134,15 @@ async def time_out_assert_custom_interval(
                 timed_out=timed_out,
             )
 
-            ether.record_property(  # pylint: disable=E1102
+            ether.record_property(
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )
 
 
-async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
+async def time_out_assert(
+    timeout: int, function: Callable[..., Any], value: object = True, *args: object, **kwargs: object
+) -> None:
     __tracebackhide__ = True
     await time_out_assert_custom_interval(
         timeout,
@@ -121,7 +155,9 @@ async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
     )
 
 
-async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):
+async def time_out_assert_not_none(
+    timeout: float, function: Callable[..., Any], *args: object, **kwargs: object
+) -> None:
     # TODO: rework to leverage time_out_assert_custom_interval() such as by allowing
     #       value to be a callable
     __tracebackhide__ = True
@@ -140,8 +176,10 @@ async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):
     assert False, "Timed assertion timed out"
 
 
-def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int = 1) -> Callable:
-    async def bool_f():
+def time_out_messages(
+    incoming_queue: asyncio.Queue[Message], msg_name: str, count: int = 1
+) -> Callable[[], Awaitable[bool]]:
+    async def bool_f() -> bool:
         if incoming_queue.qsize() < count:
             return False
         for _ in range(count):
@@ -152,3 +190,17 @@ def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int =
         return True
 
     return bool_f
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: list[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno

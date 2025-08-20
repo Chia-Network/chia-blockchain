@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
 
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 
@@ -62,7 +62,7 @@ class PoolState(Streamable):
 
 
 def initial_pool_state_from_dict(
-    state_dict: Dict[str, Any],
+    state_dict: dict[str, Any],
     owner_pubkey: G1Element,
     owner_puzzle_hash: bytes32,
 ) -> PoolState:
@@ -93,7 +93,7 @@ def create_pool_state(
     relative_lock_height: uint32,
 ) -> PoolState:
     if state not in {s.value for s in PoolSingletonState}:
-        raise AssertionError("state {state} is not a valid PoolSingletonState,")
+        raise AssertionError(f"state {state} is not a valid PoolSingletonState,")
     ps = PoolState(
         POOL_PROTOCOL_VERSION, uint8(state), target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
     )

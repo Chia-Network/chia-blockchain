@@ -4,6 +4,7 @@ from typing import Optional
 
 import click
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.show_funcs import show_async
 
 
@@ -12,8 +13,7 @@ from chia.cmds.show_funcs import show_async
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml"
+        "Set the port where the Full Node is hosting the RPC interface. See the rpc_port under full_node in config.yaml"
     ),
     type=int,
     default=None,
@@ -62,7 +62,7 @@ def show_cmd(
     asyncio.run(
         show_async(
             rpc_port,
-            ctx.obj["root_path"],
+            ChiaCliContext.set_default(ctx).root_path,
             fee,
             state,
             block_header_hash_by_height,

@@ -7,40 +7,29 @@ import logging
 import time
 import traceback
 from collections import defaultdict
+from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 import aiosqlite
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondPeers
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_version import chia_short_version
-from chia.util.ints import uint32, uint64
 from chia.util.network import resolve
 from chia.util.path import path_from_root
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +41,7 @@ class Crawler:
 
         _protocol_check: ClassVar[RpcServiceProtocol] = cast("Crawler", None)
 
-    config: Dict[str, Any]
+    config: dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
     print_status: bool = True
@@ -63,15 +52,15 @@ class Crawler:
     log: logging.Logger = log
     _shut_down: bool = False
     peer_count: int = 0
-    with_peak: Set[PeerInfo] = field(default_factory=set)
-    seen_nodes: Set[str] = field(default_factory=set)
+    with_peak: set[PeerInfo] = field(default_factory=set)
+    seen_nodes: set[str] = field(default_factory=set)
     minimum_version_count: int = 0
-    peers_retrieved: List[RespondPeers] = field(default_factory=list)
-    host_to_version: Dict[str, str] = field(default_factory=dict)
-    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
-    version_cache: List[Tuple[str, str]] = field(default_factory=list)
-    handshake_time: Dict[str, uint64] = field(default_factory=dict)
-    best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
+    peers_retrieved: list[RespondPeers] = field(default_factory=list)
+    host_to_version: dict[str, str] = field(default_factory=dict)
+    versions: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    version_cache: list[tuple[str, str]] = field(default_factory=list)
+    handshake_time: dict[str, uint64] = field(default_factory=dict)
+    best_timestamp_per_peer: dict[str, uint64] = field(default_factory=dict)
     start_crawler_loop: bool = True
 
     @property
@@ -94,7 +83,7 @@ class Crawler:
         if self.start_crawler_loop:
             # Bootstrap the initial peers
             await self.load_bootstrap_peers()
-            self.crawl_task = asyncio.create_task(self.crawl())
+            self.crawl_task = create_referenced_task(self.crawl())
         try:
             yield
         finally:
@@ -129,7 +118,7 @@ class Crawler:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def create_client(
@@ -191,7 +180,7 @@ class Crawler:
                     uint64(0),
                     uint32(0),
                     uint64(0),
-                    uint64(int(time.time())),
+                    uint64(time.time()),
                     uint64(0),
                     "undefined",
                     uint64(0),
@@ -231,7 +220,7 @@ class Crawler:
                         total_nodes += 1
                         if peer.ip_address not in tried_nodes:
                             tried_nodes.add(peer.ip_address)
-                        task = asyncio.create_task(self.connect_task(peer))
+                        task = create_referenced_task(self.connect_task(peer))
                         tasks.add(task)
                         if len(tasks) >= 250:
                             await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -259,7 +248,7 @@ class Crawler:
                                 uint64(0),
                                 uint32(0),
                                 uint64(0),
-                                uint64(int(time.time())),
+                                uint64(time.time()),
                                 uint64(response_peer.timestamp),
                                 "undefined",
                                 uint64(0),
@@ -300,18 +289,16 @@ class Crawler:
                     self.versions[version] += 1
 
                 # clear caches
-                self.version_cache: List[Tuple[str, str]] = []
+                self.version_cache: list[tuple[str, str]] = []
                 self.peers_retrieved = []
                 self.server.banned_peers = {}
                 self.with_peak = set()
 
-                if len(peers_to_crawl) == 0:
-                    continue
-
-                peer_cutoff = int(self.config.get("crawler", {}).get("prune_peer_days", 90))
-                await self.save_to_db()
-                await self.crawl_store.prune_old_peers(older_than_days=peer_cutoff)
-                await self.print_summary(t_start, total_nodes, tried_nodes)
+                if len(peers_to_crawl) > 0:
+                    peer_cutoff = int(self.config.get("crawler", {}).get("prune_peer_days", 90))
+                    await self.save_to_db()
+                    await self.crawl_store.prune_old_peers(older_than_days=peer_cutoff)
+                    await self.print_summary(t_start, total_nodes, tried_nodes)
                 await asyncio.sleep(15)  # 15 seconds between db updates
                 self._state_changed("crawl_batch_completed")
         except Exception as e:
@@ -335,7 +322,7 @@ class Crawler:
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
 
-    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -362,7 +349,7 @@ class Crawler:
     async def on_connect(self, connection: WSChiaConnection) -> None:
         pass
 
-    async def print_summary(self, t_start: float, total_nodes: int, tried_nodes: Set[str]) -> None:
+    async def print_summary(self, t_start: float, total_nodes: int, tried_nodes: set[str]) -> None:
         assert self.crawl_store is not None  # this is only ever called from the crawl task
         if not self.print_status:
             return

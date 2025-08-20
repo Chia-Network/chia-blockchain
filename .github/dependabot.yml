@@ -14,7 +14,7 @@ updates:
       - dependencies
       - go
       - "Changed"
-    reviewers: ["cmmarslender", "starttoaster"]
+    reviewers: ["cmmarslender", "Starttoaster"]
     groups:
       global:
         patterns:
@@ -25,8 +25,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
-    open-pull-requests-limit: 10
-    rebase-strategy: disabled
+    open-pull-requests-limit: 30
+    rebase-strategy: auto
     labels:
       - dependencies
       - python
@@ -34,7 +34,7 @@ updates:
     reviewers: ["emlowe", "altendky"]
 
   - package-ecosystem: "github-actions"
-    directory: /
+    directories: ["/", ".github/actions/*"]
     schedule:
       interval: "weekly"
       day: "tuesday"
@@ -70,3 +70,11 @@ updates:
       - dependencies
       - rust
       - "Changed"
+
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 10
+    rebase-strategy: auto

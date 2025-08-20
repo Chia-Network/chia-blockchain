@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
 
 import pytest
+from chia_rs import BlockRecord
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia._tests.util.benchmarks import rand_hash
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.find_fork_point import find_fork_point_in_chain, lookup_fork_chain
 from chia.simulator.block_tools import test_constants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 
 
 class DummyChain:
-    _chain: Dict[bytes32, bytes32]
+    _chain: dict[bytes32, bytes32]
 
     def __init__(self) -> None:
         self._chain = {}
@@ -23,8 +22,8 @@ class DummyChain:
     def add_block(self, h: bytes32, prev: bytes32) -> None:
         self._chain[h] = prev
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
-        ret: List[bytes32] = []
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
+        ret: list[bytes32] = []
         for h in header_hashes:
             ret.append(self._chain[h])
         return ret
@@ -47,7 +46,7 @@ dummy_chain.add_block(A, B)
 dummy_chain.add_block(E, D)
 dummy_chain.add_block(F, E)
 
-test_chain: BlockchainInterface = dummy_chain  # type: ignore[assignment]
+test_chain: BlockRecordsProtocol = dummy_chain  # type: ignore[assignment]
 
 #    A
 #    |

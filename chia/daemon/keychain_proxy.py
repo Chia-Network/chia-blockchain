@@ -5,7 +5,7 @@ import logging
 import ssl
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import Any, Literal, Optional, Union, overload
 
 from aiohttp import ClientConnectorError, ClientSession
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
@@ -31,6 +31,7 @@ from chia.util.errors import (
     KeychainProxyConnectionTimeout,
 )
 from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -71,7 +72,7 @@ class KeychainProxy(DaemonProxy):
         """
         return self.keychain is not None
 
-    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+    def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
         """
         Overrides DaemonProxy.format_request() to add keychain-specific RPC params
         """
@@ -96,10 +97,10 @@ class KeychainProxy(DaemonProxy):
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
-            raise KeychainProxyConnectionTimeout()
+            raise KeychainProxyConnectionTimeout
 
-    async def start(self) -> None:
-        self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
+    async def start(self, wait_for_start: bool = False) -> None:
+        self.keychain_connection_task = create_referenced_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 
     async def connect_to_keychain(self) -> None:
@@ -111,7 +112,7 @@ class KeychainProxy(DaemonProxy):
                     autoclose=True,
                     autoping=True,
                     heartbeat=self.heartbeat,
-                    ssl=self.ssl_context,
+                    ssl=self.ssl_context if self.ssl_context is not None else True,
                     max_msg_size=self.max_message_size,
                 )
                 await self.listener()
@@ -141,7 +142,7 @@ class KeychainProxy(DaemonProxy):
         if self.keychain_connection_task is not None:
             await self.keychain_connection_task
 
-    async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
+    async def get_response_for_request(self, request_name: str, data: dict[str, Any]) -> tuple[WsRpcMessage, bool]:
         request = self.format_request(request_name, data)
         response = await self._get(request)
         success = response["data"].get("success", False)
@@ -155,11 +156,11 @@ class KeychainProxy(DaemonProxy):
         if error:
             error_details = response["data"].get("error_details", {})
             if error == KEYCHAIN_ERR_LOCKED:
-                raise KeychainIsLocked()
+                raise KeychainIsLocked
             elif error == KEYCHAIN_ERR_NO_KEYS:
-                raise KeychainIsEmpty()
+                raise KeychainIsEmpty
             elif error == KEYCHAIN_ERR_KEY_NOT_FOUND:
-                raise KeychainKeyNotFound()
+                raise KeychainKeyNotFound
             elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
                 message = error_details.get("message", "")
                 raise KeychainMalformedRequest(message)
@@ -252,11 +253,11 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+    async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:
         """
         Forwards to Keychain.get_all_private_keys()
         """
-        keys: List[Tuple[PrivateKey, bytes]] = []
+        keys: list[tuple[PrivateKey, bytes]] = []
         if self.use_local_keychain():
             keys = self.keychain.get_all_private_keys()
         else:
@@ -355,7 +356,7 @@ class KeychainProxy(DaemonProxy):
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets=private)
             if len(keys) == 0:
-                raise KeychainIsEmpty()
+                raise KeychainIsEmpty
             else:
                 selected_key = keys[0]
                 if fingerprint is not None:
@@ -383,6 +384,11 @@ class KeychainProxy(DaemonProxy):
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
                 elif private:
+                    if ent is None:
+                        err = f"Missing ent in {response.get('command')} response"
+                        self.log.error(f"{err}")
+                        raise KeychainMalformedResponse(f"{err}")
+
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
@@ -415,11 +421,11 @@ class KeychainProxy(DaemonProxy):
                 self.handle_error(response)
         return key_data
 
-    async def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+    async def get_keys(self, include_secrets: bool = False) -> list[KeyData]:
         """
         Returns all KeyData
         """
-        keys: List[KeyData] = []
+        keys: list[KeyData] = []
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets)
         else:

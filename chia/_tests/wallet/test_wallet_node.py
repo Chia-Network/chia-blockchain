@@ -5,29 +5,27 @@ import sys
 import time
 import types
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pytest
-from chia_rs import G1Element, PrivateKey
+from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia._tests.util.misc import CoinGenerator
+from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinState
-from chia.server.outbound_message import Message, make_msg
+from chia.server.api_protocol import Self
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.api_decorators import Self, api_request
-from chia.util.batches import to_batches
 from chia.util.config import load_config
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -113,7 +111,7 @@ async def test_get_private_key_missing_key_use_default(
 async def test_get_public_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -133,7 +131,7 @@ async def test_get_public_key(root_path_populated_with_config: Path, get_temp_ke
 async def test_get_public_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -169,7 +167,7 @@ async def test_get_public_key_missing_key(
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring  # empty keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
@@ -184,7 +182,7 @@ async def test_get_public_key_missing_key_use_default(
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -300,7 +298,7 @@ def test_get_last_used_fingerprint_file_doesnt_exist(root_path_populated_with_co
 
 
 def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_config: Path) -> None:
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
 
     root_path = root_path_populated_with_config
@@ -332,7 +330,7 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
 def test_get_last_used_fingerprint_file_cant_read_win32(
     root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    if sys.platform not in ["win32", "cygwin"]:
+    if sys.platform not in {"win32", "cygwin"}:
         pytest.skip("Windows-specific test")
 
     called_read_text = False
@@ -440,7 +438,7 @@ async def test_get_timestamp_for_height_from_peer(
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_blocks_to_wallet(2, wallet)
-    full_node_peer = list(wallet_server.all_connections.values())[0]
+    full_node_peer = next(iter(wallet_server.all_connections.values()))
     # There should be no timestamp available for height 10
     assert await get_timestamp(10) is None
     # The timestamp at peak height should match the one from the full node block_store.
@@ -494,9 +492,9 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [full_node_api], [(wallet_node, wallet_server)], _bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
 
     def wallet_synced() -> bool:
@@ -514,9 +512,7 @@ async def test_get_balance(
     #       with that to a KeyError when applying the race cache if there are less than WEIGHT_PROOF_RECENT_BLOCKS
     #       blocks but we still have a peak stored in the DB. So we need to add enough blocks for a weight proof here to
     #       be able to restart the wallet in this test.
-    for block_batch in to_batches(default_400_blocks, 64):
-        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
-
+    await add_blocks_in_batches(default_400_blocks, full_node_api.full_node)
     # Initially there should be no sync and no balance
     assert not wallet_synced()
     assert await wallet_node.get_balance(wallet_id) == Balance()
@@ -581,7 +577,7 @@ async def test_add_states_from_peer_reorg_failure(
     coin_generator = CoinGenerator()
     coin_states = [CoinState(coin_generator.get().coin, None, None)]
     with caplog.at_level(logging.DEBUG):
-        full_node_peer = list(wallet_server.all_connections.values())[0]
+        full_node_peer = next(iter(wallet_server.all_connections.values()))
         # Close the connection to trigger a state processing failure during reorged coin processing.
         await full_node_peer.close()
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
@@ -602,7 +598,9 @@ async def test_add_states_from_peer_untrusted_shutdown(
     # Generate enough coin states to fill up the max number validation/add tasks.
     coin_states = [CoinState(coin_generator.get().coin, uint32(i), uint32(i)) for i in range(3000)]
     with caplog.at_level(logging.INFO):
-        assert not await wallet_node.add_states_from_peer(coin_states, list(wallet_server.all_connections.values())[0])
+        assert not await wallet_node.add_states_from_peer(
+            coin_states, next(iter(wallet_server.all_connections.values()))
+        )
         assert "Terminating receipt and validation due to shut down request" in caplog.text
 
 
@@ -625,7 +623,6 @@ async def test_transaction_send_cache(
     # Replacing the normal logic a full node has for processing transactions with a function that just logs what it gets
     logged_spends = []
 
-    @api_request()
     async def send_transaction(
         self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
     ) -> Optional[Message]:
@@ -633,48 +630,46 @@ async def test_transaction_send_cache(
         return None
 
     assert full_node_api.full_node._server is not None
-    monkeypatch.setattr(
-        full_node_api.full_node._server.get_connections()[0].api,
-        "send_transaction",
-        types.MethodType(send_transaction, full_node_api.full_node._server.get_connections()[0].api),
-    )
+    with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
+        # Generate the transaction
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
+        [tx] = action_scope.side_effects.transactions
 
-    # Generate the transaction
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), action_scope)
-    [tx] = action_scope.side_effects.transactions
+        # Make sure it is sent to the peer
+        await wallet_node._resend_queue()
 
-    # Make sure it is sent to the peer
-    await wallet_node._resend_queue()
+        def logged_spends_len() -> int:
+            return len(logged_spends)
 
-    def logged_spends_len() -> int:
-        return len(logged_spends)
+        await time_out_assert(5, logged_spends_len, 1)
 
-    await time_out_assert(5, logged_spends_len, 1)
+        # Make sure queue processing again does not result in another spend
+        await wallet_node._resend_queue()
+        with pytest.raises(AssertionError):
+            await time_out_assert(5, logged_spends_len, 2)
 
-    # Make sure queue processing again does not result in another spend
-    await wallet_node._resend_queue()
-    with pytest.raises(AssertionError):
+        # Tell the wallet that we recieved the spend (but failed to process it so it should send again)
+        msg = make_msg(
+            ProtocolMessageTypes.transaction_ack,
+            wallet_protocol.TransactionAck(
+                tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name
+            ),
+        )
+        assert simulator_and_wallet[1][0][0]._server is not None
+        await simulator_and_wallet[1][0][0]._server.get_connections()[0].incoming_queue.put(msg)
+
+        # Make sure the cache is emptied
+        def check_wallet_cache_empty() -> bool:
+            return wallet_node._tx_messages_in_progress == {}
+
+        await time_out_assert(5, check_wallet_cache_empty, True)
+
+        # Re-process the queue again and this time it should result in a resend
+        await wallet_node._resend_queue()
         await time_out_assert(5, logged_spends_len, 2)
+        assert logged_spends == [tx.name, tx.name]
 
-    # Tell the wallet that we recieved the spend (but failed to process it so it should send again)
-    msg = make_msg(
-        ProtocolMessageTypes.transaction_ack,
-        wallet_protocol.TransactionAck(tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name),
-    )
-    assert simulator_and_wallet[1][0][0]._server is not None
-    await simulator_and_wallet[1][0][0]._server.get_connections()[0].incoming_queue.put(msg)
-
-    # Make sure the cache is emptied
-    def check_wallet_cache_empty() -> bool:
-        return wallet_node._tx_messages_in_progress == {}
-
-    await time_out_assert(5, check_wallet_cache_empty, True)
-
-    # Re-process the queue again and this time it should result in a resend
-    await wallet_node._resend_queue()
-    await time_out_assert(5, logged_spends_len, 2)
-    assert logged_spends == [tx.name, tx.name]
     await time_out_assert(5, check_wallet_cache_empty, False)
 
     # Disconnect from the peer to make sure their entry in the cache is also deleted
@@ -691,14 +686,13 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
-    @api_request()
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
     ) -> Optional[Message]:
         return make_msg(
-            ProtocolMessageTypes.respond_to_coin_update,
+            ProtocolMessageTypes.respond_to_coin_updates,
             wallet_protocol.RespondToCoinUpdates(
-                [], uint32(0), [CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)), uint32(0), uint32(0))]
+                [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
         )
 
@@ -707,27 +701,25 @@ async def test_wallet_node_bad_coin_state_ignore(
         return True  # pragma: no cover
 
     assert full_node_api.full_node._server is not None
-    monkeypatch.setattr(
-        full_node_api.full_node._server.get_connections()[0].api,
-        "register_interest_in_coin",
-        types.MethodType(register_interest_in_coin, full_node_api.full_node._server.get_connections()[0].api),
-    )
-    monkeypatch.setattr(
-        wallet_node,
-        "validate_received_state_from_peer",
-        types.MethodType(validate_received_state_from_peer, wallet_node),
-    )
+    with patch_request_handler(
+        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_for_coin_updates
+    ):
+        monkeypatch.setattr(
+            wallet_node,
+            "validate_received_state_from_peer",
+            types.MethodType(validate_received_state_from_peer, wallet_node),
+        )
 
-    with pytest.raises(PeerRequestException):
-        await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
+        with pytest.raises(PeerRequestException):
+            await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
 
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_key_types(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         wallet_node._close()
@@ -756,9 +748,9 @@ async def test_start_with_multiple_key_types(
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_keys(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         wallet_node._close()

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -14,24 +16,23 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
-from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.payment import Payment
+from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_request_types import GetTransactionMemo
 
 
 class TestWalletSimulator:
@@ -76,8 +77,8 @@ class TestWalletSimulator:
 
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                bytes32([0] * 32),
+                [uint64(tx_amount)],
+                [bytes32.zeros],
                 action_scope,
                 uint64(0),
             )
@@ -108,7 +109,10 @@ class TestWalletSimulator:
         )
 
         # Test match_hinted_coin
-        selected_coin = list(await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG))[0]
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as action_scope:
+            selected_coin = next(iter(await wallet.select_coins(uint64(0), action_scope)))
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
@@ -128,8 +132,8 @@ class TestWalletSimulator:
             DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True
         ) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                bytes32([0] * 32),
+                [uint64(tx_amount)],
+                [bytes32.zeros],
                 action_scope,
                 uint64(0),
             )
@@ -184,14 +188,15 @@ class TestWalletSimulator:
         wsm_1 = env_1.wallet_state_manager
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         # Transfer to normal wallet
-        for _ in range(0, number_of_coins):
+        for _ in range(number_of_coins):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    uint64(tx_amount),
-                    normal_puzhash,
+                    [uint64(tx_amount)],
+                    [normal_puzhash],
                     action_scope,
                     uint64(0),
                     puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
@@ -233,8 +238,8 @@ class TestWalletSimulator:
 
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                normal_puzhash,
+                [uint64(tx_amount)],
+                [normal_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
@@ -334,16 +339,18 @@ class TestWalletSimulator:
         api_1 = env_2.rpc_api
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                normal_puzhash,
+                [uint64(tx_amount)],
+                [normal_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
-                memos=[b"Test"],
+                memos=[[b"Test"]],
             )
 
         await wallet_environments.process_pending_states(
@@ -389,13 +396,17 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 1
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
-        assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
+        assert txs["transactions"][0]["metadata"]["coin_id"] == "0x" + merkle_coin.name().hex()
         with pytest.raises(ValueError):
             await api_0.spend_clawback_coins({})
 
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": test_fee}
+            {
+                "coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -476,16 +487,16 @@ class TestWalletSimulator:
         api_0 = env.rpc_api
 
         tx_amount = 500
-        normal_puzhash = await wallet.get_new_puzzlehash()
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                normal_puzhash,
+                [uint64(tx_amount)],
+                [normal_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
-                memos=[b"Test"],
+                memos=[[b"Test"]],
             )
 
         await wallet_environments.process_pending_states(
@@ -524,7 +535,11 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -573,7 +588,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert list(txs["transactions"][0]["memos"].values())[0] == b"Test".hex()
+        assert "0x" + b"Test".hex() in next(iter(txs["transactions"][0]["memos"].values()))
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -593,12 +608,13 @@ class TestWalletSimulator:
         api_1 = env_2.rpc_api
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                normal_puzhash,
+                [uint64(tx_amount)],
+                [normal_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
@@ -656,7 +672,11 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_1.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
@@ -725,12 +745,13 @@ class TestWalletSimulator:
         wallet_1 = env_2.xch_wallet
 
         tx_amount = 500
-        normal_puzhash = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                normal_puzhash,
+                [uint64(tx_amount)],
+                [normal_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
@@ -773,7 +794,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32([0] * 32), None)
+            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32.zeros, None)
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -855,7 +876,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
@@ -911,8 +932,8 @@ class TestWalletSimulator:
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                bytes32([0] * 32),
+                [uint64(tx_amount)],
+                [bytes32.zeros],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
@@ -973,15 +994,17 @@ class TestWalletSimulator:
         wallet_2 = env_2.xch_wallet
         api_1 = env_1.rpc_api
 
-        wallet_1_puzhash = await wallet_1.get_new_puzzlehash()
-        wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            wallet_1_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+        async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            wallet_2_puzhash = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
 
         tx_amount = 500
         # Transfer to normal wallet
         async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_1.generate_signed_transaction(
-                uint64(tx_amount),
-                wallet_2_puzhash,
+                [uint64(tx_amount)],
+                [wallet_2_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
@@ -1027,8 +1050,8 @@ class TestWalletSimulator:
         tx_amount2 = 700
         async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_1.generate_signed_transaction(
-                uint64(tx_amount2),
-                wallet_1_puzhash,
+                [uint64(tx_amount2)],
+                [wallet_1_puzhash],
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
@@ -1108,11 +1131,11 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
 
-        before_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
-        before_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
-            await wsm_1.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
-            )
+        before_txs: dict[str, dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
+        before_txs["sender"][
+            TransactionType.INCOMING_CLAWBACK_SEND
+        ] = await wsm_1.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
         )
         before_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
@@ -1126,10 +1149,10 @@ class TestWalletSimulator:
         before_txs["sender"][TransactionType.COINBASE_REWARD] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
         )
-        before_txs["recipient"][TransactionType.INCOMING_CLAWBACK_RECEIVE] = (
-            await wsm_2.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
-            )
+        before_txs["recipient"][
+            TransactionType.INCOMING_CLAWBACK_RECEIVE
+        ] = await wsm_2.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
         )
         # Resync start
         env_1.node._close()
@@ -1155,11 +1178,11 @@ class TestWalletSimulator:
         wsm_1 = env_1.node.wallet_state_manager
         wsm_2 = env_2.node.wallet_state_manager
 
-        after_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
-        after_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
-            await wsm_1.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
-            )
+        after_txs: dict[str, dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
+        after_txs["sender"][
+            TransactionType.INCOMING_CLAWBACK_SEND
+        ] = await wsm_1.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
         )
         after_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
@@ -1173,10 +1196,10 @@ class TestWalletSimulator:
         after_txs["sender"][TransactionType.COINBASE_REWARD] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
         )
-        after_txs["recipient"][TransactionType.INCOMING_CLAWBACK_RECEIVE] = (
-            await wsm_2.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
-            )
+        after_txs["recipient"][
+            TransactionType.INCOMING_CLAWBACK_RECEIVE
+        ] = await wsm_2.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
         )
         # Check clawback
         clawback_tx_1 = await wsm_1.tx_store.get_transaction_record(clawback_coin_id_1)
@@ -1256,7 +1279,7 @@ class TestWalletSimulator:
     @pytest.mark.anyio
     async def test_wallet_send_to_three_peers(
         self,
-        three_sim_two_wallets: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        three_sim_two_wallets: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -1300,8 +1323,8 @@ class TestWalletSimulator:
 
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-                uint64(10),
-                bytes32(32 * b"0"),
+                [uint64(10)],
+                [bytes32(32 * b"0")],
                 action_scope,
                 uint64(0),
             )
@@ -1329,10 +1352,14 @@ class TestWalletSimulator:
         wallet_1 = env_1.xch_wallet
 
         tx_amount = 10
+        async with wallet_1.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
-                uint64(tx_amount),
-                await wallet_1.get_puzzle_hash(False),
+                [uint64(tx_amount)],
+                [wallet_1_ph],
                 action_scope,
                 uint64(0),
             )
@@ -1375,10 +1402,12 @@ class TestWalletSimulator:
         )
 
         tx_amount = 5
+        async with wallet_0.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_0_ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
         async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet_1.generate_signed_transaction(
-                uint64(tx_amount), await wallet_0.get_puzzle_hash(False), action_scope, uint64(0)
-            )
+            await wallet_1.generate_signed_transaction([uint64(tx_amount)], [wallet_0_ph], action_scope, uint64(0))
 
         await wallet_environments.process_pending_states(
             [
@@ -1432,10 +1461,14 @@ class TestWalletSimulator:
 
         tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
+        async with wallet_1.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
-                uint64(tx_amount),
-                await wallet_1.get_new_puzzlehash(),
+                [uint64(tx_amount)],
+                [wallet_1_ph],
                 action_scope,
                 uint64(tx_fee),
             )
@@ -1498,10 +1531,11 @@ class TestWalletSimulator:
 
         tx_amount = 1_750_000_000_000  # ensures we grab both coins
         tx_fee = 10
-        ph_2 = await wallet_1.get_new_puzzlehash()
+        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph_2 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet_0.generate_signed_transaction(
-                uint64(tx_amount), ph_2, action_scope, uint64(tx_fee), memos=[ph_2]
+                [uint64(tx_amount)], [ph_2], action_scope, uint64(tx_fee), memos=[[ph_2]]
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
@@ -1509,11 +1543,9 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        tx_id = tx.name.hex()
-        memos = await env_0.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
-        # test json serialization
-        assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
+        memo_response = await env_0.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx.name))
+        assert len(memo_response.memo_dict) == 1
+        assert next(iter(memo_response.memo_dict.values()))[0] == ph_2
 
         await wallet_environments.process_pending_states(
             [
@@ -1553,12 +1585,14 @@ class TestWalletSimulator:
             ]
         )
 
+        tx_id = None
         for coin in tx.additions:
             if coin.amount == tx_amount:
-                tx_id = coin.name().hex()
-        memos = await env_1.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
+                tx_id = coin.name()
+        assert tx_id is not None
+        memo_response = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+        assert len(memo_response.memo_dict) == 1
+        assert next(iter(memo_response.memo_dict.values()))[0] == ph_2
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -1571,10 +1605,14 @@ class TestWalletSimulator:
         env = wallet_environments.environments[0]
         wallet = env.xch_wallet
 
-        ph = await wallet.get_puzzle_hash(False)
-        primaries = [Payment(ph, uint64(1000000000 + i)) for i in range(int(wallet.max_send_quantity) + 1)]
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(uint64(1), ph, action_scope, uint64(0), primaries=primaries)
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+            await wallet.generate_signed_transaction(
+                [uint64(1)] + [uint64(1000000000 + i) for i in range(int(wallet.max_send_quantity) + 1)],
+                [ph] * (wallet.max_send_quantity + 2),
+                action_scope,
+                uint64(0),
+            )
 
         await wallet_environments.process_pending_states(
             [
@@ -1596,7 +1634,7 @@ class TestWalletSimulator:
                             ">=#max_send_amount": 1,  # any amount increase
                             "<=#pending_change": -1,  # any amount decrease
                             "pending_coin_removal_count": -1,
-                            "unspent_coin_count": len(primaries) + 1,
+                            "unspent_coin_count": wallet.max_send_quantity + 2,
                         }
                     },
                 ),
@@ -1609,8 +1647,8 @@ class TestWalletSimulator:
         # 1) Generate transaction that is under the limit
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(max_sent_amount - 1),
-                ph,
+                [uint64(max_sent_amount - 1)],
+                [ph],
                 action_scope,
                 uint64(0),
             )
@@ -1620,8 +1658,8 @@ class TestWalletSimulator:
         # 2) Generate transaction that is equal to limit
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(max_sent_amount),
-                ph,
+                [uint64(max_sent_amount)],
+                [ph],
                 action_scope,
                 uint64(0),
             )
@@ -1636,8 +1674,8 @@ class TestWalletSimulator:
         ):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
                 await wallet.generate_signed_transaction(
-                    uint64(max_sent_amount + 1),
-                    ph,
+                    [uint64(max_sent_amount + 1)],
+                    [ph],
                     action_scope,
                     uint64(0),
                 )
@@ -1657,8 +1695,8 @@ class TestWalletSimulator:
         tx_fee = 2_000_000_000_000
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
             await wallet.generate_signed_transaction(
-                uint64(tx_amount),
-                bytes32([0] * 32),
+                [uint64(tx_amount)],
+                [bytes32.zeros],
                 action_scope,
                 uint64(tx_fee),
             )
@@ -1680,6 +1718,7 @@ class TestWalletSimulator:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(0),
             to_puzzle_hash=bytes32(32 * b"0"),
+            to_address=encode_puzzle_hash(bytes32(32 * b"0"), "txch"),
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
@@ -1692,7 +1731,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
@@ -1721,19 +1760,22 @@ class TestWalletSimulator:
 
         # Ensure that we use a coin that we will not reorg out
         tx_amount = 1000
-        coins = await wallet.select_coins(
-            amount=uint64(tx_amount), coin_selection_config=DEFAULT_TX_CONFIG.coin_selection_config
-        )
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as action_scope:
+            coins = await wallet.select_coins(amount=uint64(tx_amount), action_scope=action_scope)
         coin = next(iter(coins))
 
         reorg_height = full_node_api.full_node.blockchain.get_peak_height()
         assert reorg_height is not None
         await full_node_api.farm_blocks_to_puzzlehash(count=3)
 
+        async with wallet_2.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_2_ph = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                uint64(tx_amount), await wallet_2.get_puzzle_hash(False), action_scope, coins={coin}
-            )
+            await wallet.generate_signed_transaction([uint64(tx_amount)], [wallet_2_ph], action_scope, coins={coin})
 
         await wallet_environments.process_pending_states(
             [
@@ -1960,14 +2002,16 @@ class TestWalletSimulator:
 
         # Test general string
         message = "Hello World"
-        ph = await env.xch_wallet.get_puzzle_hash(False)
+
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
         response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test hex string
         message = "0123456789ABCDEF"
@@ -1977,9 +2021,9 @@ class TestWalletSimulator:
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test informal input
         message = "0123456789ABCDEF"
@@ -1989,9 +2033,9 @@ class TestWalletSimulator:
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test BLS sign string
         message = "Hello World"
@@ -2000,9 +2044,9 @@ class TestWalletSimulator:
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             bytes(message, "utf-8"),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test BLS sign hex
         message = "0123456789ABCDEF"
@@ -2011,9 +2055,9 @@ class TestWalletSimulator:
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
-            bytes.fromhex(message),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            hexstr_to_bytes(message),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
 
     @pytest.mark.parametrize(
@@ -2028,13 +2072,12 @@ class TestWalletSimulator:
         wallet = env.xch_wallet
 
         AMOUNT_TO_SEND = 4000000000000
-        coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND), DEFAULT_TX_CONFIG.coin_selection_config)
-        coin_list = list(coins)
-
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND), action_scope)
+            coin_list = list(coins)
             await wallet.generate_signed_transaction(
-                uint64(AMOUNT_TO_SEND),
-                bytes32([0] * 32),
+                [uint64(AMOUNT_TO_SEND)],
+                [bytes32.zeros],
                 action_scope,
                 uint64(0),
                 coins=coins,
@@ -2042,7 +2085,7 @@ class TestWalletSimulator:
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
-        paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
+        paid_coin = next(coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND)
         assert paid_coin.parent_coin_info == coin_list[2].name()
         [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
@@ -2072,10 +2115,56 @@ class TestWalletSimulator:
             ]
         )
 
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes
+    @pytest.mark.anyio
+    async def test_forced_new_puzzle_hash(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
+
+        with wallet_environments.new_puzzle_hashes_allowed():
+            async with wallet.wallet_state_manager.new_action_scope(
+                wallet_environments.tx_config, push=True
+            ) as action_scope:
+                coins = await wallet.select_coins(uint64(1), action_scope)
+                coin_list = list(coins)
+                assert len(coin_list) == 1
+                await wallet.generate_signed_transaction(
+                    [uint64(coin_list[0].amount / 2)],
+                    [coin_list[0].puzzle_hash],
+                    action_scope,
+                    coins=coins,
+                )
+        [tx] = action_scope.side_effects.transactions
+        assert tx.spend_bundle is not None
+        assert len(list(set(coin.puzzle_hash for coin in tx.spend_bundle.additions()))) == 2
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes
+    @pytest.mark.anyio
+    async def test_puzzle_hashes_not_committed(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
+
+        # Our framework
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            await action_scope.get_puzzle_hash(wallet.wallet_state_manager, override_reuse_puzhash_with=False)
+
 
 def test_get_wallet_db_path_v2_r1() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_r1_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
     }
@@ -2087,7 +2176,7 @@ def test_get_wallet_db_path_v2_r1() -> None:
 
 def test_get_wallet_db_path_v2() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
     }
@@ -2099,7 +2188,7 @@ def test_get_wallet_db_path_v2() -> None:
 
 def test_get_wallet_db_path_v1() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
     }
@@ -2111,7 +2200,7 @@ def test_get_wallet_db_path_v1() -> None:
 
 def test_get_wallet_db_path_testnet() -> None:
     root_path: Path = Path("/x/y/z/.chia/testnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
         "selected_network": "testnet",
     }
@@ -2123,9 +2212,9 @@ def test_get_wallet_db_path_testnet() -> None:
 
 @pytest.mark.anyio
 async def test_wallet_has_no_server(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
-    full_nodes, wallets, bt = simulator_and_wallet
-    wallet_node, wallet_server = wallets[0]
+    _full_nodes, wallets, _bt = simulator_and_wallet
+    _wallet_node, wallet_server = wallets[0]
 
     assert wallet_server.webserver is None

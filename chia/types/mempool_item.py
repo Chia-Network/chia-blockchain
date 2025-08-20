@@ -1,25 +1,38 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
+
+from chia_rs import CoinSpend, SpendBundle, SpendBundleConditions
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
 
 
 @dataclass(frozen=True)
+class UnspentLineageInfo:
+    coin_id: bytes32
+    parent_id: bytes32
+    parent_parent_id: bytes32
+
+
+@dataclass
 class BundleCoinSpend:
     coin_spend: CoinSpend
     eligible_for_dedup: bool
     eligible_for_fast_forward: bool
-    additions: List[Coin]
-    # cost on the specific solution in this item
-    cost: Optional[uint64] = None
+    additions: list[Coin]
+    # cost on the specific solution in this item. The cost includes execution
+    # cost and conditions cost, not byte-cost.
+    cost: uint64
+
+    # if this spend is eligible for fast forward, this may be set to the
+    # current unspent lineage belonging to this singleton, that we would rebase
+    # this spend on top of if we were to make a block now
+    # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
+    latest_singleton_lineage: Optional[UnspentLineageInfo] = None
 
 
 @dataclass(frozen=True)
@@ -40,7 +53,7 @@ class MempoolItem:
 
     # Map of coin ID to coin spend data between the bundle and its
     # SpendBundleConditions
-    bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = field(default_factory=dict)
+    bundle_coin_spends: dict[bytes32, BundleCoinSpend] = field(default_factory=dict)
 
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost
@@ -61,8 +74,8 @@ class MempoolItem:
         return uint64(0 if self.conds is None else self.conds.cost)
 
     @property
-    def additions(self) -> List[Coin]:
-        additions: List[Coin] = []
+    def additions(self) -> list[Coin]:
+        additions: list[Coin] = []
         for spend in self.conds.spends:
             for puzzle_hash, amount, _ in spend.create_coin:
                 coin = Coin(spend.coin_id, puzzle_hash, uint64(amount))
@@ -70,10 +83,10 @@ class MempoolItem:
         return additions
 
     @property
-    def removals(self) -> List[Coin]:
+    def removals(self) -> list[Coin]:
         return self.spend_bundle.removals()
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         return {
             "spend_bundle": recurse_jsonify(self.spend_bundle),
             "fee": recurse_jsonify(self.fee),

@@ -4,6 +4,7 @@ on:
     types: [opened, labeled, unlabeled, synchronize]
 jobs:
   check-labels:
+    if: github.repository_owner == 'Chia-Network'
     runs-on: ubuntu-latest
     permissions:
       checks: write

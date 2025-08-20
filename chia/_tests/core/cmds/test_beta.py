@@ -342,7 +342,7 @@ def test_prepare_submission(
     assert output in result.output
 
     if exit_code == 0:
-        submission_file = list(beta_path.rglob("*.zip"))[0]
+        submission_file = next(iter(beta_path.rglob("*.zip")))
         assert submission_file.name.startswith(f"submission_{choice - 1}")
         with zipfile.ZipFile(submission_file) as zip_file:
             all_files = [Path(info.filename) for info in zip_file.filelist]
@@ -378,5 +378,5 @@ def test_beta_status(root_path_populated_with_config: Path, enabled: bool, path:
 
     assert result.exit_code == 0
     assert f"enabled: {enabled}" in result.output
-    assert f"path: {str(path)}" in result.output
-    assert f"metrics log interval: {str(metrics_log_interval_default)}" in result.output
+    assert f"path: {path!s}" in result.output
+    assert f"metrics log interval: {metrics_log_interval_default!s}" in result.output

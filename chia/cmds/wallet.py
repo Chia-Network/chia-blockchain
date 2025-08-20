@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
-from chia.cmds.cmds_util import tx_out_cmd
+from chia.cmds.cmd_classes import ChiaCliContext, get_chia_command_metadata
+from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.param_types import (
     AddressParamType,
@@ -18,8 +22,8 @@ from chia.cmds.param_types import (
     CliAmount,
     cli_amount_none,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.cmds.signer import PushTransactionsCMD, signer_cmd
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
@@ -30,6 +34,10 @@ from chia.wallet.util.wallet_types import WalletType
 @click.pass_context
 def wallet_cmd(ctx: click.Context) -> None:
     pass
+
+
+wallet_cmd.add_command(signer_cmd)
+wallet_cmd.add_command(get_chia_command_metadata(PushTransactionsCMD).command)
 
 
 @wallet_cmd.command("get_transaction", help="Get a transaction")
@@ -45,10 +53,21 @@ def wallet_cmd(ctx: click.Context) -> None:
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
 @click.option("--verbose", "-v", count=True, type=int)
-def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int) -> None:
-    from .wallet_funcs import get_transaction
+@click.pass_context
+def get_transaction_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int
+) -> None:
+    from chia.cmds.wallet_funcs import get_transaction
 
-    asyncio.run(get_transaction(wallet_rpc_port=wallet_rpc_port, fingerprint=fingerprint, tx_id=tx_id, verbose=verbose))
+    asyncio.run(
+        get_transaction(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            tx_id=tx_id,
+            verbose=verbose,
+        )
+    )
 
 
 @wallet_cmd.command("get_transactions", help="Get all transactions")
@@ -112,7 +131,9 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=False,
     help="Only show clawback transactions",
 )
+@click.pass_context
 def get_transactions_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -124,10 +145,11 @@ def get_transactions_cmd(
     reverse: bool,
     clawback: bool,
 ) -> None:  # pragma: no cover
-    from .wallet_funcs import get_transactions
+    from chia.cmds.wallet_funcs import get_transactions
 
     asyncio.run(
         get_transactions(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             wallet_id=id,
@@ -142,7 +164,7 @@ def get_transactions_cmd(
     )
 
 
-@wallet_cmd.command("send", help="Send chia to another wallet")
+@wallet_cmd.command("send", help="Send chia or other assets to another wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -152,7 +174,9 @@ def get_transactions_cmd(
 )
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much chia to send, in XCH", type=AmountParamType(), required=True)
+@click.option(
+    "-a", "--amount", help="How much chia to send, in XCH or CAT units", type=AmountParamType(), required=True
+)
 @click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
 @options.create_fee()
 # TODO: Fix RPC as this should take a puzzle_hash not an address.
@@ -196,8 +220,10 @@ def get_transactions_cmd(
     type=int,
     default=0,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def send_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -212,11 +238,13 @@ def send_cmd(
     reuse: bool,
     clawback_time: int,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import send
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import send
 
     return asyncio.run(
         send(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             wallet_id=id,
@@ -231,6 +259,7 @@ def send_cmd(
             reuse_puzhash=True if reuse else None,
             clawback_time_lock=clawback_time,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -251,10 +280,18 @@ def send_cmd(
     type=click.Choice([x.name.lower() for x in WalletType]),
     default=None,
 )
-def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
-    from .wallet_funcs import print_balances
+@click.pass_context
+def show_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
+    from chia.cmds.wallet_funcs import print_balances
 
-    asyncio.run(print_balances(wallet_rpc_port, fingerprint, WalletType[wallet_type.upper()] if wallet_type else None))
+    asyncio.run(
+        print_balances(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            WalletType[wallet_type.upper()] if wallet_type else None,
+        )
+    )
 
 
 @wallet_cmd.command("get_address", help="Get a wallet receive address")
@@ -277,10 +314,13 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
     is_flag=True,
     default=False,
 )
-def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, new_address: bool) -> None:
-    from .wallet_funcs import get_address
+@click.pass_context
+def get_address_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], id: int, fingerprint: int, new_address: bool
+) -> None:
+    from chia.cmds.wallet_funcs import get_address
 
-    asyncio.run(get_address(wallet_rpc_port, fingerprint, id, new_address))
+    asyncio.run(get_address(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, new_address))
 
 
 @wallet_cmd.command(
@@ -313,15 +353,31 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def clawback(
-    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: uint64, force: bool, push: bool
-) -> List[TransactionRecord]:
-    from .wallet_funcs import spend_clawback
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    id: int,
+    fingerprint: int,
+    tx_ids: str,
+    fee: uint64,
+    force: bool,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import spend_clawback
 
     return asyncio.run(
         spend_clawback(
-            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=fee, tx_ids_str=tx_ids, force=force, push=push
+            root_path=ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            fee=fee,
+            tx_ids_str=tx_ids,
+            force=force,
+            push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -336,10 +392,15 @@ def clawback(
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @options.create_fingerprint()
-def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int) -> None:
-    from .wallet_funcs import delete_unconfirmed_transactions
+@click.pass_context
+def delete_unconfirmed_transactions_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], id: int, fingerprint: int
+) -> None:
+    from chia.cmds.wallet_funcs import delete_unconfirmed_transactions
 
-    asyncio.run(delete_unconfirmed_transactions(wallet_rpc_port, fingerprint, id))
+    asyncio.run(
+        delete_unconfirmed_transactions(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id)
+    )
 
 
 @wallet_cmd.command("get_derivation_index", help="Get the last puzzle hash derivation path index")
@@ -351,10 +412,11 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id: int,
     default=None,
 )
 @options.create_fingerprint()
-def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
-    from .wallet_funcs import get_derivation_index
+@click.pass_context
+def get_derivation_index_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+    from chia.cmds.wallet_funcs import get_derivation_index
 
-    asyncio.run(get_derivation_index(wallet_rpc_port, fingerprint))
+    asyncio.run(get_derivation_index(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint))
 
 
 @wallet_cmd.command("sign_message", help="Sign a message by a derivation address")
@@ -369,13 +431,15 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
 # TODO: Change RPC's to use the puzzle hash instead of address
 @click.option("-a", "--address", help="The address you want to use for signing", type=AddressParamType(), required=True)
 @click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
+@click.pass_context
 def address_sign_message(
-    wallet_rpc_port: Optional[int], fingerprint: int, address: CliAddress, hex_message: str
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, address: CliAddress, hex_message: str
 ) -> None:
-    from .wallet_funcs import sign_message
+    from chia.cmds.wallet_funcs import sign_message
 
     asyncio.run(
         sign_message(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             addr_type=AddressType.XCH,
@@ -399,10 +463,13 @@ def address_sign_message(
 @click.option(
     "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
 )
-def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int, index: int) -> None:
-    from .wallet_funcs import update_derivation_index
+@click.pass_context
+def update_derivation_index_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, index: int
+) -> None:
+    from chia.cmds.wallet_funcs import update_derivation_index
 
-    asyncio.run(update_derivation_index(wallet_rpc_port, fingerprint, index))
+    asyncio.run(update_derivation_index(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, index))
 
 
 @wallet_cmd.command("add_token", help="Add/Rename a CAT to the wallet by its asset ID")
@@ -426,10 +493,15 @@ def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int
     help="The name you wish to designate to the token",
 )
 @options.create_fingerprint()
-def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: bytes32, token_name: str, fingerprint: int) -> None:
-    from .wallet_funcs import add_token
+@click.pass_context
+def add_token_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], asset_id: bytes32, token_name: str, fingerprint: int
+) -> None:
+    from chia.cmds.wallet_funcs import add_token
 
-    asyncio.run(add_token(wallet_rpc_port, fingerprint, asset_id, token_name))
+    asyncio.run(
+        add_token(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, asset_id, token_name)
+    )
 
 
 @wallet_cmd.command("make_offer", help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs")
@@ -469,9 +541,12 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: bytes32, token_name:
     default=False,
 )
 @click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
+@timelock_args(enable=True)
+@click.pass_context
 # This command looks like a good candidate for @tx_out_cmd however, pushing an incomplete tx is nonsensical and
 # we already have a canonical offer file format which the idea of exporting a different transaction conflicts with
 def make_offer_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     offer: Sequence[str],
@@ -480,8 +555,9 @@ def make_offer_cmd(
     fee: uint64,
     reuse: bool,
     override: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> None:
-    from .wallet_funcs import make_offer
+    from chia.cmds.wallet_funcs import make_offer
 
     if len(request) == 0 and not override:
         print("Cannot make an offer without requesting something without --override")
@@ -489,6 +565,7 @@ def make_offer_cmd(
 
     asyncio.run(
         make_offer(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             fee=fee,
@@ -496,6 +573,7 @@ def make_offer_cmd(
             requests=request,
             filepath=filepath,
             reuse_puzhash=True if reuse else None,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -519,8 +597,11 @@ def make_offer_cmd(
     "-ic", "--include-completed", help="Include offers that have been confirmed/cancelled or failed", is_flag=True
 )
 @click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
+@click.option("--sort-by-relevance/--sort-by-confirmed-height", help="Sort the offers one of two ways", is_flag=True)
 @click.option("-r", "--reverse", help="Reverse the order of the output", is_flag=True)
+@click.pass_context
 def get_offers_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: Optional[bytes32],
@@ -530,11 +611,13 @@ def get_offers_cmd(
     include_completed: bool,
     summaries: bool,
     reverse: bool,
+    sort_by_relevance: bool,
 ) -> None:
-    from .wallet_funcs import get_offers
+    from chia.cmds.wallet_funcs import get_offers
 
     asyncio.run(
         get_offers(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             offer_id=id,
@@ -544,6 +627,7 @@ def get_offers_cmd(
             include_completed=include_completed,
             summaries=summaries,
             reverse=reverse,
+            sort_by_relevance=sort_by_relevance,
         )
     )
 
@@ -567,8 +651,10 @@ def get_offers_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def take_offer_cmd(
+    ctx: click.Context,
     path_or_hex: str,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -576,10 +662,22 @@ def take_offer_cmd(
     fee: uint64,
     reuse: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import take_offer
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import take_offer
 
-    return asyncio.run(take_offer(wallet_rpc_port, fingerprint, fee, path_or_hex, examine_only, push))
+    return asyncio.run(
+        take_offer(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            fee,
+            path_or_hex,
+            examine_only,
+            push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
@@ -594,13 +692,32 @@ def take_offer_cmd(
 @click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True, type=Bytes32ParamType())
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @options.create_fee("The fee to use when cancelling the offer securely, in XCH")
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def cancel_offer_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: bytes32, insecure: bool, fee: uint64, push: bool
-) -> List[TransactionRecord]:
-    from .wallet_funcs import cancel_offer
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: bytes32,
+    insecure: bool,
+    fee: uint64,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import cancel_offer
 
-    return asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, fee, id, not insecure, push))
+    return asyncio.run(
+        cancel_offer(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            fee,
+            id,
+            not insecure,
+            push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
@@ -614,7 +731,7 @@ def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
 
     from chia.cmds.check_wallet_db import scan
 
-    asyncio.run(scan(ctx.obj["root_path"], db_path, verbose=verbose))
+    asyncio.run(scan(ChiaCliContext.set_default(ctx).root_path, db_path, verbose=verbose))
 
 
 @wallet_cmd.group("did", help="DID related actions")
@@ -641,13 +758,32 @@ def did_cmd() -> None:
     show_default=True,
 )
 @options.create_fee()
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def did_create_wallet_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: int, fee: uint64, push: bool
-) -> List[TransactionRecord]:
-    from .wallet_funcs import create_did_wallet
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    name: Optional[str],
+    amount: int,
+    fee: uint64,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import create_did_wallet
 
-    return asyncio.run(create_did_wallet(wallet_rpc_port, fingerprint, fee, name, amount, push))
+    return asyncio.run(
+        create_did_wallet(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            fee,
+            name,
+            amount,
+            push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @did_cmd.command("sign_message", help="Sign a message by a DID")
@@ -661,11 +797,15 @@ def did_create_wallet_cmd(
 @options.create_fingerprint()
 @click.option("-i", "--did_id", help="DID ID you want to use for signing", type=AddressParamType(), required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
-def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: CliAddress, hex_message: str) -> None:
-    from .wallet_funcs import sign_message
+@click.pass_context
+def did_sign_message(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, did_id: CliAddress, hex_message: str
+) -> None:
+    from chia.cmds.wallet_funcs import sign_message
 
     asyncio.run(
         sign_message(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             addr_type=AddressType.DID,
@@ -686,10 +826,13 @@ def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: C
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
 @click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
-def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str) -> None:
-    from .wallet_funcs import did_set_wallet_name
+@click.pass_context
+def did_wallet_name_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str
+) -> None:
+    from chia.cmds.wallet_funcs import did_set_wallet_name
 
-    asyncio.run(did_set_wallet_name(wallet_rpc_port, fingerprint, id, name))
+    asyncio.run(did_set_wallet_name(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, name))
 
 
 @did_cmd.command("get_did", help="Get DID from wallet")
@@ -702,10 +845,11 @@ def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
 )
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
-def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
-    from .wallet_funcs import get_did
+@click.pass_context
+def did_get_did_cmd(ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
+    from chia.cmds.wallet_funcs import get_did
 
-    asyncio.run(get_did(wallet_rpc_port, fingerprint, id))
+    asyncio.run(get_did(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id))
 
 
 @did_cmd.command("get_details", help="Get more details of any DID")
@@ -719,10 +863,13 @@ def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -
 @options.create_fingerprint()
 @click.option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
 @click.option("-l", "--latest", help="Return latest DID information", is_flag=True, default=True)
-def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_id: str, latest: bool) -> None:
-    from .wallet_funcs import get_did_info
+@click.pass_context
+def did_get_details_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, coin_id: str, latest: bool
+) -> None:
+    from chia.cmds.wallet_funcs import get_did_info
 
-    asyncio.run(get_did_info(wallet_rpc_port, fingerprint, coin_id, latest))
+    asyncio.run(get_did_info(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, coin_id, latest))
 
 
 @did_cmd.command("update_metadata", help="Update the metadata of a DID")
@@ -742,13 +889,32 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def did_update_metadata_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool, push: bool
-) -> List[TransactionRecord]:
-    from .wallet_funcs import update_did_metadata
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    metadata: str,
+    reuse: bool,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import update_did_metadata
 
-    return asyncio.run(update_did_metadata(wallet_rpc_port, fingerprint, id, metadata, reuse, push=push))
+    return asyncio.run(
+        update_did_metadata(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            metadata,
+            reuse,
+            push=push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @did_cmd.command("find_lost", help="Find the did you should own and recovery the DID wallet")
@@ -777,7 +943,9 @@ def did_update_metadata_cmd(
     type=int,
     required=False,
 )
+@click.pass_context
 def did_find_lost_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     coin_id: str,
@@ -785,10 +953,11 @@ def did_find_lost_cmd(
     recovery_list_hash: Optional[str],
     num_verification: Optional[int],
 ) -> None:
-    from .wallet_funcs import find_lost_did
+    from chia.cmds.wallet_funcs import find_lost_did
 
     asyncio.run(
         find_lost_did(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             coin_id=coin_id,
@@ -823,19 +992,22 @@ def did_find_lost_cmd(
     type=str,
     required=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def did_message_spend_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
     puzzle_announcements: Optional[str],
     coin_announcements: Optional[str],
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import did_message_spend
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import did_message_spend
 
-    puzzle_list: List[str] = []
-    coin_list: List[str] = []
+    puzzle_list: list[str] = []
+    coin_list: list[str] = []
     if puzzle_announcements is not None:
         try:
             puzzle_list = puzzle_announcements.split(",")
@@ -855,7 +1027,18 @@ def did_message_spend_cmd(
             print("Invalid coin announcement format, should be a list of hex strings.")
             return []
 
-    return asyncio.run(did_message_spend(wallet_rpc_port, fingerprint, id, puzzle_list, coin_list, push=push))
+    return asyncio.run(
+        did_message_spend(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            puzzle_list,
+            coin_list,
+            push=push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @did_cmd.command("transfer", help="Transfer a DID")
@@ -880,8 +1063,10 @@ def did_message_spend_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def did_transfer_did(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -890,11 +1075,13 @@ def did_transfer_did(
     fee: uint64,
     reuse: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import transfer_did
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import transfer_did
 
     return asyncio.run(
         transfer_did(
+            ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             id,
@@ -903,6 +1090,7 @@ def did_transfer_did(
             reset_recovery is False,
             True if reuse else None,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -924,12 +1112,19 @@ def nft_cmd() -> None:
 # TODO: Change RPC to use puzzlehash instead of address
 @click.option("-di", "--did-id", help="DID Id to use", type=AddressParamType())
 @click.option("-n", "--name", help="Set the NFT wallet name", type=str)
+@click.pass_context
 def nft_wallet_create_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, did_id: Optional[CliAddress], name: Optional[str]
+    ctx: click.Context,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    did_id: Optional[CliAddress],
+    name: Optional[str],
 ) -> None:
-    from .wallet_funcs import create_nft_wallet
+    from chia.cmds.wallet_funcs import create_nft_wallet
 
-    asyncio.run(create_nft_wallet(wallet_rpc_port, fingerprint, did_id, name))
+    asyncio.run(
+        create_nft_wallet(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, did_id, name)
+    )
 
 
 @nft_cmd.command("sign_message", help="Sign a message by a NFT")
@@ -943,11 +1138,15 @@ def nft_wallet_create_cmd(
 @options.create_fingerprint()
 @click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=AddressParamType(), required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
-def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: CliAddress, hex_message: str) -> None:
-    from .wallet_funcs import sign_message
+@click.pass_context
+def nft_sign_message(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, nft_id: CliAddress, hex_message: str
+) -> None:
+    from chia.cmds.wallet_funcs import sign_message
 
     asyncio.run(
         sign_message(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             addr_type=AddressType.NFT,
@@ -972,9 +1171,9 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: C
 @click.option("--no-did-ownership", help="Disable DID ownership support", is_flag=True, default=False)
 @click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
 @click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
-@click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default="")
+@click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default=None)
 @click.option("-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str)
-@click.option("-lh", "--license-hash", help="NFT license hash", type=str, default="")
+@click.option("-lh", "--license-hash", help="NFT license hash", type=str, default=None)
 @click.option("-lu", "--license-uris", help="Comma separated list of license URIs", type=str)
 @click.option("-et", "--edition-total", help="NFT edition total", type=int, show_default=True, default=1)
 @click.option("-en", "--edition-number", help="NFT edition number", show_default=True, default=1, type=int)
@@ -993,8 +1192,10 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: C
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def nft_mint_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -1013,8 +1214,9 @@ def nft_mint_cmd(
     royalty_percentage_fraction: int,
     reuse: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import mint_nft
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import mint_nft
 
     if metadata_uris is None:
         metadata_uris_list = []
@@ -1028,6 +1230,7 @@ def nft_mint_cmd(
 
     return asyncio.run(
         mint_nft(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             wallet_id=id,
@@ -1046,6 +1249,7 @@ def nft_mint_cmd(
             royalty_percentage=royalty_percentage_fraction,
             reuse_puzhash=True if reuse else None,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -1072,8 +1276,10 @@ def nft_mint_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def nft_add_uri_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -1084,11 +1290,13 @@ def nft_add_uri_cmd(
     fee: uint64,
     reuse: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import add_uri_to_nft
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import add_uri_to_nft
 
     return asyncio.run(
         add_uri_to_nft(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             wallet_id=id,
@@ -1099,6 +1307,7 @@ def nft_add_uri_cmd(
             license_uri=license_uri,
             reuse_puzhash=True if reuse else None,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -1123,8 +1332,10 @@ def nft_add_uri_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def nft_transfer_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -1133,11 +1344,13 @@ def nft_transfer_cmd(
     fee: uint64,
     reuse: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import transfer_nft
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import transfer_nft
 
     return asyncio.run(
         transfer_nft(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             wallet_id=id,
@@ -1146,6 +1359,7 @@ def nft_transfer_cmd(
             target_cli_address=target_address,
             reuse_puzhash=True if reuse else None,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -1162,10 +1376,15 @@ def nft_transfer_cmd(
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("--num", help="Number of NFTs to return", type=int, default=50)
 @click.option("--start-index", help="Which starting index to start listing NFTs from", type=int, default=0)
-def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num: int, start_index: int) -> None:
-    from .wallet_funcs import list_nfts
+@click.pass_context
+def nft_list_cmd(
+    ctx: click.Context, wallet_rpc_port: Optional[int], fingerprint: int, id: int, num: int, start_index: int
+) -> None:
+    from chia.cmds.wallet_funcs import list_nfts
 
-    asyncio.run(list_nfts(wallet_rpc_port, fingerprint, id, num, start_index))
+    asyncio.run(
+        list_nfts(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, num, start_index)
+    )
 
 
 @nft_cmd.command("set_did", help="Set a DID on an NFT")
@@ -1188,7 +1407,10 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num:
     is_flag=True,
     default=False,
 )
+@tx_out_cmd()
+@click.pass_context
 def nft_set_did_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -1196,11 +1418,14 @@ def nft_set_did_cmd(
     nft_coin_id: str,
     fee: uint64,
     reuse: bool,
-) -> None:
-    from .wallet_funcs import set_nft_did
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import set_nft_did
 
-    asyncio.run(
+    return asyncio.run(
         set_nft_did(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             wallet_id=id,
@@ -1208,6 +1433,8 @@ def nft_set_did_cmd(
             nft_coin_id=nft_coin_id,
             did_id=did_id,
             reuse_puzhash=True if reuse else None,
+            push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -1223,14 +1450,16 @@ def nft_set_did_cmd(
 @options.create_fingerprint()
 # TODO: Change RPC to use bytes instead of hex string
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
+@click.pass_context
 def nft_get_info_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     nft_coin_id: str,
 ) -> None:
-    from .wallet_funcs import get_nft_info
+    from chia.cmds.wallet_funcs import get_nft_info
 
-    asyncio.run(get_nft_info(wallet_rpc_port, fingerprint, nft_coin_id))
+    asyncio.run(get_nft_info(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, nft_coin_id))
 
 
 # Keep at bottom.
@@ -1257,16 +1486,18 @@ def notification_cmd() -> None:
 @click.option(
     "-a",
     "--amount",
-    help="The amount to send to get the notification past the recipient's spam filter",
+    help="The amount (in XCH) to send to get the notification past the recipient's spam filter",
     type=AmountParamType(),
-    default=uint64(10000000),
+    default=CliAmount(mojos=True, amount=uint64(10000000)),
     required=True,
     show_default=True,
 )
 @click.option("-n", "--message", help="The message of the notification", type=str)
 @options.create_fee()
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def send_notification_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     to_address: CliAddress,
@@ -1274,11 +1505,24 @@ def send_notification_cmd(
     message: str,
     fee: uint64,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import send_notification
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import send_notification
 
     message_bytes: bytes = bytes(message, "utf8")
-    return asyncio.run(send_notification(wallet_rpc_port, fingerprint, fee, to_address, message_bytes, amount, push))
+    return asyncio.run(
+        send_notification(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            fee,
+            to_address,
+            message_bytes,
+            amount,
+            push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @notification_cmd.command("get", help="Get notification(s) that are in your wallet")
@@ -1293,16 +1537,20 @@ def send_notification_cmd(
 @click.option("-i", "--id", help="The specific notification ID to show", type=Bytes32ParamType(), multiple=True)
 @click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
 @click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
+@click.pass_context
 def get_notifications_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: Sequence[bytes32],
     start: Optional[int],
     end: Optional[int],
 ) -> None:
-    from .wallet_funcs import get_notifications
+    from chia.cmds.wallet_funcs import get_notifications
 
-    asyncio.run(get_notifications(wallet_rpc_port, fingerprint, id, start, end))
+    asyncio.run(
+        get_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, start, end)
+    )
 
 
 @notification_cmd.command("delete", help="Delete notification(s) that are in your wallet")
@@ -1316,15 +1564,17 @@ def get_notifications_cmd(
 @options.create_fingerprint()
 @click.option("-i", "--id", help="A specific notification ID to delete", type=Bytes32ParamType(), multiple=True)
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
+@click.pass_context
 def delete_notifications_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: Sequence[bytes32],
     all: bool,
 ) -> None:
-    from .wallet_funcs import delete_notifications
+    from chia.cmds.wallet_funcs import delete_notifications
 
-    asyncio.run(delete_notifications(wallet_rpc_port, fingerprint, id, all))
+    asyncio.run(delete_notifications(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, id, all))
 
 
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
@@ -1350,18 +1600,32 @@ def vcs_cmd() -> None:  # pragma: no cover
     required=False,
 )
 @options.create_fee("Blockchain fee for mint transaction, in XCH")
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def mint_vc_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     did: CliAddress,
     target_address: Optional[CliAddress],
     fee: uint64,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import mint_vc
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import mint_vc
 
-    return asyncio.run(mint_vc(wallet_rpc_port, fingerprint, did, fee, target_address, push))
+    return asyncio.run(
+        mint_vc(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            did,
+            fee,
+            target_address,
+            push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @vcs_cmd.command("get", short_help="Get a list of existing VCs")
@@ -1379,15 +1643,17 @@ def mint_vc_cmd(
 @click.option(
     "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
 )
+@click.pass_context
 def get_vcs_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     start: int,
     count: int,
 ) -> None:  # pragma: no cover
-    from .wallet_funcs import get_vcs
+    from chia.cmds.wallet_funcs import get_vcs
 
-    asyncio.run(get_vcs(wallet_rpc_port, fingerprint, start, count))
+    asyncio.run(get_vcs(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, start, count))
 
 
 @vcs_cmd.command("update_proofs", short_help="Update a VC's proofs if you have the provider DID")
@@ -1421,8 +1687,10 @@ def get_vcs_cmd(
     default=False,
     show_default=True,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def spend_vc_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     vc_id: bytes32,
@@ -1431,11 +1699,13 @@ def spend_vc_cmd(
     fee: uint64,
     reuse_puzhash: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import spend_vc
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import spend_vc
 
     return asyncio.run(
         spend_vc(
+            root_path=ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
             vc_id=vc_id,
@@ -1444,6 +1714,7 @@ def spend_vc_cmd(
             new_proof_hash=new_proof_hash,
             reuse_puzhash=reuse_puzhash,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -1459,15 +1730,19 @@ def spend_vc_cmd(
 @options.create_fingerprint()
 @click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
 @click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
+@click.pass_context
 def add_proof_reveal_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     proof: Sequence[str],
     root_only: bool,
 ) -> None:  # pragma: no cover
-    from .wallet_funcs import add_proof_reveal
+    from chia.cmds.wallet_funcs import add_proof_reveal
 
-    asyncio.run(add_proof_reveal(wallet_rpc_port, fingerprint, proof, root_only))
+    asyncio.run(
+        add_proof_reveal(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof, root_only)
+    )
 
 
 @vcs_cmd.command("get_proofs_for_root", short_help="Get the stored proof flags for a given proof hash")
@@ -1480,14 +1755,18 @@ def add_proof_reveal_cmd(
 )
 @options.create_fingerprint()
 @click.option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
+@click.pass_context
 def get_proofs_for_root_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     proof_hash: str,
 ) -> None:  # pragma: no cover
-    from .wallet_funcs import get_proofs_for_root
+    from chia.cmds.wallet_funcs import get_proofs_for_root
 
-    asyncio.run(get_proofs_for_root(wallet_rpc_port, fingerprint, proof_hash))
+    asyncio.run(
+        get_proofs_for_root(ChiaCliContext.set_default(ctx).root_path, wallet_rpc_port, fingerprint, proof_hash)
+    )
 
 
 @vcs_cmd.command("revoke", short_help="Revoke any VC if you have the proper DID and the VCs parent coin")
@@ -1520,8 +1799,10 @@ def get_proofs_for_root_cmd(
     default=False,
     show_default=True,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def revoke_vc_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     parent_coin_id: Optional[bytes32],
@@ -1529,10 +1810,23 @@ def revoke_vc_cmd(
     fee: uint64,
     reuse_puzhash: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import revoke_vc
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import revoke_vc
 
-    return asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, fee, reuse_puzhash, push))
+    return asyncio.run(
+        revoke_vc(
+            ChiaCliContext.set_default(ctx).root_path,
+            wallet_rpc_port,
+            fingerprint,
+            parent_coin_id,
+            vc_id,
+            fee,
+            reuse_puzhash,
+            push,
+            condition_valid_times=condition_valid_times,
+        )
+    )
 
 
 @vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
@@ -1548,7 +1842,7 @@ def revoke_vc_cmd(
 @click.option(
     "-a",
     "--min-amount-to-claim",
-    help="The minimum amount to approve to move into the wallet",
+    help="The minimum amount (in CAT units) to approve to move into the wallet",
     type=AmountParamType(),
     required=True,
 )
@@ -1558,10 +1852,14 @@ def revoke_vc_cmd(
     "--min-coin-amount",
     type=AmountParamType(),
     default=cli_amount_none,
-    help="The minimum coin amount to select",
+    help="The minimum coin amount (in CAT units) to select",
 )
 @click.option(
-    "-l", "--max-coin-amount", type=AmountParamType(), default=cli_amount_none, help="The maximum coin amount to select"
+    "-l",
+    "--max-coin-amount",
+    type=AmountParamType(),
+    default=cli_amount_none,
+    help="The maximum coin amount (in CAT units) to select",
 )
 @click.option(
     "--reuse",
@@ -1569,8 +1867,10 @@ def revoke_vc_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
+@click.pass_context
 def approve_r_cats_cmd(
+    ctx: click.Context,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
@@ -1580,11 +1880,13 @@ def approve_r_cats_cmd(
     max_coin_amount: CliAmount,
     reuse: bool,
     push: bool,
-) -> List[TransactionRecord]:
-    from .wallet_funcs import approve_r_cats
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
+    from chia.cmds.wallet_funcs import approve_r_cats
 
     return asyncio.run(
         approve_r_cats(
+            ChiaCliContext.set_default(ctx).root_path,
             wallet_rpc_port,
             fingerprint,
             uint32(id),
@@ -1594,5 +1896,6 @@ def approve_r_cats_cmd(
             max_coin_amount,
             reuse,
             push,
+            condition_valid_times=condition_valid_times,
         )
     )

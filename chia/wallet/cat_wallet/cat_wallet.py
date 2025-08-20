@@ -4,27 +4,27 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
-from typing_extensions import Unpack
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
+from typing_extensions import Self, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import compute_additions_with_cost
+from chia.types.blockchain_format.program import Program, run
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
+    CAT_MOD_HASH_HASH,
+    QUOTED_CAT_MOD_HASH,
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
@@ -36,6 +36,7 @@ from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
+    CreateCoin,
     CreateCoinAnnouncement,
     UnknownCondition,
     parse_timelock_info,
@@ -43,15 +44,14 @@ from chia.wallet.conditions import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.compute_additions import compute_additions_with_cost
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -59,23 +59,18 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
-# This should probably not live in this file but it's for experimental right now
 
-CAT_MOD_HASH = CAT_MOD.get_tree_hash()
-CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
-QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
-
-
-def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
-    removals: Set[Coin] = set()
+def not_ephemeral_additions(sp: WalletSpendBundle) -> list[Coin]:
+    removals: set[Coin] = set()
     for cs in sp.coin_spends:
         removals.add(cs.coin)
 
-    additions: List[Coin] = []
+    additions: list[Coin] = []
     max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in sp.coin_spends:
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
@@ -98,6 +93,8 @@ class CATWallet:
     cat_info: CATInfo
     standard_wallet: Wallet
     lineage_store: CATLineageStore
+    wallet_type: ClassVar[WalletType] = WalletType.CAT
+    wallet_info_type: ClassVar[type[CATInfo]] = CATInfo
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
@@ -107,7 +104,7 @@ class CATWallet:
     async def create_new_cat_wallet(
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        cat_tail_info: Dict[str, Any],
+        cat_tail_info: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
@@ -125,7 +122,7 @@ class CATWallet:
 
         # We use 00 bytes because it's not optional. We must check this is overridden during issuance.
         empty_bytes = bytes32(32 * b"\0")
-        self.cat_info = CATInfo(empty_bytes, None)
+        self.cat_info = self.wallet_info_type(empty_bytes, None)
         info_as_string = bytes(self.cat_info).hex()
         # If the name is not provided, it will be autogenerated based on the resulting tail hash.
         # For now, give the wallet a temporary name "CAT WALLET" until we get the tail hash
@@ -133,7 +130,7 @@ class CATWallet:
         if name is None:
             name = "CAT WALLET"
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, self.wallet_type, info_as_string)
 
         try:
             spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
@@ -145,10 +142,10 @@ class CATWallet:
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             raise
         if spend_bundle is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             raise ValueError("Failed to create spend.")
 
         await self.wallet_state_manager.add_new_wallet(self)
@@ -161,7 +158,7 @@ class CATWallet:
             await self.set_name(name)
 
         # Change and actual CAT coin
-        non_ephemeral_coins: List[Coin] = not_ephemeral_additions(spend_bundle)
+        non_ephemeral_coins: list[Coin] = not_ephemeral_additions(spend_bundle)
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
@@ -175,10 +172,12 @@ class CATWallet:
             raise ValueError("Internal Error, unable to generate new CAT coin")
         cat_pid: bytes32 = cat_coin.parent_coin_info
 
+        converted_ph = await self.convert_puzzle_hash(cat_coin.puzzle_hash)
         cat_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
+            created_at_time=uint64(time.time()),
+            to_puzzle_hash=converted_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(converted_ph),
             amount=uint64(cat_coin.amount),
             fee_amount=fee,
             confirmed=False,
@@ -191,29 +190,30 @@ class CATWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=spend_bundle.name(),
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(cat_record)
         return self
 
-    @staticmethod
+    @classmethod
     async def get_or_create_wallet_for_cat(
+        cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
-    ) -> CATWallet:
-        self = CATWallet()
+    ) -> Self:
+        self = cls()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
         limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
 
         for id, w in wallet_state_manager.wallets.items():
-            if w.type() == CATWallet.type():
-                assert isinstance(w, CATWallet)
+            if w.type() == cls.type():
+                assert isinstance(w, cls)
                 if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
                     return w
@@ -226,9 +226,9 @@ class CATWallet:
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
         limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
-        self.cat_info = CATInfo(limitations_program_hash, None)
+        self.cat_info = cls.wallet_info_type(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, self.wallet_type, info_as_string)
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         await self.wallet_state_manager.add_new_wallet(self)
@@ -258,8 +258,11 @@ class CATWallet:
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: Dict[AssetType, Any] = {},
+        potential_subclasses: Optional[dict[AssetType, Any]] = None,
     ) -> Any:
+        if potential_subclasses is None:
+            potential_subclasses = {}
+
         next_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if next_layer is not None:
             if AssetType(next_layer.type()) in potential_subclasses:
@@ -277,13 +280,14 @@ class CATWallet:
             name,
         )
 
-    @staticmethod
+    @classmethod
     async def create(
+        cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
-    ) -> CATWallet:
-        self = CATWallet()
+    ) -> Self:
+        self = cls()
 
         self.log = logging.getLogger(__name__)
 
@@ -291,12 +295,12 @@ class CATWallet:
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
         try:
-            self.cat_info = CATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+            self.cat_info = cls.wallet_info_type.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         except AssertionError:
             # Do a migration of the lineage proofs
             cat_info = LegacyCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
-            self.cat_info = CATInfo(cat_info.limitations_program_hash, cat_info.my_tail)
+            self.cat_info = cls.wallet_info_type(cat_info.limitations_program_hash, cat_info.my_tail)
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
             for coin_id, lineage in cat_info.lineage_proofs:
                 await self.add_lineage(coin_id, lineage)
@@ -306,12 +310,12 @@ class CATWallet:
 
     @classmethod
     def type(cls) -> WalletType:
-        return WalletType.CAT
+        return cls.wallet_type
 
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
@@ -324,7 +328,7 @@ class CATWallet:
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
         return uint128(amount)
 
-    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
     @property
@@ -336,14 +340,14 @@ class CATWallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> Set[WalletCoinRecord]:
-        spendable: List[WalletCoinRecord] = list(
+    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
+        spendable: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
 
     def get_name(self) -> str:
@@ -356,15 +360,6 @@ class CATWallet:
 
     def get_asset_id(self) -> str:
         return bytes(self.cat_info.limitations_program_hash).hex()
-
-    async def set_tail_program(self, tail_program: str) -> None:
-        assert Program.fromhex(tail_program).get_tree_hash() == self.cat_info.limitations_program_hash
-        await self.save_info(
-            CATInfo(
-                self.cat_info.limitations_program_hash,
-                Program.fromhex(tail_program),
-            )
-        )
 
     async def coin_added(
         self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[CATCoinData]
@@ -423,27 +418,6 @@ class CATWallet:
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
-    async def get_new_inner_hash(self) -> bytes32:
-        puzzle = await self.get_new_inner_puzzle()
-        return puzzle.get_tree_hash()
-
-    async def get_new_inner_puzzle(self) -> Program:
-        return await self.standard_wallet.get_new_puzzle()
-
-    async def get_new_puzzlehash(self) -> bytes32:
-        return await self.standard_wallet.get_new_puzzlehash()
-
-    async def get_puzzle_hash(self, new: bool) -> bytes32:
-        if new:
-            return await self.get_new_puzzlehash()
-        else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
-            )
-            if record is None:
-                return await self.get_new_puzzlehash()
-            return record.puzzle_hash
-
     def require_derivation_paths(self) -> bool:
         return True
 
@@ -455,12 +429,21 @@ class CATWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)
         limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
-        return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
+        return curry_and_treehash(
+            QUOTED_CAT_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash
+        )
 
-    async def get_new_cat_puzzle_hash(self) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+    async def get_cat_puzzle_hash(self, new: bool) -> bytes32:
+        if new:
+            return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        else:
+            derivation_record = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            if derivation_record is None:
+                return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
-    async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+            return derivation_record.puzzle_hash
+
+    async def get_spendable_balance(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         coins = await self.get_cat_spendable_coins(records)
         amount = 0
         for record in coins:
@@ -486,7 +469,7 @@ class CATWallet:
             for coin in record.additions:
                 hint_dict = {
                     coin_id: bytes32(memos[0])
-                    for coin_id, memos in record.memos
+                    for coin_id, memos in record.memos.items()
                     if len(memos) > 0 and len(memos[0]) == 32
                 }
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict=hint_dict):
@@ -494,10 +477,10 @@ class CATWallet:
 
         return uint64(addition_amount)
 
-    async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
-        result: List[WalletCoinRecord] = []
+    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
+        result: list[WalletCoinRecord] = []
 
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.id(), records
         )
 
@@ -511,44 +494,46 @@ class CATWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
-    ) -> Set[Coin]:
+        action_scope: WalletActionScope,
+    ) -> set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: List[WalletCoinRecord] = await self.get_cat_spendable_coins()
+        spendable_coins: list[WalletCoinRecord] = await self.get_cat_spendable_coins()
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
-        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+        unconfirmed_removals: dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            spendable_coins,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                spendable_coins,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         assert sum(c.amount for c in coins) >= amount
         return coins
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        record: Optional[DerivationRecord] = (
-            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        record: Optional[DerivationRecord] = (
-            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
             return puzzle_hash  # TODO: check if we have a test for this case!
         else:
@@ -562,7 +547,7 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         action_scope: WalletActionScope,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> Optional[AssertCoinAnnouncement]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -576,12 +561,12 @@ class CATWallet:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
-                    uint64(0),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                    [],
+                    [],
                     inner_action_scope,
                     fee=uint64(fee - amount_to_claim),
                     coins=chia_coins,
@@ -592,13 +577,13 @@ class CATWallet:
             else:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
-                    uint64(selected_amount + amount_to_claim - fee),
-                    (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+                    [uint64(selected_amount + amount_to_claim - fee)],
+                    [await action_scope.get_puzzle_hash(self.wallet_state_manager)],
                     inner_action_scope,
                     coins=chia_coins,
                     negative_change_allowed=True,
@@ -611,7 +596,7 @@ class CATWallet:
                 continue
             for spend in tx.spend_bundle.coin_spends:
                 if spend.coin.name() == origin_id:
-                    conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
+                    conditions = run(spend.puzzle_reveal, Program.from_serialized(spend.solution)).as_python()
                     for condition in conditions:
                         if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
                             message = condition[1]
@@ -624,15 +609,23 @@ class CATWallet:
 
         return announcement
 
+    async def make_inner_solution(
+        self,
+        coin: Coin,
+        primaries: list[CreateCoin],
+        conditions: tuple[Condition, ...] = tuple(),
+    ) -> Program:
+        return self.standard_wallet.make_solution(primaries=primaries, conditions=conditions)
+
     async def generate_unsigned_spendbundle(
         self,
-        payments: List[Payment],
+        payments: list[CreateCoin],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
-        coins: Optional[Set[Coin]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
+        coins: Optional[set[Coin]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> WalletSpendBundle:
         if cat_discrepancy is not None:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
@@ -642,7 +635,7 @@ class CATWallet:
         if coins is None:
             cat_coins = await self.select_coins(
                 uint64(starting_amount),
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         else:
             cat_coins = coins
@@ -665,18 +658,20 @@ class CATWallet:
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                list(cat_coins)[0].puzzle_hash
+                next(iter(cat_coins)).puzzle_hash
             )
             if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
                         # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.get_new_inner_hash()
+                        change_puzhash = await action_scope.get_puzzle_hash(
+                            self.wallet_state_manager, override_reuse_puzhash_with=False
+                        )
                         break
             else:
-                change_puzhash = await self.get_new_inner_hash()
-            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
+                change_puzhash = await action_scope.get_puzzle_hash(self.wallet_state_manager)
+            primaries.append(CreateCoin(change_puzhash, uint64(change), [change_puzhash]))
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
@@ -707,7 +702,8 @@ class CATWallet:
                             action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.make_inner_solution(
+                            coin=coin,
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
@@ -718,7 +714,8 @@ class CATWallet:
                             action_scope,
                         )
                         assert xch_announcement is not None
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.make_inner_solution(
+                            coin=coin,
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
@@ -726,13 +723,14 @@ class CATWallet:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
                 else:
-                    innersol = self.standard_wallet.make_solution(
+                    innersol = await self.make_inner_solution(
+                        coin=coin,
                         primaries=primaries,
                         conditions=(*extra_conditions, announcement),
                     )
             else:
-                innersol = self.standard_wallet.make_solution(
-                    primaries=[], conditions=(announcement.corresponding_assertion(),)
+                innersol = await self.make_inner_solution(
+                    coin=coin, primaries=[], conditions=(announcement.corresponding_assertion(),)
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -755,17 +753,17 @@ class CATWallet:
 
     async def generate_signed_transaction(
         self,
-        amounts: List[uint64],
-        puzzle_hashes: List[bytes32],
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
-        memos: Optional[List[List[bytes]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         # (extra_delta, tail_reveal, tail_solution)
-        cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 
@@ -774,9 +772,9 @@ class CATWallet:
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            memos_with_hint: List[bytes] = [puzhash]
+            memos_with_hint: list[bytes] = [puzhash]
             memos_with_hint.extend(memo_list)
-            payments.append(Payment(puzhash, amount, memos_with_hint))
+            payments.append(CreateCoin(puzhash, amount, memos_with_hint))
 
         payment_sum = sum(p.amount for p in payments)
         spend_bundle = await self.generate_unsigned_spendbundle(
@@ -789,17 +787,18 @@ class CATWallet:
         )
 
         async with action_scope.use() as interface:
-            other_tx_removals: Set[Coin] = {
+            other_tx_removals: set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.removals
             }
-            other_tx_additions: Set[Coin] = {
+            other_tx_additions: set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.additions
             }
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=puzzle_hashes[0],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                     amount=uint64(payment_sum),
                     fee_amount=fee,
                     confirmed=False,
@@ -812,7 +811,7 @@ class CATWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
@@ -852,12 +851,14 @@ class CATWallet:
         self,
         asset_id: Optional[bytes32],
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
-    ) -> Set[Coin]:
+        action_scope: WalletActionScope,
+    ) -> set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount, coin_selection_config)
+        # We need to sandbox this because this method isn't supposed to lock up the coins
+        async with self.wallet_state_manager.new_action_scope(action_scope.config.tx_config) as sandbox:
+            return await self.select_coins(amount, sandbox)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return (

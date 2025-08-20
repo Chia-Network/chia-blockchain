@@ -8,7 +8,7 @@ name: test
 on:
   workflow_call:
     inputs:
-      emoji:
+      os-emoji:
         required: true
         type: string
       matrix:
@@ -35,14 +35,16 @@ on:
       arch:
         required: true
         type: string
+      arch-emoji:
+        required: true
+        type: string
       collect-junit:
         required: false
         type: boolean
         default: true
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ inputs.concurrency-name }}-${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -51,7 +53,7 @@ defaults:
 
 jobs:
   test:
-    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
@@ -59,23 +61,15 @@ jobs:
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
         os:
-          - emoji: ${{ inputs.emoji }}
+          - emoji: ${{ inputs.os-emoji }}
             matrix: ${{ inputs.matrix }}
             name: ${{ inputs.name }}
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         arch:
           - matrix: ${{ inputs.arch }}
+            emoji: ${{ inputs.arch-emoji }}
         python:
-          - name: "3.8"
-            file_name: "3.8"
-            action: "3.8"
-            apt: "3.8"
-            install_sh: "3.8"
-            matrix: "3.8"
-            exclude_from:
-              limited: True
-              main: True
           - name: "3.9"
             file_name: "3.9"
             action: "3.9"
@@ -102,7 +96,9 @@ jobs:
               main: True
           - name: "3.12"
             file_name: "3.12"
-            action: "3.12"
+            # TODO: https://github.com/python/cpython/issues/128479
+            #       return to just `3.12` after presumably 3.12.9 becomes available with the fix
+            action: "3.12.7"
             apt: "3.12"
             install_sh: "3.12"
             matrix: "3.12"
@@ -110,10 +106,6 @@ jobs:
               limited: True
               main: True
         exclude:
-          - os:
-              matrix: macos
-            python:
-              matrix: "3.8"
           - arch:
               matrix: arm
             configuration:
@@ -134,7 +126,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
-      BLOCKS_AND_PLOTS_VERSION: 0.38.0
+      BLOCKS_AND_PLOTS_VERSION: 0.44.0
 
     steps:
       - name: Configure git
@@ -176,6 +168,8 @@ jobs:
             ${{ runner.os }}-node-
 
       - uses: chia-network/actions/cache-pip@main
+        with:
+          mode: poetry
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
@@ -187,6 +181,7 @@ jobs:
           path: |
             ${{ github.workspace }}/.chia/blocks
             ${{ github.workspace }}/.chia/test-plots
+            ${{ github.workspace }}/.chia/test-bundles
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
       - name: Checkout test blocks and plots
@@ -248,6 +243,8 @@ jobs:
           diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
           echo '::endgroup::'
 
+          exit $DIFF_EXIT_CODE
+
       - name: Move chia/ so we test the installed code
         run: |
           mv chia/ notchia/
@@ -283,6 +280,7 @@ jobs:
         with:
           name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
+          include-hidden-files: true
           if-no-files-found: error
 
       - name: Check resource usage
