@@ -571,7 +571,6 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
-        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,
@@ -712,7 +711,6 @@ def create_valid_pos(farmer: Farmer) -> tuple[farmer_protocol.NewSignagePoint, P
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
-        last_tx_height=uint32(0),
     )
     pos = ProofOfSpace(
         challenge=case.plot_challenge,

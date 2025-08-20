@@ -28,7 +28,7 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_block
+from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
     is_overflow_block,
@@ -220,8 +220,6 @@ async def pre_validate_block(
         cc_sp_hash,
         block.height,
         vs.difficulty,
-        vs.ssi,
-        prev_tx_block(blockchain, prev_b),
     )
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)

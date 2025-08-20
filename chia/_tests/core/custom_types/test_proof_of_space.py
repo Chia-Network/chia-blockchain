@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
-from chia_rs import G1Element, PlotSize, ProofOfSpace
+from chia_rs import G1Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32, bytes48
 from chia_rs.sized_ints import uint8, uint32
 
@@ -156,6 +156,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
 
 
+@pytest.mark.skip("v2 plots")
 @datacases(
     ProofOfSpaceCase(
         id="v2 plot are not implemented",
@@ -242,12 +243,9 @@ class TestProofOfSpace:
 
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
-@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
-def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_size: PlotSize) -> None:
+def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
     constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
-    if plot_size.size_v2 is not None:
-        expected = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    assert calculate_prefix_bits(constants, height, plot_size) == expected
+    assert calculate_prefix_bits(constants, height) == expected
 
 
 @pytest.mark.parametrize(
@@ -264,9 +262,6 @@ def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_si
         (20643000, 5),
     ],
 )
-@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
-def test_calculate_prefix_bits_default(height: uint32, expected: int, plot_size: PlotSize) -> None:
+def test_calculate_prefix_bits_default(height: uint32, expected: int) -> None:
     constants = DEFAULT_CONSTANTS
-    if plot_size.size_v2 is not None:
-        expected = DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    assert calculate_prefix_bits(constants, height, plot_size) == expected
+    assert calculate_prefix_bits(constants, height) == expected

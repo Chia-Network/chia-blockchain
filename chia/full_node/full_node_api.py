@@ -982,15 +982,12 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            tx_peak = self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants,
                 quality_string,
                 request.proof_of_space.size(),
                 difficulty,
                 request.challenge_chain_sp,
-                sub_slot_iters,
-                tx_peak.height if tx_peak is not None else uint32(0),
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(

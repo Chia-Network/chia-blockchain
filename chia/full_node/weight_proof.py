@@ -30,7 +30,6 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.consensus.get_block_challenge import prev_tx_block
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
@@ -1329,8 +1328,6 @@ def _validate_pospace_recent_chain(
         cc_sp_hash,
         block.height,
         diff,
-        ssi,
-        prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
@@ -1378,8 +1375,6 @@ def __validate_pospace(
         cc_sp_hash,
         height,
         curr_diff,
-        curr_sub_slot_iters,
-        uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
     )
     if required_iters is None:
         log.error("could not verify proof of space")

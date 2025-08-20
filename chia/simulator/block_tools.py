@@ -1506,8 +1506,7 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            # TODO: todo_v2_plots support v2 plots in the plot manager
-            prefix_bits = calculate_prefix_bits(constants, height, PlotSize.make_v1(plot_info.prover.get_size()))
+            prefix_bits = calculate_prefix_bits(constants, height)
             if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
@@ -1520,8 +1519,6 @@ class BlockTools:
                         PlotSize.make_v1(plot_info.prover.get_size()),
                         difficulty,
                         signage_point,
-                        sub_slot_iters,
-                        prev_transaction_b_height,
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
@@ -1774,7 +1771,6 @@ def load_block_list(
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
         cache = BlockCache(blocks)
-        prev_transaction_b_height = uint32(0)  # TODO: todo_v2_plots
 
         required_iters = validate_pospace_and_get_required_iters(
             constants,
@@ -1783,8 +1779,6 @@ def load_block_list(
             sp_hash,
             full_block.height,
             uint64(difficulty),
-            sub_slot_iters,
-            prev_transaction_b_height,
         )
         assert required_iters is not None
 

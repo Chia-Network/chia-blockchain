@@ -364,7 +364,6 @@ def prepare_sp_and_pos_for_fee_test(
         sub_slot_iters=uint64(0),
         signage_point_index=uint8(0),
         peak_height=uint32(1),
-        last_tx_height=uint32(0),
     )
 
     pos = harvester_protocol.NewProofOfSpace(
