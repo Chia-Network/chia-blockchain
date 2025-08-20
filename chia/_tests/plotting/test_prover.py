@@ -26,9 +26,9 @@ class TestProver:
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             prover.get_memo()
 
-    def test_v2_prover_get_compression_level_raises_error(self) -> None:
+    def test_v2_prover_get_compression_level_raises_assertion_error(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format does not support compression level"):
+        with pytest.raises(AssertionError, match="get_compression_level\\(\\) should never be called on V2 plots"):
             prover.get_compression_level()
 
     def test_v2_prover_get_id_raises_error(self) -> None:

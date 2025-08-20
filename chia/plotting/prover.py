@@ -56,7 +56,7 @@ class V2Prover:
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_compression_level(self) -> uint8:
-        raise NotImplementedError("V2 plot format does not support compression level")
+        raise AssertionError("get_compression_level() should never be called on V2 plots")
 
     def get_version(self) -> PlotVersion:
         return PlotVersion.V2
@@ -78,8 +78,7 @@ class V2Prover:
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
-        # TODO: todo_v2_plots Implement plot proof generation
-        raise NotImplementedError("V2 plot format require solver to get full proof")
+        raise AssertionError("V2 plot format require solver to get full proof")
 
     @classmethod
     def from_bytes(cls, data: bytes) -> V2Prover:
@@ -121,7 +120,7 @@ class V1Prover:
         return [bytes32(quality) for quality in self._disk_prover.get_qualities_for_challenge(challenge)]
 
     def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]:
-        raise NotImplementedError("V1 does not implement quality chains, only qualities")
+        raise AssertionError("V1 does not implement quality chains, only qualities")
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
         return bytes(self._disk_prover.get_full_proof(challenge, index, parallel_read))
