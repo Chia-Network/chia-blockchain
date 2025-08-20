@@ -652,21 +652,22 @@ async def test_create_signed_transaction(
             )
         )
         assert len(select_coins_response.coins) == 1
+        selected_coin = select_coins_response.coins[0]
 
     txs = (
         await wallet_1_rpc.create_signed_transactions(
             outputs,
-            coins=selected_coin,
+            coins=[selected_coin] if selected_coin is not None else [],
             fee=amount_fee,
             wallet_id=wallet_id,
             # shouldn't actually block it
             tx_config=DEFAULT_TX_CONFIG.override(
-                excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
+                excluded_coin_amounts=[uint64(selected_coin.amount)] if selected_coin is not None else [],
             ),
             push=True,
         )
     ).transactions
-    change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
+    change_expected = not selected_coin or selected_coin.amount - amount_total > 0
     assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
