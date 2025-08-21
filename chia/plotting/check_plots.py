@@ -216,7 +216,7 @@ def check_plots(
                         else:
                             log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
 
-                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
+                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size().size_v1, challenge, proof)
                         if quality_str == ver_quality_str:
                             total_proofs += 1
                         else:
