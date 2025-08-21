@@ -19,17 +19,11 @@ class SolverRpcApi:
 
     def get_routes(self) -> dict[str, Endpoint]:
         return {
-            "/solve": self.solve,
             "/get_state": self.get_state,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
         return []
-
-    async def solve(self, request: dict[str, Any]) -> EndpointResult:
-        partial_proof = request["partial_proof"]
-        proof = self.service.solve(partial_proof=partial_proof)
-        return {"proof": proof.hex() if proof else None}
 
     async def get_state(self, _: dict[str, Any]) -> EndpointResult:
         return {

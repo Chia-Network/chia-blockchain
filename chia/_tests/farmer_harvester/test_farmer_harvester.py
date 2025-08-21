@@ -420,7 +420,7 @@ async def test_v2_partial_proofs_with_existing_sp(
     harvester_peer = await get_harvester_peer(farmer)
     await farmer_api.partial_proofs(partial_proofs, harvester_peer)
 
-    # should store 2 pending requests (one per quality)
+    # should store 2 pending requests (one per partial proof)
     assert len(farmer.pending_solver_requests) == 2
     assert sp_hash in farmer.cache_add_time
 
@@ -434,7 +434,6 @@ async def test_solution_response_handler(
     farmer = farmer_api.farmer
 
     # set up a pending request
-    quality = bytes32(b"3" * 32)
     sp_hash = bytes32(b"1" * 32)
     challenge_hash = bytes32(b"2" * 32)
 
@@ -453,13 +452,15 @@ async def test_solution_response_handler(
     harvester_peer = await get_harvester_peer(farmer)
 
     # manually add pending request
-    farmer.pending_solver_requests[quality] = {
+    farmer.pending_solver_requests[partial_proofs.partial_proofs[0]] = {
         "proof_data": partial_proofs,
         "peer": harvester_peer,
     }
 
     # create solution response
-    solution_response = solver_protocol.SolverResponse(partial_proof=quality, proof=b"test_proof_from_solver")
+    solution_response = solver_protocol.SolverResponse(
+        partial_proof=partial_proofs.partial_proofs[0], proof=b"test_proof_from_solver"
+    )
     solver_peer = Mock()
     solver_peer.peer_node_id = "solver_peer"
 
@@ -476,7 +477,7 @@ async def test_solution_response_handler(
         assert original_peer == harvester_peer
 
         # verify pending request was removed
-        assert quality not in farmer.pending_solver_requests
+        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
 
 
 @pytest.mark.anyio
@@ -510,7 +511,6 @@ async def test_solution_response_empty_proof(
     farmer = farmer_api.farmer
 
     # set up a pending request
-    quality = bytes32(b"3" * 32)
     sp_hash = bytes32(b"1" * 32)
     challenge_hash = bytes32(b"2" * 32)
 
@@ -530,8 +530,8 @@ async def test_solution_response_empty_proof(
     harvester_peer.peer_node_id = "harvester_peer"
 
     # manually add pending request
-    farmer.pending_solver_requests[quality] = {
-        "proof_data": partial_proofs,
+    farmer.pending_solver_requests[partial_proofs.partial_proofs[0]] = {
+        "proof_data": partial_proofs.partial_proofs[0],
         "peer": harvester_peer,
     }
 
@@ -539,7 +539,7 @@ async def test_solution_response_empty_proof(
     solver_peer = await get_solver_peer(farmer)
 
     # create solution response with empty proof
-    solution_response = solver_protocol.SolverResponse(partial_proof=quality, proof=b"")
+    solution_response = solver_protocol.SolverResponse(partial_proof=partial_proofs.partial_proofs[0], proof=b"")
 
     with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
         await farmer_api.solution_response(solution_response, solver_peer)
@@ -548,7 +548,7 @@ async def test_solution_response_empty_proof(
         mock_new_proof.assert_not_called()
 
         # verify pending request was removed (cleanup still happens)
-        assert quality not in farmer.pending_solver_requests
+        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
 
 
 @pytest.mark.anyio
@@ -594,5 +594,4 @@ async def test_v2_partial_proofs_solver_exception(
         await farmer_api.partial_proofs(partial_proofs, harvester_peer)
 
         # verify pending request was cleaned up after exception
-        quality = bytes32(b"3" * 32)
-        assert quality not in farmer.pending_solver_requests
+        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests

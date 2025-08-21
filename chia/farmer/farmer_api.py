@@ -503,7 +503,7 @@ class FarmerAPI:
             f"for plot {partial_proof_data.plot_identifier[:10]}... from {peer.peer_node_id}"
         )
 
-        # Process each quality chain through solver service to get full proofs
+        # Process each partial proof chain through solver service to get full proofs
         for partial_proof in partial_proof_data.partial_proofs:
             solver_info = SolverInfo(partial_proof=partial_proof)
 
