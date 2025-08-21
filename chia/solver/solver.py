@@ -66,7 +66,7 @@ class Solver:
             self.log.info("Solver service shutdown complete")
 
     def solve(self, partial_proof: bytes) -> Optional[bytes]:
-        self.log.debug(f"Solve request: quality={partial_proof.hex()}")
+        self.log.debug(f"Solve request: partial={partial_proof.hex()}")
         # TODO todo_v2_plots implement actualy calling the solver
         return None
 

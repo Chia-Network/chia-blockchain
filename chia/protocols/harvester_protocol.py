@@ -72,7 +72,6 @@ class PartialProofsData(Streamable):
     partial_proofs: list[bytes]  # 16 * k bits blobs instead of 32-byte quality strings
     signage_point_index: uint8
     plot_size: uint8
-    difficulty: uint64
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element

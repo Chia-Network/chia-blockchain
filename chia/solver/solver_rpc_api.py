@@ -28,7 +28,7 @@ class SolverRpcApi:
 
     async def solve(self, request: dict[str, Any]) -> EndpointResult:
         partial_proof = request["partial_proof"]
-        proof = self.service.solve(bytes.fromhex(partial_proof))
+        proof = self.service.solve(partial_proof=partial_proof)
         return {"proof": proof.hex() if proof else None}
 
     async def get_state(self, _: dict[str, Any]) -> EndpointResult:

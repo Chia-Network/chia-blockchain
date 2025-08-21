@@ -31,32 +31,3 @@ def get_state_cmd(
     from chia.cmds.solver_funcs import get_state
 
     asyncio.run(get_state(ChiaCliContext.set_default(ctx), solver_rpc_port))
-
-
-@solver_cmd.command("solve", help="Solve a partial proof of space, turning it into a full proof")
-@click.option(
-    "-sp",
-    "--solver-rpc-port",
-    help="Set the port where the Solver is hosting the RPC interface. See the rpc_port under solver in config.yaml",
-    type=int,
-    default=None,
-    show_default=True,
-)
-@click.option(
-    "-p",
-    "--partial_proof",
-    help="partial proof string to solve (hex format)",
-    type=str,
-    required=True,
-)
-@click.pass_context
-def solve_cmd(
-    ctx: click.Context,
-    solver_rpc_port: Optional[int],
-    partial_proof: str,
-) -> None:
-    import asyncio
-
-    from chia.cmds.solver_funcs import solve_partial_proof
-
-    asyncio.run(solve_partial_proof(ChiaCliContext.set_default(ctx), solver_rpc_port, partial_proof))

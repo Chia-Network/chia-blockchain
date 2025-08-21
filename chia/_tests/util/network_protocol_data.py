@@ -158,7 +158,6 @@ partial_proof = harvester_protocol.PartialProofsData(
     [b"partial-proof1", b"partial-proof2"],
     uint8(4),
     uint8(32),
-    uint64(100000),
     G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"

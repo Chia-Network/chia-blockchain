@@ -72,7 +72,6 @@ partial_proof_json: dict[str, Any] = {
     "partial_proofs": ["0x7061727469616c2d70726f6f6631", "0x7061727469616c2d70726f6f6632"],
     "signage_point_index": 4,
     "plot_size": 32,
-    "difficulty": 100000,
     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "pool_contract_puzzle_hash": "0x91240fbacdf93b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",

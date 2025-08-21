@@ -19,17 +19,3 @@ async def get_state(
             print(json.dumps(response, indent=2))
     except Exception as e:
         print(f"Failed to get solver state: {e}")
-
-
-async def solve_partial_proof(
-    ctx: ChiaCliContext,
-    solver_rpc_port: Optional[int],
-    partial_proof: str,
-) -> None:
-    """Solve a partial proof via RPC."""
-    try:
-        async with get_any_service_client(SolverRpcClient, ctx.root_path, solver_rpc_port) as (client, _):
-            response = await client.solve(partial_proof)
-            print(json.dumps(response, indent=2))
-    except Exception as e:
-        print(f"Failed to solve partial proof: {e}")

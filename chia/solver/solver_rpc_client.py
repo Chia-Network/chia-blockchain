@@ -14,7 +14,3 @@ class SolverRpcClient(RpcClient):
     async def get_state(self) -> dict[str, Any]:
         """Get solver state."""
         return await self.fetch("get_state", {})
-
-    async def solve(self, partial_proof: str) -> dict[str, Any]:
-        """Solve a partial proof."""
-        return await self.fetch("solve", {"partial_proof": partial_proof})

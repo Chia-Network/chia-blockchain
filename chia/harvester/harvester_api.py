@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
@@ -64,6 +65,47 @@ class HarvesterAPI:
             challenge.challenge_hash,
             challenge.sp_hash,
         )
+
+    async def _handle_v1_responses(
+        self,
+        awaitables: Sequence[Awaitable[tuple[Path, list[harvester_protocol.NewProofOfSpace]]]],
+        start_time: float,
+        peer: WSChiaConnection,
+    ) -> int:
+        proofs_found = 0
+        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
+            filename, sublist = await filename_sublist_awaitable
+            time_taken = time.monotonic() - start_time
+            if time_taken > 8:
+                self.harvester.log.warning(
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
+                    f" to minimize risk of losing rewards."
+                )
+            for response in sublist:
+                proofs_found += 1
+                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
+                await peer.send_message(msg)
+        return proofs_found
+
+    async def _handle_v2_responses(
+        self, v2_awaitables: Sequence[Awaitable[Optional[PartialProofsData]]], start_time: float, peer: WSChiaConnection
+    ) -> int:
+        partial_proofs_found = 0
+        for quality_awaitable in asyncio.as_completed(v2_awaitables):
+            partial_proofs_data = await quality_awaitable
+            if partial_proofs_data is None:
+                continue
+            time_taken = time.monotonic() - start_time
+            if time_taken > 8:
+                self.harvester.log.warning(
+                    f"Looking up partial proofs on {partial_proofs_data.plot_identifier}"
+                    f"took: {time_taken}. This should be below 8 seconds"
+                    f"to minimize risk of losing rewards."
+                )
+            partial_proofs_found += len(partial_proofs_data.partial_proofs)
+            msg = make_msg(ProtocolMessageTypes.partial_proofs, partial_proofs_data)
+            await peer.send_message(msg)
+        return partial_proofs_found
 
     @metadata.request(peer_required=True)
     async def harvester_handshake(
@@ -139,7 +181,7 @@ class HarvesterAPI:
                             break
 
                 # Filter qualities that pass the required_iters check (same as V1 flow)
-                good_qualities = []
+                good_partial_proofs = []
                 sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
 
                 for partial_proof in partial_proofs:
@@ -147,7 +189,7 @@ class HarvesterAPI:
                     required_iters: uint64 = calculate_iterations_quality(
                         self.harvester.constants,
                         quality_str,
-                        plot_info.prover.get_size(),  # TODO: todo_v2_plots update for V2
+                        plot_info.prover.get_size(),
                         difficulty,
                         new_challenge.sp_hash,
                         sub_slot_iters,
@@ -155,9 +197,9 @@ class HarvesterAPI:
                     )
 
                     if required_iters < sp_interval_iters:
-                        good_qualities.append(partial_proof)
+                        good_partial_proofs.append(partial_proof)
 
-                if len(good_qualities) == 0:
+                if len(good_partial_proofs) == 0:
                     return None
 
                 size = plot_info.prover.get_size().size_v2
@@ -165,11 +207,10 @@ class HarvesterAPI:
                 return PartialProofsData(
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
-                    good_qualities[0].hex() + str(filename.resolve()),
-                    good_qualities,
+                    good_partial_proofs[0].hex() + str(filename.resolve()),
+                    good_partial_proofs,
                     new_challenge.signage_point_index,
                     size,
-                    difficulty,
                     plot_info.pool_public_key,
                     plot_info.pool_contract_puzzle_hash,
                     plot_info.plot_public_key,
@@ -354,30 +395,22 @@ class HarvesterAPI:
         total_proofs_found = 0
         total_v2_partial_proofs_found = 0
 
-        # Process V1 plot responses (existing flow)
-        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
-            filename, sublist = await filename_sublist_awaitable
-            time_taken = time.monotonic() - start
-            if time_taken > 8:
-                self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
-                    f" to minimize risk of losing rewards."
-                )
-            else:
-                pass
-                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
-            for response in sublist:
-                total_proofs_found += 1
-                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
-                await peer.send_message(msg)
+        # run both concurrently
+        tasks = []
+        if awaitables:
+            tasks.append(self._handle_v1_responses(awaitables, start, peer))
+        if v2_awaitables:
+            tasks.append(self._handle_v2_responses(v2_awaitables, start, peer))
 
-        # Process V2 plot quality collections (new flow)
-        for quality_awaitable in asyncio.as_completed(v2_awaitables):
-            partial_proofs_data = await quality_awaitable
-            if partial_proofs_data is not None:
-                total_v2_partial_proofs_found += len(partial_proofs_data.partial_proofs)
-                msg = make_msg(ProtocolMessageTypes.partial_proofs, partial_proofs_data)
-                await peer.send_message(msg)
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            if len(results) == 2:
+                total_proofs_found, total_v2_partial_proofs_found = results
+            elif len(results) == 1:
+                if awaitables:
+                    total_proofs_found = results[0]
+                else:
+                    total_v2_partial_proofs_found = results[0]
 
         now = uint64(time.time())
 
