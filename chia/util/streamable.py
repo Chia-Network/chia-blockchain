@@ -459,7 +459,7 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
     if is_type_Enum(f_type):
         if not hasattr(f_type, "_streamable_proxy"):
             raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
-        return function_to_parse_one_item(f_type._streamable_proxy)
+        return lambda f: f_type(function_to_parse_one_item(f_type._streamable_proxy)(f))
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")
