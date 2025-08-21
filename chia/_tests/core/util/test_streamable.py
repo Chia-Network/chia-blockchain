@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field, fields
+from enum import Enum
 from typing import Any, Callable, ClassVar, Optional, get_type_hints
 
 import pytest
@@ -27,6 +28,7 @@ from chia.util.streamable import (
     function_to_parse_one_item,
     function_to_stream_one_item,
     is_type_Dict,
+    is_type_Enum,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -39,6 +41,7 @@ from chia.util.streamable import (
     parse_uint32,
     recurse_jsonify,
     streamable,
+    streamable_enum,
     streamable_from_dict,
     write_uint32,
 )
@@ -376,6 +379,25 @@ def test_basic_optional() -> None:
     assert not is_type_SpecificOptional(list[int])
 
 
+class BasicEnum(Enum):
+    A = 1
+    B = 2
+
+
+def test_basic_enum() -> None:
+    assert is_type_Enum(BasicEnum)
+    assert not is_type_Enum(list[int])
+
+
+def test_enum_needs_proxy() -> None:
+    with pytest.raises(UnsupportedType):
+
+        @streamable
+        @dataclass(frozen=True)
+        class EnumStreamable(Streamable):
+            enum: BasicEnum
+
+
 @streamable
 @dataclass(frozen=True)
 class PostInitTestClassBasic(Streamable):
@@ -423,6 +445,25 @@ class PostInitTestClassDict(Streamable):
     b: dict[bytes32, dict[uint8, str]]
 
 
+@streamable_enum(uint32)
+class IntEnum(Enum):
+    A = 1
+    B = 2
+
+
+@streamable_enum(str)
+class StrEnum(Enum):
+    A = "foo"
+    B = "bar"
+
+
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassEnum(Streamable):
+    a: IntEnum
+    b: StrEnum
+
+
 @pytest.mark.parametrize(
     "test_class, args",
     [
@@ -433,6 +474,7 @@ class PostInitTestClassDict(Streamable):
         (PostInitTestClassTuple, ((1, "test"), ((200, "test_2"), b"\xba" * 32))),
         (PostInitTestClassDict, ({1: "bar"}, {bytes32.zeros: {1: "bar"}})),
         (PostInitTestClassOptional, (12, None, 13, None)),
+        (PostInitTestClassEnum, (IntEnum.A, StrEnum.B)),
     ],
 )
 def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
@@ -453,6 +495,8 @@ def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
             return validate_item_type(key_type, next(iter(item.keys()))) and validate_item_type(
                 value_type, next(iter(item.values()))
             )
+        if is_type_Enum(type_in):
+            return validate_item_type(type_in._streamable_proxy, item)
         return isinstance(item, type_in)
 
     test_object = test_class(*args)
@@ -497,6 +541,8 @@ def test_basic() -> None:
         f: Optional[uint32]
         g: tuple[uint32, str, bytes]
         h: dict[uint32, str]
+        i: IntEnum
+        j: StrEnum
 
     # we want to test invalid here, hence the ignore.
     a = TestClass(
@@ -508,6 +554,8 @@ def test_basic() -> None:
         None,
         (uint32(383), "hello", b"goodbye"),
         {uint32(1): "foo"},
+        IntEnum.A,
+        StrEnum.B,
     )
 
     b: bytes = bytes(a)
@@ -623,6 +671,17 @@ def test_ambiguous_deserialization_int() -> None:
         TestClassUint.from_bytes(b"\x00\x00")
 
 
+def test_ambiguous_deserialization_int_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassIntEnum(Streamable):
+        a: IntEnum
+
+    # Does not have the required uint size
+    with pytest.raises(ValueError):
+        TestClassIntEnum.from_bytes(b"\x00\x00")
+
+
 def test_ambiguous_deserialization_list() -> None:
     @streamable
     @dataclass(frozen=True)
@@ -650,6 +709,17 @@ def test_ambiguous_deserialization_str() -> None:
     @dataclass(frozen=True)
     class TestClassStr(Streamable):
         a: str
+
+    # Does not have the required str size
+    with pytest.raises(AssertionError):
+        TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
+
+
+def test_ambiguous_deserialization_str_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassStr(Streamable):
+        a: StrEnum
 
     # Does not have the required str size
     with pytest.raises(AssertionError):
