@@ -160,10 +160,6 @@ def convert_dict(
     return {key_converter(key): value_converter(value) for key, value in mapping.items()}
 
 
-def convert_enum(convert_func: ConvertFunctionType, enum: Enum) -> Any:
-    return convert_func(enum.value)
-
-
 def convert_hex_string(item: str) -> bytes:
     if not isinstance(item, str):
         raise InvalidTypeError(str, type(item))
@@ -236,11 +232,6 @@ def function_to_convert_one_item(
         key_converter = function_to_convert_one_item(inner_types[0], json_parser)
         value_converter = function_to_convert_one_item(inner_types[1], json_parser)
         return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
-    elif is_type_Enum(f_type):
-        if not hasattr(f_type, "_streamable_proxy"):
-            raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
-        convert_func = function_to_convert_one_item(f_type._streamable_proxy, json_parser)
-        return lambda enum: convert_enum(convert_func, enum)  # type: ignore[arg-type]
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
             json_parser = f_type.from_json_dict
@@ -290,11 +281,6 @@ def function_to_post_init_process_one_item(f_type: type[object]) -> ConvertFunct
         key_converter = function_to_post_init_process_one_item(inner_types[0])
         value_converter = function_to_post_init_process_one_item(inner_types[1])
         return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
-    if is_type_Enum(f_type):
-        if not hasattr(f_type, "_streamable_proxy"):
-            raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
-        process_inner_func = function_to_post_init_process_one_item(f_type._streamable_proxy)
-        return lambda item: convert_enum(f_type._streamable_proxy, item)  # type: ignore[arg-type]
     return lambda item: post_init_process_item(f_type, item)
 
 
@@ -553,7 +539,10 @@ def function_to_stream_one_item(f_type: type[Any]) -> StreamFunctionType:
     elif is_type_Enum(f_type):
         if not hasattr(f_type, "_streamable_proxy"):
             raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
-        return function_to_stream_one_item(f_type._streamable_proxy)
+        return lambda item, f: function_to_stream_one_item(f_type._streamable_proxy)(
+            f_type._streamable_proxy(item.value),  # type: ignore[attr-defined]
+            f,
+        )
     elif f_type is str:
         return stream_str
     elif f_type is bool:

@@ -496,7 +496,7 @@ def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
                 value_type, next(iter(item.values()))
             )
         if is_type_Enum(type_in):
-            return validate_item_type(type_in._streamable_proxy, item)
+            return validate_item_type(type_in._streamable_proxy, type_in._streamable_proxy(item.value))  # type: ignore[attr-defined]
         return isinstance(item, type_in)
 
     test_object = test_class(*args)
