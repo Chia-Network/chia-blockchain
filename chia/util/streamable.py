@@ -8,7 +8,7 @@ import os
 import pprint
 import traceback
 from collections.abc import Collection
-from enum import Enum, EnumType
+from enum import Enum, EnumMeta
 from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, TypeVar, Union, get_type_hints
 
 from chia_rs.sized_bytes import bytes32
@@ -131,7 +131,7 @@ def is_type_Dict(f_type: object) -> bool:
 
 
 def is_type_Enum(f_type: object) -> bool:
-    return type(f_type) is EnumType
+    return type(f_type) is EnumMeta
 
 
 def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
@@ -727,7 +727,7 @@ class UInt64Range(Streamable):
     stop: uint64 = uint64.MAXIMUM
 
 
-_T_Enum = TypeVar("_T_Enum", bound=EnumType)
+_T_Enum = TypeVar("_T_Enum", bound=EnumMeta)
 
 
 def streamable_enum(proxy: type[Any]) -> Callable[[_T_Enum], _T_Enum]:
