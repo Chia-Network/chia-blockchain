@@ -347,7 +347,7 @@ class WalletTestFramework:
         1) Ensures all pending transactions have entered the mempool
         2) Checks that all balances have changed properly prior to a block being farmed
         3) Farms a block (to no one in particular)
-        4) Chacks that all balances have changed properly after the block was farmed
+        4) Checks that all balances have changed properly after the block was farmed
         5) Checks that all pending transactions that were gathered in step 1 are now confirmed
         6) Checks that if `reuse_puzhash` was set, no new derivations were created
         7) Ensures the wallet is in a synced state before progressing to the rest of the test
