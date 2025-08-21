@@ -58,9 +58,10 @@ class FullNodeApiStub:
     @metadata.request(peer_required=True, bytes_required=True)
     async def respond_transaction(
         self,
-        response: full_node_protocol.RespondTransaction,
+        tx: full_node_protocol.RespondTransaction,
         peer: WSChiaConnection,
         tx_bytes: bytes = b"",
+        test: bool = False,
     ) -> None:
         raise NotImplementedError("Stub method should not be called")
 
