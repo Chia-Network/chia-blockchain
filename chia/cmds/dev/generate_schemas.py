@@ -86,7 +86,7 @@ def generate_service_peer_schemas_cmd(
             schema_content = output.getvalue()
 
             # Write to file
-            with open(output_file, "w") as f:
+            with open(output_file, "w", newline="\n") as f:
                 f.write(schema_content)
 
             generated_files.append(output_file)
