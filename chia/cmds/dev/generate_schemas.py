@@ -53,10 +53,16 @@ SourceApiRegistry: dict[NodeType, type[ApiProtocol]] = {
     default=True,
     help="Run ruff format and check --fix on generated files",
 )
+@click.option(
+    "--generate-registry/--no-registry",
+    default=True,
+    help="Generate ApiProtocolRegistry file",
+)
 def generate_service_peer_schemas_cmd(
     output_dir: Path,
     service: tuple[str, ...],
     format_output: bool,
+    generate_registry: bool,
 ) -> None:
     """Generate service peer API schemas from registered API protocols."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -95,6 +101,12 @@ def generate_service_peer_schemas_cmd(
         except Exception as e:
             click.echo(f"Error generating schema for {node_type.name}: {e}", err=True)
             continue
+
+    # Generate ApiProtocolRegistry if requested
+    if generate_registry:
+        registry_file = _generate_registry_file(output_dir, selected_services)
+        if registry_file:
+            generated_files.append(registry_file)
 
     # Format generated files if requested
     if format_output and generated_files:
@@ -142,3 +154,51 @@ def _format_files(files: list[Path]) -> None:
 
         except Exception as e:
             click.echo(f"  ✗ Failed to run ruff check on {file_path.name}: {e}", err=True)
+
+
+def _generate_registry_file(output_dir: Path, selected_services: list[NodeType]) -> Path | None:
+    """Generate the ApiProtocolRegistry __init__.py file."""
+    registry_file = output_dir / "__init__.py"
+
+    try:
+        # Generate imports for each service
+        imports = []
+        registry_entries = []
+
+        for node_type in sorted(selected_services, key=lambda x: x.name):
+            schema_module = f"{node_type.name.lower()}_api_schema"
+
+            # Handle special cases for class names
+            if node_type == NodeType.WALLET:
+                schema_class = "WalletNodeApiSchema"
+            elif node_type == NodeType.FULL_NODE:
+                schema_class = "FullNodeApiSchema"
+            else:
+                # Convert FARMER -> FarmerApiSchema, HARVESTER -> HarvesterApiSchema, etc.
+                schema_class = f"{node_type.name.title()}ApiSchema"
+
+            imports.append(f"from chia.apis.{schema_module} import {schema_class}")
+            registry_entries.append(f"    NodeType.{node_type.name}: {schema_class},")
+
+        # Generate the complete file content
+        content = f"""from __future__ import annotations
+
+{chr(10).join(imports)}
+from chia.protocols.outbound_message import NodeType
+from chia.server.api_protocol import ApiProtocolSchema
+
+ApiProtocolRegistry: dict[NodeType, type[ApiProtocolSchema]] = {{
+{chr(10).join(registry_entries)}
+}}
+"""
+
+        # Write to file
+        with open(registry_file, "w", encoding="utf-8", newline="\n") as f:
+            f.write(content)
+
+        click.echo(f"Generated {registry_file} ({len(content)} characters)")
+        return registry_file
+
+    except Exception as e:
+        click.echo(f"Error generating registry file: {e}", err=True)
+        return None

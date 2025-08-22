@@ -10,10 +10,10 @@ from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiProtocolSchema
 
 ApiProtocolRegistry: dict[NodeType, type[ApiProtocolSchema]] = {
+    NodeType.FARMER: FarmerApiSchema,
     NodeType.FULL_NODE: FullNodeApiSchema,
-    NodeType.WALLET: WalletNodeApiSchema,
+    NodeType.HARVESTER: HarvesterApiSchema,
     NodeType.INTRODUCER: IntroducerApiSchema,
     NodeType.TIMELORD: TimelordApiSchema,
-    NodeType.FARMER: FarmerApiSchema,
-    NodeType.HARVESTER: HarvesterApiSchema,
+    NodeType.WALLET: WalletNodeApiSchema,
 }
