@@ -517,10 +517,12 @@ class FarmerAPI:
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for quality {partial_proof.hex()[:10]}...")
+                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.hex()[:10]}...")
 
             except Exception as e:
-                self.farmer.log.error(f"Failed to call solver service for quality {partial_proof.hex()[:10]}...: {e}")
+                self.farmer.log.error(
+                    f"Failed to call solver service for partial proof {partial_proof.hex()[:10]}...: {e}"
+                )
                 # clean up pending request
                 if partial_proof in self.farmer.pending_solver_requests:
                     del self.farmer.pending_solver_requests[partial_proof]
@@ -533,22 +535,24 @@ class FarmerAPI:
         """
         self.farmer.log.debug(f"Received solution response: {len(response.proof)} bytes from {peer.peer_node_id}")
 
-        # find the matching pending request using quality_string
+        # find the matching pending request using partial_proof
 
         if response.partial_proof not in self.farmer.pending_solver_requests:
-            self.farmer.log.warning(f"Received solver response for unknown quality {response.partial_proof.hex()}")
+            self.farmer.log.warning(
+                f"Received solver response for unknown partial proof {response.partial_proof.hex()}"
+            )
             return
 
         # get the original request data
         request_data = self.farmer.pending_solver_requests.pop(response.partial_proof)
         proof_data = request_data["proof_data"]
         original_peer = request_data["peer"]
-        quality = response.partial_proof
+        partial_proof = response.partial_proof
 
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(f"Received empty proof from solver for proof {quality.hex()}...")
+            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.hex()}...")
             return
 
         sp_challenge_hash = proof_data.challenge_hash
