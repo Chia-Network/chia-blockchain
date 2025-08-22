@@ -33,6 +33,12 @@ def visit_farmer_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(request_signed_values, "request_signed_values")
     visitor(farming_info, "farming_info")
     visitor(signed_values, "signed_values")
+    visitor(partial_proof, "partial_proof")
+
+
+def visit_solver_protocol(visitor: Callable[[Any, str], None]) -> None:
+    visitor(solver_info, "solver_info")
+    visitor(solver_response, "solver_response")
 
 
 def visit_full_node(visitor: Callable[[Any, str], None]) -> None:
@@ -170,6 +176,7 @@ def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:
     visit_pool_protocol(visitor)
     visit_timelord_protocol(visitor)
     visit_shared_protocol(visitor)
+    visit_solver_protocol(visitor)
 
 
 def get_protocol_bytes() -> bytes:

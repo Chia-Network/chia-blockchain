@@ -28,7 +28,8 @@ class ProverProtocol(Protocol):
     def __bytes__(self) -> bytes: ...
     def get_id(self) -> bytes32: ...
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]: ...
-    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes: ...
+    def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]: ...
+    def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes: ...
 
     @classmethod
     def from_bytes(cls, data: bytes) -> ProverProtocol: ...
@@ -55,8 +56,7 @@ class V2Prover:
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_compression_level(self) -> uint8:
-        # TODO: todo_v2_plots implement compression level retrieval
-        raise NotImplementedError("V2 plot format is not yet implemented")
+        raise AssertionError("get_compression_level() should never be called on V2 plots")
 
     def get_version(self) -> PlotVersion:
         return PlotVersion.V2
@@ -69,13 +69,16 @@ class V2Prover:
         # TODO: Extract plot ID from V2 plot file
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_qualities_for_challenge(self, challenge: bytes) -> list[bytes32]:
+    def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
         # TODO: todo_v2_plots Implement plot quality lookup
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
-        # TODO: todo_v2_plots Implement plot proof generation
+    def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]:
+        # TODO: todo_v2_plots Implement quality chain lookup (16 * k bits blobs)
         raise NotImplementedError("V2 plot format is not yet implemented")
+
+    def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
+        raise AssertionError("V2 plot format require solver to get full proof")
 
     @classmethod
     def from_bytes(cls, data: bytes) -> V2Prover:
@@ -116,7 +119,10 @@ class V1Prover:
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
         return [bytes32(quality) for quality in self._disk_prover.get_qualities_for_challenge(challenge)]
 
-    def get_full_proof(self, challenge: bytes, index: int, parallel_read: bool = True) -> bytes:
+    def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]:
+        raise AssertionError("V1 does not implement quality chains, only qualities")
+
+    def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
         return bytes(self._disk_prover.get_full_proof(challenge, index, parallel_read))
 
     @classmethod
