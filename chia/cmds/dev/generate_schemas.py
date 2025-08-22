@@ -131,12 +131,12 @@ def _format_files(files: list[Path]) -> None:
                 [python_exe, "-m", "ruff", "format", str(file_path)], check=False, capture_output=True, text=True
             )
             if result.returncode == 0:
-                click.echo(f"  ✓ Formatted {file_path.name}")
+                click.echo(f"  [OK] Formatted {file_path.name}")
             else:
-                click.echo(f"  ✗ ruff format failed for {file_path.name}: {result.stderr}", err=True)
+                click.echo(f"  [FAIL] ruff format failed for {file_path.name}: {result.stderr}", err=True)
 
         except Exception as e:
-            click.echo(f"  ✗ Failed to format {file_path.name}: {e}", err=True)
+            click.echo(f"  [FAIL] Failed to format {file_path.name}: {e}", err=True)
             continue
 
         try:
@@ -148,12 +148,12 @@ def _format_files(files: list[Path]) -> None:
                 text=True,
             )
             if result.returncode == 0:
-                click.echo(f"  ✓ No ruff check issues for {file_path.name}")
+                click.echo(f"  [OK] No ruff check issues for {file_path.name}")
             else:
-                click.echo(f"  ✓ Fixed ruff check issues for {file_path.name}")
+                click.echo(f"  [OK] Fixed ruff check issues for {file_path.name}")
 
         except Exception as e:
-            click.echo(f"  ✗ Failed to run ruff check on {file_path.name}: {e}", err=True)
+            click.echo(f"  [FAIL] Failed to run ruff check on {file_path.name}: {e}", err=True)
 
 
 def _generate_registry_file(output_dir: Path, selected_services: list[NodeType]) -> Path | None:
