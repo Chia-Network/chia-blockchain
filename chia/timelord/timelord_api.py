@@ -121,7 +121,9 @@ class TimelordAPI:
         return False
 
     @metadata.request()
-    async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
+    async def new_unfinished_block_timelord(
+        self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord
+    ) -> None:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import logging
+import re
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from logging import Logger
@@ -72,6 +74,7 @@ class ApiMetadata:
             non_optional_reply_types = reply_types
 
         def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
+            # print(inspect.getsource(f))
             @functools.wraps(f)
             def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
                 arg: S
@@ -114,3 +117,127 @@ class ApiMetadata:
             return wrapper
 
         return inner
+
+    def create_schema(self, api: type[ApiProtocol]) -> None:
+        imports = set()
+        imports.add("from __future__ import annotations")
+        imports.add("from chia.server.api_protocol import ApiMetadata")
+
+        # Track what's actually referenced in the generated code
+        used_types = set()
+        method_lines = []
+
+        # First pass: collect method signatures and track usage
+        for request in self.message_type_to_request.values():
+            type_hints = get_type_hints(request.method)
+            source = inspect.getsourcelines(request.method)[0]
+
+            # Collect the method signature lines
+            method_source = []
+            for line in source:
+                method_source.append(line)
+                if line.rstrip().endswith(":"):
+                    break
+            method_lines.extend(method_source)
+
+            # Check return type for Optional and Message
+            return_hint = type_hints.get("return")
+            if return_hint:
+                try:
+                    if return_hint.__origin__ is Union:
+                        args = return_hint.__args__
+                        if type(None) in args:
+                            used_types.add("Optional")
+                        for arg in args:
+                            try:
+                                if arg.__name__ == "Message":
+                                    used_types.add("Message")
+                            except AttributeError:
+                                pass
+                except AttributeError:
+                    try:
+                        if return_hint.__name__ == "Message":
+                            used_types.add("Message")
+                    except AttributeError:
+                        pass
+
+            # Check for types used in parameters that appear in the signature
+            for param_name, hint in type_hints.items():
+                if param_name not in {"self", "return"}:
+                    try:
+                        module = hint.__module__
+                        name = hint.__name__
+                        if module and module.startswith("chia."):
+                            # Check if the type name actually appears directly in the method signature
+                            # (not as part of harvester_protocol.ClassName)
+                            signature_text = "".join(method_source)
+                            # Only import if used directly, not through module qualification
+                            if f": {name}" in signature_text or f"-> {name}" in signature_text:
+                                used_types.add(name)
+                                imports.add(f"from {module} import {name}")
+                    except AttributeError:
+                        # Skip types that don't have the expected attributes
+                        pass
+
+            # Check decorators for ProtocolMessageTypes usage
+            decorator_line = source[0].strip()
+            if "ProtocolMessageTypes." in decorator_line:
+                used_types.add("ProtocolMessageTypes")
+                imports.add("from chia.protocols.protocol_message_types import ProtocolMessageTypes")
+
+            # Check for protocol module usage in the signature
+            for line in method_source:
+                # Look for any protocol module usage (e.g., farmer_protocol.*, full_node_protocol.*, etc.)
+                protocol_matches = re.findall(r"(\w+_protocol)\.", line)
+                for protocol_module in protocol_matches:
+                    imports.add(f"from chia.protocols import {protocol_module}")
+
+                # Also check for types that might be from protocol modules but used directly
+                # Look for CamelCase types that aren't already imported
+                type_matches = re.findall(r": ([A-Z][a-zA-Z]+)", line)
+                for type_name in type_matches:
+                    if type_name not in used_types and type_name not in {"Optional", "Message", "WSChiaConnection"}:
+                        # This might be a direct import we missed
+                        # Try to find it in the type hints
+                        for param_name, hint in type_hints.items():
+                            try:
+                                name = hint.__name__
+                                module = hint.__module__
+                                if name == type_name and module:
+                                    # Import from chia.protocols.*
+                                    if module.startswith("chia.protocols."):
+                                        imports.add(f"from {module} import {name}")
+                                        used_types.add(name)
+                                    # Special case: chia_rs types show up as builtins but are actually from chia_rs
+                                    elif module == "builtins" and type_name in {"RespondToPhUpdates"}:
+                                        imports.add(f"from chia_rs import {name}")
+                                        used_types.add(name)
+                            except AttributeError:
+                                # Skip types that don't have the expected attributes
+                                pass
+
+        # Add imports only for types that are actually used
+        if "Optional" in used_types:
+            imports.add("from typing import Optional")
+        if "Message" in used_types:
+            imports.add("from chia.protocols.outbound_message import Message")
+
+        # Print imports
+        for import_line in sorted(imports):
+            print(import_line)
+        print()
+
+        # Use *ApiSchema naming convention for generated schemas
+        schema_class_name = api.__name__.replace("API", "ApiSchema")
+        print(f"class {schema_class_name}:")
+        print("    metadata = ApiMetadata()")
+        print()
+
+        for request in self.message_type_to_request.values():
+            source = inspect.getsourcelines(request.method)[0]
+            for line in source:
+                print(line, end="")
+                if line.rstrip().endswith(":"):
+                    break
+            print("        ...")
+            print()
