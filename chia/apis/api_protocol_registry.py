@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from chia.apis.farmer_stub import FarmerApiStub
+from chia.apis.full_node_stub import FullNodeApiStub
 from chia.apis.harvester_stub import HarvesterApiStub
-from chia.farmer.farmer_api import FarmerAPI
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.introducer.introducer_api import IntroducerAPI
+from chia.apis.introducer_stub import IntroducerApiStub
+from chia.apis.timelord_stub import TimelordApiStub
+from chia.apis.wallet_stub import WalletNodeApiStub
 from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiProtocol
 from chia.solver.solver_api import SolverAPI
@@ -11,11 +13,11 @@ from chia.timelord.timelord_api import TimelordAPI
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
 ApiProtocolRegistry: dict[NodeType, type[ApiProtocol]] = {
-    NodeType.FULL_NODE: FullNodeAPI,
-    NodeType.WALLET: WalletNodeAPI,
-    NodeType.INTRODUCER: IntroducerAPI,
-    NodeType.TIMELORD: TimelordAPI,
-    NodeType.FARMER: FarmerAPI,
+    NodeType.FULL_NODE: FullNodeApiStub,
+    NodeType.WALLET: WalletNodeApiStub,
+    NodeType.INTRODUCER: IntroducerApiStub,
+    NodeType.TIMELORD: TimelordApiStub,
+    NodeType.FARMER: FarmerApiStub,
     NodeType.HARVESTER: HarvesterApiStub,
     NodeType.SOLVER: SolverAPI,
 }
