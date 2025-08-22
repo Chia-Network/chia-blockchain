@@ -8,6 +8,8 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from chiapos import DiskProver
 
+from chia.types.blockchain_format.proof_of_space import quality_for_partial_proof
+
 if TYPE_CHECKING:
     from chiapos import DiskProver
 
@@ -27,8 +29,13 @@ class ProverProtocol(Protocol):
     def get_version(self) -> PlotVersion: ...
     def __bytes__(self) -> bytes: ...
     def get_id(self) -> bytes32: ...
-    def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]: ...
-    def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]: ...
+    def get_qualities_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes32]: ...
+
+    # this is only supported by v2 plots
+    def get_partial_proofs_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes]: ...
+
+    # this is only supported by v1 plots. v2 plots first get the partial proof
+    # and turn it into a full proof by calling solve_proof(), or pass it to the solver service
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes: ...
 
     @classmethod
@@ -56,7 +63,8 @@ class V2Prover:
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_compression_level(self) -> uint8:
-        raise AssertionError("get_compression_level() should never be called on V2 plots")
+        # v2 plots are never compressed
+        return uint8(0)
 
     def get_version(self) -> PlotVersion:
         return PlotVersion.V2
@@ -69,13 +77,15 @@ class V2Prover:
         # TODO: Extract plot ID from V2 plot file
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
+    def get_partial_proofs_for_challenge(self, challenge: bytes, plot_strength: uint8) -> list[bytes]:
         # TODO: todo_v2_plots Implement plot quality lookup
         raise NotImplementedError("V2 plot format is not yet implemented")
 
-    def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]:
-        # TODO: todo_v2_plots Implement quality chain lookup (16 * k bits blobs)
-        raise NotImplementedError("V2 plot format is not yet implemented")
+    def get_qualities_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes32]:
+        return [
+            quality_for_partial_proof(partial, challenge)
+            for partial in self.get_partial_proofs_for_challenge(challenge, plot_strength)
+        ]
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
         raise AssertionError("V2 plot format require solver to get full proof")
@@ -116,11 +126,11 @@ class V1Prover:
     def get_id(self) -> bytes32:
         return bytes32(self._disk_prover.get_id())
 
-    def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
-        return [bytes32(quality) for quality in self._disk_prover.get_qualities_for_challenge(challenge)]
+    def get_partial_proofs_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes]:
+        raise AssertionError("V1 plot format doesn't use partial proofs")
 
-    def get_partial_proofs_for_challenge(self, challenge: bytes32) -> list[bytes]:
-        raise AssertionError("V1 does not implement quality chains, only qualities")
+    def get_qualities_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes32]:
+        return [bytes32(quality) for quality in self._disk_prover.get_qualities_for_challenge(challenge)]
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
         return bytes(self._disk_prover.get_full_proof(challenge, index, parallel_read))
