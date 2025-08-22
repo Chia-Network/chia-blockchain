@@ -8,9 +8,24 @@ from pathlib import Path
 
 import click
 
-import chia.apis
-from chia.apis import ApiProtocolRegistry
+from chia.farmer.farmer_api import FarmerAPI
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.harvester.harvester_api import HarvesterAPI
+from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.outbound_message import NodeType
+from chia.server.api_protocol import ApiProtocol
+from chia.timelord.timelord_api import TimelordAPI
+from chia.wallet.wallet_node_api import WalletNodeAPI
+
+# Registry of original implementation APIs for schema generation
+SourceApiRegistry: dict[NodeType, type[ApiProtocol]] = {
+    NodeType.FULL_NODE: FullNodeAPI,
+    NodeType.WALLET: WalletNodeAPI,
+    NodeType.INTRODUCER: IntroducerAPI,
+    NodeType.TIMELORD: TimelordAPI,
+    NodeType.FARMER: FarmerAPI,
+    NodeType.HARVESTER: HarvesterAPI,
+}
 
 
 @click.command("generate-service-peer-schemas")
@@ -18,7 +33,7 @@ from chia.protocols.outbound_message import NodeType
     "--output-dir",
     "-o",
     type=click.Path(exists=False, path_type=Path),
-    default=Path(chia.apis.__file__).parent,
+    default=lambda: Path(__file__).parent.parent.parent / "apis",
     help="Output directory for generated schema files",
 )
 @click.option(
@@ -46,16 +61,16 @@ def generate_service_peer_schemas_cmd(
     if service:
         selected_services = [NodeType[name.upper()] for name in service]
     else:
-        selected_services = list(ApiProtocolRegistry.keys())
+        selected_services = list(SourceApiRegistry.keys())
 
     generated_files = []
 
     for node_type in selected_services:
-        if node_type not in ApiProtocolRegistry:
+        if node_type not in SourceApiRegistry:
             click.echo(f"Warning: No API registered for {node_type.name}", err=True)
             continue
 
-        api_class = ApiProtocolRegistry[node_type]
+        api_class = SourceApiRegistry[node_type]
         output_file = output_dir / f"{node_type.name.lower()}_api_schema.py"
 
         # Generate schema content
