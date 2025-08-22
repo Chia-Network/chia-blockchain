@@ -8,6 +8,7 @@ from pathlib import Path
 
 import click
 
+import chia.apis
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester_api import HarvesterAPI
@@ -33,7 +34,7 @@ SourceApiRegistry: dict[NodeType, type[ApiProtocol]] = {
     "--output-dir",
     "-o",
     type=click.Path(exists=False, path_type=Path),
-    default=lambda: Path(__file__).parent.parent.parent / "apis",
+    default=Path(chia.apis.__file__).parent,
     help="Output directory for generated schema files",
 )
 @click.option(
