@@ -12,6 +12,7 @@ from chia_rs import G1Element
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     PlotInfo,
@@ -173,7 +174,7 @@ def check_plots(
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
                     quality_start_time = round(monotonic() * 1000)
-                    qualities = pr.get_qualities_for_challenge(challenge)
+                    qualities = pr.get_qualities_for_challenge(challenge, DEFAULT_CONSTANTS.PLOT_DIFFICULTY_INITIAL)
                     quality_spent_time = round(monotonic() * 1000) - quality_start_time
                     if quality_spent_time > 8000:
                         log.warning(
