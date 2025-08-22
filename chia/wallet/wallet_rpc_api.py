@@ -183,6 +183,8 @@ from chia.wallet.wallet_request_types import (
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSpendableCoins,
+    GetSpendableCoinsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -1763,43 +1765,26 @@ class WalletRpcApi:
 
         return SelectCoinsResponse(coins=list(selected_coins))
 
-    async def get_spendable_coins(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
-        wallet_id = uint32(request["wallet_id"])
-        min_coin_amount = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        excluded_coin_amounts: Optional[list[uint64]] = request.get("excluded_coin_amounts")
-        if excluded_coin_amounts is not None:
-            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
-        else:
-            excluded_coin_amounts = []
-        excluded_coins_input: Optional[dict[str, dict[str, Any]]] = request.get("excluded_coins")
-        if excluded_coins_input is not None:
-            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input.values()]
-        else:
-            excluded_coins = []
-        excluded_coin_ids_input: Optional[list[str]] = request.get("excluded_coin_ids")
-        if excluded_coin_ids_input is not None:
-            excluded_coin_ids = [bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids_input]
-        else:
-            excluded_coin_ids = []
         state_mgr = self.service.wallet_state_manager
-        wallet = state_mgr.wallets[wallet_id]
+        wallet = state_mgr.wallets[request.wallet_id]
         async with state_mgr.lock:
-            all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(request.wallet_id)
             if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
                 spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
             else:
-                spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(wallet_id, all_coin_records))
+                spendable_coins = list(
+                    await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records)
+                )
 
             # Now we get the unconfirmed transactions and manually derive the additions and removals.
             unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
-                wallet_id
+                request.wallet_id
             )
             unconfirmed_removal_ids: dict[bytes32, uint64] = {
                 coin.name(): transaction.created_at_time
@@ -1810,7 +1795,7 @@ class WalletRpcApi:
                 coin
                 for transaction in unconfirmed_transactions
                 for coin in transaction.additions
-                if await state_mgr.does_coin_belong_to_wallet(coin, wallet_id)
+                if await state_mgr.does_coin_belong_to_wallet(coin, request.wallet_id)
             ]
             valid_spendable_cr: list[CoinRecord] = []
             unconfirmed_removals: list[CoinRecord] = []
@@ -1820,23 +1805,26 @@ class WalletRpcApi:
             for coin_record in spendable_coins:  # remove all the unconfirmed coins, exclude coins and dust.
                 if coin_record.name() in unconfirmed_removal_ids:
                     continue
-                if coin_record.coin in excluded_coins:
+                if request.excluded_coin_ids is not None and coin_record.coin.name() in request.excluded_coin_ids:
                     continue
-                if coin_record.name() in excluded_coin_ids:
+                if (request.min_coin_amount is not None and coin_record.coin.amount < request.min_coin_amount) or (
+                    request.max_coin_amount is not None and coin_record.coin.amount > request.max_coin_amount
+                ):
                     continue
-                if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
-                    continue
-                if coin_record.coin.amount in excluded_coin_amounts:
+                if (
+                    request.excluded_coin_amounts is not None
+                    and coin_record.coin.amount in request.excluded_coin_amounts
+                ):
                     continue
                 c_r = await state_mgr.get_coin_record_by_wallet_record(coin_record)
                 assert c_r is not None and c_r.coin == coin_record.coin  # this should never happen
                 valid_spendable_cr.append(c_r)
 
-        return {
-            "confirmed_records": [cr.to_json_dict() for cr in valid_spendable_cr],
-            "unconfirmed_removals": [cr.to_json_dict() for cr in unconfirmed_removals],
-            "unconfirmed_additions": [coin.to_json_dict() for coin in unconfirmed_additions],
-        }
+        return GetSpendableCoinsResponse(
+            confirmed_records=valid_spendable_cr,
+            unconfirmed_removals=unconfirmed_removals,
+            unconfirmed_additions=unconfirmed_additions,
+        )
 
     async def get_coin_records_by_names(self, request: dict[str, Any]) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:

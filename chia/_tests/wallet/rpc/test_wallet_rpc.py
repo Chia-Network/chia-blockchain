@@ -124,6 +124,7 @@ from chia.wallet.wallet_request_types import (
     GetNextAddress,
     GetNotifications,
     GetPrivateKey,
+    GetSpendableCoins,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTransaction,
@@ -2392,27 +2393,40 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         assert coin != coin_300[0]
 
     # test get coins
-    all_coins, _, _ = await client_2.get_spendable_coins(
-        wallet_id=1,
-        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
-            excluded_coin_ids=[c.name() for c in excluded_amt_coins_response.coins]
+    spendable_coins_response = await client_2.get_spendable_coins(
+        GetSpendableCoins.from_coin_selection_config(
+            wallet_id=uint32(1),
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+                excluded_coin_ids=[c.name() for c in excluded_amt_coins_response.coins]
+            ),
         ),
     )
-    assert set(excluded_amt_coins_response.coins).intersection({rec.coin for rec in all_coins}) == set()
-    all_coins, _, _ = await client_2.get_spendable_coins(
-        wallet_id=1,
-        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
+    assert (
+        set(excluded_amt_coins_response.coins).intersection(
+            {rec.coin for rec in spendable_coins_response.confirmed_records}
+        )
+        == set()
     )
-    assert len([rec for rec in all_coins if rec.coin.amount == 1000]) == 0
-    all_coins_2, _, _ = await client_2.get_spendable_coins(
-        wallet_id=1,
-        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),
+    spendable_coins_response = await client_2.get_spendable_coins(
+        GetSpendableCoins.from_coin_selection_config(
+            wallet_id=uint32(1),
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
+        )
     )
-    assert all_coins_2[0].coin == coin_300[0]
+    assert len([rec for rec in spendable_coins_response.confirmed_records if rec.coin.amount == 1000]) == 0
+    spendable_coins_response = await client_2.get_spendable_coins(
+        GetSpendableCoins.from_coin_selection_config(
+            wallet_id=uint32(1),
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),
+        )
+    )
+    assert spendable_coins_response.confirmed_records[0].coin == coin_300[0]
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
         await client_2.get_spendable_coins(
-            wallet_id=1,
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[b"a"]),
+            GetSpendableCoins.from_coin_selection_config(
+                wallet_id=uint32(1),
+                coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[b"a"]),
+            )
         )
 
 

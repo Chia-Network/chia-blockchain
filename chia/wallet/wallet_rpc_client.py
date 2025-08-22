@@ -16,7 +16,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     AddKey,
@@ -99,6 +99,8 @@ from chia.wallet.wallet_request_types import (
     GetPrivateKey,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSpendableCoins,
+    GetSpendableCoinsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -413,18 +415,8 @@ class WalletRpcClient(RpcClient):
     async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
         return await self.fetch("get_coin_records", request.to_json_dict())
 
-    async def get_spendable_coins(
-        self, wallet_id: int, coin_selection_config: CoinSelectionConfig
-    ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
-        """
-        We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
-        """
-        request = {"wallet_id": wallet_id, **coin_selection_config.to_json_dict()}
-        response = await self.fetch("get_spendable_coins", request)
-        confirmed_wrs = [CoinRecord.from_json_dict(coin) for coin in response["confirmed_records"]]
-        unconfirmed_removals = [CoinRecord.from_json_dict(coin) for coin in response["unconfirmed_removals"]]
-        unconfirmed_additions = [Coin.from_json_dict(coin) for coin in response["unconfirmed_additions"]]
-        return confirmed_wrs, unconfirmed_removals, unconfirmed_additions
+    async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
+        return GetSpendableCoinsResponse.from_json_dict(await self.fetch("get_spendable_coins", request.to_json_dict()))
 
     async def get_coin_records_by_names(
         self,

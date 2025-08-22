@@ -13,6 +13,7 @@ from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
+from chia.types.coin_record import CoinRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
@@ -512,6 +513,30 @@ class SelectCoins(CoinSelectionConfigLoader):
 @dataclass(frozen=True)
 class SelectCoinsResponse(Streamable):
     coins: list[Coin]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetSpendableCoins(CoinSelectionConfigLoader):
+    wallet_id: uint32 = field(default_factory=default_raise)
+
+    @classmethod
+    def from_coin_selection_config(cls, wallet_id: uint32, coin_selection_config: CoinSelectionConfig) -> Self:
+        return cls(
+            wallet_id=wallet_id,
+            min_coin_amount=coin_selection_config.min_coin_amount,
+            max_coin_amount=coin_selection_config.max_coin_amount,
+            excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
+            excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetSpendableCoinsResponse(Streamable):
+    confirmed_records: list[CoinRecord]
+    unconfirmed_removals: list[CoinRecord]
+    unconfirmed_additions: list[Coin]
 
 
 @streamable

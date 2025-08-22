@@ -18,7 +18,7 @@ from chia.util.config import selected_network_address_prefix
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import CombineCoins, SplitCoins
+from chia.wallet.wallet_request_types import CombineCoins, GetSpendableCoins, SplitCoins
 
 
 async def async_list(
@@ -44,23 +44,28 @@ async def async_list(
     if not (await client_info.client.get_sync_status()).synced:
         print("Wallet not synced. Please wait.")
         return
-    conf_coins, unconfirmed_removals, unconfirmed_additions = await client_info.client.get_spendable_coins(
-        wallet_id=wallet_id,
-        coin_selection_config=CMDCoinSelectionConfigLoader(
-            max_coin_amount=max_coin_amount,
-            min_coin_amount=min_coin_amount,
-            excluded_coin_amounts=list(excluded_amounts),
-            excluded_coin_ids=list(excluded_coin_ids),
-        ).to_coin_selection_config(mojo_per_unit),
+    response = await client_info.client.get_spendable_coins(
+        GetSpendableCoins.from_coin_selection_config(
+            wallet_id=uint32(wallet_id),
+            coin_selection_config=CMDCoinSelectionConfigLoader(
+                max_coin_amount=max_coin_amount,
+                min_coin_amount=min_coin_amount,
+                excluded_coin_amounts=list(excluded_amounts),
+                excluded_coin_ids=list(excluded_coin_ids),
+            ).to_coin_selection_config(mojo_per_unit),
+        )
     )
-    print(f"There are a total of {len(conf_coins) + len(unconfirmed_additions)} coins in wallet {wallet_id}.")
-    print(f"{len(conf_coins)} confirmed coins.")
-    print(f"{len(unconfirmed_additions)} unconfirmed additions.")
-    print(f"{len(unconfirmed_removals)} unconfirmed removals.")
+    print(
+        f"There are a total of {len(response.confirmed_records) + len(response.unconfirmed_additions)}"
+        f" coins in wallet {wallet_id}."
+    )
+    print(f"{len(response.confirmed_records)} confirmed coins.")
+    print(f"{len(response.unconfirmed_additions)} unconfirmed additions.")
+    print(f"{len(response.unconfirmed_removals)} unconfirmed removals.")
     print("Confirmed coins:")
     print_coins(
         "\tAddress: {} Amount: {}, Confirmed in block: {}\n",
-        [(cr.coin, str(cr.confirmed_block_index)) for cr in conf_coins],
+        [(cr.coin, str(cr.confirmed_block_index)) for cr in response.confirmed_records],
         mojo_per_unit,
         addr_prefix,
         paginate,
@@ -69,7 +74,7 @@ async def async_list(
         print("\nUnconfirmed Removals:")
         print_coins(
             "\tPrevious Address: {} Amount: {}, Confirmed in block: {}\n",
-            [(cr.coin, str(cr.confirmed_block_index)) for cr in unconfirmed_removals],
+            [(cr.coin, str(cr.confirmed_block_index)) for cr in response.unconfirmed_removals],
             mojo_per_unit,
             addr_prefix,
             paginate,
@@ -77,7 +82,7 @@ async def async_list(
         print("\nUnconfirmed Additions:")
         print_coins(
             "\tNew Address: {} Amount: {}, Not yet confirmed in a block.{}\n",
-            [(coin, "") for coin in unconfirmed_additions],
+            [(coin, "") for coin in response.unconfirmed_additions],
             mojo_per_unit,
             addr_prefix,
             paginate,
