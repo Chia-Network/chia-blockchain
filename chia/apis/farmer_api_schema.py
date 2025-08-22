@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import PlotSyncDone, PlotSyncPathList, PlotSyncPlotList, PlotSyncStart
 from chia.protocols.outbound_message import Message
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
 from chia.server.ws_connection import WSChiaConnection
 
 
 class FarmerApiSchema:
-    metadata = ApiMetadata()
+    if TYPE_CHECKING:
+        _protocol_check: ApiProtocolSchema = cast("FarmerApiSchema", None)
+
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     @metadata.request(peer_required=True)
     async def new_proof_of_space(

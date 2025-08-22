@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, ClassVar, cast
+
 from chia_rs import RespondToPhUpdates
 
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
 from chia.server.ws_connection import WSChiaConnection
 
 
 class WalletNodeApiSchema:
-    metadata = ApiMetadata()
+    if TYPE_CHECKING:
+        _protocol_check: ApiProtocolSchema = cast("WalletNodeApiSchema", None)
+
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     @metadata.request(peer_required=True)
     async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection) -> None: ...

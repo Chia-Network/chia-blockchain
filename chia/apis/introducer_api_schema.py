@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.outbound_message import Message
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
 from chia.server.ws_connection import WSChiaConnection
 
 
 class IntroducerApiSchema:
-    metadata = ApiMetadata()
+    if TYPE_CHECKING:
+        _protocol_check: ApiProtocolSchema = cast("IntroducerApiSchema", None)
+
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     @metadata.request(peer_required=True)
     async def request_peers_introducer(

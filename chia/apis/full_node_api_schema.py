@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
 from chia.server.ws_connection import WSChiaConnection
 
 
 class FullNodeApiSchema:
-    metadata = ApiMetadata()
+    if TYPE_CHECKING:
+        _protocol_check: ApiProtocolSchema = cast("FullNodeApiSchema", None)
+
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
     async def request_peers(
@@ -212,12 +215,12 @@ class FullNodeApiSchema:
     ) -> None: ...
 
     @metadata.request(peer_required=True)
-    async def register_for_ph_updates(
+    async def register_for_ph_updates(  # type: ignore[empty-body]
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message: ...
 
     @metadata.request(peer_required=True)
-    async def register_for_coin_updates(
+    async def register_for_coin_updates(  # type: ignore[empty-body]
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message: ...
 
@@ -225,16 +228,18 @@ class FullNodeApiSchema:
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]: ...
 
     @metadata.request()
-    async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo) -> Message: ...
+    async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo) -> Message:  # type: ignore[empty-body]
+        ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_fee_estimates])
-    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message: ...
+    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:  # type: ignore[empty-body]
+        ...
 
     @metadata.request(
         peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_remove_puzzle_subscriptions],
     )
-    async def request_remove_puzzle_subscriptions(
+    async def request_remove_puzzle_subscriptions(  # type: ignore[empty-body]
         self, request: wallet_protocol.RequestRemovePuzzleSubscriptions, peer: WSChiaConnection
     ) -> Message: ...
 
@@ -242,19 +247,18 @@ class FullNodeApiSchema:
         peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_remove_coin_subscriptions],
     )
-    async def request_remove_coin_subscriptions(
+    async def request_remove_coin_subscriptions(  # type: ignore[empty-body]
         self, request: wallet_protocol.RequestRemoveCoinSubscriptions, peer: WSChiaConnection
     ) -> Message: ...
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_puzzle_state])
-    async def request_puzzle_state(
+    async def request_puzzle_state(  # type: ignore[empty-body]
         self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
     ) -> Message: ...
 
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
-    async def request_coin_state(
-        self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection
-    ) -> Message: ...
+    async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:  # type: ignore[empty-body]
+        ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_cost_info])
     async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Optional[Message]: ...

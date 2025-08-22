@@ -4,6 +4,7 @@ import functools
 import inspect
 import logging
 import re
+import textwrap
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from logging import Logger
@@ -16,9 +17,12 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.streamable import Streamable
 
 
-class ApiProtocol(Protocol):
-    log: Logger
+class ApiProtocolSchema(Protocol):
     metadata: ClassVar[ApiMetadata]
+
+
+class ApiProtocol(ApiProtocolSchema, Protocol):
+    log: Logger
 
     def ready(self) -> bool: ...
 
@@ -121,7 +125,7 @@ class ApiMetadata:
     def create_schema(self, api: type[ApiProtocol]) -> None:
         imports = set()
         imports.add("from __future__ import annotations")
-        imports.add("from chia.server.api_protocol import ApiMetadata")
+        imports.add("from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema")
 
         # Track what's actually referenced in the generated code
         used_types = set()
@@ -218,7 +222,10 @@ class ApiMetadata:
 
         # Add imports only for types that are actually used
         if "Optional" in used_types:
-            imports.add("from typing import Optional")
+            imports.add("from typing import TYPE_CHECKING, ClassVar, Optional, cast")
+        else:
+            imports.add("from typing import TYPE_CHECKING, ClassVar, cast")
+
         if "Message" in used_types:
             imports.add("from chia.protocols.outbound_message import Message")
 
@@ -229,15 +236,52 @@ class ApiMetadata:
 
         # Use *ApiSchema naming convention for generated schemas
         schema_class_name = api.__name__.replace("API", "ApiSchema")
-        print(f"class {schema_class_name}:")
-        print("    metadata = ApiMetadata()")
-        print()
+        print(
+            textwrap.dedent(
+                f"""
+                class {schema_class_name}:
+                    if TYPE_CHECKING:
+                        _protocol_check: ApiProtocolSchema = cast("{schema_class_name}", None)
+
+                    metadata: ClassVar[ApiMetadata] = ApiMetadata()
+                """
+            )
+        )
 
         for request in self.message_type_to_request.values():
-            source = inspect.getsourcelines(request.method)[0]
+            source = inspect.getsource(request.method).splitlines()
+
+            # Check if method has a non-None return type that requires an ignore comment
+            type_hints = get_type_hints(request.method)
+            return_hint = type_hints.get("return")
+            needs_ignore = False
+
+            if return_hint and return_hint is not type(None):
+                # Check if it's Optional[something] - Optional types are fine with "..."
+                try:
+                    if hasattr(return_hint, "__origin__") and return_hint.__origin__ is Union:
+                        args = return_hint.__args__
+                        if type(None) not in args:
+                            # Not Optional (e.g., just Message), needs ignore
+                            needs_ignore = True
+                        # else: is Optional, no ignore needed
+                    else:
+                        # Direct return type (not Optional), needs ignore
+                        needs_ignore = True
+                except AttributeError:
+                    # If we can't analyze it, assume it needs ignore
+                    needs_ignore = True
+
             for line in source:
-                print(line, end="")
-                if line.rstrip().endswith(":"):
+                stripped = line.strip()
+                final_line = line
+                if stripped.startswith(("async def", "def")):
+                    if needs_ignore:
+                        final_line = final_line.rstrip() + "  # type: ignore[empty-body]"
+
+                print(final_line)
+                if stripped.endswith(":"):
                     break
+
             print("        ...")
             print()

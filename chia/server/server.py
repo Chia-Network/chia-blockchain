@@ -31,7 +31,7 @@ from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
-from chia.server.api_protocol import ApiProtocol
+from chia.server.api_protocol import ApiProtocol, ApiProtocolSchema
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
@@ -132,7 +132,7 @@ class ChiaServer:
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
     exempt_peer_networks: list[Union[IPv4Network, IPv6Network]]
-    class_for_type: dict[NodeType, type[ApiProtocol]]
+    class_for_type: dict[NodeType, type[ApiProtocolSchema]]
     all_connections: dict[bytes32, WSChiaConnection] = field(default_factory=dict)
     on_connect: Optional[ConnectionCallback] = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -160,7 +160,7 @@ class ChiaServer:
         config: dict[str, Any],
         private_ca_crt_key: tuple[Path, Path],
         chia_ca_crt_key: tuple[Path, Path],
-        class_for_type: dict[NodeType, type[ApiProtocol]],
+        class_for_type: dict[NodeType, type[ApiProtocolSchema]],
         name: str = __name__,
     ) -> ChiaServer:
         log = logging.getLogger(name)
