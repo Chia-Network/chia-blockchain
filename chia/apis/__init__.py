@@ -7,9 +7,8 @@ from chia.apis.introducer_api_schema import IntroducerApiSchema
 from chia.apis.timelord_api_schema import TimelordApiSchema
 from chia.apis.wallet_api_schema import WalletNodeApiSchema
 from chia.protocols.outbound_message import NodeType
-from chia.server.api_protocol import ApiProtocol
 
-ApiProtocolRegistry: dict[NodeType, type[ApiProtocol]] = {
+ApiProtocolRegistry: dict[NodeType, type[object]] = {
     NodeType.FULL_NODE: FullNodeApiSchema,
     NodeType.WALLET: WalletNodeApiSchema,
     NodeType.INTRODUCER: IntroducerApiSchema,
