@@ -27,7 +27,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, str2bool
+from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
@@ -172,6 +172,8 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetCoinRecordsByNames,
+    GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
@@ -1826,26 +1828,24 @@ class WalletRpcApi:
             unconfirmed_additions=unconfirmed_additions,
         )
 
-    async def get_coin_records_by_names(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
 
-        if "names" not in request:
-            raise ValueError("Names not in request")
-        coin_ids = [bytes32.from_hexstr(name) for name in request["names"]]
         kwargs: dict[str, Any] = {
-            "coin_id_filter": HashFilter.include(coin_ids),
+            "coin_id_filter": HashFilter.include(request.names),
         }
 
         confirmed_range = UInt32Range()
-        if "start_height" in request:
-            confirmed_range = dataclasses.replace(confirmed_range, start=uint32(request["start_height"]))
-        if "end_height" in request:
-            confirmed_range = dataclasses.replace(confirmed_range, stop=uint32(request["end_height"]))
+        if request.start_height is not None:
+            confirmed_range = dataclasses.replace(confirmed_range, start=request.start_height)
+        if request.end_height is not None:
+            confirmed_range = dataclasses.replace(confirmed_range, stop=request.end_height)
         if confirmed_range != UInt32Range():
             kwargs["confirmed_range"] = confirmed_range
 
-        if "include_spent_coins" in request and not str2bool(request["include_spent_coins"]):
+        if request.include_spent_coins:
             kwargs["spent_range"] = unspent_range
 
         async with self.service.wallet_state_manager.lock:
@@ -1853,12 +1853,12 @@ class WalletRpcApi:
                 **kwargs
             )
             missed_coins: list[str] = [
-                "0x" + c_id.hex() for c_id in coin_ids if c_id not in [cr.name for cr in coin_records]
+                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
             ]
             if missed_coins:
                 raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
-        return {"coin_records": [cr.to_json_dict() for cr in coin_records]}
+        return GetCoinRecordsByNamesResponse(coin_records)
 
     @marshal
     async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:

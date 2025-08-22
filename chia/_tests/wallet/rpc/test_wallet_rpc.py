@@ -121,6 +121,7 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDID,
     DIDUpdateMetadata,
     FungibleAsset,
+    GetCoinRecordsByNames,
     GetNextAddress,
     GetNotifications,
     GetPrivateKey,
@@ -1504,13 +1505,17 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         ]
     )
 
-    test_crs: list[CoinRecord] = await env_1.rpc_client.get_coin_records_by_names(
-        [a.name() for a in spend_bundle.additions() if a.amount != 4]
-    )
+    test_crs: list[CoinRecord] = (
+        await env_1.rpc_client.get_coin_records_by_names(
+            GetCoinRecordsByNames([a.name() for a in spend_bundle.additions() if a.amount != 4])
+        )
+    ).coin_records
     for cr in test_crs:
         assert cr.coin in spend_bundle.additions()
     with pytest.raises(ValueError):
-        await env_1.rpc_client.get_coin_records_by_names([a.name() for a in spend_bundle.additions() if a.amount == 4])
+        await env_1.rpc_client.get_coin_records_by_names(
+            GetCoinRecordsByNames([a.name() for a in spend_bundle.additions() if a.amount == 4])
+        )
     # Create an offer of 5 chia for one CAT
     await env_1.rpc_client.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1}, wallet_environments.tx_config, validate_only=True
@@ -1855,16 +1860,18 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     assert len(coin_ids_unspent) > 0
     # Do some queries to trigger all parameters
     # 1. Empty coin_ids
-    assert await client.get_coin_records_by_names([]) == []
+    assert (await client.get_coin_records_by_names(GetCoinRecordsByNames([]))).coin_records == []
     # 2. All coins
-    rpc_result = await client.get_coin_records_by_names(coin_ids + coin_ids_unspent)
-    assert {record.coin for record in rpc_result} == {*coins, *coins_unspent}
+    rpc_result = await client.get_coin_records_by_names(GetCoinRecordsByNames(coin_ids + coin_ids_unspent))
+    assert {record.coin for record in rpc_result.coin_records} == {*coins, *coins_unspent}
     # 3. All spent coins
-    rpc_result = await client.get_coin_records_by_names(coin_ids, include_spent_coins=True)
-    assert {record.coin for record in rpc_result} == coins
+    rpc_result = await client.get_coin_records_by_names(GetCoinRecordsByNames(coin_ids, include_spent_coins=True))
+    assert {record.coin for record in rpc_result.coin_records} == coins
     # 4. All unspent coins
-    rpc_result = await client.get_coin_records_by_names(coin_ids_unspent, include_spent_coins=False)
-    assert {record.coin for record in rpc_result} == coins_unspent
+    rpc_result = await client.get_coin_records_by_names(
+        GetCoinRecordsByNames(coin_ids_unspent, include_spent_coins=False)
+    )
+    assert {record.coin for record in rpc_result.coin_records} == coins_unspent
     # 5. Filter start/end height
     filter_records = result.records[:10]
     assert len(filter_records) == 10
@@ -1873,11 +1880,13 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     min_height = min(record.confirmed_block_height for record in filter_records)
     max_height = max(record.confirmed_block_height for record in filter_records)
     assert min_height != max_height
-    rpc_result = await client.get_coin_records_by_names(filter_coin_ids, start_height=min_height, end_height=max_height)
-    assert {record.coin for record in rpc_result} == filter_coins
+    rpc_result = await client.get_coin_records_by_names(
+        GetCoinRecordsByNames(filter_coin_ids, start_height=min_height, end_height=max_height)
+    )
+    assert {record.coin for record in rpc_result.coin_records} == filter_coins
     # 8. Test the failure case
     with pytest.raises(ValueError, match="not found"):
-        await client.get_coin_records_by_names(coin_ids, include_spent_coins=False)
+        await client.get_coin_records_by_names(GetCoinRecordsByNames(coin_ids, include_spent_coins=False))
 
 
 @pytest.mark.anyio

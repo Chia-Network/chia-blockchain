@@ -541,6 +541,21 @@ class GetSpendableCoinsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetCoinRecordsByNames(Streamable):
+    names: list[bytes32]
+    start_height: Optional[uint32] = None
+    end_height: Optional[uint32] = None
+    include_spent_coins: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCoinRecordsByNamesResponse(Streamable):
+    coin_records: list[CoinRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class GetCurrentDerivationIndexResponse(Streamable):
     index: Optional[uint32]
 

@@ -18,7 +18,7 @@ from chia.util.config import selected_network_address_prefix
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import CombineCoins, GetSpendableCoins, SplitCoins
+from chia.wallet.wallet_request_types import CombineCoins, GetCoinRecordsByNames, GetSpendableCoins, SplitCoins
 
 
 async def async_list(
@@ -222,19 +222,19 @@ async def async_split(
         return []
 
     if number_of_coins is None:
-        coins = await client_info.client.get_coin_records_by_names([target_coin_id])
-        if len(coins) == 0:
+        response = await client_info.client.get_coin_records_by_names(GetCoinRecordsByNames([target_coin_id]))
+        if len(response.coin_records) == 0:
             print("Could not find target coin.")
             return []
         assert amount_per_coin is not None
-        number_of_coins = int(coins[0].coin.amount // amount_per_coin.convert_amount(mojo_per_unit))
+        number_of_coins = int(response.coin_records[0].coin.amount // amount_per_coin.convert_amount(mojo_per_unit))
     elif amount_per_coin is None:
-        coins = await client_info.client.get_coin_records_by_names([target_coin_id])
-        if len(coins) == 0:
+        response = await client_info.client.get_coin_records_by_names(GetCoinRecordsByNames([target_coin_id]))
+        if len(response.coin_records) == 0:
             print("Could not find target coin.")
             return []
         assert number_of_coins is not None
-        amount_per_coin = CliAmount(True, uint64(coins[0].coin.amount // number_of_coins))
+        amount_per_coin = CliAmount(True, uint64(response.coin_records[0].coin.amount // number_of_coins))
 
     final_amount_per_coin = amount_per_coin.convert_amount(mojo_per_unit)
 

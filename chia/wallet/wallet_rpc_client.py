@@ -9,7 +9,6 @@ from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
@@ -88,6 +87,8 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
     GetCATListResponse,
+    GetCoinRecordsByNames,
+    GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
@@ -418,22 +419,10 @@ class WalletRpcClient(RpcClient):
     async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
         return GetSpendableCoinsResponse.from_json_dict(await self.fetch("get_spendable_coins", request.to_json_dict()))
 
-    async def get_coin_records_by_names(
-        self,
-        names: list[bytes32],
-        include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
-    ) -> list[CoinRecord]:
-        names_hex = [name.hex() for name in names]
-        request = {"names": names_hex, "include_spent_coins": include_spent_coins}
-        if start_height is not None:
-            request["start_height"] = start_height
-        if end_height is not None:
-            request["end_height"] = end_height
-
-        response = await self.fetch("get_coin_records_by_names", request)
-        return [CoinRecord.from_json_dict(cr) for cr in response["coin_records"]]
+    async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
+        return GetCoinRecordsByNamesResponse.from_json_dict(
+            await self.fetch("get_coin_records_by_names", request.to_json_dict())
+        )
 
     # DID wallet
     async def create_new_did_wallet(
