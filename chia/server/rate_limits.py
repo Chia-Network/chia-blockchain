@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 class RateLimiter:
     incoming: bool
     reset_seconds: int
-    current_minute: int
+    current_slot: int
     message_counts: Counter[ProtocolMessageTypes]
     message_cumulative_sizes: Counter[ProtocolMessageTypes]
     percentage_of_limit: int
@@ -35,7 +35,7 @@ class RateLimiter:
         """
         self.incoming = incoming
         self.reset_seconds = reset_seconds
-        self.current_minute = int(monotonic() // reset_seconds)
+        self.current_slot = int(monotonic() // reset_seconds)
         self.message_counts = Counter()
         self.message_cumulative_sizes = Counter()
         self.percentage_of_limit = percentage_of_limit
@@ -51,9 +51,9 @@ class RateLimiter:
         hit and the message is good to be sent or received.
         """
 
-        current_minute = int(monotonic() // self.reset_seconds)
-        if current_minute != self.current_minute:
-            self.current_minute = current_minute
+        current_slot = int(monotonic() // self.reset_seconds)
+        if current_slot != self.current_slot:
+            self.current_slot = current_slot
             self.message_counts = Counter()
             self.message_cumulative_sizes = Counter()
             self.non_tx_message_counts = 0
