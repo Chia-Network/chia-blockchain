@@ -162,6 +162,8 @@ from chia.wallet.wallet_request_types import (
     PWStatusResponse,
     SelectCoins,
     SelectCoinsResponse,
+    SendNotification,
+    SendNotificationResponse,
     SendTransaction,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -1088,27 +1090,16 @@ class WalletRpcClient(RpcClient):
 
     async def send_notification(
         self,
-        target: bytes32,
-        msg: bytes,
-        amount: uint64,
-        fee: uint64 = uint64(0),
+        request: SendNotification,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
-    ) -> TransactionRecord:
-        response = await self.fetch(
-            "send_notification",
-            {
-                "target": target.hex(),
-                "message": msg.hex(),
-                "amount": amount,
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **timelock_info.to_json_dict(),
-            },
+    ) -> SendNotificationResponse:
+        return SendNotificationResponse.from_json_dict(
+            await self.fetch(
+                "send_notification", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return TransactionRecord.from_json_dict(response["tx"])
 
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         return SignMessageByAddressResponse.from_json_dict(
