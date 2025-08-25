@@ -10,10 +10,7 @@ from typing import Optional
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint64
 
-from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.simulator.block_tools import BlockTools
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
