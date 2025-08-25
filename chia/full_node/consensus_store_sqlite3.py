@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import AsyncIterator, Collection
 from contextlib import AbstractAsyncContextManager
+from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -15,6 +16,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
+from chia.util.db_wrapper import DBWrapper2
 
 
 class ConsensusStoreSQLite3Writer:
@@ -71,15 +73,25 @@ class ConsensusStoreSQLite3:
     @classmethod
     async def create(
         cls,
-        block_store: BlockStore,
-        coin_store: CoinStore,
-        height_map: BlockHeightMap,
+        db_wrapper: DBWrapper2,
+        blockchain_dir: Path,
+        *,
+        use_cache: bool = True,
+        selected_network: Optional[str] = None,
     ) -> ConsensusStoreSQLite3:
-        """Create a new ConsensusStore instance from existing sub-stores.
+        """Create a new ConsensusStore instance, creating all underlying sub-stores internally.
 
-        This factory does not create sub-stores. Construct BlockStore, CoinStore,
-        and BlockHeightMap separately and pass them in here.
+        Args:
+            db_wrapper: Database wrapper to use for all stores
+            blockchain_dir: Directory path for blockchain data (used by BlockHeightMap)
+            use_cache: Whether to enable caching in BlockStore (default: True)
+            selected_network: Network selection for BlockHeightMap (default: None)
         """
+        # Create underlying stores
+        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
+        coin_store = await CoinStore.create(db_wrapper)
+        height_map = await BlockHeightMap.create(blockchain_dir, db_wrapper, selected_network)
+
         return cls(
             block_store=block_store,
             coin_store=coin_store,
