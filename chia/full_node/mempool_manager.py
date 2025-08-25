@@ -625,11 +625,16 @@ class MempoolManager:
             eligible_for_ff = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
             if eligible_for_ff:
                 # Make sure the fast forward spend still has a version that is
-                # still unspent, because if the singleton has been melted, the
-                # fast forward spend will never become valid.
+                # still unspent, because if the singleton has been spent in a
+                # non-FF spend, this fast forward spend will never become valid.
+                # So treat this as a normal spend, which requires the exact coin
+                # to exist and be unspent.
+                # Singletons that were created before the optimization of using
+                # spent_index will also fail this test, and such spends will
+                # fall back to be treated as non-FF spends.
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
                 if lineage_info is None:
-                    return Err.DOUBLE_SPEND, None, []
+                    eligible_for_ff = False
 
             spend_additions = []
             for puzzle_hash, amount, _ in spend_conds.create_coin:
