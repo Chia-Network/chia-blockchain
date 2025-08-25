@@ -14,6 +14,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.proof_of_space import solve_proof
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +68,10 @@ class Solver:
 
     def solve(self, partial_proof: bytes) -> Optional[bytes]:
         self.log.debug(f"Solve request: partial={partial_proof.hex()}")
-        # TODO todo_v2_plots implement actualy calling the solver
+        try:
+            return solve_proof(partial_proof)
+        except Exception:
+            self.log.exception("solve_proof()")
         return None
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
