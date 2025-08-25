@@ -1845,7 +1845,7 @@ class WalletRpcApi:
         if confirmed_range != UInt32Range():
             kwargs["confirmed_range"] = confirmed_range
 
-        if request.include_spent_coins:
+        if not request.include_spent_coins:
             kwargs["spent_range"] = unspent_range
 
         async with self.service.wallet_state_manager.lock:
