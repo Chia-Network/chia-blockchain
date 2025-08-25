@@ -63,7 +63,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     await hint_store1.add_hints([(h[0], h[1])])
 
             height_map = await BlockHeightMap.create(Path("."), db_wrapper1)
-            consensus_store = await ConsensusStoreSQLite3.create(block_store1, coin_store1, height_map)
+            consensus_store = ConsensusStoreSQLite3(block_store1, coin_store1, height_map)
             bc = await Blockchain.create(consensus_store, test_constants, reserved_cores=0)
             sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:

@@ -21,10 +21,7 @@ async def create_ram_blockchain(
 ) -> AsyncIterator[tuple[DBWrapper2, Blockchain]]:
     uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
     async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as db_wrapper:
-        block_store = await BlockStore.create(db_wrapper)
-        coin_store = await CoinStore.create(db_wrapper)
-        height_map = await BlockHeightMap.create(Path("."), db_wrapper)
-        consensus_store = await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, Path("."))
         blockchain = await Blockchain.create(consensus_store, consensus_constants, 2)
         try:
             yield db_wrapper, blockchain
