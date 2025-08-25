@@ -319,7 +319,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        consensus_store = await ConsensusStoreSQLite3.create(store, coin_store, height_map)
+        consensus_store = ConsensusStoreSQLite3(store, coin_store, height_map)
         b: Blockchain = await Blockchain.create(consensus_store, bt.constants, 2)
         try:
             records: list[Optional[CoinRecord]] = []
@@ -387,7 +387,7 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         coin_store = await CoinStore.create(db_wrapper)
         store = await BlockStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        consensus_store = await ConsensusStoreSQLite3.create(store, coin_store, height_map)
+        consensus_store = ConsensusStoreSQLite3(store, coin_store, height_map)
         b: Blockchain = await Blockchain.create(consensus_store, bt.constants, 2)
         for block in blocks:
             await _validate_and_add_block(b, block)

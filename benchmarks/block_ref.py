@@ -71,7 +71,7 @@ async def main(db_path: Path) -> None:
         # make configurable
         reserved_cores = 4
         height_map = await BlockHeightMap.create(db_path.parent, db_wrapper)
-        consensus_store = await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
+        consensus_store = ConsensusStoreSQLite3(block_store, coin_store, height_map)
         blockchain = await Blockchain.create(consensus_store, DEFAULT_CONSTANTS, reserved_cores)
 
         peak = blockchain.get_peak()
