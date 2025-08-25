@@ -26,10 +26,7 @@ async def create_blockchain(
 ) -> AsyncIterator[tuple[Blockchain, DBWrapper2]]:
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
-        block_store = await BlockStore.create(wrapper)
-        coin_store = await CoinStore.create(wrapper)
-        height_map = await BlockHeightMap.create(Path("."), wrapper, None)
-        consensus_store = await ConsensusStoreSQLite3.create(block_store, coin_store, height_map)
+        consensus_store = await ConsensusStoreSQLite3.create(wrapper, Path("."))
         bc1 = await Blockchain.create(consensus_store, constants, 3, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
