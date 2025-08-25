@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import AsyncIterator, Collection
 from contextlib import AbstractAsyncContextManager
+from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Optional
@@ -19,30 +19,30 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2
 
 
+@dataclass
 class ConsensusStoreSQLite3Writer:
-    def __init__(self, block_store: BlockStore, coin_store: CoinStore):
-        self._block_store = block_store
-        self._coin_store = coin_store
+    block_store: BlockStore
+    coin_store: CoinStore
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
-        await self._block_store.add_full_block(header_hash, block, block_record)
+        await self.block_store.add_full_block(header_hash, block, block_record)
 
     async def rollback(self, height: int) -> None:
-        await self._block_store.rollback(height)
+        await self.block_store.rollback(height)
 
     async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None:
-        await self._block_store.set_in_chain(header_hashes)
+        await self.block_store.set_in_chain(header_hashes)
 
     async def set_peak(self, header_hash: bytes32) -> None:
-        await self._block_store.set_peak(header_hash)
+        await self.block_store.set_peak(header_hash)
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
-        await self._block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
+        await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def rollback_to_block(self, block_index: int) -> dict[bytes32, CoinRecord]:
-        return await self._coin_store.rollback_to_block(block_index)
+        return await self.coin_store.rollback_to_block(block_index)
 
     async def new_block(
         self,
@@ -52,10 +52,10 @@ class ConsensusStoreSQLite3Writer:
         tx_additions: Collection[tuple[bytes32, Coin, bool]],
         tx_removals: list[bytes32],
     ) -> None:
-        await self._coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
+        await self.coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
 
 
-@dataclasses.dataclass
+@dataclass
 class ConsensusStoreSQLite3:
     """
     Consensus store that combines block_store, coin_store, and height_map functionality.
