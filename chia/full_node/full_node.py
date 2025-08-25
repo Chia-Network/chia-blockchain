@@ -269,7 +269,7 @@ class FullNode:
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
             selected_network = self.config.get("selected_network")
             height_map = await BlockHeightMap.create(self.db_path.parent, self.db_wrapper, selected_network)
-            consensus_store = await ConsensusStoreSQLite3.create(self.block_store, self.coin_store, height_map)
+            consensus_store = ConsensusStoreSQLite3(self.block_store, self.coin_store, height_map)
             self._blockchain = await Blockchain.create(
                 consensus_store=consensus_store,
                 consensus_constants=self.constants,
