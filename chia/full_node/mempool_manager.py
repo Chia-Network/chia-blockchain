@@ -6,16 +6,18 @@ import time
 from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar, Union
 
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
     MEMPOOL_MODE,
     BLSCache,
+    CoinRecord,
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    check_time_locks,
     get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
@@ -25,7 +27,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
@@ -34,7 +35,6 @@ from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemov
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -734,12 +734,14 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        tl_error: Optional[Err] = check_time_locks(
+        tl_error: Optional[Union[int, Err]] = check_time_locks(
             removal_record_dict,
             conds,
             self.peak.height,
             self.peak.timestamp,
         )
+        if tl_error is not None:
+            tl_error = Err(tl_error)
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 
