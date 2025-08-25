@@ -2076,8 +2076,7 @@ class TestBodyValidation:
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin was in fact spent
-                recs = await b.consensus_store.get_coin_records([coin.name()])
-                c = recs[0] if len(recs) > 0 else None
+                c = await b.consensus_store.get_coin_record(coin.name())
                 assert c is not None and c.spent
 
     @pytest.mark.anyio
@@ -2287,12 +2286,10 @@ class TestBodyValidation:
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin1 was in fact spent
-                recs1 = await b.consensus_store.get_coin_records([coin1.name()])
-                c = recs1[0] if len(recs1) > 0 else None
+                c = await b.consensus_store.get_coin_record(coin1.name())
                 assert c is not None and c.spent
                 # ensure coin2 was NOT spent
-                recs2 = await b.consensus_store.get_coin_records([coin2.name()])
-                c = recs2[0] if len(recs2) > 0 else None
+                c = await b.consensus_store.get_coin_record(coin2.name())
                 assert c is not None and not c.spent
 
     @pytest.mark.anyio
@@ -3106,11 +3103,9 @@ class TestBodyValidation:
             )
 
         # ephemeral coin is spent
-        recs_first = await b.consensus_store.get_coin_records([new_coin.name()])
-        first_coin = recs_first[0] if len(recs_first) > 0 else None
+        first_coin = await b.consensus_store.get_coin_record(new_coin.name())
         assert first_coin is not None and first_coin.spent
-        recs_second = await b.consensus_store.get_coin_records([tx_2.additions()[0].name()])
-        second_coin = recs_second[0] if len(recs_second) > 0 else None
+        second_coin = await b.consensus_store.get_coin_record(tx_2.additions()[0].name())
         assert second_coin is not None and not second_coin.spent
 
         farmer_coin = create_farmer_coin(
@@ -3126,8 +3121,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks_reorg[-1])
 
-        recs_farmer = await b.consensus_store.get_coin_records([farmer_coin.name()])
-        farmer_coin_record = recs_farmer[0] if len(recs_farmer) > 0 else None
+        farmer_coin_record = await b.consensus_store.get_coin_record(farmer_coin.name())
         assert farmer_coin_record is not None and farmer_coin_record.spent
 
     @pytest.mark.anyio
@@ -3882,14 +3876,14 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # Incorrectly set the height as spent in DB to trigger an error
-    recs_dbg1 = await b.consensus_store.get_coin_records([spend_bundle.coin_spends[0].coin.name()])
-    print(f"{recs_dbg1[0] if len(recs_dbg1) > 0 else None}")
+    coin_record_dbg1 = await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())
+    print(f"{coin_record_dbg1}")
     print(spend_bundle.coin_spends[0].coin.name())
     # await b.consensus_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
     async with b.consensus_store as writer:
         await writer.rollback_to_block(2)
-    recs_dbg2 = await b.consensus_store.get_coin_records([spend_bundle.coin_spends[0].coin.name()])
-    print(f"{recs_dbg2[0] if len(recs_dbg2) > 0 else None}")
+    coin_record_dbg2 = await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())
+    print(f"{coin_record_dbg2}")
 
     fork_block = blocks_reorg_chain[10 - 1]
     # fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
