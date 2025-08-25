@@ -177,6 +177,9 @@ class ConsensusStoreSQLite3:
     async def get_coin_records(self, names: Collection[bytes32]) -> list[CoinRecord]:
         return await self.coin_store.get_coin_records(names)
 
+    async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
+        return await self.coin_store.get_coin_record(coin_name)
+
     async def get_coins_added_at_height(self, height: uint32) -> list[CoinRecord]:
         return await self.coin_store.get_coins_added_at_height(height)
 
