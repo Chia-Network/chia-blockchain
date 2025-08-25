@@ -15,7 +15,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.wallet_request_types import NFTGetNFTs, NFTMintBulk, NFTMintMetadata, PushTransactions
+from chia.wallet.wallet_request_types import NFTGetNFTs, NFTMintBulk, NFTMintMetadata, PushTransactions, SelectCoins
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -291,22 +291,25 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
     fee = 100
     num_chunks = int(n / chunk) + (1 if n % chunk > 0 else 0)
     required_amount = n + (fee * num_chunks)
-    xch_coins = await env_0.rpc_client.select_coins(
-        amount=required_amount,
-        coin_selection_config=wallet_environments.tx_config.coin_selection_config,
-        wallet_id=wallet_0.id(),
+    select_coins_response = await env_0.rpc_client.select_coins(
+        SelectCoins.from_coin_selection_config(
+            amount=uint64(required_amount),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+            wallet_id=wallet_0.id(),
+        )
     )
-    funding_coin = xch_coins[0]
+    funding_coin = select_coins_response.coins[0]
     assert funding_coin.amount >= required_amount
-    funding_coin_dict = xch_coins[0].to_json_dict()
     next_coin = funding_coin
     did_coin = (
         await env_0.rpc_client.select_coins(
-            amount=1,
-            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
-            wallet_id=env_0.wallet_aliases["did"],
+            SelectCoins.from_coin_selection_config(
+                amount=uint64(1),
+                coin_selection_config=wallet_environments.tx_config.coin_selection_config,
+                wallet_id=uint32(env_0.wallet_aliases["did"]),
+            )
         )
-    )[0]
+    ).coins[0]
     did_lineage_parent: Optional[bytes32] = None
     txs: list[TransactionRecord] = []
     nft_ids = set()
@@ -321,7 +324,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
                 mint_number_start=uint16(i + 1),
                 mint_total=uint16(n),
                 xch_coins=[next_coin],
-                xch_change_target=funding_coin_dict["puzzle_hash"],
+                xch_change_target=funding_coin.puzzle_hash.hex(),
                 did_coin=did_coin if with_did else None,
                 did_lineage_parent=did_lineage_parent if with_did else None,
                 mint_from_did=with_did,
