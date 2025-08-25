@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import time
 from collections import Counter
+from time import monotonic
 from typing import Optional
 
 from chia.protocols.outbound_message import Message
@@ -35,7 +35,7 @@ class RateLimiter:
         """
         self.incoming = incoming
         self.reset_seconds = reset_seconds
-        self.current_minute = int(time.time() // reset_seconds)
+        self.current_minute = int(monotonic() // reset_seconds)
         self.message_counts = Counter()
         self.message_cumulative_sizes = Counter()
         self.percentage_of_limit = percentage_of_limit
@@ -51,7 +51,7 @@ class RateLimiter:
         hit and the message is good to be sent or received.
         """
 
-        current_minute = int(time.time() // self.reset_seconds)
+        current_minute = int(monotonic() // self.reset_seconds)
         if current_minute != self.current_minute:
             self.current_minute = current_minute
             self.message_counts = Counter()
