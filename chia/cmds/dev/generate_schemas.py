@@ -117,7 +117,8 @@ def generate_service_peer_schemas_cmd(
             schema_content = api_class.metadata.create_schema(api_class)
 
             # Write to file
-            output_file.write_text(schema_content, encoding="utf-8", newline="\n")
+            with output_file.open("w", encoding="utf-8", newline="\n") as file:
+                file.write(schema_content)
 
             generated_files.append(output_file)
             click.echo(f"Generated {output_file} ({len(schema_content)} characters)")
@@ -267,7 +268,8 @@ ApiProtocolRegistry: dict[NodeType, type[ApiSchemaProtocol]] = {{
 }}
 """
 
-        registry_file.write_text(content, encoding="utf-8", newline="\n")
+        with registry_file.open("w", encoding="utf-8", newline="\n") as file:
+            file.write(content)
 
         click.echo(f"Generated {registry_file} ({len(content)} characters)")
         return registry_file
