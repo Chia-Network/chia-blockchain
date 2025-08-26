@@ -426,153 +426,158 @@ def test_protocol_bytes() -> None:
     assert bytes(message_79) == bytes(new_signage_point_harvester)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_80 = type(new_proof_of_space).from_bytes(message_bytes)
-    assert message_80 == new_proof_of_space
-    assert bytes(message_80) == bytes(new_proof_of_space)
+    message_80 = type(new_signage_point_harvester2).from_bytes(message_bytes)
+    assert message_80 == new_signage_point_harvester2
+    assert bytes(message_80) == bytes(new_signage_point_harvester2)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_81 = type(request_signatures).from_bytes(message_bytes)
-    assert message_81 == request_signatures
-    assert bytes(message_81) == bytes(request_signatures)
+    message_81 = type(new_proof_of_space).from_bytes(message_bytes)
+    assert message_81 == new_proof_of_space
+    assert bytes(message_81) == bytes(new_proof_of_space)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_82 = type(respond_signatures).from_bytes(message_bytes)
-    assert message_82 == respond_signatures
-    assert bytes(message_82) == bytes(respond_signatures)
+    message_82 = type(request_signatures).from_bytes(message_bytes)
+    assert message_82 == request_signatures
+    assert bytes(message_82) == bytes(request_signatures)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_83 = type(plot).from_bytes(message_bytes)
-    assert message_83 == plot
-    assert bytes(message_83) == bytes(plot)
+    message_83 = type(respond_signatures).from_bytes(message_bytes)
+    assert message_83 == respond_signatures
+    assert bytes(message_83) == bytes(respond_signatures)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_84 = type(request_plots).from_bytes(message_bytes)
-    assert message_84 == request_plots
-    assert bytes(message_84) == bytes(request_plots)
+    message_84 = type(plot).from_bytes(message_bytes)
+    assert message_84 == plot
+    assert bytes(message_84) == bytes(plot)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_85 = type(respond_plots).from_bytes(message_bytes)
-    assert message_85 == respond_plots
-    assert bytes(message_85) == bytes(respond_plots)
+    message_85 = type(request_plots).from_bytes(message_bytes)
+    assert message_85 == request_plots
+    assert bytes(message_85) == bytes(request_plots)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_86 = type(request_peers_introducer).from_bytes(message_bytes)
-    assert message_86 == request_peers_introducer
-    assert bytes(message_86) == bytes(request_peers_introducer)
+    message_86 = type(respond_plots).from_bytes(message_bytes)
+    assert message_86 == respond_plots
+    assert bytes(message_86) == bytes(respond_plots)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_87 = type(respond_peers_introducer).from_bytes(message_bytes)
-    assert message_87 == respond_peers_introducer
-    assert bytes(message_87) == bytes(respond_peers_introducer)
+    message_87 = type(request_peers_introducer).from_bytes(message_bytes)
+    assert message_87 == request_peers_introducer
+    assert bytes(message_87) == bytes(request_peers_introducer)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_88 = type(authentication_payload).from_bytes(message_bytes)
-    assert message_88 == authentication_payload
-    assert bytes(message_88) == bytes(authentication_payload)
+    message_88 = type(respond_peers_introducer).from_bytes(message_bytes)
+    assert message_88 == respond_peers_introducer
+    assert bytes(message_88) == bytes(respond_peers_introducer)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_89 = type(get_pool_info_response).from_bytes(message_bytes)
-    assert message_89 == get_pool_info_response
-    assert bytes(message_89) == bytes(get_pool_info_response)
+    message_89 = type(authentication_payload).from_bytes(message_bytes)
+    assert message_89 == authentication_payload
+    assert bytes(message_89) == bytes(authentication_payload)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_90 = type(post_partial_payload).from_bytes(message_bytes)
-    assert message_90 == post_partial_payload
-    assert bytes(message_90) == bytes(post_partial_payload)
+    message_90 = type(get_pool_info_response).from_bytes(message_bytes)
+    assert message_90 == get_pool_info_response
+    assert bytes(message_90) == bytes(get_pool_info_response)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_91 = type(post_partial_request).from_bytes(message_bytes)
-    assert message_91 == post_partial_request
-    assert bytes(message_91) == bytes(post_partial_request)
+    message_91 = type(post_partial_payload).from_bytes(message_bytes)
+    assert message_91 == post_partial_payload
+    assert bytes(message_91) == bytes(post_partial_payload)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_92 = type(post_partial_response).from_bytes(message_bytes)
-    assert message_92 == post_partial_response
-    assert bytes(message_92) == bytes(post_partial_response)
+    message_92 = type(post_partial_request).from_bytes(message_bytes)
+    assert message_92 == post_partial_request
+    assert bytes(message_92) == bytes(post_partial_request)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_93 = type(get_farmer_response).from_bytes(message_bytes)
-    assert message_93 == get_farmer_response
-    assert bytes(message_93) == bytes(get_farmer_response)
+    message_93 = type(post_partial_response).from_bytes(message_bytes)
+    assert message_93 == post_partial_response
+    assert bytes(message_93) == bytes(post_partial_response)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_94 = type(post_farmer_payload).from_bytes(message_bytes)
-    assert message_94 == post_farmer_payload
-    assert bytes(message_94) == bytes(post_farmer_payload)
+    message_94 = type(get_farmer_response).from_bytes(message_bytes)
+    assert message_94 == get_farmer_response
+    assert bytes(message_94) == bytes(get_farmer_response)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_95 = type(post_farmer_request).from_bytes(message_bytes)
-    assert message_95 == post_farmer_request
-    assert bytes(message_95) == bytes(post_farmer_request)
+    message_95 = type(post_farmer_payload).from_bytes(message_bytes)
+    assert message_95 == post_farmer_payload
+    assert bytes(message_95) == bytes(post_farmer_payload)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_96 = type(post_farmer_response).from_bytes(message_bytes)
-    assert message_96 == post_farmer_response
-    assert bytes(message_96) == bytes(post_farmer_response)
+    message_96 = type(post_farmer_request).from_bytes(message_bytes)
+    assert message_96 == post_farmer_request
+    assert bytes(message_96) == bytes(post_farmer_request)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_97 = type(put_farmer_payload).from_bytes(message_bytes)
-    assert message_97 == put_farmer_payload
-    assert bytes(message_97) == bytes(put_farmer_payload)
+    message_97 = type(post_farmer_response).from_bytes(message_bytes)
+    assert message_97 == post_farmer_response
+    assert bytes(message_97) == bytes(post_farmer_response)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_98 = type(put_farmer_request).from_bytes(message_bytes)
-    assert message_98 == put_farmer_request
-    assert bytes(message_98) == bytes(put_farmer_request)
+    message_98 = type(put_farmer_payload).from_bytes(message_bytes)
+    assert message_98 == put_farmer_payload
+    assert bytes(message_98) == bytes(put_farmer_payload)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_99 = type(put_farmer_response).from_bytes(message_bytes)
-    assert message_99 == put_farmer_response
-    assert bytes(message_99) == bytes(put_farmer_response)
+    message_99 = type(put_farmer_request).from_bytes(message_bytes)
+    assert message_99 == put_farmer_request
+    assert bytes(message_99) == bytes(put_farmer_request)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_100 = type(error_response).from_bytes(message_bytes)
-    assert message_100 == error_response
-    assert bytes(message_100) == bytes(error_response)
+    message_100 = type(put_farmer_response).from_bytes(message_bytes)
+    assert message_100 == put_farmer_response
+    assert bytes(message_100) == bytes(put_farmer_response)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_101 = type(new_peak_timelord).from_bytes(message_bytes)
-    assert message_101 == new_peak_timelord
-    assert bytes(message_101) == bytes(new_peak_timelord)
+    message_101 = type(error_response).from_bytes(message_bytes)
+    assert message_101 == error_response
+    assert bytes(message_101) == bytes(error_response)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_102 = type(new_unfinished_block_timelord).from_bytes(message_bytes)
-    assert message_102 == new_unfinished_block_timelord
-    assert bytes(message_102) == bytes(new_unfinished_block_timelord)
+    message_102 = type(new_peak_timelord).from_bytes(message_bytes)
+    assert message_102 == new_peak_timelord
+    assert bytes(message_102) == bytes(new_peak_timelord)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_103 = type(new_infusion_point_vdf).from_bytes(message_bytes)
-    assert message_103 == new_infusion_point_vdf
-    assert bytes(message_103) == bytes(new_infusion_point_vdf)
+    message_103 = type(new_unfinished_block_timelord).from_bytes(message_bytes)
+    assert message_103 == new_unfinished_block_timelord
+    assert bytes(message_103) == bytes(new_unfinished_block_timelord)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_104 = type(new_signage_point_vdf).from_bytes(message_bytes)
-    assert message_104 == new_signage_point_vdf
-    assert bytes(message_104) == bytes(new_signage_point_vdf)
+    message_104 = type(new_infusion_point_vdf).from_bytes(message_bytes)
+    assert message_104 == new_infusion_point_vdf
+    assert bytes(message_104) == bytes(new_infusion_point_vdf)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_105 = type(new_end_of_sub_slot_bundle).from_bytes(message_bytes)
-    assert message_105 == new_end_of_sub_slot_bundle
-    assert bytes(message_105) == bytes(new_end_of_sub_slot_bundle)
+    message_105 = type(new_signage_point_vdf).from_bytes(message_bytes)
+    assert message_105 == new_signage_point_vdf
+    assert bytes(message_105) == bytes(new_signage_point_vdf)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_106 = type(request_compact_proof_of_time).from_bytes(message_bytes)
-    assert message_106 == request_compact_proof_of_time
-    assert bytes(message_106) == bytes(request_compact_proof_of_time)
+    message_106 = type(new_end_of_sub_slot_bundle).from_bytes(message_bytes)
+    assert message_106 == new_end_of_sub_slot_bundle
+    assert bytes(message_106) == bytes(new_end_of_sub_slot_bundle)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_107 = type(respond_compact_proof_of_time).from_bytes(message_bytes)
-    assert message_107 == respond_compact_proof_of_time
-    assert bytes(message_107) == bytes(respond_compact_proof_of_time)
+    message_107 = type(request_compact_proof_of_time).from_bytes(message_bytes)
+    assert message_107 == request_compact_proof_of_time
+    assert bytes(message_107) == bytes(request_compact_proof_of_time)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_108 = type(error_without_data).from_bytes(message_bytes)
-    assert message_108 == error_without_data
-    assert bytes(message_108) == bytes(error_without_data)
+    message_108 = type(respond_compact_proof_of_time).from_bytes(message_bytes)
+    assert message_108 == respond_compact_proof_of_time
+    assert bytes(message_108) == bytes(respond_compact_proof_of_time)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
-    message_109 = type(error_with_data).from_bytes(message_bytes)
-    assert message_109 == error_with_data
-    assert bytes(message_109) == bytes(error_with_data)
+    message_109 = type(error_without_data).from_bytes(message_bytes)
+    assert message_109 == error_without_data
+    assert bytes(message_109) == bytes(error_without_data)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message_110 = type(error_with_data).from_bytes(message_bytes)
+    assert message_110 == error_with_data
+    assert bytes(message_110) == bytes(error_with_data)
 
     assert input_bytes == b""
