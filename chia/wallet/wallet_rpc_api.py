@@ -112,6 +112,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CATSetName,
+    CATSetNameResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
     CombineCoins,
@@ -2101,11 +2103,11 @@ class WalletRpcApi:
     async def get_cat_list(self, request: Empty) -> GetCATListResponse:
         return GetCATListResponse([DefaultCAT.from_json_dict(default_cat) for default_cat in DEFAULT_CATS.values()])
 
-    async def cat_set_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
-        await wallet.set_name(str(request["name"]))
-        return {"wallet_id": wallet_id}
+    @marshal
+    async def cat_set_name(self, request: CATSetName) -> CATSetNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
+        await wallet.set_name(request.name)
+        return CATSetNameResponse(wallet_id=request.wallet_id)
 
     async def cat_get_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

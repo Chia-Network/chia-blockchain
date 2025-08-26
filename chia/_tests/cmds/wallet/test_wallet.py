@@ -43,6 +43,8 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     BalanceResponse,
     CancelOfferResponse,
+    CATSetName,
+    CATSetNameResponse,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
     CreateOfferForIDsResponse,
@@ -683,8 +685,9 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
             self.add_to_log("create_wallet_for_existing_cat", (asset_id,))
             return {"wallet_id": 3}
 
-        async def set_cat_name(self, wallet_id: int, name: str) -> None:
-            self.add_to_log("set_cat_name", (wallet_id, name))
+        async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
+            self.add_to_log("set_cat_name", (request.wallet_id, request.name))
+            return CATSetNameResponse(wallet_id=request.wallet_id)
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
