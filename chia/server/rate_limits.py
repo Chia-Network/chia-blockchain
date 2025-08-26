@@ -83,7 +83,7 @@ class RateLimiter:
         rate_limits = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
-            limits: RLSettings = rate_limits["default_settings"]
+            limits: RLSettings
             if message_type in rate_limits["rate_limits_tx"]:
                 limits = rate_limits["rate_limits_tx"][message_type]
             elif message_type in rate_limits["rate_limits_other"]:
@@ -113,6 +113,7 @@ class RateLimiter:
                 log.warning(
                     f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
                 )
+                limits = rate_limits["default_settings"]
 
             if isinstance(limits, Unlimited):
                 # this message type is not rate limited. This is used for
@@ -130,9 +131,9 @@ class RateLimiter:
                 if new_message_counts > limits.frequency * proportion_of_limit:
                     return " ".join(
                         [
-                            f"message count: {new_message_counts}"
-                            f"> {limits.frequency * proportion_of_limit}"
-                            f"(scale factor: {proportion_of_limit})"
+                            f"message count: {new_message_counts}",
+                            f"> {limits.frequency * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
                         ]
                     )
                 if len(message.data) > limits.max_size:
