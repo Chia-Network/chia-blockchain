@@ -118,6 +118,7 @@ from chia.wallet.wallet_request_types import (
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    DefaultCAT,
     DeleteKey,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
@@ -172,6 +173,7 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
@@ -2095,8 +2097,9 @@ class WalletRpcApi:
     # CATs and Trading
     ##########################################################################################
 
-    async def get_cat_list(self, request: dict[str, Any]) -> EndpointResult:
-        return {"cat_list": list(DEFAULT_CATS.values())}
+    @marshal
+    async def get_cat_list(self, request: Empty) -> GetCATListResponse:
+        return GetCATListResponse([DefaultCAT.from_json_dict(default_cat) for default_cat in DEFAULT_CATS.values()])
 
     async def cat_set_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
