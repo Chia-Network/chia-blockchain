@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import time
 from collections import Counter
-from time import monotonic
-from typing import Optional
+from typing import Callable, Optional
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -24,8 +24,16 @@ class RateLimiter:
     percentage_of_limit: int
     non_tx_message_counts: int = 0
     non_tx_cumulative_size: int = 0
+    get_time: Callable[[], float]
 
-    def __init__(self, incoming: bool, reset_seconds: int = 60, percentage_of_limit: int = 100):
+    def __init__(
+        self,
+        incoming: bool,
+        reset_seconds: int = 60,
+        percentage_of_limit: int = 100,
+        *,
+        get_time: Callable[[], float] = time.monotonic,
+    ):
         """
         The incoming parameter affects whether counters are incremented
         unconditionally or not. For incoming messages, the counters are always
@@ -33,9 +41,10 @@ class RateLimiter:
         if they are allowed to be sent by the rate limiter, since we won't send
         the messages otherwise.
         """
+        self.get_time = get_time
         self.incoming = incoming
         self.reset_seconds = reset_seconds
-        self.current_slot = int(monotonic() // reset_seconds)
+        self.current_slot = int(get_time() // reset_seconds)
         self.message_counts = Counter()
         self.message_cumulative_sizes = Counter()
         self.percentage_of_limit = percentage_of_limit
@@ -51,7 +60,7 @@ class RateLimiter:
         hit and the message is good to be sent or received.
         """
 
-        current_slot = int(monotonic() // self.reset_seconds)
+        current_slot = int(self.get_time() // self.reset_seconds)
         if current_slot != self.current_slot:
             self.current_slot = current_slot
             self.message_counts = Counter()
