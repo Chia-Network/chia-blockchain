@@ -12,13 +12,13 @@ from chia.protocols.harvester_protocol import (
 )
 from chia.protocols.outbound_message import Message
 from chia.protocols.solver_protocol import SolverResponse
-from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
+from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
 class FarmerApiSchema:
     if TYPE_CHECKING:
-        _protocol_check: ApiProtocolSchema = cast("FarmerApiSchema", None)
+        _protocol_check: ApiSchemaProtocol = cast("FarmerApiSchema", None)
 
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 

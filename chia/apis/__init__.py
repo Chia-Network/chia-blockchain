@@ -8,9 +8,9 @@ from chia.apis.solver_api_schema import SolverApiSchema
 from chia.apis.timelord_api_schema import TimelordApiSchema
 from chia.apis.wallet_api_schema import WalletNodeApiSchema
 from chia.protocols.outbound_message import NodeType
-from chia.server.api_protocol import ApiProtocolSchema
+from chia.server.api_protocol import ApiSchemaProtocol
 
-ApiProtocolRegistry: dict[NodeType, type[ApiProtocolSchema]] = {
+ApiProtocolRegistry: dict[NodeType, type[ApiSchemaProtocol]] = {
     NodeType.FARMER: FarmerApiSchema,
     NodeType.FULL_NODE: FullNodeApiSchema,
     NodeType.HARVESTER: HarvesterApiSchema,

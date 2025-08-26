@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewPeakTimelord
-from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
+from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol
 
 
 class TimelordApiSchema:
     if TYPE_CHECKING:
-        _protocol_check: ApiProtocolSchema = cast("TimelordApiSchema", None)
+        _protocol_check: ApiSchemaProtocol = cast("TimelordApiSchema", None)
 
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 

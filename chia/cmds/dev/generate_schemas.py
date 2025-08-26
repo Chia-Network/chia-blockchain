@@ -187,9 +187,9 @@ def _generate_registry_file(output_dir: Path, selected_services: list[NodeType])
 
 {chr(10).join(imports)}
 from chia.protocols.outbound_message import NodeType
-from chia.server.api_protocol import ApiProtocolSchema
+from chia.server.api_protocol import ApiSchemaProtocol
 
-ApiProtocolRegistry: dict[NodeType, type[ApiProtocolSchema]] = {{
+ApiProtocolRegistry: dict[NodeType, type[ApiSchemaProtocol]] = {{
 {chr(10).join(registry_entries)}
 }}
 """

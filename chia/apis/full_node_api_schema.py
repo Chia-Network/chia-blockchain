@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, ClassVar, Optional, cast
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
+from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
 class FullNodeApiSchema:
     if TYPE_CHECKING:
-        _protocol_check: ApiProtocolSchema = cast("FullNodeApiSchema", None)
+        _protocol_check: ApiSchemaProtocol = cast("FullNodeApiSchema", None)
 
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 

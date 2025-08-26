@@ -28,7 +28,7 @@ from chia.protocols.protocol_timing import (
     RATE_LIMITER_BAN_SECONDS,
 )
 from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
-from chia.server.api_protocol import ApiMetadata, ApiProtocol, ApiProtocolSchema
+from chia.server.api_protocol import ApiMetadata, ApiProtocol, ApiSchemaProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
@@ -84,7 +84,7 @@ class WSChiaConnection:
     close_callback: Optional[ConnectionClosedCallbackProtocol] = field(repr=False)
     outbound_rate_limiter: RateLimiter
     inbound_rate_limiter: RateLimiter
-    class_for_type: dict[NodeType, type[ApiProtocolSchema]] = field(repr=False)
+    class_for_type: dict[NodeType, type[ApiSchemaProtocol]] = field(repr=False)
 
     # connection properties
     is_outbound: bool
@@ -140,7 +140,7 @@ class WSChiaConnection:
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         local_capabilities_for_handshake: list[tuple[uint16, str]],
-        class_for_type: dict[NodeType, type[ApiProtocolSchema]],
+        class_for_type: dict[NodeType, type[ApiSchemaProtocol]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
         assert ws._writer is not None

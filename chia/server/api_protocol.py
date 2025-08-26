@@ -17,11 +17,11 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.streamable import Streamable
 
 
-class ApiProtocolSchema(Protocol):
+class ApiSchemaProtocol(Protocol):
     metadata: ClassVar[ApiMetadata]
 
 
-class ApiProtocol(ApiProtocolSchema, Protocol):
+class ApiProtocol(ApiSchemaProtocol, Protocol):
     log: Logger
 
     def ready(self) -> bool: ...
@@ -125,7 +125,7 @@ class ApiMetadata:
     def create_schema(self, api: type[ApiProtocol]) -> None:
         imports = set()
         imports.add("from __future__ import annotations")
-        imports.add("from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema")
+        imports.add("from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol")
 
         # Track what's actually referenced in the generated code
         used_types = set()
@@ -241,7 +241,7 @@ class ApiMetadata:
                 f"""
                 class {schema_class_name}:
                     if TYPE_CHECKING:
-                        _protocol_check: ApiProtocolSchema = cast("{schema_class_name}", None)
+                        _protocol_check: ApiSchemaProtocol = cast("{schema_class_name}", None)
 
                     metadata: ClassVar[ApiMetadata] = ApiMetadata()
                 """

@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, ClassVar, cast
 from chia_rs import RespondToPhUpdates
 
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
-from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
+from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
 class WalletNodeApiSchema:
     if TYPE_CHECKING:
-        _protocol_check: ApiProtocolSchema = cast("WalletNodeApiSchema", None)
+        _protocol_check: ApiSchemaProtocol = cast("WalletNodeApiSchema", None)
 
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 

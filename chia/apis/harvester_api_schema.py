@@ -6,13 +6,13 @@ from chia.protocols import harvester_protocol
 from chia.protocols.harvester_protocol import PlotSyncResponse
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
+from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
 class HarvesterApiSchema:
     if TYPE_CHECKING:
-        _protocol_check: ApiProtocolSchema = cast("HarvesterApiSchema", None)
+        _protocol_check: ApiSchemaProtocol = cast("HarvesterApiSchema", None)
 
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
