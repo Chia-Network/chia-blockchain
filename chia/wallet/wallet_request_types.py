@@ -622,6 +622,21 @@ class CATGetNameResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class StrayCAT(Streamable):
+    asset_id: bytes32
+    name: str
+    first_seen_height: uint32
+    sender_puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetStrayCATsResponse(Streamable):
+    stray_cats: list[StrayCAT]
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str

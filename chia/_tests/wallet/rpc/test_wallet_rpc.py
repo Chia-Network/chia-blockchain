@@ -1397,8 +1397,8 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     await env_0.wallet_state_manager.interested_store.add_unacknowledged_token(
         asset_id, "Unknown", uint32(10000), bytes32(b"\00" * 32)
     )
-    cats = await env_0.rpc_client.get_stray_cats()
-    assert len(cats) == 1
+    stray_cats_response = await env_0.rpc_client.get_stray_cats()
+    assert len(stray_cats_response.stray_cats) == 1
 
     # Test CAT coin selection
     select_coins_response = await env_0.rpc_client.select_coins(

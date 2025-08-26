@@ -193,6 +193,7 @@ from chia.wallet.wallet_request_types import (
     GetPublicKeysResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
+    GetStrayCATsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -267,6 +268,7 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoinsResponse,
     SplitCoins,
     SplitCoinsResponse,
+    StrayCAT,
     SubmitTransactions,
     SubmitTransactionsResponse,
     TransactionRecordWithMetadata,
@@ -2117,14 +2119,15 @@ class WalletRpcApi:
         name: str = wallet.get_name()
         return CATGetNameResponse(wallet_id=request.wallet_id, name=name)
 
-    async def get_stray_cats(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_stray_cats(self, request: Empty) -> GetStrayCATsResponse:
         """
         Get a list of all unacknowledged CATs
         :param request: RPC request
         :return: A list of unacknowledged CATs
         """
         cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
-        return {"stray_cats": cats}
+        return GetStrayCATsResponse(stray_cats=[StrayCAT.from_json_dict(cat) for cat in cats])
 
     @tx_endpoint(push=True)
     async def cat_spend(
