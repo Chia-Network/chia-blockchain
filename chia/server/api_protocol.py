@@ -122,7 +122,7 @@ class ApiMetadata:
 
         return inner
 
-    def create_schema(self, api: type[ApiProtocol]) -> None:
+    def create_schema(self, api: type[ApiProtocol]) -> str:
         imports = set()
         imports.add("from __future__ import annotations")
         imports.add("from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol")
@@ -147,41 +147,30 @@ class ApiMetadata:
             # Check return type for Optional and Message
             return_hint = type_hints.get("return")
             if return_hint:
-                try:
-                    if return_hint.__origin__ is Union:
-                        args = return_hint.__args__
-                        if type(None) in args:
-                            used_types.add("Optional")
-                        for arg in args:
-                            try:
-                                if arg.__name__ == "Message":
-                                    used_types.add("Message")
-                            except AttributeError:
-                                pass
-                except AttributeError:
-                    try:
-                        if return_hint.__name__ == "Message":
+                origin = getattr(return_hint, "__origin__", None)
+                if origin is Union:
+                    args = return_hint.__args__
+                    if type(None) in args:
+                        used_types.add("Optional")
+                    for arg in args:
+                        if arg.__name__ == "Message":
                             used_types.add("Message")
-                    except AttributeError:
-                        pass
+                elif return_hint.__name__ == "Message":
+                    used_types.add("Message")
 
             # Check for types used in parameters that appear in the signature
             for param_name, hint in type_hints.items():
                 if param_name not in {"self", "return"}:
-                    try:
-                        module = hint.__module__
-                        name = hint.__name__
-                        if module and module.startswith("chia."):
-                            # Check if the type name actually appears directly in the method signature
-                            # (not as part of harvester_protocol.ClassName)
-                            signature_text = "".join(method_source)
-                            # Only import if used directly, not through module qualification
-                            if f": {name}" in signature_text or f"-> {name}" in signature_text:
-                                used_types.add(name)
-                                imports.add(f"from {module} import {name}")
-                    except AttributeError:
-                        # Skip types that don't have the expected attributes
-                        pass
+                    module = hint.__module__
+                    name = hint.__name__
+                    if module and module.startswith("chia."):
+                        # Check if the type name actually appears directly in the method signature
+                        # (not as part of harvester_protocol.ClassName)
+                        signature_text = "".join(method_source)
+                        # Only import if used directly, not through module qualification
+                        if f": {name}" in signature_text or f"-> {name}" in signature_text:
+                            used_types.add(name)
+                            imports.add(f"from {module} import {name}")
 
             # Check decorators for ProtocolMessageTypes usage
             decorator_line = source[0].strip()
@@ -204,21 +193,17 @@ class ApiMetadata:
                         # This might be a direct import we missed
                         # Try to find it in the type hints
                         for param_name, hint in type_hints.items():
-                            try:
-                                name = hint.__name__
-                                module = hint.__module__
-                                if name == type_name and module:
-                                    # Import from chia.protocols.*
-                                    if module.startswith("chia.protocols."):
-                                        imports.add(f"from {module} import {name}")
-                                        used_types.add(name)
-                                    # Special case: chia_rs types show up as builtins but are actually from chia_rs
-                                    elif module == "builtins" and type_name in {"RespondToPhUpdates"}:
-                                        imports.add(f"from chia_rs import {name}")
-                                        used_types.add(name)
-                            except AttributeError:
-                                # Skip types that don't have the expected attributes
-                                pass
+                            name = hint.__name__
+                            module = hint.__module__
+                            if name == type_name and module:
+                                # Import from chia.protocols.*
+                                if module.startswith("chia.protocols."):
+                                    imports.add(f"from {module} import {name}")
+                                    used_types.add(name)
+                                # Special case: chia_rs types show up as builtins but are actually from chia_rs
+                                elif module == "builtins" and type_name in {"RespondToPhUpdates"}:
+                                    imports.add(f"from chia_rs import {name}")
+                                    used_types.add(name)
 
         # Add imports only for types that are actually used
         if "Optional" in used_types:
@@ -229,14 +214,17 @@ class ApiMetadata:
         if "Message" in used_types:
             imports.add("from chia.protocols.outbound_message import Message")
 
-        # Print imports
+        # Build the schema content as a string
+        lines = []
+
+        # Add imports
         for import_line in sorted(imports):
-            print(import_line)
-        print()
+            lines.append(import_line)
+        lines.append("")
 
         # Use *ApiSchema naming convention for generated schemas
         schema_class_name = api.__name__.replace("API", "ApiSchema")
-        print(
+        lines.append(
             textwrap.dedent(
                 f"""
                 class {schema_class_name}:
@@ -245,7 +233,7 @@ class ApiMetadata:
 
                     metadata: ClassVar[ApiMetadata] = ApiMetadata()
                 """
-            )
+            ).strip()
         )
 
         for request in self.message_type_to_request.values():
@@ -258,18 +246,14 @@ class ApiMetadata:
 
             if return_hint and return_hint is not type(None):
                 # Check if it's Optional[something] - Optional types are fine with "..."
-                try:
-                    if hasattr(return_hint, "__origin__") and return_hint.__origin__ is Union:
-                        args = return_hint.__args__
-                        if type(None) not in args:
-                            # Not Optional (e.g., just Message), needs ignore
-                            needs_ignore = True
-                        # else: is Optional, no ignore needed
-                    else:
-                        # Direct return type (not Optional), needs ignore
+                if hasattr(return_hint, "__origin__") and return_hint.__origin__ is Union:
+                    args = return_hint.__args__
+                    if type(None) not in args:
+                        # Not Optional (e.g., just Message), needs ignore
                         needs_ignore = True
-                except AttributeError:
-                    # If we can't analyze it, assume it needs ignore
+                    # else: is Optional, no ignore needed
+                else:
+                    # Direct return type (not Optional), needs ignore
                     needs_ignore = True
 
             for line in source:
@@ -279,9 +263,11 @@ class ApiMetadata:
                     if needs_ignore:
                         final_line = final_line.rstrip() + "  # type: ignore[empty-body]"
 
-                print(final_line)
+                lines.append(final_line.rstrip())
                 if stripped.endswith(":"):
                     break
 
-            print("        ...")
-            print()
+            lines.append("        ...")
+            lines.append("")
+
+        return "\n".join(lines)

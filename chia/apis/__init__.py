@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from chia.apis.data_layer_api_schema import DataLayerApiSchema
 from chia.apis.farmer_api_schema import FarmerApiSchema
 from chia.apis.full_node_api_schema import FullNodeApiSchema
 from chia.apis.harvester_api_schema import HarvesterApiSchema
@@ -11,6 +12,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiSchemaProtocol
 
 ApiProtocolRegistry: dict[NodeType, type[ApiSchemaProtocol]] = {
+    NodeType.DATA_LAYER: DataLayerApiSchema,
     NodeType.FARMER: FarmerApiSchema,
     NodeType.FULL_NODE: FullNodeApiSchema,
     NodeType.HARVESTER: HarvesterApiSchema,
