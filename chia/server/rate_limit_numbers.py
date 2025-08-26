@@ -69,7 +69,6 @@ def compose_rate_limits(old_rate_limits: dict[str, Any], new_rate_limits: dict[s
 # Version 1 includes the original limits for chia software from versions 1.0 to 1.4.
 rate_limits = {
     1: {
-        "default_settings": RLSettings(100, 1024 * 1024, 100 * 1024 * 1024),
         "non_tx_freq": 1000,  # There is also a freq limit for many requests
         "non_tx_max_total_size": 100 * 1024 * 1024,  # There is also a size limit for many requests
         # All transaction related apis also have an aggregate limit
@@ -181,7 +180,6 @@ rate_limits = {
         },
     },
     2: {
-        "default_settings": RLSettings(100, 1024 * 1024, 100 * 1024 * 1024),
         "non_tx_freq": 1000,  # There is also a freq limit for many requests
         "non_tx_max_total_size": 100 * 1024 * 1024,  # There is also a size limit for many requests
         "rate_limits_tx": {
