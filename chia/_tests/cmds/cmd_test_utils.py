@@ -33,6 +33,8 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    CATGetName,
+    CATGetNameResponse,
     GetSyncStatusResponse,
     GetTransaction,
     GetTransactionResponse,
@@ -146,9 +148,9 @@ class TestWalletRpcClient(TestRpcClient):
             bytes32([2] * 32),
         )
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        self.add_to_log("get_cat_name", (wallet_id,))
-        return "test" + str(wallet_id)
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        self.add_to_log("get_cat_name", (request.wallet_id,))
+        return CATGetNameResponse(request.wallet_id, "test" + str(request.wallet_id))
 
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         self.add_to_log("sign_message_by_address", (request.address, request.message))
