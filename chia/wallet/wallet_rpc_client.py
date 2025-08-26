@@ -165,6 +165,8 @@ from chia.wallet.wallet_request_types import (
     SignMessageByAddressResponse,
     SignMessageByID,
     SignMessageByIDResponse,
+    SpendClawbackCoins,
+    SpendClawbackCoinsResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -341,23 +343,16 @@ class WalletRpcClient(RpcClient):
 
     async def spend_clawback_coins(
         self,
-        coin_ids: list[bytes32],
-        fee: int = 0,
-        force: bool = False,
-        push: bool = True,
+        request: SpendClawbackCoins,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> dict[str, Any]:
-        request = {
-            "coin_ids": [cid.hex() for cid in coin_ids],
-            "fee": fee,
-            "force": force,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("spend_clawback_coins", request)
-        return response
+    ) -> SpendClawbackCoinsResponse:
+        return SpendClawbackCoinsResponse.from_json_dict(
+            await self.fetch(
+                "spend_clawback_coins", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
         await self.fetch("delete_unconfirmed_transactions", request.to_json_dict())

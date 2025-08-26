@@ -40,6 +40,7 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
@@ -79,6 +80,7 @@ from chia.wallet.wallet_request_types import (
     SignMessageByAddressResponse,
     SignMessageByID,
     SignMessageByIDResponse,
+    SpendClawbackCoins,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -1684,14 +1686,12 @@ async def spend_clawback(
             print("Batch fee cannot be negative.")
             return []
         response = await wallet_client.spend_clawback_coins(
-            tx_ids,
-            fee,
-            force,
-            push=push,
+            SpendClawbackCoins(coin_ids=tx_ids, fee=fee, force=force, push=push),
+            tx_config=DEFAULT_TX_CONFIG,
             timelock_info=condition_valid_times,
         )
         print(str(response))
-        return [TransactionRecord.from_json_dict(tx) for tx in response["transactions"]]
+        return response.transactions
 
 
 async def mint_vc(

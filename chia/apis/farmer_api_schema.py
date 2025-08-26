@@ -3,8 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.harvester_protocol import PlotSyncDone, PlotSyncPathList, PlotSyncPlotList, PlotSyncStart
+from chia.protocols.harvester_protocol import (
+    PartialProofsData,
+    PlotSyncDone,
+    PlotSyncPathList,
+    PlotSyncPlotList,
+    PlotSyncStart,
+)
 from chia.protocols.outbound_message import Message
+from chia.protocols.solver_protocol import SolverResponse
 from chia.server.api_protocol import ApiMetadata, ApiProtocolSchema
 from chia.server.ws_connection import WSChiaConnection
 
@@ -19,6 +26,12 @@ class FarmerApiSchema:
     async def new_proof_of_space(
         self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
     ) -> None: ...
+
+    @metadata.request(peer_required=True)
+    async def partial_proofs(self, partial_proof_data: PartialProofsData, peer: WSChiaConnection) -> None: ...
+
+    @metadata.request()
+    async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None: ...
 
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None: ...

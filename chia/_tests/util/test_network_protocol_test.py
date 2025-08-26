@@ -12,6 +12,7 @@ from chia.protocols import (
     pool_protocol,
     protocol_message_types,
     shared_protocol,
+    solver_protocol,
     timelord_protocol,
     wallet_protocol,
 )
@@ -188,6 +189,7 @@ def test_missing_messages() -> None:
         "RequestSignatures",
         "RespondPlots",
         "RespondSignatures",
+        "PartialProofsData",
     }
 
     introducer_msgs = {"RequestPeersIntroducer", "RespondPeersIntroducer"}
@@ -218,6 +220,8 @@ def test_missing_messages() -> None:
         "RequestCompactProofOfTime",
         "RespondCompactProofOfTime",
     }
+
+    solver_msgs = {"SolverInfo", "SolverResponse"}
 
     shared_msgs = {"Handshake", "Capability", "Error"}
 
@@ -250,6 +254,10 @@ def test_missing_messages() -> None:
 
     assert types_in_module(timelord_protocol) == timelord_msgs, (
         f"message types were added or removed from timelord_protocol. {STANDARD_ADVICE}"
+    )
+
+    assert types_in_module(solver_protocol) == solver_msgs, (
+        f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"
     )
 
     assert types_in_module(shared_protocol) == shared_msgs, (
