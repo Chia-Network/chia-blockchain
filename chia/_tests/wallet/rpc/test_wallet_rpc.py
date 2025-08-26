@@ -104,6 +104,7 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
+    CATAssetIDToName,
     CATGetAssetID,
     CATGetName,
     CATSetName,
@@ -1212,19 +1213,17 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id.hex())
     await env_0.rpc_client.set_cat_name(CATSetName(cat_0_id, "My cat"))
     assert (await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))).name == "My cat"
-    result = await env_0.rpc_client.cat_asset_id_to_name(asset_id)
-    assert result is not None
-    wid, name = result
-    assert wid == cat_0_id
-    assert name == "My cat"
-    result = await env_0.rpc_client.cat_asset_id_to_name(bytes32.zeros)
-    assert result is None
+    asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(CATAssetIDToName(asset_id))
+    assert asset_to_name_response.wallet_id == cat_0_id
+    assert asset_to_name_response.name == "My cat"
+    asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(CATAssetIDToName(bytes32.zeros))
+    assert asset_to_name_response.name is None
     verified_asset_id = next(iter(DEFAULT_CATS.items()))[1]["asset_id"]
-    result = await env_0.rpc_client.cat_asset_id_to_name(bytes32.from_hexstr(verified_asset_id))
-    assert result is not None
-    should_be_none, name = result
-    assert should_be_none is None
-    assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
+    asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(
+        CATAssetIDToName(bytes32.from_hexstr(verified_asset_id))
+    )
+    assert asset_to_name_response.wallet_id is None
+    assert asset_to_name_response.name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
     # Creates a second wallet with the same CAT
     res = await env_1.rpc_client.create_wallet_for_existing_cat(asset_id)
