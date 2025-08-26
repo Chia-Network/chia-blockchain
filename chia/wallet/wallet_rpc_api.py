@@ -112,6 +112,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
     CATGetAssetID,
     CATGetAssetIDResponse,
     CATGetName,
@@ -2226,15 +2228,16 @@ class WalletRpcApi:
         asset_id: str = wallet.get_asset_id()
         return CATGetAssetIDResponse(asset_id=bytes32.from_hexstr(asset_id), wallet_id=request.wallet_id)
 
-    async def cat_asset_id_to_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+    @marshal
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request.asset_id.hex())
         if wallet is None:
-            if request["asset_id"] in DEFAULT_CATS:
-                return {"wallet_id": None, "name": DEFAULT_CATS[request["asset_id"]]["name"]}
+            if request.asset_id.hex() in DEFAULT_CATS:
+                return CATAssetIDToNameResponse(wallet_id=None, name=DEFAULT_CATS[request.asset_id.hex()]["name"])
             else:
-                raise ValueError("The asset ID specified does not belong to a wallet")
+                return CATAssetIDToNameResponse(wallet_id=None, name=None)
         else:
-            return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
+            return CATAssetIDToNameResponse(wallet_id=wallet.id(), name=wallet.get_name())
 
     @tx_endpoint(push=False)
     async def create_offer_for_ids(

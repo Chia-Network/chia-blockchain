@@ -650,6 +650,19 @@ class CATGetAssetIDResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CATAssetIDToName(Streamable):
+    asset_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATAssetIDToNameResponse(Streamable):
+    wallet_id: Optional[uint32]
+    name: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str

@@ -24,6 +24,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
     CATGetAssetID,
     CATGetAssetIDResponse,
     CATGetName,
@@ -637,15 +639,8 @@ class WalletRpcClient(RpcClient):
     async def get_stray_cats(self) -> GetStrayCATsResponse:
         return GetStrayCATsResponse.from_json_dict(await self.fetch("get_stray_cats", {}))
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
-        request = {"asset_id": asset_id.hex()}
-        try:
-            res = await self.fetch("cat_asset_id_to_name", request)
-        except ValueError:  # This happens if the asset_id is unknown
-            return None
-
-        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(res["wallet_id"])
-        return wallet_id, res["name"]
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+        return CATAssetIDToNameResponse.from_json_dict(await self.fetch("cat_asset_id_to_name", request.to_json_dict()))
 
     async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
         return CATGetNameResponse.from_json_dict(await self.fetch("cat_get_name", request.to_json_dict()))
