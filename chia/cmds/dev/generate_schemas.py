@@ -202,33 +202,24 @@ def _verify_git_tracking(files: list[Path]) -> None:
     """Verify all generated files are tracked by git. Raises GitTrackingError if issues found."""
     try:
         # Get list of tracked files from git
-        result = subprocess.run(["git", "ls-files"], check=True, capture_output=True, text=True, cwd=Path.cwd())
-        tracked_files = set(result.stdout.strip().split("\n"))
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], check=True, capture_output=True, text=True, cwd=Path.cwd()
+        )
+        repo_root = Path(result.stdout.strip())
+        result = subprocess.run(["git", "ls-files"], check=True, capture_output=True, text=True, cwd=repo_root)
+        tracked_files = {Path(line) for line in result.stdout.strip().splitlines()}
 
         # Check each generated file
-        untracked_files = []
-        warnings = []
+        untracked_files = [file_path for file_path in files if file_path.relative_to(repo_root) not in tracked_files]
 
-        for file_path in files:
-            # Convert to relative path from repo root
-            try:
-                relative_path = file_path.relative_to(Path.cwd())
-                if str(relative_path) not in tracked_files:
-                    untracked_files.append(file_path)
-            except ValueError:
-                # File is outside repo root, can't check tracking
-                warning = f"Cannot check git tracking for file outside repo: {file_path}"
-                click.echo(f"Warning: {warning}", err=True)
-                warnings.append(warning)
-
-        if untracked_files:
+        if len(untracked_files) == 0:
+            click.echo("All generated files are tracked by git")
+        else:
             click.echo("ERROR: The following generated files are not tracked by git:", err=True)
             for file_path in untracked_files:
                 click.echo(f"  {file_path}", err=True)
             click.echo("Please add these files to git before proceeding.", err=True)
             raise GitTrackingError(f"Found {len(untracked_files)} untracked generated files")
-        else:
-            click.echo("All generated files are tracked by git")
 
     except subprocess.CalledProcessError as e:
         error_msg = f"Error checking git status: {e}"
