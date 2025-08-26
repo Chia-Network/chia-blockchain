@@ -24,6 +24,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
+    CATGetAssetID,
+    CATGetAssetIDResponse,
     CATGetName,
     CATGetNameResponse,
     CATSetName,
@@ -629,9 +631,8 @@ class WalletRpcClient(RpcClient):
         request = {"wallet_type": "cat_wallet", "asset_id": asset_id.hex(), "mode": "existing"}
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_asset_id(self, wallet_id: int) -> bytes32:
-        request = {"wallet_id": wallet_id}
-        return bytes32.from_hexstr((await self.fetch("cat_get_asset_id", request))["asset_id"])
+    async def get_cat_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
+        return CATGetAssetIDResponse.from_json_dict(await self.fetch("cat_get_asset_id", request.to_json_dict()))
 
     async def get_stray_cats(self) -> GetStrayCATsResponse:
         return GetStrayCATsResponse.from_json_dict(await self.fetch("get_stray_cats", {}))

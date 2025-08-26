@@ -112,6 +112,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CATGetAssetID,
+    CATGetAssetIDResponse,
     CATGetName,
     CATGetNameResponse,
     CATSetName,
@@ -2218,11 +2220,11 @@ class WalletRpcApi:
             "transaction_id": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def cat_get_asset_id(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+    @marshal
+    async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
         asset_id: str = wallet.get_asset_id()
-        return {"asset_id": asset_id, "wallet_id": wallet_id}
+        return CATGetAssetIDResponse(asset_id=bytes32.from_hexstr(asset_id), wallet_id=request.wallet_id)
 
     async def cat_asset_id_to_name(self, request: dict[str, Any]) -> EndpointResult:
         wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])

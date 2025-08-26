@@ -104,6 +104,7 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
+    CATGetAssetID,
     CATGetName,
     CATSetName,
     CheckDeleteKey,
@@ -1205,7 +1206,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         env_0.wallet_states[uint32(env_0.wallet_aliases["cat0"])].balance.to_json_dict().items()
         <= (await env_0.rpc_client.get_wallet_balance(GetWalletBalance(cat_0_id))).wallet_balance.to_json_dict().items()
     )
-    asset_id = await env_0.rpc_client.get_cat_asset_id(cat_0_id)
+    asset_id = (await env_0.rpc_client.get_cat_asset_id(CATGetAssetID(cat_0_id))).asset_id
     assert (
         await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))
     ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id.hex())
