@@ -726,6 +726,17 @@ def test_ambiguous_deserialization_str_enum() -> None:
         TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
 
 
+def test_deserialization_to_invalid_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassStr(Streamable):
+        a: StringEnum
+
+    # encodes the string "baz" which is not a valid value for StringEnum
+    with pytest.raises(ValueError, match=re.escape("'baz' is not a valid StringEnum")):
+        TestClassStr.from_bytes(bytes([0, 0, 0, 3, 98, 97, 122]))
+
+
 def test_ambiguous_deserialization_bytes() -> None:
     @streamable
     @dataclass(frozen=True)
