@@ -609,6 +609,19 @@ class CATSetNameResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CATGetName(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetNameResponse(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str

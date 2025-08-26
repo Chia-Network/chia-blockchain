@@ -45,6 +45,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    CATGetName,
     CATSetName,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
@@ -185,7 +186,7 @@ async def get_unit_name_for_wallet_id(
     }:
         name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
-        name = await wallet_client.get_cat_name(wallet_id=wallet_id)
+        name = (await wallet_client.get_cat_name(CATGetName(wallet_id=uint32(wallet_id)))).name
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
@@ -571,7 +572,7 @@ async def make_offer(
                             name = "XCH"
                             unit = units["chia"]
                         else:
-                            name = await wallet_client.get_cat_name(id)
+                            name = (await wallet_client.get_cat_name(CATGetName(id))).name
                             unit = units["cat"]
                         if item in offers:
                             fungible_assets.append(FungibleAsset(name, uint64(abs(int(Decimal(amount) * unit)))))

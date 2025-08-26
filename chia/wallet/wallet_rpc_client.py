@@ -24,6 +24,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
+    CATGetName,
+    CATGetNameResponse,
     CATSetName,
     CATSetNameResponse,
     CATSpendResponse,
@@ -645,11 +647,8 @@ class WalletRpcClient(RpcClient):
         wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(res["wallet_id"])
         return wallet_id, res["name"]
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("cat_get_name", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(str, response["name"])
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        return CATGetNameResponse.from_json_dict(await self.fetch("cat_get_name", request.to_json_dict()))
 
     async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
         return CATSetNameResponse.from_json_dict(await self.fetch("cat_set_name", request.to_json_dict()))
