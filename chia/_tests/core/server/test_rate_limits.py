@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from chia_rs.sized_ints import uint32
 
@@ -9,7 +11,7 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, Respond
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.server.rate_limit_numbers import compose_rate_limits, get_rate_limits_to_use
+from chia.server.rate_limit_numbers import RLSettings, compose_rate_limits, get_rate_limits_to_use
 from chia.server.rate_limit_numbers import rate_limits as rl_numbers
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
@@ -40,34 +42,90 @@ async def test_get_rate_limits_to_use():
     assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
 
 
+# we want to exercise every possibly limit we may hit
+# they are:
+# * total number of messages / 60 seconds for non-transaction messages
+# * total number of bytes / 60 seconds for non-transaction messages
+# * number of messages / 60 seconds for "transaction" messages
+# * number of bytes / 60 seconds for transaction messages
+
+
 @pytest.mark.anyio
-async def test_too_many_messages():
-    # Too many messages
+@pytest.mark.parametrize("incoming", [True, False])
+@pytest.mark.parametrize("tx_msg", [True, False])
+@pytest.mark.parametrize("cumulative_size", [True, False])
+async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, monkeypatch):
+    # this test uses a single message type, and alters the rate limit settings
+    # for it to hit the different cases
+    print(f"{incoming=} {tx_msg=} {cumulative_size=}")
+
+    count = 1000
+    message_data = b"0" * 1024
+    msg_type = ProtocolMessageTypes.new_transaction
+
+    limits: dict[str, Any] = {}
+
+    if cumulative_size:
+        limits.update(
+            {
+                # this is the rate limit across all (non-tx) messages
+                "non_tx_freq": 2000,
+                # this is the byte size limit across all (non-tx) messages
+                "non_tx_max_total_size": 1000 * 1024,
+            }
+        )
+    else:
+        limits.update(
+            {
+                # this is the rate limit across all (non-tx) messages
+                "non_tx_freq": 1000,
+                # this is the byte size limit across all (non-tx) messages
+                "non_tx_max_total_size": 100 * 1024 * 1024,
+            }
+        )
+
+    if cumulative_size:
+        rate_limit = {msg_type: RLSettings(2000, 1024, 1000 * 1024)}
+    else:
+        rate_limit = {msg_type: RLSettings(1000, 1024, 1000 * 1024 * 1024)}
+
+    if tx_msg:
+        limits.update({"rate_limits_tx": rate_limit, "rate_limits_other": {}})
+    else:
+        limits.update({"rate_limits_other": rate_limit, "rate_limits_tx": {}})
+
+    def mock_get_limits(*args, **kwargs) -> dict[str, Any]:
+        return limits
+
+    import chia
+
+    monkeypatch.setattr(chia.server.rate_limits, "get_rate_limits_to_use", mock_get_limits)
+
     timer = SimClock()
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
-    new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
-    for i in range(4999):
-        assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2) is None
+    r = RateLimiter(incoming=incoming, get_time=timer.monotonic)
+    msg = make_msg(ProtocolMessageTypes.new_transaction, message_data)
 
-    saw_disconnect = False
-    for i in range(4999):
-        response = r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
-        if response is not None:
-            saw_disconnect = True
-    assert saw_disconnect
+    for i in range(count):
+        assert r.process_msg_and_check(msg, rl_v2, rl_v2) is None
 
-    # Non-tx message
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
-    new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
-    for i in range(200):
-        assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2) is None
+    expected_msg = ""
 
-    saw_disconnect = False
-    for i in range(200):
-        response = r.process_msg_and_check(new_peak_message, rl_v2, rl_v2)
-        if response is not None:
-            saw_disconnect = True
-    assert saw_disconnect
+    if cumulative_size:
+        if not tx_msg:
+            expected_msg += "non-tx size:"
+        else:
+            expected_msg += "cumulative size:"
+        expected_msg += f" {(count + 1) * len(message_data)} > {count * len(message_data) * 1.0}"
+    else:
+        if not tx_msg:
+            expected_msg += "non-tx count:"
+        else:
+            expected_msg += "message count:"
+        expected_msg += f" {count + 1} > {count * 1.0}"
+    expected_msg += " (scale factor: 1.0)"
+
+    response = r.process_msg_and_check(msg, rl_v2, rl_v2)
+    assert response == expected_msg
 
 
 @pytest.mark.anyio
