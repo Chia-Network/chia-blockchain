@@ -637,6 +637,19 @@ class GetStrayCATsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CATGetAssetID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetAssetIDResponse(Streamable):
+    wallet_id: uint32
+    asset_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str
