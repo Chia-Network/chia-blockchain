@@ -78,7 +78,6 @@ class ApiMetadata:
             non_optional_reply_types = reply_types
 
         def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
-            # print(inspect.getsource(f))
             @functools.wraps(f)
             def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
                 arg: S
