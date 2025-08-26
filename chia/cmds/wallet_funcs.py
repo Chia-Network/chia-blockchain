@@ -45,6 +45,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    CATSetName,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
     DeleteNotifications,
@@ -479,10 +480,10 @@ async def add_token(
         if wallet_id is None:
             response = await wallet_client.create_wallet_for_existing_cat(asset_id)
             wallet_id = response["wallet_id"]
-            await wallet_client.set_cat_name(wallet_id, token_name)
+            await wallet_client.set_cat_name(CATSetName(wallet_id, token_name))
             print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
         else:
-            await wallet_client.set_cat_name(wallet_id, token_name)
+            await wallet_client.set_cat_name(CATSetName(wallet_id, token_name))
             print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
 
 

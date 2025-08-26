@@ -104,6 +104,7 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
+    CATSetName,
     CheckDeleteKey,
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
@@ -1207,7 +1208,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == wallet_type.default_wallet_name_for_unknown_cat(
         asset_id.hex()
     )
-    await env_0.rpc_client.set_cat_name(cat_0_id, "My cat")
+    await env_0.rpc_client.set_cat_name(CATSetName(cat_0_id, "My cat"))
     assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == "My cat"
     result = await env_0.rpc_client.cat_asset_id_to_name(asset_id)
     assert result is not None
