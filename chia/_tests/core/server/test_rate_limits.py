@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Union
 
 import pytest
 from chia_rs.sized_ints import uint32
@@ -11,8 +11,7 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, Respond
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.server.rate_limit_numbers import RLSettings, compose_rate_limits, get_rate_limits_to_use
-from chia.server.rate_limit_numbers import rate_limits as rl_numbers
+from chia.server.rate_limit_numbers import RLSettings, Unlimited, get_rate_limits_to_use
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -63,39 +62,19 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, mo
     message_data = b"0" * 1024
     msg_type = ProtocolMessageTypes.new_transaction
 
-    limits: dict[str, Any] = {}
-
     if cumulative_size:
-        limits.update(
-            {
-                # this is the rate limit across all (non-tx) messages
-                "non_tx_freq": 2000,
-                # this is the byte size limit across all (non-tx) messages
-                "non_tx_max_total_size": 1000 * 1024,
-            }
-        )
+        agg_limit = RLSettings(False, 2000, 1000 * 1024, 1000 * 1024)
     else:
-        limits.update(
-            {
-                # this is the rate limit across all (non-tx) messages
-                "non_tx_freq": 1000,
-                # this is the byte size limit across all (non-tx) messages
-                "non_tx_max_total_size": 100 * 1024 * 1024,
-            }
-        )
+        agg_limit = RLSettings(False, 1000, 100 * 1024 * 1024, 100 * 1024 * 1024)
 
+    limits: dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]
     if cumulative_size:
-        rate_limit = {msg_type: RLSettings(2000, 1024, 1000 * 1024)}
+        limits = {msg_type: RLSettings(not tx_msg, 2000, 1024, 1000 * 1024)}
     else:
-        rate_limit = {msg_type: RLSettings(1000, 1024, 1000 * 1024 * 1024)}
+        limits = {msg_type: RLSettings(not tx_msg, 1000, 1024, 1000 * 1024 * 1024)}
 
-    if tx_msg:
-        limits.update({"rate_limits_tx": rate_limit, "rate_limits_other": {}})
-    else:
-        limits.update({"rate_limits_other": rate_limit, "rate_limits_tx": {}})
-
-    def mock_get_limits(*args, **kwargs) -> dict[str, Any]:
-        return limits
+    def mock_get_limits(*args, **kwargs) -> tuple[dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]], RLSettings]:
+        return limits, agg_limit
 
     import chia
 
@@ -103,7 +82,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, mo
 
     timer = SimClock()
     r = RateLimiter(incoming=incoming, get_time=timer.monotonic)
-    msg = make_msg(ProtocolMessageTypes.new_transaction, message_data)
+    msg = make_msg(msg_type, message_data)
 
     for i in range(count):
         assert r.process_msg_and_check(msg, rl_v2, rl_v2) is None
@@ -318,18 +297,18 @@ async def test_too_many_outgoing_messages():
     timer = SimClock()
     r = RateLimiter(incoming=False, get_time=timer.monotonic)
     new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
-    non_tx_freq = get_rate_limits_to_use(rl_v2, rl_v2)["non_tx_freq"]
+    _, agg_limit = get_rate_limits_to_use(rl_v2, rl_v2)
 
     passed = 0
     blocked = 0
-    for i in range(non_tx_freq):
+    for i in range(agg_limit.frequency):
         if r.process_msg_and_check(new_peers_message, rl_v2, rl_v2) is None:
             passed += 1
         else:
             blocked += 1
 
     assert passed == 10
-    assert blocked == non_tx_freq - passed
+    assert blocked == agg_limit.frequency - passed
 
     # ensure that *another* message type is not blocked because of this
 
@@ -343,18 +322,18 @@ async def test_too_many_incoming_messages():
     timer = SimClock()
     r = RateLimiter(incoming=True, get_time=timer.monotonic)
     new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
-    non_tx_freq = get_rate_limits_to_use(rl_v2, rl_v2)["non_tx_freq"]
+    _, agg_limit = get_rate_limits_to_use(rl_v2, rl_v2)
 
     passed = 0
     blocked = 0
-    for i in range(non_tx_freq):
+    for i in range(agg_limit.frequency):
         if r.process_msg_and_check(new_peers_message, rl_v2, rl_v2) is None:
             passed += 1
         else:
             blocked += 1
 
     assert passed == 10
-    assert blocked == non_tx_freq - passed
+    assert blocked == agg_limit.frequency - passed
 
     # ensure that other message types *are* blocked because of this
 
@@ -426,37 +405,11 @@ async def test_different_versions(node_with_params, node_with_params_b, self_hos
     # The following code checks whether all of the runs resulted in the same number of items in "rate_limits_tx",
     # which would mean the same rate limits are always used. This should not happen, since two nodes with V2
     # will use V2.
-    total_tx_msg_count = len(
-        get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)["rate_limits_tx"]
-    )
+    total_tx_msg_count = len(get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities))
 
     test_different_versions_results.append(total_tx_msg_count)
     if len(test_different_versions_results) >= 4:
         assert len(set(test_different_versions_results)) >= 2
-
-
-@pytest.mark.anyio
-async def test_compose():
-    rl_1 = rl_numbers[1]
-    rl_2 = rl_numbers[2]
-    assert ProtocolMessageTypes.respond_children in rl_1["rate_limits_other"]
-    assert ProtocolMessageTypes.respond_children not in rl_1["rate_limits_tx"]
-    assert ProtocolMessageTypes.respond_children not in rl_2["rate_limits_other"]
-    assert ProtocolMessageTypes.respond_children in rl_2["rate_limits_tx"]
-
-    assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
-    assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
-    assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_other"]
-    assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_tx"]
-
-    comps = compose_rate_limits(rl_1, rl_2)
-    # v2 limits are used if present
-    assert ProtocolMessageTypes.respond_children not in comps["rate_limits_other"]
-    assert ProtocolMessageTypes.respond_children in comps["rate_limits_tx"]
-
-    # Otherwise, fall back to v1
-    assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
-    assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
 
 
 @pytest.mark.anyio
