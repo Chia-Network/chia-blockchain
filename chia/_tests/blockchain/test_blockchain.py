@@ -3878,14 +3878,12 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info)
 
     # Incorrectly set the height as spent in DB to trigger an error
-    coin_record_dbg1 = await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())
-    print(f"{coin_record_dbg1}")
+    print(f"{await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
     print(spend_bundle.coin_spends[0].coin.name())
     # await b.consensus_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
     async with b.consensus_store as writer:
         await writer.rollback_to_block(2)
-    coin_record_dbg2 = await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())
-    print(f"{coin_record_dbg2}")
+    print(f"{await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
     fork_block = blocks_reorg_chain[10 - 1]
     # fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
