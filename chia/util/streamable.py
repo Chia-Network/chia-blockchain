@@ -719,7 +719,7 @@ class UInt64Range(Streamable):
 _T_Enum = TypeVar("_T_Enum", bound=EnumMeta)
 
 
-def streamable_enum(proxy: type[Any]) -> Callable[[_T_Enum], _T_Enum]:
+def streamable_enum(proxy: type[object]) -> Callable[[_T_Enum], _T_Enum]:
     def streamable_enum_wrapper(cls: _T_Enum) -> _T_Enum:
         setattr(cls, "_streamable_proxy", proxy)
         setattr(cls, "_ignore_", ["_streamable_proxy"])

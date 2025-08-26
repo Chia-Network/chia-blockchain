@@ -446,13 +446,13 @@ class PostInitTestClassDict(Streamable):
 
 
 @streamable_enum(uint32)
-class IntEnum(Enum):
+class IntegerEnum(Enum):
     A = 1
     B = 2
 
 
 @streamable_enum(str)
-class StrEnum(Enum):
+class StringEnum(Enum):
     A = "foo"
     B = "bar"
 
@@ -460,8 +460,8 @@ class StrEnum(Enum):
 @streamable
 @dataclass(frozen=True)
 class PostInitTestClassEnum(Streamable):
-    a: IntEnum
-    b: StrEnum
+    a: IntegerEnum
+    b: StringEnum
 
 
 @pytest.mark.parametrize(
@@ -474,7 +474,7 @@ class PostInitTestClassEnum(Streamable):
         (PostInitTestClassTuple, ((1, "test"), ((200, "test_2"), b"\xba" * 32))),
         (PostInitTestClassDict, ({1: "bar"}, {bytes32.zeros: {1: "bar"}})),
         (PostInitTestClassOptional, (12, None, 13, None)),
-        (PostInitTestClassEnum, (IntEnum.A, StrEnum.B)),
+        (PostInitTestClassEnum, (IntegerEnum.A, StringEnum.B)),
     ],
 )
 def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
@@ -541,8 +541,8 @@ def test_basic() -> None:
         f: Optional[uint32]
         g: tuple[uint32, str, bytes]
         h: dict[uint32, str]
-        i: IntEnum
-        j: StrEnum
+        i: IntegerEnum
+        j: StringEnum
 
     # we want to test invalid here, hence the ignore.
     a = TestClass(
@@ -554,8 +554,8 @@ def test_basic() -> None:
         None,
         (uint32(383), "hello", b"goodbye"),
         {uint32(1): "foo"},
-        IntEnum.A,
-        StrEnum.B,
+        IntegerEnum.A,
+        StringEnum.B,
     )
 
     b: bytes = bytes(a)
@@ -667,19 +667,19 @@ def test_ambiguous_deserialization_int() -> None:
         a: uint32
 
     # Does not have the required uint size
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=re.escape("uint32.from_bytes() requires 4 bytes but got: 2")):
         TestClassUint.from_bytes(b"\x00\x00")
 
 
 def test_ambiguous_deserialization_int_enum() -> None:
     @streamable
     @dataclass(frozen=True)
-    class TestClassIntEnum(Streamable):
-        a: IntEnum
+    class TestClassIntegerEnum(Streamable):
+        a: IntegerEnum
 
-    # Does not have the required uint size
-    with pytest.raises(ValueError):
-        TestClassIntEnum.from_bytes(b"\x00\x00")
+    # passed bytes are incorrect size for serialization proxy
+    with pytest.raises(ValueError, match=re.escape("uint32.from_bytes() requires 4 bytes but got: 2")):
+        TestClassIntegerEnum.from_bytes(b"\x00\x00")
 
 
 def test_ambiguous_deserialization_list() -> None:
@@ -719,9 +719,9 @@ def test_ambiguous_deserialization_str_enum() -> None:
     @streamable
     @dataclass(frozen=True)
     class TestClassStr(Streamable):
-        a: StrEnum
+        a: StringEnum
 
-    # Does not have the required str size
+    # passed bytes are incorrect size for serialization proxy
     with pytest.raises(AssertionError):
         TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
 
