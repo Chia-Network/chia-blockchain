@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -106,6 +106,7 @@ from chia.wallet.wallet_request_types import (
     GetPublicKeysResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
+    GetStrayCATsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -632,10 +633,8 @@ class WalletRpcClient(RpcClient):
         request = {"wallet_id": wallet_id}
         return bytes32.from_hexstr((await self.fetch("cat_get_asset_id", request))["asset_id"])
 
-    async def get_stray_cats(self) -> list[dict[str, Any]]:
-        response = await self.fetch("get_stray_cats", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(list[dict[str, Any]], response["stray_cats"])
+    async def get_stray_cats(self) -> GetStrayCATsResponse:
+        return GetStrayCATsResponse.from_json_dict(await self.fetch("get_stray_cats", {}))
 
     async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
         request = {"asset_id": asset_id.hex()}
