@@ -71,7 +71,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
