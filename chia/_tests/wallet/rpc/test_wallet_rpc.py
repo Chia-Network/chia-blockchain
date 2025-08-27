@@ -109,6 +109,7 @@ from chia.wallet.wallet_request_types import (
     CATGetName,
     CATSetName,
     CheckDeleteKey,
+    CheckOfferValidity,
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
     DefaultCAT,
@@ -1566,8 +1567,9 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     }
     assert advanced_summary == summary
 
-    id, _valid = await env_1.rpc_client.check_offer_validity(offer)
-    assert id == offer.name()
+    offer_validity_response = await env_1.rpc_client.check_offer_validity(CheckOfferValidity(offer.to_bech32()))
+    assert offer_validity_response.id == offer.name()
+    assert offer_validity_response.valid
 
     all_offers = await env_1.rpc_client.get_all_offers(file_contents=True)
     assert len(all_offers) == 1

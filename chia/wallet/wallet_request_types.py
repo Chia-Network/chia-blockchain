@@ -663,6 +663,19 @@ class CATAssetIDToNameResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CheckOfferValidity(Streamable):
+    offer: str
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckOfferValidityResponse(Streamable):
+    valid: bool
+    id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str
