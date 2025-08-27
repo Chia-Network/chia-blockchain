@@ -122,6 +122,8 @@ from chia.wallet.wallet_request_types import (
     CATSetNameResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
+    CheckOfferValidity,
+    CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDL,
@@ -2361,15 +2363,14 @@ class WalletRpcApi:
             },
         }
 
-    async def check_offer_validity(self, request: dict[str, Any]) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
+    @marshal
+    async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
+        offer = Offer.from_bech32(request.offer)
         peer = self.service.get_full_node_peer()
-        return {
-            "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
-            "id": offer.name(),
-        }
+        return CheckOfferValidityResponse(
+            valid=(await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
+            id=offer.name(),
+        )
 
     @tx_endpoint(push=True)
     async def take_offer(

@@ -35,6 +35,8 @@ from chia.wallet.wallet_request_types import (
     CATSpendResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
+    CheckOfferValidity,
+    CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDL,
@@ -728,9 +730,10 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
         return bytes32.from_hexstr(res["id"]), res["summary"]
 
-    async def check_offer_validity(self, offer: Offer) -> tuple[bytes32, bool]:
-        res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
-        return bytes32.from_hexstr(res["id"]), res["valid"]
+    async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
+        return CheckOfferValidityResponse.from_json_dict(
+            await self.fetch("check_offer_validity", request.to_json_dict())
+        )
 
     async def take_offer(
         self,
