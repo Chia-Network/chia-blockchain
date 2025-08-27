@@ -73,7 +73,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import DLLatestSingleton
+from chia.wallet.wallet_request_types import CheckOfferValidity, DLLatestSingleton
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_service import WalletService
 
@@ -222,7 +222,9 @@ async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
     await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    return (await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer))[1]
+    return (
+        await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(CheckOfferValidity(offer=offer.to_bech32()))
+    ).valid
 
 
 async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process:
@@ -1825,9 +1827,11 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     for _ in range(10):
         if not (
             await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-                offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])),
+                CheckOfferValidity(
+                    offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])).to_bech32()
+                ),
             )
-        )[1]:
+        ).valid:
             break
         await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)

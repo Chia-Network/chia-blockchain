@@ -33,6 +33,10 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetName,
+    CATGetNameResponse,
     GetSyncStatusResponse,
     GetTransaction,
     GetTransactionResponse,
@@ -146,9 +150,9 @@ class TestWalletRpcClient(TestRpcClient):
             bytes32([2] * 32),
         )
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        self.add_to_log("get_cat_name", (wallet_id,))
-        return "test" + str(wallet_id)
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        self.add_to_log("get_cat_name", (request.wallet_id,))
+        return CATGetNameResponse(request.wallet_id, "test" + str(request.wallet_id))
 
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         self.add_to_log("sign_message_by_address", (request.address, request.message))
@@ -182,15 +186,15 @@ class TestWalletRpcClient(TestRpcClient):
         signing_mode = SigningMode.CHIP_0002.value
         return SignMessageByIDResponse(pubkey, signature, bytes32.zeros, signing_mode)
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
         """
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
-        self.add_to_log("cat_asset_id_to_name", (asset_id,))
+        self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
         for i in range(256):
-            if asset_id == get_bytes32(i):
-                return uint32(i + 1), "test" + str(i)
-        return None
+            if request.asset_id == get_bytes32(i):
+                return CATAssetIDToNameResponse(uint32(i + 1), "test" + str(i))
+        return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
     async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
         self.add_to_log("get_nft_info", (request.coin_id, request.latest))
