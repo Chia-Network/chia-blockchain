@@ -193,6 +193,7 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffersCountResponse,
     GetPrivateKey,
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
@@ -2456,12 +2457,15 @@ class WalletRpcApi:
 
         return {"trade_records": result, "offers": offer_values}
 
-    async def get_offers_count(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_offers_count(self, request: Empty) -> GetOffersCountResponse:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
 
-        return {"total": total, "my_offers_count": my_offers_count, "taken_offers_count": taken_offers_count}
+        return GetOffersCountResponse(
+            total=uint16(total), my_offers_count=uint16(my_offers_count), taken_offers_count=uint16(taken_offers_count)
+        )
 
     @tx_endpoint(push=True)
     async def cancel_offer(
