@@ -44,7 +44,7 @@ class NewSignagePointHarvester(Streamable):
 
 
 # this message has the same message ID as NewSignagePointHarvester, but this
-# message format is used if the protocol version is 0.0.27 or higher
+# message format is used if the protocol version is 0.0.37 or higher
 @streamable
 @dataclass(frozen=True)
 class NewSignagePointHarvester2(Streamable):
