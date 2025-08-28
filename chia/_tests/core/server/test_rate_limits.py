@@ -71,25 +71,25 @@ async def test_limits_v2(
         limits.update(
             {
                 # this is the rate limit across all (non-tx) messages
-                "non_tx_freq": 2000,
+                "non_tx_freq": count * 2,
                 # this is the byte size limit across all (non-tx) messages
-                "non_tx_max_total_size": 1000 * 1024,
+                "non_tx_max_total_size": count * len(message_data),
             }
         )
     else:
         limits.update(
             {
                 # this is the rate limit across all (non-tx) messages
-                "non_tx_freq": 1000,
+                "non_tx_freq": count,
                 # this is the byte size limit across all (non-tx) messages
-                "non_tx_max_total_size": 100 * 1024 * 1024,
+                "non_tx_max_total_size": count * 2 * len(message_data),
             }
         )
 
     if limit_size:
-        rate_limit = {msg_type: RLSettings(2000, 1024, 1000 * 1024)}
+        rate_limit = {msg_type: RLSettings(count * 2, 1024, count * len(message_data))}
     else:
-        rate_limit = {msg_type: RLSettings(1000, 1024, 1000 * 1024 * 1024)}
+        rate_limit = {msg_type: RLSettings(count, 1024, count * 2 * len(message_data))}
 
     if exempt_from_aggregate:
         limits.update({"rate_limits_tx": rate_limit, "rate_limits_other": {}})
