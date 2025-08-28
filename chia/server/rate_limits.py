@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import Counter
-from typing import Optional
+from typing import Callable, Optional
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -18,14 +18,22 @@ log = logging.getLogger(__name__)
 class RateLimiter:
     incoming: bool
     reset_seconds: int
-    current_minute: int
+    current_slot: int
     message_counts: Counter[ProtocolMessageTypes]
     message_cumulative_sizes: Counter[ProtocolMessageTypes]
     percentage_of_limit: int
     non_tx_message_counts: int = 0
     non_tx_cumulative_size: int = 0
+    get_time: Callable[[], float]
 
-    def __init__(self, incoming: bool, reset_seconds: int = 60, percentage_of_limit: int = 100):
+    def __init__(
+        self,
+        incoming: bool,
+        reset_seconds: int = 60,
+        percentage_of_limit: int = 100,
+        *,
+        get_time: Callable[[], float] = time.monotonic,
+    ):
         """
         The incoming parameter affects whether counters are incremented
         unconditionally or not. For incoming messages, the counters are always
@@ -33,9 +41,10 @@ class RateLimiter:
         if they are allowed to be sent by the rate limiter, since we won't send
         the messages otherwise.
         """
+        self.get_time = get_time
         self.incoming = incoming
         self.reset_seconds = reset_seconds
-        self.current_minute = int(time.time() // reset_seconds)
+        self.current_slot = int(get_time() // reset_seconds)
         self.message_counts = Counter()
         self.message_cumulative_sizes = Counter()
         self.percentage_of_limit = percentage_of_limit
@@ -51,9 +60,9 @@ class RateLimiter:
         hit and the message is good to be sent or received.
         """
 
-        current_minute = int(time.time() // self.reset_seconds)
-        if current_minute != self.current_minute:
-            self.current_minute = current_minute
+        current_slot = int(self.get_time() // self.reset_seconds)
+        if current_slot != self.current_slot:
+            self.current_slot = current_slot
             self.message_counts = Counter()
             self.message_cumulative_sizes = Counter()
             self.non_tx_message_counts = 0
@@ -74,7 +83,7 @@ class RateLimiter:
         rate_limits = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
-            limits: RLSettings = rate_limits["default_settings"]
+            limits: RLSettings
             if message_type in rate_limits["rate_limits_tx"]:
                 limits = rate_limits["rate_limits_tx"][message_type]
             elif message_type in rate_limits["rate_limits_other"]:
@@ -104,6 +113,7 @@ class RateLimiter:
                 log.warning(
                     f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
                 )
+                limits = rate_limits["default_settings"]
 
             if isinstance(limits, Unlimited):
                 # this message type is not rate limited. This is used for
@@ -121,9 +131,9 @@ class RateLimiter:
                 if new_message_counts > limits.frequency * proportion_of_limit:
                     return " ".join(
                         [
-                            f"message count: {new_message_counts}"
-                            f"> {limits.frequency * proportion_of_limit}"
-                            f"(scale factor: {proportion_of_limit})"
+                            f"message count: {new_message_counts}",
+                            f"> {limits.frequency * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
                         ]
                     )
                 if len(message.data) > limits.max_size:
