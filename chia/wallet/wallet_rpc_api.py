@@ -120,6 +120,8 @@ from chia.wallet.wallet_request_types import (
     CATGetNameResponse,
     CATSetName,
     CATSetNameResponse,
+    CATSpend,
+    CATSpendResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
     CheckOfferValidity,
@@ -2137,72 +2139,47 @@ class WalletRpcApi:
         return GetStrayCATsResponse(stray_cats=[StrayCAT.from_json_dict(cat) for cat in cats])
 
     @tx_endpoint(push=True)
+    @marshal
     async def cat_spend(
         self,
-        request: dict[str, Any],
+        request: CATSpend,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
-    ) -> EndpointResult:
+    ) -> CATSpendResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
 
         amounts: list[uint64] = []
         puzzle_hashes: list[bytes32] = []
         memos: list[list[bytes]] = []
-        additions: Optional[list[dict[str, Any]]] = request.get("additions")
-        if not isinstance(request["fee"], int) or (additions is None and not isinstance(request["amount"], int)):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        if additions is not None:
-            for addition in additions:
-                receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
-                if len(receiver_ph) != 32:
-                    raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
-                amount = uint64(addition["amount"])
-                if amount > self.service.constants.MAX_COIN_AMOUNT:
+        if request.additions is not None:
+            for addition in request.additions:
+                if addition.amount > self.service.constants.MAX_COIN_AMOUNT:
                     raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-                amounts.append(amount)
-                puzzle_hashes.append(receiver_ph)
-                if "memos" in addition:
-                    memos.append([mem.encode("utf-8") for mem in addition["memos"]])
+                amounts.append(addition.amount)
+                puzzle_hashes.append(addition.puzzle_hash)
+                if addition.memos is not None:
+                    memos.append([mem.encode("utf-8") for mem in addition.memos])
         else:
-            amounts.append(uint64(request["amount"]))
-            puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
-            if "memos" in request:
-                memos.append([mem.encode("utf-8") for mem in request["memos"]])
+            # Our __post_init__ guards against these not being None
+            amounts.append(request.amount)  # type: ignore[arg-type]
+            puzzle_hashes.append(decode_puzzle_hash(request.inner_address))  # type: ignore[arg-type]
+            if request.memos is not None:
+                memos.append([mem.encode("utf-8") for mem in request.memos])
         coins: Optional[set[Coin]] = None
-        if "coins" in request and len(request["coins"]) > 0:
-            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
-        fee: uint64 = uint64(request.get("fee", 0))
+        if request.coins is not None and len(request.coins) > 0:
+            coins = set(request.coins)
 
-        cat_discrepancy_params: tuple[Optional[int], Optional[str], Optional[str]] = (
-            request.get("extra_delta", None),
-            request.get("tail_reveal", None),
-            request.get("tail_solution", None),
-        )
-        cat_discrepancy: Optional[tuple[int, Program, Program]] = None
-        if cat_discrepancy_params != (None, None, None):
-            if None in cat_discrepancy_params:
-                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
-            else:
-                assert cat_discrepancy_params[0] is not None
-                assert cat_discrepancy_params[1] is not None
-                assert cat_discrepancy_params[2] is not None
-                cat_discrepancy = (
-                    cat_discrepancy_params[0],  # mypy sanitization
-                    Program.fromhex(cat_discrepancy_params[1]),
-                    Program.fromhex(cat_discrepancy_params[2]),
-                )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     action_scope,
-                    fee,
-                    cat_discrepancy=cat_discrepancy,
+                    request.fee,
+                    cat_discrepancy=request.cat_discrepancy,
                     coins=coins,
                     memos=memos if memos else None,
                     extra_conditions=extra_conditions,
@@ -2212,18 +2189,15 @@ class WalletRpcApi:
                 amounts,
                 puzzle_hashes,
                 action_scope,
-                fee,
-                cat_discrepancy=cat_discrepancy,
+                request.fee,
+                cat_discrepancy=request.cat_discrepancy,
                 coins=coins,
                 memos=memos if memos else None,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "transaction": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "transaction_id": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will fill in these default values
+        return CATSpendResponse([], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros)
 
     @marshal
     async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
