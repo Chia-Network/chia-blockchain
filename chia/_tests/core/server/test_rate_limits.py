@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import pytest
@@ -26,8 +27,9 @@ node_with_params_b = node_with_params
 test_different_versions_results: list[int] = []
 
 
+@dataclass
 class SimClock:
-    current_time = 1000.0
+    current_time: float = 1000.0
 
     def monotonic(self) -> float:
         return self.current_time
@@ -127,6 +129,17 @@ async def test_limits_v2(
 
     response = r.process_msg_and_check(msg, rl_v2, rl_v2)
     assert response == expected_msg
+
+    for _ in range(10):
+        response = r.process_msg_and_check(msg, rl_v2, rl_v2)
+        # we can't stop incoming messages from arriving, counters keep
+        # increasing for incoming messages. For outgoing messages, we expect
+        # them not to be sent when hitting the rate limit, so those counters in
+        # the returned message stay the same
+        if direction:
+            assert response is not None
+        else:
+            assert response == expected_msg
 
 
 @pytest.mark.anyio
