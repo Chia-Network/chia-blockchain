@@ -49,6 +49,7 @@ from chia.wallet.wallet_request_types import (
     CATAssetIDToNameResponse,
     CATGetName,
     CATSetName,
+    CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
     DeleteNotifications,
@@ -401,18 +402,20 @@ async def send(
         elif typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             print("Submitting transaction...")
             res = await wallet_client.cat_spend(
-                wallet_id,
-                CMDTXConfigLoader(
+                CATSpend(
+                    wallet_id=uint32(wallet_id),
+                    amount=final_amount,
+                    inner_address=address.original_address,
+                    fee=fee,
+                    memos=memos,
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
-                final_amount,
-                address.original_address,
-                fee,
-                memos,
-                push=push,
                 timelock_info=condition_valid_times,
             )
         else:
