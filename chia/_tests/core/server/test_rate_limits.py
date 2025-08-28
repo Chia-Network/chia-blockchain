@@ -32,7 +32,7 @@ class SimClock:
     def monotonic(self) -> float:
         return self.current_time
 
-    def sleep(self, duration: float) -> None:
+    def advance(self, duration: float) -> None:
         self.current_time += duration
 
 
@@ -55,12 +55,14 @@ async def test_get_rate_limits_to_use():
 @boolean_datacases(name="direction", true="incoming", false="outgoing")
 @boolean_datacases(name="exempt_from_aggregate", true="yes", false="no")
 @boolean_datacases(name="limit_size", true="yes", false="no")
-async def test_limits_v2(direction: bool, exempt_from_aggregate: bool, limit_size: bool, monkeypatch):
+async def test_limits_v2(
+    direction: bool, exempt_from_aggregate: bool, limit_size: bool, monkeypatch: pytest.MonkeyPatch
+):
     # this test uses a single message type, and alters the rate limit settings
     # for it to hit the different cases
 
     count = 1000
-    message_data = b"0" * 1024
+    message_data = b"\0" * 1024
     msg_type = ProtocolMessageTypes.new_transaction
 
     limits: dict[str, Any] = {}
@@ -101,9 +103,8 @@ async def test_limits_v2(direction: bool, exempt_from_aggregate: bool, limit_siz
 
     monkeypatch.setattr(chia.server.rate_limits, "get_rate_limits_to_use", mock_get_limits)
 
-    timer = SimClock()
-    r = RateLimiter(incoming=direction, get_time=timer.monotonic)
-    msg = make_msg(ProtocolMessageTypes.new_transaction, message_data)
+    r = RateLimiter(incoming=direction, get_time=lambda: 0)
+    msg = make_msg(msg_type, message_data)
 
     for i in range(count):
         assert r.process_msg_and_check(msg, rl_v2, rl_v2) is None
@@ -134,15 +135,14 @@ async def test_large_message():
     small_tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
     large_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 3 * 1024 * 1024))
 
-    timer = SimClock()
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     assert r.process_msg_and_check(small_tx_message, rl_v2, rl_v2) is None
     assert r.process_msg_and_check(large_tx_message, rl_v2, rl_v2) is not None
 
     small_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 5 * 1024))
     large_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 600 * 1024))
     large_blocks_message = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 51 * 1024 * 1024))
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2) is None
     assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2) is None
     assert r.process_msg_and_check(large_vdf_message, rl_v2, rl_v2) is not None
@@ -153,8 +153,7 @@ async def test_large_message():
 @pytest.mark.anyio
 async def test_too_much_data():
     # Too much data
-    timer = SimClock()
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
     for i in range(40):
         assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is None
@@ -166,7 +165,7 @@ async def test_too_much_data():
             saw_disconnect = True
     assert saw_disconnect
 
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     block_message = make_msg(ProtocolMessageTypes.respond_unfinished_block, bytes([1] * 1024 * 1024))
     for i in range(10):
         assert r.process_msg_and_check(block_message, rl_v2, rl_v2) is None
@@ -182,8 +181,7 @@ async def test_too_much_data():
 @pytest.mark.anyio
 async def test_non_tx_aggregate_limits():
     # Frequency limits
-    timer = SimClock()
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     message_1 = make_msg(ProtocolMessageTypes.coin_state_update, bytes([1] * 32))
     message_2 = make_msg(ProtocolMessageTypes.request_blocks, bytes([1] * 64))
     message_3 = make_msg(ProtocolMessageTypes.plot_sync_start, bytes([1] * 64))
@@ -202,7 +200,7 @@ async def test_non_tx_aggregate_limits():
     assert saw_disconnect
 
     # Size limits
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     message_4 = make_msg(ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 49 * 1024 * 1024))
     message_5 = make_msg(ProtocolMessageTypes.request_blocks, bytes([1] * 49 * 1024 * 1024))
 
@@ -232,7 +230,7 @@ async def test_periodic_reset():
             saw_disconnect = True
     assert saw_disconnect
     assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is not None
-    timer.sleep(6)
+    timer.advance(6)
     assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is None
 
     # Counts reset also
@@ -247,14 +245,13 @@ async def test_periodic_reset():
         if response is not None:
             saw_disconnect = True
     assert saw_disconnect
-    timer.sleep(6)
+    timer.advance(6)
     assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2) is None
 
 
 @pytest.mark.anyio
 async def test_percentage_limits():
-    timer = SimClock()
-    r = RateLimiter(True, 60, 40, get_time=timer.monotonic)
+    r = RateLimiter(True, 60, 40, get_time=lambda: 0)
     new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
     for i in range(50):
         assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2) is None
@@ -266,7 +263,7 @@ async def test_percentage_limits():
             saw_disconnect = True
     assert saw_disconnect
 
-    r = RateLimiter(True, 60, 40, get_time=timer.monotonic)
+    r = RateLimiter(True, 60, 40, get_time=lambda: 0)
     block_message = make_msg(ProtocolMessageTypes.respond_unfinished_block, bytes([1] * 1024 * 1024))
     for i in range(5):
         assert r.process_msg_and_check(block_message, rl_v2, rl_v2) is None
@@ -279,7 +276,7 @@ async def test_percentage_limits():
     assert saw_disconnect
 
     # Aggregate percentage limit count
-    r = RateLimiter(True, 60, 40, get_time=timer.monotonic)
+    r = RateLimiter(True, 60, 40, get_time=lambda: 0)
     message_1 = make_msg(ProtocolMessageTypes.coin_state_update, bytes([1] * 5))
     message_2 = make_msg(ProtocolMessageTypes.request_blocks, bytes([1] * 32))
     message_3 = make_msg(ProtocolMessageTypes.plot_sync_start, bytes([1] * 32))
@@ -297,7 +294,7 @@ async def test_percentage_limits():
     assert saw_disconnect
 
     # Aggregate percentage limit max total size
-    r = RateLimiter(True, 60, 40, get_time=timer.monotonic)
+    r = RateLimiter(True, 60, 40, get_time=lambda: 0)
     message_4 = make_msg(ProtocolMessageTypes.respond_proof_of_weight, bytes([1] * 18 * 1024 * 1024))
     message_5 = make_msg(ProtocolMessageTypes.respond_unfinished_block, bytes([1] * 24 * 1024 * 1024))
 
@@ -315,8 +312,7 @@ async def test_percentage_limits():
 @pytest.mark.anyio
 async def test_too_many_outgoing_messages():
     # Too many messages
-    timer = SimClock()
-    r = RateLimiter(incoming=False, get_time=timer.monotonic)
+    r = RateLimiter(incoming=False, get_time=lambda: 0)
     new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
     non_tx_freq = get_rate_limits_to_use(rl_v2, rl_v2)["non_tx_freq"]
 
@@ -340,8 +336,7 @@ async def test_too_many_outgoing_messages():
 @pytest.mark.anyio
 async def test_too_many_incoming_messages():
     # Too many messages
-    timer = SimClock()
-    r = RateLimiter(incoming=True, get_time=timer.monotonic)
+    r = RateLimiter(incoming=True, get_time=lambda: 0)
     new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
     non_tx_freq = get_rate_limits_to_use(rl_v2, rl_v2)["non_tx_freq"]
 
@@ -470,8 +465,7 @@ async def test_compose():
     ],
 )
 async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
-    timer = SimClock()
-    r = RateLimiter(incoming=False, get_time=timer.monotonic)
+    r = RateLimiter(incoming=False, get_time=lambda: 0)
 
     message = make_msg(msg_type, bytes([1] * size))
 
