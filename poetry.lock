@@ -3394,14 +3394,14 @@ files = [
 
 [[package]]
 name = "types-aiofiles"
-version = "24.1.0.20250809"
+version = "24.1.0.20250822"
 description = "Typing stubs for aiofiles"
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "types_aiofiles-24.1.0.20250809-py3-none-any.whl", hash = "sha256:657c83f876047ffc242b34bfcd9167f201d1b02e914ee854f16e589aa95c0d45"},
-    {file = "types_aiofiles-24.1.0.20250809.tar.gz", hash = "sha256:4dc9734330b1324d9251f92edfc94fd6827fbb829c593313f034a77ac33ae327"},
+    {file = "types_aiofiles-24.1.0.20250822-py3-none-any.whl", hash = "sha256:0ec8f8909e1a85a5a79aed0573af7901f53120dd2a29771dd0b3ef48e12328b0"},
+    {file = "types_aiofiles-24.1.0.20250822.tar.gz", hash = "sha256:9ab90d8e0c307fe97a7cf09338301e3f01a163e39f3b529ace82466355c84a7b"},
 ]
 
 [[package]]
