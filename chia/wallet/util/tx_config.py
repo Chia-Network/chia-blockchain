@@ -6,7 +6,7 @@ from typing import Any, Optional
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from typing_extensions import NotRequired, Self, TypedDict, Unpack
+from typing_extensions import NotRequired, Self, TypedDict, TypeVar, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -88,7 +88,7 @@ class CoinSelectionConfigLoader(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        if "excluded_coins" in json_dict:
+        if "excluded_coins" in json_dict and json_dict["excluded_coins"] is not None:
             excluded_coins: list[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
             excluded_coin_ids: list[str] = [c.name().hex() for c in excluded_coins]
             if "excluded_coin_ids" in json_dict:
@@ -98,8 +98,12 @@ class CoinSelectionConfigLoader(Streamable):
         return super().from_json_dict(json_dict)
 
     # This function is purely for ergonomics
-    def override(self, **kwargs: Any) -> CoinSelectionConfigLoader:
+    # But creates a small linting complication
+    def override(self: _T_CoinSelectionConfigLoader, **kwargs: Any) -> _T_CoinSelectionConfigLoader:  # noqa: PYI019
         return dataclasses.replace(self, **kwargs)
+
+
+_T_CoinSelectionConfigLoader = TypeVar("_T_CoinSelectionConfigLoader", bound=CoinSelectionConfigLoader)
 
 
 @streamable
@@ -137,10 +141,6 @@ class TXConfigLoader(CoinSelectionConfigLoader):
             autofilled_cs_config.excluded_coin_ids,
             reuse_puzhash,
         )
-
-    # This function is purely for ergonomics
-    def override(self, **kwargs: Any) -> TXConfigLoader:
-        return dataclasses.replace(self, **kwargs)
 
 
 DEFAULT_COIN_SELECTION_CONFIG = CoinSelectionConfig(uint64(0), uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT), [], [])
