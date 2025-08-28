@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import cast
 
 import pytest
 from chia_rs.sized_ints import uint32
@@ -11,12 +12,13 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, Respond
 from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.server.rate_limit_numbers import compose_rate_limits, get_rate_limits_to_use
+from chia.server.rate_limit_numbers import RLSettings, compose_rate_limits, get_rate_limits_to_use
 from chia.server.rate_limit_numbers import rate_limits as rl_numbers
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
@@ -27,13 +29,13 @@ test_different_versions_results: list[int] = []
 
 class TestRateLimits:
     @pytest.mark.anyio
-    async def test_get_rate_limits_to_use(self):
+    async def test_get_rate_limits_to_use(self) -> None:
         assert get_rate_limits_to_use(rl_v2, rl_v2) != get_rate_limits_to_use(rl_v2, rl_v1)
         assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v2, rl_v1)
         assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
 
     @pytest.mark.anyio
-    async def test_too_many_messages(self):
+    async def test_too_many_messages(self) -> None:
         # Too many messages
         r = RateLimiter(incoming=True)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
@@ -61,7 +63,7 @@ class TestRateLimits:
         assert saw_disconnect
 
     @pytest.mark.anyio
-    async def test_large_message(self):
+    async def test_large_message(self) -> None:
         # Large tx
         small_tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
         large_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 3 * 1024 * 1024))
@@ -81,7 +83,7 @@ class TestRateLimits:
         assert r.process_msg_and_check(large_blocks_message, rl_v2, rl_v2) is not None
 
     @pytest.mark.anyio
-    async def test_too_much_data(self):
+    async def test_too_much_data(self) -> None:
         # Too much data
         r = RateLimiter(incoming=True)
         tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
@@ -108,7 +110,7 @@ class TestRateLimits:
         assert saw_disconnect
 
     @pytest.mark.anyio
-    async def test_non_tx_aggregate_limits(self):
+    async def test_non_tx_aggregate_limits(self) -> None:
         # Frequency limits
         r = RateLimiter(incoming=True)
         message_1 = make_msg(ProtocolMessageTypes.coin_state_update, bytes([1] * 32))
@@ -144,7 +146,7 @@ class TestRateLimits:
         assert saw_disconnect
 
     @pytest.mark.anyio
-    async def test_periodic_reset(self):
+    async def test_periodic_reset(self) -> None:
         r = RateLimiter(True, 5)
         tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
         for i in range(10):
@@ -176,7 +178,7 @@ class TestRateLimits:
         assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2) is None
 
     @pytest.mark.anyio
-    async def test_percentage_limits(self):
+    async def test_percentage_limits(self) -> None:
         r = RateLimiter(True, 60, 40)
         new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
         for i in range(50):
@@ -235,7 +237,7 @@ class TestRateLimits:
         assert saw_disconnect
 
     @pytest.mark.anyio
-    async def test_too_many_outgoing_messages(self):
+    async def test_too_many_outgoing_messages(self) -> None:
         # Too many messages
         r = RateLimiter(incoming=False)
         new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
@@ -258,7 +260,7 @@ class TestRateLimits:
         assert r.process_msg_and_check(new_signatures_message, rl_v2, rl_v2) is None
 
     @pytest.mark.anyio
-    async def test_too_many_incoming_messages(self):
+    async def test_too_many_incoming_messages(self) -> None:
         # Too many messages
         r = RateLimiter(incoming=True)
         new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
@@ -318,7 +320,9 @@ class TestRateLimits:
     )
     @pytest.mark.anyio
     @pytest.mark.limit_consensus_modes(reason="save time")
-    async def test_different_versions(self, node_with_params, node_with_params_b, self_hostname):
+    async def test_different_versions(
+        self, node_with_params: FullNodeSimulator, node_with_params_b: FullNodeSimulator, self_hostname: str
+    ) -> None:
         node_a = node_with_params
         node_b = node_with_params_b
 
@@ -353,18 +357,22 @@ class TestRateLimits:
             assert len(set(test_different_versions_results)) >= 2
 
     @pytest.mark.anyio
-    async def test_compose(self):
+    async def test_compose(self) -> None:
         rl_1 = rl_numbers[1]
         rl_2 = rl_numbers[2]
-        assert ProtocolMessageTypes.respond_children in rl_1["rate_limits_other"]
-        assert ProtocolMessageTypes.respond_children not in rl_1["rate_limits_tx"]
-        assert ProtocolMessageTypes.respond_children not in rl_2["rate_limits_other"]
-        assert ProtocolMessageTypes.respond_children in rl_2["rate_limits_tx"]
+        rl_1_rate_limits_other = cast(dict[ProtocolMessageTypes, RLSettings], rl_1["rate_limits_other"])
+        rl_2_rate_limits_other = cast(dict[ProtocolMessageTypes, RLSettings], rl_2["rate_limits_other"])
+        rl_1_rate_limits_tx = cast(dict[ProtocolMessageTypes, RLSettings], rl_1["rate_limits_tx"])
+        rl_2_rate_limits_tx = cast(dict[ProtocolMessageTypes, RLSettings], rl_2["rate_limits_tx"])
+        assert ProtocolMessageTypes.respond_children in rl_1_rate_limits_other
+        assert ProtocolMessageTypes.respond_children not in rl_1_rate_limits_tx
+        assert ProtocolMessageTypes.respond_children not in rl_2_rate_limits_other
+        assert ProtocolMessageTypes.respond_children in rl_2_rate_limits_tx
 
-        assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
-        assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
-        assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_other"]
-        assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_tx"]
+        assert ProtocolMessageTypes.request_block in rl_1_rate_limits_other
+        assert ProtocolMessageTypes.request_block not in rl_1_rate_limits_tx
+        assert ProtocolMessageTypes.request_block not in rl_2_rate_limits_other
+        assert ProtocolMessageTypes.request_block not in rl_2_rate_limits_tx
 
         comps = compose_rate_limits(rl_1, rl_2)
         # v2 limits are used if present
@@ -372,8 +380,8 @@ class TestRateLimits:
         assert ProtocolMessageTypes.respond_children in comps["rate_limits_tx"]
 
         # Otherwise, fall back to v1
-        assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
-        assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
+        assert ProtocolMessageTypes.request_block in rl_1_rate_limits_other
+        assert ProtocolMessageTypes.request_block not in rl_1_rate_limits_tx
 
 
 @pytest.mark.anyio
@@ -386,7 +394,7 @@ class TestRateLimits:
         (ProtocolMessageTypes.reject_block, 90),
     ],
 )
-async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
+async def test_unlimited(msg_type: ProtocolMessageTypes, size: int) -> None:
     r = RateLimiter(incoming=False)
 
     message = make_msg(msg_type, bytes([1] * size))
@@ -443,8 +451,12 @@ async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
     indirect=True,
 )
 async def test_unsolicited_responses(
-    node_with_params, node_with_params_b, self_hostname: str, msg_type: ProtocolMessageTypes, bt: BlockTools
-):
+    node_with_params: FullNodeSimulator,
+    node_with_params_b: FullNodeSimulator,
+    self_hostname: str,
+    msg_type: ProtocolMessageTypes,
+    bt: BlockTools,
+) -> None:
     node_a = node_with_params
     node_b = node_with_params_b
 
