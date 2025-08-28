@@ -53,7 +53,7 @@ click = ">=8.1.7"  # For the CLI
 clvm = ">=0.9.12"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
 
-rocks_pyo3 = { git = "https://github.com/richardkiss/rocks_pyo3", rev = "9d3f71f" }
+rocks_pyo3 = { git = "https://github.com/richardkiss/rocks_pyo3", rev = "386a547" }
 clvm_tools_rs = ">=0.1.45"  # Rust implementation of clvm_tools' compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
 colorlog = ">=6.9.0"  # Adds color to logs
