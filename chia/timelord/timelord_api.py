@@ -121,7 +121,9 @@ class TimelordAPI:
         return False
 
     @metadata.request()
-    async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
+    async def new_unfinished_block_timelord(
+        self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord
+    ) -> None:
         if self.timelord.last_state is None:
             return None
         async with self.timelord.lock:
@@ -155,7 +157,7 @@ class TimelordAPI:
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @metadata.request()
-    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
+    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime) -> None:
         async with self.timelord.lock:
             if not self.timelord.bluebox_mode:
                 return None
