@@ -6,6 +6,7 @@ import pytest
 from chia_rs.sized_ints import uint32
 
 from chia._tests.conftest import node_with_params
+from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks, RespondBlock, RespondBlocks
 from chia.protocols.outbound_message import make_msg
@@ -51,13 +52,12 @@ async def test_get_rate_limits_to_use():
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("incoming", [True, False])
-@pytest.mark.parametrize("tx_msg", [True, False])
-@pytest.mark.parametrize("cumulative_size", [True, False])
-async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, monkeypatch):
+@boolean_datacases(name="direction", true="incoming", false="outgoing")
+@boolean_datacases(name="exempt_from_aggregate", true="yes", false="no")
+@boolean_datacases(name="limit_size", true="yes", false="no")
+async def test_limits_v2(direction: bool, exempt_from_aggregate: bool, limit_size: bool, monkeypatch):
     # this test uses a single message type, and alters the rate limit settings
     # for it to hit the different cases
-    print(f"{incoming=} {tx_msg=} {cumulative_size=}")
 
     count = 1000
     message_data = b"0" * 1024
@@ -65,7 +65,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, mo
 
     limits: dict[str, Any] = {}
 
-    if cumulative_size:
+    if limit_size:
         limits.update(
             {
                 # this is the rate limit across all (non-tx) messages
@@ -84,12 +84,12 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, mo
             }
         )
 
-    if cumulative_size:
+    if limit_size:
         rate_limit = {msg_type: RLSettings(2000, 1024, 1000 * 1024)}
     else:
         rate_limit = {msg_type: RLSettings(1000, 1024, 1000 * 1024 * 1024)}
 
-    if tx_msg:
+    if exempt_from_aggregate:
         limits.update({"rate_limits_tx": rate_limit, "rate_limits_other": {}})
     else:
         limits.update({"rate_limits_other": rate_limit, "rate_limits_tx": {}})
@@ -102,7 +102,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, mo
     monkeypatch.setattr(chia.server.rate_limits, "get_rate_limits_to_use", mock_get_limits)
 
     timer = SimClock()
-    r = RateLimiter(incoming=incoming, get_time=timer.monotonic)
+    r = RateLimiter(incoming=direction, get_time=timer.monotonic)
     msg = make_msg(ProtocolMessageTypes.new_transaction, message_data)
 
     for i in range(count):
@@ -110,14 +110,14 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, cumulative_size: bool, mo
 
     expected_msg = ""
 
-    if cumulative_size:
-        if not tx_msg:
+    if limit_size:
+        if not exempt_from_aggregate:
             expected_msg += "non-tx size:"
         else:
             expected_msg += "cumulative size:"
         expected_msg += f" {(count + 1) * len(message_data)} > {count * len(message_data) * 1.0}"
     else:
-        if not tx_msg:
+        if not exempt_from_aggregate:
             expected_msg += "non-tx count:"
         else:
             expected_msg += "message count:"
