@@ -47,7 +47,7 @@ on:
         type: boolean
       run-macos-intel:
         description: "run macOS-intel tests"
-        default: true
+        default: false
         required: false
         type: boolean
       run-macos-arm:
@@ -103,13 +103,21 @@ jobs:
             && 'all'
             || 'main'
           }} >> "$GITHUB_OUTPUT"
+          echo mac_intel=${{
+            ( github.event_name == 'schedule' || inputs.run-macos-intel )
+            || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') )
+            || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') )
+            && 'true'
+            || 'false'
+          }} >> "$GITHUB_OUTPUT"
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
+      mac_intel: ${{ steps.configure.outputs.mac_intel }}
 
   macos-intel:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-intel
+    if: needs.configure.outputs.mac_intel == 'true'
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -120,7 +128,7 @@ jobs:
       concurrency-name: macos-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-13
+      runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
       arch: intel
       arch-emoji: 🌀
   macos-arm:

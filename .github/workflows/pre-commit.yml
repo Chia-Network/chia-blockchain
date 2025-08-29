@@ -29,7 +29,7 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: macos-13
+              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
               arm: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-15' }}
           - name: Windows
             matrix: windows
@@ -50,6 +50,11 @@ jobs:
               matrix: windows
             arch:
               matrix: arm
+          # Back to self hosted mac intel runners, which we have very few of
+          - os:
+              matrix: macos
+            arch:
+              matrix: intel
 
     steps:
       - name: Clean workspace
