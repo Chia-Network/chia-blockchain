@@ -53,7 +53,7 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
-    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester) -> bool:
+    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester2) -> bool:
         filter_prefix_bits = calculate_prefix_bits(
             self.harvester.constants,
             challenge.peak_height,
@@ -123,9 +123,9 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @metadata.request(peer_required=True)
+    @metadata.request(peer_required=True, request_type=ProtocolMessageTypes.new_signage_point_harvester)
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+        self, new_challenge: harvester_protocol.NewSignagePointHarvester2, peer: WSChiaConnection
     ) -> None:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.

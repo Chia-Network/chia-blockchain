@@ -6,9 +6,10 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, G2Element, PlotSize, PoolTarget, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from packaging.version import Version
 
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
@@ -40,6 +41,7 @@ from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     get_plot_id,
@@ -627,7 +629,8 @@ class FarmerAPI:
                         p2_singleton_puzzle_hash,
                     )
                 )
-            message = harvester_protocol.NewSignagePointHarvester(
+
+            message2 = harvester_protocol.NewSignagePointHarvester2(
                 new_signage_point.challenge_hash,
                 new_signage_point.difficulty,
                 new_signage_point.sub_slot_iters,
@@ -638,8 +641,31 @@ class FarmerAPI:
                 new_signage_point.last_tx_height,
             )
 
-            msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
-            await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
+            # The plot size in the call to calculate_prefix_bits is only used
+            # to distinguish v1 and v2 plots. The value does not matter
+            message1 = harvester_protocol.NewSignagePointHarvester(
+                new_signage_point.challenge_hash,
+                new_signage_point.difficulty,
+                new_signage_point.sub_slot_iters,
+                new_signage_point.signage_point_index,
+                new_signage_point.challenge_chain_sp,
+                pool_difficulties,
+                uint8(
+                    calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height, PlotSize.make_v1(32))
+                ),
+            )
+
+            def old_harvesters(conn: WSChiaConnection) -> bool:
+                return conn.protocol_version <= Version("0.0.36")
+
+            def new_harvesters(conn: WSChiaConnection) -> bool:
+                return conn.protocol_version > Version("0.0.36")
+
+            msg1 = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message1)
+            await self.farmer.server.send_to_all_if([msg1], NodeType.HARVESTER, old_harvesters)
+
+            msg2 = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message2)
+            await self.farmer.server.send_to_all_if([msg2], NodeType.HARVESTER, new_harvesters)
         except Exception as exception:
             # Remove here, as we want to reprocess the SP should it be sent again
             self.farmer.sps[new_signage_point.challenge_chain_sp].remove(new_signage_point)

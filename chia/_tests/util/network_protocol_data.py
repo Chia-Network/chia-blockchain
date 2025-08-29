@@ -816,9 +816,20 @@ new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
     uint8(148),
     bytes32(bytes.fromhex("b78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c")),
     [pool_difficulty],
+    uint8(3),
+)
+
+new_signage_point_harvester2 = harvester_protocol.NewSignagePointHarvester2(
+    bytes32(bytes.fromhex("e342c21b4aeaa52349d42492be934692db58494ca9bce4a8697d06fdf8e583bb")),
+    uint64(15615706268399948682),
+    uint64(10520767421667792980),
+    uint8(148),
+    bytes32(bytes.fromhex("b78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c")),
+    [pool_difficulty],
     uint32(0),
     uint32(0),
 )
+
 
 new_proof_of_space = harvester_protocol.NewProofOfSpace(
     bytes32.fromhex("1b64ec6bf3fe33bb80eca5b64ff1c88be07771eaed1e98a7199510522087e56e"),
