@@ -103,6 +103,10 @@ jobs:
             && 'all'
             || 'main'
           }} >> "$GITHUB_OUTPUT"
+
+      - name: Generate mac intel configuration
+        id: macintel
+        run: |
           echo mac_intel=${{
             ( github.event_name == 'schedule' || inputs.run-macos-intel )
             || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') )
@@ -114,7 +118,7 @@ jobs:
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
-      mac_intel: ${{ steps.configure.outputs.mac_intel }}
+      mac_intel: ${{ steps.macintel.outputs.mac_intel }}
 
   macos-intel:
     if: needs.configure.outputs.mac_intel == 'true'
