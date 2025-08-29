@@ -116,7 +116,7 @@ jobs:
       os-emoji: 🍎
       matrix: macos-intel
       name: macOS Intel
-      file_name: macos
+      file_name: macos-intel
       concurrency-name: macos-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
