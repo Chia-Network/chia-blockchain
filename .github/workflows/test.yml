@@ -152,8 +152,8 @@ jobs:
       os-emoji: 🐧
       matrix: ubuntu
       name: Ubuntu
-      file_name: ubuntu
-      concurrency-name: ubuntu
+      file_name: ubuntu-intel
+      concurrency-name: ubuntu-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
@@ -168,8 +168,8 @@ jobs:
       os-emoji: 🐧
       matrix: ubuntu
       name: Ubuntu
-      file_name: ubuntu
-      concurrency-name: ubuntu
+      file_name: ubuntu-arm
+      concurrency-name: ubuntu-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-24.04-arm
