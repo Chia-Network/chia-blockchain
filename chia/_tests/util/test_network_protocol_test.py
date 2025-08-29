@@ -174,6 +174,7 @@ def test_missing_messages() -> None:
         "ProofOfSpaceFeeInfo",
         "NewProofOfSpace",
         "NewSignagePointHarvester",
+        "NewSignagePointHarvester2",
         "Plot",
         "PlotSyncDone",
         "PlotSyncError",

@@ -196,6 +196,11 @@ def test_protocol_json() -> None:
         type(new_signage_point_harvester).from_json_dict(new_signage_point_harvester_json)
         == new_signage_point_harvester
     )
+    assert str(new_signage_point_harvester2_json) == str(new_signage_point_harvester2.to_json_dict())
+    assert (
+        type(new_signage_point_harvester2).from_json_dict(new_signage_point_harvester2_json)
+        == new_signage_point_harvester2
+    )
     assert str(new_proof_of_space_json) == str(new_proof_of_space.to_json_dict())
     assert type(new_proof_of_space).from_json_dict(new_proof_of_space_json) == new_proof_of_space
     assert str(request_signatures_json) == str(request_signatures.to_json_dict())

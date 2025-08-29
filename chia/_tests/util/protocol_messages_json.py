@@ -2172,6 +2172,22 @@ new_signage_point_harvester_json: dict[str, Any] = {
             "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
         }
     ],
+    "filter_prefix_bits": 3,
+}
+
+new_signage_point_harvester2_json: dict[str, Any] = {
+    "challenge_hash": "0xe342c21b4aeaa52349d42492be934692db58494ca9bce4a8697d06fdf8e583bb",
+    "difficulty": 15615706268399948682,
+    "sub_slot_iters": 10520767421667792980,
+    "signage_point_index": 148,
+    "sp_hash": "0xb78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c",
+    "pool_difficulties": [
+        {
+            "difficulty": 14819251421858580996,
+            "sub_slot_iters": 12852879676624401630,
+            "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
+        }
+    ],
     "peak_height": 0,
     "last_tx_height": 0,
 }

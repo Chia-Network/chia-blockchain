@@ -40,6 +40,20 @@ class NewSignagePointHarvester(Streamable):
     signage_point_index: uint8
     sp_hash: bytes32
     pool_difficulties: list[PoolDifficulty]
+    filter_prefix_bits: uint8
+
+
+# this message has the same message ID as NewSignagePointHarvester, but this
+# message format is used if the protocol version is 0.0.37 or higher
+@streamable
+@dataclass(frozen=True)
+class NewSignagePointHarvester2(Streamable):
+    challenge_hash: bytes32
+    difficulty: uint64
+    sub_slot_iters: uint64
+    signage_point_index: uint8
+    sp_hash: bytes32
+    pool_difficulties: list[PoolDifficulty]
     peak_height: uint32
     last_tx_height: uint32
 
