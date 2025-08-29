@@ -200,7 +200,8 @@ jobs:
     needs:
       - macos-intel
       - macos-arm
-      - ubuntu
+      - ubuntu-intel
+      - ubuntu-arm
       - windows
     strategy:
       fail-fast: false
