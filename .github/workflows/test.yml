@@ -40,8 +40,13 @@ on:
         default: 1
         required: false
         type: number
-      run-linux:
-        description: "run Linux tests"
+      run-linux-intel:
+        description: "run Linux-intel tests"
+        default: true
+        required: false
+        type: boolean
+      run-linux-arm:
+        description: "run Linux-arm tests"
         default: true
         required: false
         type: boolean
