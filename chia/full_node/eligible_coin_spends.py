@@ -277,11 +277,11 @@ class SingletonFastForward:
             # Run the new spend bundle to make sure it remains valid. What we
             # care about here is whether this call throws or not.
             get_conditions_from_spendbundle(new_sb, mempool_item.conds.cost, constants, height)
-        # get_conditions_from_spendbundle raises a TypeError with an error code
-        except TypeError as e:
+        # get_conditions_from_spendbundle raises a ValueError with an error code
+        except ValueError as e:
             # Convert that to a ValidationError
-            if len(e.args) > 0:
-                error = Err(e.args[0])
+            if len(e.args) > 1:
+                error = Err(e.args[1])
                 raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
             else:
                 raise ValueError(

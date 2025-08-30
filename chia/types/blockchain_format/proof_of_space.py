@@ -182,15 +182,15 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_si
 
 
 def calculate_required_plot_strength(constants: ConsensusConstants, height: uint32) -> uint8:
-    if height < constants.PLOT_DIFFICULTY_4_HEIGHT:
-        return constants.PLOT_DIFFICULTY_INITIAL
-    if height < constants.PLOT_DIFFICULTY_5_HEIGHT:
+    if height < constants.PLOT_STRENGTH_4_HEIGHT:
+        return constants.PLOT_STRENGTH_INITIAL
+    if height < constants.PLOT_STRENGTH_5_HEIGHT:
         return uint8(4)
-    if height < constants.PLOT_DIFFICULTY_6_HEIGHT:
+    if height < constants.PLOT_STRENGTH_6_HEIGHT:
         return uint8(5)
-    if height < constants.PLOT_DIFFICULTY_7_HEIGHT:
+    if height < constants.PLOT_STRENGTH_7_HEIGHT:
         return uint8(6)
-    if height < constants.PLOT_DIFFICULTY_8_HEIGHT:
+    if height < constants.PLOT_STRENGTH_8_HEIGHT:
         return uint8(7)
     else:
         return uint8(8)

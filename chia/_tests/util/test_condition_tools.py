@@ -53,7 +53,7 @@ def mk_agg_sig_conditions(
         condition_cost=0,
         fingerprint=b"",
     )
-    return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0, False, 0, 0)
+    return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0, False, 0, 0, 0, 0, 0)
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
 
 class TestPkmPairs:
     def test_empty_list(self) -> None:
-        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0)
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0, 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
