@@ -72,7 +72,7 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
 from chia.solver.solver_service import SolverService
 from chia.timelord.timelord_service import TimelordService
-from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
+from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import Keychain
@@ -895,8 +895,7 @@ async def farmer_one_harvester_solver(
         farmer_service,
         bt,
     ):
-        farmer_peer = UnresolvedPeerInfo(bt.config["self_hostname"], farmer_service._server.get_port())
-        async with setup_solver(tmp_path / "solver", bt, bt.constants, farmer_peer=farmer_peer) as solver_service:
+        async with setup_solver(tmp_path / "solver", bt, bt.constants) as solver_service:
             yield harvester_services, farmer_service, solver_service, bt
 
 

@@ -298,6 +298,7 @@ def chia_init(
                 crawler_minimum_version_count=None,
                 seeder_domain_name="",
                 seeder_nameserver="",
+                set_solver_peer="",
             )
         if fix_ssl_permissions:
             fix_ssl(root_path)
@@ -324,6 +325,7 @@ def chia_init(
             crawler_minimum_version_count=None,
             seeder_domain_name="",
             seeder_nameserver="",
+            set_solver_peer="",
         )
     create_all_ssl(root_path)
     if fix_ssl_permissions:

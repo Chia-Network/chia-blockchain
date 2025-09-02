@@ -386,7 +386,6 @@ async def setup_farmer_multi_harvester_with_solver(
                 block_tools,  # Pass BlockTools so SSL CA can be consistent
                 consensus_constants,
                 start_service=start_services,
-                farmer_peer=farmer_peer,
             )
         )
 
