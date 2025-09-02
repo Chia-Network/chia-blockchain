@@ -1,18 +1,31 @@
 from __future__ import annotations
 
 from chia_rs import PlotSize
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 # The actual space in bytes of a plot, is _expected_plot_size(k) * UI_ACTUAL_SPACE_CONSTANT_FACTO
 # This is not used in consensus, only for display purposes
 UI_ACTUAL_SPACE_CONSTANT_FACTOR = 0.78
 
-# these values are from CHIP-48
+# TODO: todo_v2_plots these values prelimenary. When the plotter is complete,
+# replace this table with a closed form formula
 v2_plot_sizes: dict[int, uint64] = {
-    28: uint64(1717986918),
-    30: uint64(4509715660),
-    32: uint64(11381663334),
+    16: uint64(222_863),
+    18: uint64(1_048_737),
+    20: uint64(4_824_084),
+    22: uint64(21_812_958),
+    24: uint64(97_318_160),
+    26: uint64(429_539_960),
+    28: uint64(1_879_213_114),
+    30: uint64(8_161_097_549),
+    32: uint64(35_221_370_574),
 }
+
+
+def quality_for_partial_proof(partial_proof: bytes, challenge: bytes32) -> bytes32:
+    # TODO todo_v2_plots real implementaion
+    return challenge
 
 
 def _expected_plot_size(size: PlotSize) -> uint64:

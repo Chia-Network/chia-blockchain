@@ -965,7 +965,6 @@ class BlockTools:
                         block_list.append(full_block)
 
                         if include_transactions:
-                            prev_tx_height = full_block.height
                             for coin in full_block.get_included_reward_coins():
                                 if coin.puzzle_hash == self.farmer_ph:
                                     pending_rewards.append(coin)
@@ -979,6 +978,7 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
+                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1259,7 +1259,6 @@ class BlockTools:
                         block_list.append(full_block)
 
                         if include_transactions:
-                            prev_tx_height = full_block.height
                             for coin in full_block.get_included_reward_coins():
                                 if coin.puzzle_hash == self.farmer_ph:
                                     pending_rewards.append(coin)
@@ -1273,6 +1272,7 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
+                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1505,46 +1505,50 @@ class BlockTools:
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
             prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_size())
-            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
-                new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
-                qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
+            if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
+                continue
 
-                for proof_index, quality_str in enumerate(qualities):
-                    required_iters = calculate_iterations_quality(
-                        constants,
-                        quality_str,
-                        plot_info.prover.get_size(),
-                        difficulty,
-                        signage_point,
-                        sub_slot_iters,
-                        prev_transaction_b_height,
-                    )
-                    if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
-                        proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+            new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
+            qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
-                        # Look up local_sk from plot to save locked memory
-                        (
-                            pool_public_key_or_puzzle_hash,
-                            farmer_public_key,
-                            local_master_sk,
-                        ) = parse_plot_info(plot_info.prover.get_memo())
-                        local_sk = master_sk_to_local_sk(local_master_sk)
+            for proof_index, quality_str in enumerate(qualities):
+                required_iters = calculate_iterations_quality(
+                    constants,
+                    quality_str,
+                    plot_info.prover.get_size(),
+                    difficulty,
+                    signage_point,
+                    sub_slot_iters,
+                    prev_transaction_b_height,
+                )
+                if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
+                    continue
 
-                        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
-                            include_taproot = False
-                        else:
-                            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
-                            include_taproot = True
-                        plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
-                        proof_of_space: ProofOfSpace = make_pos(
-                            new_challenge,
-                            plot_info.pool_public_key,
-                            plot_info.pool_contract_puzzle_hash,
-                            plot_pk,
-                            plot_info.prover.get_size(),
-                            proof_xs,
-                        )
-                        found_proofs.append((required_iters, proof_of_space))
+                proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+
+                # Look up local_sk from plot to save locked memory
+                (
+                    pool_public_key_or_puzzle_hash,
+                    farmer_public_key,
+                    local_master_sk,
+                ) = parse_plot_info(plot_info.prover.get_memo())
+                local_sk = master_sk_to_local_sk(local_master_sk)
+
+                if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+                    include_taproot = False
+                else:
+                    assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+                    include_taproot = True
+                plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+                proof_of_space: ProofOfSpace = make_pos(
+                    new_challenge,
+                    plot_info.pool_public_key,
+                    plot_info.pool_contract_puzzle_hash,
+                    plot_pk,
+                    plot_info.prover.get_size(),
+                    proof_xs,
+                )
+                found_proofs.append((required_iters, proof_of_space))
         random_sample = found_proofs
         if len(found_proofs) >= 1:
             if rng.random() < 0.1:
@@ -1755,6 +1759,7 @@ def load_block_list(
     sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
     height_to_hash: dict[uint32, bytes32] = {}
     blocks: dict[bytes32, BlockRecord] = {}
+    prev_transaction_b_height = uint32(0)
     for full_block in block_list:
         if full_block.height != 0:
             if len(full_block.finished_sub_slots) > 0:
@@ -1771,7 +1776,6 @@ def load_block_list(
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
         cache = BlockCache(blocks)
-        prev_transaction_b_height = uint32(0)  # TODO: todo_v2_plots
 
         required_iters = validate_pospace_and_get_required_iters(
             constants,
@@ -1784,6 +1788,9 @@ def load_block_list(
             prev_transaction_b_height,
         )
         assert required_iters is not None
+
+        if full_block.is_transaction_block():
+            prev_transaction_b_height = full_block.height
 
         blocks[full_block.header_hash] = block_to_block_record(
             constants,

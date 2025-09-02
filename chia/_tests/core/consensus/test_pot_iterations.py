@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from chia_rs import PlotSize
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
@@ -83,67 +84,96 @@ class TestPotIterations:
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
-    # TODO: todo_v2_plots test this for v2 plots as well
-    def test_win_percentage(self):
+    @pytest.mark.parametrize(
+        "height",
+        [
+            uint32(0),
+            test_constants.HARD_FORK2_HEIGHT - 1,
+            test_constants.HARD_FORK2_HEIGHT,
+            test_constants.HARD_FORK2_HEIGHT + test_constants.PLOT_V1_PHASE_OUT,
+            test_constants.HARD_FORK2_HEIGHT + test_constants.PLOT_V1_PHASE_OUT + 1,
+        ],
+    )
+    def test_win_percentage(self, height: uint32):
         """
         Tests that the percentage of blocks won is proportional to the space of each farmer,
         with the assumption that all farmers have access to the same VDF speed.
         """
         farmer_ks = {
-            uint8(32): 100,
-            uint8(33): 100,
-            uint8(34): 100,
-            uint8(35): 100,
-            uint8(36): 100,
+            PlotSize.make_v1(32): 100,
+            PlotSize.make_v1(33): 100,
+            PlotSize.make_v1(34): 100,
+            PlotSize.make_v1(35): 100,
+            PlotSize.make_v1(36): 100,
+            PlotSize.make_v2(28): 200,
+            PlotSize.make_v2(30): 200,
+            PlotSize.make_v2(32): 200,
         }
-        farmer_space = {k: _expected_plot_size(PlotSize.make_v1(k)) * count for k, count in farmer_ks.items()}
-        total_space = sum(farmer_space.values())
-        percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
+        farmer_space = {k: _expected_plot_size(k) * count for k, count in farmer_ks.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
+
+        constants = test_constants.replace(DIFFICULTY_CONSTANT_FACTOR=uint128(2**25))
         total_slots = 50
         num_sps = 16
-        sp_interval_iters = uint64(100000000 // 32)
+        sub_slot_iters = uint64(100000000)
+        sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
         difficulty = uint64(500000000000)
-        constants = test_constants.replace(DIFFICULTY_CONSTANT_FACTOR=uint128(2**25))
         for slot_index in range(total_slots):
             total_wins_in_slot = 0
             for sp_index in range(num_sps):
                 sp_hash = std_hash(slot_index.to_bytes(4, "big") + sp_index.to_bytes(4, "big"))
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
-                        quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
+                        plot_k_val = k.size_v1 if k.size_v2 is None else k.size_v2
+                        assert plot_k_val is not None
+                        quality = std_hash(
+                            slot_index.to_bytes(4, "big") + plot_k_val.to_bytes(1, "big") + bytes(farmer_index)
+                        )
                         required_iters = calculate_iterations_quality(
-                            constants, quality, PlotSize.make_v1(k), difficulty, sp_hash, uint64(100000000), uint32(0)
+                            constants, quality, k, difficulty, sp_hash, sub_slot_iters, height
                         )
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1
+
+        if height < test_constants.HARD_FORK2_HEIGHT + test_constants.PLOT_V1_PHASE_OUT:
+            total_space = sum(farmer_space.values())
+            percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
+        else:
+            # after the phase-out, v1 plots don't count
+            # all wins are by v2 plots
+            total_space = sum(0 if k.size_v2 is None else sp for k, sp in farmer_space.items())
+            percentage_space = {
+                k: 0.0 if k.size_v2 is None else float(sp / total_space) for k, sp in farmer_space.items()
+            }
 
         win_percentage = {k: wins[k] / sum(wins.values()) for k in farmer_ks.keys()}
         for k in farmer_ks.keys():
             # Win rate is proportional to percentage of space
             assert abs(win_percentage[k] - percentage_space[k]) < 0.01
 
-    def test_calculate_phase_out(self):
+    @pytest.mark.parametrize("sp_interval", [uint64(6250000000), uint64(1), uint64(2), uint64(10), uint64(10000000000)])
+    def test_calculate_phase_out(self, sp_interval: uint64):
         constants = test_constants
-        sub_slot_iters = uint64(100000000000)
-        sp_interval = calculate_sp_interval_iters(constants, sub_slot_iters)
+        sub_slot_iters = uint64(sp_interval * constants.NUM_SPS_SUB_SLOT)
         # Before or at HARD_FORK2_HEIGHT, should return 0
-        assert calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT - 1) == 0
+        assert calculate_phase_out(constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT - 1)) == 0
         assert calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT) == 0
         # after HARD_FORK2_HEIGHT, should return value = delta/phase_out_period * sp_interval
         assert (
-            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + 1)
+            calculate_phase_out(constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT + 1))
             == sp_interval // constants.PLOT_V1_PHASE_OUT
         )
         assert (
             calculate_phase_out(
-                constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT // 2
+                constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT // 2)
             )
             == sp_interval // 2
         )
         assert (
-            calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT)
+            calculate_phase_out(
+                constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT)
+            )
             == sp_interval
         )
 
@@ -154,21 +184,16 @@ class TestPotIterations:
 
 
 def test_expected_plot_size_v1() -> None:
-    last_size = 4800000
+    last_size = 2_400_000
     for k in range(18, 50):
         plot_size = _expected_plot_size(PlotSize.make_v1(k))
-        assert plot_size > last_size
+        assert plot_size > last_size * 2
         last_size = plot_size
 
 
 def test_expected_plot_size_v2() -> None:
-    last_size = 1700000000
-    for k in range(18, 32, 2):
+    last_size = 100_000
+    for k in range(16, 32, 2):
         plot_size = _expected_plot_size(PlotSize.make_v2(k))
-        # TODO: todo_v2_plots remove this special case once we support smaller k-sizes
-        if k < 28:
-            assert plot_size == 0
-            continue
-
-        assert plot_size > last_size
+        assert plot_size > last_size * 2
         last_size = plot_size

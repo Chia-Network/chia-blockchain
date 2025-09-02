@@ -3,22 +3,25 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.pos_quality import quality_for_partial_proof
 from chia.consensus.pot_iterations import (
     calculate_iterations_quality,
     calculate_sp_interval_iters,
 )
 from chia.harvester.harvester import Harvester
+from chia.plotting.prover import PlotVersion
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
+from chia.protocols.harvester_protocol import PartialProofsData, Plot, PlotSyncResponse
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata
@@ -49,6 +52,60 @@ class HarvesterAPI:
 
     def ready(self) -> bool:
         return True
+
+    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester) -> bool:
+        filter_prefix_bits = calculate_prefix_bits(
+            self.harvester.constants,
+            challenge.peak_height,
+            plot_info.prover.get_size(),
+        )
+        return passes_plot_filter(
+            filter_prefix_bits,
+            plot_info.prover.get_id(),
+            challenge.challenge_hash,
+            challenge.sp_hash,
+        )
+
+    async def _handle_v1_responses(
+        self,
+        awaitables: Sequence[Awaitable[tuple[Path, list[harvester_protocol.NewProofOfSpace]]]],
+        start_time: float,
+        peer: WSChiaConnection,
+    ) -> int:
+        proofs_found = 0
+        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
+            filename, sublist = await filename_sublist_awaitable
+            time_taken = time.monotonic() - start_time
+            if time_taken > 8:
+                self.harvester.log.warning(
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
+                    f" to minimize risk of losing rewards."
+                )
+            for response in sublist:
+                proofs_found += 1
+                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
+                await peer.send_message(msg)
+        return proofs_found
+
+    async def _handle_v2_responses(
+        self, v2_awaitables: Sequence[Awaitable[Optional[PartialProofsData]]], start_time: float, peer: WSChiaConnection
+    ) -> int:
+        partial_proofs_found = 0
+        for quality_awaitable in asyncio.as_completed(v2_awaitables):
+            partial_proofs_data = await quality_awaitable
+            if partial_proofs_data is None:
+                continue
+            time_taken = time.monotonic() - start_time
+            if time_taken > 8:
+                self.harvester.log.warning(
+                    f"Looking up partial proofs on {partial_proofs_data.plot_identifier}"
+                    f"took: {time_taken}. This should be below 8 seconds"
+                    f"to minimize risk of losing rewards."
+                )
+            partial_proofs_found += len(partial_proofs_data.partial_proofs)
+            msg = make_msg(ProtocolMessageTypes.partial_proofs, partial_proofs_data)
+            await peer.send_message(msg)
+        return partial_proofs_found
 
     @metadata.request(peer_required=True)
     async def harvester_handshake(
@@ -96,6 +153,72 @@ class HarvesterAPI:
         assert len(new_challenge.challenge_hash) == 32
 
         loop = asyncio.get_running_loop()
+
+        def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> Optional[PartialProofsData]:
+            # Uses the V2 Prover object to lookup qualities only. No full proofs generated.
+            try:
+                plot_id = plot_info.prover.get_id()
+                sp_challenge_hash = calculate_pos_challenge(
+                    plot_id,
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
+                )
+                partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(sp_challenge_hash)
+
+                # If no partial proofs are found, return None
+                if len(partial_proofs) == 0:
+                    return None
+
+                # Get the appropriate difficulty for this plot
+                difficulty = new_challenge.difficulty
+                sub_slot_iters = new_challenge.sub_slot_iters
+                if plot_info.pool_contract_puzzle_hash is not None:
+                    # Check for pool-specific difficulty
+                    for pool_difficulty in new_challenge.pool_difficulties:
+                        if pool_difficulty.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
+                            difficulty = pool_difficulty.difficulty
+                            sub_slot_iters = pool_difficulty.sub_slot_iters
+                            break
+
+                # Filter qualities that pass the required_iters check (same as V1 flow)
+                good_partial_proofs = []
+                sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
+
+                for partial_proof in partial_proofs:
+                    quality_str = quality_for_partial_proof(partial_proof, new_challenge.challenge_hash)
+                    required_iters: uint64 = calculate_iterations_quality(
+                        self.harvester.constants,
+                        quality_str,
+                        plot_info.prover.get_size(),
+                        difficulty,
+                        new_challenge.sp_hash,
+                        sub_slot_iters,
+                        new_challenge.last_tx_height,
+                    )
+
+                    if required_iters < sp_interval_iters:
+                        good_partial_proofs.append(partial_proof)
+
+                if len(good_partial_proofs) == 0:
+                    return None
+
+                size = plot_info.prover.get_size().size_v2
+                assert size is not None
+                return PartialProofsData(
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
+                    good_partial_proofs[0].hex() + str(filename.resolve()),
+                    good_partial_proofs,
+                    new_challenge.signage_point_index,
+                    size,
+                    plot_info.pool_public_key,
+                    plot_info.pool_contract_puzzle_hash,
+                    plot_info.plot_public_key,
+                )
+                return None
+            except Exception:
+                self.harvester.log.exception("Failed V2 partial proof lookup")
+                return None
 
         def blocking_lookup(filename: Path, plot_info: PlotInfo) -> list[tuple[bytes32, ProofOfSpace]]:
             # Uses the Prover object to lookup qualities. This is a blocking call,
@@ -241,6 +364,7 @@ class HarvesterAPI:
             return filename, all_responses
 
         awaitables = []
+        v2_awaitables = []
         passed = 0
         total = 0
         with self.harvester.plot_manager:
@@ -249,20 +373,19 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 total += 1
-
-                filter_prefix_bits = uint8(
-                    calculate_prefix_bits(
-                        self.harvester.constants,
-                        new_challenge.peak_height,
-                        try_plot_info.prover.get_size(),
+                if not self._plot_passes_filter(try_plot_info, new_challenge):
+                    continue
+                if try_plot_info.prover.get_version() == PlotVersion.V2:
+                    v2_awaitables.append(
+                        loop.run_in_executor(
+                            self.harvester.executor,
+                            blocking_lookup_v2_partial_proofs,
+                            try_plot_filename,
+                            try_plot_info,
+                        )
                     )
-                )
-                if passes_plot_filter(
-                    filter_prefix_bits,
-                    try_plot_info.prover.get_id(),
-                    new_challenge.challenge_hash,
-                    new_challenge.sp_hash,
-                ):
+                    passed += 1
+                else:
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
@@ -270,21 +393,24 @@ class HarvesterAPI:
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.monotonic() - start
         total_proofs_found = 0
-        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
-            filename, sublist = await filename_sublist_awaitable
-            time_taken = time.monotonic() - start
-            if time_taken > 8:
-                self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
-                    f" to minimize risk of losing rewards."
-                )
-            else:
-                pass
-                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
-            for response in sublist:
-                total_proofs_found += 1
-                msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
-                await peer.send_message(msg)
+        total_v2_partial_proofs_found = 0
+
+        # run both concurrently
+        tasks = []
+        if awaitables:
+            tasks.append(self._handle_v1_responses(awaitables, start, peer))
+        if v2_awaitables:
+            tasks.append(self._handle_v2_responses(v2_awaitables, start, peer))
+
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            if len(results) == 2:
+                total_proofs_found, total_v2_partial_proofs_found = results
+            elif len(results) == 1:
+                if awaitables:
+                    total_proofs_found = results[0]
+                else:
+                    total_v2_partial_proofs_found = results[0]
 
         now = uint64(time.time())
 
@@ -301,9 +427,10 @@ class HarvesterAPI:
         await peer.send_message(pass_msg)
 
         self.harvester.log.info(
-            f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
-            f" Found {total_proofs_found} proofs. Time: {time_taken:.5f} s. "
-            f"Total {self.harvester.plot_manager.plot_count()} plots"
+            f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]} ..."
+            f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge"
+            f"Found {total_proofs_found} V1 proofs and {total_v2_partial_proofs_found} V2 qualities."
+            f" Time: {time_taken:.5f} s. Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
             "farming_info",
@@ -311,7 +438,8 @@ class HarvesterAPI:
                 "challenge_hash": new_challenge.challenge_hash.hex(),
                 "total_plots": self.harvester.plot_manager.plot_count(),
                 "found_proofs": total_proofs_found,
-                "eligible_plots": len(awaitables),
+                "found_v2_partial_proofs": total_v2_partial_proofs_found,
+                "eligible_plots": len(awaitables) + len(v2_awaitables),
                 "time": time_taken,
             },
         )

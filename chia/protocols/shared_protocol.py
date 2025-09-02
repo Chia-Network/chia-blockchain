@@ -17,6 +17,7 @@ protocol_version = {
     NodeType.INTRODUCER: "0.0.36",
     NodeType.WALLET: "0.0.38",
     NodeType.DATA_LAYER: "0.0.36",
+    NodeType.SOLVER: "0.0.37",
 }
 
 """
@@ -65,6 +66,7 @@ default_capabilities = {
     NodeType.INTRODUCER: _capabilities,
     NodeType.WALLET: _capabilities,
     NodeType.DATA_LAYER: _capabilities,
+    NodeType.SOLVER: _capabilities,
 }
 
 

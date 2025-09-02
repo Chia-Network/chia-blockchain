@@ -37,6 +37,7 @@ from chia.protocols import (
     harvester_protocol,
     introducer_protocol,
     pool_protocol,
+    solver_protocol,
     timelord_protocol,
     wallet_protocol,
 )
@@ -147,6 +148,26 @@ signed_values = farmer_protocol.SignedValues(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
+    ),
+)
+
+partial_proof = harvester_protocol.PartialProofsData(
+    bytes32.fromhex("42743566108589c11bb3811b347900b6351fd3e25bad6c956c0bf1c05a4d93fb"),
+    bytes32.fromhex("8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a"),
+    "plot-filename",
+    [b"partial-proof1", b"partial-proof2"],
+    uint8(4),
+    uint8(32),
+    G1Element.from_bytes(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
+    ),
+    bytes32.fromhex("91240fbacdf93b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a"),
+    G1Element.from_bytes(
+        bytes.fromhex(
+            "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+        ),
     ),
 )
 
@@ -1082,3 +1103,8 @@ respond_compact_proof_of_time = timelord_protocol.RespondCompactProofOfTime(
     uint32(386395693),
     uint8(224),
 )
+
+# SOLVER PROTOCOL
+solver_info = solver_protocol.SolverInfo(partial_proof=b"partial-proof")
+
+solver_response = solver_protocol.SolverResponse(b"partial-proof", b"full-proof")

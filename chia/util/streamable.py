@@ -8,7 +8,7 @@ import os
 import pprint
 import traceback
 from collections.abc import Collection
-from enum import Enum
+from enum import Enum, EnumMeta
 from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, TypeVar, Union, get_type_hints
 
 from chia_rs.sized_bytes import bytes32
@@ -128,6 +128,10 @@ def is_type_Tuple(f_type: object) -> bool:
 
 def is_type_Dict(f_type: object) -> bool:
     return get_origin(f_type) is dict or f_type is dict
+
+
+def is_type_Enum(f_type: object) -> bool:
+    return type(f_type) is EnumMeta
 
 
 def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
@@ -307,11 +311,10 @@ def recurse_jsonify(
                 val, None, **next_recursion_env
             )
         return new_dict
-
+    elif isinstance(d, Enum):
+        return next_recursion_step(d.value, None, **next_recursion_env)
     elif issubclass(type(d), bytes):
         return f"0x{bytes(d).hex()}"
-    elif isinstance(d, Enum):
-        return d.name
     elif isinstance(d, bool):
         return d
     elif isinstance(d, int):
@@ -439,6 +442,10 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
         key_parse_inner_type_f = function_to_parse_one_item(inner_types[0])
         value_parse_inner_type_f = function_to_parse_one_item(inner_types[1])
         return lambda f: parse_dict(f, key_parse_inner_type_f, value_parse_inner_type_f)
+    if is_type_Enum(f_type):
+        if not hasattr(f_type, "_streamable_proxy"):
+            raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
+        return lambda f: f_type(function_to_parse_one_item(f_type._streamable_proxy)(f))
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")
@@ -529,6 +536,13 @@ def function_to_stream_one_item(f_type: type[Any]) -> StreamFunctionType:
         key_stream_inner_type_func = function_to_stream_one_item(inner_types[0])
         value_stream_inner_type_func = function_to_stream_one_item(inner_types[1])
         return lambda item, f: stream_dict(key_stream_inner_type_func, value_stream_inner_type_func, item, f)
+    elif is_type_Enum(f_type):
+        if not hasattr(f_type, "_streamable_proxy"):
+            raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
+        return lambda item, f: function_to_stream_one_item(f_type._streamable_proxy)(
+            f_type._streamable_proxy(item.value),  # type: ignore[attr-defined]
+            f,
+        )
     elif f_type is str:
         return stream_str
     elif f_type is bool:
@@ -700,3 +714,15 @@ class UInt32Range(Streamable):
 class UInt64Range(Streamable):
     start: uint64 = uint64(0)
     stop: uint64 = uint64.MAXIMUM
+
+
+_T_Enum = TypeVar("_T_Enum", bound=EnumMeta)
+
+
+def streamable_enum(proxy: type[object]) -> Callable[[_T_Enum], _T_Enum]:
+    def streamable_enum_wrapper(cls: _T_Enum) -> _T_Enum:
+        setattr(cls, "_streamable_proxy", proxy)
+        setattr(cls, "_ignore_", ["_streamable_proxy"])
+        return cls
+
+    return streamable_enum_wrapper

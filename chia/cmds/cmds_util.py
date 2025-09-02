@@ -23,6 +23,7 @@ from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
+from chia.solver.solver_rpc_client import SolverRpcClient
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
@@ -42,6 +43,7 @@ NODE_TYPES: dict[str, type[RpcClient]] = {
     "harvester": HarvesterRpcClient,
     "data_layer": DataLayerRpcClient,
     "simulator": SimulatorFullNodeRpcClient,
+    "solver": SolverRpcClient,
 }
 
 node_config_section_names: dict[type[RpcClient], str] = {
@@ -52,6 +54,7 @@ node_config_section_names: dict[type[RpcClient], str] = {
     HarvesterRpcClient: "harvester",
     DataLayerRpcClient: "data_layer",
     SimulatorFullNodeRpcClient: "full_node",
+    SolverRpcClient: "solver",
 }
 
 _T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)

@@ -44,7 +44,7 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [badge-commits]: https://img.shields.io/github/commit-activity/w/Chia-Network/chia-blockchain?logo=GitHub
 [badge-contributors]: https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub
 [badge-coverage]: https://img.shields.io/coverallsCoverage/github/Chia-Network/chia-blockchain?logo=Coveralls&logoColor=red&labelColor=%23212F39
-[badge-discord]: https://dcbadge.vercel.app/api/server/chia?style=flat-square&theme=full-presence
+[badge-discord]: https://img.shields.io/badge/discord-Chia%20Network-green.svg
 [badge-discord2]: https://img.shields.io/discord/1034523881404370984.svg?label=Discord&logo=discord&colorB=1e2b2f
 [badge-downloads]: https://img.shields.io/github/downloads/Chia-Network/chia-blockchain/total?logo=GitHub
 [badge-rc]: https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-rc.json&query=%24.message&logo=chianetwork&logoColor=white&label=Latest%20RC&labelColor=%230d3349&color=%23474748

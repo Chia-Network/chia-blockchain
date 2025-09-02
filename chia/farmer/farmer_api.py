@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PoolTarget, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -17,6 +17,7 @@ from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.farmer_protocol import DeclareProofOfSpace, SignedValues
 from chia.protocols.harvester_protocol import (
+    PartialProofsData,
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
@@ -33,6 +34,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.solver_protocol import SolverInfo, SolverResponse
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -477,6 +479,103 @@ class FarmerAPI:
                 )
 
                 return
+
+    @metadata.request(peer_required=True)
+    async def partial_proofs(self, partial_proof_data: PartialProofsData, peer: WSChiaConnection) -> None:
+        """
+        This is a response from the harvester for V2 plots, containing only partial proof data.
+        We send these to the solver service and wait for a response with the full proof.
+        """
+        if partial_proof_data.sp_hash not in self.farmer.number_of_responses:
+            self.farmer.number_of_responses[partial_proof_data.sp_hash] = 0
+            self.farmer.cache_add_time[partial_proof_data.sp_hash] = uint64(time.time())
+
+        if partial_proof_data.sp_hash not in self.farmer.sps:
+            self.farmer.log.warning(
+                f"Received partial proofs for a signage point that we do not have {partial_proof_data.sp_hash}"
+            )
+            return None
+
+        self.farmer.cache_add_time[partial_proof_data.sp_hash] = uint64(time.time())
+
+        self.farmer.log.info(
+            f"Received V2 partial proof collection with {len(partial_proof_data.partial_proofs)} partail proofs "
+            f"for plot {partial_proof_data.plot_identifier[:10]}... from {peer.peer_node_id}"
+        )
+
+        # Process each partial proof chain through solver service to get full proofs
+        for partial_proof in partial_proof_data.partial_proofs:
+            solver_info = SolverInfo(partial_proof=partial_proof)
+
+            try:
+                # store pending request data for matching with response
+                self.farmer.pending_solver_requests[partial_proof] = {
+                    "proof_data": partial_proof_data,
+                    "peer": peer,
+                }
+
+                # send solve request to all solver connections
+                msg = make_msg(ProtocolMessageTypes.solve, solver_info)
+                await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
+                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.hex()[:10]}...")
+
+            except Exception as e:
+                self.farmer.log.error(
+                    f"Failed to call solver service for partial proof {partial_proof.hex()[:10]}...: {e}"
+                )
+                # clean up pending request
+                if partial_proof in self.farmer.pending_solver_requests:
+                    del self.farmer.pending_solver_requests[partial_proof]
+
+    @metadata.request()
+    async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
+        """
+        Handle solution response from solver service.
+        This is called when a solver responds to a solve request.
+        """
+        self.farmer.log.debug(f"Received solution response: {len(response.proof)} bytes from {peer.peer_node_id}")
+
+        # find the matching pending request using partial_proof
+
+        if response.partial_proof not in self.farmer.pending_solver_requests:
+            self.farmer.log.warning(
+                f"Received solver response for unknown partial proof {response.partial_proof.hex()}"
+            )
+            return
+
+        # get the original request data
+        request_data = self.farmer.pending_solver_requests.pop(response.partial_proof)
+        proof_data = request_data["proof_data"]
+        original_peer = request_data["peer"]
+        partial_proof = response.partial_proof
+
+        # create the proof of space with the solver's proof
+        proof_bytes = response.proof
+        if proof_bytes is None or len(proof_bytes) == 0:
+            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.hex()}...")
+            return
+
+        sp_challenge_hash = proof_data.challenge_hash
+        new_proof_of_space = harvester_protocol.NewProofOfSpace(
+            proof_data.challenge_hash,
+            proof_data.sp_hash,
+            proof_data.plot_identifier,
+            ProofOfSpace(
+                sp_challenge_hash,
+                proof_data.pool_public_key,
+                proof_data.pool_contract_puzzle_hash,
+                proof_data.plot_public_key,
+                proof_data.plot_size,
+                proof_bytes,
+            ),
+            proof_data.signage_point_index,
+            include_source_signature_data=False,
+            farmer_reward_address_override=None,
+            fee_info=None,
+        )
+
+        # process the proof of space
+        await self.new_proof_of_space(new_proof_of_space, original_peer)
 
     @metadata.request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
