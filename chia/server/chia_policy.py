@@ -6,6 +6,7 @@ import socket
 import ssl
 import struct
 import sys
+import weakref
 
 if sys.platform == "win32":
     import _overlapped  # type: ignore[import-not-found]
@@ -57,7 +58,11 @@ if TYPE_CHECKING:
         else:
             _loop: EventsAbstractEventLoop
         _sockets: Iterable[socket.socket]
-        _active_count: int
+        if sys.version_info >= (3, 13):
+            # https://github.com/python/cpython/blob/v3.13.7/Lib/asyncio/base_events.py#L283
+            _clients: weakref.WeakSet[object]
+        else:
+            _active_count: int
         _protocol_factory: _ProtocolFactory
         _backlog: int
         _ssl_context: _SSLContext
