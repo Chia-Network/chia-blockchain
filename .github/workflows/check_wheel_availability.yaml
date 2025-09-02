@@ -32,7 +32,7 @@ jobs:
           - name: macOS
             matrix: macos
             runs-on:
-              intel: macos-13
+              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
               arm: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-15' }}
           - name: Windows
             matrix: windows
@@ -54,7 +54,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - uses: Chia-Network/actions/setup-python@main
         with:

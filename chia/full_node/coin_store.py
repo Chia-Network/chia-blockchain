@@ -30,6 +30,9 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
+    # Fall back to the `coin_puzzle_hash` index if the ff unspent index
+    # does not exist.
+    _unspent_lineage_for_ph_idx: str = "coin_puzzle_hash"
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
@@ -82,6 +85,12 @@ class CoinStore:
                         WHERE spent_index = -1
                     """
                 )
+            async with conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'coin_record_ph_ff_unspent_idx'"
+            ) as cursor:
+                has_ff_unspent_idx = await cursor.fetchone() is not None
+            if has_ff_unspent_idx:
+                self._unspent_lineage_for_ph_idx = "coin_record_ph_ff_unspent_idx"
 
         return self
 
@@ -647,6 +656,7 @@ class CoinStore:
                 "unspent.coin_parent, "
                 "parent.coin_parent "
                 "FROM coin_record AS unspent "
+                f"INDEXED BY {self._unspent_lineage_for_ph_idx} "
                 "LEFT JOIN coin_record AS parent ON unspent.coin_parent = parent.coin_name "
                 "WHERE unspent.spent_index = -1 "
                 "AND parent.spent_index > 0 "
