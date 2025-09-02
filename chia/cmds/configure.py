@@ -22,6 +22,7 @@ from chia.util.network import parse_host_port
 def configure(
     root_path: Path,
     set_farmer_peer: str,
+    set_solver_peer: str,
     set_node_introducer: str,
     set_fullnode_port: str,
     set_harvester_port: str,
@@ -59,6 +60,14 @@ def configure(
                 change_made = True
             except ValueError:
                 print("Farmer address must be in format [IP:Port]")
+        if set_solver_peer:
+            try:
+                host, port = parse_host_port(set_solver_peer)
+                config["farmer"]["solver_peers"] = [{"host": host, "port": port}]
+                print("Solver peer updated for farmer")
+                change_made = True
+            except ValueError:
+                print("Solver address must be in format [IP:Port]")
         if set_fullnode_port:
             config["full_node"]["port"] = int(set_fullnode_port)
             config["full_node"]["introducer_peer"]["port"] = int(set_fullnode_port)
@@ -237,6 +246,7 @@ def configure(
 )
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
+@click.option("--set-solver-peer", help="Set the solver peer for farmer - IP:Port", type=str)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for testing",
@@ -292,6 +302,7 @@ def configure(
 def configure_cmd(
     ctx: click.Context,
     set_farmer_peer: str,
+    set_solver_peer: str,
     set_node_introducer: str,
     set_fullnode_port: str,
     set_harvester_port: str,
@@ -309,6 +320,7 @@ def configure_cmd(
     configure(
         ChiaCliContext.set_default(ctx).root_path,
         set_farmer_peer,
+        set_solver_peer,
         set_node_introducer,
         set_fullnode_port,
         set_harvester_port,
