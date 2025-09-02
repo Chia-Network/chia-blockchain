@@ -514,7 +514,6 @@ async def setup_solver(
     b_tools: BlockTools,
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
-    farmer_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncGenerator[SolverService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
@@ -528,7 +527,6 @@ async def setup_solver(
         root_path,
         config,
         consensus_constants,
-        farmer_peers={farmer_peer} if farmer_peer is not None else set(),
     )
 
     async with service.manage(start=start_service):
