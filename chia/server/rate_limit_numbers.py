@@ -24,6 +24,8 @@ class RLSettings:
 # this class is used to indicate that a message type is not subject to a rate
 # limit, but just a per-message size limit. This may be appropriate for response
 # messages that are implicitly limited by their corresponding request message
+# Unlimited message types are also not subject to the overall limit across all
+# messages (just like messages in the "tx" category)
 @dataclasses.dataclass(frozen=True)
 class Unlimited:
     max_size: int  # Max size of each request
