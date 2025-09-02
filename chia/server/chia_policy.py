@@ -132,20 +132,22 @@ class PausableServer(BaseEventsServer):
             max_concurrent_connections if max_concurrent_connections is not None else global_max_concurrent_connections
         )
 
-    def _attach(self) -> None:
-        super()._attach()
-        logging.getLogger(__name__).debug(f"New connection. Total connections: {self._active_count}")
-        if not self._paused and self._active_count >= self.max_concurrent_connections:
+    def _attach(self, *args: object, **kwargs: object) -> None:
+        super()._attach(*args, **kwargs)
+        active_connections = self._chia_active_connections()
+        logging.getLogger(__name__).debug(f"New connection. Total connections: {active_connections}")
+        if not self._paused and active_connections >= self.max_concurrent_connections:
             self._chia_pause()
 
-    def _detach(self) -> None:
-        super()._detach()
-        logging.getLogger(__name__).debug(f"Connection lost. Total connections: {self._active_count}")
+    def _detach(self, *args: object, **kwargs: object) -> None:
+        super()._detach(*args, **kwargs)
+        active_connections = self._chia_active_connections()
+        logging.getLogger(__name__).debug(f"Connection lost. Total connections: {active_connections}")
         if (
-            self._active_count > 0
+            active_connections > 0
             and self._sockets is not None
             and self._paused
-            and self._active_count < self.max_concurrent_connections
+            and active_connections < self.max_concurrent_connections
         ):
             self._chia_resume()
 
@@ -179,6 +181,12 @@ class PausableServer(BaseEventsServer):
                     self._ssl_handshake_timeout,
                 )
         logging.getLogger(__name__).debug("Resumed accepting connections.")
+
+    def _chia_active_connections(self) -> int:
+        if sys.version_info >= (3, 13):
+            return len(self._clients)
+        else:
+            return self._active_count
 
 
 async def _chia_create_server(
