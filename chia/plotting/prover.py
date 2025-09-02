@@ -30,7 +30,7 @@ class ProverProtocol(Protocol):
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]: ...
 
     # this is only supported by v2 plots
-    def get_partial_proofs_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes]: ...
+    def get_partial_proofs_for_challenge(self, challenge: bytes32, required_plot_strength: uint8) -> list[bytes]: ...
 
     # this is only supported by v1 plots. v2 plots first get the partial proof
     # and turn it into a full proof by calling solve_proof(), or pass it to the solver service
@@ -76,10 +76,10 @@ class V2Prover:
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
-        raise NotImplementedError("V2 plot format does not support qualities directly, use partial proofs")
+        raise AssertionError("V2 plot format does not support qualities directly, use partial proofs")
 
-    def get_partial_proofs_for_challenge(self, challenge: bytes, plot_strength: uint8) -> list[bytes]:
-        # TODO: todo_v2_plots Implement plot quality lookup
+    def get_partial_proofs_for_challenge(self, challenge: bytes, required_plot_strength: uint8) -> list[bytes]:
+        # TODO: todo_v2_plots Implement plot partial proof lookup
         raise NotImplementedError("V2 plot format is not yet implemented")
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
@@ -124,7 +124,7 @@ class V1Prover:
     def get_qualities_for_challenge(self, challenge: bytes32) -> list[bytes32]:
         return [bytes32(quality) for quality in self._disk_prover.get_qualities_for_challenge(challenge)]
 
-    def get_partial_proofs_for_challenge(self, challenge: bytes32, plot_strength: uint8) -> list[bytes]:
+    def get_partial_proofs_for_challenge(self, challenge: bytes32, required_plot_strength: uint8) -> list[bytes]:
         raise AssertionError("V1 plot format doesn't use partial proofs")
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:
