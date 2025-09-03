@@ -210,7 +210,7 @@ jobs:
             matrix: "3.10"
 
     steps:
-      - uses: re-actors/alls-green@release/v1.2.2
+      - uses: re-actors/alls-green@release/v1.2
         id: alls-green
         with:
           allowed-skips: ${{ needs.configure.outputs.mac_intel != 'true' && 'macos-intel' || '' }}
