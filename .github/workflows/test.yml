@@ -189,7 +189,6 @@ jobs:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-      - macos-intel
       - macos-arm
       - ubuntu
       - windows
