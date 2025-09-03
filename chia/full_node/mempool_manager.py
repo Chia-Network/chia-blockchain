@@ -510,7 +510,7 @@ class MempoolManager:
 
         Args:
             new_spend: spend bundle to validate and add
-            conds: the SpendBundleConditions resulting from running the clvm in the SpendBundles coin spends
+            conds: SpendBundleConditions resulting from running the clvm in the spend bundle's coin spends
             spend_name: hash of the spend bundle data, passed in as an optimization
 
         Returns:
