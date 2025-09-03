@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from chia_rs.sized_ints import uint32
@@ -19,6 +19,7 @@ from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
@@ -39,7 +40,7 @@ class SimClock:
 
 
 @pytest.mark.anyio
-async def test_get_rate_limits_to_use():
+async def test_get_rate_limits_to_use() -> None:
     assert get_rate_limits_to_use(rl_v2, rl_v2) != get_rate_limits_to_use(rl_v2, rl_v1)
     assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v2, rl_v1)
     assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
@@ -57,7 +58,7 @@ async def test_get_rate_limits_to_use():
 @boolean_datacases(name="incoming", true="incoming", false="outgoing")
 @boolean_datacases(name="tx_msg", true="tx", false="non-tx")
 @boolean_datacases(name="limit_size", true="size-limit", false="count-limit")
-async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeypatch: pytest.MonkeyPatch):
+async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeypatch: pytest.MonkeyPatch) -> None:
     # this test uses a single message type, and alters the rate limit settings
     # for it to hit the different cases
 
@@ -96,7 +97,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
     else:
         limits.update({"rate_limits_other": rate_limit, "rate_limits_tx": {}})
 
-    def mock_get_limits(*args, **kwargs) -> dict[str, Any]:
+    def mock_get_limits(our_capabilities: list[Capability], peer_capabilities: list[Capability]) -> dict[str, Any]:
         return limits
 
     import chia.server.rate_limits
@@ -141,7 +142,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
 
 
 @pytest.mark.anyio
-async def test_large_message():
+async def test_large_message() -> None:
     # Large tx
     small_tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
     large_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 3 * 1024 * 1024))
@@ -162,7 +163,7 @@ async def test_large_message():
 
 
 @pytest.mark.anyio
-async def test_too_much_data():
+async def test_too_much_data() -> None:
     # Too much data
     r = RateLimiter(incoming=True, get_time=lambda: 0)
     tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
@@ -190,7 +191,7 @@ async def test_too_much_data():
 
 
 @pytest.mark.anyio
-async def test_non_tx_aggregate_limits():
+async def test_non_tx_aggregate_limits() -> None:
     # Frequency limits
     r = RateLimiter(incoming=True, get_time=lambda: 0)
     message_1 = make_msg(ProtocolMessageTypes.coin_state_update, bytes([1] * 32))
@@ -227,7 +228,7 @@ async def test_non_tx_aggregate_limits():
 
 
 @pytest.mark.anyio
-async def test_periodic_reset():
+async def test_periodic_reset() -> None:
     timer = SimClock()
     r = RateLimiter(True, 5, get_time=timer.monotonic)
     tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
@@ -261,7 +262,7 @@ async def test_periodic_reset():
 
 
 @pytest.mark.anyio
-async def test_percentage_limits():
+async def test_percentage_limits() -> None:
     r = RateLimiter(True, 60, 40, get_time=lambda: 0)
     new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
     for i in range(50):
@@ -321,7 +322,7 @@ async def test_percentage_limits():
 
 
 @pytest.mark.anyio
-async def test_too_many_outgoing_messages():
+async def test_too_many_outgoing_messages() -> None:
     # Too many messages
     r = RateLimiter(incoming=False, get_time=lambda: 0)
     new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
@@ -345,7 +346,7 @@ async def test_too_many_outgoing_messages():
 
 
 @pytest.mark.anyio
-async def test_too_many_incoming_messages():
+async def test_too_many_incoming_messages() -> None:
     # Too many messages
     r = RateLimiter(incoming=True, get_time=lambda: 0)
     new_peers_message = make_msg(ProtocolMessageTypes.respond_peers, bytes([1]))
@@ -406,7 +407,9 @@ async def test_too_many_incoming_messages():
 )
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="save time")
-async def test_different_versions(node_with_params, node_with_params_b, self_hostname):
+async def test_different_versions(
+    node_with_params: FullNodeSimulator, node_with_params_b: FullNodeSimulator, self_hostname: str
+) -> None:
     node_a = node_with_params
     node_b = node_with_params_b
 
@@ -442,18 +445,22 @@ async def test_different_versions(node_with_params, node_with_params_b, self_hos
 
 
 @pytest.mark.anyio
-async def test_compose():
+async def test_compose() -> None:
     rl_1 = rl_numbers[1]
     rl_2 = rl_numbers[2]
-    assert ProtocolMessageTypes.respond_children in rl_1["rate_limits_other"]
-    assert ProtocolMessageTypes.respond_children not in rl_1["rate_limits_tx"]
-    assert ProtocolMessageTypes.respond_children not in rl_2["rate_limits_other"]
-    assert ProtocolMessageTypes.respond_children in rl_2["rate_limits_tx"]
+    rl_1_rate_limits_other = cast(dict[ProtocolMessageTypes, RLSettings], rl_1["rate_limits_other"])
+    rl_2_rate_limits_other = cast(dict[ProtocolMessageTypes, RLSettings], rl_2["rate_limits_other"])
+    rl_1_rate_limits_tx = cast(dict[ProtocolMessageTypes, RLSettings], rl_1["rate_limits_tx"])
+    rl_2_rate_limits_tx = cast(dict[ProtocolMessageTypes, RLSettings], rl_2["rate_limits_tx"])
+    assert ProtocolMessageTypes.respond_children in rl_1_rate_limits_other
+    assert ProtocolMessageTypes.respond_children not in rl_1_rate_limits_tx
+    assert ProtocolMessageTypes.respond_children not in rl_2_rate_limits_other
+    assert ProtocolMessageTypes.respond_children in rl_2_rate_limits_tx
 
-    assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
-    assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
-    assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_other"]
-    assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_tx"]
+    assert ProtocolMessageTypes.request_block in rl_1_rate_limits_other
+    assert ProtocolMessageTypes.request_block not in rl_1_rate_limits_tx
+    assert ProtocolMessageTypes.request_block not in rl_2_rate_limits_other
+    assert ProtocolMessageTypes.request_block not in rl_2_rate_limits_tx
 
     comps = compose_rate_limits(rl_1, rl_2)
     # v2 limits are used if present
@@ -461,8 +468,8 @@ async def test_compose():
     assert ProtocolMessageTypes.respond_children in comps["rate_limits_tx"]
 
     # Otherwise, fall back to v1
-    assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
-    assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
+    assert ProtocolMessageTypes.request_block in rl_1_rate_limits_other
+    assert ProtocolMessageTypes.request_block not in rl_1_rate_limits_tx
 
 
 @pytest.mark.anyio
@@ -475,7 +482,7 @@ async def test_compose():
         (ProtocolMessageTypes.reject_block, 90),
     ],
 )
-async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
+async def test_unlimited(msg_type: ProtocolMessageTypes, size: int) -> None:
     r = RateLimiter(incoming=False, get_time=lambda: 0)
 
     message = make_msg(msg_type, bytes([1] * size))
@@ -532,8 +539,12 @@ async def test_unlimited(msg_type: ProtocolMessageTypes, size: int):
     indirect=True,
 )
 async def test_unsolicited_responses(
-    node_with_params, node_with_params_b, self_hostname: str, msg_type: ProtocolMessageTypes, bt: BlockTools
-):
+    node_with_params: FullNodeSimulator,
+    node_with_params_b: FullNodeSimulator,
+    self_hostname: str,
+    msg_type: ProtocolMessageTypes,
+    bt: BlockTools,
+) -> None:
     node_a = node_with_params
     node_b = node_with_params_b
 
