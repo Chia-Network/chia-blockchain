@@ -123,6 +123,7 @@ def visit_harvester_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(pool_difficulty, "pool_difficulty")
     visitor(harvester_handhsake, "harvester_handhsake")
     visitor(new_signage_point_harvester, "new_signage_point_harvester")
+    visitor(new_signage_point_harvester2, "new_signage_point_harvester2")
     visitor(new_proof_of_space, "new_proof_of_space")
     visitor(request_signatures, "request_signatures")
     visitor(respond_signatures, "respond_signatures")
