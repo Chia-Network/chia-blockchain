@@ -185,10 +185,11 @@ jobs:
       collect-junit: false
 
   coverage:
-    if: github.repository_owner == 'Chia-Network'
+    if: always() && github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
+      - configure
       - macos-intel
       - macos-arm
       - ubuntu
@@ -209,6 +210,11 @@ jobs:
             matrix: "3.10"
 
     steps:
+      - uses: re-actors/alls-green@release/v1.2.2
+        with:
+          allowed-skips: ${{ needs.configure.outputs.mac_intel != 'true' && 'macos-intel' || '' }}
+          jobs: ${{ toJSON(needs) }}
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
