@@ -14,7 +14,6 @@ from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.network import is_localhost
 
 log = logging.getLogger(__name__)
 
@@ -76,15 +75,13 @@ class Solver:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
-        if is_localhost(connection.peer_info.host):
-            self.log.info(f"Accepting localhost connection from {connection.connection_type}: {connection.get_peer_logging()}")
+        if not self.config.get("trusted_peers_only", True):
+            self.log.info(f"trusted peers check disabled, Accepting connection from {connection.get_peer_logging()}")
             return
-
-        trusted_peers = self.config.get("trusted_peers", {})
-        if self.server.is_trusted_peer(connection, trusted_peers):
-            self.log.info(f"Accepting trusted peer connection from {connection.connection_type}: {connection.get_peer_logging()}")
+        if self.server.is_trusted_peer(connection, self.config.get("trusted_peers", {})):
+            self.log.info(f"Accepting connection from {connection.get_peer_logging()}")
             return
-        self.log.warning(f"Rejecting untrusted connection from {connection.connection_type}: {connection.get_peer_logging()}")
+        self.log.warning(f"Rejecting untrusted connection from {connection.get_peer_logging()}")
         await connection.close()
 
     async def on_disconnect(self, connection: WSChiaConnection) -> None:
