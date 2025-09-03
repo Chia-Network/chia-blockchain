@@ -303,13 +303,14 @@ async def setup_simulators_and_wallets_inner(
 
 
 @asynccontextmanager
-async def setup_farmer_multi_harvester(
+async def setup_farmer_solver_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
@@ -320,6 +321,7 @@ async def setup_farmer_multi_harvester(
                 consensus_constants,
                 port=uint16(0),
                 start_service=start_services,
+                solver_peer=solver_peer,
             )
         )
         if start_services:

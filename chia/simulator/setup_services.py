@@ -359,6 +359,7 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncGenerator[FarmerService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
@@ -385,6 +386,16 @@ async def setup_farmer(
     else:
         service_config.pop("full_node_peer", None)
         service_config.pop("full_node_peers", None)
+
+    if solver_peer:
+        service_config["solver_peers"] = [
+            {
+                "host": solver_peer.host,
+                "port": solver_peer.port,
+            },
+        ]
+    else:
+        service_config.pop("solver_peers", None)
 
     service = create_farmer_service(
         root_path,
