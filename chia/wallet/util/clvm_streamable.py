@@ -125,22 +125,19 @@ def json_deserialize_with_clvm_streamable(
         for old_field in old_streamable_fields:
             if is_compound_type(old_field.type):
                 inner_type = get_args(old_field.type)[0]
-                if is_clvm_streamable_type(inner_type):
-                    new_streamable_fields.append(
-                        dataclasses.replace(
-                            old_field,
-                            convert_function=function_to_convert_one_item(
-                                old_field.type,
-                                functools.partial(
-                                    json_deserialize_with_clvm_streamable,
-                                    streamable_type=inner_type,
-                                    translation_layer=translation_layer,
-                                ),
+                new_streamable_fields.append(
+                    dataclasses.replace(
+                        old_field,
+                        convert_function=function_to_convert_one_item(
+                            old_field.type,
+                            functools.partial(
+                                json_deserialize_with_clvm_streamable,
+                                streamable_type=inner_type,
+                                translation_layer=translation_layer,
                             ),
-                        )
+                        ),
                     )
-                else:
-                    new_streamable_fields.append(old_field)
+                )
             elif is_clvm_streamable_type(old_field.type):
                 new_streamable_fields.append(
                     dataclasses.replace(
