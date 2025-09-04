@@ -643,7 +643,7 @@ solver:
 
   # Node IDs of trusted solver peers, only these can connect by default
   trusted_peers:
-    localhost: 9999
+    0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb7: Does_not_matter
 
   # If False, accepts connections from all peers (not just trusted_peers)
   # If True (default), only accepts localhost and trusted_peers connections

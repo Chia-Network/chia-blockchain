@@ -75,11 +75,13 @@ class Solver:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
-        if not self.config.get("trusted_peers_only", True):
-            self.log.info(f"trusted peers check disabled, Accepting connection from {connection.get_peer_logging()}")
-            return
         if self.server.is_trusted_peer(connection, self.config.get("trusted_peers", {})):
             self.log.info(f"Accepting connection from {connection.get_peer_logging()}")
+            return
+        if not self.config.get("trusted_peers_only", True):
+            self.log.info(
+                f"trusted peers check disabled, Accepting connection from untrusted {connection.get_peer_logging()}"
+            )
             return
         self.log.warning(f"Rejecting untrusted connection from {connection.get_peer_logging()}")
         await connection.close()
