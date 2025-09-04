@@ -590,7 +590,9 @@ def make_bundle_spends_map_and_fee(
 
 
 def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
-    conds = get_conditions_from_spendbundle(spend_bundle, INFINITE_COST, DEFAULT_CONSTANTS, uint32(0))
+    conds = get_conditions_from_spendbundle(
+        spend_bundle, INFINITE_COST, DEFAULT_CONSTANTS, DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
+    )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, conds)
     return MempoolItem(
         spend_bundle=spend_bundle,

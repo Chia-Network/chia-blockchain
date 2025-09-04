@@ -3213,6 +3213,97 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
             raise ValueError(f"Failed to get puzzle and solution for coin {TEST_COIN}, error: {e}") from e
 
 
+# this puzzle just creates coins, however many are requested by the solution
+# (mod (A)
+#    (defun loop (n)
+#        (if (= n 1)
+#            (list)
+#            (c (list 51 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff n) (loop (- n 1))))
+#    )
+#    (loop A)
+# )
+create_coins_loop: str = (
+    "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02"
+    "ffff03ffff09ff05ffff010180ff80ffff01ff04ffff04ffff0133ffff04ffff"
+    "01a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    "ffffffff04ff05ff80808080ffff02ff02ffff04ff02ffff04ffff11ff05ffff"
+    "010180ff808080808080ff0180ff018080"
+)
+
+
+# this test uses artificial puzzles just to exercise the block creation. These
+# spends are expected not to verify any signatures
+# This is to keep the test simple.
+@pytest.mark.parametrize(
+    "puzzle, solution",
+    [
+        # create 2000 coins
+        (create_coins_loop, "ff8207d180"),
+        # create 1000 coins
+        (create_coins_loop, "ff8203e980"),
+        # create 500 coins
+        (create_coins_loop, "ff8201f580"),
+    ],
+)
+@pytest.mark.parametrize("old", [True, False])
+def test_create_block_generator_custom_spend(puzzle: str, solution: str, old: bool) -> None:
+    mempool_info = MempoolInfo(
+        CLVMCost(uint64(11000000000 * 3)),
+        FeeRate(uint64(1000000)),
+        CLVMCost(uint64(11000000000)),
+    )
+
+    fee_estimator = create_bitcoin_fee_estimator(test_constants.MAX_BLOCK_COST_CLVM)
+    solution_str = SerializedProgram.fromhex(solution)
+    puzzle_reveal = SerializedProgram.fromhex(puzzle)
+    puzzle_hash = puzzle_reveal.get_tree_hash()
+    mempool = Mempool(mempool_info, fee_estimator)
+    coins = [Coin(bytes32.random(), puzzle_hash, uint64(amount)) for amount in range(100000000, 100000022)]
+
+    spend_bundles = [
+        SpendBundle(
+            coin_spends=[CoinSpend(coin, puzzle_reveal=puzzle_reveal, solution=solution_str)],
+            aggregated_signature=G2Element(),
+        )
+        for coin in coins
+    ]
+
+    for sb in spend_bundles:
+        mi = mempool_item_from_spendbundle(sb)
+        mempool.add_to_pool(mi)
+        invariant_check_mempool(mempool)
+
+    create_block = mempool.create_block_generator if old else mempool.create_block_generator2
+    generator = create_block(test_constants, test_constants.HARD_FORK2_HEIGHT, 10.0)
+    assert generator is not None
+
+    assert generator.signature == G2Element()
+
+    removals = set(generator.removals)
+
+    err, conds = run_block_generator2(
+        bytes(generator.program),
+        generator.generator_refs,
+        test_constants.MAX_BLOCK_COST_CLVM,
+        0,
+        generator.signature,
+        None,
+        test_constants,
+    )
+
+    assert err is None
+    assert conds is not None
+
+    assert len(conds.spends) == len(removals)
+
+    for spend in conds.spends:
+        removal = Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount))
+        assert removal in coins
+        assert removal in removals
+
+    invariant_check_mempool(mempool)
+
+
 @pytest.mark.parametrize("old", [True, False])
 def test_create_block_generator(old: bool) -> None:
     mempool = construct_mempool()
