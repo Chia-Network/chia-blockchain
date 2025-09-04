@@ -224,11 +224,12 @@ def check_plots(
                         if version == PlotVersion.V1:
                             quality_str = bytes32(proof)
                             full_proof = pr.get_full_proof(challenge, index, parallel_read)
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         else:
                             quality_str = quality_for_partial_proof(proof, challenge)
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                             full_proof = solve_proof(proof)
 
-                        proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         if proof_spent_time > 15000:
                             log.warning(
                                 f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
