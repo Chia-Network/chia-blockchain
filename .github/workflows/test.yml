@@ -185,10 +185,11 @@ jobs:
       collect-junit: false
 
   coverage:
-    if: github.repository_owner == 'Chia-Network'
+    if: always() && github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
+      - configure
       - macos-intel
       - macos-arm
       - ubuntu
@@ -209,6 +210,12 @@ jobs:
             matrix: "3.10"
 
     steps:
+      - uses: re-actors/alls-green@release/v1.2
+        id: alls-green
+        with:
+          allowed-skips: ${{ needs.configure.outputs.mac_intel != 'true' && 'macos-intel' || '' }}
+          jobs: ${{ toJSON(needs) }}
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -265,13 +272,13 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Add time out assert results to workflow summary
-        if: always() && false
+        if: always() && steps.alls-green.outputs.success == 'true' && false
         run: |
           python -m chia._tests.process_junit --limit 50 --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
           python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
 
       - name: Publish JUnit results
-        if: always() && false
+        if: always() && steps.alls-green.outputs.success == 'true' && false
         uses: actions/upload-artifact@v4
         with:
           name: junit-results
@@ -285,7 +292,7 @@ jobs:
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
       - uses: coverallsapp/github-action@v2
-        if: always()
+        if: always() && steps.alls-green.outputs.success == 'true'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
@@ -320,7 +327,7 @@ jobs:
           fi
 
       - name: Remove previous coverage report comment and label from PR
-        if: github.base_ref != '' && always()
+        if: github.base_ref != '' && always() && steps.alls-green.outputs.success == 'true'
         shell: bash
         env:
           COV_STATUS: ${{ env.COV_STATUS }}
@@ -341,7 +348,7 @@ jobs:
           fi
 
       - name: Add diff coverage report comment to PR
-        if: github.base_ref != '' && always()
+        if: github.base_ref != '' && always() && steps.alls-green.outputs.success == 'true'
         env:
           BRANCH_NAME: ${{ github.sha }}
           COV_STATUS: ${{ env.COV_STATUS }}
@@ -391,12 +398,12 @@ jobs:
           fi
 
       - name: Add diff coverage report to workflow summary
-        if: (github.base_ref != '' || github.event.before != '') && always()
+        if: (github.base_ref != '' || github.event.before != '') && always() && steps.alls-green.outputs.success == 'true'
         run: |
           cat coverage-reports/diff-cover.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish coverage reports
-        if: always()
+        if: always() && steps.alls-green.outputs.success == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
