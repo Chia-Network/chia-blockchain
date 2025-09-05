@@ -91,11 +91,6 @@ if [ "$PLATFORM" = "arm64" ]; then
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
   sudo apt-get -y install ruby ruby-dev
-  # ERROR:  Error installing fpm:
-  #     The last version of dotenv (>= 0) to support your Ruby & RubyGems was 2.8.1. Try installing it with `gem install dotenv -v 2.8.1` and then running the current command again
-  #     dotenv requires Ruby version >= 3.0. The current ruby version is 2.7.0.0.
-  # @TODO Once ruby 3.0 can be installed on `apt install ruby`, installing dotenv below should be removed.
-  sudo gem install dotenv -v 2.8.1
   sudo gem install fpm
   echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
