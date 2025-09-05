@@ -210,6 +210,7 @@ class VCWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=inner_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(inner_puzzle_hash),
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -347,6 +348,7 @@ class VCWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=puzzle_hashes[0],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -453,12 +455,10 @@ class VCWallet:
                     crcat_spends.append(crcat_spend)
                     if spend in offer._bundle.coin_spends:
                         spends_to_fix[spend.coin.name()] = spend
-                else:
-                    if spend in offer._bundle.coin_spends:  # pragma: no cover
-                        other_spends.append(spend)
-            else:
-                if spend in offer._bundle.coin_spends:
+                elif spend in offer._bundle.coin_spends:  # pragma: no cover
                     other_spends.append(spend)
+            elif spend in offer._bundle.coin_spends:
+                other_spends.append(spend)
 
         # Figure out what VC announcements are needed
         announcements_to_make: dict[bytes32, list[CreatePuzzleAnnouncement]] = {}

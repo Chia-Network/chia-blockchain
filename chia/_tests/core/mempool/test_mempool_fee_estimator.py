@@ -23,7 +23,6 @@ async def test_basics() -> None:
 
     cost = uint64(5000000)
     for i in range(300, 700):
-        i = uint32(i)
         items = []
         for _ in range(2, 100):
             fee = uint64(10000000)
@@ -50,7 +49,7 @@ async def test_basics() -> None:
             )
             items.append(mempool_item2)
 
-        fee_tracker.process_block(i, items)
+        fee_tracker.process_block(uint32(i), items)
 
     short, med, long = fee_tracker.estimate_fees()
 
@@ -72,7 +71,6 @@ async def test_fee_increase() -> None:
         estimator = SmartFeeEstimator(fee_tracker, uint64(test_constants.MAX_BLOCK_COST_CLVM))
         random = Random(x=1)
         for i in range(300, 700):
-            i = uint32(i)
             items = []
             for _ in range(20):
                 fee = uint64(0)
@@ -85,7 +83,7 @@ async def test_fee_increase() -> None:
                 )
                 items.append(mempool_item)
 
-            fee_tracker.process_block(i, items)
+            fee_tracker.process_block(uint32(i), items)
 
         short, med, long = fee_tracker.estimate_fees()
         mempool_info = mempool_manager.mempool.fee_estimator.get_mempool_info()

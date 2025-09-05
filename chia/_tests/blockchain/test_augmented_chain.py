@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
@@ -93,7 +94,7 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
     with pytest.raises(KeyError):
         await abc.prev_block_hash([blocks[2].header_hash])
 
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[3].header_hash, {uint32(3)})
 
     block_records = []
@@ -105,11 +106,11 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
 
     assert abc.height_to_block_record(uint32(1)) == block_records[1]
 
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[10].header_hash, {uint32(3), uint32(10)})
 
     # block 1 exists in the chain, but it doesn't have a generator
-    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+    with pytest.raises(ValueError, match=re.escape(Err.GENERATOR_REF_HAS_NO_GENERATOR.name)):
         await abc.lookup_block_generators(blocks[1].header_hash, {uint32(1)})
 
     expect_gen = blocks[2].transactions_generator

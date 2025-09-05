@@ -41,6 +41,7 @@ from chia.full_node.mempool_manager import (
     QUOTE_BYTES,
     QUOTE_EXECUTION_COST,
     MempoolManager,
+    NewPeakItem,
     TimelockConditions,
     can_replace,
     check_removals,
@@ -359,6 +360,7 @@ def make_test_conds(
                 flags,
                 execution_cost=0,
                 condition_cost=0,
+                fingerprint=b"",
             )
             for coin_id, parent_id, puzzle_hash, amount, flags, create_coin in spend_info
         ],
@@ -372,6 +374,9 @@ def make_test_conds(
         0,
         0,
         False,
+        0,
+        0,
+        0,
         0,
         0,
     )
@@ -589,7 +594,9 @@ def make_bundle_spends_map_and_fee(
 
 
 def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
-    conds = get_conditions_from_spendbundle(spend_bundle, INFINITE_COST, DEFAULT_CONSTANTS, uint32(0))
+    conds = get_conditions_from_spendbundle(
+        spend_bundle, INFINITE_COST, DEFAULT_CONSTANTS, DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
+    )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, conds)
     return MempoolItem(
         spend_bundle=spend_bundle,
@@ -3151,3 +3158,155 @@ def test_check_removals(case: CheckRemovalsCase) -> None:
     assert err == expected_err
     assert len(conflicts) == len(expected_conflicts)
     assert set(conflicts) == set(expected_conflicts)
+
+
+@pytest.mark.anyio
+async def test_new_peak_deferred_ff_items() -> None:
+    """
+    Covers the case where we update lineage info for multiple fast forward
+    singletons at new peak.
+    """
+    singleton_spend1 = make_singleton_spend(bytes32([1] * 32))
+    singleton1_id = singleton_spend1.coin.name()
+    singleton_spend2 = make_singleton_spend(bytes32([2] * 32))
+    singleton2_id = singleton_spend2.coin.name()
+    coins = TestCoins(
+        [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2],
+        {
+            singleton_spend1.coin.puzzle_hash: singleton_spend1.coin,
+            singleton_spend2.coin.puzzle_hash: singleton_spend2.coin,
+        },
+    )
+    mempool_manager = await setup_mempool(coins)
+    # Let's submit the two singletons transactions to the mempool
+    sb_names = []
+    for singleton_spend, regular_coin in [(singleton_spend1, TEST_COIN), (singleton_spend2, TEST_COIN2)]:
+        sb = SpendBundle([singleton_spend, mk_coin_spend(regular_coin)], G2Element())
+        sb_name = sb.name()
+        await mempool_manager.add_spend_bundle(
+            sb,
+            make_test_conds(spend_ids=[(singleton_spend.coin, ELIGIBLE_FOR_FF), (regular_coin, 0)], cost=1337),
+            sb_name,
+            uint32(1),
+        )
+        assert mempool_manager.get_mempool_item(sb_name) is not None
+        sb_names.append(sb_name)
+    # Let's advance the mempool by spending these singletons into new lineages
+    singleton1_new_latest = Coin(singleton1_id, singleton_spend1.coin.puzzle_hash, singleton_spend1.coin.amount)
+    coins.update_lineage(singleton_spend1.coin.puzzle_hash, singleton1_new_latest)
+    singleton2_new_latest = Coin(singleton2_id, singleton_spend2.coin.puzzle_hash, singleton_spend2.coin.amount)
+    coins.update_lineage(singleton_spend2.coin.puzzle_hash, singleton2_new_latest)
+    await advance_mempool(mempool_manager, [singleton1_id, singleton2_id], use_optimization=True)
+    # Both items should get updated with their related latest lineages
+    mi1 = mempool_manager.get_mempool_item(sb_names[0])
+    assert mi1 is not None
+    latest_singleton_lineage1 = mi1.bundle_coin_spends[singleton1_id].latest_singleton_lineage
+    assert latest_singleton_lineage1 is not None
+    assert latest_singleton_lineage1.coin_id == singleton1_new_latest.name()
+    mi2 = mempool_manager.get_mempool_item(sb_names[1])
+    assert mi2 is not None
+    latest_singleton_lineage2 = mi2.bundle_coin_spends[singleton2_id].latest_singleton_lineage
+    assert latest_singleton_lineage2 is not None
+    assert latest_singleton_lineage2.coin_id == singleton2_new_latest.name()
+
+
+@pytest.mark.anyio
+async def test_different_ff_versions() -> None:
+    """
+    Covers the case where we send an item with an older ff singleton version
+    while the mempool is aware of a newer lineage.
+    """
+    launcher_id = bytes32([1] * 32)
+    singleton_spend1 = make_singleton_spend(launcher_id, bytes32([2] * 32))
+    version1_id = singleton_spend1.coin.name()
+    singleton_spend2 = make_singleton_spend(launcher_id, bytes32([3] * 32))
+    version2_id = singleton_spend2.coin.name()
+    singleton_ph = singleton_spend2.coin.puzzle_hash
+    coins = TestCoins(
+        [singleton_spend1.coin, singleton_spend2.coin, TEST_COIN, TEST_COIN2], {singleton_ph: singleton_spend2.coin}
+    )
+    mempool_manager = await setup_mempool(coins)
+    mempool_items: list[MempoolItem] = []
+    for singleton_spend, regular_coin in [(singleton_spend1, TEST_COIN), (singleton_spend2, TEST_COIN2)]:
+        sb = SpendBundle([singleton_spend, mk_coin_spend(regular_coin)], G2Element())
+        sb_name = sb.name()
+        await mempool_manager.add_spend_bundle(
+            sb,
+            make_test_conds(spend_ids=[(singleton_spend.coin, ELIGIBLE_FOR_FF), (regular_coin, 0)], cost=1337),
+            sb_name,
+            uint32(1),
+        )
+        mi = mempool_manager.get_mempool_item(sb_name)
+        assert mi is not None
+        mempool_items.append(mi)
+    [mi1, mi2] = mempool_items
+    latest_lineage_id = version2_id
+    assert latest_lineage_id != version1_id
+    # Bundle coin spends key points to version 1 but the lineage is latest (v2)
+    latest_singleton_lineage1 = mi1.bundle_coin_spends[version1_id].latest_singleton_lineage
+    assert latest_singleton_lineage1 is not None
+    assert latest_singleton_lineage1.coin_id == latest_lineage_id
+    # Both the bundle coin spends key and the lineage point to latest (v2)
+    latest_singleton_lineage2 = mi2.bundle_coin_spends[version2_id].latest_singleton_lineage
+    assert latest_singleton_lineage2 is not None
+    assert latest_singleton_lineage2.coin_id == latest_lineage_id
+    # Let's update the lineage with a new version of the singleton
+    new_latest_lineage = Coin(version2_id, singleton_ph, singleton_spend2.coin.amount)
+    new_latest_lineage_id = new_latest_lineage.name()
+    coins.update_lineage(singleton_ph, new_latest_lineage)
+    await advance_mempool(mempool_manager, [version1_id, version2_id], use_optimization=True)
+    # Both items should get updated with the latest lineage
+    new_mi1 = mempool_manager.get_mempool_item(mi1.spend_bundle_name)
+    assert new_mi1 is not None
+    latest_singleton_lineage1 = new_mi1.bundle_coin_spends[version1_id].latest_singleton_lineage
+    assert latest_singleton_lineage1 is not None
+    assert latest_singleton_lineage1.coin_id == new_latest_lineage_id
+    new_mi2 = mempool_manager.get_mempool_item(mi2.spend_bundle_name)
+    assert new_mi2 is not None
+    latest_singleton_lineage2 = new_mi2.bundle_coin_spends[version2_id].latest_singleton_lineage
+    assert latest_singleton_lineage2 is not None
+    assert latest_singleton_lineage2.coin_id == new_latest_lineage_id
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "condition_and_error",
+    [
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+    ],
+)
+@pytest.mark.parametrize("optimized_path", [True, False])
+async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Err], optimized_path: bool) -> None:
+    """
+    Tests that deferred transactions because of time-lock are retried once the
+    time-lock allows them to be reconsidered.
+    """
+    coins = TestCoins([TEST_COIN], {})
+    mempool_manager = await setup_mempool(coins)
+    # Add an item that should go to the pending cache
+    assert mempool_manager.peak is not None
+    condition_height = mempool_manager.peak.height + 1
+    condition, expected_error = condition_and_error
+    sb, sb_name, result = await generate_and_add_spendbundle(mempool_manager, [[condition, condition_height]])
+    _, status, error = result
+    assert status == MempoolInclusionStatus.PENDING
+    assert error == expected_error
+    # Advance the mempool beyond the asserted height to retry the test item
+    if optimized_path:
+        spent_coins: Optional[list[bytes32]] = []
+        new_peak_info = await mempool_manager.new_peak(
+            create_test_block_record(height=uint32(condition_height)), spent_coins
+        )
+        # We're not there yet (needs to be higher, not equal)
+        assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
+        assert new_peak_info.items == []
+    else:
+        spent_coins = None
+    new_peak_info = await mempool_manager.new_peak(
+        create_test_block_record(height=uint32(condition_height + 1)), spent_coins
+    )
+    # The item gets retried successfully now
+    mi = mempool_manager.get_mempool_item(sb_name, include_pending=False)
+    assert mi is not None
+    assert new_peak_info.items == [NewPeakItem(sb_name, sb, mi.conds)]

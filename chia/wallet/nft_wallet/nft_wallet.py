@@ -550,9 +550,9 @@ class NFTWallet:
         name: Optional[str] = None,
     ) -> Any:
         # Off the bat we don't support multiple profile but when we do this will have to change
-        for wallet in wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.NFT.value:
-                return wallet
+        for wsm_wallet in wallet_state_manager.wallets.values():
+            if wsm_wallet.type() == WalletType.NFT.value:
+                return wsm_wallet
 
         # TODO: These are not the arguments to this function yet but they will be
         return await cls.create_new_nft_wallet(
@@ -617,6 +617,7 @@ class NFTWallet:
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(time.time()),
                 to_puzzle_hash=puzzle_hashes[0],
+                to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                 amount=uint64(payment_sum),
                 fee_amount=fee,
                 confirmed=False,
@@ -1406,6 +1407,7 @@ class NFTWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(time.time()),
                     to_puzzle_hash=innerpuz.get_tree_hash(),
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(innerpuz.get_tree_hash()),
                     amount=uint64(1),
                     fee_amount=fee,
                     confirmed=False,

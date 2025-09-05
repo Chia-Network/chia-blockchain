@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, final
+from typing import Any, BinaryIO, Optional, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self, dataclass_transform
 
 from chia.data_layer.data_layer_wallet import Mirror
@@ -15,7 +15,7 @@ from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
@@ -28,10 +28,14 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -223,6 +227,121 @@ class GetWalletsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetWalletBalance(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalances(Streamable):
+    wallet_ids: Optional[list[uint32]] = None
+
+
+# utility for GetWalletBalanceResponse(s)
+@streamable
+@kw_only_dataclass
+class BalanceResponse(Balance):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_type: uint8 = field(default_factory=default_raise)
+    fingerprint: Optional[uint32] = None
+    asset_id: Optional[bytes32] = None
+    pending_approval_balance: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalanceResponse(Streamable):
+    wallet_balance: BalanceResponse
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalancesResponse(Streamable):
+    wallet_balances: dict[uint32, BalanceResponse]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransaction(Streamable):
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionResponse(Streamable):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactions(Streamable):
+    wallet_id: uint32
+    start: Optional[uint16] = None
+    end: Optional[uint16] = None
+    sort_key: Optional[str] = None
+    reverse: bool = False
+    to_address: Optional[str] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+    confirmed: Optional[bool] = None
+
+    def __post_init__(self) -> None:
+        if self.sort_key is not None and not hasattr(SortKey, self.sort_key):
+            raise ValueError(f"There is no known sort {self.sort_key}")
+
+
+# utility for GetTransactionsResponse
+# this class cannot be a dataclass because if it is, streamable will assume it knows how to serialize it
+# TODO: We should put some thought into deprecating this and separating the metadata more reasonably
+class TransactionRecordMetadata:
+    content: dict[str, Any]
+    coin_id: bytes32
+    spent: bool
+
+    def __init__(self, content: dict[str, Any], coin_id: bytes32, spent: bool) -> None:
+        self.content = content
+        self.coin_id = coin_id
+        self.spent = spent
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> TransactionRecordMetadata:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **self.content,
+            "coin_id": "0x" + self.coin_id.hex(),
+            "spent": self.spent,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> TransactionRecordMetadata:
+        return TransactionRecordMetadata(
+            coin_id=bytes32.from_hexstr(json_dict["coin_id"]),
+            spent=json_dict["spent"],
+            content={k: v for k, v in json_dict.items() if k not in {"coin_id", "spent"}},
+        )
+
+
+# utility for GetTransactionsResponse
+@streamable
+@dataclass(frozen=True)
+class TransactionRecordWithMetadata(TransactionRecord):
+    metadata: Optional[TransactionRecordMetadata] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionsResponse(Streamable):
+    transactions: list[TransactionRecordWithMetadata]
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[list[bytes32]] = None
     start: Optional[uint32] = None
@@ -233,6 +352,12 @@ class GetNotifications(Streamable):
 @dataclass(frozen=True)
 class GetNotificationsResponse(Streamable):
     notifications: list[Notification]
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteNotifications(Streamable):
+    ids: Optional[list[bytes32]] = None
 
 
 @streamable
@@ -254,41 +379,123 @@ class VerifySignatureResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class GetTransactionMemo(Streamable):
-    transaction_id: bytes32
+class SignMessageByAddress(Streamable):
+    address: str
+    message: str
+    is_hex: bool = False
+    safe_mode: bool = True
 
 
-# utility type for GetTransactionMemoResponse
 @streamable
 @dataclass(frozen=True)
-class CoinIDWithMemos(Streamable):
-    coin_id: bytes32
-    memos: list[bytes]
+class SignMessageByAddressResponse(Streamable):
+    pubkey: G1Element
+    signature: G2Element
+    signing_mode: str
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByID(Streamable):
+    id: str
+    message: str
+    is_hex: bool = False
+    safe_mode: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class SignMessageByIDResponse(Streamable):
+    pubkey: G1Element
+    signature: G2Element
+    latest_coin_id: bytes32
+    signing_mode: str
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionMemo(Streamable):
+    transaction_id: bytes32
 
 
 @streamable
 @dataclass(frozen=True)
 class GetTransactionMemoResponse(Streamable):
-    transaction_id: bytes32
-    coins_with_memos: list[CoinIDWithMemos]
+    transaction_memos: dict[bytes32, dict[bytes32, list[bytes]]]
+
+    @property
+    def memo_dict(self) -> dict[bytes32, list[bytes]]:
+        return next(iter(self.transaction_memos.values()))
 
     # TODO: deprecate the kinda silly format of this RPC and delete these functions
     def to_json_dict(self) -> dict[str, Any]:
-        return {
-            self.transaction_id.hex(): {
-                cwm.coin_id.hex(): [memo.hex() for memo in cwm.memos] for cwm in self.coins_with_memos
-            }
-        }
+        # This is semantically guaranteed but mypy can't know that
+        return super().to_json_dict()["transaction_memos"]  # type: ignore[no-any-return]
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> GetTransactionMemoResponse:
-        return cls(
-            bytes32.from_hexstr(next(iter(json_dict.keys()))),
-            [
-                CoinIDWithMemos(bytes32.from_hexstr(coin_id), [bytes32.from_hexstr(memo) for memo in memos])
-                for coin_id, memos in next(iter(json_dict.values())).items()
-            ],
+        return super().from_json_dict(
+            # We have to filter out the "success" key here
+            # because it doesn't match our `transaction_memos` hint
+            #
+            # We do this by only allowing the keys with "0x"
+            # which we can assume exist because we serialize all responses
+            {"transaction_memos": {key: value for key, value in json_dict.items() if key.startswith("0x")}}
         )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCount(Streamable):
+    wallet_id: uint32
+    confirmed: Optional[bool] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCountResponse(Streamable):
+    wallet_id: uint32
+    count: uint16
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddress(Streamable):
+    wallet_id: uint32
+    new_address: bool = False
+    save_derivations: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddressResponse(Streamable):
+    wallet_id: uint32
+    address: str
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteUnconfirmedTransactions(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCurrentDerivationIndexResponse(Streamable):
+    index: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
+class ExtendDerivationIndex(Streamable):
+    index: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class ExtendDerivationIndexResponse(Streamable):
+    index: Optional[uint32]
 
 
 @streamable
@@ -894,7 +1101,7 @@ class TransactionEndpointRequest(Streamable):
         return {
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
-            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **self.to_json_dict(_avoid_ban=True),
         }
 
@@ -904,6 +1111,53 @@ class TransactionEndpointRequest(Streamable):
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: list[UnsignedTransaction]
     transactions: list[TransactionRecord]
+
+
+# utility for SendTransaction
+@streamable
+@dataclass(frozen=True)
+class ClawbackPuzzleDecoratorOverride(Streamable):
+    decorator: str
+    clawback_timelock: uint64
+
+    def __post_init__(self) -> None:
+        if self.decorator != PuzzleDecoratorType.CLAWBACK.name:
+            raise ValueError("Invalid clawback puzzle decorator override specified")
+        super().__post_init__()
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransaction(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    address: str = field(default_factory=default_raise)
+    memos: list[str] = field(default_factory=list)
+    # Technically this value was meant to support many types here
+    # However, only one is supported right now and there are no plans to extend
+    # So, as a slight hack, we'll specify that only Clawback is supported
+    puzzle_decorator: Optional[list[ClawbackPuzzleDecoratorOverride]] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class SpendClawbackCoins(TransactionEndpointRequest):
+    coin_ids: list[bytes32] = field(default_factory=default_raise)
+    batch_size: Optional[uint16] = None
+    force: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class SpendClawbackCoinsResponse(TransactionEndpointResponse):
+    transaction_ids: list[bytes32]
 
 
 @streamable
@@ -920,10 +1174,7 @@ class PushTransactions(TransactionEndpointRequest):
             if isinstance(transaction_hexstr_or_json, str):
                 tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
             else:
-                try:
-                    tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
-                except AttributeError:
-                    tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
+                tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
             transactions.append(tx)
 
         json_dict["transactions"] = [tx.to_json_dict() for tx in transactions]
@@ -1344,11 +1595,6 @@ class VCRevokeResponse(TransactionEndpointResponse):
 
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
-@streamable
-@dataclass(frozen=True)
-class SendTransactionResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable

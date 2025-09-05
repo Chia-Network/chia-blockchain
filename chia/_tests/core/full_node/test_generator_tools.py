@@ -8,7 +8,6 @@ from chia_rs import (
     get_spends_for_trusted_block,
     get_spends_for_trusted_block_with_conditions,
 )
-from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.generator_tools import tx_removals_and_additions
@@ -47,6 +46,7 @@ spends: list[SpendConditions] = [
         0,
         execution_cost=0,
         condition_cost=0,
+        fingerprint=b"",
     ),
     SpendConditions(
         coin_ids[1],
@@ -74,19 +74,20 @@ spends: list[SpendConditions] = [
         0,
         execution_cost=0,
         condition_cost=0,
+        fingerprint=b"",
     ),
 ]
 
 
 def test_tx_removals_and_additions() -> None:
     conditions = SpendBundleConditions(
-        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0, False, 0, 0
+        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0, False, 0, 0, 0, 0, 0
     )
     expected_rems = [coin_ids[0], coin_ids[1]]
     expected_additions = []
     for spend in spends:
         for puzzle_hash, am, _ in spend.create_coin:
-            expected_additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(am)))
+            expected_additions.append(Coin(spend.coin_id, puzzle_hash, uint64(am)))
     rems, adds = tx_removals_and_additions(conditions)
     assert rems == expected_rems
     assert adds == expected_additions
@@ -109,7 +110,7 @@ def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block(
         test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
     )
-    assert conditions[0]["block_spends"] == []
+    assert conditions["block_spends"] == []
 
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:

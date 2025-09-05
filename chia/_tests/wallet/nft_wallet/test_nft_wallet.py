@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from clvm_tools.binutils import disassemble
@@ -41,6 +41,7 @@ from chia.wallet.wallet_request_types import (
     NFTTransferBulk,
     NFTTransferNFT,
     NFTWalletWithDID,
+    SignMessageByID,
 )
 from chia.wallet.wallet_rpc_api import MAX_NFT_CHUNK_SIZE
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -528,7 +529,7 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
     # Test an error case
-    with pytest.raises(ResponseFailureError, match="The NFT doesn't support setting a DID."):
+    with pytest.raises(ResponseFailureError, match="The NFT doesn't support setting a DID"):
         await env_1.rpc_client.set_nft_did(
             NFTSetNFTDID(
                 wallet_id=uint32(env_1.wallet_aliases["nft"]),
@@ -659,7 +660,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     # test counts
     assert (await env.rpc_client.count_nfts(NFTCountNFTs(uint32(env.wallet_aliases["nft"])))).count == 2
     assert (await env.rpc_client.count_nfts(NFTCountNFTs())).count == 2
-    with pytest.raises(ResponseFailureError, match="Wallet 50 not found."):
+    with pytest.raises(ResponseFailureError, match="Wallet 50 not found"):
         await env.rpc_client.count_nfts(NFTCountNFTs(uint32(50)))
 
 
@@ -2757,51 +2758,55 @@ async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> Non
     assert not coin.pending_transaction
     # Test general string
     message = "Hello World"
-    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
-        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message
+    sign_by_id_res = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message)
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
+        sign_by_id_res.pubkey,
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        sign_by_id_res.signature,
     )
     # Test hex string
     message = "0123456789ABCDEF"
-    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
-        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message, is_hex=True
+    sign_by_id_res = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message, is_hex=True)
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
+        sign_by_id_res.pubkey,
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        sign_by_id_res.signature,
     )
     # Test BLS sign string
     message = "Hello World"
-    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
-        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
-        message=message,
-        is_hex=False,
-        safe_mode=False,
+    sign_by_id_res = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(
+            id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
+            message=message,
+            is_hex=False,
+            safe_mode=False,
+        )
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
+        sign_by_id_res.pubkey,
         bytes(message, "utf-8"),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        sign_by_id_res.signature,
     )
     # Test BLS sign hex
     message = "0123456789ABCDEF"
-    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
-        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
-        message=message,
-        is_hex=True,
-        safe_mode=False,
+    sign_by_id_res = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(
+            id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
+            message=message,
+            is_hex=True,
+            safe_mode=False,
+        )
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(pubkey)),
+        sign_by_id_res.pubkey,
         bytes.fromhex(message),
-        G2Element.from_bytes(bytes.fromhex(sig)),
+        sign_by_id_res.signature,
     )

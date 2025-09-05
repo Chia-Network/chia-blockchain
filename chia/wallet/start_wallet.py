@@ -12,7 +12,6 @@ from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import WalletService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -26,6 +25,7 @@ from chia.wallet.wallet_node import WalletNode
 # See: https://bugs.python.org/issue29288
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_service import WalletService
 
 "".encode("idna")
 

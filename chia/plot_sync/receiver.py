@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
+from chia_rs import PlotSize
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
@@ -349,7 +350,11 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
         self._total_effective_plot_size = int(
-            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in self._plots.values())
+            # TODO: todo_v2_plots support v2 plots
+            sum(
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+                for plot in self._plots.values()
+            )
         )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync

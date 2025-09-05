@@ -65,6 +65,18 @@ signed_values_json: dict[str, Any] = {
     "foliage_transaction_block_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 }
 
+partial_proof_json: dict[str, Any] = {
+    "challenge_hash": "0x42743566108589c11bb3811b347900b6351fd3e25bad6c956c0bf1c05a4d93fb",
+    "sp_hash": "0x8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
+    "plot_identifier": "plot-filename",
+    "partial_proofs": ["0x7061727469616c2d70726f6f6631", "0x7061727469616c2d70726f6f6632"],
+    "signage_point_index": 4,
+    "plot_size": 32,
+    "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+    "pool_contract_puzzle_hash": "0x91240fbacdf93b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
+    "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+}
+
 new_peak_json: dict[str, Any] = {
     "header_hash": "0x8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deae9f8ddb00528721493f7a",
     "height": 2653549198,
@@ -2160,6 +2172,22 @@ new_signage_point_harvester_json: dict[str, Any] = {
             "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
         }
     ],
+    "filter_prefix_bits": 3,
+}
+
+new_signage_point_harvester2_json: dict[str, Any] = {
+    "challenge_hash": "0xe342c21b4aeaa52349d42492be934692db58494ca9bce4a8697d06fdf8e583bb",
+    "difficulty": 15615706268399948682,
+    "sub_slot_iters": 10520767421667792980,
+    "signage_point_index": 148,
+    "sp_hash": "0xb78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c",
+    "pool_difficulties": [
+        {
+            "difficulty": 14819251421858580996,
+            "sub_slot_iters": 12852879676624401630,
+            "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
+        }
+    ],
     "peak_height": 0,
     "last_tx_height": 0,
 }
@@ -2701,3 +2729,10 @@ respond_compact_proof_of_time_json: dict[str, Any] = {
 error_without_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "data": None}
 
 error_with_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}
+
+solver_info_json: dict[str, Any] = {"partial_proof": "0x7061727469616c2d70726f6f66"}
+
+solver_response_json: dict[str, Any] = {
+    "partial_proof": "0x7061727469616c2d70726f6f66",
+    "proof": "0x66756c6c2d70726f6f66",
+}

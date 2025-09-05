@@ -333,16 +333,20 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
+                    k = prover.get_size()
                     level = prover.get_compression_level()
-                    if level == 0:
-                        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                            log.warning(
-                                f"Not farming plot {file_path}. "
-                                f"Size is {stat_info.st_size / (1024**3)} GiB, "
-                                f"but expected at least: {expected_size / (1024**3)} GiB. "
-                                "We assume the file is being copied."
-                            )
-                            return None
+                    if (
+                        level == 0
+                        and stat_info.st_size < 0.98 * expected_size
+                        and ((k.size_v1 is not None and k.size_v1 >= 30) or (k.size_v2 is not None and k.size_v2 >= 28))
+                    ):
+                        log.warning(
+                            f"Not farming plot {file_path}. "
+                            f"Size is {stat_info.st_size / (1024**3)} GiB, "
+                            f"but expected at least: {expected_size / (1024**3)} GiB. "
+                            "We assume the file is being copied."
+                        )
+                        return None
 
                     cache_entry = CacheEntry.from_prover(prover)
                     self.cache.update(file_path, cache_entry)

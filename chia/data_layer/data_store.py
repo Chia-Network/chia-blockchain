@@ -1818,13 +1818,12 @@ class DataStore:
                         )
                     else:
                         subscriptions.append(Subscription(store_id, []))
-                else:
-                    if url is not None and num_consecutive_failures is not None and ignore_till is not None:
-                        new_servers_info = subscription.servers_info
-                        new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
-                        new_subscription = replace(subscription, servers_info=new_servers_info)
-                        subscriptions.remove(subscription)
-                        subscriptions.append(new_subscription)
+                elif url is not None and num_consecutive_failures is not None and ignore_till is not None:
+                    new_servers_info = subscription.servers_info
+                    new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
+                    new_subscription = replace(subscription, servers_info=new_servers_info)
+                    subscriptions.remove(subscription)
+                    subscriptions.append(new_subscription)
 
         return subscriptions
 

@@ -40,6 +40,20 @@ class NewSignagePointHarvester(Streamable):
     signage_point_index: uint8
     sp_hash: bytes32
     pool_difficulties: list[PoolDifficulty]
+    filter_prefix_bits: uint8
+
+
+# this message has the same message ID as NewSignagePointHarvester, but this
+# message format is used if the protocol version is 0.0.37 or higher
+@streamable
+@dataclass(frozen=True)
+class NewSignagePointHarvester2(Streamable):
+    challenge_hash: bytes32
+    difficulty: uint64
+    sub_slot_iters: uint64
+    signage_point_index: uint8
+    sp_hash: bytes32
+    pool_difficulties: list[PoolDifficulty]
     peak_height: uint32
     last_tx_height: uint32
 
@@ -61,6 +75,20 @@ class NewProofOfSpace(Streamable):
     include_source_signature_data: bool
     farmer_reward_address_override: Optional[bytes32]
     fee_info: Optional[ProofOfSpaceFeeInfo]
+
+
+@streamable
+@dataclass(frozen=True)
+class PartialProofsData(Streamable):
+    challenge_hash: bytes32
+    sp_hash: bytes32
+    plot_identifier: str
+    partial_proofs: list[bytes]  # 16 * k bits blobs instead of 32-byte quality strings
+    signage_point_index: uint8
+    plot_size: uint8
+    pool_public_key: Optional[G1Element]
+    pool_contract_puzzle_hash: Optional[bytes32]
+    plot_public_key: G1Element
 
 
 # Source data corresponding to the hash that is sent to the Harvester for signing

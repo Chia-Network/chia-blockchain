@@ -457,9 +457,9 @@ async def test_signage_points(
         full_node_service_1.config,
     ) as client:
         # Only provide one
-        with pytest.raises(ValueError, match="sp_hash or challenge_hash must be provided."):
+        with pytest.raises(ValueError, match="sp_hash or challenge_hash must be provided"):
             await client.get_recent_signage_point_or_eos(None, None)
-        with pytest.raises(ValueError, match="Either sp_hash or challenge_hash must be provided, not both."):
+        with pytest.raises(ValueError, match="Either sp_hash or challenge_hash must be provided, not both"):
             await client.get_recent_signage_point_or_eos(std_hash(b"0"), std_hash(b"1"))
         # Not found
         with pytest.raises(ValueError, match="in cache"):
@@ -548,6 +548,7 @@ async def test_signage_points(
 
         # Signage point is no longer in the blockchain
         res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
+        assert res is not None
         assert res["reverted"]
         assert res["signage_point"] == sp
         assert "eos" not in res

@@ -13,6 +13,55 @@ from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
 
+# These are temporary stubs for chiapos2, that we build against until it's ready to be integrated.
+
+
+# returns quality string for v2 plot, or None if invalid
+def validate_proof_v2(
+    plot_id: bytes32, size: uint8, required_plot_strength: uint8, challenge: bytes32, proof: bytes
+) -> Optional[bytes32]:
+    # TODO: todo_v2_plots call into new chiapos library
+    raise NotImplementedError
+
+
+# this is compute intensive, solving a partial proof returning a full proof
+def solve_proof(partial_proof: bytes) -> bytes:
+    # TODO: todo_v2_plots call into new chiapos library
+    raise NotImplementedError
+
+
+# given a partial proof, computes the quality. This is used to compute required iters.
+def quality_for_partial_proof(partial_proof: bytes, challenge: bytes32) -> bytes32:
+    # TODO: todo_v2_plots call into new chiapos library
+    return std_hash(partial_proof + challenge)
+
+
+def make_pos(
+    challenge: bytes32,
+    pool_public_key: Optional[G1Element],
+    pool_contract_puzzle_hash: Optional[bytes32],
+    plot_public_key: G1Element,
+    version_and_size: PlotSize,
+    proof: bytes,
+) -> ProofOfSpace:
+    k: int
+    if version_and_size.size_v1 is not None:
+        k = version_and_size.size_v1
+    else:
+        assert version_and_size.size_v2 is not None
+        k = version_and_size.size_v2
+        assert k is not None
+        k |= 0x80
+
+    return ProofOfSpace(
+        challenge,
+        pool_public_key,
+        pool_contract_puzzle_hash,
+        plot_public_key,
+        uint8(k),
+        proof,
+    )
+
 
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
     assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
@@ -20,14 +69,6 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
         assert pos.pool_contract_puzzle_hash is not None
         return calculate_plot_id_ph(pos.pool_contract_puzzle_hash, pos.plot_public_key)
     return calculate_plot_id_pk(pos.pool_public_key, pos.plot_public_key)
-
-
-# returns quality string for v2 plot, or None if invalid
-def validate_proof_v2(
-    plot_id: bytes32, size: uint8, difficulty: uint8, challenge: bytes32, proof: bytes
-) -> Optional[bytes32]:
-    # TODO: todo_v2_plots call into new chiapos library
-    raise NotImplementedError
 
 
 def check_plot_size(constants: ConsensusConstants, ps: PlotSize) -> bool:
@@ -49,6 +90,9 @@ def check_plot_size(constants: ConsensusConstants, ps: PlotSize) -> bool:
         return False
     if size_v2 > constants.MAX_PLOT_SIZE_V2:
         log.error("Plot size is higher than the maximum")
+        return False
+    if (size_v2 & 1) == 1:
+        log.error("Plot size is odd")
         return False
     return True
 
@@ -98,8 +142,8 @@ def verify_and_get_quality_string(
         # === V2 plots ===
         assert plot_size.size_v2 is not None
 
-        plot_difficulty = calculate_plot_difficulty(constants, height)
-        return validate_proof_v2(plot_id, plot_size.size_v2, plot_difficulty, pos.challenge, bytes(pos.proof))
+        required_plot_strength = calculate_required_plot_strength(constants, height)
+        return validate_proof_v2(plot_id, plot_size.size_v2, required_plot_strength, pos.challenge, bytes(pos.proof))
 
 
 def passes_plot_filter(
@@ -137,16 +181,16 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_si
     return max(0, prefix_bits)
 
 
-def calculate_plot_difficulty(constants: ConsensusConstants, height: uint32) -> uint8:
-    if height < constants.PLOT_DIFFICULTY_4_HEIGHT:
-        return constants.PLOT_DIFFICULTY_INITIAL
-    if height < constants.PLOT_DIFFICULTY_5_HEIGHT:
+def calculate_required_plot_strength(constants: ConsensusConstants, height: uint32) -> uint8:
+    if height < constants.PLOT_STRENGTH_4_HEIGHT:
+        return constants.PLOT_STRENGTH_INITIAL
+    if height < constants.PLOT_STRENGTH_5_HEIGHT:
         return uint8(4)
-    if height < constants.PLOT_DIFFICULTY_6_HEIGHT:
+    if height < constants.PLOT_STRENGTH_6_HEIGHT:
         return uint8(5)
-    if height < constants.PLOT_DIFFICULTY_7_HEIGHT:
+    if height < constants.PLOT_STRENGTH_7_HEIGHT:
         return uint8(6)
-    if height < constants.PLOT_DIFFICULTY_8_HEIGHT:
+    if height < constants.PLOT_STRENGTH_8_HEIGHT:
         return uint8(7)
     else:
         return uint8(8)
