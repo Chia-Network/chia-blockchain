@@ -135,6 +135,7 @@ jobs:
       runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
       arch: intel
       arch-emoji: 🌀
+      collect-junit: false
   macos-arm:
     if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
     uses: ./.github/workflows/test-single.yml
