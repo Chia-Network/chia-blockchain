@@ -210,32 +210,39 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Optional[Callable[[object], Streamable]] = None
+    f_type: type[Any], json_parsers: Optional[list[Callable[[object], Streamable]]] = None
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
-        convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
+        convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parsers)
         return lambda item: convert_optional(convert_inner_func, item)
     elif is_type_Tuple(f_type):
         args = get_args(f_type)
         convert_inner_tuple_funcs = []
         for arg in args:
-            convert_inner_tuple_funcs.append(function_to_convert_one_item(arg, json_parser))
+            convert_inner_tuple_funcs.append(function_to_convert_one_item(arg, json_parsers))
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_tuple(convert_inner_tuple_funcs, items)  # type: ignore[arg-type]
     elif is_type_List(f_type):
         inner_type = get_args(f_type)[0]
-        convert_inner_func = function_to_convert_one_item(inner_type, json_parser)
+        convert_inner_func = function_to_convert_one_item(inner_type, json_parsers)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
     elif is_type_Dict(f_type):
         inner_types = get_args(f_type)
-        key_converter = function_to_convert_one_item(inner_types[0], json_parser)
-        value_converter = function_to_convert_one_item(inner_types[1], json_parser)
+        if json_parsers is None:
+            key_parsers = None
+            value_parsers = None
+        else:
+            key_parsers = [json_parsers[0]]
+            value_parsers = [json_parsers[1]]
+        key_converter = function_to_convert_one_item(inner_types[0], key_parsers)
+        value_converter = function_to_convert_one_item(inner_types[1], value_parsers)
         return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
     elif hasattr(f_type, "from_json_dict"):
-        if json_parser is None:
-            json_parser = f_type.from_json_dict
-        return json_parser
+        if json_parsers is None:
+            return f_type.from_json_dict  # type: ignore[no-any-return]
+        else:
+            return json_parsers[0]
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
