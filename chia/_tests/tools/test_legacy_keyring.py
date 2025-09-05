@@ -59,24 +59,24 @@ def test_legacy_keyring_format(tmp_dir: Path) -> None:
 def test_legacy_keyring_cli() -> None:
     keyring = create_legacy_keyring()
     result = show()
-    assert result.exit_code == 1
+    assert result.exit_code == 1, result.output
     assert "No keys found in the legacy keyring." in result.output
     keys = []
     for i in range(5):
         keys.append(generate_and_add(keyring))
         result = show()
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         for key in keys:
             assert key.mnemonic_str() in result.output
 
     # Should abort if the prompt gets a `n`
     result = clear("n")
-    assert result.exit_code == 1
+    assert result.exit_code == 1, result.output
     assert "Aborted" in result.output
 
     # And succeed if the prompt gets a `y`
     result = clear("y")
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     for key in keys:
         assert key.mnemonic_str() in result.output
     assert f"{len(keys)} keys removed" in result.output
