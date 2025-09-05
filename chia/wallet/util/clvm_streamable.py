@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-from types import MappingProxyType
-from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_args, get_type_hints
+from types import GenericAlias, MappingProxyType
+from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_args, get_origin, get_type_hints
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import TypeGuard
@@ -101,7 +101,11 @@ def is_compound_type(typ: Any) -> bool:
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
 #       useful for now
 def is_clvm_streamable_type(v: type[object]) -> TypeGuard[type[Streamable]]:
-    return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
+    if isinstance(v, GenericAlias):
+        resolved = get_origin(v)
+    else:
+        resolved = v
+    return issubclass(resolved, Streamable) and hasattr(resolved, "_clvm_streamable")
 
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
