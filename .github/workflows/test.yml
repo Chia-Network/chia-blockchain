@@ -297,13 +297,13 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
       - name: Coverage report (chia/)
-        if: always()
+        if: always() && steps.alls-green.outputs.success == 'true'
         run: |
           set -o pipefail
           coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --omit='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
       - name: Coverage report (chia/_tests/)
-        if: always()
+        if: always() && steps.alls-green.outputs.success == 'true'
         run: |
           set -o pipefail
           coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
@@ -314,7 +314,7 @@ jobs:
           echo "hash=$(git rev-parse HEAD~1)" >> "$GITHUB_OUTPUT"
 
       - name: Coverage report (diff)
-        if: (github.base_ref != '' || github.event.before != '') && always()
+        if: (github.base_ref != '' || github.event.before != '') && always() && steps.alls-green.outputs.success == 'true'
         env:
           compare-branch: ${{ github.base_ref == '' && steps.parent-commit.outputs.hash || format('origin/{0}', github.base_ref) }}
         run: |
