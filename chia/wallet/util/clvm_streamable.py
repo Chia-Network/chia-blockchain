@@ -12,6 +12,7 @@ from chia.types.blockchain_format.program import Program
 from chia.util.streamable import (
     Streamable,
     function_to_convert_one_item,
+    is_type_Dict,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -95,7 +96,7 @@ def byte_deserialize_clvm_streamable(
 
 
 def is_compound_type(typ: Any) -> bool:
-    return is_type_SpecificOptional(typ) or is_type_Tuple(typ) or is_type_List(typ)
+    return is_type_SpecificOptional(typ) or is_type_Tuple(typ) or is_type_List(typ) or is_type_Dict(typ)
 
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
@@ -127,17 +128,20 @@ def json_deserialize_with_clvm_streamable(
         new_streamable_fields = []
         for old_field in old_streamable_fields:
             if is_compound_type(old_field.type):
-                inner_type = get_args(old_field.type)[0]
+                inner_types = get_args(old_field.type)
                 new_streamable_fields.append(
                     dataclasses.replace(
                         old_field,
                         convert_function=function_to_convert_one_item(
                             old_field.type,
-                            functools.partial(
-                                json_deserialize_with_clvm_streamable,
-                                streamable_type=inner_type,
-                                translation_layer=translation_layer,
-                            ),
+                            [
+                                functools.partial(
+                                    json_deserialize_with_clvm_streamable,
+                                    streamable_type=inner_type,
+                                    translation_layer=translation_layer,
+                                )
+                                for inner_type in inner_types
+                            ],
                         ),
                     )
                 )
