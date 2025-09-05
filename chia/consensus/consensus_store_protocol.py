@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from types import TracebackType
 from typing import Optional, Protocol
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import AsyncContextManager
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
@@ -46,13 +46,13 @@ class ConsensusStoreProtocol(Protocol):
     """
     Read-only protocol for the consensus store.
 
-    This protocol also acts as an async context manager. Entering the context
+    This protocol is callable and returns an async context manager. Entering the context
     yields a ConsensusStoreWriteProtocol instance, which must be used for
     performing write (mutating) operations. This ensures atomic writes and
     makes it harder to accidentally perform writes outside a transaction.
 
     Example usage:
-        async with store as writer:
+        async with store.writer() as writer:
             await writer.add_full_block(...)
             await writer.set_peak(...)
 
@@ -60,14 +60,8 @@ class ConsensusStoreProtocol(Protocol):
         br = await store.get_block_record(header_hash)
     """
 
-    # Async context manager methods
-    async def __aenter__(self) -> ConsensusStoreWriteProtocol: ...
-    async def __aexit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc: Optional[BaseException],
-        tb: Optional[TracebackType],
-    ) -> Optional[bool]: ...
+    # Writer method that returns async context manager
+    def writer(self) -> AsyncContextManager[ConsensusStoreWriteProtocol]: ...
 
     # Block store reads
     async def get_block_records_close_to_peak(

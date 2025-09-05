@@ -3879,7 +3879,7 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
     print(f"{await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
     print(spend_bundle.coin_spends[0].coin.name())
     # await b.consensus_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
-    async with b.consensus_store as writer:
+    async with b.consensus_store.writer() as writer:
         await writer.rollback_to_block(2)
     print(f"{await b.consensus_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
