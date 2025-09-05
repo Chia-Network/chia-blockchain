@@ -149,7 +149,7 @@ jobs:
           python-version: ${{ matrix.python.action }}
 
       - name: Create keychain for CI use (macOS)
-        if: matrix.os.matrix == 'macos'
+        if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'macos-intel'
         run: |
           security create-keychain -p foo chiachain
           security default-keychain -s chiachain
