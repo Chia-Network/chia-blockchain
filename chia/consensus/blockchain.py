@@ -413,7 +413,7 @@ class Blockchain:
 
         try:
             # Always add the block to the database
-            async with self.consensus_store as writer:
+            async with self.consensus_store.writer() as writer:
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await writer.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
@@ -486,7 +486,7 @@ class Blockchain:
         if genesis and peak is not None:
             return [], None
 
-        async with self.consensus_store as writer:
+        async with self.consensus_store.writer() as writer:
             if peak is not None:
                 if block_record.weight < peak.weight:
                     # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
@@ -981,7 +981,7 @@ class Blockchain:
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
-        async with self.consensus_store as writer:
+        async with self.consensus_store.writer() as writer:
             await writer.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
