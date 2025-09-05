@@ -18,8 +18,7 @@ from chia.util.errors import Err
 async def check_block_store_invariant(bc: Blockchain):
     # This function checks the invariant of the sqlite database.
     # Only operate on the sqlite block store.
-    if not isinstance(bc.consensus_store, ConsensusStoreSQLite3):
-        return
+    assert isinstance(bc.consensus_store, ConsensusStoreSQLite3)
 
     db_wrapper = bc.consensus_store.block_store.db_wrapper
 
