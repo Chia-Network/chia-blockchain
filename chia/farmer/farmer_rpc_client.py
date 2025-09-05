@@ -85,3 +85,7 @@ class FarmerRpcClient(RpcClient):
             return cast(Optional[str], result["login_link"])
         except ValueError:  # not connected to pool.
             return None
+
+    async def connect_to_solver(self, host: str, port: int) -> dict[str, Any]:
+        """Connect farmer to specific solver"""
+        return await self.fetch("connect_to_solver", {"host": host, "port": port})
