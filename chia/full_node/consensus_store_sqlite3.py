@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Collection
-from contextlib import AbstractAsyncContextManager
+from collections.abc import AsyncIterator, Collection
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from types import TracebackType
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -55,6 +54,12 @@ class ConsensusStoreSQLite3Writer:
     ) -> None:
         await self.coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
 
+    @asynccontextmanager
+    async def writer(self) -> AsyncIterator[ConsensusStoreSQLite3Writer]:
+        # Return self as the writer facade
+        async with self.block_store.transaction():
+            yield self
+
 
 @dataclass
 class ConsensusStoreSQLite3:
@@ -65,11 +70,6 @@ class ConsensusStoreSQLite3:
     block_store: BlockStore
     coin_store: CoinStoreProtocol
     height_map: BlockHeightMap
-
-    # Writer context and writer facade for transactional writes (re-entrant via depth counter)
-    _writer_ctx: Optional[AbstractAsyncContextManager[Any]] = None
-    _writer: Optional[ConsensusStoreSQLite3Writer] = None
-    _txn_depth: int = 0
 
     @classmethod
     async def create(
@@ -99,41 +99,12 @@ class ConsensusStoreSQLite3:
             height_map=height_map,
         )
 
-    # Async context manager yielding a writer for atomic writes
-    async def __aenter__(self) -> ConsensusStoreSQLite3Writer:
-        # Re-entrant async context manager:
-        # Begin a transaction only at the outermost level. CoinStore shares the same DB.
-        if self._writer is None:
-            self._writer_ctx = self.block_store.transaction()
-            await self._writer_ctx.__aenter__()
-            # Create writer facade bound to this transaction
-            self._writer = ConsensusStoreSQLite3Writer(self.block_store, self.coin_store)
-        self._txn_depth += 1
-        return self._writer  # Return the same writer for nested contexts
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc: Optional[BaseException],
-        tb: Optional[TracebackType],
-    ) -> Optional[bool]:
-        try:
-            # Check if we're at the outermost level before decrementing
-            if self._txn_depth == 1:
-                # This is the outermost context, handle transaction exit
-                if self._writer_ctx is not None:
-                    return await self._writer_ctx.__aexit__(exc_type, exc, tb)
-                return None
-            else:
-                # This is a nested context, just return None (don't suppress exceptions)
-                return None
-        finally:
-            # Always decrement depth and clean up if we're at the outermost level
-            if self._txn_depth > 0:
-                self._txn_depth -= 1
-            if self._txn_depth == 0:
-                self._writer_ctx = None
-                self._writer = None
+    @asynccontextmanager
+    async def writer(self) -> AsyncIterator[ConsensusStoreSQLite3Writer]:
+        """Async context manager that yields a writer facade for performing transactional writes."""
+        csw = ConsensusStoreSQLite3Writer(self.block_store, self.coin_store)
+        async with csw.writer() as writer:
+            yield writer
 
     # Block store methods
 
