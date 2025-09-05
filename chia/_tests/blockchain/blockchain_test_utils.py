@@ -76,7 +76,7 @@ async def _validate_and_add_block(
             conds = None
         else:
             # fake the signature validation. Just say True here.
-            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0)
+            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
         results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
         future = await pre_validate_block(

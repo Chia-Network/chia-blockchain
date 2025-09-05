@@ -465,11 +465,11 @@ class MempoolManager:
                 self.constants,
                 flags | MEMPOOL_MODE,
             )
-        # validate_clvm_and_signature raises a TypeError with an error code
-        except Exception as e:
+        # validate_clvm_and_signature raises a ValueError with an error code
+        except ValueError as e:
             # Convert that to a ValidationError
-            if len(e.args) > 0:
-                error = Err(e.args[0])
+            if len(e.args) > 1:
+                error = Err(e.args[1])
                 raise ValidationError(error)
             else:
                 raise ValidationError(Err.UNKNOWN)  # pragma: no cover
