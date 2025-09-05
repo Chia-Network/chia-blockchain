@@ -10,25 +10,42 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 
 
 async def check_block_store_invariant(bc: Blockchain):
+    # This function checks the invariant of the sqlite database.
+    # Only operate on the sqlite block store.
+    if not isinstance(bc.consensus_store, ConsensusStoreSQLite3):
+        return
+
+    db_wrapper = bc.consensus_store.block_store.db_wrapper
+
+    if db_wrapper.db_version == 1:
+        return
+
     in_chain = set()
     max_height = -1
-    async for height in bc.consensus_store.get_block_heights_in_main_chain():
-        # if this block is in-chain, ensure we haven't found another block
-        # at this height that's also in chain. That would be an invariant
-        # violation
-        # make sure we don't have any duplicate heights. Each block
-        # height can only have a single block with in_main_chain set
-        assert height not in in_chain
-        in_chain.add(height)
-        max_height = max(max_height, height)
+    async with bc.consensus_store.block_store.transaction() as conn:
+        async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
+            rows = await cursor.fetchall()
+            for row in rows:
+                height = row[0]
 
-    # make sure every height is represented in the set
-    assert len(in_chain) == max_height + 1
+                # if this block is in-chain, ensure we haven't found another block
+                # at this height that's also in chain. That would be an invariant
+                # violation
+                if row[1]:
+                    # make sure we don't have any duplicate heights. Each block
+                    # height can only have a single block with in_main_chain set
+                    assert height not in in_chain
+                    in_chain.add(height)
+                    max_height = max(max_height, height)
+
+            # make sure every height is represented in the set
+            assert len(in_chain) == max_height + 1
 
 
 async def _validate_and_add_block(
