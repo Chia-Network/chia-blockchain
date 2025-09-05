@@ -120,6 +120,9 @@ def json_deserialize_with_clvm_streamable(
             bytes.fromhex(json_dict), streamable_type, translation_layer=translation_layer
         )
     else:
+        if not hasattr(streamable_type, "streamable_fields"):
+            # This is a rust streamable and therefore cannot be a clvm_streamable
+            return streamable_type.from_json_dict(json_dict)
         old_streamable_fields = streamable_type.streamable_fields()
         new_streamable_fields = []
         for old_field in old_streamable_fields:
