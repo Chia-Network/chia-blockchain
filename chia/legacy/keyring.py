@@ -49,18 +49,23 @@ def create_legacy_keyring() -> LegacyKeyring:
 
 
 def generate_and_add(keyring: LegacyKeyring) -> KeyData:
+    print("generate_and_add(): entering")
     key = KeyData.generate()
+    print(f"generate_and_add(): generated {key=}")
     index = 0
     while True:
         try:
+            print(f"generate_and_add(): get_key_data({index=}")
             get_key_data(keyring, index)
             index += 1
         except KeychainUserNotFound:
+            print(f"generate_and_add(): KeychainUserNotFound, adding at {index=}")
             keyring.set_password(
                 DEFAULT_SERVICE,
                 get_private_key_user(DEFAULT_USER, index),
                 bytes(key.public_key).hex() + key.entropy.hex(),
             )
+            print(f"generate_and_add(): returning {key=}")
             return key
 
 
