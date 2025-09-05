@@ -3,16 +3,20 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 from threading import Lock
 from time import monotonic, sleep
-from typing import Optional
+from typing import Optional, Union
 
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import PlotVersion
 from chia.plotting.util import (
     PlotInfo,
     PlotRefreshEvents,
@@ -21,6 +25,10 @@ from chia.plotting.util import (
     find_duplicate_plot_IDs,
     get_plot_filenames,
     parse_plot_info,
+)
+from chia.types.blockchain_format.proof_of_space import (
+    quality_for_partial_proof,
+    solve_proof,
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
@@ -168,12 +176,20 @@ def check_plots(
 
             total_proofs = 0
             caught_exception: bool = False
+            version = pr.get_version()
             for i in range(num_start, num_end):
                 challenge = std_hash(i.to_bytes(32, "big"))
+                # these are either qualities (v1) or partial proofs (v2)
+                proofs: Sequence[Union[bytes32, bytes]]
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
                     quality_start_time = round(monotonic() * 1000)
-                    qualities = pr.get_qualities_for_challenge(challenge)
+                    if version == PlotVersion.V1:
+                        proofs = pr.get_qualities_for_challenge(challenge)
+                    else:
+                        proofs = pr.get_partial_proofs_for_challenge(
+                            challenge, DEFAULT_CONSTANTS.PLOT_DIFFICULTY_INITIAL
+                        )
                     quality_spent_time = round(monotonic() * 1000) - quality_start_time
                     if quality_spent_time > 8000:
                         log.warning(
@@ -201,13 +217,19 @@ def check_plots(
                     caught_exception = True
                     break
 
-                for index, quality_str in enumerate(qualities):
+                for index, proof in enumerate(proofs):
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
                         proof_start_time = round(monotonic() * 1000)
-                        # TODO : todo_v2_plots handle v2 plots
-                        proof = pr.get_full_proof(challenge, index, parallel_read)
-                        proof_spent_time = round(monotonic() * 1000) - proof_start_time
+                        if version == PlotVersion.V1:
+                            quality_str = bytes32(proof)
+                            full_proof = pr.get_full_proof(challenge, index, parallel_read)
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
+                        else:
+                            quality_str = quality_for_partial_proof(proof, challenge)
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
+                            full_proof = solve_proof(proof)
+
                         if proof_spent_time > 15000:
                             log.warning(
                                 f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
@@ -216,7 +238,7 @@ def check_plots(
                         else:
                             log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
 
-                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size().size_v1, challenge, proof)
+                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size().size_v1, challenge, full_proof)
                         if quality_str == ver_quality_str:
                             total_proofs += 1
                         else:
