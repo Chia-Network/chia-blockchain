@@ -11,11 +11,12 @@ from chia_rs.sized_ints import uint16, uint64
 
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.sender import Sender
 from chia.protocols.harvester_protocol import PlotSyncIdentifier
 from chia.protocols.outbound_message import Message, NodeType
-from chia.server.aliases import FarmerService, HarvesterService
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 
 

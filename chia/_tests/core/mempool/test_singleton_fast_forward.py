@@ -79,7 +79,7 @@ def test_process_fast_forward_spends_unknown_ff() -> None:
     singleton_ff = SingletonFastForward()
     # We have no fast forward records yet, so we'll process this coin for the
     # first time here, but the item's latest singleton lineage returns None
-    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward."):
+    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward"):
         singleton_ff.process_fast_forward_spends(
             mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
         )
@@ -663,4 +663,4 @@ async def test_double_spend_ff_spend_no_latest_unspent() -> None:
         status, error = await make_and_send_spend_bundle(sim, sim_client, [singleton_coin_spend], aggsig=sig)
         # It fails validation because it doesn't currently have a latest unspent
         assert status == MempoolInclusionStatus.FAILED
-        assert error == Err.DOUBLE_SPEND
+        assert error == Err.UNKNOWN_UNSPENT

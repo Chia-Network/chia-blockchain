@@ -384,6 +384,11 @@ class KeychainProxy(DaemonProxy):
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
                 elif private:
+                    if ent is None:
+                        err = f"Missing ent in {response.get('command')} response"
+                        self.log.error(f"{err}")
+                        raise KeychainMalformedResponse(f"{err}")
+
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)

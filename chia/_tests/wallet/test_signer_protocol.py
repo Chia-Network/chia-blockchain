@@ -848,8 +848,8 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
         with open("some file", "wb") as file:
             file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
-            with open("some file2", "wb") as file:
-                file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+            with open("some file2", "wb") as file2:
+                file2.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
         result = runner.invoke(
             cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]

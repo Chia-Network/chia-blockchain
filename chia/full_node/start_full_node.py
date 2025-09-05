@@ -15,8 +15,8 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_o
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
+from chia.full_node.full_node_service import FullNodeService
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import FullNodeService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run

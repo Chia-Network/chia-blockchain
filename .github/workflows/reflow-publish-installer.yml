@@ -27,6 +27,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.repository_owner == 'Chia-Network'
     name: Publish ${{ matrix.arch.name }} ${{ matrix.mode.name }} ${{ matrix.os.file-type.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
