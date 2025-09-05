@@ -24,7 +24,7 @@ on:
         type: string
       per:
         description: "individual job scope"
-        default: "directory"
+        default: "file"
         required: false
         type: choice
         options:
@@ -32,7 +32,7 @@ on:
           - file
       only:
         description: "only run this job"
-        default: ""
+        default: "tools/test_legacy_keyring.py"
         required: false
         type: string
       duplicates:
@@ -47,7 +47,7 @@ on:
         type: boolean
       run-macos-intel:
         description: "run macOS-intel tests"
-        default: false
+        default: true
         required: false
         type: boolean
       run-macos-arm:

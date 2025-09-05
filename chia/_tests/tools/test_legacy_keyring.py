@@ -63,7 +63,8 @@ def test_legacy_keyring_cli() -> None:
     assert "No keys found in the legacy keyring." in result.output
     keys = []
     for i in range(5):
-        keys.append(generate_and_add(keyring))
+        new_key = generate_and_add(keyring)
+        keys.append(new_key)
         result = show()
         assert result.exit_code == 0, result.output
         for key in keys:
