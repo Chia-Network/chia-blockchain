@@ -120,7 +120,7 @@ class WalletCoinStore:
             name = record.name()
         assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
+            await conn.execute(
                 "INSERT OR REPLACE INTO coin_record ("
                 "coin_name, confirmed_height, spent_height, spent, coinbase, puzzle_hash, coin_parent, amount, "
                 "wallet_type, wallet_id, coin_type, metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -150,7 +150,7 @@ class WalletCoinStore:
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
+            await conn.execute(
                 "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?",
                 (
                     height,
