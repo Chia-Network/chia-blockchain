@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Collection
+from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,16 +186,6 @@ class ConsensusStoreSQLite3:
 
     async def get_coins_removed_at_height(self, height: uint32) -> list[CoinRecord]:
         return await self.coin_store.get_coins_removed_at_height(height)
-
-    def get_block_heights_in_main_chain(self) -> AsyncIterator[int]:
-        async def gen() -> AsyncIterator[int]:
-            async with self.block_store.transaction() as conn:
-                async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
-                    async for row in cursor:
-                        if row[1]:
-                            yield row[0]
-
-        return gen()
 
     # Height map methods
     def get_ses_heights(self) -> list[uint32]:
