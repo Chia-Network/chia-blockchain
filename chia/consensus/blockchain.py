@@ -93,9 +93,9 @@ class Blockchain:
     # peak of the blockchain
     _peak_height: Optional[uint32]
     # All blocks in peak path are guaranteed to be included, can include orphan blocks
-    __block_records: dict[bytes32, BlockRecord]
+    _block_records: dict[bytes32, BlockRecord]
     # all hashes of blocks in block_record by height, used for garbage collection
-    __heights_in_cache: dict[uint32, set[bytes32]]
+    _heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
     consensus_store: ConsensusStoreProtocol
@@ -159,17 +159,15 @@ class Blockchain:
         """
         Initialize the blockchain cache data structures.
         """
-        self.__block_records = {}
-        self.__heights_in_cache = {}
+        self._block_records = {}
+        self._heights_in_cache = {}
 
     async def _load_recent_blocks_from_store(self) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Load recent blocks from the consensus store.
         Returns block records and peak hash.
         """
-        return await self.consensus_store.get_block_records_close_to_peak(
-            self.constants.BLOCKS_CACHE_SIZE
-        )
+        return await self.consensus_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
 
     def _populate_cache_with_blocks(self, block_records: dict[bytes32, BlockRecord]) -> None:
         """
@@ -814,7 +812,7 @@ class Blockchain:
         return True
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
-        return self.__block_records[header_hash]
+        return self._block_records[header_hash]
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         # Precondition: height is in the blockchain
@@ -867,16 +865,16 @@ class Blockchain:
             height = self._peak_height - self.constants.BLOCKS_CACHE_SIZE
         if height < 0:
             return None
-        blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
+        blocks_to_remove = self._heights_in_cache.get(uint32(height), None)
         while blocks_to_remove is not None and height >= 0:
             for header_hash in blocks_to_remove:
-                del self.__block_records[header_hash]  # remove from blocks
-            del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
+                del self._block_records[header_hash]  # remove from blocks
+            del self._heights_in_cache[uint32(height)]  # remove height from heights in cache
 
             if height == 0:
                 break
             height -= 1
-            blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
+            blocks_to_remove = self._heights_in_cache.get(uint32(height), None)
 
     def clean_block_records(self) -> None:
         """
@@ -885,7 +883,7 @@ class Blockchain:
         These blocks are necessary for calculating future difficulty adjustments.
         """
 
-        if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:
+        if len(self._block_records) < self.constants.BLOCKS_CACHE_SIZE:
             return None
 
         assert self._peak_height is not None
@@ -964,12 +962,12 @@ class Blockchain:
         return await self.consensus_store.get_block_records_by_hash(hashes)
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if header_hash in self.__block_records:
+        if header_hash in self._block_records:
             return self.block_record(header_hash)
         return None
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        ret = self.__block_records.get(header_hash)
+        ret = self._block_records.get(header_hash)
         if ret is not None:
             return ret
         return await self.consensus_store.get_block_record(header_hash)
@@ -981,7 +979,7 @@ class Blockchain:
         """
         ret = []
         for h in header_hashes:
-            b = self.__block_records.get(h)
+            b = self._block_records.get(h)
             if b is not None:
                 ret.append(b.prev_hash)
             else:
@@ -989,7 +987,7 @@ class Blockchain:
         return ret
 
     async def contains_block_from_db(self, header_hash: bytes32) -> bool:
-        ret = header_hash in self.__block_records
+        ret = header_hash in self._block_records
         if ret:
             return True
 
@@ -997,18 +995,18 @@ class Blockchain:
 
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
-        del self.__block_records[header_hash]
-        self.__heights_in_cache[sbr.height].remove(header_hash)
+        del self._block_records[header_hash]
+        self._heights_in_cache[sbr.height].remove(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         """
         Adds a block record to the cache.
         """
 
-        self.__block_records[block_record.header_hash] = block_record
-        if block_record.height not in self.__heights_in_cache.keys():
-            self.__heights_in_cache[block_record.height] = set()
-        self.__heights_in_cache[block_record.height].add(block_record.header_hash)
+        self._block_records[block_record.header_hash] = block_record
+        if block_record.height not in self._heights_in_cache.keys():
+            self._heights_in_cache[block_record.height] = set()
+        self._heights_in_cache[block_record.height].add(block_record.header_hash)
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
