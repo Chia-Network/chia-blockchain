@@ -71,7 +71,7 @@ def create_solver_service(
 
 
 async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) -> int:
-    config = load_config(root_path, "config.yaml")
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
     config[SERVICE_NAME] = service_config
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]

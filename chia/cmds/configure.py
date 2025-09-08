@@ -64,6 +64,9 @@ def configure(
         if set_solver_peer:
             try:
                 host, port = parse_host_port(set_solver_peer)
+                # ensure farmer section has solver_peers field
+                if "solver_peers" not in config["farmer"]:
+                    config["farmer"]["solver_peers"] = []
                 # Set single solver peer (overrides any existing)
                 config["farmer"]["solver_peers"] = [{"host": host, "port": port}]
                 print(f"Solver peer updated to {host}:{port}")

@@ -74,7 +74,7 @@ def create_farmer_service(
 
 async def async_main(root_path: pathlib.Path) -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml")
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     config_pool = load_config_cli(root_path, "config.yaml", "pool")
