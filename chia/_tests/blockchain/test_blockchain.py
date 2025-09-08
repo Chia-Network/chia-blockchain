@@ -4352,6 +4352,9 @@ async def test_include_spends_same_as_parent(
         True,
         0,
         0,
+        0,
+        0,
+        0,
     )
     # Now let's run the test
     test_setup.fork_info.include_spends(conds, test_setup.test_block, test_setup.test_block.header_hash)

@@ -51,7 +51,7 @@ async def harvester_environment(
 
 def signage_point_from_block(
     block: FullBlock, constants: ConsensusConstants
-) -> harvester_protocol.NewSignagePointHarvester:
+) -> harvester_protocol.NewSignagePointHarvester2:
     sp_index = block.reward_chain_block.signage_point_index
     challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
     sp_hash = (
@@ -59,7 +59,7 @@ def signage_point_from_block(
         if block.reward_chain_block.reward_chain_sp_vdf
         else challenge_hash
     )
-    return harvester_protocol.NewSignagePointHarvester(
+    return harvester_protocol.NewSignagePointHarvester2(
         challenge_hash=challenge_hash,
         difficulty=uint64(constants.DIFFICULTY_STARTING),
         sub_slot_iters=uint64(constants.SUB_SLOT_ITERS_STARTING),
@@ -75,7 +75,7 @@ def create_test_setup(
     harvester_environment: HarvesterTestEnvironment,
     default_400_blocks: list[FullBlock],
     blockchain_constants: ConsensusConstants,
-) -> tuple[HarvesterTestEnvironment, harvester_protocol.NewSignagePointHarvester, MagicMock]:
+) -> tuple[HarvesterTestEnvironment, harvester_protocol.NewSignagePointHarvester2, MagicMock]:
     env = harvester_environment
     block = default_400_blocks[2]
     new_challenge = signage_point_from_block(block, blockchain_constants)
@@ -128,7 +128,7 @@ async def test_new_signage_point_harvester_pool_difficulty(
         sub_slot_iters=uint64(67108864),
     )
 
-    new_challenge = harvester_protocol.NewSignagePointHarvester(
+    new_challenge = harvester_protocol.NewSignagePointHarvester2(
         challenge_hash=new_challenge.challenge_hash,
         difficulty=new_challenge.difficulty,
         sub_slot_iters=new_challenge.sub_slot_iters,
