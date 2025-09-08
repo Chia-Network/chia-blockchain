@@ -510,18 +510,8 @@ class Blockchain:
         and the new chain, or returns None if there was no update to the heaviest chain.
         """
 
-        if genesis and self.get_peak() is not None:
-            return [], None
-
         async with self.consensus_store.writer() as writer:
-            records_to_add, state_summary = await self._perform_db_operations_for_peak(
-                writer, block_record, genesis, fork_info
-            )
-
-            # Changes the peak to be the new peak
-            await writer.set_peak(block_record.header_hash)
-
-        return records_to_add, state_summary
+            return await self._perform_db_operations_for_peak(writer, block_record, genesis, fork_info)
 
     async def _perform_db_operations_for_peak(
         self,
@@ -536,6 +526,9 @@ class Blockchain:
         """
         peak = self.get_peak()
         rolled_back_state: dict[bytes32, CoinRecord] = {}
+
+        if genesis and peak is not None:
+            return [], None
 
         if peak is not None:
             if block_record.weight < peak.weight:
@@ -637,8 +630,10 @@ class Blockchain:
         await writer.rollback(fork_info.fork_height)
         await writer.set_in_chain([(br.header_hash,) for br in records_to_add])
 
-        # Create and return the complete StateChangeSummary
-        state_summary = StateChangeSummary(
+        # Changes the peak to be the new peak
+        await writer.set_peak(block_record.header_hash)
+
+        return records_to_add, StateChangeSummary(
             block_record,
             uint32(max(fork_info.fork_height, 0)),
             list(rolled_back_state.values()),
@@ -650,8 +645,6 @@ class Blockchain:
             ],
             [fork_add.coin for fork_add in fork_info.additions_since_fork.values() if fork_add.is_coinbase],
         )
-
-        return records_to_add, state_summary
 
     def get_next_sub_slot_iters_and_difficulty(self, header_hash: bytes32, new_slot: bool) -> tuple[uint64, uint64]:
         curr = self.try_block_record(header_hash)
