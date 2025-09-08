@@ -140,7 +140,7 @@ def json_deserialize_with_clvm_streamable(
         old_streamable_fields = streamable_type.streamable_fields()
         new_streamable_fields = []
         for old_field in old_streamable_fields:
-            if is_compound_type(old_field):
+            if is_compound_type(old_field.type):
                 inner_types = get_args(old_field.type)
                 new_streamable_fields.append(
                     dataclasses.replace(
