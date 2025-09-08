@@ -120,14 +120,27 @@ def json_deserialize_with_clvm_streamable(
         return byte_deserialize_clvm_streamable(
             bytes.fromhex(json_dict), streamable_type, translation_layer=translation_layer
         )
+    elif not hasattr(streamable_type, "streamable_fields"):
+        if is_compound_type(streamable_type):
+            inner_types = get_args(streamable_type)
+            return function_to_convert_one_item(  # type: ignore[return-value]
+                streamable_type,
+                [
+                    functools.partial(
+                        json_deserialize_with_clvm_streamable,
+                        streamable_type=inner_type,
+                        translation_layer=translation_layer,
+                    )
+                    for inner_type in inner_types
+                ],
+            )(json_dict)
+        else:
+            return function_to_convert_one_item(streamable_type)(json_dict)  # type: ignore[return-value]
     else:
-        if not hasattr(streamable_type, "streamable_fields"):
-            # This is a rust streamable and therefore cannot be a clvm_streamable
-            return streamable_type.from_json_dict(json_dict)
         old_streamable_fields = streamable_type.streamable_fields()
         new_streamable_fields = []
         for old_field in old_streamable_fields:
-            if is_compound_type(old_field.type):
+            if is_compound_type(old_field):
                 inner_types = get_args(old_field.type)
                 new_streamable_fields.append(
                     dataclasses.replace(
@@ -161,6 +174,58 @@ def json_deserialize_with_clvm_streamable(
 
         setattr(streamable_type, "_streamable_fields", tuple(new_streamable_fields))
         return streamable_type.from_json_dict(json_dict)
+
+
+# def json_deserialize_with_clvm_streamable(
+#     json_dict: Union[str, dict[str, Any]],
+#     streamable_type: type[_T_Streamable],
+#     translation_layer: Optional[TranslationLayer] = None,
+# ) -> _T_Streamable:
+#     if isinstance(json_dict, str):
+#         return byte_deserialize_clvm_streamable(
+#             bytes.fromhex(json_dict), streamable_type, translation_layer=translation_layer
+#         )
+#     else:
+#         if not hasattr(streamable_type, "streamable_fields"):
+#             # This is a rust streamable and therefore cannot be a clvm_streamable
+#             return streamable_type.from_json_dict(json_dict)
+#         old_streamable_fields = streamable_type.streamable_fields()
+#         new_streamable_fields = []
+#         for old_field in old_streamable_fields:
+#             if is_compound_type(old_field.type):
+#                 inner_types = get_args(old_field.type)
+#                 new_streamable_fields.append(
+#                     dataclasses.replace(
+#                         old_field,
+#                         convert_function=function_to_convert_one_item(
+#                             old_field.type,
+#                             [
+#                                 functools.partial(
+#                                     json_deserialize_with_clvm_streamable,
+#                                     streamable_type=inner_type,
+#                                     translation_layer=translation_layer,
+#                                 )
+#                                 for inner_type in inner_types
+#                             ],
+#                         ),
+#                     )
+#                 )
+#             elif is_clvm_streamable_type(old_field.type):
+#                 new_streamable_fields.append(
+#                     dataclasses.replace(
+#                         old_field,
+#                         convert_function=functools.partial(
+#                             json_deserialize_with_clvm_streamable,
+#                             streamable_type=old_field.type,
+#                             translation_layer=translation_layer,
+#                         ),
+#                     )
+#                 )
+#             else:
+#                 new_streamable_fields.append(old_field)
+
+#         setattr(streamable_type, "_streamable_fields", tuple(new_streamable_fields))
+#         return streamable_type.from_json_dict(json_dict)
 
 
 _T_ClvmStreamable = TypeVar("_T_ClvmStreamable", bound="Streamable")
