@@ -1,7 +1,6 @@
 # All of these rate limits scale with the number of transactions so the aggregate amounts are higher
 from __future__ import annotations
 
-import copy
 import dataclasses
 from typing import Optional, Union
 
@@ -33,7 +32,13 @@ class Unlimited:
     max_size: int  # Max size of each request
 
 
-aggregate_limit = RLSettings(False, 1000, 100 * 1024 * 1024 * 1024, 100 * 1024 * 1024 * 1024)
+# for the aggregate limit, not all fields of RLSettings are used. Only "frequency" and "max_total_size"
+aggregate_limit = RLSettings(
+    aggregate_limit=False,
+    frequency=1000,
+    max_size=0,
+    max_total_size=100 * 1024 * 1024,
+)
 
 
 def get_rate_limits_to_use(
@@ -46,8 +51,10 @@ def get_rate_limits_to_use(
         # Use V2 rate limits
         if 2 in compose_rate_limits_cache:
             return compose_rate_limits_cache[2], aggregate_limit
-        composed = copy.copy(rate_limits[1])
-        composed.update(rate_limits[2])
+        composed = {
+            **rate_limits[1],
+            **rate_limits[2],
+        }
         compose_rate_limits_cache[2] = composed
         return composed, aggregate_limit
     else:
@@ -111,10 +118,14 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]]
         ProtocolMessageTypes.request_puzzle_solution: RLSettings(True, 1000, 100),
         ProtocolMessageTypes.respond_puzzle_solution: RLSettings(True, 1000, 1024 * 1024),
         ProtocolMessageTypes.reject_puzzle_solution: RLSettings(True, 1000, 100),
+        ProtocolMessageTypes.none_response: RLSettings(False, 500, 100),
         ProtocolMessageTypes.new_peak_wallet: RLSettings(True, 200, 300),
         ProtocolMessageTypes.request_block_header: RLSettings(True, 500, 100),
         ProtocolMessageTypes.respond_block_header: RLSettings(True, 500, 500 * 1024),
         ProtocolMessageTypes.reject_header_request: RLSettings(True, 500, 100),
+        ProtocolMessageTypes.request_block_headers: RLSettings(False, 5000, 100),
+        ProtocolMessageTypes.reject_block_headers: RLSettings(False, 1000, 100),
+        ProtocolMessageTypes.respond_block_headers: RLSettings(False, 5000, 2 * 1024 * 1024),
         ProtocolMessageTypes.request_removals: RLSettings(True, 500, 50 * 1024, 10 * 1024 * 1024),
         ProtocolMessageTypes.respond_removals: RLSettings(True, 500, 1024 * 1024, 10 * 1024 * 1024),
         ProtocolMessageTypes.reject_removals_request: RLSettings(True, 500, 100),
@@ -160,6 +171,12 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]]
         ProtocolMessageTypes.respond_ses_hashes: RLSettings(True, 2000, 1 * 1024 * 1024),
         ProtocolMessageTypes.request_children: RLSettings(True, 2000, 1024 * 1024),
         ProtocolMessageTypes.respond_children: RLSettings(True, 2000, 1 * 1024 * 1024),
+        ProtocolMessageTypes.error: RLSettings(False, 50000, 100),
+        ProtocolMessageTypes.request_fee_estimates: RLSettings(True, 10, 100),
+        ProtocolMessageTypes.respond_fee_estimates: RLSettings(True, 10, 100),
+        ProtocolMessageTypes.solve: RLSettings(False, 120, 1024),
+        ProtocolMessageTypes.solution_response: RLSettings(False, 120, 1024),
+        ProtocolMessageTypes.partial_proofs: RLSettings(False, 120, 3 * 1024),
     },
     2: {
         ProtocolMessageTypes.request_block_header: RLSettings(False, 500, 100),
@@ -173,9 +190,6 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]]
         ProtocolMessageTypes.reject_additions_request: RLSettings(False, 500, 100),
         ProtocolMessageTypes.reject_header_blocks: RLSettings(False, 1000, 100),
         ProtocolMessageTypes.respond_header_blocks: RLSettings(False, 5000, 2 * 1024 * 1024),
-        ProtocolMessageTypes.request_block_headers: RLSettings(False, 5000, 100),
-        ProtocolMessageTypes.reject_block_headers: RLSettings(False, 1000, 100),
-        ProtocolMessageTypes.respond_block_headers: RLSettings(False, 5000, 2 * 1024 * 1024),
         ProtocolMessageTypes.request_ses_hashes: RLSettings(False, 2000, 1 * 1024 * 1024),
         ProtocolMessageTypes.respond_ses_hashes: RLSettings(False, 2000, 1 * 1024 * 1024),
         ProtocolMessageTypes.request_children: RLSettings(False, 2000, 1024 * 1024),
@@ -183,8 +197,6 @@ rate_limits: dict[int, dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]]
         ProtocolMessageTypes.request_puzzle_solution: RLSettings(False, 5000, 100),
         ProtocolMessageTypes.respond_puzzle_solution: RLSettings(False, 5000, 1024 * 1024),
         ProtocolMessageTypes.reject_puzzle_solution: RLSettings(False, 5000, 100),
-        ProtocolMessageTypes.none_response: RLSettings(False, 500, 100),
-        ProtocolMessageTypes.error: RLSettings(False, 50000, 100),
         # These will have a lower cap since they don't scale with high TPS (NON_TX_FREQ)
         ProtocolMessageTypes.request_header_blocks: RLSettings(True, 5000, 100),
     },

@@ -68,14 +68,14 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
     limits: dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]
 
     if limit_size:
-        agg_limit = RLSettings(False, count * 2, 1024, count * len(message_data))
+        agg_limit = RLSettings(False, count * 2, len(message_data), count * len(message_data))
     else:
-        agg_limit = RLSettings(False, count, 1024, count * 2 * len(message_data))
+        agg_limit = RLSettings(False, count, len(message_data), count * 2 * len(message_data))
 
     if limit_size:
-        limits = {msg_type: RLSettings(not tx_msg, count * 2, 1024, count * len(message_data))}
+        limits = {msg_type: RLSettings(not tx_msg, count * 2, len(message_data), count * len(message_data))}
     else:
-        limits = {msg_type: RLSettings(not tx_msg, count, 1024, count * 2 * len(message_data))}
+        limits = {msg_type: RLSettings(not tx_msg, count, len(message_data), count * 2 * len(message_data))}
 
     def mock_get_limits(
         our_capabilities: list[Capability], peer_capabilities: list[Capability]

@@ -4,6 +4,8 @@ import ast
 import inspect
 from typing import Any, cast
 
+import pytest
+
 from chia.protocols import (
     farmer_protocol,
     full_node_protocol,
@@ -264,3 +266,19 @@ def test_missing_messages() -> None:
     assert types_in_module(shared_protocol) == shared_msgs, (
         f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"
     )
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_rate_limits_complete(version: int) -> None:
+    from chia.protocols.protocol_message_types import ProtocolMessageTypes
+    from chia.server.rate_limit_numbers import rate_limits
+
+    if version == 1:
+        composed = rate_limits[1]
+    elif version == 2:
+        composed = {
+            **rate_limits[1],
+            **rate_limits[2],
+        }
+
+    assert set(composed.keys()) == set(ProtocolMessageTypes)

@@ -84,11 +84,10 @@ class RateLimiter:
         rate_limits, agg_limit = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
-            limits: Union[RLSettings, Unlimited]
-            limits = rate_limits[message_type]
+            limits: Union[RLSettings, Unlimited] = rate_limits[message_type]
             if isinstance(limits, RLSettings) and limits.aggregate_limit:
                 non_tx_freq = agg_limit.frequency
-                assert agg_limit.max_total_size
+                assert agg_limit.max_total_size is not None
                 non_tx_max_total_size = agg_limit.max_total_size
                 new_non_tx_count = self.non_tx_message_counts + 1
                 new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
