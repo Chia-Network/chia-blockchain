@@ -187,9 +187,7 @@ def check_plots(
                     if version == PlotVersion.V1:
                         proofs = pr.get_qualities_for_challenge(challenge)
                     else:
-                        proofs = pr.get_partial_proofs_for_challenge(
-                            challenge, DEFAULT_CONSTANTS.PLOT_DIFFICULTY_INITIAL
-                        )
+                        proofs = pr.get_partial_proofs_for_challenge(challenge, DEFAULT_CONSTANTS.PLOT_STRENGTH_INITIAL)
                     quality_spent_time = round(monotonic() * 1000) - quality_start_time
                     if quality_spent_time > 8000:
                         log.warning(
