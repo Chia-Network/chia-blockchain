@@ -124,7 +124,7 @@ def generate_service_peer_schemas_cmd(
             click.echo(f"Generated {output_file} ({len(schema_content)} characters)")
 
         except Exception as e:
-            click.echo(f"Error generating schema for {node_type.name}: {e}", err=True)
+            click.echo(f"Error generating schema for {node_type.name}: {type(e).__name__} -> {e}", err=True)
             has_errors = True
             continue
 

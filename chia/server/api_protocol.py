@@ -126,7 +126,6 @@ class ApiMetadata:
         import_lines = [
             "from __future__ import annotations",
             "from typing import TYPE_CHECKING, ClassVar, Optional, cast",
-            "from chia_rs import RespondToPhUpdates",
             "from chia.protocols.outbound_message import Message",
             "from chia.protocols.protocol_message_types import ProtocolMessageTypes",
             "from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol",
@@ -180,6 +179,8 @@ class ApiMetadata:
                         import_lines.append(f"from {base}.{protocol} import {name}")
                     if re.search(rf"(?<!\.){protocol}\b", this_method_schema_source) is not None:
                         import_lines.append(f"from {base} import {protocol}")
+                elif module.partition(".")[0] == "chia_rs":
+                    import_lines.append(f"from {module} import {name}")
 
             # Check if method has a non-None return type that requires an ignore comment
             return_hint = type_hints.get("return")
