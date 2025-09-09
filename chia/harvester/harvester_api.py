@@ -11,7 +11,6 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.pos_quality import quality_for_partial_proof
 from chia.consensus.pot_iterations import (
     calculate_iterations_quality,
     calculate_sp_interval_iters,
@@ -29,9 +28,11 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     generate_plot_public_key,
     make_pos,
     passes_plot_filter,
+    quality_for_partial_proof,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -53,7 +54,7 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
-    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester) -> bool:
+    def _plot_passes_filter(self, plot_info: PlotInfo, challenge: harvester_protocol.NewSignagePointHarvester2) -> bool:
         filter_prefix_bits = calculate_prefix_bits(
             self.harvester.constants,
             challenge.peak_height,
@@ -123,9 +124,9 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @metadata.request(peer_required=True)
+    @metadata.request(peer_required=True, request_type=ProtocolMessageTypes.new_signage_point_harvester)
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+        self, new_challenge: harvester_protocol.NewSignagePointHarvester2, peer: WSChiaConnection
     ) -> None:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
@@ -152,6 +153,10 @@ class HarvesterAPI:
         start = time.monotonic()
         assert len(new_challenge.challenge_hash) == 32
 
+        required_plot_strength = calculate_required_plot_strength(
+            self.harvester.constants, new_challenge.last_tx_height
+        )
+
         loop = asyncio.get_running_loop()
 
         def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> Optional[PartialProofsData]:
@@ -163,7 +168,9 @@ class HarvesterAPI:
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
-                partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(sp_challenge_hash)
+                partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(
+                    sp_challenge_hash, required_plot_strength
+                )
 
                 # If no partial proofs are found, return None
                 if len(partial_proofs) == 0:

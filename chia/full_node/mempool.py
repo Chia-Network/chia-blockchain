@@ -750,6 +750,7 @@ class Mempool:
                             f"cost: {batch_cost} total cost: {block_cost}"
                         )
                     else:
+                        log.info(f"Skipping transaction batch cumulative cost: {block_cost} batch cost: {batch_cost}")
                         skipped_items += 1
 
                     batch_cost = 0
@@ -775,12 +776,12 @@ class Mempool:
 
         if len(batch_transactions) > 0:
             added, _ = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+            log.info(f"trying to add residual batch: {len(batch_transactions)} batch cost: {batch_cost} added: {added}")
 
             if added:
                 added_spends += batch_spends
                 additions.extend(batch_additions)
                 removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
-                block_cost = builder.cost()
                 log.info(
                     f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
                     f"cost: {batch_cost} total cost: {block_cost}"
@@ -797,7 +798,6 @@ class Mempool:
             f"create_block_generator2() took {duration:0.4f} seconds. "
             f"block cost: {cost} spends: {added_spends} additions: {len(additions)}",
         )
-        assert block_cost == cost
 
         return NewBlockGenerator(
             SerializedProgram.from_bytes(block_program),
@@ -806,5 +806,5 @@ class Mempool:
             signature,
             additions,
             removals,
-            uint64(block_cost),
+            uint64(cost),
         )

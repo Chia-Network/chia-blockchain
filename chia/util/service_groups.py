@@ -20,7 +20,7 @@ SERVICES_FOR_GROUP: dict[str, list[str]] = {
     "data_layer_http": ["chia_data_layer_http"],
     "node": ["chia_full_node"],
     "harvester": ["chia_harvester"],
-    "farmer": ["chia_harvester", "chia_farmer", "chia_full_node", "chia_wallet"],
+    "farmer": ["chia_harvester", "chia_farmer", "chia_full_node", "chia_wallet", "chia_solver"],
     "farmer-no-wallet": ["chia_harvester", "chia_farmer", "chia_full_node"],
     "farmer-only": ["chia_farmer"],
     "timelord": ["chia_timelord_launcher", "chia_timelord", "chia_full_node"],

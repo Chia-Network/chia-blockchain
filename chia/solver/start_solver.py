@@ -74,7 +74,6 @@ def create_solver_service(
 
 
 async def async_main(service_config: dict[str, Any], root_path: pathlib.Path) -> int:
-    # TODO: refactor to avoid the double load
     config = load_config(root_path, "config.yaml")
     config[SERVICE_NAME] = service_config
     network_id = service_config["selected_network"]
