@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 from types import MappingProxyType
-from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_args, get_type_hints
+from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_type_hints
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import TypeGuard
@@ -116,64 +116,38 @@ def json_deserialize_with_clvm_streamable(
     streamable_type: type[_T_Streamable],
     translation_layer: Optional[TranslationLayer] = None,
 ) -> _T_Streamable:
+    # This function is flawed for compound types because it's highjacking the function_to_convert_one_item func
+    # which does not call back to it. More examination is needed.
     if isinstance(json_dict, str):
         return byte_deserialize_clvm_streamable(
             bytes.fromhex(json_dict), streamable_type, translation_layer=translation_layer
         )
-    elif not hasattr(streamable_type, "streamable_fields"):
-        if is_compound_type(streamable_type):
-            inner_types = get_args(streamable_type)
-            return function_to_convert_one_item(  # type: ignore[return-value]
-                streamable_type,
-                [
-                    functools.partial(
-                        json_deserialize_with_clvm_streamable,
-                        streamable_type=inner_type,
-                        translation_layer=translation_layer,
-                    )
-                    for inner_type in inner_types
-                ],
-            )(json_dict)
-        else:
-            return function_to_convert_one_item(streamable_type)(json_dict)  # type: ignore[return-value]
-    else:
+    elif hasattr(streamable_type, "streamable_fields"):
         old_streamable_fields = streamable_type.streamable_fields()
         new_streamable_fields = []
         for old_field in old_streamable_fields:
-            if is_compound_type(old_field.type):
-                inner_types = get_args(old_field.type)
-                new_streamable_fields.append(
-                    dataclasses.replace(
-                        old_field,
-                        convert_function=function_to_convert_one_item(
-                            old_field.type,
-                            [
-                                functools.partial(
-                                    json_deserialize_with_clvm_streamable,
-                                    streamable_type=inner_type,
-                                    translation_layer=translation_layer,
-                                )
-                                for inner_type in inner_types
-                            ],
-                        ),
-                    )
-                )
-            elif is_clvm_streamable_type(old_field.type):
-                new_streamable_fields.append(
-                    dataclasses.replace(
-                        old_field,
-                        convert_function=functools.partial(
+            new_streamable_fields.append(
+                dataclasses.replace(
+                    old_field,
+                    convert_function=function_to_convert_one_item(
+                        old_field.type,
+                        functools.partial(
                             json_deserialize_with_clvm_streamable,
-                            streamable_type=old_field.type,
                             translation_layer=translation_layer,
                         ),
-                    )
+                    ),
                 )
-            else:
-                new_streamable_fields.append(old_field)
-
+            )
         setattr(streamable_type, "_streamable_fields", tuple(new_streamable_fields))
         return streamable_type.from_json_dict(json_dict)
+    else:
+        return function_to_convert_one_item(  # type: ignore[return-value]
+            streamable_type,
+            functools.partial(
+                json_deserialize_with_clvm_streamable,
+                translation_layer=translation_layer,
+            ),
+        )(json_dict)
 
 
 _T_ClvmStreamable = TypeVar("_T_ClvmStreamable", bound="Streamable")
