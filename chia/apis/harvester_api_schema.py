@@ -21,9 +21,9 @@ class HarvesterApiSchema:
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ) -> None: ...
 
-    @metadata.request(peer_required=True)
+    @metadata.request(peer_required=True, request_type=ProtocolMessageTypes.new_signage_point_harvester)
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+        self, new_challenge: harvester_protocol.NewSignagePointHarvester2, peer: WSChiaConnection
     ) -> None: ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
