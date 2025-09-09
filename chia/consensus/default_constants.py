@@ -76,7 +76,6 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # inclusive, so the max allowed range of 32 is a request for 33 blocks
     # (which is allowed)
     MAX_BLOCK_COUNT_PER_REQUESTS=uint32(32),
-    MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     # June 2024
