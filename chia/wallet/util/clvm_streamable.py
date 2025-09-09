@@ -12,9 +12,6 @@ from chia.types.blockchain_format.program import Program
 from chia.util.streamable import (
     Streamable,
     function_to_convert_one_item,
-    is_type_Dict,
-    is_type_List,
-    is_type_SpecificOptional,
     is_type_Tuple,
     recurse_jsonify,
     streamable,
@@ -93,16 +90,6 @@ def byte_deserialize_clvm_streamable(
     return program_deserialize_clvm_streamable(
         Program.from_bytes(blob), clvm_streamable_type, translation_layer=translation_layer
     )
-
-
-def is_compound_type(typ: Any) -> bool:
-    return is_type_SpecificOptional(typ) or is_type_Tuple(typ) or is_type_List(typ) or is_type_Dict(typ)
-
-
-# TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
-#       useful for now
-def is_clvm_streamable_type(v: type[object]) -> TypeGuard[type[Streamable]]:
-    return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
 
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
