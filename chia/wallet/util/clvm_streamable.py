@@ -9,6 +9,7 @@ from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import TypeGuard
 
 from chia.types.blockchain_format.program import Program
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import (
     Streamable,
     function_to_convert_one_item,
@@ -94,6 +95,12 @@ def byte_deserialize_clvm_streamable(
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
 #       useful for now
+def is_clvm_streamable_type(v: type[object]) -> bool:
+    return isinstance(v, type) and issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
+
+
+# TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
+#       useful for now
 def is_clvm_streamable(v: object) -> TypeGuard[Streamable]:
     return isinstance(v, Streamable) and hasattr(v, "_clvm_streamable")
 
@@ -105,9 +112,9 @@ def json_deserialize_with_clvm_streamable(
 ) -> _T_Streamable:
     # This function is flawed for compound types because it's highjacking the function_to_convert_one_item func
     # which does not call back to it. More examination is needed.
-    if isinstance(json_dict, str):
+    if is_clvm_streamable_type(streamable_type) and isinstance(json_dict, str):
         return byte_deserialize_clvm_streamable(
-            bytes.fromhex(json_dict), streamable_type, translation_layer=translation_layer
+            hexstr_to_bytes(json_dict), streamable_type, translation_layer=translation_layer
         )
     elif hasattr(streamable_type, "streamable_fields"):
         old_streamable_fields = streamable_type.streamable_fields()
@@ -126,7 +133,9 @@ def json_deserialize_with_clvm_streamable(
                 )
             )
         setattr(streamable_type, "_streamable_fields", tuple(new_streamable_fields))
-        return streamable_type.from_json_dict(json_dict)
+        return streamable_type.from_json_dict(json_dict)  # type: ignore[arg-type]
+    elif hasattr(streamable_type, "from_json_dict"):
+        return streamable_type.from_json_dict(json_dict)  # type: ignore[arg-type]
     else:
         return function_to_convert_one_item(  # type: ignore[return-value]
             streamable_type,
