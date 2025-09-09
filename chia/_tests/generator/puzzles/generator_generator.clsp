@@ -1,18 +1,18 @@
-(mod (amount)
+(mod block_refs
 
-    (defun generate_conds (id pair_count)
+    (defun generate_conds (block_refs)
         (if pair_count
-            (c (list 66 36 (+ "hello" pair_count) id) (c (list 67 36 (+ "hello" pair_count) id) (generate_conds id (- pair_count 1))))
+            (c (list 1 (f block_refs)) (generate_conds (r block_refs)))
             0
         )
     )
 
-    (defun loop_coins (id amount)
-        (if amount
-            (c (list id (c 1 (generate_conds id 512)) 123 (list 0 (list 1))) (loop_coins (+ id 1) (- amount 1)))
+    (defun loop_coins (id coins amount)
+        (if coins
+            (c (list id (generate_conds block_refs) 123 (list 0 (list 1))) (loop_coins (+ id 1) (- coins 1)))
             ()
         )   
     )
     ; main
-    (list (loop_coins 0x0101010101010101010101010101010101010101010101010101010101010101 amount))
+    (list (loop_coins 0x0101010101010101010101010101010101010101010101010101010101010101 1 block_refs))
 )
