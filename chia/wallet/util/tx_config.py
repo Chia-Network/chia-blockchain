@@ -6,7 +6,7 @@ from typing import Any, Optional
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
-from typing_extensions import NotRequired, Self, TypedDict, TypeVar, Unpack
+from typing_extensions import NotRequired, Self, TypedDict, Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -88,7 +88,7 @@ class CoinSelectionConfigLoader(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        if "excluded_coins" in json_dict and json_dict["excluded_coins"] is not None:
+        if json_dict.get("excluded_coins") is not None:
             excluded_coins: list[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
             excluded_coin_ids: list[str] = [c.name().hex() for c in excluded_coins]
             if "excluded_coin_ids" in json_dict:
@@ -99,11 +99,8 @@ class CoinSelectionConfigLoader(Streamable):
 
     # This function is purely for ergonomics
     # But creates a small linting complication
-    def override(self: _T_CoinSelectionConfigLoader, **kwargs: Any) -> _T_CoinSelectionConfigLoader:  # noqa: PYI019
+    def override(self, **kwargs: Any) -> Self:
         return dataclasses.replace(self, **kwargs)
-
-
-_T_CoinSelectionConfigLoader = TypeVar("_T_CoinSelectionConfigLoader", bound=CoinSelectionConfigLoader)
 
 
 @streamable
