@@ -1808,19 +1808,18 @@ class WalletRpcApi:
             for coin_record in all_coin_records:
                 if coin_record.name() in unconfirmed_removal_ids:
                     unconfirmed_removals.append(coin_record.to_coin_record(unconfirmed_removal_ids[coin_record.name()]))
+
+            cs_config = request.autofill(constants=self.service.wallet_state_manager.constants)
             for coin_record in spendable_coins:  # remove all the unconfirmed coins, exclude coins and dust.
                 if coin_record.name() in unconfirmed_removal_ids:
                     continue
-                if request.excluded_coin_ids is not None and coin_record.coin.name() in request.excluded_coin_ids:
+                if coin_record.coin.name() in cs_config.excluded_coin_ids:
                     continue
-                if (request.min_coin_amount is not None and coin_record.coin.amount < request.min_coin_amount) or (
-                    request.max_coin_amount is not None and coin_record.coin.amount > request.max_coin_amount
+                if (coin_record.coin.amount < cs_config.min_coin_amount) or (
+                    coin_record.coin.amount > cs_config.max_coin_amount
                 ):
                     continue
-                if (
-                    request.excluded_coin_amounts is not None
-                    and coin_record.coin.amount in request.excluded_coin_amounts
-                ):
+                if coin_record.coin.amount in cs_config.excluded_coin_amounts:
                     continue
                 c_r = await state_mgr.get_coin_record_by_wallet_record(coin_record)
                 assert c_r is not None and c_r.coin == coin_record.coin  # this should never happen
