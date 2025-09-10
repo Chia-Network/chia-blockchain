@@ -1752,10 +1752,14 @@ class WalletRpcApi:
         # don't love this snippet of code
         # but I think action scopes need to accept CoinSelectionConfigs
         # instead of solely TXConfigs in order for this to be less ugly
+        autofilled_cs_config = request.autofill(
+            constants=self.service.wallet_state_manager.constants,
+        )
         tx_config = DEFAULT_TX_CONFIG.override(
-            **request.autofill(
-                constants=self.service.wallet_state_manager.constants,
-            ).__dict__
+            **{
+                field.name: getattr(autofilled_cs_config, field.name)
+                for field in dataclasses.fields(autofilled_cs_config)
+            }
         )
 
         if await self.service.wallet_state_manager.synced() is False:
