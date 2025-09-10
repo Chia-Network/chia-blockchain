@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Self
+from typing import Any, Optional
 
 from clvm.SExp import SExp
 from clvm_tools.binutils import assemble, type_for_atom
 from ir.Type import Type
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.util.casts import int_from_bytes
