@@ -52,6 +52,7 @@ from chia.wallet.wallet_request_types import (
     CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
+    CreateOfferForIDs,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDFindLostDID,
@@ -507,8 +508,8 @@ async def make_offer(
         if offers == [] or requests == []:
             print("Not creating offer: Must be offering and requesting at least one asset")
         else:
-            offer_dict: dict[Union[uint32, str], int] = {}
-            driver_dict: dict[str, Any] = {}
+            offer_dict: dict[str, str] = {}
+            driver_dict: dict[bytes32, PuzzleInfo] = {}
             printable_dict: dict[str, tuple[str, int, int]] = {}  # dict[asset_name, tuple[amount, unit, multiplier]]
             royalty_assets: list[RoyaltyAsset] = []
             fungible_assets: list[FungibleAsset] = []
@@ -516,7 +517,7 @@ async def make_offer(
                 name, amount = tuple(item.split(":")[0:2])
                 try:
                     b32_id = bytes32.from_hexstr(name)
-                    id: Union[uint32, str] = b32_id.hex()
+                    id: str = b32_id.hex()
                     result = await wallet_client.cat_asset_id_to_name(CATAssetIDToName(b32_id))
                     if result.name is not None:
                         name = result.name
@@ -535,7 +536,7 @@ async def make_offer(
                             id = info.launcher_id.hex()
                             assert isinstance(id, str)
                             if item in requests:
-                                driver_dict[id] = {
+                                puzzle_info_dict: dict[str, Any] = {
                                     "type": "singleton",
                                     "launcher_id": "0x" + id,
                                     "launcher_ph": "0x" + info.launcher_puzhash.hex(),
@@ -548,7 +549,7 @@ async def make_offer(
                                 if info.supports_did:
                                     assert info.royalty_puzzle_hash is not None
                                     assert info.royalty_percentage is not None
-                                    driver_dict[id]["also"]["also"] = {
+                                    puzzle_info_dict["also"]["also"] = {
                                         "type": "ownership",
                                         "owner": "()",
                                         "transfer_program": {
@@ -565,17 +566,18 @@ async def make_offer(
                                             info.royalty_percentage,
                                         )
                                     )
+                                driver_dict[info.launcher_id] = PuzzleInfo(puzzle_info_dict)
                         else:
                             id = decode_puzzle_hash(name).hex()
                             assert hrp is not None
                             unit = units[hrp]
                     except ValueError:
-                        id = uint32(name)
-                        if id == 1:
+                        id = str(uint32(name))
+                        if id == "1":
                             name = "XCH"
                             unit = units["chia"]
                         else:
-                            name = (await wallet_client.get_cat_name(CATGetName(id))).name
+                            name = (await wallet_client.get_cat_name(CATGetName(uint32(name)))).name
                             unit = units["cat"]
                         if item in offers:
                             fungible_assets.append(FungibleAsset(name, uint64(abs(int(Decimal(amount) * unit)))))
@@ -585,7 +587,7 @@ async def make_offer(
                     print("Not creating offer: Cannot offer and request the same asset in a trade")
                     break
                 else:
-                    offer_dict[id] = int(Decimal(amount) * unit) * multiplier
+                    offer_dict[id] = str(int(Decimal(amount) * unit) * multiplier)
             else:
                 print("Creating Offer")
                 print("--------------")
@@ -642,9 +644,11 @@ async def make_offer(
 
                 with filepath.open(mode="w") as file:
                     res = await wallet_client.create_offer_for_ids(
-                        offer_dict,
-                        driver_dict=driver_dict,
-                        fee=fee,
+                        CreateOfferForIDs(
+                            offer=offer_dict,
+                            driver_dict=driver_dict,
+                            fee=fee,
+                        ),
                         tx_config=CMDTXConfigLoader(
                             reuse_puzhash=reuse_puzhash,
                         ).to_tx_config(units["chia"], config, fingerprint),
