@@ -129,7 +129,7 @@ def decode_info_value(cls: Any, value: Any) -> Any:
     elif isinstance(value, Program) and value.atom is None:
         return value
     else:
-        if value == "()":  # special case
+        if value in {"()", ""}:  # special case
             return Program.to([])
         expression: SExp = assemble(value)
         if expression.atom is None:
