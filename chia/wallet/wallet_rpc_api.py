@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -130,6 +130,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    CreateOfferForIDs,
+    CreateOfferForIDsResponse,
     DefaultCAT,
     DeleteKey,
     DeleteNotifications,
@@ -2217,66 +2219,42 @@ class WalletRpcApi:
             return CATAssetIDToNameResponse(wallet_id=wallet.id(), name=wallet.get_name())
 
     @tx_endpoint(push=False)
+    @marshal
     async def create_offer_for_ids(
         self,
-        request: dict[str, Any],
+        request: CreateOfferForIDs,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CreateOfferForIDsResponse:
         if action_scope.config.push:
-            raise ValueError("Cannot push an incomplete spend")  # pragma: no cover
-
-        offer: dict[str, int] = request["offer"]
-        fee: uint64 = uint64(request.get("fee", 0))
-        validate_only: bool = request.get("validate_only", False)
-        driver_dict_str: Optional[dict[str, Any]] = request.get("driver_dict", None)
-        marshalled_solver = request.get("solver")
-        solver: Optional[Solver]
-        if marshalled_solver is None:
-            solver = None
-        else:
-            solver = Solver(info=marshalled_solver)
+            raise ValueError("Cannot push an incomplete spend")
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: dict[bytes32, PuzzleInfo] = {}
-        if driver_dict_str is None:
-            for key, amount in offer.items():
-                if amount > 0:
-                    try:
-                        driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
-                            {"type": AssetType.CAT.value, "tail": "0x" + key}
-                        )
-                    except ValueError:
-                        pass
+        if request.driver_dict is None:
+            for key, amount in request.offer_spec.items():
+                if amount > 0 and isinstance(key, bytes32):
+                    driver_dict[key] = PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + key.hex()})
         else:
-            for key, value in driver_dict_str.items():
-                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
-
-        modified_offer: dict[Union[int, bytes32], int] = {}
-        for wallet_identifier, change in offer.items():
-            try:
-                modified_offer[bytes32.from_hexstr(wallet_identifier)] = change
-            except ValueError:
-                modified_offer[int(wallet_identifier)] = change
+            driver_dict = request.driver_dict
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer,
+                request.offer_spec,
                 action_scope,
                 driver_dict,
-                solver=solver,
-                fee=fee,
-                validate_only=validate_only,
+                solver=request.solver,
+                fee=request.fee,
+                validate_only=request.validate_only,
                 extra_conditions=extra_conditions,
             )
-        if result[0]:
-            _success, trade_record, _error = result
-            return {
-                "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
-                "trade_record": trade_record.to_json_dict_convenience(),
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
-        raise ValueError(result[2])
+
+        return CreateOfferForIDsResponse(
+            [],
+            [],
+            offer=Offer.from_bytes(result[1].offer),
+            trade_record=result[1],
+        )
 
     async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
