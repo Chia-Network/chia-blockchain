@@ -42,6 +42,7 @@ class SimClock:
 @pytest.mark.anyio
 async def test_get_rate_limits_to_use() -> None:
     assert get_rate_limits_to_use(rl_v2, rl_v2) != get_rate_limits_to_use(rl_v2, rl_v1)
+    assert get_rate_limits_to_use(rl_v2, rl_v2) != get_rate_limits_to_use(rl_v1, rl_v2)
     assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v2, rl_v1)
     assert get_rate_limits_to_use(rl_v1, rl_v1) == get_rate_limits_to_use(rl_v1, rl_v2)
 
