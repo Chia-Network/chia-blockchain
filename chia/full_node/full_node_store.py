@@ -832,8 +832,8 @@ class FullNodeStore:
     def get_signage_point_by_index_and_cc_output(
         self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
     ) -> Optional[SignagePoint]:
-        assert len(self.finished_sub_slots) >= 1        
-        for sub_slot, sps, _ in self.finished_sub_slots:            
+        assert len(self.finished_sub_slots) >= 1
+        for sub_slot, sps, _ in self.finished_sub_slots:
             if sub_slot is not None:
                 cc_hash = sub_slot.challenge_chain.get_hash()
             else:
