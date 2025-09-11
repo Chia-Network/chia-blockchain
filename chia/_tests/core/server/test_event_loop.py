@@ -105,7 +105,13 @@ def test_base_event_loop_has_methods() -> None:
 
         for func in ("_attach", "_detach"):
             assert hasattr(base_server, func)
-            method = getattr(base_server, func)
-            assert str(inspect.signature(method)) == "()"
+            if sys.version_info >= (3, 13):
+                # https://github.com/python/cpython/blob/bcee1c322115c581da27600f2ae55e5439c027eb/Lib/asyncio/base_events.py#L296
+                method = getattr(base_server, func)
+                assert str(inspect.signature(method)) == "(transport)"
+            else:
+                method = getattr(base_server, func)
+                assert str(inspect.signature(method)) == "()"
+
     finally:
         selector_event_loop.close()
