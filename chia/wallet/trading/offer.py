@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Optional, Union
+from typing import BinaryIO, Optional, Union
 
 from chia_puzzles_py.programs import SETTLEMENT_PAYMENT, SETTLEMENT_PAYMENT_HASH
 from chia_rs import CoinSpend, G2Element
@@ -15,12 +15,13 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program, run_wit
 from chia.types.coin_spend import make_spend
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
-from chia.util.streamable import parse_rust
+from chia.util.streamable import Streamable, parse_rust, streamable
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
+    ConditionValidTimesAbsolute,
     CreateCoin,
     parse_conditions_non_consensus,
     parse_timelock_info,
@@ -43,7 +44,7 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OfferSummary = dict[Union[int, bytes32], int]
+OfferSpecification = dict[Union[int, bytes32], int]
 
 OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
 OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
@@ -74,6 +75,18 @@ class NotarizedPayment(CreateCoin):
 
     def name(self) -> bytes32:
         return self.to_program().get_tree_hash()
+
+
+@streamable
+@dataclass(frozen=True)
+class OfferSummary(Streamable):
+    offered: dict[str, str]  # str for negative int support
+    requested: dict[str, str]  # str for negative int support
+    fees: uint64
+    infos: dict[str, PuzzleInfo]
+    additions: list[bytes32]
+    removals: list[bytes32]
+    valid_times: ConditionValidTimesAbsolute
 
 
 @dataclass(frozen=True, eq=False)
@@ -320,26 +333,26 @@ class Offer:
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> tuple[dict[str, int], dict[str, int], dict[str, dict[str, Any]], ConditionValidTimes]:
+    def summary(self) -> tuple[dict[str, str], dict[str, str], dict[str, PuzzleInfo], ConditionValidTimes]:
         offered_amounts: dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: dict[Optional[bytes32], Any]) -> dict[str, Any]:
-            new_dic: dict[str, Any] = {}
+        def keys_and_amounts_to_strings(dic: dict[Optional[bytes32], int]) -> dict[str, str]:
+            new_dic: dict[str, str] = {}
             for key, val in dic.items():
                 if key is None:
-                    new_dic["xch"] = val
+                    new_dic["xch"] = str(val)
                 else:
-                    new_dic[key.hex()] = val
+                    new_dic[key.hex()] = str(val)
             return new_dic
 
-        driver_dict: dict[str, Any] = {}
+        driver_dict: dict[str, PuzzleInfo] = {}
         for key, value in self.driver_dict.items():
-            driver_dict[key.hex()] = value.info
+            driver_dict[key.hex()] = value
 
         return (
-            keys_to_strings(offered_amounts),
-            keys_to_strings(requested_amounts),
+            keys_and_amounts_to_strings(offered_amounts),
+            keys_and_amounts_to_strings(requested_amounts),
             driver_dict,
             self.absolute_valid_times_ban_relatives(),
         )
