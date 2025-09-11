@@ -190,7 +190,7 @@ description = "Python graph (network) package"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "altgraph-0.17.4-py2.py3-none-any.whl", hash = "sha256:642743b4750de17e655e6711601b077bc6598dbfa3ba5fa2b2a35ce12b508dff"},
     {file = "altgraph-0.17.4.tar.gz", hash = "sha256:1b5afbb98f6c4dcadb2e2ae6ab9fa994bbb8c1d75f4fa96d340f9437ae454406"},
@@ -1917,7 +1917,7 @@ description = "Mach-O header analysis and editing"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"darwin\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and sys_platform == \"darwin\" and python_version < \"3.14\""
 files = [
     {file = "macholib-1.16.3-py2.py3-none-any.whl", hash = "sha256:0e315d7583d38b8c77e815b1ecbdbf504a8258d8b3e17b61165c6feb60d18f2c"},
     {file = "macholib-1.16.3.tar.gz", hash = "sha256:07ae9e15e8e4cd9a788013d81f5908b3609aa76f9b1421bae9c4d7606ec86a30"},
@@ -2381,7 +2381,7 @@ description = "Python PE parsing module"
 optional = true
 python-versions = ">=3.6.0"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"win32\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and sys_platform == \"win32\" and python_version < \"3.14\""
 files = [
     {file = "pefile-2023.2.7-py3-none-any.whl", hash = "sha256:da185cd2af68c08a6cd4481f7325ed600a88f6a813bad9dea07ab3ef73d8d8d6"},
     {file = "pefile-2023.2.7.tar.gz", hash = "sha256:82e6114004b3d6911c77c3953e3838654b04511b8b66e8583db70c65998017dc"},
@@ -2712,7 +2712,7 @@ description = "PyInstaller bundles a Python application and all its dependencies
 optional = true
 python-versions = "<3.15,>=3.8"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "pyinstaller-6.15.0-py3-none-macosx_10_13_universal2.whl", hash = "sha256:9f00c71c40148cd1e61695b2c6f1e086693d3bcf9bfa22ab513aa4254c3b966f"},
     {file = "pyinstaller-6.15.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:cbcc8eb77320c60722030ac875883b564e00768fe3ff1721c7ba3ad0e0a277e9"},
@@ -2749,7 +2749,7 @@ description = "Community maintained hooks for PyInstaller"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "pyinstaller_hooks_contrib-2025.8-py3-none-any.whl", hash = "sha256:8d0b8cfa0cb689a619294ae200497374234bd4e3994b3ace2a4442274c899064"},
     {file = "pyinstaller_hooks_contrib-2025.8.tar.gz", hash = "sha256:3402ad41dfe9b5110af134422e37fc5d421ba342c6cb980bd67cb30b7415641c"},
@@ -3799,7 +3799,7 @@ description = "ZSTD Bindings for Python"
 optional = false
 python-versions = "*"
 groups = ["main"]
-markers = "python_version == \"3.12\""
+markers = "python_version >= \"3.12\""
 files = [
     {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b5cd20afab8d13c52d2b2219bf18cc765eae87b8219343bce20647007890adab"},
     {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:0f467ab9b57ab8b4b874e6974d38b802f20406803bb7ec9308df923553cd48f7"},
@@ -3862,4 +3862,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9, <4, !=3.9.0, !=3.9.1"
-content-hash = "650f0c98ff03cf897ee793ebb1e26bee8ae7b3c99bab5295fee7736bc19e346f"
+content-hash = "b7d446b58d0bc30a0f35c407a90e167c2f79550d5216399c090db6fe2cc802f4"

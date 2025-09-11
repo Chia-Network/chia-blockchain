@@ -6,6 +6,7 @@ import socket
 import ssl
 import struct
 import sys
+import weakref
 
 if sys.platform == "win32":
     import _overlapped  # type: ignore[import-not-found]
@@ -57,15 +58,26 @@ if TYPE_CHECKING:
         else:
             _loop: EventsAbstractEventLoop
         _sockets: Iterable[socket.socket]
-        _active_count: int
+        if sys.version_info >= (3, 13):
+            # https://github.com/python/cpython/blob/v3.13.7/Lib/asyncio/base_events.py#L283
+            _clients: weakref.WeakSet[object]
+        else:
+            _active_count: int
         _protocol_factory: _ProtocolFactory
         _backlog: int
         _ssl_context: _SSLContext
         _ssl_handshake_timeout: Optional[float]
 
-        def _attach(self) -> None: ...
+        if sys.version_info >= (3, 13):
+            # https://github.com/python/cpython/blob/bcee1c322115c581da27600f2ae55e5439c027eb/Lib/asyncio/base_events.py#L296
+            def _attach(self, transport: object) -> None: ...
 
-        def _detach(self) -> None: ...
+            def _detach(self, transport: object) -> None: ...
+        else:
+
+            def _attach(self) -> None: ...
+
+            def _detach(self) -> None: ...
 
         def _start_serving(self) -> None: ...
 
@@ -132,20 +144,22 @@ class PausableServer(BaseEventsServer):
             max_concurrent_connections if max_concurrent_connections is not None else global_max_concurrent_connections
         )
 
-    def _attach(self) -> None:
-        super()._attach()
-        logging.getLogger(__name__).debug(f"New connection. Total connections: {self._active_count}")
-        if not self._paused and self._active_count >= self.max_concurrent_connections:
+    def _attach(self, *args: object, **kwargs: object) -> None:
+        super()._attach(*args, **kwargs)
+        active_connections = self._chia_active_connections()
+        logging.getLogger(__name__).debug(f"New connection. Total connections: {active_connections}")
+        if not self._paused and active_connections >= self.max_concurrent_connections:
             self._chia_pause()
 
-    def _detach(self) -> None:
-        super()._detach()
-        logging.getLogger(__name__).debug(f"Connection lost. Total connections: {self._active_count}")
+    def _detach(self, *args: object, **kwargs: object) -> None:
+        super()._detach(*args, **kwargs)
+        active_connections = self._chia_active_connections()
+        logging.getLogger(__name__).debug(f"Connection lost. Total connections: {active_connections}")
         if (
-            self._active_count > 0
+            active_connections > 0
             and self._sockets is not None
             and self._paused
-            and self._active_count < self.max_concurrent_connections
+            and active_connections < self.max_concurrent_connections
         ):
             self._chia_resume()
 
@@ -179,6 +193,12 @@ class PausableServer(BaseEventsServer):
                     self._ssl_handshake_timeout,
                 )
         logging.getLogger(__name__).debug("Resumed accepting connections.")
+
+    def _chia_active_connections(self) -> int:
+        if sys.version_info >= (3, 13):
+            return len(self._clients)
+        else:
+            return self._active_count
 
 
 async def _chia_create_server(
