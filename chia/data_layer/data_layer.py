@@ -1282,7 +1282,7 @@ class DataLayer:
             trade_record = await self.wallet_rpc.get_offer(trade_id=trade_id, file_contents=True)
             trading_offer = TradingOffer.from_bytes(trade_record.offer)
             summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
-            store_ids = [bytes32.from_hexstr(offered["launcher_id"]) for offered in summary["offered"]]
+            store_ids = [offered.launcher_id for offered in summary.offered]
 
         await self.wallet_rpc.cancel_offer(
             trade_id=trade_id,

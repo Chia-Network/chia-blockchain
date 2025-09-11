@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Any, BinaryIO, Optional, Union, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
@@ -8,7 +9,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self
 
-from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
@@ -27,7 +28,7 @@ from chia.wallet.signer_protocol import (
     UnsignedTransaction,
 )
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
@@ -652,6 +653,51 @@ class CATAssetIDToName(Streamable):
 class CATAssetIDToNameResponse(Streamable):
     wallet_id: Optional[uint32]
     name: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetOfferSummary(Streamable):
+    offer: str
+    advanced: bool = False
+
+    @cached_property
+    def parsed_offer(self) -> Offer:
+        return Offer.from_bech32(self.offer)
+
+
+@streamable
+@dataclass(frozen=True)
+class GetOfferSummaryResponse(Streamable):
+    id: bytes32
+    summary: Optional[OfferSummary] = None
+    data_layer_summary: Optional[DataLayerSummary] = None
+
+    def __post_init__(self) -> None:
+        if self.summary is not None and self.data_layer_summary is not None:
+            raise ValueError("Cannot have both summary and data_layer_summary")
+        elif self.summary is None and self.data_layer_summary is None:
+            raise ValueError("Must have either summary or data_layer_summary")
+        super().__post_init__()
+
+    def to_json_dict(self) -> dict[str, Any]:
+        serialized = super().to_json_dict()
+        if self.data_layer_summary is not None:
+            serialized["summary"] = serialized["data_layer_summary"]
+        del serialized["data_layer_summary"]
+        return serialized
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        if isinstance(json_dict["summary"]["offered"], dict):
+            summary: Union[OfferSummary, DataLayerSummary] = OfferSummary.from_json_dict(json_dict["summary"])
+        else:
+            summary = DataLayerSummary.from_json_dict(json_dict["summary"])
+        return cls(
+            id=bytes32.from_hexstr(json_dict["id"]),
+            summary=summary if isinstance(summary, OfferSummary) else None,
+            data_layer_summary=summary if isinstance(summary, DataLayerSummary) else None,
+        )
 
 
 @streamable
