@@ -1,0 +1,18 @@
+(mod
+  (
+    TIMELOCK
+    Conditions
+  )
+
+  (include condition_codes.clib)
+  (include utility_macros.clib)
+
+  (defun check_conditions (TIMELOCK conditions)
+    (if (and (= (f (f conditions)) ASSERT_SECONDS_RELATIVE) (= (f (r (f conditions))) TIMELOCK))
+        conditions
+        (c (f conditions) (check_conditions TIMELOCK (r conditions)))
+    )
+  )
+
+  (check_conditions TIMELOCK Conditions)
+)
