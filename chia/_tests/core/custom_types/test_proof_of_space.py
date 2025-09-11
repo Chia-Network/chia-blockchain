@@ -12,8 +12,8 @@ from chia_rs.sized_ints import uint8, uint32
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_plot_difficulty,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     check_plot_size,
     make_pos,
     passes_plot_filter,
@@ -201,26 +201,26 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
 
 
 @pytest.mark.parametrize(
-    "height, difficulty",
+    "height, strength",
     [
         (0, 2),
         (DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, 2),
         (DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT, 2),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_4_HEIGHT - 1, 2),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_4_HEIGHT, 4),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_5_HEIGHT - 1, 4),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_5_HEIGHT, 5),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_6_HEIGHT - 1, 5),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_6_HEIGHT, 6),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_7_HEIGHT - 1, 6),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_7_HEIGHT, 7),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_8_HEIGHT - 1, 7),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_8_HEIGHT, 8),
-        (DEFAULT_CONSTANTS.PLOT_DIFFICULTY_8_HEIGHT + 1000000, 8),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_4_HEIGHT - 1, 2),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_4_HEIGHT, 4),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_5_HEIGHT - 1, 4),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_5_HEIGHT, 5),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_6_HEIGHT - 1, 5),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_6_HEIGHT, 6),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_7_HEIGHT - 1, 6),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_7_HEIGHT, 7),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT - 1, 7),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT, 8),
+        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT + 1000000, 8),
     ],
 )
-def test_calculate_plot_difficulty(height: uint32, difficulty: uint8) -> None:
-    assert calculate_plot_difficulty(DEFAULT_CONSTANTS, height) == difficulty
+def test_calculate_plot_strength(height: uint32, strength: uint8) -> None:
+    assert calculate_required_plot_strength(DEFAULT_CONSTANTS, height) == strength
 
 
 @pytest.mark.parametrize(

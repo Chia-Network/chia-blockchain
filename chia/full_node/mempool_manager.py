@@ -26,7 +26,6 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.check_time_locks import check_time_locks
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -466,11 +465,11 @@ class MempoolManager:
                 self.constants,
                 flags | MEMPOOL_MODE,
             )
-        # validate_clvm_and_signature raises a TypeError with an error code
-        except Exception as e:
+        # validate_clvm_and_signature raises a ValueError with an error code
+        except ValueError as e:
             # Convert that to a ValidationError
-            if len(e.args) > 0:
-                error = Err(e.args[0])
+            if len(e.args) > 1:
+                error = Err(e.args[1])
                 raise ValidationError(error)
             else:
                 raise ValidationError(Err.UNKNOWN)  # pragma: no cover
@@ -480,8 +479,6 @@ class MempoolManager:
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
 
-        ret = NPCResult(None, sbc)
-
         if spend_bundle_id is None:
             spend_bundle_id = spend_bundle.name()
 
@@ -490,10 +487,7 @@ class MempoolManager:
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
             f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
-        if ret.error is not None:
-            raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")
-        assert ret.conds is not None
-        return ret.conds
+        return sbc
 
     async def add_spend_bundle(
         self,
@@ -507,14 +501,16 @@ class MempoolManager:
         ] = None,
     ) -> SpendBundleAddInfo:
         """
-        Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
-        The mempool should be locked during this call (blockchain lock). If there are mempool conflicts, the conflicting
-        spends might be removed (if the new spend is a superset of the previous). Otherwise, the new spend might be
+        Validates and adds to mempool a new_spend with the given
+        SpendBundleConditions, and spend_name, and the current mempool. The mempool
+        should be locked during this call (blockchain lock). If there are mempool
+        conflicts, the conflicting spends might be removed (if the new spend is
+        a superset of the previous). Otherwise, the new spend might be
         added to the potential pool.
 
         Args:
             new_spend: spend bundle to validate and add
-            conds: result of running the clvm transaction in a fake block
+            conds: SpendBundleConditions resulting from running the clvm in the spend bundle's coin spends
             spend_name: hash of the spend bundle data, passed in as an optimization
 
         Returns:
