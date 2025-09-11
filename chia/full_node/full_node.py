@@ -58,7 +58,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
+from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
@@ -99,7 +99,8 @@ from chia.util.task_referencer import create_referenced_task
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: list[NewPeakItem]  # The new items from calling MempoolManager.new_peak
+    # The added transactions IDs from calling MempoolManager.new_peak
+    mempool_peak_added_tx_ids: list[bytes32]
     mempool_removals: list[MempoolRemoveInfo]  # The removed mempool items from calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: list[tuple[bytes32, bytes]]  # The hints added to the DB
@@ -321,7 +322,8 @@ class FullNode:
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                    assert len(pending_tx.items) == 0  # no pending transactions when starting up
+                    # No pending transactions when starting up
+                    assert len(pending_tx.spend_bundle_ids) == 0
 
                     full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
                     assert full_peak is not None
@@ -1939,7 +1941,7 @@ class FullNode:
         mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
 
         return PeakPostProcessingResult(
-            mempool_new_peak_result.items,
+            mempool_new_peak_result.spend_bundle_ids,
             mempool_new_peak_result.removals,
             fns_peak_result,
             hints_to_add,
@@ -1961,9 +1963,9 @@ class FullNode:
         record = state_change_summary.peak
         for signage_point in ppp_result.signage_points:
             await self.signage_point_post_processing(*signage_point)
-        for new_peak_item in ppp_result.mempool_peak_result:
-            self.log.debug(f"Added transaction to mempool: {new_peak_item.transaction_id}")
-            mempool_item = self.mempool_manager.get_mempool_item(new_peak_item.transaction_id)
+        for transaction_id in ppp_result.mempool_peak_added_tx_ids:
+            self.log.debug(f"Added transaction to mempool: {transaction_id}")
+            mempool_item = self.mempool_manager.get_mempool_item(transaction_id)
             assert mempool_item is not None
             await self.broadcast_added_tx(mempool_item)
 
