@@ -27,7 +27,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, str2bool
+from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
@@ -172,6 +172,8 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetCoinRecordsByNames,
+    GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
@@ -183,6 +185,8 @@ from chia.wallet.wallet_request_types import (
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSpendableCoins,
+    GetSpendableCoinsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -242,6 +246,8 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
+    SelectCoins,
+    SelectCoinsResponse,
     SendTransaction,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -1728,74 +1734,63 @@ class WalletRpcApi:
                 wallet.target_state = None
             return Empty()
 
+    @marshal
     async def select_coins(
         self,
-        request: dict[str, Any],
-    ) -> EndpointResult:
+        request: SelectCoins,
+    ) -> SelectCoinsResponse:
         assert self.service.logged_in_fingerprint is not None
-        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
         # Some backwards compat fill-ins
-        if tx_config_loader.excluded_coin_ids is None:
-            excluded_coins: Optional[list[dict[str, Any]]] = request.get("excluded_coins", request.get("exclude_coins"))
-            if excluded_coins is not None:
-                tx_config_loader = tx_config_loader.override(
-                    excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
+        if request.excluded_coin_ids is None:
+            if request.exclude_coins is not None:
+                request = request.override(
+                    excluded_coin_ids=[c.name() for c in request.exclude_coins],
+                    exclude_coins=None,
                 )
 
-        tx_config: TXConfig = tx_config_loader.autofill(
+        # don't love this snippet of code
+        # but I think action scopes need to accept CoinSelectionConfigs
+        # instead of solely TXConfigs in order for this to be less ugly
+        autofilled_cs_config = request.autofill(
             constants=self.service.wallet_state_manager.constants,
+        )
+        tx_config = DEFAULT_TX_CONFIG.override(
+            **{
+                field.name: getattr(autofilled_cs_config, field.name)
+                for field in dataclasses.fields(autofilled_cs_config)
+            }
         )
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
-        amount = uint64(request["amount"])
-        wallet_id = uint32(request["wallet_id"])
-
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
-            selected_coins = await wallet.select_coins(amount, action_scope)
+            selected_coins = await wallet.select_coins(request.amount, action_scope)
 
-        return {"coins": [coin.to_json_dict() for coin in selected_coins]}
+        return SelectCoinsResponse(coins=list(selected_coins))
 
-    async def get_spendable_coins(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
-        wallet_id = uint32(request["wallet_id"])
-        min_coin_amount = uint64(request.get("min_coin_amount", 0))
-        max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
-        if max_coin_amount == 0:
-            max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        excluded_coin_amounts: Optional[list[uint64]] = request.get("excluded_coin_amounts")
-        if excluded_coin_amounts is not None:
-            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
-        else:
-            excluded_coin_amounts = []
-        excluded_coins_input: Optional[dict[str, dict[str, Any]]] = request.get("excluded_coins")
-        if excluded_coins_input is not None:
-            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input.values()]
-        else:
-            excluded_coins = []
-        excluded_coin_ids_input: Optional[list[str]] = request.get("excluded_coin_ids")
-        if excluded_coin_ids_input is not None:
-            excluded_coin_ids = [bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids_input]
-        else:
-            excluded_coin_ids = []
         state_mgr = self.service.wallet_state_manager
-        wallet = state_mgr.wallets[wallet_id]
+        wallet = state_mgr.wallets[request.wallet_id]
         async with state_mgr.lock:
-            all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(request.wallet_id)
             if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
                 spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
             else:
-                spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(wallet_id, all_coin_records))
+                spendable_coins = list(
+                    await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records)
+                )
 
             # Now we get the unconfirmed transactions and manually derive the additions and removals.
             unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
-                wallet_id
+                request.wallet_id
             )
             unconfirmed_removal_ids: dict[bytes32, uint64] = {
                 coin.name(): transaction.created_at_time
@@ -1806,54 +1801,54 @@ class WalletRpcApi:
                 coin
                 for transaction in unconfirmed_transactions
                 for coin in transaction.additions
-                if await state_mgr.does_coin_belong_to_wallet(coin, wallet_id)
+                if await state_mgr.does_coin_belong_to_wallet(coin, request.wallet_id)
             ]
             valid_spendable_cr: list[CoinRecord] = []
             unconfirmed_removals: list[CoinRecord] = []
             for coin_record in all_coin_records:
                 if coin_record.name() in unconfirmed_removal_ids:
                     unconfirmed_removals.append(coin_record.to_coin_record(unconfirmed_removal_ids[coin_record.name()]))
+
+            cs_config = request.autofill(constants=self.service.wallet_state_manager.constants)
             for coin_record in spendable_coins:  # remove all the unconfirmed coins, exclude coins and dust.
                 if coin_record.name() in unconfirmed_removal_ids:
                     continue
-                if coin_record.coin in excluded_coins:
+                if coin_record.coin.name() in cs_config.excluded_coin_ids:
                     continue
-                if coin_record.name() in excluded_coin_ids:
+                if (coin_record.coin.amount < cs_config.min_coin_amount) or (
+                    coin_record.coin.amount > cs_config.max_coin_amount
+                ):
                     continue
-                if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
-                    continue
-                if coin_record.coin.amount in excluded_coin_amounts:
+                if coin_record.coin.amount in cs_config.excluded_coin_amounts:
                     continue
                 c_r = await state_mgr.get_coin_record_by_wallet_record(coin_record)
                 assert c_r is not None and c_r.coin == coin_record.coin  # this should never happen
                 valid_spendable_cr.append(c_r)
 
-        return {
-            "confirmed_records": [cr.to_json_dict() for cr in valid_spendable_cr],
-            "unconfirmed_removals": [cr.to_json_dict() for cr in unconfirmed_removals],
-            "unconfirmed_additions": [coin.to_json_dict() for coin in unconfirmed_additions],
-        }
+        return GetSpendableCoinsResponse(
+            confirmed_records=valid_spendable_cr,
+            unconfirmed_removals=unconfirmed_removals,
+            unconfirmed_additions=unconfirmed_additions,
+        )
 
-    async def get_coin_records_by_names(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before finding coin information")
 
-        if "names" not in request:
-            raise ValueError("Names not in request")
-        coin_ids = [bytes32.from_hexstr(name) for name in request["names"]]
         kwargs: dict[str, Any] = {
-            "coin_id_filter": HashFilter.include(coin_ids),
+            "coin_id_filter": HashFilter.include(request.names),
         }
 
         confirmed_range = UInt32Range()
-        if "start_height" in request:
-            confirmed_range = dataclasses.replace(confirmed_range, start=uint32(request["start_height"]))
-        if "end_height" in request:
-            confirmed_range = dataclasses.replace(confirmed_range, stop=uint32(request["end_height"]))
+        if request.start_height is not None:
+            confirmed_range = dataclasses.replace(confirmed_range, start=request.start_height)
+        if request.end_height is not None:
+            confirmed_range = dataclasses.replace(confirmed_range, stop=request.end_height)
         if confirmed_range != UInt32Range():
             kwargs["confirmed_range"] = confirmed_range
 
-        if "include_spent_coins" in request and not str2bool(request["include_spent_coins"]):
+        if not request.include_spent_coins:
             kwargs["spent_range"] = unspent_range
 
         async with self.service.wallet_state_manager.lock:
@@ -1861,12 +1856,12 @@ class WalletRpcApi:
                 **kwargs
             )
             missed_coins: list[str] = [
-                "0x" + c_id.hex() for c_id in coin_ids if c_id not in [cr.name for cr in coin_records]
+                "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
             ]
             if missed_coins:
                 raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
-        return {"coin_records": [cr.to_json_dict() for cr in coin_records]}
+        return GetCoinRecordsByNamesResponse(coin_records)
 
     @marshal
     async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:
