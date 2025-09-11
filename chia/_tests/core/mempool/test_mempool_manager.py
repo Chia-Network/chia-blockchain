@@ -41,7 +41,6 @@ from chia.full_node.mempool_manager import (
     QUOTE_BYTES,
     QUOTE_EXECUTION_COST,
     MempoolManager,
-    NewPeakItem,
     TimelockConditions,
     can_replace,
     check_removals,
@@ -3288,7 +3287,7 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
     assert mempool_manager.peak is not None
     condition_height = mempool_manager.peak.height + 1
     condition, expected_error = condition_and_error
-    sb, sb_name, result = await generate_and_add_spendbundle(mempool_manager, [[condition, condition_height]])
+    _, sb_name, result = await generate_and_add_spendbundle(mempool_manager, [[condition, condition_height]])
     _, status, error = result
     assert status == MempoolInclusionStatus.PENDING
     assert error == expected_error
@@ -3299,14 +3298,13 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
             create_test_block_record(height=uint32(condition_height)), spent_coins
         )
         # We're not there yet (needs to be higher, not equal)
+        assert new_peak_info.spend_bundle_ids == []
         assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
-        assert new_peak_info.items == []
     else:
         spent_coins = None
     new_peak_info = await mempool_manager.new_peak(
         create_test_block_record(height=uint32(condition_height + 1)), spent_coins
     )
     # The item gets retried successfully now
-    mi = mempool_manager.get_mempool_item(sb_name, include_pending=False)
-    assert mi is not None
-    assert new_peak_info.items == [NewPeakItem(sb_name, sb, mi.conds)]
+    assert new_peak_info.spend_bundle_ids == [sb_name]
+    assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
