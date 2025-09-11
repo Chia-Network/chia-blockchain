@@ -305,14 +305,12 @@ def selected_network_address_prefix(config: dict[str, Any]) -> str:
 
 
 def load_defaults_for_missing_services(config: dict[str, Any], config_name: str) -> dict[str, Any]:
-    services = ["data_layer"]
+    services = ["data_layer", "solver"]
     missing_services = [service for service in services if service not in config]
     defaulted = {}
     if len(missing_services) > 0:
         marshalled_default_config: str = initial_config_file(config_name)
-
         unmarshalled_default_config = yaml.safe_load(marshalled_default_config)
-
         for service in missing_services:
             defaulted[service] = unmarshalled_default_config[service]
 

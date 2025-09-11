@@ -105,3 +105,26 @@ def challenges_cmd(ctx: click.Context, farmer_rpc_port: Optional[int], limit: in
     from chia.cmds.farm_funcs import challenges
 
     asyncio.run(challenges(ChiaCliContext.set_default(ctx).root_path, farmer_rpc_port, limit))
+
+
+@farm_cmd.command("connect-solver", help="Connect to a solver")
+@click.option(
+    "-fp",
+    "--farmer-rpc-port",
+    help="Set the port where the Farmer is hosting the RPC interface",
+    type=int,
+    default=None,
+    show_default=True,
+)
+@click.argument("solver_address", required=True)
+@click.pass_context
+def connect_solver_cmd(
+    ctx: click.Context,
+    farmer_rpc_port: Optional[int],
+    solver_address: str,
+) -> None:
+    import asyncio
+
+    from chia.cmds.farm_funcs import solver_connect
+
+    asyncio.run(solver_connect(ChiaCliContext.set_default(ctx).root_path, farmer_rpc_port, solver_address))
