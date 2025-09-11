@@ -670,7 +670,7 @@ def timestamp_to_time(timestamp: int) -> str:
 
 
 async def print_offer_summary(
-    cat_name_resolver: CATNameResolver, sum_dict: dict[str, int], has_fee: bool = False, network_xch: str = "XCH"
+    cat_name_resolver: CATNameResolver, sum_dict: dict[str, str], has_fee: bool = False, network_xch: str = "XCH"
 ) -> None:
     for asset_id, amount in sum_dict.items():
         description: str = ""
@@ -721,7 +721,7 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested, _, _ = offer.summary()
-        outbound_balances: dict[str, int] = offer.get_pending_amounts()
+        outbound_balances: dict[str, str] = {k: str(v) for k, v in offer.get_pending_amounts().items()}
         fees: Decimal = Decimal(offer.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")

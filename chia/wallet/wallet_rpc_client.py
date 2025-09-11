@@ -108,6 +108,8 @@ from chia.wallet.wallet_request_types import (
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
+    GetOfferSummary,
+    GetOfferSummaryResponse,
     GetPrivateKey,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
@@ -678,11 +680,8 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def get_offer_summary(
-        self, offer: Offer, advanced: bool = False
-    ) -> tuple[bytes32, dict[str, dict[str, int]]]:
-        res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
-        return bytes32.from_hexstr(res["id"]), res["summary"]
+    async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
+        return GetOfferSummaryResponse.from_json_dict(await self.fetch("get_offer_summary", request.to_json_dict()))
 
     async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
         return CheckOfferValidityResponse.from_json_dict(

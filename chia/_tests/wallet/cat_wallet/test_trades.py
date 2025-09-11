@@ -28,7 +28,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer, OfferSummary
+from chia.wallet.trading.offer import Offer, OfferSpecification
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -415,29 +415,29 @@ async def test_cat_trades(
     await env_maker.check_balances()
 
     # Create the trade parameters
-    chia_for_cat: OfferSummary = {
+    chia_for_cat: OfferSpecification = {
         wallet_maker.id(): -1,
         bytes32.from_hexstr(new_cat_wallet_maker.get_asset_id()): 2,  # This is the CAT that the taker made
     }
-    cat_for_chia: OfferSummary = {
+    cat_for_chia: OfferSpecification = {
         wallet_maker.id(): 3,
         cat_wallet_maker.id(): -4,  # The taker has no knowledge of this CAT yet
     }
-    cat_for_cat: OfferSummary = {
+    cat_for_cat: OfferSpecification = {
         bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): -5,
         new_cat_wallet_maker.id(): 6,
     }
-    chia_for_multiple_cat: OfferSummary = {
+    chia_for_multiple_cat: OfferSpecification = {
         wallet_maker.id(): -7,
         cat_wallet_maker.id(): 8,
         new_cat_wallet_maker.id(): 9,
     }
-    multiple_cat_for_chia: OfferSummary = {
+    multiple_cat_for_chia: OfferSpecification = {
         wallet_maker.id(): 10,
         cat_wallet_maker.id(): -11,
         new_cat_wallet_maker.id(): -12,
     }
-    chia_and_cat_for_cat: OfferSummary = {
+    chia_and_cat_for_cat: OfferSpecification = {
         wallet_maker.id(): -13,
         cat_wallet_maker.id(): -14,
         new_cat_wallet_maker.id(): 15,
@@ -1673,12 +1673,12 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework, wall
         ]
     )
 
-    cat_for_chia: OfferSummary = {
+    cat_for_chia: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: 1,
         env_maker.wallet_aliases["cat"]: -2,
     }
 
-    chia_for_cat: OfferSummary = {
+    chia_for_cat: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: -3,
         env_maker.wallet_aliases["cat"]: 4,
     }
@@ -1846,7 +1846,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework, wall
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
     # Now let's test the case where two coins need to be spent in order to cancel
-    chia_and_cat_for_something: OfferSummary = {
+    chia_and_cat_for_something: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: -5,
         env_maker.wallet_aliases["cat"]: -6,
         bytes32.zeros: 1,  # Doesn't matter
@@ -1991,7 +1991,7 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework, wallet_t
         ]
     )
 
-    cat_for_chia: OfferSummary = {
+    cat_for_chia: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: 1000,
         env_maker.wallet_aliases["cat"]: -4,
     }
@@ -2182,7 +2182,7 @@ async def test_trade_bad_spend(wallet_environments: WalletTestFramework, wallet_
         ]
     )
 
-    cat_for_chia: OfferSummary = {
+    cat_for_chia: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: 1000,
         env_maker.wallet_aliases["cat"]: -4,
     }
@@ -2304,7 +2304,7 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework, wallet_t
         ]
     )
 
-    cat_for_chia: OfferSummary = {
+    cat_for_chia: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: 1000,
         env_maker.wallet_aliases["cat"]: -4,
     }
@@ -2449,15 +2449,15 @@ async def test_aggregated_trade_state(wallet_environments: WalletTestFramework, 
         ]
     )
 
-    cat_for_chia: OfferSummary = {
+    cat_for_chia: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: 2,
         env_maker.wallet_aliases["cat"]: -2,
     }
-    chia_for_cat: OfferSummary = {
+    chia_for_cat: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: -1,
         env_maker.wallet_aliases["cat"]: 1,
     }
-    combined_summary: OfferSummary = {
+    combined_summary: OfferSpecification = {
         env_maker.wallet_aliases["xch"]: cat_for_chia[env_maker.wallet_aliases["xch"]]
         + chia_for_cat[env_maker.wallet_aliases["xch"]],
         env_maker.wallet_aliases["cat"]: cat_for_chia[env_maker.wallet_aliases["cat"]]
