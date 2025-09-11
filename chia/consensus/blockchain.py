@@ -155,32 +155,18 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    def _initialize_caches(self) -> None:
+    async def _load_chain_from_store(self) -> None:
         """
-        Initialize the blockchain cache data structures.
+        Initializes the state of the Blockchain class from the database.
         """
         self._block_records = {}
         self._heights_in_cache = {}
-
-    async def _load_recent_blocks_from_store(self) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
-        """
-        Load recent blocks from the consensus store.
-        Returns block records and peak hash.
-        """
-        return await self.consensus_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
-
-    def _populate_cache_with_blocks(self, block_records: dict[bytes32, BlockRecord]) -> None:
-        """
-        Add the loaded block records to the cache.
-        """
+        block_records, peak = await self.consensus_store.get_block_records_close_to_peak(
+            self.constants.BLOCKS_CACHE_SIZE
+        )
         for block in block_records.values():
             self.add_block_record(block)
 
-    def _set_peak_height_from_blocks(self, block_records: dict[bytes32, BlockRecord], peak: Optional[bytes32]) -> None:
-        """
-        Set the peak height based on loaded blocks.
-        Handles the case where no blocks are loaded (empty blockchain).
-        """
         if len(block_records) == 0:
             assert peak is None
             self._peak_height = None
@@ -188,24 +174,8 @@ class Blockchain:
 
         assert peak is not None
         self._peak_height = self.block_record(peak).height
-
-    def _validate_blockchain_state(self) -> None:
-        """
-        Validate the loaded blockchain state for consistency.
-        """
-        if self._peak_height is not None:
-            assert self.consensus_store.contains_height(self._peak_height)
-            assert not self.consensus_store.contains_height(uint32(self._peak_height + 1))
-
-    async def _load_chain_from_store(self) -> None:
-        """
-        Initializes the state of the Blockchain class from the database.
-        """
-        self._initialize_caches()
-        block_records, peak = await self._load_recent_blocks_from_store()
-        self._populate_cache_with_blocks(block_records)
-        self._set_peak_height_from_blocks(block_records, peak)
-        self._validate_blockchain_state()
+        assert self.consensus_store.contains_height(self._peak_height)
+        assert not self.consensus_store.contains_height(uint32(self._peak_height + 1))
 
     def get_peak(self) -> Optional[BlockRecord]:
         """
