@@ -186,6 +186,8 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetAllOffers,
+    GetAllOffersResponse,
     GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
@@ -2370,36 +2372,32 @@ class WalletRpcApi:
             trade_record,
         )
 
-    async def get_all_offers(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        start: int = request.get("start", 0)
-        end: int = request.get("end", 10)
-        exclude_my_offers: bool = request.get("exclude_my_offers", False)
-        exclude_taken_offers: bool = request.get("exclude_taken_offers", False)
-        include_completed: bool = request.get("include_completed", False)
-        sort_key: Optional[str] = request.get("sort_key", None)
-        reverse: bool = request.get("reverse", False)
-        file_contents: bool = request.get("file_contents", False)
-
         all_trades = await trade_mgr.trade_store.get_trades_between(
-            start,
-            end,
-            sort_key=sort_key,
-            reverse=reverse,
-            exclude_my_offers=exclude_my_offers,
-            exclude_taken_offers=exclude_taken_offers,
-            include_completed=include_completed,
+            request.start,
+            request.end,
+            sort_key=request.sort_key,
+            reverse=request.reverse,
+            exclude_my_offers=request.exclude_my_offers,
+            exclude_taken_offers=request.exclude_taken_offers,
+            include_completed=request.include_completed,
         )
         result = []
-        offer_values: Optional[list[str]] = [] if file_contents else None
+        offer_values: Optional[list[str]] = [] if request.file_contents else None
         for trade in all_trades:
-            result.append(trade.to_json_dict_convenience())
-            if file_contents and offer_values is not None:
+            result.append(trade)
+            if request.file_contents:
                 offer_to_return: bytes = trade.offer if trade.taken_offer is None else trade.taken_offer
-                offer_values.append(Offer.from_bytes(offer_to_return).to_bech32())
+                # semantics guarantee this to be not None
+                offer_values.append(Offer.from_bytes(offer_to_return).to_bech32())  # type: ignore[union-attr]
 
-        return {"trade_records": result, "offers": offer_values}
+        return GetAllOffersResponse(
+            trade_records=result,
+            offers=offer_values,
+        )
 
     @marshal
     async def get_offers_count(self, request: Empty) -> GetOffersCountResponse:

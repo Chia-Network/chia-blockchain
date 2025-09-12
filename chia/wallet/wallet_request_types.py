@@ -1976,6 +1976,42 @@ class GetOfferResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetAllOffers(Streamable):
+    start: uint16 = uint16(0)
+    end: uint16 = uint16(10)
+    exclude_my_offers: bool = False
+    exclude_taken_offers: bool = False
+    include_completed: bool = False
+    sort_key: Optional[str] = None
+    reverse: bool = False
+    file_contents: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAllOffersResponse(Streamable):
+    offers: Optional[list[str]]
+    trade_records: list[TradeRecord]
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {**super().to_json_dict(), "trade_records": [tr.to_json_dict_convenience() for tr in self.trade_records]}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            offers=json_dict["offers"],
+            trade_records=[
+                TradeRecord.from_json_dict_convenience(
+                    json_tr,
+                    bytes(Offer.from_bech32(json_dict["offers"][i])).hex() if json_dict["offers"] is not None else "",
+                )
+                for i, json_tr in enumerate(json_dict["trade_records"])
+            ],
+        )
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
 

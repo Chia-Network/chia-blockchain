@@ -131,6 +131,7 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDID,
     DIDUpdateMetadata,
     FungibleAsset,
+    GetAllOffers,
     GetCoinRecordsByNames,
     GetNextAddress,
     GetNotifications,
@@ -1595,7 +1596,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, validate_only=True),
         tx_config=wallet_environments.tx_config,
     )
-    all_offers = await env_1.rpc_client.get_all_offers()
+    all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 0
 
     driver_dict = {
@@ -1639,7 +1640,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert offer_validity_response.id == offer.name()
     assert offer_validity_response.valid
 
-    all_offers = await env_1.rpc_client.get_all_offers(file_contents=True)
+    all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers(file_contents=True))).trade_records
     assert len(all_offers) == 1
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
@@ -1678,7 +1679,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         CreateOfferForIDs(offer={str(1): "-5", str(cat_wallet_id): "1"}, fee=uint64(1)),
         tx_config=wallet_environments.tx_config,
     )
-    all_offers = await env_1.rpc_client.get_all_offers()
+    all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 2
     offer_count = await env_1.rpc_client.get_offers_count()
     assert offer_count.total == 2
@@ -1768,25 +1769,35 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         return [t.trade_id for t in trades]
 
     trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name()))).trade_record
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True)  # confirmed at index descending
+    all_offers = (  # confirmed at index descending
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True))
+    ).trade_records
     assert len(all_offers) == 2
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
-    all_offers = await env_1.rpc_client.get_all_offers(
-        include_completed=True, reverse=True
-    )  # confirmed at index ascending
+    all_offers = (  # confirmed at index ascending
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, reverse=True))
+    ).trade_records
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
+    all_offers = (  # most relevant
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, sort_key="RELEVANCE"))
+    ).trade_records
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await env_1.rpc_client.get_all_offers(
-        include_completed=True, sort_key="RELEVANCE", reverse=True
-    )  # least relevant
+    all_offers = (  # least relevant
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, sort_key="RELEVANCE", reverse=True))
+    ).trade_records
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=0, end=1)
+    all_offers = (
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(1)))
+    ).trade_records
     assert len(all_offers) == 1
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=50)
+    all_offers = (
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(10)))
+    ).trade_records
     assert len(all_offers) == 0
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=0, end=50)
+    all_offers = (
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(50)))
+    ).trade_records
     assert len(all_offers) == 2
 
     await env_1.rpc_client.create_offer_for_ids(
@@ -1794,11 +1805,25 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 2
     )
     await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, batch_size=1)
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
     )
     await wallet_environments.process_pending_states(
         [
@@ -1835,11 +1860,25 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 2
     )
     await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, cancel_all=True)
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
     )
 
     await wallet_environments.process_pending_states(
@@ -1883,15 +1922,36 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 1
     )
     await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, asset_id=bytes32.zeros)
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 1
     )
     await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, asset_id=cat_asset_id)
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
     )
 
     with pytest.raises(ValueError, match="not currently supported"):
