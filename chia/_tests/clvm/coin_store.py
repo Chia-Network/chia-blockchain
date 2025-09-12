@@ -111,13 +111,8 @@ class CoinStore:
             self._add_coin_entry(new_coin, now)
         for spent_coin in removals:
             coin_name = spent_coin.name()
-            self._db[coin_name] = CoinRecord(
-                self._db[coin_name].coin,
-                self._db[coin_name].confirmed_block_index,
-                now.height,
-                self._db[coin_name].coinbase,
-                self._db[coin_name].timestamp,
-            )
+            coin_record = self._db[coin_name]
+            self._db[coin_name] = coin_record.replace(spent_block_index=now.height)
         return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:
