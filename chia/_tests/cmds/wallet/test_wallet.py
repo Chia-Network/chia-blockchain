@@ -75,6 +75,7 @@ from chia.wallet.wallet_request_types import (
     SendTransactionResponse,
     SpendClawbackCoins,
     SpendClawbackCoinsResponse,
+    TakeOffer,
     TakeOfferResponse,
     TransactionRecordWithMetadata,
     WalletInfoResponse,
@@ -1055,18 +1056,19 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     class TakeOfferRpcClient(TestWalletRpcClient):
         async def take_offer(
             self,
-            offer: Offer,
+            request: TakeOffer,
             tx_config: TXConfig,
-            solver: Optional[dict[str, Any]] = None,
-            fee: uint64 = uint64(0),
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> TakeOfferResponse:
-            self.add_to_log("take_offer", (offer, tx_config, solver, fee, push, timelock_info))
+            self.add_to_log(
+                "take_offer",
+                (request.parsed_offer, tx_config, request.solver, request.fee, request.push, timelock_info),
+            )
             return TakeOfferResponse(
                 [STD_UTX],
                 [STD_TX],
-                offer,
+                request.parsed_offer,
                 TradeRecord(
                     confirmed_at_index=uint32(0),
                     accepted_at_time=uint64(123456789),
@@ -1074,10 +1076,10 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                     is_my_offer=False,
                     sent=uint32(1),
                     sent_to=[("aaaaa", uint8(1), None)],
-                    offer=bytes(offer),
+                    offer=bytes(request.parsed_offer),
                     taken_offer=None,
-                    coins_of_interest=offer.get_involved_coins(),
-                    trade_id=offer.name(),
+                    coins_of_interest=request.parsed_offer.get_involved_coins(),
+                    trade_id=request.parsed_offer.name(),
                     status=uint32(TradeStatus.PENDING_ACCEPT.value),
                     valid_times=ConditionValidTimes(),
                 ),
