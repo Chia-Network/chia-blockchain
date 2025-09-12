@@ -919,6 +919,10 @@ async def test_new_peak(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    reason="We can no longer (reliably) farm blocks from before the hard fork",
+)
 async def test_new_transaction_and_mempool(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -946,8 +950,10 @@ async def test_new_transaction_and_mempool(
 
     # Makes a bunch of coins
     conditions_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
-    # This should fit in one transaction
-    for _ in range(100):
+    # This should fit in one transaction. The test constants have a max block cost of 400,000,000
+    # and the default max *transaction* cost is half that, so 200,000,000. CREATE_COIN has a cost of
+    # 1,800,000, we create 80 coins
+    for _ in range(80):
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
         puzzle_hashes.append(receiver_puzzlehash)
         output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000000)])
@@ -1046,8 +1052,8 @@ async def test_new_transaction_and_mempool(
     # these numbers reflect the capacity of the mempool. In these
     # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
     # and MAX_BLOCK_COST_CLVM
-    assert included_tx == 23
-    assert not_included_tx == 10
+    assert included_tx == 20
+    assert not_included_tx == 7
     assert seen_bigger_transaction_has_high_fee
 
     # Mempool is full
