@@ -893,7 +893,7 @@ async def take_offer(
             print()
             cli_confirm("Would you like to take this offer? (y/n): ")
             res = await wallet_client.take_offer(
-                TakeOffer(offer.to_bech32(), fee=fee, push=push),
+                TakeOffer(offer=offer.to_bech32(), fee=fee, push=push),
                 timelock_info=condition_valid_times,
                 tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             )
