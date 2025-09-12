@@ -60,6 +60,8 @@ from chia.wallet.wallet_request_types import (
     GetHeightInfoResponse,
     GetNextAddress,
     GetNextAddressResponse,
+    GetOffer,
+    GetOfferResponse,
     GetTransaction,
     GetTransactions,
     GetTransactionsResponse,
@@ -1163,22 +1165,25 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
 
     # set RPC Client
     class CancelOfferRpcClient(TestWalletRpcClient):
-        async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
-            self.add_to_log("get_offer", (trade_id, file_contents))
+        async def get_offer(self, request: GetOffer) -> GetOfferResponse:
+            self.add_to_log("get_offer", (request.trade_id, request.file_contents))
             offer = Offer.from_bech32(test_offer_file_bech32)
-            return TradeRecord(
-                confirmed_at_index=uint32(0),
-                accepted_at_time=uint64(0),
-                created_at_time=uint64(12345678),
-                is_my_offer=True,
-                sent=uint32(0),
-                sent_to=[],
-                offer=bytes(offer),
-                taken_offer=None,
-                coins_of_interest=offer.get_involved_coins(),
-                trade_id=offer.name(),
-                status=uint32(TradeStatus.PENDING_ACCEPT.value),
-                valid_times=ConditionValidTimes(),
+            return GetOfferResponse(
+                test_offer_file_bech32,
+                TradeRecord(
+                    confirmed_at_index=uint32(0),
+                    accepted_at_time=uint64(0),
+                    created_at_time=uint64(12345678),
+                    is_my_offer=True,
+                    sent=uint32(0),
+                    sent_to=[],
+                    offer=bytes(offer),
+                    taken_offer=None,
+                    coins_of_interest=offer.get_involved_coins(),
+                    trade_id=offer.name(),
+                    status=uint32(TradeStatus.PENDING_ACCEPT.value),
+                    valid_times=ConditionValidTimes(),
+                ),
             )
 
         async def cancel_offer(

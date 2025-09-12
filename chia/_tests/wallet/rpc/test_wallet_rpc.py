@@ -133,6 +133,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetNextAddress,
     GetNotifications,
+    GetOffer,
     GetOfferSummary,
     GetPrivateKey,
     GetSpendableCoins,
@@ -1622,7 +1623,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
 
     await env_1.rpc_client.cancel_offer(offer.name(), wallet_environments.tx_config, secure=False)
 
-    trade_record = await env_1.rpc_client.get_offer(offer.name(), file_contents=True)
+    trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name(), file_contents=True))).trade_record
     assert trade_record.offer == bytes(offer)
     assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
@@ -1630,7 +1631,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         offer.name(), wallet_environments.tx_config, fee=uint64(1), secure=True
     )
 
-    trade_record = await env_1.rpc_client.get_offer(offer.name())
+    trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name()))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
     create_res = await env_1.rpc_client.create_offer_for_ids(
@@ -1717,7 +1718,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
 
     async def is_trade_confirmed(client: WalletRpcClient, offer: Offer) -> bool:
-        trade_record = await client.get_offer(offer.name())
+        trade_record = (await client.get_offer(GetOffer(offer.name()))).trade_record
         return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
 
     await time_out_assert(15, is_trade_confirmed, True, env_1.rpc_client, offer)
@@ -1726,7 +1727,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     def only_ids(trades: list[TradeRecord]) -> list[bytes32]:
         return [t.trade_id for t in trades]
 
-    trade_record = await env_1.rpc_client.get_offer(offer.name())
+    trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name()))).trade_record
     all_offers = await env_1.rpc_client.get_all_offers(include_completed=True)  # confirmed at index descending
     assert len(all_offers) == 2
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
