@@ -1941,7 +1941,7 @@ class CreateOfferForIDsResponse(_OfferEndpointResponse):
 @streamable
 @dataclass(frozen=True)
 class TakeOffer(TransactionEndpointRequest):
-    offer: str
+    offer: str = field(default_factory=default_raise)
     solver: Optional[Solver] = None
 
     @cached_property
