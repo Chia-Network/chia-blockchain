@@ -107,6 +107,8 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffer,
+    GetOfferResponse,
     GetOffersCountResponse,
     GetOfferSummary,
     GetOfferSummaryResponse,
@@ -702,10 +704,8 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
-        res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        offer_str = bytes(Offer.from_bech32(res["offer"])).hex() if file_contents else ""
-        return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
+    async def get_offer(self, request: GetOffer) -> GetOfferResponse:
+        return GetOfferResponse.from_json_dict(await self.fetch("get_offer", request.to_json_dict()))
 
     async def get_all_offers(
         self,
