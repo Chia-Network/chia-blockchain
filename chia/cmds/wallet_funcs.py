@@ -64,6 +64,7 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     ExtendDerivationIndex,
     FungibleAsset,
+    GetAllOffers,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -769,16 +770,20 @@ async def get_offers(
 
             # Traverse offers page by page
             while True:
-                new_records: list[TradeRecord] = await wallet_client.get_all_offers(
-                    start,
-                    end,
-                    sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
-                    reverse=reverse,
-                    file_contents=file_contents,
-                    exclude_my_offers=exclude_my_offers,
-                    exclude_taken_offers=exclude_taken_offers,
-                    include_completed=include_completed,
-                )
+                new_records: list[TradeRecord] = (
+                    await wallet_client.get_all_offers(
+                        GetAllOffers(
+                            start=uint16(start),
+                            end=uint16(end),
+                            sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
+                            reverse=reverse,
+                            file_contents=file_contents,
+                            exclude_my_offers=exclude_my_offers,
+                            exclude_taken_offers=exclude_taken_offers,
+                            include_completed=include_completed,
+                        )
+                    )
+                ).trade_records
                 records.extend(new_records)
 
                 # If fewer records were returned than requested, we're done

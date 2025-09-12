@@ -56,6 +56,8 @@ from chia.wallet.wallet_request_types import (
     ExtendDerivationIndex,
     ExtendDerivationIndexResponse,
     FungibleAsset,
+    GetAllOffers,
+    GetAllOffersResponse,
     GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetNextAddress,
@@ -948,32 +950,22 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     # set RPC Client
     class GetOffersRpcClient(TestWalletRpcClient):
-        async def get_all_offers(
-            self,
-            start: int = 0,
-            end: int = 50,
-            sort_key: Optional[str] = None,
-            reverse: bool = False,
-            file_contents: bool = False,
-            exclude_my_offers: bool = False,
-            exclude_taken_offers: bool = False,
-            include_completed: bool = False,
-        ) -> list[TradeRecord]:
+        async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
             self.add_to_log(
                 "get_all_offers",
                 (
-                    start,
-                    end,
-                    sort_key,
-                    reverse,
-                    file_contents,
-                    exclude_my_offers,
-                    exclude_taken_offers,
-                    include_completed,
+                    request.start,
+                    request.end,
+                    request.sort_key,
+                    request.reverse,
+                    request.file_contents,
+                    request.exclude_my_offers,
+                    request.exclude_taken_offers,
+                    request.include_completed,
                 ),
             )
             records: list[TradeRecord] = []
-            for i in reversed(range(start, end - 1)):  # reversed to match the sort order
+            for i in reversed(range(request.start, request.end - 1)):  # reversed to match the sort order
                 trade_offer = TradeRecord(
                     confirmed_at_index=uint32(0),
                     accepted_at_time=None,
@@ -997,7 +989,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                     ),
                 )
                 records.append(trade_offer)
-            return records
+            return GetAllOffersResponse([], records)
 
     inst_rpc_client = GetOffersRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
