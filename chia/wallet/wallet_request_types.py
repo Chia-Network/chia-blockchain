@@ -1949,6 +1949,33 @@ class TakeOfferResponse(_OfferEndpointResponse):  # Inheriting for de-dup sake
 
 @streamable
 @dataclass(frozen=True)
+class GetOffer(Streamable):
+    trade_id: bytes32
+    file_contents: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetOfferResponse(Streamable):
+    offer: Optional[str]
+    trade_record: TradeRecord
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {**super().to_json_dict(), "trade_record": self.trade_record.to_json_dict_convenience()}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            offer=json_dict["offer"],
+            trade_record=TradeRecord.from_json_dict_convenience(
+                json_dict["trade_record"],
+                bytes(Offer.from_bech32(json_dict["offer"])).hex() if json_dict["offer"] is not None else "",
+            ),
+        )
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
 

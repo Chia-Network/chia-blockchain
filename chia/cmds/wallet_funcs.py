@@ -66,6 +66,7 @@ from chia.wallet.wallet_request_types import (
     FungibleAsset,
     GetNextAddress,
     GetNotifications,
+    GetOffer,
     GetTransaction,
     GetTransactions,
     GetWalletBalance,
@@ -787,7 +788,7 @@ async def get_offers(
                 start = end
                 end += batch_size
         else:
-            records = [await wallet_client.get_offer(offer_id, file_contents)]
+            records = [(await wallet_client.get_offer(GetOffer(offer_id, file_contents))).trade_record]
             if filepath is not None:
                 with open(pathlib.Path(filepath), "w") as file:
                     file.write(Offer.from_bytes(records[0].offer).to_bech32())
@@ -919,7 +920,7 @@ async def cancel_offer(
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        trade_record = await wallet_client.get_offer(offer_id, file_contents=True)
+        trade_record = (await wallet_client.get_offer(GetOffer(offer_id, file_contents=True))).trade_record
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
         cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")

@@ -196,6 +196,8 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffer,
+    GetOfferResponse,
     GetOffersCountResponse,
     GetOfferSummary,
     GetOfferSummaryResponse,
@@ -2353,18 +2355,20 @@ class WalletRpcApi:
             trade_record,
         )
 
-    async def get_offer(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_offer(self, request: GetOffer) -> GetOfferResponse:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
-        trade_id = bytes32.from_hexstr(request["trade_id"])
-        file_contents: bool = request.get("file_contents", False)
-        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(bytes32(trade_id))
+        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(request.trade_id)
         if trade_record is None:
-            raise ValueError(f"No trade with trade id: {trade_id.hex()}")
+            raise ValueError(f"No trade with trade id: {request.trade_id.hex()}")
 
         offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
-        offer_value: Optional[str] = Offer.from_bytes(offer_to_return).to_bech32() if file_contents else None
-        return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
+        offer: Optional[str] = Offer.from_bytes(offer_to_return).to_bech32() if request.file_contents else None
+        return GetOfferResponse(
+            offer,
+            trade_record,
+        )
 
     async def get_all_offers(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
