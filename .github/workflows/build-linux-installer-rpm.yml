@@ -82,6 +82,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Node 22.x
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22.x"
+
       - name: Get latest madmax plotter
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
