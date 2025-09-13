@@ -22,7 +22,6 @@ from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
@@ -31,7 +30,7 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     GetSyncStatusResponse,
@@ -231,46 +230,6 @@ class TestWalletRpcClient(TestRpcClient):
                 {asset.asset: asset.amount for asset in request.fungible_assets},
             )
         )
-
-    async def get_spendable_coins(
-        self,
-        wallet_id: int,
-        coin_selection_config: CoinSelectionConfig,
-    ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
-        """
-        We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
-        """
-        self.add_to_log(
-            "get_spendable_coins",
-            (wallet_id, coin_selection_config),
-        )
-        confirmed_records = [
-            CoinRecord(
-                Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
-                uint32(123456),
-                uint32(0),
-                False,
-                uint64(0),
-            ),
-            CoinRecord(
-                Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(1234560000)),
-                uint32(123456),
-                uint32(0),
-                False,
-                uint64(0),
-            ),
-        ]
-        unconfirmed_removals = [
-            CoinRecord(
-                Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(1234570000)),
-                uint32(123457),
-                uint32(0),
-                True,
-                uint64(0),
-            )
-        ]
-        unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
-        return confirmed_records, unconfirmed_removals, unconfirmed_additions
 
     async def send_transaction_multi(
         self,
