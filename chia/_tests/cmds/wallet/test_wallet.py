@@ -42,6 +42,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     BalanceResponse,
+    CancelOffer,
     CancelOfferResponse,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
@@ -1180,14 +1181,14 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
 
         async def cancel_offer(
             self,
-            trade_id: bytes32,
+            request: CancelOffer,
             tx_config: TXConfig,
-            fee: uint64 = uint64(0),
-            secure: bool = True,
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CancelOfferResponse:
-            self.add_to_log("cancel_offer", (trade_id, tx_config, fee, secure, push, timelock_info))
+            self.add_to_log(
+                "cancel_offer", (request.trade_id, tx_config, request.fee, request.secure, request.push, timelock_info)
+            )
             return CancelOfferResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CancelOfferRpcClient()
