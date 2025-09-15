@@ -1740,7 +1740,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         == 2
     )
     await env_1.rpc_client.cancel_offers(
-        CancelOffers(secure=True, batch_size=uint16(1)), tx_config=wallet_environments.tx_config
+        CancelOffers(secure=True, batch_size=uint16(1), push=True), tx_config=wallet_environments.tx_config
     )
     assert (
         len(
@@ -1797,7 +1797,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         == 2
     )
     await env_1.rpc_client.cancel_offers(
-        CancelOffers(secure=True, cancel_all=True), tx_config=wallet_environments.tx_config
+        CancelOffers(secure=True, cancel_all=True, push=True), tx_config=wallet_environments.tx_config
     )
     assert (
         len(
@@ -1861,7 +1861,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         == 1
     )
     await env_1.rpc_client.cancel_offers(
-        CancelOffers(secure=True, asset_id=bytes32.zeros.hex()), tx_config=wallet_environments.tx_config
+        CancelOffers(secure=True, asset_id=bytes32.zeros.hex(), push=True), tx_config=wallet_environments.tx_config
     )
     assert (
         len(
@@ -1874,7 +1874,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         == 1
     )
     await env_1.rpc_client.cancel_offers(
-        CancelOffers(secure=True, asset_id=cat_asset_id.hex()), tx_config=wallet_environments.tx_config
+        CancelOffers(secure=True, asset_id=cat_asset_id.hex(), push=True), tx_config=wallet_environments.tx_config
     )
     assert (
         len(
