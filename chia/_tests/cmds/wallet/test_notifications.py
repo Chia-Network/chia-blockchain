@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from asyncio.locks import Condition
 from pathlib import Path
 
 from chia_rs.sized_bytes import bytes32
@@ -9,7 +8,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_request_types import (
