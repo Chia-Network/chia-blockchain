@@ -358,12 +358,6 @@ class WSChiaConnection:
         self.log.error(f"Banning peer for {ban_seconds} seconds: {self.peer_info.host} {log_err_msg}")
         await self.close(ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE)
 
-    async def ban_peer_consensus_error(self, log_err_msg: str) -> None:
-        """Ban peer for consensus rule violation"""
-        ban_seconds = CONSENSUS_ERROR_BAN_SECONDS
-        self.log.error(f"Banning peer for {ban_seconds} seconds: {self.peer_info.host} {log_err_msg}")
-        await self.close(ban_seconds)
-
     def cancel_pending_requests(self) -> None:
         for message_id, event in self.pending_requests.items():
             try:

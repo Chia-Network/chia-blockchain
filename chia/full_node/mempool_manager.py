@@ -460,7 +460,6 @@ class MempoolManager:
             )
         # validate_clvm_and_signature raises a ValueError with an error code
         except ValueError as e:
-            log.warning(f"max CLVM cost: {self.max_tx_clvm_cost}")
             # Convert that to a ValidationError
             if len(e.args) > 1:
                 error = Err(e.args[1])

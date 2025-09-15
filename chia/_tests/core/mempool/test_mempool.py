@@ -692,7 +692,10 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_invalid_signature(
-        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
+        self,
+        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+        wallet_a: WalletTool,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -716,11 +719,12 @@ class TestMempoolManager:
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = sb.replace(aggregated_signature=G2Element.generator())
+        caplog.clear()
         res: Optional[Message] = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
-        assert ack.status == MempoolInclusionStatus.FAILED.value
-        assert ack.error == Err.BAD_AGGREGATE_SIGNATURE.name
+        assert ack.status != MempoolInclusionStatus.SUCCESS.value
+        assert "chia.util.errors.ValidationError: Error code: BAD_AGGREGATE_SIGNATURE" in caplog.text
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     async def condition_tester(

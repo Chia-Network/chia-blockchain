@@ -389,7 +389,6 @@ class BlockTools:
                 program = simple_solution_generator(transaction_data).program
             block_refs = []
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
-            print(f"computed cost: {cost} additions: {len(additions)} removals: {len(removals)}")
             return NewBlockGenerator(
                 program,
                 [],

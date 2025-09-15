@@ -88,7 +88,7 @@ from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
-from chia.util.errors import ConsensusError, Err, TimestampError
+from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
 from chia.util.path import path_from_root
@@ -503,11 +503,16 @@ class FullNode:
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error in _handle_one_transaction, closing: {error_stack}")
+        except ValidationError as e:
+            self.log.exception("Error in _handle_one_transaction, closing")
             if peer is not None:
                 await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            entry.done.set((MempoolInclusionStatus.FAILED, e.code))
+        except Exception:
+            self.log.exception("Error in _handle_one_transaction, closing")
+            if peer is not None:
+                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            entry.done.set((MempoolInclusionStatus.FAILED, Err.UNKNOWN))
         finally:
             self.add_transaction_semaphore.release()
 
