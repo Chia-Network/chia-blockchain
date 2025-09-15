@@ -111,9 +111,6 @@ jobs:
             apt: "3.13"
             install_sh: "3.13"
             matrix: "3.13"
-            exclude_from:
-              limited: True
-              main: True
         exclude:
           - arch:
               matrix: arm
