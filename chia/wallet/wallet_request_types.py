@@ -2012,6 +2012,13 @@ class GetAllOffersResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CancelOffer(TransactionEndpointRequest):
+    trade_id: bytes32 = field(default_factory=default_raise)
+    secure: bool = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
 

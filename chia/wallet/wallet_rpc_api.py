@@ -111,6 +111,8 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CancelOffer,
+    CancelOfferResponse,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
     CATGetAssetID,
@@ -2389,22 +2391,24 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def cancel_offer(
         self,
-        request: dict[str, Any],
+        request: CancelOffer,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CancelOfferResponse:
         wsm = self.service.wallet_state_manager
-        secure = request["secure"]
-        trade_id = bytes32.from_hexstr(request["trade_id"])
-        fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
             await wsm.trade_manager.cancel_pending_offers(
-                [trade_id], action_scope, fee=fee, secure=secure, extra_conditions=extra_conditions
+                [request.trade_id],
+                action_scope,
+                fee=request.fee,
+                secure=request.secure,
+                extra_conditions=extra_conditions,
             )
 
-        return {"transactions": None}  # tx_endpoint wrapper will take care of this
+        return CancelOfferResponse([], [])  # tx_endpoint will fill in default values here
 
     @tx_endpoint(push=True, merge_spends=False)
     async def cancel_offers(

@@ -19,6 +19,7 @@ from chia.wallet.wallet_request_types import (
     AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
+    CancelOffer,
     CancelOfferResponse,
     CancelOffersResponse,
     CATAssetIDToName,
@@ -715,28 +716,16 @@ class WalletRpcClient(RpcClient):
 
     async def cancel_offer(
         self,
-        trade_id: bytes32,
+        request: CancelOffer,
         tx_config: TXConfig,
-        fee: int = 0,
-        secure: bool = True,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> CancelOfferResponse:
-        res = await self.fetch(
-            "cancel_offer",
-            {
-                "trade_id": trade_id.hex(),
-                "secure": secure,
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return CancelOfferResponse.from_json_dict(
+            await self.fetch(
+                "cancel_offer", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-
-        return json_deserialize_with_clvm_streamable(res, CancelOfferResponse)
 
     async def cancel_offers(
         self,
