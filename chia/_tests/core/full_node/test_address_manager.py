@@ -560,7 +560,7 @@ class TestPeerManager:
     # use tmp_path pytest fixture to create a temporary directory
     async def test_serialization(self, tmp_path: Path):
         addrman = AddressManagerTest()
-        now = int(math.floor(time.time()))
+        now = math.floor(time.time())
         t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
         t_peer2 = TimestampedPeerInfo("1050:0000:0000:0000:0005:0600:300c:326b", uint16(9999), uint64(now - 20000))
         t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
@@ -587,7 +587,7 @@ class TestPeerManager:
     @pytest.mark.anyio
     async def test_bad_ip_encoding(self, tmp_path: Path):
         addrman = AddressManagerTest()
-        now = int(math.floor(time.time()))
+        now = math.floor(time.time())
         t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
         t_peer2 = TimestampedPeerInfo("1050:0000:0000:0000:0005:0600:300c:326b", uint16(9999), uint64(now - 20000))
         t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
@@ -725,7 +725,7 @@ class TestPeerManager:
 
         # create a file with the old serialization, then migrate to new serialization
         addrman = AddressManagerTest()
-        now = int(math.floor(time.time()))
+        now = math.floor(time.time())
         t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
         t_peer2 = TimestampedPeerInfo("1050:0000:0000:0000:0005:0600:300c:326b", uint16(9999), uint64(now - 20000))
         t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))

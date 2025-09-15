@@ -220,9 +220,9 @@ class TestKeychain:
         test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
         all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
-        for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
+        for idx, [entropy_hex, full_mnemonic, seed_hex, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)
-            seed = bytes.fromhex(seed)
+            seed = bytes.fromhex(seed_hex)
 
             assert mnemonic_from_short_words(short_mnemonic) == full_mnemonic
             assert bytes_from_mnemonic(short_mnemonic) == entropy_bytes
@@ -355,7 +355,7 @@ async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
     keychain: Keychain = get_temp_keyring
     expected_keys = []
     # Add 10 keys and validate the result `get_key` for each of them after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:
@@ -385,7 +385,7 @@ async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
     assert keychain.get_keys(include_secrets) == []
     expected_keys = []
     # Add 10 keys and validate the result of `get_keys` after each addition
-    for _ in range(0, 10):
+    for _ in range(10):
         key_data = KeyData.generate()
         mnemonic_str = key_data.mnemonic_str()
         if not include_secrets:

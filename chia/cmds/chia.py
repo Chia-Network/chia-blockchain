@@ -24,6 +24,7 @@ from chia.cmds.plots import plots_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
+from chia.cmds.solver import solver_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
@@ -53,7 +54,7 @@ CONTEXT_SETTINGS = {
 @click.option(
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )
-@click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the keyring passphrase from")
+@click.option("--passphrase-file", type=click.File("r"), help="File to read the keyring passphrase from")
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -81,7 +82,7 @@ def cli(
             if Keychain.master_passphrase_is_valid(passphrase):
                 cache_passphrase(passphrase)
             else:
-                raise KeychainCurrentPassphraseIsInvalid()
+                raise KeychainCurrentPassphraseIsInvalid
         except KeychainCurrentPassphraseIsInvalid:
             if Path(passphrase_file.name).is_file():
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')
@@ -127,6 +128,7 @@ cli.add_command(configure_cmd)
 cli.add_command(init_cmd)
 cli.add_command(rpc_cmd)
 cli.add_command(show_cmd)
+cli.add_command(solver_cmd)
 cli.add_command(start_cmd)
 cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)

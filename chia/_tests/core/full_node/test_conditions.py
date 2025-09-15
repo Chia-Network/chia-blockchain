@@ -11,7 +11,6 @@ from typing import Optional
 import pytest
 from chia_rs import AugSchemeMPL, FullBlock, G2Element, SpendBundle
 from chia_rs.sized_ints import uint32, uint64
-from clvm.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
@@ -25,6 +24,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
@@ -355,6 +355,9 @@ class TestConditions:
             ("", "(66 0x3f {msg} {coin})", "(67 0x3f {msg} {coin})", 512, None),
             ("", "(66 0x3f {msg} {coin})", "(67 0x3f {msg} {coin})", 513, Err.TOO_MANY_ANNOUNCEMENTS),
         ],
+    )
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.HARD_FORK_2_0], reason="announce conditions limit was removed in hard-fork 3.0"
     )
     async def test_announce_conditions_limit(
         self,

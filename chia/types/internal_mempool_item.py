@@ -14,5 +14,5 @@ class InternalMempoolItem:
     spend_bundle: SpendBundle
     conds: SpendBundleConditions
     height_added_to_mempool: uint32
-    # Map of coin ID to coin spend data between the bundle and its NPCResult
+    # Map of coin ID to coin spend data between the bundle and its SpendBundleConditions
     bundle_coin_spends: dict[bytes32, BundleCoinSpend]

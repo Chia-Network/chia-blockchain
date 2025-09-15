@@ -26,14 +26,6 @@ from chia.cmds.signer import (
     SPOut,
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
-from chia.rpc.wallet_request_types import (
-    ApplySignatures,
-    ExecuteSigningInstructions,
-    GatherSigningInfo,
-    GatherSigningInfoResponse,
-    SubmitTransactions,
-)
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -76,8 +68,15 @@ from chia.wallet.util.clvm_streamable import (
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    SubmitTransactions,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -614,7 +613,9 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
     )
 
     AMOUNT = uint64(1)
-    async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, sign=False, push=False) as action_scope:
+    async with wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, sign=False, push=False
+    ) as action_scope:
         await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
 
@@ -847,8 +848,8 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
         with open("some file", "wb") as file:
             file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
-            with open("some file2", "wb") as file:
-                file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+            with open("some file2", "wb") as file2:
+                file2.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
         result = runner.invoke(
             cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]

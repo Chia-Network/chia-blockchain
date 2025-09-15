@@ -44,11 +44,11 @@ def test_compute_spend_hints_and_additions() -> None:
 
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0] for _ in range(0, 10000)]))
+            make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0] for _ in range(10000)]))
         )
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(parent_coin.coin, Program.to(1), Program.to([[50, bytes48.zeros, b""] for _ in range(0, 10000)]))
+            make_spend(parent_coin.coin, Program.to(1), Program.to([[50, bytes48.zeros, b""] for _ in range(10000)]))
         )
 
 

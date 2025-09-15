@@ -7,13 +7,11 @@ from typing import Any, Callable, Optional
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.rpc.wallet_request_types import VCAddProofs, VCGet, VCGetList, VCGetProofsForRoot, VCMint, VCRevoke, VCSpend
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -25,13 +23,26 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import (
+    GetTransactions,
+    GetWallets,
+    VCAddProofs,
+    VCGet,
+    VCGetList,
+    VCGetProofsForRoot,
+    VCMint,
+    VCRevoke,
+    VCSpend,
+    WalletInfoResponse,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -41,11 +52,12 @@ async def mint_cr_cat(
     wallet_node_0: WalletNode,
     client_0: WalletRpcClient,
     full_node_api: FullNodeSimulator,
+    tx_config: TXConfig,
     authorized_providers: list[bytes32] = [],
     tail: Program = Program.to(None),
     proofs_checker: ProofsChecker = ProofsChecker(["foo", "bar"]),
 ) -> None:
-    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         our_puzzle = await action_scope.get_puzzle(wallet_0.wallet_state_manager)
     cat_puzzle: Program = construct_cat_puzzle(
         CAT_MOD,
@@ -63,7 +75,7 @@ async def mint_cr_cat(
                     "amount": CAT_AMOUNT_0,
                 }
             ],
-            DEFAULT_TX_CONFIG,
+            tx_config,
             wallet_id=1,
         )
     ).signed_tx
@@ -314,7 +326,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert get_list_reponse.proof_dict[proof_root] == proofs.key_value_pairs
 
     # Mint CR-CAT
-    await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
+    await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, wallet_environments.tx_config, [did_id])
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -354,14 +366,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         wallet_node_0.wallet_state_manager.main_wallet,
         (await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT))[0],
     )
-    assert {
-        "data": bytes(cr_cat_wallet_0.info).hex(),
-        "id": env_0.dealias_wallet_id("crcat"),
-        "name": cr_cat_wallet_0.get_name(),
-        "type": cr_cat_wallet_0.type(),
-        "authorized_providers": [p.hex() for p in cr_cat_wallet_0.info.authorized_providers],
-        "flags_needed": cr_cat_wallet_0.info.proofs_checker.flags,
-    } == (await client_0.get_wallets(wallet_type=cr_cat_wallet_0.type()))[0]
+    assert (
+        WalletInfoResponse(
+            data=bytes(cr_cat_wallet_0.info).hex(),
+            id=env_0.dealias_wallet_id("crcat"),
+            name=cr_cat_wallet_0.get_name(),
+            type=uint8(cr_cat_wallet_0.type()),
+            authorized_providers=cr_cat_wallet_0.info.authorized_providers,
+            flags_needed=cr_cat_wallet_0.info.proofs_checker.flags,
+        )
+        == (await client_0.get_wallets(GetWallets(type=uint16(cr_cat_wallet_0.type())))).wallets[0]
+    )
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         wallet_1_ph = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
@@ -440,13 +455,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert await wallet_node_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("crcat")].match_hinted_coin(
         next(c for tx in txs for c in tx.additions if c.amount == 90), wallet_1_ph
     )
-    pending_tx = await client_1.get_transactions(
-        env_1.dealias_wallet_id("crcat"),
-        0,
-        1,
-        reverse=True,
-        type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
-    )
+    pending_tx = (
+        await client_1.get_transactions(
+            GetTransactions(
+                uint32(env_1.dealias_wallet_id("crcat")),
+                uint16(0),
+                uint16(1),
+                reverse=True,
+                type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
+            )
+        )
+    ).transactions
     assert len(pending_tx) == 1
 
     # Send the VC to wallet_1 to use for the CR-CATs
@@ -739,7 +758,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     async with did_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await did_wallet.transfer_did(bytes32.zeros, uint64(0), False, action_scope)
+        await did_wallet.transfer_did(bytes32.zeros, uint64(0), action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -823,7 +842,7 @@ async def test_cat_wallet_conversion(
     )
 
     did_id = bytes32.zeros
-    await mint_cr_cat(num_blocks, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
+    await mint_cr_cat(num_blocks, wallet_0, wallet_node_0, client_0, full_node_api, DEFAULT_TX_CONFIG, [did_id])
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 

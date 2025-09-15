@@ -160,20 +160,19 @@ class Timelord:
         slow_bluebox = self.config.get("slow_bluebox", False)
         if not self.bluebox_mode:
             self.main_loop = create_referenced_task(self._manage_chains())
+        elif os.name == "nt" or slow_bluebox:
+            # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
+            workers = self.config.get("slow_bluebox_process_count", 1)
+            self._executor_shutdown_tempfile = _create_shutdown_file()
+            self.bluebox_pool = ThreadPoolExecutor(
+                max_workers=workers,
+                thread_name_prefix="blue-box-",
+            )
+            self.main_loop = create_referenced_task(
+                self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
+            )
         else:
-            if os.name == "nt" or slow_bluebox:
-                # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
-                workers = self.config.get("slow_bluebox_process_count", 1)
-                self._executor_shutdown_tempfile = _create_shutdown_file()
-                self.bluebox_pool = ThreadPoolExecutor(
-                    max_workers=workers,
-                    thread_name_prefix="blue-box-",
-                )
-                self.main_loop = create_referenced_task(
-                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
-                )
-            else:
-                self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
+            self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
         log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
         try:
             yield
@@ -254,6 +253,7 @@ class Timelord:
                 sub_slot_iters,
                 difficulty,
                 self.get_height(),
+                self.last_state.get_last_tx_height(),
             )
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
@@ -556,6 +556,7 @@ class Timelord:
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
                             self.get_height(),
+                            uint32(0),
                         )
                     except Exception as e:
                         log.error(f"Error {e}")
@@ -629,7 +630,7 @@ class Timelord:
                     ):
                         # We don't know when the last block was, so we can't make peaks
                         return
-
+                    assert self.last_state.last_tx_block_block_height is not None
                     sp_total_iters = (
                         ip_total_iters
                         - ip_iters
@@ -1170,6 +1171,7 @@ class Timelord:
                     t1 = time.time()
                     log.info(
                         f"Working on compact proof for height: {picked_info.height}. "
+                        f"VDF: {picked_info.field_vdf}. "
                         f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
                     )
                     bluebox_process_data = BlueboxProcessData(

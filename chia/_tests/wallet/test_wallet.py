@@ -11,7 +11,6 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.rpc.wallet_request_types import GetTransactionMemo
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -20,6 +19,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -32,6 +32,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
+from chia.wallet.wallet_request_types import GetTransactionMemo
 
 
 class TestWalletSimulator:
@@ -191,7 +192,7 @@ class TestWalletSimulator:
             normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         # Transfer to normal wallet
-        for _ in range(0, number_of_coins):
+        for _ in range(number_of_coins):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
                     [uint64(tx_amount)],
@@ -395,15 +396,16 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 1
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
-        assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
-        with pytest.raises(ValueError):
-            await api_0.spend_clawback_coins({})
+        assert txs["transactions"][0]["metadata"]["coin_id"] == "0x" + merkle_coin.name().hex()
 
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": test_fee}
+            {
+                "coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
         await wallet_environments.process_pending_states(
@@ -530,9 +532,12 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
         await wallet_environments.process_pending_states(
@@ -579,7 +584,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert next(iter(txs["transactions"][0]["memos"].values())) == b"Test".hex()
+        assert "0x" + b"Test".hex() in next(iter(txs["transactions"][0]["memos"].values()))
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -663,9 +668,12 @@ class TestWalletSimulator:
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
         resp = await api_1.spend_clawback_coins(
-            {"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": test_fee}
+            {
+                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
+                "fee": test_fee,
+                **wallet_environments.tx_config.to_json_dict(),
+            }
         )
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
         await wallet_environments.process_pending_states(
@@ -1081,10 +1089,8 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # clawback merkle coin
         resp = await api_1.spend_clawback_coins({"coin_ids": [clawback_coin_id_1.hex()], "fee": 0})
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         resp = await api_1.spend_clawback_coins({"coin_ids": [clawback_coin_id_2.hex()], "fee": 0})
-        assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
 
         await wallet_environments.process_pending_states(
@@ -1530,9 +1536,9 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        memos = await env_0.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx.name))
-        assert len(memos.coins_with_memos) == 1
-        assert memos.coins_with_memos[0].memos[0] == ph_2
+        memo_response = await env_0.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx.name))
+        assert len(memo_response.memo_dict) == 1
+        assert next(iter(memo_response.memo_dict.values()))[0] == ph_2
 
         await wallet_environments.process_pending_states(
             [
@@ -1577,13 +1583,9 @@ class TestWalletSimulator:
             if coin.amount == tx_amount:
                 tx_id = coin.name()
         assert tx_id is not None
-        memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
-        assert len(memos.coins_with_memos) == 1
-        assert memos.coins_with_memos[0].memos[0] == ph_2
-        # test json serialization
-        assert memos.to_json_dict() == {
-            tx_id.hex(): {memos.coins_with_memos[0].coin_id.hex(): [memos.coins_with_memos[0].memos[0].hex()]}
-        }
+        memo_response = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+        assert len(memo_response.memo_dict) == 1
+        assert next(iter(memo_response.memo_dict.values()))[0] == ph_2
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -1709,6 +1711,7 @@ class TestWalletSimulator:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(0),
             to_puzzle_hash=bytes32(32 * b"0"),
+            to_address=encode_puzzle_hash(bytes32(32 * b"0"), "txch"),
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
@@ -1721,7 +1724,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
@@ -1999,9 +2002,9 @@ class TestWalletSimulator:
         puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test hex string
         message = "0123456789ABCDEF"
@@ -2011,9 +2014,9 @@ class TestWalletSimulator:
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test informal input
         message = "0123456789ABCDEF"
@@ -2023,9 +2026,9 @@ class TestWalletSimulator:
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             puzzle.get_tree_hash(),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test BLS sign string
         message = "Hello World"
@@ -2034,9 +2037,9 @@ class TestWalletSimulator:
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
             bytes(message, "utf-8"),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
         # Test BLS sign hex
         message = "0123456789ABCDEF"
@@ -2045,9 +2048,9 @@ class TestWalletSimulator:
         )
 
         assert AugSchemeMPL.verify(
-            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
-            bytes.fromhex(message),
-            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+            G1Element.from_bytes(hexstr_to_bytes(response["pubkey"])),
+            hexstr_to_bytes(message),
+            G2Element.from_bytes(hexstr_to_bytes(response["signature"])),
         )
 
     @pytest.mark.parametrize(
@@ -2132,6 +2135,24 @@ class TestWalletSimulator:
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         assert len(list(set(coin.puzzle_hash for coin in tx.spend_bundle.additions()))) == 2
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes
+    @pytest.mark.anyio
+    async def test_puzzle_hashes_not_committed(self, wallet_environments: WalletTestFramework) -> None:
+        env = wallet_environments.environments[0]
+        wallet = env.xch_wallet
+
+        # Our framework
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config,
+            push=False,
+        ) as action_scope:
+            await action_scope.get_puzzle_hash(wallet.wallet_state_manager, override_reuse_puzhash_with=False)
 
 
 def test_get_wallet_db_path_v2_r1() -> None:

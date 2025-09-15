@@ -32,7 +32,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
-from chia.full_node.signage_point import SignagePoint
+from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.generator_types import NewBlockGenerator
@@ -354,17 +354,16 @@ def create_unfinished_block(
     else:
         if new_sub_slot:
             rc_sp_hash = finished_sub_slots[-1].reward_chain.get_hash()
+        elif is_genesis:
+            rc_sp_hash = constants.GENESIS_CHALLENGE
         else:
-            if is_genesis:
-                rc_sp_hash = constants.GENESIS_CHALLENGE
-            else:
-                assert prev_block is not None
-                assert blocks is not None
-                curr = prev_block
-                while not curr.first_in_sub_slot:
-                    curr = blocks.block_record(curr.prev_hash)
-                assert curr.finished_reward_slot_hashes is not None
-                rc_sp_hash = curr.finished_reward_slot_hashes[-1]
+            assert prev_block is not None
+            assert blocks is not None
+            curr = prev_block
+            while not curr.first_in_sub_slot:
+                curr = blocks.block_record(curr.prev_hash)
+            assert curr.finished_reward_slot_hashes is not None
+            rc_sp_hash = curr.finished_reward_slot_hashes[-1]
         signage_point = SignagePoint(None, None, None, None)
 
     cc_sp_signature: Optional[G2Element] = get_plot_signature(cc_sp_hash, proof_of_space.plot_public_key)

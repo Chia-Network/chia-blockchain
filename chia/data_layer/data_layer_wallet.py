@@ -19,6 +19,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
     AssertAnnouncement,
     AssertCoinAnnouncement,
@@ -66,35 +67,23 @@ if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 
+@streamable
 @dataclasses.dataclass(frozen=True)
-class Mirror:
+class Mirror(Streamable):
     coin_id: bytes32
     launcher_id: bytes32
     amount: uint64
-    urls: list[bytes]
+    urls: list[str]
     ours: bool
     confirmed_at_height: Optional[uint32]
 
-    def to_json_dict(self) -> dict[str, Any]:
-        return {
-            "coin_id": self.coin_id.hex(),
-            "launcher_id": self.launcher_id.hex(),
-            "amount": self.amount,
-            "urls": [url.decode("utf8") for url in self.urls],
-            "ours": self.ours,
-            "confirmed_at_height": self.confirmed_at_height,
-        }
+    @staticmethod
+    def encode_urls(urls: list[str]) -> list[bytes]:
+        return [url.encode("utf8") for url in urls]
 
-    @classmethod
-    def from_json_dict(cls, json_dict: dict[str, Any]) -> Mirror:
-        return cls(
-            bytes32.from_hexstr(json_dict["coin_id"]),
-            bytes32.from_hexstr(json_dict["launcher_id"]),
-            json_dict["amount"],
-            [bytes(url, "utf8") for url in json_dict["urls"]],
-            json_dict["ours"],
-            json_dict["confirmed_at_height"],
-        )
+    @staticmethod
+    def decode_urls(urls: list[bytes]) -> list[str]:
+        return [url.decode("utf8") for url in urls]
 
 
 @final
@@ -547,8 +536,9 @@ class DataLayerWallet:
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=new_puz_hash,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(new_puz_hash),
             amount=uint64(singleton_record.lineage_proof.amount),
             fee_amount=fee,
             confirmed=False,
@@ -556,7 +546,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -600,15 +590,14 @@ class DataLayerWallet:
         if coins is None or len(coins) == 0:
             if launcher_id is None:
                 raise ValueError("Not enough info to know which DL coin to send")
+        elif len(coins) != 1:
+            raise ValueError("The wallet can only send one DL coin at a time")
         else:
-            if len(coins) != 1:
-                raise ValueError("The wallet can only send one DL coin at a time")
+            record = await self.wallet_state_manager.dl_store.get_singleton_record(next(iter(coins)).name())
+            if record is None:
+                raise ValueError("The specified coin is not a tracked DL")
             else:
-                record = await self.wallet_state_manager.dl_store.get_singleton_record(next(iter(coins)).name())
-                if record is None:
-                    raise ValueError("The specified coin is not a tracked DL")
-                else:
-                    launcher_id = record.launcher_id
+                launcher_id = record.launcher_id
 
         if len(amounts) != 1 or len(puzzle_hashes) != 1:
             raise ValueError("The wallet can only send one DL coin to one place at a time")
@@ -742,8 +731,9 @@ class DataLayerWallet:
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=uint64(time.time()),
                     to_puzzle_hash=new_puzhash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(new_puzhash),
                     amount=uint64(mirror_coin.amount),
                     fee_amount=fee,
                     confirmed=False,
@@ -751,7 +741,7 @@ class DataLayerWallet:
                     spend_bundle=mirror_bundle,
                     additions=mirror_bundle.additions(),
                     removals=mirror_bundle.removals(),
-                    memos=list(compute_memos(mirror_bundle).items()),
+                    memos=compute_memos(mirror_bundle),
                     wallet_id=self.id(),  # This is being called before the wallet is created so we're using a ID of 0
                     sent_to=[],
                     trade_id=None,
@@ -792,7 +782,7 @@ class DataLayerWallet:
                         coin.name(),
                         launcher_id,
                         uint64(coin.amount),
-                        urls,
+                        Mirror.decode_urls(urls),
                         ours,
                         height,
                     )
@@ -1099,12 +1089,13 @@ class DataLayerWallet:
         # Create all of the new solutions
         new_spends: list[CoinSpend] = []
         for spend in offer.coin_spends():
+            spend_to_add = spend
             solution = Program.from_serialized(spend.solution)
             if match_dl_singleton(spend.puzzle_reveal)[0]:
                 try:
                     graftroot: Program = solution.at("rrffrf")
                 except EvalError:
-                    new_spends.append(spend)
+                    new_spends.append(spend_to_add)
                     continue
                 mod, curried_args_prg = graftroot.uncurry()
                 if mod == GRAFTROOT_DL_OFFERS:
@@ -1147,9 +1138,9 @@ class DataLayerWallet:
                             ]
                         )
                     )
-                    new_spend: CoinSpend = spend.replace(solution=new_solution.to_serialized())
-                    spend = new_spend
-            new_spends.append(spend)
+                    spend_to_add = spend.replace(solution=new_solution.to_serialized())
+
+            new_spends.append(spend_to_add)
 
         return Offer({}, WalletSpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
 

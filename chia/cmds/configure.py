@@ -16,6 +16,7 @@ from chia.util.config import (
     save_config,
     str2bool,
 )
+from chia.util.network import parse_host_port
 
 
 def configure(
@@ -42,28 +43,20 @@ def configure(
         change_made = False
         if set_node_introducer:
             try:
-                if set_node_introducer.index(":"):
-                    host, port = (
-                        ":".join(set_node_introducer.split(":")[:-1]),
-                        set_node_introducer.split(":")[-1],
-                    )
-                    config["full_node"]["introducer_peer"]["host"] = host
-                    config["full_node"]["introducer_peer"]["port"] = int(port)
-                    config["introducer"]["port"] = int(port)
-                    print("Node introducer updated")
-                    change_made = True
+                host, port = parse_host_port(set_node_introducer)
+                config["full_node"]["introducer_peer"]["host"] = host
+                config["full_node"]["introducer_peer"]["port"] = port
+                config["introducer"]["port"] = port
+                print("Node introducer updated")
+                change_made = True
             except ValueError:
                 print("Node introducer address must be in format [IP:Port]")
         if set_farmer_peer:
             try:
-                if set_farmer_peer.index(":"):
-                    host, port = (
-                        ":".join(set_farmer_peer.split(":")[:-1]),
-                        set_farmer_peer.split(":")[-1],
-                    )
-                    set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=int(port))
-                    print("Farmer peer updated, make sure your harvester has the proper cert installed")
-                    change_made = True
+                host, port = parse_host_port(set_farmer_peer)
+                set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=port)
+                print("Farmer peer updated, make sure your harvester has the proper cert installed")
+                change_made = True
             except ValueError:
                 print("Farmer address must be in format [IP:Port]")
         if set_fullnode_port:

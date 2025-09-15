@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, TypeVar, Union
+from typing import Optional, Union
 
 from aiosqlite import Row
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
+from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.wallet.lineage_proof import LineageProof
-
-_T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
 def _row_to_singleton_record(row: Row) -> SingletonRecord:
@@ -38,7 +37,14 @@ def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
         url = byte_list[2 : length + 2]
         byte_list = byte_list[length + 2 :]
         urls.append(url)
-    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]), confirmed_at_height)
+    return Mirror(
+        bytes32(row[0]),
+        bytes32(row[1]),
+        uint64.from_bytes(row[2]),
+        Mirror.decode_urls(urls),
+        bool(row[4]),
+        confirmed_at_height,
+    )
 
 
 class DataLayerStore:
@@ -49,7 +55,7 @@ class DataLayerStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
+    async def create(cls, db_wrapper: DBWrapper2) -> Self:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -315,7 +321,7 @@ class DataLayerStore:
                     mirror.launcher_id,
                     mirror.amount.stream_to_bytes(),
                     b"".join(
-                        [uint16(len(url)).stream_to_bytes() + url for url in mirror.urls]
+                        [uint16(len(url)).stream_to_bytes() + url for url in Mirror.encode_urls(mirror.urls)]
                     ),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),

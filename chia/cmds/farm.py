@@ -49,6 +49,13 @@ def farm_cmd() -> None:
     default=None,
     show_default=True,
 )
+@click.option(
+    "-i",
+    "--include-pool-rewards",
+    help="Include pool farming rewards in the total farmed amount",
+    is_flag=True,
+    default=False,
+)
 @click.pass_context
 def summary_cmd(
     ctx: click.Context,
@@ -56,6 +63,7 @@ def summary_cmd(
     wallet_rpc_port: Optional[int],
     harvester_rpc_port: Optional[int],
     farmer_rpc_port: Optional[int],
+    include_pool_rewards: bool,
 ) -> None:
     import asyncio
 
@@ -67,6 +75,7 @@ def summary_cmd(
             wallet_rpc_port,
             harvester_rpc_port,
             farmer_rpc_port,
+            include_pool_rewards,
             root_path=ChiaCliContext.set_default(ctx).root_path,
         )
     )

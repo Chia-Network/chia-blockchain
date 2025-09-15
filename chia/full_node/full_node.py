@@ -39,14 +39,17 @@ from packaging.version import Version
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_creation import unfinished_block_to_full_block
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
@@ -55,8 +58,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
-from chia.full_node.signage_point import SignagePoint
+from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
@@ -97,7 +99,8 @@ from chia.util.task_referencer import create_referenced_task
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: list[NewPeakItem]  # The new items from calling MempoolManager.new_peak
+    # The added transactions IDs from calling MempoolManager.new_peak
+    mempool_peak_added_tx_ids: list[bytes32]
     mempool_removals: list[MempoolRemoveInfo]  # The removed mempool items from calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: list[tuple[bytes32, bytes]]  # The hints added to the DB
@@ -155,7 +158,7 @@ class FullNode:
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
     _block_store: Optional[BlockStore] = None
-    _coin_store: Optional[CoinStore] = None
+    _coin_store: Optional[CoinStoreProtocol] = None
     _mempool_manager: Optional[MempoolManager] = None
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     _blockchain: Optional[Blockchain] = None
@@ -263,15 +266,16 @@ class FullNode:
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+            selected_network = self.config.get("selected_network")
+            height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
             self._blockchain = await Blockchain.create(
                 coin_store=self.coin_store,
                 block_store=self.block_store,
                 consensus_constants=self.constants,
-                blockchain_dir=self.db_path.parent,
+                height_map=height_map,
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
-                selected_network=self.config.get("selected_network"),
             )
 
             self._mempool_manager = MempoolManager(
@@ -304,10 +308,9 @@ class FullNode:
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if peak is None:
                 self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-                num_unspent = await self.coin_store.num_unspent()
-                if num_unspent > 0:
+                if not await self.coin_store.is_empty():
                     self.log.error(
-                        f"Inconsistent blockchain DB file! Could not find peak block but found {num_unspent} coins! "
+                        "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
                         "This is a fatal error. The blockchain database may be corrupt"
                     )
                     raise RuntimeError("corrupt blockchain DB")
@@ -319,7 +322,8 @@ class FullNode:
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                    assert len(pending_tx.items) == 0  # no pending transactions when starting up
+                    # No pending transactions when starting up
+                    assert len(pending_tx.spend_bundle_ids) == 0
 
                     full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
                     assert full_peak is not None
@@ -348,9 +352,9 @@ class FullNode:
             self.initialized = True
 
             try:
-                async with contextlib.AsyncExitStack() as exit_stack:
+                async with contextlib.AsyncExitStack() as aexit_stack:
                     if self.full_node_peers is not None:
-                        await exit_stack.enter_async_context(self.full_node_peers.manage())
+                        await aexit_stack.enter_async_context(self.full_node_peers.manage())
                     yield
             finally:
                 self._shut_down = True
@@ -417,7 +421,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def coin_store(self) -> CoinStore:
+    def coin_store(self) -> CoinStoreProtocol:
         assert self._coin_store is not None
         return self._coin_store
 
@@ -885,7 +889,7 @@ class FullNode:
 
     async def synced(self, block_is_current_at: Optional[uint64] = None) -> bool:
         if block_is_current_at is None:
-            block_is_current_at = uint64(int(time.time() - 60 * 7))
+            block_is_current_at = uint64(time.time() - 60 * 7)
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1383,7 +1387,7 @@ class FullNode:
                     block_rate_height = end_height
 
                 self.log.info(
-                    "Added blocks {start_height} to {end_height} "
+                    f"Added blocks {start_height} to {end_height} "
                     f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
                 )
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1621,6 +1625,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             header_hash = block.header_hash
             assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
+            assert pre_validation_results[i].error is None
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             # when adding blocks in batches, we won't have any overlapping
@@ -1815,6 +1820,7 @@ class FullNode:
             difficulty = self.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
 
+        tx_peak = self.blockchain.get_tx_peak()
         # Notify farmers of the new signage point
         broadcast_farmer = farmer_protocol.NewSignagePoint(
             request.challenge_chain_vdf.challenge,
@@ -1824,6 +1830,7 @@ class FullNode:
             sub_slot_iters,
             request.index_from_challenge,
             uint32(0) if peak is None else peak.height,
+            tx_peak.height if tx_peak is not None else uint32(0),
             sp_source_data=SignagePointSourceData(
                 vdf_data=SPVDFSourceData(request.challenge_chain_vdf.output, request.reward_chain_vdf.output)
             ),
@@ -1934,7 +1941,7 @@ class FullNode:
         mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
 
         return PeakPostProcessingResult(
-            mempool_new_peak_result.items,
+            mempool_new_peak_result.spend_bundle_ids,
             mempool_new_peak_result.removals,
             fns_peak_result,
             hints_to_add,
@@ -1956,9 +1963,9 @@ class FullNode:
         record = state_change_summary.peak
         for signage_point in ppp_result.signage_points:
             await self.signage_point_post_processing(*signage_point)
-        for new_peak_item in ppp_result.mempool_peak_result:
-            self.log.debug(f"Added transaction to mempool: {new_peak_item.transaction_id}")
-            mempool_item = self.mempool_manager.get_mempool_item(new_peak_item.transaction_id)
+        for transaction_id in ppp_result.mempool_peak_added_tx_ids:
+            self.log.debug(f"Added transaction to mempool: {transaction_id}")
+            mempool_item = self.mempool_manager.get_mempool_item(transaction_id)
             assert mempool_item is not None
             await self.broadcast_added_tx(mempool_item)
 
@@ -2152,7 +2159,7 @@ class FullNode:
                         added = AddBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     elif Err(pre_validation_result.error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                        raise TimestampError()
+                        raise TimestampError
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
@@ -2254,8 +2261,8 @@ class FullNode:
 
         state_changed_data: dict[str, Any] = {
             "transaction_block": False,
-            "k_size": block.reward_chain_block.proof_of_space.size_v1(),
-            "k_size2": block.reward_chain_block.proof_of_space.size_v2(),
+            "k_size": block.reward_chain_block.proof_of_space.size().size_v1,
+            "k_size2": block.reward_chain_block.proof_of_space.size().size_v2,
             "header_hash": block.header_hash,
             "fork_height": None,
             "rolled_back_records": None,
@@ -2367,7 +2374,7 @@ class FullNode:
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
                 if header_error == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
-                    raise TimestampError()
+                    raise TimestampError
                 else:
                     raise ConsensusError(header_error)
             validate_time = time.monotonic() - start_header_time
@@ -2720,7 +2727,7 @@ class FullNode:
 
                 for infusion in new_infusions:
                     await self.new_infusion_point_vdf(infusion)
-
+                tx_peak = self.blockchain.get_tx_peak()
                 # Notify farmers of the new sub-slot
                 broadcast_farmer = farmer_protocol.NewSignagePoint(
                     end_of_slot_bundle.challenge_chain.get_hash(),
@@ -2730,6 +2737,7 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                     uint32(0) if peak is None else peak.height,
+                    tx_peak.height if tx_peak is not None else uint32(0),
                     sp_source_data=SignagePointSourceData(
                         sub_slot_data=SPSubSlotSourceData(
                             end_of_slot_bundle.challenge_chain, end_of_slot_bundle.reward_chain

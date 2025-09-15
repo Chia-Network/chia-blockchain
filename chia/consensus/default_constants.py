@@ -14,7 +14,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     SLOT_BLOCKS_TARGET=uint32(32),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(16),  # Must be less than half of SLOT_BLOCKS_TARGET
     MAX_SUB_SLOT_BLOCKS=uint32(128),  # Must be less than half of SUB_EPOCH_BLOCKS
-    NUM_SPS_SUB_SLOT=uint32(64),  # Must be a power of 2
+    NUM_SPS_SUB_SLOT=uint8(64),  # Must be a power of 2
     SUB_SLOT_ITERS_STARTING=uint64(2**27),
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
@@ -30,10 +30,12 @@ DEFAULT_CONSTANTS = ConsensusConstants(
         9
     ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
     NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
-        9
+        5
     ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
-    MIN_PLOT_SIZE=uint8(32),  # 32 for mainnet
-    MAX_PLOT_SIZE=uint8(50),
+    MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
+    MAX_PLOT_SIZE_V1=uint8(50),
+    MIN_PLOT_SIZE_V2=uint8(28),
+    MAX_PLOT_SIZE_V2=uint8(32),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     NUM_SP_INTERVALS_EXTRA=uint8(3),  # The number of sp intervals to add to the signage point
     MAX_FUTURE_TIME2=uint32(2 * 60),  # The next block can have a timestamp of at most these many seconds in the future
@@ -79,21 +81,33 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFF),
+    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
+    # starting at the hard fork 2 height, v1 plots will gradually be phased out,
+    # and stop working entirely after this many blocks
+    PLOT_V1_PHASE_OUT=uint32(1179648),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
-    PLOT_DIFFICULTY_4_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_5_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_6_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_7_HEIGHT=uint32(0xFFFFFFFF),
-    PLOT_DIFFICULTY_8_HEIGHT=uint32(0xFFFFFFFF),
+    PLOT_STRENGTH_INITIAL=uint8(2),
+    PLOT_STRENGTH_4_HEIGHT=uint32(0xFFFFFFFB),
+    PLOT_STRENGTH_5_HEIGHT=uint32(0xFFFFFFFC),
+    PLOT_STRENGTH_6_HEIGHT=uint32(0xFFFFFFFD),
+    PLOT_STRENGTH_7_HEIGHT=uint32(0xFFFFFFFE),
+    PLOT_STRENGTH_8_HEIGHT=uint32(0xFFFFFFFF),
 )
 
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
-    if network_id == "testnet11":
-        pass
+    # These constants changed names to support v2 plots
+    if "MIN_PLOT_SIZE_V1" not in overrides and "MIN_PLOT_SIZE" in overrides:
+        overrides["MIN_PLOT_SIZE_V1"] = overrides["MIN_PLOT_SIZE"]
+        overrides.pop("MIN_PLOT_SIZE")
+    if "MAX_PLOT_SIZE_V1" not in overrides and "MAX_PLOT_SIZE" in overrides:
+        overrides["MAX_PLOT_SIZE_V1"] = overrides["MAX_PLOT_SIZE"]
+        overrides.pop("MAX_PLOT_SIZE")
+    if network_id in {"testnet11", "testneta"}:
+        if "MIN_PLOT_SIZE_V2" not in overrides:
+            overrides["MIN_PLOT_SIZE_V2"] = 18

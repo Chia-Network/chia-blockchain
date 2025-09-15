@@ -30,6 +30,7 @@ from chia_rs import (
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
@@ -39,11 +40,10 @@ from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.full_node.signage_point import SignagePoint
 from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -72,6 +72,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
+from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -301,7 +302,7 @@ class FullNodeAPI:
 
         if len(tips) > 4:
             # Remove old from cache
-            for i in range(0, 4):
+            for i in range(4):
                 self.full_node.pow_creation.pop(tips[i])
 
         if wp is None:
@@ -982,16 +983,15 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            # TODO: support v2 plots after the hard fork
-            pos_size_v1 = request.proof_of_space.size_v1()
-            assert pos_size_v1
-
+            tx_peak = self.full_node.blockchain.get_tx_peak()
             required_iters: uint64 = calculate_iterations_quality(
-                self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
+                self.full_node.constants,
                 quality_string,
-                pos_size_v1,
+                request.proof_of_space.size(),
                 difficulty,
                 request.challenge_chain_sp,
+                sub_slot_iters,
+                tx_peak.height if tx_peak is not None else uint32(0),
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(
@@ -1002,14 +1002,14 @@ class FullNodeAPI:
             )
 
             # The block's timestamp must be greater than the previous transaction block's timestamp
-            timestamp = uint64(int(time.time()))
+            timestamp = uint64(time.time())
             curr: Optional[BlockRecord] = prev_b
             while curr is not None and not curr.is_transaction_block and curr.height != 0:
                 curr = self.full_node.blockchain.try_block_record(curr.prev_hash)
             if curr is not None:
                 assert curr.timestamp is not None
                 if timestamp <= curr.timestamp:
-                    timestamp = uint64(int(curr.timestamp + 1))
+                    timestamp = uint64(curr.timestamp + 1)
 
             self.log.info("Starting to make the unfinished block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
@@ -1134,6 +1134,12 @@ class FullNodeAPI:
         try:
             await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
+            if isinstance(e, ValidationError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
+                self.full_node.log.info(
+                    f"Failed to farm block {e}. Consensus rules prevent this block from being farmed. Not retrying"
+                )
+                return None
+
             # If we have an error with this block, try making an empty block
             self.full_node.log.error(f"Error farming block {e} {new_candidate}")
             candidate_tuple = self.full_node.full_node_store.get_candidate_block(
@@ -1238,7 +1244,7 @@ class FullNodeAPI:
             )
             # strip the hint from additions, and compute the puzzle hash for
             # removals
-            removals_and_additions = ([r.name() for r in removals], [a[0] for a in additions])
+            removals_and_additions = ([name for name, _ in removals], [name for name, _ in additions])
         elif block.is_transaction_block():
             # This is a transaction block with just reward coins.
             removals_and_additions = ([], [])
@@ -1394,14 +1400,11 @@ class FullNodeAPI:
             error_name = error.name if error is not None else None
             if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+            # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+            elif self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+                response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None)
             else:
-                # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
-                if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
-                    response = wallet_protocol.TransactionAck(
-                        spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
-                    )
-                else:
-                    response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+                response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
     @metadata.request()
@@ -1428,17 +1431,18 @@ class FullNodeAPI:
         )
         assert block_generator is not None
         try:
-            spend_info = await asyncio.get_running_loop().run_in_executor(
+            puzzle, solution = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
                 get_puzzle_and_solution_for_coin,
-                block_generator,
+                block_generator.program,
+                block_generator.generator_refs,
+                self.full_node.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                height,
-                self.full_node.constants,
+                get_flags_for_height_and_constants(height, self.full_node.constants),
             )
         except ValueError:
             return reject_msg
-        wrapper = PuzzleSolutionResponse(coin_name, height, spend_info.puzzle, spend_info.solution)
+        wrapper = PuzzleSolutionResponse(coin_name, height, puzzle, solution)
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg
@@ -1453,24 +1457,13 @@ class FullNodeAPI:
 
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-        if self.full_node.block_store.db_wrapper.db_version == 2:
-            try:
-                blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
-                    request.start_height, request.end_height
-                )
-            except ValueError:
-                return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        try:
+            blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
+                request.start_height, request.end_height
+            )
+        except ValueError:
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
 
-        else:
-            height_to_hash = self.full_node.blockchain.height_to_hash
-            header_hashes: list[bytes32] = []
-            for i in range(request.start_height, request.end_height + 1):
-                header_hash: Optional[bytes32] = height_to_hash(uint32(i))
-                if header_hash is None:
-                    return make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
-                header_hashes.append(header_hash)
-
-            blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -14,6 +13,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -24,10 +24,7 @@ from chia.util.db_wrapper import DBWrapper2
 
 
 def rand_hash() -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = random.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random()
 
 
 def make_version(conn: sqlite3.Connection, version: int) -> None:
@@ -116,7 +113,7 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool, default_config: dict[
             make_block_table(conn)
 
             prev = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
-            for height in range(0, 100):
+            for height in range(100):
                 header_hash = rand_hash()
                 add_block(conn, header_hash, prev, height, True)
                 if height % 4 == 0:
@@ -143,8 +140,9 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
 
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
+        height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, height_map, test_constants, reserved_cores=0)
         sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:

@@ -6,7 +6,7 @@ from typing import Any, Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
@@ -39,7 +39,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
 
     if synced:
         print("Current Blockchain Status: Full Node Synced")
-        print("\nPeak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
+        print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
     elif peak is not None and sync_mode:
         sync_max_block = blockchain_state["sync"]["sync_tip_height"]
         sync_current_block = blockchain_state["sync"]["sync_progress_height"]
@@ -48,7 +48,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
             f"({sync_max_block - sync_current_block} behind). "
             f"({sync_current_block * 100.0 / sync_max_block:2.2f}% synced)"
         )
-        print("Peak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
+        print("Peak: Hash:", peak.header_hash if peak is not None else "")
     elif peak is not None:
         print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
     else:
@@ -59,7 +59,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
         if peak.is_transaction_block:
             peak_time = peak.timestamp
         else:
-            peak_hash = bytes32(peak.header_hash)
+            peak_hash = peak.header_hash
             curr = await node_client.get_block_record(peak_hash)
             while curr is not None and not curr.is_transaction_block:
                 curr = await node_client.get_block_record(curr.prev_hash)
@@ -88,7 +88,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
             curr = await node_client.get_block_record(curr.prev_hash)
 
         for b in added_blocks:
-            print(f"{b.height:>9} | {bytes32(b.header_hash)}")
+            print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
     return False
@@ -125,7 +125,7 @@ async def print_block_from_hash(
             cost = str(full_block.transactions_info.cost)
             tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
             if full_block.foliage_transaction_block:
-                tx_filter_hash = bytes32(full_block.foliage_transaction_block.filter_hash)
+                tx_filter_hash = full_block.foliage_transaction_block.filter_hash
             fees: Any = block.fees
         else:
             block_time_string = "Not a transaction block"
@@ -152,8 +152,8 @@ async def print_block_from_hash(
             f"Total VDF Iterations   {block.total_iters}\n"
             f"Is a Transaction Block?{block.is_transaction_block}\n"
             f"Deficit                {block.deficit}\n"
-            f"PoSpace 'k' Size (v1)  {full_block.reward_chain_block.proof_of_space.size_v1()}\n"
-            f"PoSpace 'k' Size (v2)  {full_block.reward_chain_block.proof_of_space.size_v2()}\n"
+            f"PoSpace 'k' Size (v1)  {full_block.reward_chain_block.proof_of_space.size().size_v1}\n"
+            f"PoSpace 'k' Size (v2)  {full_block.reward_chain_block.proof_of_space.size().size_v2}\n"
             f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
             f"Pool Public Key        {pool_pk}\n"
             f"Tx Filter Hash         {tx_filter_hash}\n"

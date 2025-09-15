@@ -10,6 +10,7 @@ from _pytest.fixtures import SubRequest
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.misc import Marks, datacases, measure_runtime
+from chia.data_layer.data_layer_rpc_util import MarshallableProtocol
 from chia.data_layer.data_layer_util import (
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
@@ -22,7 +23,6 @@ from chia.data_layer.data_layer_util import (
     key_hash,
     leaf_hash,
 )
-from chia.rpc.data_layer_rpc_util import MarshallableProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 
@@ -158,13 +158,6 @@ def test_internal_hash(seeded_random: Random) -> None:
             assert definition(left_hash=left_hash, right_hash=right_hash) == reference
 
 
-def get_random_bytes(length: int, r: Random) -> bytes:
-    if length == 0:
-        return b""
-
-    return r.getrandbits(length * 8).to_bytes(length, "big")
-
-
 def test_leaf_hash(seeded_random: Random) -> None:
     def definition(key: bytes, value: bytes) -> bytes32:
         return SerializedProgram.to((key, value)).get_tree_hash()
@@ -176,13 +169,13 @@ def test_leaf_hash(seeded_random: Random) -> None:
         else:
             length = seeded_random.randrange(100)
 
-        key = get_random_bytes(length=length, r=seeded_random)
+        key = seeded_random.randbytes(length)
 
         if cycle in {1, 2}:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        value = get_random_bytes(length=length, r=seeded_random)
+        value = seeded_random.randbytes(length)
         reference = definition(key=key, value=value)
         data.append((key, value, reference))
 
@@ -205,7 +198,7 @@ def test_key_hash(seeded_random: Random) -> None:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        key = get_random_bytes(length=length, r=seeded_random)
+        key = seeded_random.randbytes(length)
         reference = definition(key=key)
         data.append((key, reference))
 

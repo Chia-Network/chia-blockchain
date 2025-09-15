@@ -13,8 +13,8 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.full_node.full_node_service import FullNodeService
 from chia.protocols import timelord_protocol
-from chia.server.aliases import FullNodeService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator

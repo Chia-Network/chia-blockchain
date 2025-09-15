@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field, fields
+from enum import Enum
 from typing import Any, Callable, ClassVar, Optional, get_type_hints
 
 import pytest
@@ -26,6 +27,8 @@ from chia.util.streamable import (
     UnsupportedType,
     function_to_parse_one_item,
     function_to_stream_one_item,
+    is_type_Dict,
+    is_type_Enum,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -38,6 +41,7 @@ from chia.util.streamable import (
     parse_uint32,
     recurse_jsonify,
     streamable,
+    streamable_enum,
     streamable_from_dict,
     write_uint32,
 )
@@ -59,15 +63,6 @@ def test_float_not_supported() -> None:
         @dataclass(frozen=True)
         class TestClassFloat(Streamable):
             a: float
-
-
-def test_dict_not_suppported() -> None:
-    with pytest.raises(UnsupportedType):
-
-        @streamable
-        @dataclass(frozen=True)
-        class TestClassDict(Streamable):
-            a: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -159,6 +154,28 @@ class ConvertListFailures(Streamable):
     ],
 )
 def test_convert_list_failures(input_dict: dict[str, Any], error: Any) -> None:
+    with pytest.raises(error):
+        streamable_from_dict(ConvertListFailures, input_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class ConvertDictFailures(Streamable):
+    a: dict[str, str]
+    b: dict[str, dict[str, str]]
+
+
+@pytest.mark.parametrize(
+    "input_dict, error",
+    [
+        pytest.param({"a": [1, 1], "b": {"foo": [2, 2]}}, InvalidTypeError, id="a: invalid type list"),
+        pytest.param({"a": 1, "b": {"foo": "bar"}}, InvalidTypeError, id="a: invalid type int"),
+        pytest.param({"a": "11", "b": {"foo": "bar"}}, InvalidTypeError, id="a: invalid type str"),
+        pytest.param({"a": {"foo": "bar"}, "b": {1: {"foo": "bar"}}}, InvalidTypeError, id="b: invalid type int"),
+        pytest.param({"a": {"foo": "bar"}, "b": {"foo": {"foo": 1}}}, InvalidTypeError, id="b: invalid type int"),
+    ],
+)
+def test_convert_dict_failures(input_dict: dict[str, Any], error: Any) -> None:
     with pytest.raises(error):
         streamable_from_dict(ConvertListFailures, input_dict)
 
@@ -319,16 +336,21 @@ class TestFromJsonDictDefaultValues(Streamable):
     a: uint64 = uint64(1)
     b: str = "default"
     c: list[uint64] = field(default_factory=list)
+    d: dict[str, str] = field(default_factory=dict)
 
 
 @pytest.mark.parametrize(
     "input_dict, output_dict",
     [
-        [{}, {"a": 1, "b": "default", "c": []}],
-        [{"a": 2}, {"a": 2, "b": "default", "c": []}],
-        [{"b": "not_default"}, {"a": 1, "b": "not_default", "c": []}],
-        [{"c": [1, 2]}, {"a": 1, "b": "default", "c": [1, 2]}],
-        [{"a": 2, "b": "not_default", "c": [1, 2]}, {"a": 2, "b": "not_default", "c": [1, 2]}],
+        [{}, {"a": 1, "b": "default", "c": [], "d": {}}],
+        [{"a": 2}, {"a": 2, "b": "default", "c": [], "d": {}}],
+        [{"b": "not_default"}, {"a": 1, "b": "not_default", "c": [], "d": {}}],
+        [{"c": [1, 2]}, {"a": 1, "b": "default", "c": [1, 2], "d": {}}],
+        [{"d": {"foo": "bar"}}, {"a": 1, "b": "default", "c": [], "d": {"foo": "bar"}}],
+        [
+            {"a": 2, "b": "not_default", "c": [1, 2], "d": {"foo": "bar"}},
+            {"a": 2, "b": "not_default", "c": [1, 2], "d": {"foo": "bar"}},
+        ],
     ],
 )
 def test_from_json_dict_default_values(input_dict: dict[str, object], output_dict: dict[str, object]) -> None:
@@ -353,8 +375,27 @@ def test_not_lists() -> None:
 
 def test_basic_optional() -> None:
     assert is_type_SpecificOptional(Optional[int])
-    assert is_type_SpecificOptional(Optional[Optional[int]])
+    assert is_type_SpecificOptional(Optional[int])
     assert not is_type_SpecificOptional(list[int])
+
+
+class BasicEnum(Enum):
+    A = 1
+    B = 2
+
+
+def test_basic_enum() -> None:
+    assert is_type_Enum(BasicEnum)
+    assert not is_type_Enum(list[int])
+
+
+def test_enum_needs_proxy() -> None:
+    with pytest.raises(UnsupportedType):
+
+        @streamable
+        @dataclass(frozen=True)
+        class EnumStreamable(Streamable):
+            enum: BasicEnum
 
 
 @streamable
@@ -379,8 +420,8 @@ class PostInitTestClassBad(Streamable):
 class PostInitTestClassOptional(Streamable):
     a: Optional[uint8]
     b: Optional[uint8]
-    c: Optional[Optional[uint8]]
-    d: Optional[Optional[uint8]]
+    c: Optional[uint8]
+    d: Optional[uint8]
 
 
 @streamable
@@ -397,6 +438,32 @@ class PostInitTestClassTuple(Streamable):
     b: tuple[tuple[uint8, str], bytes32]
 
 
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassDict(Streamable):
+    a: dict[uint8, str]
+    b: dict[bytes32, dict[uint8, str]]
+
+
+@streamable_enum(uint32)
+class IntegerEnum(Enum):
+    A = 1
+    B = 2
+
+
+@streamable_enum(str)
+class StringEnum(Enum):
+    A = "foo"
+    B = "bar"
+
+
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassEnum(Streamable):
+    a: IntegerEnum
+    b: StringEnum
+
+
 @pytest.mark.parametrize(
     "test_class, args",
     [
@@ -405,7 +472,9 @@ class PostInitTestClassTuple(Streamable):
         (PostInitTestClassBad, (25,)),
         (PostInitTestClassList, ([1, 2, 3], [[G1Element(), bytes(G1Element())], [bytes(G1Element())]])),
         (PostInitTestClassTuple, ((1, "test"), ((200, "test_2"), b"\xba" * 32))),
+        (PostInitTestClassDict, ({1: "bar"}, {bytes32.zeros: {1: "bar"}})),
         (PostInitTestClassOptional, (12, None, 13, None)),
+        (PostInitTestClassEnum, (IntegerEnum.A, StringEnum.B)),
     ],
 )
 def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
@@ -420,6 +489,14 @@ def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
             list_type = get_args(type_in)[0]
             assert type(item) is list
             return all(validate_item_type(list_type, list_item) for list_item in item)
+        if is_type_Dict(type_in):
+            [key_type, value_type] = get_args(type_in)
+            assert type(item) is dict
+            return validate_item_type(key_type, next(iter(item.keys()))) and validate_item_type(
+                value_type, next(iter(item.values()))
+            )
+        if is_type_Enum(type_in):
+            return validate_item_type(type_in._streamable_proxy, type_in._streamable_proxy(item.value))  # type: ignore[attr-defined]
         return isinstance(item, type_in)
 
     test_object = test_class(*args)
@@ -463,9 +540,23 @@ def test_basic() -> None:
         e: Optional[uint32]
         f: Optional[uint32]
         g: tuple[uint32, str, bytes]
+        h: dict[uint32, str]
+        i: IntegerEnum
+        j: StringEnum
 
     # we want to test invalid here, hence the ignore.
-    a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore[arg-type,list-item]
+    a = TestClass(
+        uint32(24),
+        uint32(352),
+        [uint32(1), uint32(2), uint32(4)],
+        [[uint32(1), uint32(2), uint32(3)], [uint32(3), uint32(4)]],
+        uint32(728),
+        None,
+        (uint32(383), "hello", b"goodbye"),
+        {uint32(1): "foo"},
+        IntegerEnum.A,
+        StringEnum.B,
+    )
 
     b: bytes = bytes(a)
     assert a == TestClass.from_bytes(b)
@@ -576,8 +667,19 @@ def test_ambiguous_deserialization_int() -> None:
         a: uint32
 
     # Does not have the required uint size
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=re.escape("uint32.from_bytes() requires 4 bytes but got: 2")):
         TestClassUint.from_bytes(b"\x00\x00")
+
+
+def test_ambiguous_deserialization_int_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassIntegerEnum(Streamable):
+        a: IntegerEnum
+
+    # passed bytes are incorrect size for serialization proxy
+    with pytest.raises(ValueError, match=re.escape("uint32.from_bytes() requires 4 bytes but got: 2")):
+        TestClassIntegerEnum.from_bytes(b"\x00\x00")
 
 
 def test_ambiguous_deserialization_list() -> None:
@@ -611,6 +713,28 @@ def test_ambiguous_deserialization_str() -> None:
     # Does not have the required str size
     with pytest.raises(AssertionError):
         TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
+
+
+def test_ambiguous_deserialization_str_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassStr(Streamable):
+        a: StringEnum
+
+    # passed bytes are incorrect size for serialization proxy
+    with pytest.raises(AssertionError):
+        TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
+
+
+def test_deserialization_to_invalid_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassStr(Streamable):
+        a: StringEnum
+
+    # encodes the string "baz" which is not a valid value for StringEnum
+    with pytest.raises(ValueError, match=re.escape("'baz' is not a valid StringEnum")):
+        TestClassStr.from_bytes(bytes([0, 0, 0, 3, 98, 97, 122]))
 
 
 def test_ambiguous_deserialization_bytes() -> None:
@@ -800,7 +924,7 @@ class TestFromBytes:
 class FailFromBytes:
     @classmethod
     def from_bytes(cls, b: bytes) -> FailFromBytes:
-        raise ValueError()
+        raise ValueError
 
 
 def test_parse_str() -> None:
@@ -868,10 +992,8 @@ def test_streamable_inheritance_missing() -> None:
     [
         (function_to_parse_one_item, float),
         (function_to_parse_one_item, int),
-        (function_to_parse_one_item, dict),
         (function_to_stream_one_item, float),
         (function_to_stream_one_item, int),
-        (function_to_stream_one_item, dict),
         (recurse_jsonify, 1.0),
         (recurse_jsonify, recurse_jsonify),
     ],
@@ -879,3 +1001,22 @@ def test_streamable_inheritance_missing() -> None:
 def test_unsupported_types(method: Callable[[object], object], input_type: object) -> None:
     with pytest.raises(UnsupportedType):
         method(input_type)
+
+
+@streamable
+@dataclass(frozen=True)
+class UnsupportedDictToSerialize(Streamable):
+    a: list[tuple[str, uint8]]
+
+
+@streamable
+@dataclass(frozen=True)
+class UnsupportedDictToDeserialize(Streamable):
+    a: dict[str, uint8]
+
+
+def test_duplicate_dict_key_error() -> None:
+    with pytest.raises(ValueError, match="duplicate dict keys"):
+        UnsupportedDictToDeserialize.from_bytes(
+            bytes(UnsupportedDictToSerialize([("foo", uint8(1)), ("foo", uint8(2))]))
+        )

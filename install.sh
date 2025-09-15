@@ -57,8 +57,6 @@ if [ "$(uname -m)" = "armv7l" ]; then
   echo "Exiting."
   exit 1
 fi
-# Get submodules
-git submodule update --init mozilla-ca
 
 # You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
 # e.g. `export INSTALL_PYTHON_VERSION=3.9`
@@ -172,7 +170,7 @@ fi
 
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
 # shellcheck disable=SC2086
-.penv/bin/poetry install ${EXTRAS}
+.penv/bin/poetry sync ${EXTRAS}
 
 if [ -e venv ]; then
   if [ -d venv ] && [ ! -L venv ]; then

@@ -24,6 +24,7 @@ _all_private_node_names: list[str] = [
     "crawler",
     "data_layer",
     "daemon",
+    "solver",
 ]
 _all_public_node_names: list[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
@@ -36,7 +37,7 @@ def get_chia_ca_crt_key() -> tuple[Any, Any]:
 
 
 def get_mozilla_ca_crt() -> str:
-    mozilla_path = Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
+    mozilla_path = Path(__file__).parent.absolute() / "cacert.pem"
     return str(mozilla_path)
 
 

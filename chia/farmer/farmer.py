@@ -143,6 +143,9 @@ class Farmer:
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
         self.quality_str_to_identifiers: dict[bytes32, tuple[str, bytes32, bytes32, bytes32]] = {}
 
+        # Track pending solver requests, keyed by partial proof
+        self.pending_solver_requests: dict[bytes, dict[str, Any]] = {}
+
         # number of responses to each signage point
         self.number_of_responses: dict[bytes32, int] = {}
 
@@ -226,7 +229,7 @@ class Farmer:
             else:
                 self.keychain_proxy = await connect_to_keychain_and_validate(self._root_path, self.log)
                 if not self.keychain_proxy:
-                    raise KeychainProxyConnectionFailure()
+                    raise KeychainProxyConnectionFailure
         return self.keychain_proxy
 
     async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:

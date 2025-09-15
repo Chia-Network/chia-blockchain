@@ -29,7 +29,6 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
-from clvm.casts import int_to_bytes
 from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
@@ -48,13 +47,13 @@ from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_cu
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.coin_store import CoinStore
+from chia.consensus.signage_point import SignagePoint
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
@@ -99,6 +98,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
@@ -112,11 +112,11 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def test_pre_validation_result() -> None:
-    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0)
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
     results = PreValidationResult(None, uint64(1), conds, uint32(0))
     assert results.validated_signature is True
 
-    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0)
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False, 0, 0, 0, 0, 0)
     results = PreValidationResult(None, uint64(1), conds, uint32(0))
     assert results.validated_signature is False
 
@@ -548,7 +548,7 @@ async def test_request_peers(
     async def have_msgs(full_node_peers: FullNodePeers) -> bool:
         assert full_node_peers.address_manager is not None
         await full_node_peers.address_manager.add_to_new_table(
-            [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time()) - 1000))],
+            [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(time.time() - 1000))],
             None,
         )
         assert server_2._port is not None
@@ -683,7 +683,7 @@ async def test_respond_end_of_sub_slot_no_reorg(
     # First get two blocks in the same sub slot
     blocks = await full_node_1.get_all_full_blocks()
 
-    for i in range(0, 9999999):
+    for i in range(9999999):
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, skip_slots=1, seed=i.to_bytes(4, "big"))
         if len(blocks[-1].finished_sub_slots) == 0:
             break
@@ -1468,7 +1468,7 @@ async def test_new_unfinished_block2_forward_limit(
     unf_blocks: list[UnfinishedBlock] = []
 
     last_reward_hash: Optional[bytes32] = None
-    for idx in range(0, 6):
+    for idx in range(6):
         # we include a different transaction in each block. This makes the
         # foliage different in each of them, but the reward block (plot) the same
         tx = wallet_a.generate_signed_transaction(uint64(100 * (idx + 1)), puzzle_hash, coin)
@@ -1765,7 +1765,7 @@ async def test_request_unfinished_block2(
     # deterministically
     best_unf: Optional[UnfinishedBlock] = None
 
-    for idx in range(0, 6):
+    for idx in range(6):
         # we include a different transaction in each block. This makes the
         # foliage different in each of them, but the reward block (plot) the same
         tx = wallet_a.generate_signed_transaction(uint64(100 * (idx + 1)), puzzle_hash, coin)
@@ -2505,7 +2505,7 @@ def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: n
         print(f"{rec}")
 
 
-async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> None:
+async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBlock]) -> None:
     prev_height = blocks[0].height - 1
     prev_hash = blocks[0].prev_header_hash
     for block in blocks:
@@ -2551,11 +2551,12 @@ async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> N
         assert records == {}
 
         records = {rec.coin.name(): rec for rec in await coin_store.get_coins_removed_at_height(block.height)}
-        for rem in removals:
-            rec = records.pop(rem.name())
+        for name, rem in removals:
+            rec = records.pop(name)
             assert rec is not None
             assert rec.spent_block_index == block.height
             assert rec.coin == rem
+            assert name == rem.name()
 
         if len(records) > 0:  # pragma: no cover
             print(f"height: {block.height} unexpected removals: {records} TX: Yes")
@@ -2677,16 +2678,15 @@ async def test_long_reorg_nodes(
             blocks = default_10000_blocks[: 1600 - chain_length]
             reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
             reorg_height = 2000
-    else:
-        if fork_point == 1500:
-            blocks = default_10000_blocks[: 1900 - chain_length]
-            reorg_blocks = test_long_reorg_1500_blocks[: 1900 - chain_length]
-            reorg_height = 2300
-        else:  # pragma: no cover
-            pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
-            blocks = default_10000_blocks[: 1100 - chain_length]
-            # reorg_blocks = test_long_reorg_blocks[: 1100 - chain_length]
-            reorg_height = 1600
+    elif fork_point == 1500:
+        blocks = default_10000_blocks[: 1900 - chain_length]
+        reorg_blocks = test_long_reorg_1500_blocks[: 1900 - chain_length]
+        reorg_height = 2300
+    else:  # pragma: no cover
+        pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
+        blocks = default_10000_blocks[: 1100 - chain_length]
+        # reorg_blocks = test_long_reorg_blocks[: 1100 - chain_length]
+        reorg_height = 1600
 
     # this is a pre-requisite for a reorg to happen
     assert default_10000_blocks[reorg_height].weight > reorg_blocks[-1].weight
@@ -3162,15 +3162,14 @@ async def declare_pos_unfinished_block(
         challenge_chain_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
     if block.reward_chain_block.reward_chain_sp_vdf is not None:
         reward_chain_sp = block.reward_chain_block.reward_chain_sp_vdf.output.get_hash()
+    elif len(block.finished_sub_slots) > 0:
+        reward_chain_sp = block.finished_sub_slots[-1].reward_chain.get_hash()
     else:
-        if len(block.finished_sub_slots) > 0:
-            reward_chain_sp = block.finished_sub_slots[-1].reward_chain.get_hash()
-        else:
-            curr = blockchain.block_record(block.prev_header_hash)
-            while not curr.first_in_sub_slot:
-                curr = blockchain.block_record(curr.prev_hash)
-            assert curr.finished_reward_slot_hashes is not None
-            reward_chain_sp = curr.finished_reward_slot_hashes[-1]
+        curr = blockchain.block_record(block.prev_header_hash)
+        while not curr.first_in_sub_slot:
+            curr = blockchain.block_record(curr.prev_hash)
+        assert curr.finished_reward_slot_hashes is not None
+        reward_chain_sp = curr.finished_reward_slot_hashes[-1]
     farmer_reward_address = block.foliage.foliage_block_data.farmer_reward_puzzle_hash
     pool_target = block.foliage.foliage_block_data.pool_target
     pool_target_signature = block.foliage.foliage_block_data.pool_signature
@@ -3295,3 +3294,62 @@ def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) 
     # Final assertion to check the entire block
     assert block1 == block2, "The entire block objects are not identical"
     return True
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "condition, error",
+    [
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, "ASSERT_HEIGHT_RELATIVE_FAILED"),
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, "ASSERT_HEIGHT_ABSOLUTE_FAILED"),
+    ],
+)
+async def test_pending_tx_cache_retry_on_new_peak(
+    condition: ConditionOpcode, error: str, blockchain_constants: ConsensusConstants, caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    Covers PendingTXCache items that are placed there due to unmet relative or
+    absolute height conditions, to make sure those items get retried at peak
+    post processing when those conditions are met.
+    """
+    async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
+        full_node_api = new.simulators[0].peer_api
+        bt = new.bt
+        wallet = WalletTool(test_constants)
+        ph = wallet.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph, pool_reward_puzzle_hash=ph
+        )
+        for block in blocks:
+            await full_node_api.full_node.add_block(block)
+        peak = full_node_api.full_node.blockchain.get_peak()
+        assert peak is not None
+        current_height = peak.height
+        # Create a transaction with a height condition that makes it pending
+        coin = blocks[-1].get_included_reward_coins()[0]
+        if condition == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+            condition_height = 1
+        else:
+            condition_height = current_height + 1
+        condition_dic = {condition: [ConditionWithArgs(condition, [int_to_bytes(condition_height)])]}
+        sb = wallet.generate_signed_transaction(uint64(42), ph, coin, condition_dic)
+        sb_name = sb.name()
+        # Send the transaction
+        res = await full_node_api.send_transaction(SendTransaction(sb))
+        assert res is not None
+        assert ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
+        transaction_ack = TransactionAck.from_bytes(res.data)
+        assert transaction_ack.status == MempoolInclusionStatus.PENDING.value
+        assert transaction_ack.error == error
+        # Make sure it ends up in the pending cache, not the mempool
+        assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
+        assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=True) is not None
+        # Advance peak to meet the asserted height condition
+        with caplog.at_level(logging.DEBUG):
+            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+            for block in blocks:
+                await full_node_api.full_node.add_block(block)
+        # This should trigger peak post processing with the added transaction
+        assert f"Added transaction to mempool: {sb_name}\n" in caplog.text
+        # Make sure the transaction was retried and got added to the mempool
+        assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None

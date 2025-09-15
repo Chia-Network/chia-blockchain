@@ -10,6 +10,7 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
@@ -17,13 +18,6 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants
 from chia.util.db_wrapper import DBWrapper2
-
-
-def rand_bytes(num) -> bytes:
-    ret = bytearray(num)
-    for i in range(num):
-        ret[i] = random.getrandbits(8)
-    return bytes(ret)
 
 
 @pytest.mark.anyio
@@ -34,21 +28,21 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
 
     hints: list[tuple[bytes32, bytes]] = []
     for i in range(351):
-        hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+        hints.append((bytes32.random(), random.randbytes(20)))
 
     # the v1 schema allows duplicates in the hints table
     for i in range(10):
-        coin_id = bytes32(rand_bytes(32))
-        hint = rand_bytes(20)
+        coin_id = bytes32.random()
+        hint = random.randbytes(20)
         hints.append((coin_id, hint))
         hints.append((coin_id, hint))
 
     for i in range(2000):
-        hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
+        hints.append((bytes32.random(), random.randbytes(20)))
 
     for i in range(5):
-        coin_id = bytes32(rand_bytes(32))
-        hint = rand_bytes(20)
+        coin_id = bytes32.random()
+        hint = random.randbytes(20)
         hints.append((coin_id, hint))
         hints.append((coin_id, hint))
 
@@ -67,7 +61,8 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 for h in hints:
                     await hint_store1.add_hints([(h[0], h[1])])
 
-            bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
+            height_map = await BlockHeightMap.create(Path("."), db_wrapper1)
+            bc = await Blockchain.create(coin_store1, block_store1, height_map, test_constants, reserved_cores=0)
             sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:
                 if block.height != 0 and len(block.finished_sub_slots) > 0:

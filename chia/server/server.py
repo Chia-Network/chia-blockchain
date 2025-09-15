@@ -57,7 +57,7 @@ def ssl_context_for_server(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))  # noqa: S323
     ssl_context.check_hostname = False
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     ssl_context.set_ciphers(
@@ -99,7 +99,7 @@ def ssl_context_for_client(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))  # noqa: S323
     ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED
@@ -172,8 +172,14 @@ class ChiaServer:
         private_cert_path, private_key_path = None, None
         public_cert_path, public_key_path = None, None
 
-        authenticated_client_types = {NodeType.HARVESTER}
-        authenticated_server_types = {NodeType.HARVESTER, NodeType.FARMER, NodeType.WALLET, NodeType.DATA_LAYER}
+        authenticated_client_types = {NodeType.HARVESTER, NodeType.SOLVER}
+        authenticated_server_types = {
+            NodeType.HARVESTER,
+            NodeType.FARMER,
+            NodeType.WALLET,
+            NodeType.DATA_LAYER,
+            NodeType.SOLVER,
+        }
 
         if local_type in authenticated_client_types:
             # Authenticated clients
@@ -260,9 +266,8 @@ class ChiaServer:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:
                             to_remove.append(connection)
-                    else:
-                        if time.time() - connection.last_message_time > 1800:
-                            to_remove.append(connection)
+                    elif time.time() - connection.last_message_time > 1800:
+                        to_remove.append(connection)
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_info.host} due to inactivity")
                 if connection.closed:

@@ -31,15 +31,17 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.harvester.harvester_service import HarvesterService
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
@@ -77,7 +79,6 @@ async def test_harvester_receive_source_signing_data(
         full_node_service_2,
         _,
     ) = farmer_harvester_2_simulators_zero_bits_plot_filter
-
     farmer: Farmer = farmer_service._node
     harvester: Harvester = harvester_service._node
     full_node_1: FullNode = full_node_service_1._node
@@ -106,6 +107,7 @@ async def test_harvester_receive_source_signing_data(
     # so that we have blocks generated that have our farmer reward address, instead
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
     await add_test_blocks_into_full_node(blocks, full_node_2)
+    await time_out_assert(60, full_node_2.blockchain.get_peak_height, blocks[-1].height)
 
     validated_foliage_data = False
     validated_foliage_transaction = False
@@ -364,6 +366,7 @@ def prepare_sp_and_pos_for_fee_test(
         sub_slot_iters=uint64(0),
         signage_point_index=uint8(0),
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
 
     pos = harvester_protocol.NewProofOfSpace(

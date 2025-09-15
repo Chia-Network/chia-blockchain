@@ -45,11 +45,11 @@ ChiaCommand = Union[SyncChiaCommand, AsyncChiaCommand]
 
 
 def option(*param_decls: str, **kwargs: Any) -> Any:
-    if sys.version_info < (3, 10):  # versions < 3.10 don't know about kw_only and they complain about lacks of defaults
+    if sys.version_info >= (3, 10):
+        default_default = MISSING
+    else:  # versions < 3.10 don't know about kw_only and they complain about lacks of defaults
         # Can't get coverage on this because we only test on one version
         default_default = None  # pragma: no cover
-    else:
-        default_default = MISSING
 
     return field(
         metadata=dict(
@@ -181,10 +181,10 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
     needs_context: bool = False
 
     hints = get_type_hints(cls)
-    _fields = fields(cls)  # type: ignore[arg-type]
+    cls_fields = fields(cls)  # type: ignore[arg-type]
 
-    for _field in _fields:
-        field_name = _field.name
+    for cls_field in cls_fields:
+        field_name = cls_field.name
         if getattr(hints[field_name], COMMAND_HELPER_ATTRIBUTE_NAME, False):
             members[field_name] = _generate_command_parser(hints[field_name])
         elif field_name == "context":
@@ -193,9 +193,9 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
             else:
                 needs_context = True
                 kwarg_names.append(field_name)
-        elif "option_args" in _field.metadata:
+        elif "option_args" in cls_field.metadata:
             option_args: dict[str, Any] = {"multiple": False, "required": False}
-            option_args.update(_field.metadata["option_args"])
+            option_args.update(cls_field.metadata["option_args"])
 
             if "type" not in option_args:
                 origin = get_origin(hints[field_name])
@@ -270,15 +270,15 @@ def chia_command(
     def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
-        if sys.version_info < (3, 10):  # pragma: no cover
-            # stuff below 3.10 doesn't know about kw_only
-            wrapped_cls: type[ChiaCommand] = dataclass(
-                frozen=True,
-            )(cls)
-        else:
+        if sys.version_info >= (3, 10):
             wrapped_cls: type[ChiaCommand] = dataclass(
                 frozen=True,
                 kw_only=True,
+            )(cls)
+        else:  # pragma: no cover
+            # stuff below 3.10 doesn't know about kw_only
+            wrapped_cls: type[ChiaCommand] = dataclass(
+                frozen=True,
             )(cls)
 
         metadata = Metadata(
@@ -316,9 +316,9 @@ def get_chia_command_metadata(cls: type[ChiaCommand]) -> Metadata:
 
 @dataclass_transform(frozen_default=True)
 def command_helper(cls: type[Any]) -> type[Any]:
-    if sys.version_info < (3, 10):  # stuff below 3.10 doesn't support kw_only
-        new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
-    else:
+    if sys.version_info >= (3, 10):
         new_cls = dataclass(frozen=True, kw_only=True)(cls)
+    else:  # stuff below 3.10 doesn't support kw_only
+        new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
     setattr(new_cls, COMMAND_HELPER_ATTRIBUTE_NAME, True)
     return new_cls

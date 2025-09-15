@@ -13,6 +13,7 @@ import click
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.get_block_generator import get_block_generator
@@ -68,7 +69,8 @@ async def main(db_path: Path) -> None:
         start_time = monotonic()
         # make configurable
         reserved_cores = 4
-        blockchain = await Blockchain.create(coin_store, block_store, DEFAULT_CONSTANTS, db_path.parent, reserved_cores)
+        height_map = await BlockHeightMap.create(db_path.parent, db_wrapper)
+        blockchain = await Blockchain.create(coin_store, block_store, height_map, DEFAULT_CONSTANTS, reserved_cores)
 
         peak = blockchain.get_peak()
         assert peak is not None

@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -44,7 +44,6 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -57,13 +56,15 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
+    validate_pospace_and_get_required_iters,
 )
+from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
-from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import PlotVersion
 from chia.plotting.util import (
     Params,
     PlotRefreshEvents,
@@ -91,10 +92,13 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     generate_plot_public_key,
     generate_taproot_sk,
+    make_pos,
     passes_plot_filter,
-    verify_and_get_quality_string,
+    quality_for_partial_proof,
+    solve_proof,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -120,13 +124,16 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
 GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GENERATOR)
 
 test_constants = DEFAULT_CONSTANTS.replace(
-    MIN_PLOT_SIZE=uint8(18),
+    MIN_PLOT_SIZE_V1=uint8(18),
+    # TODO: todo_v2_plots decide on v2 test plot k-size
+    MIN_PLOT_SIZE_V2=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**10),
     DISCRIMINANT_SIZE_BITS=uint16(16),
@@ -134,7 +141,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(380),
     DIFFICULTY_CONSTANT_FACTOR=uint128(33554432),
-    NUM_SPS_SUB_SLOT=uint32(16),  # Must be a power of 2
+    NUM_SPS_SUB_SLOT=uint8(16),  # Must be a power of 2
     MAX_SUB_SLOT_BLOCKS=uint32(50),
     EPOCH_BLOCKS=uint32(340),
     # the block cache must contain at least 3 epochs in order for
@@ -166,7 +173,9 @@ def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
     return ret
 
 
-def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstants, height: uint32) -> uint64:
+def compute_block_cost(
+    generator: SerializedProgram, constants: ConsensusConstants, height: uint32, prev_tx_height: uint32
+) -> uint64:
     # this function cannot *validate* the block or any of the transactions. We
     # deliberately create invalid blocks as parts of the tests, and we still
     # need to be able to compute the cost of it
@@ -187,7 +196,9 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
 
             cost, result = _run(puzzle, INFINITE_COST, DEFAULT_FLAGS, solution)
             clvm_cost += cost
-            condition_cost += conditions_cost(result)
+            condition_cost += conditions_cost(
+                result, charge_for_conditions=prev_tx_height >= constants.HARD_FORK2_HEIGHT
+            )
 
     else:
         block_program_args = SerializedProgram.to([[]])
@@ -197,7 +208,7 @@ def compute_block_cost(generator: SerializedProgram, constants: ConsensusConstan
             # each condition item is:
             # (parent-coin-id puzzle-hash amount conditions)
             conditions = res.at("rrrf")
-            condition_cost += conditions_cost(conditions)
+            condition_cost += conditions_cost(conditions, charge_for_conditions=False)
 
     size_cost = len(bytes(generator)) * constants.COST_PER_BYTE
 
@@ -346,6 +357,7 @@ class BlockTools:
         rng: Optional[random.Random],
         available_coins: list[Coin],
         *,
+        prev_tx_height: uint32,
         dummy_block_references: bool,
         include_transactions: bool,
         transaction_data: Optional[SpendBundle],
@@ -376,7 +388,7 @@ class BlockTools:
             else:
                 program = simple_solution_generator(transaction_data).program
             block_refs = []
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1))
+            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
                 program,
                 [],
@@ -396,7 +408,7 @@ class BlockTools:
             bundle, additions = make_spend_bundle(available_coins, wallet, rng)
             removals = bundle.removals()
             program = simple_solution_generator(bundle).program
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1))
+            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(
                 program,
                 [],
@@ -409,7 +421,7 @@ class BlockTools:
 
         if dummy_block_references:
             program = SerializedProgram.from_bytes(solution_generator([]))
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1))
+            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
             return NewBlockGenerator(program, [], block_refs + dummy_refs, G2Element(), [], [], cost)
 
         return None
@@ -446,10 +458,10 @@ class BlockTools:
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
             if reward_ph is None:
-                self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                self.farmer_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
                 )
-                self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                self.pool_ph: bytes32 = puzzle_hash_for_pk(
                     master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
                 )
             else:
@@ -764,7 +776,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
+                timestamp=(uint64(time.time()) if genesis_timestamp is None else genesis_timestamp),
             )
             self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -791,6 +803,7 @@ class BlockTools:
             curr = blocks[curr.prev_hash]
         assert curr.timestamp is not None
         last_timestamp = float(curr.timestamp)
+        prev_tx_height = curr.height
 
         curr = latest_block
         blocks_added_this_sub_slot = 1
@@ -823,7 +836,7 @@ class BlockTools:
                 num_empty_slots_added += 1
             else:
                 # Loop over every signage point (Except for the last ones, which are used for overflows)
-                for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
+                for signage_point_index in range(constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
                         constants, sub_slot_iters, uint8(signage_point_index)
@@ -867,6 +880,7 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
+                        tx_block_heights[-1] if len(tx_block_heights) > 0 else uint32(0),
                         force_plot_id=force_plot_id,
                     )
 
@@ -888,11 +902,10 @@ class BlockTools:
                                 # address, so continue until a proof of space tied to a pk is found
                                 continue
                             pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        elif pool_reward_puzzle_hash is not None:
+                            pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                         else:
-                            if pool_reward_puzzle_hash is not None:
-                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
-                            else:
-                                pool_target = PoolTarget(self.pool_ph, uint32(0))
+                            pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         new_gen = self.setup_new_gen(
                             tx_block_heights,
@@ -900,6 +913,7 @@ class BlockTools:
                             wallet,
                             rng,
                             available_coins,
+                            prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
                             transaction_data=transaction_data,
                             include_transactions=include_transactions,
@@ -968,6 +982,7 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
+                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1168,6 +1183,7 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
+                        tx_block_heights[-1] if len(tx_block_heights) > 0 else uint32(0),
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1180,11 +1196,10 @@ class BlockTools:
                                 # address, so continue until a proof of space tied to a pk is found
                                 continue
                             pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        elif pool_reward_puzzle_hash is not None:
+                            pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                         else:
-                            if pool_reward_puzzle_hash is not None:
-                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
-                            else:
-                                pool_target = PoolTarget(self.pool_ph, uint32(0))
+                            pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         new_gen = self.setup_new_gen(
                             tx_block_heights,
@@ -1192,6 +1207,7 @@ class BlockTools:
                             wallet,
                             rng,
                             available_coins,
+                            prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
                             transaction_data=transaction_data,
                             include_transactions=include_transactions,
@@ -1230,7 +1246,6 @@ class BlockTools:
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
-
                         if block_record.is_transaction_block:
                             transaction_data = None
                             block_refs = []
@@ -1261,6 +1276,7 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
+                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1297,7 +1313,7 @@ class BlockTools:
         skip_slots: int = 0,
     ) -> FullBlock:
         if timestamp is None:
-            timestamp = uint64(int(time.time()))
+            timestamp = uint64(time.time())
 
         finished_sub_slots: list[EndOfSubSlotBundle] = []
         unfinished_block: Optional[UnfinishedBlock] = None
@@ -1307,7 +1323,7 @@ class BlockTools:
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             cc_challenge, rc_challenge = get_challenges(constants, {}, finished_sub_slots, None)
-            for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
+            for signage_point_index in range(constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
                     BlockCache({}),
@@ -1332,6 +1348,7 @@ class BlockTools:
                     seed,
                     constants.DIFFICULTY_STARTING,
                     constants.SUB_SLOT_ITERS_STARTING,
+                    uint32(0),
                     uint32(0),
                 )
 
@@ -1481,54 +1498,87 @@ class BlockTools:
         difficulty: uint64,
         sub_slot_iters: uint64,
         height: uint32,
+        prev_transaction_b_height: uint32,
         force_plot_id: Optional[bytes32] = None,
     ) -> list[tuple[uint64, ProofOfSpace]]:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
         rng.seed(seed)
+
+        required_plot_strength = calculate_required_plot_strength(constants, prev_transaction_b_height)
+
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            prefix_bits = calculate_prefix_bits(constants, height)
-            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
-                new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
-                qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
+            prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_size())
+            if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
+                continue
 
-                for proof_index, quality_str in enumerate(qualities):
-                    required_iters = calculate_iterations_quality(
-                        constants.DIFFICULTY_CONSTANT_FACTOR,
-                        quality_str,
-                        plot_info.prover.get_size(),
-                        difficulty,
-                        signage_point,
-                    )
-                    if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
-                        proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+            # v2 plots aren't valid until after the hard fork
+            if (
+                prev_transaction_b_height < constants.HARD_FORK2_HEIGHT
+                and plot_info.prover.get_version() == PlotVersion.V2
+            ):
+                continue
 
-                        # Look up local_sk from plot to save locked memory
-                        (
-                            pool_public_key_or_puzzle_hash,
-                            farmer_public_key,
-                            local_master_sk,
-                        ) = parse_plot_info(plot_info.prover.get_memo())
-                        local_sk = master_sk_to_local_sk(local_master_sk)
+            new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
-                        if isinstance(pool_public_key_or_puzzle_hash, G1Element):
-                            include_taproot = False
-                        else:
-                            assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
-                            include_taproot = True
-                        plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
-                        proof_of_space: ProofOfSpace = ProofOfSpace(
-                            new_challenge,
-                            plot_info.pool_public_key,
-                            plot_info.pool_contract_puzzle_hash,
-                            plot_pk,
-                            plot_info.prover.get_size(),
-                            proof_xs,
-                        )
-                        found_proofs.append((required_iters, proof_of_space))
+            # these are either qualities (v1) or partial proofs (v2)
+            proofs: Sequence[Union[bytes32, bytes]]
+            v = plot_info.prover.get_version()
+            if v == PlotVersion.V1:
+                proofs = plot_info.prover.get_qualities_for_challenge(new_challenge)
+            else:
+                proofs = plot_info.prover.get_partial_proofs_for_challenge(new_challenge, required_plot_strength)
+
+            for proof_index, proof in enumerate(proofs):
+                if v == PlotVersion.V2:
+                    quality_str = quality_for_partial_proof(proof, new_challenge)
+                elif v == PlotVersion.V1:
+                    quality_str = bytes32(proof)
+
+                required_iters = calculate_iterations_quality(
+                    constants,
+                    quality_str,
+                    plot_info.prover.get_size(),
+                    difficulty,
+                    signage_point,
+                    sub_slot_iters,
+                    prev_transaction_b_height,
+                )
+                if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
+                    continue
+
+                proof_xs: bytes
+                if v == PlotVersion.V1:
+                    proof_xs = plot_info.prover.get_full_proof(new_challenge, proof_index)
+                else:
+                    proof_xs = solve_proof(proof)
+
+                # Look up local_sk from plot to save locked memory
+                (
+                    pool_public_key_or_puzzle_hash,
+                    farmer_public_key,
+                    local_master_sk,
+                ) = parse_plot_info(plot_info.prover.get_memo())
+                local_sk = master_sk_to_local_sk(local_master_sk)
+
+                if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+                    include_taproot = False
+                else:
+                    assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+                    include_taproot = True
+                plot_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+                proof_of_space: ProofOfSpace = make_pos(
+                    new_challenge,
+                    plot_info.pool_public_key,
+                    plot_info.pool_contract_puzzle_hash,
+                    plot_pk,
+                    plot_info.prover.get_size(),
+                    proof_xs,
+                )
+                found_proofs.append((required_iters, proof_of_space))
         random_sample = found_proofs
         if len(found_proofs) >= 1:
             if rng.random() < 0.1:
@@ -1714,7 +1764,8 @@ def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = Tr
     if not automated_testing:  # make sure we don't accidentally stack directories.
         root_dir = (
             root_dir.parent
-            if root_dir.parts[-1] == plot_dir_name.split("/")[0] or root_dir.parts[-1] == plot_dir_name.split("\\")[0]
+            if root_dir.parts[-1] == plot_dir_name.split("/", maxsplit=1)[0]
+            or root_dir.parts[-1] == plot_dir_name.split("\\", maxsplit=1)[0]
             else root_dir
         )
     cache_path = root_dir.joinpath(plot_dir_name)
@@ -1738,6 +1789,7 @@ def load_block_list(
     sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
     height_to_hash: dict[uint32, bytes32] = {}
     blocks: dict[bytes32, BlockRecord] = {}
+    prev_transaction_b_height = uint32(0)
     for full_block in block_list:
         if full_block.height != 0:
             if len(full_block.finished_sub_slots) > 0:
@@ -1752,25 +1804,27 @@ def load_block_list(
             assert full_block.reward_chain_block.challenge_chain_sp_vdf is not None
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-        quality_str = verify_and_get_quality_string(
-            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
-        )
-        assert quality_str is not None
-        # TODO: support v2 plots
-        pos_size_v1 = full_block.reward_chain_block.proof_of_space.size_v1()
-        assert pos_size_v1 is not None, "plot format v2 not supported yet"
 
-        required_iters: uint64 = calculate_iterations_quality(
-            constants.DIFFICULTY_CONSTANT_FACTOR,
-            quality_str,
-            pos_size_v1,
-            uint64(difficulty),
+        cache = BlockCache(blocks)
+
+        required_iters = validate_pospace_and_get_required_iters(
+            constants,
+            full_block.reward_chain_block.proof_of_space,
+            challenge,
             sp_hash,
+            full_block.height,
+            uint64(difficulty),
+            sub_slot_iters,
+            prev_transaction_b_height,
         )
+        assert required_iters is not None
+
+        if full_block.is_transaction_block():
+            prev_transaction_b_height = full_block.height
 
         blocks[full_block.header_hash] = block_to_block_record(
             constants,
-            BlockCache(blocks),
+            cache,
             required_iters,
             full_block,
             sub_slot_iters,
@@ -1951,10 +2005,19 @@ def compute_cost_table() -> list[int]:
 CONDITION_COSTS = compute_cost_table()
 
 
-def conditions_cost(conds: Program) -> uint64:
+def conditions_cost(conds: Program, *, charge_for_conditions: bool) -> uint64:
+    free_conditions = 100
+
     condition_cost = 0
     for cond in conds.as_iter():
         condition = cond.first().as_atom()
+
+        # this is new in hard fork 2
+        if free_conditions > 0:
+            free_conditions -= 1
+        elif charge_for_conditions:
+            condition_cost += ConditionCost.GENERIC_CONDITION_COST.value
+
         if condition == ConditionOpcode.CREATE_COIN:
             condition_cost += ConditionCost.CREATE_COIN.value
         # after the 2.0 hard fork, two byte conditions (with no leading 0)

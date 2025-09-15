@@ -13,7 +13,17 @@ from chia_rs.sized_ints import uint16
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 
-services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
+services: list[str] = [
+    "crawler",
+    "daemon",
+    "farmer",
+    "full_node",
+    "harvester",
+    "timelord",
+    "wallet",
+    "data_layer",
+    "solver",
+]
 
 
 async def call_endpoint(
@@ -131,7 +141,7 @@ def status_cmd(ctx: click.Context, json_output: bool) -> None:
         status = "ACTIVE"
         try:
             if not get_routes(service, config, root_path=root_path, quiet=True)["success"]:
-                raise Exception()
+                raise Exception
         except Exception:
             status = "INACTIVE"
         status_data[service] = status

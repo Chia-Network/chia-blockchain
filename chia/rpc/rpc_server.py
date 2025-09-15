@@ -199,7 +199,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func, route)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
@@ -292,7 +292,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def open_connection(self, request: dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
-        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(int(port)))
+        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(port))
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
@@ -303,7 +303,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def close_connection(self, request: dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
-            raise web.HTTPInternalServerError()
+            raise web.HTTPInternalServerError
         connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")

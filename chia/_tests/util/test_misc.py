@@ -98,7 +98,7 @@ def test_empty_lists() -> None:
 @pytest.mark.parametrize("collection_type", [list, set])
 def test_valid(collection_type: type) -> None:
     for k in range(1, 10):
-        test_collection = collection_type([x for x in range(0, k)])
+        test_collection = collection_type([x for x in range(k)])
         for i in range(1, len(test_collection) + 1):  # Test batch_size 1 to 11 (length + 1)
             checked = 0
             for batch in to_batches(test_collection, i):
@@ -182,7 +182,7 @@ def test_split_manager_raises_on_second_entry() -> None:
     split = SplitManager(manager=sync_manager(y=x), object=None)
     split.enter()
 
-    with pytest.raises(Exception, match="^already entered$"):
+    with pytest.raises(Exception, match=r"^already entered$"):
         split.enter()
 
 
@@ -193,7 +193,7 @@ def test_split_manager_raises_on_second_entry_after_exiting() -> None:
     split.enter()
     split.exit()
 
-    with pytest.raises(Exception, match="^already entered, already exited$"):
+    with pytest.raises(Exception, match=r"^already entered, already exited$"):
         split.enter()
 
 
@@ -204,7 +204,7 @@ def test_split_manager_raises_on_second_exit() -> None:
     split.enter()
     split.exit()
 
-    with pytest.raises(Exception, match="^already exited$"):
+    with pytest.raises(Exception, match=r"^already exited$"):
         split.exit()
 
 
@@ -213,7 +213,7 @@ def test_split_manager_raises_on_exit_without_entry() -> None:
 
     split = SplitManager(manager=sync_manager(y=x), object=None)
 
-    with pytest.raises(Exception, match="^not yet entered$"):
+    with pytest.raises(Exception, match=r"^not yet entered$"):
         split.exit()
 
 
@@ -274,7 +274,7 @@ async def test_split_async_manager_raises_on_second_entry() -> None:
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
     await split.enter()
 
-    with pytest.raises(Exception, match="^already entered$"):
+    with pytest.raises(Exception, match=r"^already entered$"):
         await split.enter()
 
 
@@ -286,7 +286,7 @@ async def test_split_async_manager_raises_on_second_entry_after_exiting() -> Non
     await split.enter()
     await split.exit()
 
-    with pytest.raises(Exception, match="^already entered, already exited$"):
+    with pytest.raises(Exception, match=r"^already entered, already exited$"):
         await split.enter()
 
 
@@ -298,7 +298,7 @@ async def test_split_async_manager_raises_on_second_exit() -> None:
     await split.enter()
     await split.exit()
 
-    with pytest.raises(Exception, match="^already exited$"):
+    with pytest.raises(Exception, match=r"^already exited$"):
         await split.exit()
 
 
@@ -308,7 +308,7 @@ async def test_split_async_manager_raises_on_exit_without_entry() -> None:
 
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
 
-    with pytest.raises(Exception, match="^not yet entered$"):
+    with pytest.raises(Exception, match=r"^not yet entered$"):
         await split.exit()
 
 
@@ -390,7 +390,7 @@ async def test_valued_event_set_again_raises_and_does_not_change_value() -> None
     value = 37
     valued_event.set(value)
 
-    with pytest.raises(Exception, match="^Value already set$"):
+    with pytest.raises(Exception, match=r"^Value already set$"):
         valued_event.set(value + 1)
 
     with anyio.fail_after(adjusted_timeout(10)):
@@ -404,7 +404,7 @@ async def test_valued_event_wait_raises_if_not_set() -> None:
     valued_event = ValuedEvent[int]()
     valued_event._event.set()
 
-    with pytest.raises(Exception, match="^Value not set despite event being set$"):
+    with pytest.raises(Exception, match=r"^Value not set despite event being set$"):
         with anyio.fail_after(adjusted_timeout(10)):
             await valued_event.wait()
 

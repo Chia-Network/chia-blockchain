@@ -107,7 +107,7 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
     await raw_data_store.create_tree(store_id=store_id)
 
 
-@pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
+@pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(32), *range(33, 48)]])
 @pytest.mark.anyio
 async def test_create_store_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
     bad_store_id = b"\0" * length
@@ -594,7 +594,7 @@ async def test_ancestor_table_unique_inserts(data_store: DataStore, store_id: by
     hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
     await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
     await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
-    with pytest.raises(Exception, match="^Requested insertion of ancestor"):
+    with pytest.raises(Exception, match=r"^Requested insertion of ancestor"):
         await data_store._insert_ancestor_table(hash_1, hash_1, store_id, 2)
     await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
 
@@ -1361,7 +1361,7 @@ async def test_server_http_ban(
         log: logging.Logger,
     ) -> None:
         if error:
-            raise aiohttp.ClientConnectionError()
+            raise aiohttp.ClientConnectionError
 
     start_timestamp = int(time.time())
     with monkeypatch.context() as m:
@@ -1589,11 +1589,7 @@ async def test_benchmark_batch_insert_speed(
     r.seed("shadowlands", version=2)
 
     changelist = [
-        {
-            "action": "insert",
-            "key": x.to_bytes(32, byteorder="big", signed=False),
-            "value": bytes(r.getrandbits(8) for _ in range(1200)),
-        }
+        {"action": "insert", "key": x.to_bytes(32, byteorder="big", signed=False), "value": r.randbytes(1200)}
         for x in range(case.pre + case.count)
     ]
 
@@ -1637,7 +1633,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
                 {
                     "action": "insert",
                     "key": x.to_bytes(32, byteorder="big", signed=False),
-                    "value": bytes(r.getrandbits(8) for _ in range(10000)),
+                    "value": r.randbytes(10000),
                 }
                 for x in range(batch * case.count, (batch + 1) * case.count)
             ]
@@ -2389,11 +2385,10 @@ async def test_get_leaf_at_minimum_height(
                 if isinstance(node, InternalNode):
                     heights[node.left_hash] = heights[node.hash] + 1
                     heights[node.right_hash] = heights[node.hash] + 1
+                elif min_leaf_height is not None:
+                    min_leaf_height = min(min_leaf_height, heights[node.hash])
                 else:
-                    if min_leaf_height is not None:
-                        min_leaf_height = min(min_leaf_height, heights[node.hash])
-                    else:
-                        min_leaf_height = heights[node.hash]
+                    min_leaf_height = heights[node.hash]
 
             assert min_leaf_height is not None
             if pre > 0:

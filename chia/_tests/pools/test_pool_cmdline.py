@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from io import StringIO
 from typing import Optional, cast
@@ -9,7 +10,7 @@ import click
 import pytest
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from pytest_mock import MockerFixture
@@ -38,8 +39,7 @@ from chia.cmds.plotnft import (
     ShowPlotNFTCMD,
 )
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
-from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.pools.pool_wallet_info import PoolSingletonState
 from chia.simulator.setup_services import setup_farmer
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
@@ -47,6 +47,8 @@ from chia.util.errors import CliRpcConnectionError
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import GetWallets, PWStatus
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 # limit to plain consensus mode for all tests
@@ -152,9 +154,9 @@ async def test_plotnft_cli_create(
         ]
     )
 
-    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 1
-    wallet_id: int = summaries_response[0]["id"]
+    summaries_response = await wallet_rpc.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))
+    assert len(summaries_response.wallets) == 1
+    wallet_id: int = summaries_response.wallets[0].id
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
 
@@ -324,7 +326,7 @@ async def test_plotnft_cli_show_with_farmer(
         assert "Current state" not in out
 
         wallet_id = await create_new_plotnft(wallet_environments)
-        pw_info, _ = await wallet_rpc.pw_status(wallet_id)
+        pw_info = (await wallet_rpc.pw_status(PWStatus(uint32(wallet_id)))).state
 
         await ShowPlotNFTCMD(
             context=ChiaCliContext(root_path=root_path),
@@ -483,7 +485,7 @@ async def test_plotnft_cli_join(
     wallet_id = await create_new_plotnft(wallet_environments)
 
     # Test joining the same pool again
-    with pytest.raises(click.ClickException, match="already farming to pool http://pool.example.com"):
+    with pytest.raises(click.ClickException, match=re.escape("already farming to pool http://pool.example.com")):
         await JoinPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
@@ -678,7 +680,7 @@ async def test_plotnft_cli_claim(
     # Create a self-pooling plotnft
     wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
 
-    status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
+    status = (await wallet_rpc.pw_status(PWStatus(uint32(wallet_id)))).state
     async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
     bt = wallet_environments.full_node.bt
@@ -876,7 +878,7 @@ async def test_plotnft_cli_change_payout(
     root_path = wallet_environments.environments[0].node.root_path
 
     wallet_id = await create_new_plotnft(wallet_environments)
-    pw_info, _ = await wallet_rpc.pw_status(wallet_id)
+    pw_info = (await wallet_rpc.pw_status(PWStatus(uint32(wallet_id)))).state
 
     # This tests what happens when using None for root_path
     mocker.patch("chia.cmds.plotnft_funcs.DEFAULT_ROOT_PATH", root_path)
@@ -1006,7 +1008,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
 @pytest.mark.anyio
 async def test_plotnft_unsynced_joining(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
     from chia.cmds.plotnft_funcs import join_pool
-    from chia.rpc.wallet_request_types import GetSyncStatusResponse
+    from chia.wallet.wallet_request_types import GetSyncStatusResponse
 
     test_rpc_client = TestWalletRpcClient()
 
