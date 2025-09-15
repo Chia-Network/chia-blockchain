@@ -21,6 +21,7 @@ from chia.wallet.wallet_request_types import (
     ApplySignaturesResponse,
     CancelOffer,
     CancelOfferResponse,
+    CancelOffers,
     CancelOffersResponse,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
@@ -729,32 +730,16 @@ class WalletRpcClient(RpcClient):
 
     async def cancel_offers(
         self,
+        request: CancelOffers,
         tx_config: TXConfig,
-        batch_fee: int = 0,
-        secure: bool = True,
-        batch_size: int = 5,
-        cancel_all: bool = False,
-        asset_id: bytes32 | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> CancelOffersResponse:
-        res = await self.fetch(
-            "cancel_offers",
-            {
-                "secure": secure,
-                "batch_fee": batch_fee,
-                "batch_size": batch_size,
-                "cancel_all": cancel_all,
-                "asset_id": None if asset_id is None else asset_id.hex(),
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return CancelOffersResponse.from_json_dict(
+            await self.fetch(
+                "cancel_offers", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-
-        return json_deserialize_with_clvm_streamable(res, CancelOffersResponse)
 
     async def get_cat_list(self) -> GetCATListResponse:
         return GetCATListResponse.from_json_dict(await self.fetch("get_cat_list", {}))
