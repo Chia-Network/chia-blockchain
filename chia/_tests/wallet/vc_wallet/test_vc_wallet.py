@@ -31,6 +31,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    CATSpend,
     GetTransactions,
     GetWallets,
     VCAddProofs,
@@ -383,12 +384,15 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
     txs = (
         await client_0.cat_spend(
-            cr_cat_wallet_0.id(),
+            CATSpend(
+                wallet_id=cr_cat_wallet_0.id(),
+                amount=uint64(90),
+                inner_address=wallet_1_addr,
+                fee=uint64(2000000000),
+                memos=["hey"],
+                push=True,
+            ),
             wallet_environments.tx_config,
-            uint64(90),
-            wallet_1_addr,
-            uint64(2000000000),
-            memos=["hey"],
         )
     ).transactions
     await wallet_environments.process_pending_states(
@@ -557,10 +561,12 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):
         await client_0.cat_spend(
-            cr_cat_wallet_0.id(),
-            wallet_environments.tx_config,
-            uint64(10),
-            wallet_1_addr,
+            CATSpend(
+                wallet_id=cr_cat_wallet_0.id(),
+                amount=uint64(10),
+                inner_address=wallet_1_addr,
+            ),
+            tx_config=wallet_environments.tx_config,
         )
 
     # Test melting a CRCAT
@@ -568,12 +574,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     with wallet_environments.new_puzzle_hashes_allowed():
         tx = (
             await client_1.cat_spend(
-                env_1.dealias_wallet_id("crcat"),
-                wallet_environments.tx_config,
-                uint64(20),
-                wallet_1_addr,
-                uint64(0),
-                cat_discrepancy=(-50, Program.to(None), Program.to(None)),
+                CATSpend(
+                    wallet_id=env_1.dealias_wallet_id("crcat"),
+                    amount=uint64(20),
+                    inner_address=wallet_1_addr,
+                    fee=uint64(0),
+                    extra_delta=str(-50),
+                    tail_reveal=b"\x80",
+                    tail_solution=b"\x80",
+                    push=True,
+                ),
+                tx_config=wallet_environments.tx_config,
             )
         ).transaction
     [tx] = await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
