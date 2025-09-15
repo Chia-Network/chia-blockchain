@@ -1,0 +1,22 @@
+(mod atom
+
+    (defun generate_conds (block_refs)
+        (if pair_count
+            (c (list 1 (f block_refs)) (generate_conds (r block_refs)))
+            0
+        )
+    )
+
+    (defun loop_coins (id coins amount)
+        (if coins
+            (c (list id (generate_conds block_refs) 123 (list 0 (list 1))) (loop_coins (+ id 1) (- coins 1)))
+            ()
+        )   
+    )
+
+    (defun-inline create_output (atom)
+        (list (list 0x0101010101010101010101010101010101010101010101010101010101010101 (c 1 (list (list 1 atom))) 123 (list 0 (list 1))))
+    )
+    ; main
+    (r (c atom (list (list))))
+)

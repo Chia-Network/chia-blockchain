@@ -44,6 +44,14 @@ NEW_THING = load_clvm(
     "generator_generator.clsp", package_or_requirement="chia._tests.generator.puzzles"
 )
 
+REF_THING = load_clvm(
+    "generator_to_be_ref.clsp", package_or_requirement="chia._tests.generator.puzzles"
+)
+
+LADDER = load_clvm(
+    "ladder.clsp", package_or_requirement="chia._tests.generator.puzzles"
+)
+
 Nil = Program.from_bytes(b"\x80")
 
 original_generator = hexstr_to_bytes(
@@ -80,6 +88,16 @@ class TestCompression:
 
 class TestDecompression:
     def test_deserialization(self) -> None:
+        file_path = 'chia/_tests/generator/puzzles/largest_atom.txt'
+
+        with open(file_path, 'r') as file:
+            file_content = file.read()
+
+        test = bytes.fromhex(file_content)
+        file_path = 'chia/_tests/generator/puzzles/curried_generator.clsp'
+        curried = REF_THING.curry(test)
+        with open(file_path, 'w') as file:
+            file_content = file.write(bytes(curried).hex())
         breakpoint()
         _cost, out = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [bytes(Program.to("hello"))])
         assert out == Program.to("hello")

@@ -1,0 +1,12 @@
+(mod ()
+
+    (defun ladder_maker (depth a b)
+        (if depth
+            (c (ladder_maker (- depth 1) a b) (ladder_maker (- depth 1) b a))
+            (c a b)
+        )
+    )
+
+; main
+    (list (ladder_maker 10 (list 1 "hello") (list 1 " world")))
+)
