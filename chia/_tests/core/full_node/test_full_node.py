@@ -3294,3 +3294,62 @@ def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) 
     # Final assertion to check the entire block
     assert block1 == block2, "The entire block objects are not identical"
     return True
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "condition, error",
+    [
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, "ASSERT_HEIGHT_RELATIVE_FAILED"),
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, "ASSERT_HEIGHT_ABSOLUTE_FAILED"),
+    ],
+)
+async def test_pending_tx_cache_retry_on_new_peak(
+    condition: ConditionOpcode, error: str, blockchain_constants: ConsensusConstants, caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    Covers PendingTXCache items that are placed there due to unmet relative or
+    absolute height conditions, to make sure those items get retried at peak
+    post processing when those conditions are met.
+    """
+    async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
+        full_node_api = new.simulators[0].peer_api
+        bt = new.bt
+        wallet = WalletTool(test_constants)
+        ph = wallet.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph, pool_reward_puzzle_hash=ph
+        )
+        for block in blocks:
+            await full_node_api.full_node.add_block(block)
+        peak = full_node_api.full_node.blockchain.get_peak()
+        assert peak is not None
+        current_height = peak.height
+        # Create a transaction with a height condition that makes it pending
+        coin = blocks[-1].get_included_reward_coins()[0]
+        if condition == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+            condition_height = 1
+        else:
+            condition_height = current_height + 1
+        condition_dic = {condition: [ConditionWithArgs(condition, [int_to_bytes(condition_height)])]}
+        sb = wallet.generate_signed_transaction(uint64(42), ph, coin, condition_dic)
+        sb_name = sb.name()
+        # Send the transaction
+        res = await full_node_api.send_transaction(SendTransaction(sb))
+        assert res is not None
+        assert ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
+        transaction_ack = TransactionAck.from_bytes(res.data)
+        assert transaction_ack.status == MempoolInclusionStatus.PENDING.value
+        assert transaction_ack.error == error
+        # Make sure it ends up in the pending cache, not the mempool
+        assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
+        assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=True) is not None
+        # Advance peak to meet the asserted height condition
+        with caplog.at_level(logging.DEBUG):
+            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+            for block in blocks:
+                await full_node_api.full_node.add_block(block)
+        # This should trigger peak post processing with the added transaction
+        assert f"Added transaction to mempool: {sb_name}\n" in caplog.text
+        # Make sure the transaction was retried and got added to the mempool
+        assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
