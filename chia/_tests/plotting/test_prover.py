@@ -5,6 +5,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8
 
 from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, get_prover_from_bytes, get_prover_from_file
 
@@ -25,10 +27,9 @@ class TestProver:
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
             prover.get_memo()
 
-    def test_v2_prover_get_compression_level_raises_error(self) -> None:
+    def test_v2_prover_get_compression_level(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_compression_level()
+        assert prover.get_compression_level() == uint8(0)
 
     def test_v2_prover_get_id_raises_error(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
@@ -37,13 +38,15 @@ class TestProver:
 
     def test_v2_prover_get_qualities_for_challenge_raises_error(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_qualities_for_challenge(b"challenge")
+        with pytest.raises(
+            AssertionError, match="V2 plot format does not support qualities directly, use partial proofs"
+        ):
+            prover.get_qualities_for_challenge(bytes32(b"1" * 32))
 
     def test_v2_prover_get_full_proof_raises_error(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_full_proof(b"challenge", 0)
+        with pytest.raises(AssertionError, match="V2 plot format require solver to get full proof"):
+            prover.get_full_proof(bytes32(b"1" * 32), 0)
 
     def test_v2_prover_bytes_raises_error(self) -> None:
         prover = V2Prover("/nonexistent/path/test.plot2")

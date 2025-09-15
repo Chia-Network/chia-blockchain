@@ -4,6 +4,8 @@ import ast
 import inspect
 from typing import Any, cast
 
+import pytest
+
 from chia.protocols import (
     farmer_protocol,
     full_node_protocol,
@@ -12,6 +14,7 @@ from chia.protocols import (
     pool_protocol,
     protocol_message_types,
     shared_protocol,
+    solver_protocol,
     timelord_protocol,
     wallet_protocol,
 )
@@ -173,6 +176,7 @@ def test_missing_messages() -> None:
         "ProofOfSpaceFeeInfo",
         "NewProofOfSpace",
         "NewSignagePointHarvester",
+        "NewSignagePointHarvester2",
         "Plot",
         "PlotSyncDone",
         "PlotSyncError",
@@ -188,6 +192,7 @@ def test_missing_messages() -> None:
         "RequestSignatures",
         "RespondPlots",
         "RespondSignatures",
+        "PartialProofsData",
     }
 
     introducer_msgs = {"RequestPeersIntroducer", "RespondPeersIntroducer"}
@@ -218,6 +223,8 @@ def test_missing_messages() -> None:
         "RequestCompactProofOfTime",
         "RespondCompactProofOfTime",
     }
+
+    solver_msgs = {"SolverInfo", "SolverResponse"}
 
     shared_msgs = {"Handshake", "Capability", "Error"}
 
@@ -252,6 +259,26 @@ def test_missing_messages() -> None:
         f"message types were added or removed from timelord_protocol. {STANDARD_ADVICE}"
     )
 
+    assert types_in_module(solver_protocol) == solver_msgs, (
+        f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"
+    )
+
     assert types_in_module(shared_protocol) == shared_msgs, (
         f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"
     )
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_rate_limits_complete(version: int) -> None:
+    from chia.protocols.protocol_message_types import ProtocolMessageTypes
+    from chia.server.rate_limit_numbers import rate_limits
+
+    if version == 1:
+        composed = rate_limits[1]
+    elif version == 2:
+        composed = {
+            **rate_limits[1],
+            **rate_limits[2],
+        }
+
+    assert set(composed.keys()) == set(ProtocolMessageTypes)

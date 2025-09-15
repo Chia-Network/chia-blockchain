@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field, fields
+from enum import Enum
 from typing import Any, Callable, ClassVar, Optional, get_type_hints
 
 import pytest
@@ -27,6 +28,7 @@ from chia.util.streamable import (
     function_to_parse_one_item,
     function_to_stream_one_item,
     is_type_Dict,
+    is_type_Enum,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -39,6 +41,7 @@ from chia.util.streamable import (
     parse_uint32,
     recurse_jsonify,
     streamable,
+    streamable_enum,
     streamable_from_dict,
     write_uint32,
 )
@@ -376,6 +379,25 @@ def test_basic_optional() -> None:
     assert not is_type_SpecificOptional(list[int])
 
 
+class BasicEnum(Enum):
+    A = 1
+    B = 2
+
+
+def test_basic_enum() -> None:
+    assert is_type_Enum(BasicEnum)
+    assert not is_type_Enum(list[int])
+
+
+def test_enum_needs_proxy() -> None:
+    with pytest.raises(UnsupportedType):
+
+        @streamable
+        @dataclass(frozen=True)
+        class EnumStreamable(Streamable):
+            enum: BasicEnum
+
+
 @streamable
 @dataclass(frozen=True)
 class PostInitTestClassBasic(Streamable):
@@ -423,6 +445,25 @@ class PostInitTestClassDict(Streamable):
     b: dict[bytes32, dict[uint8, str]]
 
 
+@streamable_enum(uint32)
+class IntegerEnum(Enum):
+    A = 1
+    B = 2
+
+
+@streamable_enum(str)
+class StringEnum(Enum):
+    A = "foo"
+    B = "bar"
+
+
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassEnum(Streamable):
+    a: IntegerEnum
+    b: StringEnum
+
+
 @pytest.mark.parametrize(
     "test_class, args",
     [
@@ -433,6 +474,7 @@ class PostInitTestClassDict(Streamable):
         (PostInitTestClassTuple, ((1, "test"), ((200, "test_2"), b"\xba" * 32))),
         (PostInitTestClassDict, ({1: "bar"}, {bytes32.zeros: {1: "bar"}})),
         (PostInitTestClassOptional, (12, None, 13, None)),
+        (PostInitTestClassEnum, (IntegerEnum.A, StringEnum.B)),
     ],
 )
 def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
@@ -453,6 +495,8 @@ def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
             return validate_item_type(key_type, next(iter(item.keys()))) and validate_item_type(
                 value_type, next(iter(item.values()))
             )
+        if is_type_Enum(type_in):
+            return validate_item_type(type_in._streamable_proxy, type_in._streamable_proxy(item.value))  # type: ignore[attr-defined]
         return isinstance(item, type_in)
 
     test_object = test_class(*args)
@@ -497,6 +541,8 @@ def test_basic() -> None:
         f: Optional[uint32]
         g: tuple[uint32, str, bytes]
         h: dict[uint32, str]
+        i: IntegerEnum
+        j: StringEnum
 
     # we want to test invalid here, hence the ignore.
     a = TestClass(
@@ -508,6 +554,8 @@ def test_basic() -> None:
         None,
         (uint32(383), "hello", b"goodbye"),
         {uint32(1): "foo"},
+        IntegerEnum.A,
+        StringEnum.B,
     )
 
     b: bytes = bytes(a)
@@ -619,8 +667,19 @@ def test_ambiguous_deserialization_int() -> None:
         a: uint32
 
     # Does not have the required uint size
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=re.escape("uint32.from_bytes() requires 4 bytes but got: 2")):
         TestClassUint.from_bytes(b"\x00\x00")
+
+
+def test_ambiguous_deserialization_int_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassIntegerEnum(Streamable):
+        a: IntegerEnum
+
+    # passed bytes are incorrect size for serialization proxy
+    with pytest.raises(ValueError, match=re.escape("uint32.from_bytes() requires 4 bytes but got: 2")):
+        TestClassIntegerEnum.from_bytes(b"\x00\x00")
 
 
 def test_ambiguous_deserialization_list() -> None:
@@ -654,6 +713,28 @@ def test_ambiguous_deserialization_str() -> None:
     # Does not have the required str size
     with pytest.raises(AssertionError):
         TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
+
+
+def test_ambiguous_deserialization_str_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassStr(Streamable):
+        a: StringEnum
+
+    # passed bytes are incorrect size for serialization proxy
+    with pytest.raises(AssertionError):
+        TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
+
+
+def test_deserialization_to_invalid_enum() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class TestClassStr(Streamable):
+        a: StringEnum
+
+    # encodes the string "baz" which is not a valid value for StringEnum
+    with pytest.raises(ValueError, match=re.escape("'baz' is not a valid StringEnum")):
+        TestClassStr.from_bytes(bytes([0, 0, 0, 3, 98, 97, 122]))
 
 
 def test_ambiguous_deserialization_bytes() -> None:

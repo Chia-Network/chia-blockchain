@@ -13,7 +13,17 @@ from chia_rs.sized_ints import uint16
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.config import load_config
 
-services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
+services: list[str] = [
+    "crawler",
+    "daemon",
+    "farmer",
+    "full_node",
+    "harvester",
+    "timelord",
+    "wallet",
+    "data_layer",
+    "solver",
+]
 
 
 async def call_endpoint(

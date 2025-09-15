@@ -545,7 +545,7 @@ class GetCoinRecordsByNames(Streamable):
     names: list[bytes32]
     start_height: Optional[uint32] = None
     end_height: Optional[uint32] = None
-    include_spent_coins: bool = False
+    include_spent_coins: bool = True
 
 
 @streamable

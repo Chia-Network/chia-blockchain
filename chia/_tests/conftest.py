@@ -65,12 +65,14 @@ from chia.simulator.setup_services import (
     setup_full_node,
     setup_introducer,
     setup_seeder,
+    setup_solver,
     setup_timelord,
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
+from chia.solver.solver_service import SolverService
 from chia.timelord.timelord_service import TimelordService
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.keychain import Keychain
@@ -879,6 +881,23 @@ FarmerOneHarvester = tuple[list[HarvesterService], FarmerService, BlockTools]
 async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[FarmerOneHarvester]:
     async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True) as _:
         yield _
+
+
+FarmerOneHarvesterSolver = tuple[list[HarvesterService], FarmerService, SolverService, BlockTools]
+
+
+@pytest.fixture(scope="function")
+async def farmer_one_harvester_solver(
+    tmp_path: Path, get_b_tools: BlockTools
+) -> AsyncIterator[FarmerOneHarvesterSolver]:
+    async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True) as (
+        harvester_services,
+        farmer_service,
+        bt,
+    ):
+        farmer_peer = UnresolvedPeerInfo(bt.config["self_hostname"], farmer_service._server.get_port())
+        async with setup_solver(tmp_path / "solver", bt, bt.constants, farmer_peer=farmer_peer) as solver_service:
+            yield harvester_services, farmer_service, solver_service, bt
 
 
 @pytest.fixture(scope="function")

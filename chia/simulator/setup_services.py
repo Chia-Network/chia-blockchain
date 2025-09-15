@@ -37,6 +37,8 @@ from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.simulator.start_simulator import SimulatorFullNodeService, create_full_node_simulator_service
+from chia.solver.solver_service import SolverService
+from chia.solver.start_solver import create_solver_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.start_timelord import create_timelord_service
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
@@ -503,4 +505,31 @@ async def setup_timelord(
     )
 
     async with service.manage():
+        yield service
+
+
+@asynccontextmanager
+async def setup_solver(
+    root_path: Path,
+    b_tools: BlockTools,
+    consensus_constants: ConsensusConstants,
+    start_service: bool = True,
+    farmer_peer: Optional[UnresolvedPeerInfo] = None,
+) -> AsyncGenerator[SolverService, None]:
+    with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
+        config["logging"]["log_stdout"] = True
+        config["solver"]["enable_upnp"] = True
+        config["solver"]["selected_network"] = "testnet0"
+        config["solver"]["port"] = 0
+        config["solver"]["rpc_port"] = 0
+        config["solver"]["num_threads"] = 1
+        save_config(root_path, "config.yaml", config)
+    service = create_solver_service(
+        root_path,
+        config,
+        consensus_constants,
+        farmer_peers={farmer_peer} if farmer_peer is not None else set(),
+    )
+
+    async with service.manage(start=start_service):
         yield service

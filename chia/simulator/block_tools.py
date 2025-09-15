@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -64,6 +64,7 @@ from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_va
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import PlotVersion
 from chia.plotting.util import (
     Params,
     PlotRefreshEvents,
@@ -91,10 +92,13 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
+    calculate_required_plot_strength,
     generate_plot_public_key,
     generate_taproot_sk,
     make_pos,
     passes_plot_filter,
+    quality_for_partial_proof,
+    solve_proof,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -965,7 +969,6 @@ class BlockTools:
                         block_list.append(full_block)
 
                         if include_transactions:
-                            prev_tx_height = full_block.height
                             for coin in full_block.get_included_reward_coins():
                                 if coin.puzzle_hash == self.farmer_ph:
                                     pending_rewards.append(coin)
@@ -979,6 +982,7 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
+                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1259,7 +1263,6 @@ class BlockTools:
                         block_list.append(full_block)
 
                         if include_transactions:
-                            prev_tx_height = full_block.height
                             for coin in full_block.get_included_reward_coins():
                                 if coin.puzzle_hash == self.farmer_ph:
                                     pending_rewards.append(coin)
@@ -1273,6 +1276,7 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
+                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1500,6 +1504,9 @@ class BlockTools:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
         rng.seed(seed)
+
+        required_plot_strength = calculate_required_plot_strength(constants, prev_transaction_b_height)
+
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1508,10 +1515,29 @@ class BlockTools:
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
 
-            new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
-            qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
+            # v2 plots aren't valid until after the hard fork
+            if (
+                prev_transaction_b_height < constants.HARD_FORK2_HEIGHT
+                and plot_info.prover.get_version() == PlotVersion.V2
+            ):
+                continue
 
-            for proof_index, quality_str in enumerate(qualities):
+            new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
+
+            # these are either qualities (v1) or partial proofs (v2)
+            proofs: Sequence[Union[bytes32, bytes]]
+            v = plot_info.prover.get_version()
+            if v == PlotVersion.V1:
+                proofs = plot_info.prover.get_qualities_for_challenge(new_challenge)
+            else:
+                proofs = plot_info.prover.get_partial_proofs_for_challenge(new_challenge, required_plot_strength)
+
+            for proof_index, proof in enumerate(proofs):
+                if v == PlotVersion.V2:
+                    quality_str = quality_for_partial_proof(proof, new_challenge)
+                elif v == PlotVersion.V1:
+                    quality_str = bytes32(proof)
+
                 required_iters = calculate_iterations_quality(
                     constants,
                     quality_str,
@@ -1524,7 +1550,11 @@ class BlockTools:
                 if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
                     continue
 
-                proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+                proof_xs: bytes
+                if v == PlotVersion.V1:
+                    proof_xs = plot_info.prover.get_full_proof(new_challenge, proof_index)
+                else:
+                    proof_xs = solve_proof(proof)
 
                 # Look up local_sk from plot to save locked memory
                 (
@@ -1759,6 +1789,7 @@ def load_block_list(
     sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
     height_to_hash: dict[uint32, bytes32] = {}
     blocks: dict[bytes32, BlockRecord] = {}
+    prev_transaction_b_height = uint32(0)
     for full_block in block_list:
         if full_block.height != 0:
             if len(full_block.finished_sub_slots) > 0:
@@ -1775,7 +1806,6 @@ def load_block_list(
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
         cache = BlockCache(blocks)
-        prev_transaction_b_height = uint32(0)  # TODO: todo_v2_plots
 
         required_iters = validate_pospace_and_get_required_iters(
             constants,
@@ -1788,6 +1818,9 @@ def load_block_list(
             prev_transaction_b_height,
         )
         assert required_iters is not None
+
+        if full_block.is_transaction_block():
+            prev_transaction_b_height = full_block.height
 
         blocks[full_block.header_hash] = block_to_block_record(
             constants,

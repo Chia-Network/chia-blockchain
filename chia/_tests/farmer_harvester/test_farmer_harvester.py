@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import unittest.mock
 from math import floor
 from pathlib import Path
 from typing import Any, Optional
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from chia_rs import G1Element
@@ -19,14 +21,35 @@ from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.harvester.harvester_service import HarvesterService
 from chia.plotting.util import PlotsRefreshParameter
-from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols import farmer_protocol, harvester_protocol, solver_protocol
 from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
+from chia.solver.solver_service import SolverService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.keychain import generate_mnemonic
+
+
+async def get_harvester_peer(farmer: Farmer) -> Any:
+    """wait for harvester connection and return the peer"""
+
+    def has_harvester_connection() -> bool:
+        return len(farmer.server.get_connections(NodeType.HARVESTER)) > 0
+
+    await time_out_assert(10, has_harvester_connection, True)
+    return farmer.server.get_connections(NodeType.HARVESTER)[0]
+
+
+async def get_solver_peer(farmer: Farmer) -> Any:
+    """wait for solver connection and return the peer"""
+
+    def has_solver_connection() -> bool:
+        return len(farmer.server.get_connections(NodeType.SOLVER)) > 0
+
+    await time_out_assert(60, has_solver_connection, True)
+    return farmer.server.get_connections(NodeType.SOLVER)[0]
 
 
 def farmer_is_started(farmer: Farmer) -> bool:
@@ -144,9 +167,6 @@ async def test_farmer_respond_signatures(
     # messages even though it didn't request them, to cover when the farmer doesn't know
     # about an sp_hash, so it fails at the sp record check.
 
-    def log_is_ready() -> bool:
-        return len(caplog.text) > 0
-
     _, _, harvester_service, _, _ = harvester_farmer_environment
     # We won't have an sp record for this one
     challenge_hash = bytes32(b"1" * 32)
@@ -161,11 +181,16 @@ async def test_farmer_respond_signatures(
         include_source_signature_data=False,
         farmer_reward_address_override=None,
     )
+
+    expected_error = f"Do not have challenge hash {challenge_hash}"
+
+    def expected_log_is_ready() -> bool:
+        return expected_error in caplog.text
+
     msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
     await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
-    await time_out_assert(5, log_is_ready)
-    # We fail the sps record check
-    expected_error = f"Do not have challenge hash {challenge_hash}"
+    await time_out_assert(10, expected_log_is_ready)
+    # We should find the error message
     assert expected_error in caplog.text
 
 
@@ -298,3 +323,275 @@ async def test_harvester_has_no_server(
     harvester_server = harvesters[0]._server
 
     assert harvester_server.webserver is None
+
+
+@pytest.mark.anyio
+async def test_v2_partial_proofs_new_sp_hash(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _solver_service, _bt = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    sp_hash = bytes32(b"1" * 32)
+    partial_proofs = harvester_protocol.PartialProofsData(
+        challenge_hash=bytes32(b"2" * 32),
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        partial_proofs=[b"test_partial_proof_1"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        pool_public_key=None,
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = await get_harvester_peer(farmer)
+    await farmer_api.partial_proofs(partial_proofs, harvester_peer)
+
+    assert sp_hash in farmer.number_of_responses
+    assert farmer.number_of_responses[sp_hash] == 0
+    assert sp_hash in farmer.cache_add_time
+
+
+@pytest.mark.anyio
+async def test_v2_partial_proofs_missing_sp_hash(
+    caplog: pytest.LogCaptureFixture,
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+
+    sp_hash = bytes32(b"1" * 32)
+    partial_proofs = harvester_protocol.PartialProofsData(
+        challenge_hash=bytes32(b"2" * 32),
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        partial_proofs=[b"test_partial_proof_1"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        pool_public_key=None,
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = await get_harvester_peer(farmer_api.farmer)
+    await farmer_api.partial_proofs(partial_proofs, harvester_peer)
+
+    assert f"Received partial proofs for a signage point that we do not have {sp_hash}" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_v2_partial_proofs_with_existing_sp(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    sp_hash = bytes32(b"1" * 32)
+    challenge_hash = bytes32(b"2" * 32)
+
+    sp = farmer_protocol.NewSignagePoint(
+        challenge_hash=challenge_hash,
+        challenge_chain_sp=sp_hash,
+        reward_chain_sp=std_hash(b"1"),
+        difficulty=uint64(1000),
+        sub_slot_iters=uint64(1000),
+        signage_point_index=uint8(0),
+        peak_height=uint32(1),
+        last_tx_height=uint32(0),
+    )
+
+    farmer.sps[sp_hash] = [sp]
+
+    partial_proofs = harvester_protocol.PartialProofsData(
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        partial_proofs=[b"test_partial_proof_1", b"test_partial_proof_2"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = await get_harvester_peer(farmer)
+    await farmer_api.partial_proofs(partial_proofs, harvester_peer)
+
+    # should store 2 pending requests (one per partial proof)
+    assert len(farmer.pending_solver_requests) == 2
+    assert sp_hash in farmer.cache_add_time
+
+
+@pytest.mark.anyio
+async def test_solution_response_handler(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    # set up a pending request
+    sp_hash = bytes32(b"1" * 32)
+    challenge_hash = bytes32(b"2" * 32)
+
+    partial_proofs = harvester_protocol.PartialProofsData(
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        partial_proofs=[b"test_partial_proof_for_quality"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = await get_harvester_peer(farmer)
+
+    # manually add pending request
+    farmer.pending_solver_requests[partial_proofs.partial_proofs[0]] = {
+        "proof_data": partial_proofs,
+        "peer": harvester_peer,
+    }
+
+    # create solution response
+    solution_response = solver_protocol.SolverResponse(
+        partial_proof=partial_proofs.partial_proofs[0], proof=b"test_proof_from_solver"
+    )
+    solver_peer = Mock()
+    solver_peer.peer_node_id = "solver_peer"
+
+    with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
+        await farmer_api.solution_response(solution_response, solver_peer)
+
+        # verify new_proof_of_space was called with correct proof
+        mock_new_proof.assert_called_once()
+        call_args = mock_new_proof.call_args[0]
+        new_proof_of_space = call_args[0]
+        original_peer = call_args[1]
+
+        assert new_proof_of_space.proof.proof == b"test_proof_from_solver"
+        assert original_peer == harvester_peer
+
+        # verify pending request was removed
+        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
+
+
+@pytest.mark.anyio
+async def test_solution_response_unknown_quality(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    # get real solver peer connection
+    solver_peer = await get_solver_peer(farmer)
+
+    # create solution response with unknown quality
+    solution_response = solver_protocol.SolverResponse(partial_proof=bytes(b"1" * 32), proof=b"test_proof")
+
+    with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
+        await farmer_api.solution_response(solution_response, solver_peer)
+        # verify new_proof_of_space was NOT called
+        mock_new_proof.assert_not_called()
+        # verify pending requests unchanged
+        assert len(farmer.pending_solver_requests) == 0
+
+
+@pytest.mark.anyio
+async def test_solution_response_empty_proof(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    # set up a pending request
+    sp_hash = bytes32(b"1" * 32)
+    challenge_hash = bytes32(b"2" * 32)
+
+    partial_proofs = harvester_protocol.PartialProofsData(
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        partial_proofs=[b"test_partial_proof_for_quality"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = Mock()
+    harvester_peer.peer_node_id = "harvester_peer"
+
+    # manually add pending request
+    farmer.pending_solver_requests[partial_proofs.partial_proofs[0]] = {
+        "proof_data": partial_proofs.partial_proofs[0],
+        "peer": harvester_peer,
+    }
+
+    # get real solver peer connection
+    solver_peer = await get_solver_peer(farmer)
+
+    # create solution response with empty proof
+    solution_response = solver_protocol.SolverResponse(partial_proof=partial_proofs.partial_proofs[0], proof=b"")
+
+    with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
+        await farmer_api.solution_response(solution_response, solver_peer)
+
+        # verify new_proof_of_space was NOT called
+        mock_new_proof.assert_not_called()
+
+        # verify pending request was removed (cleanup still happens)
+        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
+
+
+@pytest.mark.anyio
+async def test_v2_partial_proofs_solver_exception(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, _solver_service, _ = farmer_one_harvester_solver
+    farmer_api = farmer_service._api
+    farmer = farmer_api.farmer
+
+    sp_hash = bytes32(b"1" * 32)
+    challenge_hash = bytes32(b"2" * 32)
+
+    sp = farmer_protocol.NewSignagePoint(
+        challenge_hash=challenge_hash,
+        challenge_chain_sp=sp_hash,
+        reward_chain_sp=std_hash(b"1"),
+        difficulty=uint64(1000),
+        sub_slot_iters=uint64(1000),
+        signage_point_index=uint8(0),
+        peak_height=uint32(1),
+        last_tx_height=uint32(0),
+    )
+
+    farmer.sps[sp_hash] = [sp]
+
+    partial_proofs = harvester_protocol.PartialProofsData(
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        plot_identifier="test_plot_id",
+        partial_proofs=[b"test_partial_proof_1"],
+        signage_point_index=uint8(0),
+        plot_size=uint8(32),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"4" * 32),
+        plot_public_key=G1Element(),
+    )
+
+    harvester_peer = await get_harvester_peer(farmer)
+
+    # Mock send_to_all to raise an exception
+    with unittest.mock.patch.object(farmer.server, "send_to_all", side_effect=Exception("Solver connection failed")):
+        await farmer_api.partial_proofs(partial_proofs, harvester_peer)
+
+        # verify pending request was cleaned up after exception
+        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests

@@ -375,6 +375,9 @@ def make_test_conds(
         False,
         0,
         0,
+        0,
+        0,
+        0,
     )
 
 
@@ -590,7 +593,9 @@ def make_bundle_spends_map_and_fee(
 
 
 def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
-    conds = get_conditions_from_spendbundle(spend_bundle, INFINITE_COST, DEFAULT_CONSTANTS, uint32(0))
+    conds = get_conditions_from_spendbundle(
+        spend_bundle, INFINITE_COST, DEFAULT_CONSTANTS, DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
+    )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, conds)
     return MempoolItem(
         spend_bundle=spend_bundle,
@@ -3260,3 +3265,46 @@ async def test_different_ff_versions() -> None:
     latest_singleton_lineage2 = new_mi2.bundle_coin_spends[version2_id].latest_singleton_lineage
     assert latest_singleton_lineage2 is not None
     assert latest_singleton_lineage2.coin_id == new_latest_lineage_id
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "condition_and_error",
+    [
+        (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+    ],
+)
+@pytest.mark.parametrize("optimized_path", [True, False])
+async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Err], optimized_path: bool) -> None:
+    """
+    Tests that deferred transactions because of time-lock are retried once the
+    time-lock allows them to be reconsidered.
+    """
+    coins = TestCoins([TEST_COIN], {})
+    mempool_manager = await setup_mempool(coins)
+    # Add an item that should go to the pending cache
+    assert mempool_manager.peak is not None
+    condition_height = mempool_manager.peak.height + 1
+    condition, expected_error = condition_and_error
+    _, sb_name, result = await generate_and_add_spendbundle(mempool_manager, [[condition, condition_height]])
+    _, status, error = result
+    assert status == MempoolInclusionStatus.PENDING
+    assert error == expected_error
+    # Advance the mempool beyond the asserted height to retry the test item
+    if optimized_path:
+        spent_coins: Optional[list[bytes32]] = []
+        new_peak_info = await mempool_manager.new_peak(
+            create_test_block_record(height=uint32(condition_height)), spent_coins
+        )
+        # We're not there yet (needs to be higher, not equal)
+        assert new_peak_info.spend_bundle_ids == []
+        assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is None
+    else:
+        spent_coins = None
+    new_peak_info = await mempool_manager.new_peak(
+        create_test_block_record(height=uint32(condition_height + 1)), spent_coins
+    )
+    # The item gets retried successfully now
+    assert new_peak_info.spend_bundle_ids == [sb_name]
+    assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None

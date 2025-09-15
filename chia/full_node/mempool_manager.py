@@ -26,7 +26,6 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.check_time_locks import check_time_locks
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -134,15 +133,8 @@ class SpendBundleAddInfo:
 
 @dataclass
 class NewPeakInfo:
-    items: list[NewPeakItem]
+    spend_bundle_ids: list[bytes32]
     removals: list[MempoolRemoveInfo]
-
-
-@dataclass
-class NewPeakItem:
-    transaction_id: bytes32
-    spend_bundle: SpendBundle
-    conds: SpendBundleConditions
 
 
 # For block overhead cost calculation
@@ -466,11 +458,11 @@ class MempoolManager:
                 self.constants,
                 flags | MEMPOOL_MODE,
             )
-        # validate_clvm_and_signature raises a TypeError with an error code
-        except Exception as e:
+        # validate_clvm_and_signature raises a ValueError with an error code
+        except ValueError as e:
             # Convert that to a ValidationError
-            if len(e.args) > 0:
-                error = Err(e.args[0])
+            if len(e.args) > 1:
+                error = Err(e.args[1])
                 raise ValidationError(error)
             else:
                 raise ValidationError(Err.UNKNOWN)  # pragma: no cover
@@ -480,8 +472,6 @@ class MempoolManager:
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
 
-        ret = NPCResult(None, sbc)
-
         if spend_bundle_id is None:
             spend_bundle_id = spend_bundle.name()
 
@@ -490,10 +480,7 @@ class MempoolManager:
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
             f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
-        if ret.error is not None:
-            raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")
-        assert ret.conds is not None
-        return ret.conds
+        return sbc
 
     async def add_spend_bundle(
         self,
@@ -507,14 +494,16 @@ class MempoolManager:
         ] = None,
     ) -> SpendBundleAddInfo:
         """
-        Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
-        The mempool should be locked during this call (blockchain lock). If there are mempool conflicts, the conflicting
-        spends might be removed (if the new spend is a superset of the previous). Otherwise, the new spend might be
+        Validates and adds to mempool a new_spend with the given
+        SpendBundleConditions, and spend_name, and the current mempool. The mempool
+        should be locked during this call (blockchain lock). If there are mempool
+        conflicts, the conflicting spends might be removed (if the new spend is
+        a superset of the previous). Otherwise, the new spend might be
         added to the potential pool.
 
         Args:
             new_spend: spend bundle to validate and add
-            conds: result of running the clvm transaction in a fake block
+            conds: SpendBundleConditions resulting from running the clvm in the spend bundle's coin spends
             spend_name: hash of the spend bundle data, passed in as an optimization
 
         Returns:
@@ -625,11 +614,16 @@ class MempoolManager:
             eligible_for_ff = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
             if eligible_for_ff:
                 # Make sure the fast forward spend still has a version that is
-                # still unspent, because if the singleton has been melted, the
-                # fast forward spend will never become valid.
+                # still unspent, because if the singleton has been spent in a
+                # non-FF spend, this fast forward spend will never become valid.
+                # So treat this as a normal spend, which requires the exact coin
+                # to exist and be unspent.
+                # Singletons that were created before the optimization of using
+                # spent_index will also fail this test, and such spends will
+                # fall back to be treated as non-FF spends.
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
                 if lineage_info is None:
-                    return Err.DOUBLE_SPEND, None, []
+                    eligible_for_ff = False
 
             spend_additions = []
             for puzzle_hash, amount, _ in spend_conds.create_coin:
@@ -991,7 +985,7 @@ class MempoolManager:
                 lineage_cache.get_unspent_lineage_info,
             )
             if info.status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.conds))
+                txs_added.append(item.spend_bundle_name)
             mempool_item_removals.extend(info.removals)
         log.info(
             f"Size of mempool: {self.mempool.size()} spends, "
