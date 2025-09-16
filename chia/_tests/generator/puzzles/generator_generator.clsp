@@ -1,16 +1,16 @@
 (mod (DEPTH deserializer_mod (block1 block2 block3))
 
-    (defun ladder_maker (depth a b)
-        (if depth
-            (c (ladder_maker (- depth 1) a b) (ladder_maker (- depth 1) b a))
-            (c a b)
-        )
-    )
+    ;(defun ladder_maker (depth a b)
+    ;    (if depth
+    ;        (c (ladder_maker (- depth 1) a b) (ladder_maker (- depth 1) b a))
+    ;        (c a b)
+    ;    )
+    ;)
 
-    (defun generate_conds (amount depth)
+    (defun generate_conds (amount depth atom)
         (if amount
-            (c (list 1 (ladder_maker depth amount (* 101 amount))) (generate_conds (- amount 1)))
-            0
+            (c (list 1 (+ atom depth)) (generate_conds (- amount 1)))
+            (list (list 1 atom))
         )
     )
 
@@ -21,5 +21,5 @@
         )   
     )
     ; main
-    (list (loop_coins 0x0101010101010101010101010101010101010101010101010101010101010101 1 1 DEPTH))
+    (list (loop_coins 0x0101010101010101010101010101010101010101010101010101010101010101 1 1 block1))
 )
