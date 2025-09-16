@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any, BinaryIO, Optional, Union, final
+from typing import Any, BinaryIO, Optional, TypeVar, Union, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -1870,17 +1870,6 @@ class VCRevokeResponse(TransactionEndpointResponse):
     pass
 
 
-# TODO: The section below needs corresponding request types
-# TODO: The section below should be added to the API (currently only for client)
-
-
-@streamable
-@dataclass(frozen=True)
-class SendTransactionMultiResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
-
-
 @streamable
 @dataclass(frozen=True)
 class CSTCoinAnnouncement(Streamable):
@@ -1943,6 +1932,94 @@ class CreateSignedTransaction(TransactionEndpointRequest):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
+
+
+_T_SendTransactionMultiProxy = TypeVar("_T_SendTransactionMultiProxy", CATSpend, CreateSignedTransaction)
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionMulti(TransactionEndpointRequest):
+    # primarily for cat_spend
+    wallet_id: uint32 = field(default_factory=default_raise)
+    additions: Optional[list[Addition]] = None  # for both
+    amount: Optional[uint64] = None
+    inner_address: Optional[str] = None
+    memos: Optional[list[str]] = None
+    coins: Optional[list[Coin]] = None  # for both
+    extra_delta: Optional[str] = None  # str to support negative ints :(
+    tail_reveal: Optional[bytes] = None
+    tail_solution: Optional[bytes] = None
+    # for create_signed_transaction
+    morph_bytes: Optional[bytes] = None
+    coin_announcements: Optional[list[CSTCoinAnnouncement]] = None
+    puzzle_announcements: Optional[list[CSTPuzzleAnnouncement]] = None
+
+    def convert_to_proxy(self, proxy_type: type[_T_SendTransactionMultiProxy]) -> _T_SendTransactionMultiProxy:
+        if proxy_type is CATSpend:
+            if self.morph_bytes is not None:
+                raise ValueError(
+                    'Specified "morph_bytes" for a CAT-type wallet. Maybe you meant to specify an XCH wallet?'
+                )
+            elif self.coin_announcements or self.puzzle_announcements is not None:
+                raise ValueError(
+                    'Specified "coin/puzzle_announcements" for a CAT-type wallet.'
+                    "Maybe you meant to specify an XCH wallet?"
+                )
+
+            # not sure why mypy hasn't understood this is purely a CATSpend
+            return proxy_type(
+                wallet_id=self.wallet_id,
+                additions=self.additions,  # type: ignore[arg-type]
+                amount=self.amount,  # type: ignore[call-arg]
+                inner_address=self.inner_address,
+                memos=self.memos,
+                coins=self.coins,
+                extra_delta=self.extra_delta,
+                tail_reveal=self.tail_reveal,
+                tail_solution=self.tail_solution,
+                fee=self.fee,
+                push=self.push,
+                sign=self.sign,
+            )
+        elif proxy_type is CreateSignedTransaction:
+            if self.amount is not None:
+                raise ValueError('Specified "amount" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?')
+            elif self.inner_address is not None:
+                raise ValueError(
+                    'Specified "inner_address" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'
+                )
+            elif self.memos is not None:
+                raise ValueError('Specified "memos" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?')
+            elif self.extra_delta is not None or self.tail_reveal is not None or self.tail_solution is not None:
+                raise ValueError(
+                    'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+                    "Maybe you meant to specify a CAT-type wallet?"
+                )
+            elif self.additions is None:
+                raise ValueError('"additions" are required for XCH wallets.')
+
+            # not sure why mypy hasn't understood this is purely a CreateSignedTransaction
+            return proxy_type(
+                additions=self.additions,
+                wallet_id=self.wallet_id,
+                coins=self.coins,
+                morph_bytes=self.morph_bytes,  # type: ignore[call-arg]
+                coin_announcements=self.coin_announcements if self.coin_announcements is not None else [],
+                puzzle_announcements=self.puzzle_announcements if self.puzzle_announcements is not None else [],
+                fee=self.fee,
+                push=self.push,
+                sign=self.sign,
+            )
+        else:
+            raise ValueError("An unsupported wallet type was selected for `send_transaction_multi`")
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionMultiResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
 
 
 @streamable
