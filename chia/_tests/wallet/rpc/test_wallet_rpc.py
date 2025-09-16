@@ -162,6 +162,7 @@ from chia.wallet.wallet_request_types import (
     SelectCoins,
     SendNotification,
     SendTransaction,
+    SendTransactionMulti,
     SetWalletResyncOnStartup,
     SpendClawbackCoins,
     SplitCoins,
@@ -1003,11 +1004,14 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 
     send_tx_res: TransactionRecord = (
         await client.send_transaction_multi(
-            1,
-            [{**output.to_json_dict(), "puzzle_hash": output.puzzle_hash} for output in outputs],
-            DEFAULT_TX_CONFIG,
-            coins=select_coins_response.coins,
-            fee=amount_fee,
+            SendTransactionMulti(
+                wallet_id=uint32(1),
+                additions=outputs,
+                coins=select_coins_response.coins,
+                fee=amount_fee,
+                push=True,
+            ),
+            tx_config=DEFAULT_TX_CONFIG,
         )
     ).transaction
     spend_bundle = send_tx_res.spend_bundle
@@ -1503,10 +1507,11 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await env_2.rpc_client.create_wallet_for_existing_cat(cat_asset_id)
     wallet_2_address = (await env_2.rpc_client.get_next_address(GetNextAddress(cat_wallet_id, False))).address
-    adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
+    adds = [Addition(puzzle_hash=decode_puzzle_hash(wallet_2_address), amount=uint64(4), memos=["the cat memo"])]
     tx_res = (
         await env_1.rpc_client.send_transaction_multi(
-            cat_wallet_id, additions=adds, tx_config=wallet_environments.tx_config, fee=uint64(0)
+            SendTransactionMulti(wallet_id=uint32(cat_wallet_id), additions=adds, fee=uint64(0), push=True),
+            tx_config=wallet_environments.tx_config,
         )
     ).transaction
     spend_bundle = tx_res.spend_bundle
