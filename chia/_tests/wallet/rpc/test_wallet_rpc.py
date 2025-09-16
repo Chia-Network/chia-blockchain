@@ -913,7 +913,7 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
     send_tx_res: TransactionRecord = (
         await client.send_transaction_multi(
             1,
-            [output.to_json_dict() for output in outputs],
+            [{**output.to_json_dict(), "puzzle_hash": output.puzzle_hash} for output in outputs],
             wallet_environments.tx_config,
             coins=select_coins_response.coins,
             fee=amount_fee,
