@@ -72,7 +72,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem, UnspentLineageInfo
 from chia.util.casts import int_to_bytes
-from chia.util.errors import Err
+from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
@@ -361,7 +361,10 @@ async def respond_transaction(
         self.full_node.full_node_store.pending_tx_request.pop(spend_name)
     if spend_name in self.full_node.full_node_store.peers_with_tx:
         self.full_node.full_node_store.peers_with_tx.pop(spend_name)
-    ret = await self.full_node.add_transaction(tx.transaction, spend_name, peer, test)
+    try:
+        ret = await self.full_node.add_transaction(tx.transaction, spend_name, peer, test)
+    except ValidationError as e:
+        ret = (MempoolInclusionStatus.FAILED, e.code)
     invariant_check_mempool(self.full_node.mempool_manager.mempool)
     return ret
 
@@ -2865,8 +2868,9 @@ class TestMaliciousGenerators:
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
-        res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        assert res == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
+        with pytest.raises(ValidationError) as e:
+            await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
+        assert e.value.code == Err.WRONG_PUZZLE_HASH
 
 
 coins = make_test_coins()

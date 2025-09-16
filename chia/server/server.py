@@ -553,9 +553,15 @@ class ChiaServer:
         # in this case we still want to do the banning logic and remove the connection from the list
         # but the other cleanup should already have been done so we skip that
 
-        if is_localhost(connection.peer_info.host) and ban_time != 0:
-            self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
-            ban_time = 0
+        if ban_time > 0:
+            if is_localhost(connection.peer_info.host):
+                self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
+                ban_time = 0
+            elif self.is_trusted_peer(connection, self.config.get("trusted_peers", {})):
+                self.log.warning(
+                    f"Trying to ban trusted peer {connection.peer_info.host} for {ban_time}, but will not ban"
+                )
+                ban_time = 0
         if ban_time > 0:
             ban_until: float = time.time() + ban_time
             self.log.warning(f"Banning {connection.peer_info.host} for {ban_time} seconds")
