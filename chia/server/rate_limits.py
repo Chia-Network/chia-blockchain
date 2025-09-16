@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import Counter
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -80,40 +80,33 @@ class RateLimiter:
         proportion_of_limit: float = self.percentage_of_limit / 100
 
         ret: bool = False
-        rate_limits = get_rate_limits_to_use(our_capabilities, peer_capabilities)
+        rate_limits: dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]
+        rate_limits, agg_limit = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
-            limits: RLSettings
-            if message_type in rate_limits["rate_limits_tx"]:
-                limits = rate_limits["rate_limits_tx"][message_type]
-            elif message_type in rate_limits["rate_limits_other"]:
-                limits = rate_limits["rate_limits_other"][message_type]
-                if isinstance(limits, RLSettings):
-                    non_tx_freq = rate_limits["non_tx_freq"]
-                    non_tx_max_total_size = rate_limits["non_tx_max_total_size"]
-                    new_non_tx_count = self.non_tx_message_counts + 1
-                    new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
-                    if new_non_tx_count > non_tx_freq * proportion_of_limit:
-                        return " ".join(
-                            [
-                                f"non-tx count: {new_non_tx_count}",
-                                f"> {non_tx_freq * proportion_of_limit}",
-                                f"(scale factor: {proportion_of_limit})",
-                            ]
-                        )
-                    if new_non_tx_size > non_tx_max_total_size * proportion_of_limit:
-                        return " ".join(
-                            [
-                                f"non-tx size: {new_non_tx_size}",
-                                f"> {non_tx_max_total_size * proportion_of_limit}",
-                                f"(scale factor: {proportion_of_limit})",
-                            ]
-                        )
-            else:  # pragma: no cover
-                log.warning(
-                    f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
-                )
-                limits = rate_limits["default_settings"]
+            limits: Union[RLSettings, Unlimited] = rate_limits[message_type]
+            if isinstance(limits, RLSettings) and limits.aggregate_limit:
+                non_tx_freq = agg_limit.frequency
+                assert agg_limit.max_total_size is not None
+                non_tx_max_total_size = agg_limit.max_total_size
+                new_non_tx_count = self.non_tx_message_counts + 1
+                new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
+                if new_non_tx_count > non_tx_freq * proportion_of_limit:
+                    return " ".join(
+                        [
+                            f"non-tx count: {new_non_tx_count}",
+                            f"> {non_tx_freq * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
+                        ]
+                    )
+                if new_non_tx_size > non_tx_max_total_size * proportion_of_limit:
+                    return " ".join(
+                        [
+                            f"non-tx size: {new_non_tx_size}",
+                            f"> {non_tx_max_total_size * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
+                        ]
+                    )
 
             if isinstance(limits, Unlimited):
                 # this message type is not rate limited. This is used for

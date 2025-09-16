@@ -40,8 +40,13 @@ on:
         default: 1
         required: false
         type: number
-      run-linux:
-        description: "run Linux tests"
+      run-linux-intel:
+        description: "run Linux-intel tests"
+        default: true
+        required: false
+        type: boolean
+      run-linux-arm:
+        description: "run Linux-arm tests"
         default: true
         required: false
         type: boolean
@@ -151,21 +156,37 @@ jobs:
       arch: arm
       arch-emoji: 💪
       collect-junit: false
-  ubuntu:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-linux
+  ubuntu-intel:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-linux-intel
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
       os-emoji: 🐧
       matrix: ubuntu
       name: Ubuntu
-      file_name: ubuntu
-      concurrency-name: ubuntu
+      file_name: ubuntu-intel
+      concurrency-name: ubuntu-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
       arch: intel
       arch-emoji: 🌀
+      collect-junit: false
+  ubuntu-arm:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-linux-arm
+    uses: ./.github/workflows/test-single.yml
+    needs: configure
+    with:
+      os-emoji: 🐧
+      matrix: ubuntu
+      name: Ubuntu
+      file_name: ubuntu-arm
+      concurrency-name: ubuntu-arm
+      configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
+      runs-on: ubuntu-24.04-arm
+      arch: arm
+      arch-emoji: 💪
       collect-junit: false
   windows:
     if: github.event_name != 'workflow_dispatch' || inputs.run-windows
@@ -192,7 +213,8 @@ jobs:
       - configure
       - macos-intel
       - macos-arm
-      - ubuntu
+      - ubuntu-intel
+      - ubuntu-arm
       - windows
     strategy:
       fail-fast: false

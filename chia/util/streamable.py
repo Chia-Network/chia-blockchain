@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import io
 import os
 import pprint
@@ -210,7 +211,7 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Optional[Callable[[object], Streamable]] = None
+    f_type: type[Any], json_parser: Optional[Callable[[object, type[object]], Streamable]] = None
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
@@ -234,8 +235,9 @@ def function_to_convert_one_item(
         return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
-            json_parser = f_type.from_json_dict
-        return json_parser
+            return f_type.from_json_dict  # type: ignore[no-any-return]
+        else:
+            return functools.partial(json_parser, streamable_type=f_type)  # type: ignore[call-arg]
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
