@@ -692,10 +692,7 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_invalid_signature(
-        self,
-        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
-        wallet_a: WalletTool,
-        caplog: pytest.LogCaptureFixture,
+        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -719,12 +716,11 @@ class TestMempoolManager:
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = sb.replace(aggregated_signature=G2Element.generator())
-        caplog.clear()
         res: Optional[Message] = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
-        assert ack.status != MempoolInclusionStatus.SUCCESS.value
-        assert "chia.util.errors.ValidationError: Error code: BAD_AGGREGATE_SIGNATURE" in caplog.text
+        assert ack.status == MempoolInclusionStatus.FAILED.value
+        assert ack.error == Err.BAD_AGGREGATE_SIGNATURE.name
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     async def condition_tester(
@@ -2872,11 +2868,9 @@ class TestMaliciousGenerators:
         coin_spend_0 = make_spend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0, *spend_bundle.coin_spends[1:]])
         assert spend_bundle is not None
-        try:
-            res = await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
-        except ValidationError as e:
-            res = (MempoolInclusionStatus.FAILED, e.code)
-        assert res == (MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH)
+        with pytest.raises(ValidationError) as e:
+            await full_node_1.full_node.add_transaction(new_bundle, new_bundle.name(), test=True)
+        assert e.value.code == Err.WRONG_PUZZLE_HASH
 
 
 coins = make_test_coins()

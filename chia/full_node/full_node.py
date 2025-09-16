@@ -504,7 +504,7 @@ class FullNode:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
         except ValidationError as e:
-            self.log.exception("Error in _handle_one_transaction, closing")
+            self.log.exception("ValidationError in _handle_one_transaction, closing")
             if peer is not None:
                 await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             entry.done.set((MempoolInclusionStatus.FAILED, e.code))
