@@ -52,7 +52,7 @@ def test_process_fast_forward_spends_nothing_to_do() -> None:
     sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     item = mempool_item_from_spendbundle(sb)
     # This coin is not eligible for fast forward
-    assert item.bundle_coin_spends[TEST_COIN_ID].eligible_for_fast_forward is False
+    assert not item.bundle_coin_spends[TEST_COIN_ID].supports_fast_forward
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
@@ -61,28 +61,6 @@ def test_process_fast_forward_spends_nothing_to_do() -> None:
     )
     assert singleton_ff == SingletonFastForward()
     assert bundle_coin_spends == original_version.bundle_coin_spends
-
-
-def test_process_fast_forward_spends_unknown_ff() -> None:
-    """
-    This tests the case when we process for the first time but we are unable
-    to lookup the latest version from the item's latest singleton lineage
-    """
-    test_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, uint64(1))
-    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
-    sb = spend_bundle_from_conditions(conditions, test_coin)
-    item = mempool_item_from_spendbundle(sb)
-    # The coin is eligible for fast forward
-    assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = None
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
-    singleton_ff = SingletonFastForward()
-    # We have no fast forward records yet, so we'll process this coin for the
-    # first time here, but the item's latest singleton lineage returns None
-    with pytest.raises(ValueError, match="Cannot proceed with singleton spend fast forward"):
-        singleton_ff.process_fast_forward_spends(
-            mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
-        )
 
 
 def test_process_fast_forward_spends_latest_unspent() -> None:
@@ -103,7 +81,7 @@ def test_process_fast_forward_spends_latest_unspent() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, test_amount]]
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
-    assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
+    assert item.bundle_coin_spends[test_coin.name()].supports_fast_forward
     item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = test_unspent_lineage_info
     internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
@@ -168,12 +146,12 @@ def test_perform_the_fast_forward() -> None:
         "517b0dadb0c310ded24dd86dff8205398080ff808080"
     )
     test_coin_spend = CoinSpend(test_coin, test_puzzle_reveal, test_solution)
-    test_spend_data = BundleCoinSpend(test_coin_spend, False, True, [test_child_coin], uint64(0))
     test_unspent_lineage_info = UnspentLineageInfo(
         coin_id=latest_unspent_coin.name(),
         parent_id=latest_unspent_coin.parent_coin_info,
         parent_parent_id=test_child_coin.parent_coin_info,
     )
+    test_spend_data = BundleCoinSpend(test_coin_spend, False, [test_child_coin], uint64(0), test_unspent_lineage_info)
     # Start from a fresh state of fast forward spends
     fast_forward_spends: dict[bytes32, UnspentLineageInfo] = {}
     # Perform the fast forward on the test coin (the grandparent)
