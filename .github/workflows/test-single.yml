@@ -55,7 +55,7 @@ jobs:
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
-    timeout-minutes: ${{ matrix.configuration.job_timeout }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
