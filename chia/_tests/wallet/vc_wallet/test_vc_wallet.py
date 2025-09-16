@@ -31,7 +31,9 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    Addition,
     CATSpend,
+    CreateSignedTransaction,
     GetTransactions,
     GetWallets,
     VCAddProofs,
@@ -70,14 +72,16 @@ async def mint_cr_cat(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
     tx = (
         await client_0.create_signed_transactions(
-            [
-                {
-                    "puzzle_hash": cat_puzzle.get_tree_hash(),
-                    "amount": CAT_AMOUNT_0,
-                }
-            ],
+            CreateSignedTransaction(
+                wallet_id=uint32(1),
+                additions=[
+                    Addition(
+                        puzzle_hash=cat_puzzle.get_tree_hash(),
+                        amount=CAT_AMOUNT_0,
+                    )
+                ],
+            ),
             tx_config,
-            wallet_id=1,
         )
     ).signed_tx
     spend_bundle = tx.spend_bundle
