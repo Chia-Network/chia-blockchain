@@ -119,7 +119,7 @@ async def test_cat_trades(
 
     trusted = len(wallet_node_maker.config["trusted_peers"]) > 0
 
-    # Because making/taking CR-CATs is asymetrical, approving the hacked together aggregation test will fail
+    # Because making/taking CR-CATs is asymmetrical, approving the hacked together aggregation test will fail
     # The taker is "making" offers that it is approving with a VC which multiple actual makers would never do
     # This is really a test of CATOuterPuzzle anyways and is not correlated with any of our params
     test_aggregation = not credential_restricted and not wallet_environments.tx_config.reuse_puzhash and trusted
@@ -559,7 +559,7 @@ async def test_cat_trades(
                         "pending_coin_removal_count": 1,
                         "<=#spendable_balance": -2,
                         "<=#max_send_amount": -2,
-                        # Unconfirmed balance doesn't change because receiveing 1 XCH and spending 1 in fee
+                        # Unconfirmed balance doesn't change because receiving 1 XCH and spending 1 in fee
                         "unconfirmed_wallet_balance": 0,
                         ">=#pending_change": 1,  # any amount increase
                     },
@@ -586,7 +586,7 @@ async def test_cat_trades(
                         "unspent_coin_count": 1,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
-                        # Confirmed balance doesn't change because receiveing 1 XCH and spending 1 in fee
+                        # Confirmed balance doesn't change because receiving 1 XCH and spending 1 in fee
                         "confirmed_wallet_balance": 0,
                         "<=#pending_change": 1,  # any amount decrease
                     },
