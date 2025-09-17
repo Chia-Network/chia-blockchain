@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Self
+from typing_extensions import Self, final
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
@@ -20,6 +20,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2
 
 
+@final
 @dataclass
 class ConsensusStoreSQLite3Writer:
     block_store: BlockStore
