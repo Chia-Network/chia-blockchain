@@ -163,8 +163,16 @@ elif [ "$(uname)" = "Darwin" ] && type brew >/dev/null 2>&1; then
   # MacOS
   if ! nodejs_is_installed; then
     echo "Installing nodejs on MacOS"
-    brew install llvm
-    brew install npm
+    # Download and install nvm:
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    # in lieu of restarting the shell
+    \. "$HOME/.nvm/nvm.sh"
+    # Download and install Node.js:
+    nvm install 20
+    echo "Node version"
+    node -v
+    echo "npm version:"
+    npm -v
   fi
   do_install_npm_locally
 elif [ "$(uname)" = "OpenBSD" ]; then
