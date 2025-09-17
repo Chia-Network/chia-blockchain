@@ -260,7 +260,7 @@ jobs:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
           RUST_BACKTRACE: full
         run: |
-          pytest --capture no -n 0 --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          pytest --capture no -n 4 --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Move back to chia/ for coverage
         run: |
