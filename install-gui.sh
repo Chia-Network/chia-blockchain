@@ -163,6 +163,7 @@ elif [ "$(uname)" = "Darwin" ] && type brew >/dev/null 2>&1; then
   # MacOS
   if ! nodejs_is_installed; then
     echo "Installing nodejs on MacOS"
+    brew install llvm
     brew install npm
   fi
   do_install_npm_locally
