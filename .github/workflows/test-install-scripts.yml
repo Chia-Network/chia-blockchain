@@ -83,6 +83,11 @@ jobs:
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
 
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
+
       - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
