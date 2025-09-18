@@ -19,7 +19,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, streamable, streamable_enum
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
@@ -2192,6 +2192,7 @@ class CancelOffersResponse(TransactionEndpointResponse):
 
 
 # utilities for CreateNewWallet
+@streamable_enum(str)
 class CreateNewWalletType(Enum):
     CAT_WALLET = "cat_wallet"
     DID_WALLET = "did_wallet"
@@ -2199,11 +2200,13 @@ class CreateNewWalletType(Enum):
     POOL_WALLET = "pool_wallet"
 
 
+@streamable_enum(str)
 class WalletCreationMode(Enum):
     NEW = "new"
     EXISTING = "existing"
 
 
+@streamable_enum(str)
 class DIDType(Enum):
     NEW = "new"
     RECOVERY = "recovery"
@@ -2343,9 +2346,7 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
     p2_singleton_puzzle_hash: Optional[bytes32] = None
 
     def __post_init__(self) -> None:
-        if self.type not in {
-            member.name for member in WalletType if member.name.startswith("NFT") or member.name == "POOL_WALLET"
-        }:
+        if self.type not in {member.name for member in WalletType}:
             raise ValueError(f"Invalid wallet type: {self.type}")
         super().__post_init__()
 
