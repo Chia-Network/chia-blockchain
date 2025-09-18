@@ -30,6 +30,16 @@ fi
 SUBMODULE_BRANCH=$1
 
 do_check_npm_install() {
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is not installed. Please install NodeJS>=20 and npm>=10 manually"
+    exit 1
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    echo "NodeJS is not installed. Please install NodeJS>=20 and npm>=10 manually"
+    exit 1
+  fi
+
   NODEJS_VERSION="$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')"
   NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
 
