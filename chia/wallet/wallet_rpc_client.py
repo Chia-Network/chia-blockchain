@@ -410,7 +410,7 @@ class WalletRpcClient(RpcClient):
     # DID wallet
     async def create_new_did_wallet(
         self,
-        amount: int,
+        amount: Optional[int],
         tx_config: TXConfig,
         fee: int = 0,
         name: str | None = "DID Wallet",

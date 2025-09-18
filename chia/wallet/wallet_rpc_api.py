@@ -1288,6 +1288,7 @@ class WalletRpcApi:
                     return CreateNewWalletResponse(
                         [],
                         [],
+                        transaction=REPLACEABLE_TRANSACTION_RECORD,
                         total_fee=uint64(request.fee * 2),
                         launcher_id=launcher_id,
                         p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,

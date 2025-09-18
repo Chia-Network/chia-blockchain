@@ -2303,7 +2303,7 @@ class CreateNewWallet(TransactionEndpointRequest):
                 raise ValueError(
                     '"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'
                 )
-            if self.mode != WalletCreationMode.NEW:
+            if self.mode is not None and self.mode != WalletCreationMode.NEW:
                 raise ValueError('"mode": "existing" is only valid for CAT wallets')
 
         if self.wallet_type == CreateNewWalletType.DID_WALLET:
@@ -2392,12 +2392,12 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
         if wallet_type == WalletType.CAT:
             if self.asset_id is None:
                 raise ValueError("`asset_id` is required for CAT wallets")
-            field_names &= {"asset_id"}
-            field_names &= tx_endpoint_field_names
+            field_names |= {"asset_id"}
+            field_names |= tx_endpoint_field_names
         elif wallet_type == WalletType.DECENTRALIZED_ID:
             if self.my_did is None:
                 raise ValueError("`my_did` is required for DID wallets")
-            field_names &= {"my_did"}
+            field_names |= {"my_did"}
             if (
                 self.coin_name is not None
                 and self.coin_list is not None
@@ -2406,7 +2406,7 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
                 and self.backup_dids is not None
                 and self.num_verifications_required is not None
             ):
-                field_names &= {
+                field_names |= {
                     "coin_name",
                     "coin_list",
                     "newpuzhash",
@@ -2425,7 +2425,7 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
             ):
                 raise ValueError("Must specify all recovery options or none of them")
             else:
-                field_names &= tx_endpoint_field_names
+                field_names |= tx_endpoint_field_names
         elif wallet_type == WalletType.POOLING_WALLET:
             if not (
                 (
@@ -2449,7 +2449,7 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
                     "launcher_id",
                     "p2_singleton_puzzle_hash",
                 }
-                field_names &= tx_endpoint_field_names
+                field_names |= tx_endpoint_field_names
 
         return {**{k: v for k, v in super().to_json_dict().items() if k in field_names}, **serialization_updates}
 
