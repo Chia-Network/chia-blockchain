@@ -893,7 +893,7 @@ async def farmer_one_harvester_solver(
     tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[FarmerOneHarvesterSolver]:
     async with setup_solver(tmp_path / "solver", get_b_tools, get_b_tools.constants) as solver_service:
-        solver_peer = UnresolvedPeerInfo("127.0.0.1", solver_service._server.get_port())
+        solver_peer = UnresolvedPeerInfo(get_b_tools.config["self_hostname"], solver_service._server.get_port())
         async with setup_farmer_solver_multi_harvester(
             get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True, solver_peer=solver_peer
         ) as (harvester_services, farmer_service, bt):
