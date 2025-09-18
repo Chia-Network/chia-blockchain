@@ -11,13 +11,6 @@ SCRIPT_DIR=$(
 
 echo "### Checking GUI dependencies"
 
-if [ -d "${SCRIPT_DIR}/.n" ]; then
-  export N_PREFIX="${SCRIPT_DIR}/.n"
-  export PATH="${N_PREFIX}/bin:${PATH}"
-  echo "Loading nodejs/npm from"
-  echo "  ${N_PREFIX}"
-fi
-
 if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."
   echo "Execute '. ./activate' before running."
