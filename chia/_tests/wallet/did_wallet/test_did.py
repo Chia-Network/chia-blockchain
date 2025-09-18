@@ -285,8 +285,8 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
 
     # Wallet2 recovers DIDWallet2 to a new set of keys
     await env_2.rpc_client.create_new_did_wallet(
-        uint64(1),
-        DEFAULT_TX_CONFIG,
+        None,
+        tx_config=DEFAULT_TX_CONFIG,
         type="recovery",
         backup_data=backup_data,
     )
