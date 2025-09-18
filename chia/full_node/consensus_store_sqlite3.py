@@ -14,7 +14,6 @@ from typing_extensions import Self
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.coin_store_protocol import CoinStoreProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2
@@ -23,7 +22,7 @@ from chia.util.db_wrapper import DBWrapper2
 @dataclass
 class ConsensusStoreSQLite3Writer:
     block_store: BlockStore
-    coin_store: CoinStoreProtocol
+    coin_store: CoinStore
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         await self.block_store.add_full_block(header_hash, block, block_record)
@@ -69,7 +68,7 @@ class ConsensusStoreSQLite3:
     """
 
     block_store: BlockStore
-    coin_store: CoinStoreProtocol
+    coin_store: CoinStore
     height_map: BlockHeightMap
 
     @classmethod

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from chia.full_node.coin_store_protocol import CoinStoreProtocol
+from chia.full_node.coin_store import CoinStore
 from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2
 
 
-async def add_coin_records_to_db(coin_store: CoinStoreProtocol, records: list[CoinRecord]) -> None:
+async def add_coin_records_to_db(coin_store: CoinStore, records: list[CoinRecord]) -> None:
     if len(records) == 0:
         return
     db_wrapper = getattr(coin_store, "db_wrapper", None)

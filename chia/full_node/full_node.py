@@ -52,7 +52,6 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.coin_store_protocol import CoinStoreProtocol
 from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
@@ -158,7 +157,7 @@ class FullNode:
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
     _block_store: Optional[BlockStore] = None
-    _coin_store: Optional[CoinStoreProtocol] = None
+    _coin_store: Optional[CoinStore] = None
     _mempool_manager: Optional[MempoolManager] = None
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     _blockchain: Optional[Blockchain] = None
@@ -419,7 +418,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def coin_store(self) -> CoinStoreProtocol:
+    def coin_store(self) -> CoinStore:
         assert self._coin_store is not None
         return self._coin_store
 
