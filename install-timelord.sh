@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# an op for noop
+
 set -o errexit
 
 USAGE_TEXT="\
