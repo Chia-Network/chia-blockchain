@@ -1148,13 +1148,13 @@ class WalletRpcApi:
                 async with self.service.wallet_state_manager.lock:
                     assert request.asset_id is not None  # mypy doesn't know about our __post_init__
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
-                        wallet_state_manager, main_wallet, bytes32.from_hexstr(request.asset_id), request.name
+                        wallet_state_manager, main_wallet, request.asset_id, request.name
                     )
                 return CreateNewWalletResponse(
                     [],
                     [],
                     type=cat_wallet.type().name,
-                    asset_id=bytes32.from_hexstr(request.asset_id),
+                    asset_id=request.asset_id,
                     wallet_id=cat_wallet.id(),
                 )
         elif request.wallet_type == CreateNewWalletType.DID_WALLET:

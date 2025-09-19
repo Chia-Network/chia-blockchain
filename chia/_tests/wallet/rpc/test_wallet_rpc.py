@@ -108,6 +108,8 @@ from chia.wallet.wallet_request_types import (
     CheckOfferValidity,
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
+    CreateNewWallet,
+    CreateNewWalletType,
     CreateOfferForIDs,
     CreateSignedTransaction,
     DefaultCAT,
@@ -122,6 +124,7 @@ from chia.wallet.wallet_request_types import (
     DIDMessageSpend,
     DIDSetWalletName,
     DIDTransferDID,
+    DIDType,
     DIDUpdateMetadata,
     FungibleAsset,
     GetAllOffers,
@@ -160,6 +163,7 @@ from chia.wallet.wallet_request_types import (
     VCSpend,
     VerifySignature,
     VerifySignatureResponse,
+    WalletCreationMode,
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -578,10 +582,17 @@ async def test_create_signed_transaction(
 
     wallet_id = 1
     if is_cat:
-        # +1 assures we'll have change
-        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(amount_outputs + 1), test=True)
-        assert res["success"]
-        wallet_id = res["wallet_id"]
+        create_cat_res = await wallet_1_rpc.create_new_wallet(
+            CreateNewWallet(
+                wallet_type=CreateNewWalletType.CAT_WALLET,
+                mode=WalletCreationMode.NEW,
+                amount=uint64(amount_outputs + 1),
+                test=True,
+                push=True,
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+        wallet_id = create_cat_res.wallet_id
 
         await wallet_environments.process_pending_states(
             [
@@ -1172,10 +1183,17 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     assert asset_to_name_response.name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
     # Creates a second wallet with the same CAT
-    res = await env_1.rpc_client.create_wallet_for_existing_cat(asset_id)
-    assert res["success"]
-    cat_1_id = res["wallet_id"]
-    cat_1_asset_id = bytes.fromhex(res["asset_id"])
+    create_wallet_res = await env_1.rpc_client.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.EXISTING,
+            asset_id=asset_id,
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    cat_1_id = create_wallet_res.wallet_id
+    cat_1_asset_id = create_wallet_res.asset_id
     assert cat_1_asset_id == asset_id
 
     await wallet_environments.process_pending_states(
@@ -1468,7 +1486,15 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     cat_asset_id = cat_wallet.cat_info.limitations_program_hash
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
-    await env_2.rpc_client.create_wallet_for_existing_cat(cat_asset_id)
+    await env_2.rpc_client.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.EXISTING,
+            asset_id=cat_asset_id,
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
     wallet_2_address = (await env_2.rpc_client.get_next_address(GetNextAddress(cat_wallet_id, False))).address
     adds = [Addition(puzzle_hash=decode_puzzle_hash(wallet_2_address), amount=uint64(4), memos=["the cat memo"])]
     tx_res = (
@@ -2017,17 +2043,25 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
     wallet_1_id = wallet_1.id()
 
     # Create a DID wallet
-    res = await wallet_1_rpc.create_new_did_wallet(amount=1, tx_config=wallet_environments.tx_config, name="Profile 1")
-    assert res["success"]
-    did_wallet_id_0 = res["wallet_id"]
-    did_id_0 = res["my_did"]
+    create_new_res = await wallet_1_rpc.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.DID_WALLET,
+            did_type=DIDType.NEW,
+            amount=uint64(1),
+            wallet_name="Profile 1",
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    did_wallet_id_0 = create_new_res.wallet_id
+    did_id_0 = create_new_res.my_did
     await env.change_balances({"did": {"init": True, "set_remainder": True}})
     await env.change_balances({"nft": {"init": True, "set_remainder": True}})
 
     # Get wallet name
     get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
     assert get_name_res.name == "Profile 1"
-    nft_wallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    nft_wallet = wallet_1_node.wallet_state_manager.wallets[uint32(did_wallet_id_0 + 1)]
     assert isinstance(nft_wallet, NFTWallet)
     assert nft_wallet.get_name() == "Profile 1 NFT Wallet"
 
@@ -2222,8 +2256,11 @@ async def test_nft_endpoints(wallet_environments: WalletTestFramework) -> None:
         "nft": 2,
     }
 
-    res = await wallet_1_rpc.create_new_nft_wallet(None)
-    nft_wallet_id = res["wallet_id"]
+    create_wallet_res = await wallet_1_rpc.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, did_id=None, push=True),
+        wallet_environments.tx_config,
+    )
+    nft_wallet_id = create_wallet_res.wallet_id
     await wallet_1_rpc.mint_nft(
         request=NFTMintNFTRequest(
             wallet_id=nft_wallet_id,
@@ -3149,7 +3186,15 @@ async def test_set_wallet_resync_on_startup(wallet_environments: WalletTestFrame
         "nft0": 4,
     }
 
-    await wc.create_new_did_wallet(1, wallet_environments.tx_config, 0)
+    await wc.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.DID_WALLET,
+            did_type=DIDType.NEW,
+            amount=uint64(1),
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -3169,8 +3214,11 @@ async def test_set_wallet_resync_on_startup(wallet_environments: WalletTestFrame
         ]
     )
 
-    nft_wallet = await wc.create_new_nft_wallet(None)
-    nft_wallet_id = nft_wallet["wallet_id"]
+    nft_wallet_res = await wc.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, did_id=None, push=True),
+        wallet_environments.tx_config,
+    )
+    nft_wallet_id = nft_wallet_res.wallet_id
     address = (await wc.get_next_address(GetNextAddress(env.xch_wallet.id(), True))).address
     await wc.mint_nft(
         request=NFTMintNFTRequest(
@@ -3459,10 +3507,16 @@ async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> N
     await farm_transaction(full_node_api, wallet_node, eve_spend)
 
     # Make sure we have the CAT
-    res = await client.create_wallet_for_existing_cat(Program.NIL.get_tree_hash())
-    assert res["success"]
-    cat_wallet_id = res["wallet_id"]
-
+    create_wallet_res = await client.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.EXISTING,
+            asset_id=Program.to(None).get_tree_hash(),
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    cat_wallet_id = create_wallet_res.wallet_id
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -3532,9 +3586,26 @@ async def test_get_balances(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100), test=True)
-    await client.create_new_cat_and_wallet(uint64(20), test=True)
-
+    await client.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.NEW,
+            amount=uint64(100),
+            test=True,
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+    await client.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.NEW,
+            amount=uint64(20),
+            test=True,
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -3552,7 +3623,6 @@ async def test_get_balances(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-
     bals_response = await client.get_wallet_balances(GetWalletBalances())
     assert len(bals_response.wallet_balances) == 3
     assert bals_response.wallet_balances[uint32(1)].confirmed_wallet_balance == 1999999999880
