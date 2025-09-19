@@ -200,7 +200,7 @@ jobs:
       concurrency-name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: windows-latest
+      runs-on: windows-2022
       arch: intel
       arch-emoji: 🌀
       collect-junit: false
