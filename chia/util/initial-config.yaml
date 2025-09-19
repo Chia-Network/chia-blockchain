@@ -209,6 +209,11 @@ farmer:
     - host: *self_hostname
       port: 8444
 
+  # The farmer will attempt to connect to these solvers for V2 plot solving
+  solver_peers:
+    - host: *self_hostname
+      port: 8666
+
   pool_public_keys: !!set {}
 
   # Replace this with a real receive address
@@ -635,6 +640,14 @@ solver:
 
   # Enable or disable UPnP port forwarding
   enable_upnp: False
+
+  # Node IDs of trusted solver peers, only these can connect by default
+  trusted_peers:
+    0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb7: Does_not_matter
+
+  # If False, accepts connections from all peers (not just trusted_peers)
+  # If True (default), only accepts localhost and trusted_peers connections
+  trusted_peers_only: True
 
   # Logging configuration
   logging: *logging
