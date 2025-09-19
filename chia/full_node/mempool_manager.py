@@ -243,7 +243,7 @@ def check_removals(
     conflicts = set()
     for coin_id, coin_bcs in bundle_coin_spends.items():
         # 1. Checks if it's been spent already
-        if removals[coin_id].spent and not coin_bcs.eligible_for_fast_forward:
+        if removals[coin_id].spent and not coin_bcs.supports_fast_forward:
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict
@@ -269,12 +269,12 @@ def check_removals(
                     return Err.INVALID_SPEND_BUNDLE, []
             # if the spend we're adding to the mempool is not DEDUP nor FF, it's
             # just a regular conflict
-            if not coin_bcs.eligible_for_fast_forward and not coin_bcs.eligible_for_dedup:
+            if not coin_bcs.supports_fast_forward and not coin_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
             # if the spend we're adding is FF, but there's a conflicting spend
             # that isn't FF, they can't be chained, so that's a conflict
-            elif coin_bcs.eligible_for_fast_forward and not conflict_bcs.eligible_for_fast_forward:
+            elif coin_bcs.supports_fast_forward and not conflict_bcs.supports_fast_forward:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP, but there's a conflicting spend
@@ -611,8 +611,7 @@ class MempoolManager:
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
-            eligible_for_ff = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
-            if eligible_for_ff:
+            if bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend):
                 # Make sure the fast forward spend still has a version that is
                 # still unspent, because if the singleton has been spent in a
                 # non-FF spend, this fast forward spend will never become valid.
@@ -622,8 +621,6 @@ class MempoolManager:
                 # spent_index will also fail this test, and such spends will
                 # fall back to be treated as non-FF spends.
                 lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
-                if lineage_info is None:
-                    eligible_for_ff = False
 
             spend_additions = []
             for puzzle_hash, amount, _ in spend_conds.create_coin:
@@ -635,7 +632,6 @@ class MempoolManager:
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP),
-                eligible_for_fast_forward=eligible_for_ff,
                 additions=spend_additions,
                 cost=uint64(spend_conds.condition_cost + spend_conds.execution_cost),
                 latest_singleton_lineage=lineage_info,
@@ -644,7 +640,7 @@ class MempoolManager:
         # fast forward spends are only allowed when bundled with other, non-FF, spends
         # in order to evict an FF spend, it must be associated with a normal
         # spend that can be included in a block or invalidated some other way
-        if all([s.eligible_for_fast_forward for s in bundle_coin_spends.values()]):
+        if all([s.supports_fast_forward for s in bundle_coin_spends.values()]):
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
@@ -1062,7 +1058,7 @@ def can_replace(
             if coin_id not in removal_names:
                 log.debug("Rejecting conflicting tx as it does not spend conflicting coin %s", coin_id)
                 return False
-            if bcs.eligible_for_fast_forward:
+            if bcs.supports_fast_forward:
                 existing_ff_spends.add(bytes32(coin_id))
             if bcs.eligible_for_dedup:
                 existing_dedup_spends.add(bytes32(coin_id))
@@ -1113,7 +1109,7 @@ def can_replace(
 
     if len(existing_ff_spends) > 0 or len(existing_dedup_spends) > 0:
         for coin_id, bcs in new_item.bundle_coin_spends.items():
-            if not bcs.eligible_for_fast_forward and coin_id in existing_ff_spends:
+            if not bcs.supports_fast_forward and coin_id in existing_ff_spends:
                 log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_FF of coin spend %s", coin_id)
                 return False
 
