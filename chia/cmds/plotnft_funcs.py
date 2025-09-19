@@ -30,7 +30,7 @@ from chia.pools.pool_config import (
     load_pool_config,
     update_pool_config,
 )
-from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
+from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState, PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.server.server import ssl_context_for_root
@@ -38,11 +38,12 @@ from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
     GetTransaction,
     GetWalletBalance,
     GetWallets,
@@ -51,6 +52,7 @@ from chia.wallet.wallet_request_types import (
     PWSelfPool,
     PWStatus,
     TransactionEndpointResponse,
+    WalletCreationMode,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -91,7 +93,7 @@ async def create(
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
         pool_url = None
-        relative_lock_height = uint32(0)
+        relative_lock_height = None
         target_puzzle_hash = None  # wallet will fill this in
     elif state == "FARMING_TO_POOL":
         enforce_https = wallet_info.config["selected_network"] == "mainnet"
@@ -110,22 +112,31 @@ async def create(
         cli_confirm("Confirm (y/n): ", "Aborting.")
 
     try:
-        tx_record: TransactionRecord = await wallet_info.client.create_new_pool_wallet(
-            target_puzzle_hash,
-            pool_url,
-            relative_lock_height,
-            "localhost:5000",
-            "new",
-            state,
-            fee,
+        create_response = await wallet_info.client.create_new_wallet(
+            CreateNewWallet(
+                wallet_type=CreateNewWalletType.POOL_WALLET,
+                initial_target_state=NewPoolWalletInitialTargetState(
+                    target_puzzle_hash=target_puzzle_hash,
+                    state=state,
+                    pool_url=pool_url,
+                    relative_lock_height=relative_lock_height,
+                ),
+                mode=WalletCreationMode.NEW,
+                fee=fee,
+                push=True,
+            ),
+            DEFAULT_TX_CONFIG,
         )
+        assert create_response.transaction is not None  # mypy doesn't know about __post_init__
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = (await wallet_info.client.get_transaction(GetTransaction(tx_record.name))).transaction
+            tx = (
+                await wallet_info.client.get_transaction(GetTransaction(create_response.transaction.name))
+            ).transaction
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(wallet_info.fingerprint, tx_record.name))
+                print(transaction_status_msg(wallet_info.fingerprint, create_response.transaction.name))
                 return None
     except Exception as e:
         raise CliRpcConnectionError(
