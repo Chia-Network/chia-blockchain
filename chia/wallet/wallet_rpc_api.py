@@ -112,12 +112,23 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetAssetID,
+    CATGetAssetIDResponse,
+    CATGetName,
+    CATGetNameResponse,
+    CATSetName,
+    CATSetNameResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
+    CheckOfferValidity,
+    CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    DefaultCAT,
     DeleteKey,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
@@ -172,6 +183,7 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
@@ -181,12 +193,14 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffersCountResponse,
     GetPrivateKey,
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
+    GetStrayCATsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -261,6 +275,7 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoinsResponse,
     SplitCoins,
     SplitCoinsResponse,
+    StrayCAT,
     SubmitTransactions,
     SubmitTransactionsResponse,
     TransactionRecordWithMetadata,
@@ -2095,29 +2110,31 @@ class WalletRpcApi:
     # CATs and Trading
     ##########################################################################################
 
-    async def get_cat_list(self, request: dict[str, Any]) -> EndpointResult:
-        return {"cat_list": list(DEFAULT_CATS.values())}
+    @marshal
+    async def get_cat_list(self, request: Empty) -> GetCATListResponse:
+        return GetCATListResponse([DefaultCAT.from_json_dict(default_cat) for default_cat in DEFAULT_CATS.values()])
 
-    async def cat_set_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
-        await wallet.set_name(str(request["name"]))
-        return {"wallet_id": wallet_id}
+    @marshal
+    async def cat_set_name(self, request: CATSetName) -> CATSetNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
+        await wallet.set_name(request.name)
+        return CATSetNameResponse(wallet_id=request.wallet_id)
 
-    async def cat_get_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+    @marshal
+    async def cat_get_name(self, request: CATGetName) -> CATGetNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
         name: str = wallet.get_name()
-        return {"wallet_id": wallet_id, "name": name}
+        return CATGetNameResponse(wallet_id=request.wallet_id, name=name)
 
-    async def get_stray_cats(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_stray_cats(self, request: Empty) -> GetStrayCATsResponse:
         """
         Get a list of all unacknowledged CATs
         :param request: RPC request
         :return: A list of unacknowledged CATs
         """
         cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
-        return {"stray_cats": cats}
+        return GetStrayCATsResponse(stray_cats=[StrayCAT.from_json_dict(cat) for cat in cats])
 
     @tx_endpoint(push=True)
     async def cat_spend(
@@ -2208,21 +2225,22 @@ class WalletRpcApi:
             "transaction_id": None,  # tx_endpoint wrapper will take care of this
         }
 
-    async def cat_get_asset_id(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+    @marshal
+    async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
         asset_id: str = wallet.get_asset_id()
-        return {"asset_id": asset_id, "wallet_id": wallet_id}
+        return CATGetAssetIDResponse(asset_id=bytes32.from_hexstr(asset_id), wallet_id=request.wallet_id)
 
-    async def cat_asset_id_to_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+    @marshal
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request.asset_id.hex())
         if wallet is None:
-            if request["asset_id"] in DEFAULT_CATS:
-                return {"wallet_id": None, "name": DEFAULT_CATS[request["asset_id"]]["name"]}
+            if request.asset_id.hex() in DEFAULT_CATS:
+                return CATAssetIDToNameResponse(wallet_id=None, name=DEFAULT_CATS[request.asset_id.hex()]["name"])
             else:
-                raise ValueError("The asset ID specified does not belong to a wallet")
+                return CATAssetIDToNameResponse(wallet_id=None, name=None)
         else:
-            return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
+            return CATAssetIDToNameResponse(wallet_id=wallet.id(), name=wallet.get_name())
 
     @tx_endpoint(push=False)
     async def create_offer_for_ids(
@@ -2346,15 +2364,14 @@ class WalletRpcApi:
             },
         }
 
-    async def check_offer_validity(self, request: dict[str, Any]) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
+    @marshal
+    async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
+        offer = Offer.from_bech32(request.offer)
         peer = self.service.get_full_node_peer()
-        return {
-            "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
-            "id": offer.name(),
-        }
+        return CheckOfferValidityResponse(
+            valid=(await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
+            id=offer.name(),
+        )
 
     @tx_endpoint(push=True)
     async def take_offer(
@@ -2440,12 +2457,15 @@ class WalletRpcApi:
 
         return {"trade_records": result, "offers": offer_values}
 
-    async def get_offers_count(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_offers_count(self, request: Empty) -> GetOffersCountResponse:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
 
-        return {"total": total, "my_offers_count": my_offers_count, "taken_offers_count": taken_offers_count}
+        return GetOffersCountResponse(
+            total=uint16(total), my_offers_count=uint16(my_offers_count), taken_offers_count=uint16(taken_offers_count)
+        )
 
     @tx_endpoint(push=True)
     async def cancel_offer(

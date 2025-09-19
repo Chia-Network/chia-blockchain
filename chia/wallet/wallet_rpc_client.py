@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -24,9 +24,19 @@ from chia.wallet.wallet_request_types import (
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetAssetID,
+    CATGetAssetIDResponse,
+    CATGetName,
+    CATGetNameResponse,
+    CATSetName,
+    CATSetNameResponse,
     CATSpendResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
+    CheckOfferValidity,
+    CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDL,
@@ -102,6 +112,7 @@ from chia.wallet.wallet_request_types import (
     GetPublicKeysResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
+    GetStrayCATsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -624,37 +635,20 @@ class WalletRpcClient(RpcClient):
         request = {"wallet_type": "cat_wallet", "asset_id": asset_id.hex(), "mode": "existing"}
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_asset_id(self, wallet_id: int) -> bytes32:
-        request = {"wallet_id": wallet_id}
-        return bytes32.from_hexstr((await self.fetch("cat_get_asset_id", request))["asset_id"])
+    async def get_cat_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
+        return CATGetAssetIDResponse.from_json_dict(await self.fetch("cat_get_asset_id", request.to_json_dict()))
 
-    async def get_stray_cats(self) -> list[dict[str, Any]]:
-        response = await self.fetch("get_stray_cats", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(list[dict[str, Any]], response["stray_cats"])
+    async def get_stray_cats(self) -> GetStrayCATsResponse:
+        return GetStrayCATsResponse.from_json_dict(await self.fetch("get_stray_cats", {}))
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
-        request = {"asset_id": asset_id.hex()}
-        try:
-            res = await self.fetch("cat_asset_id_to_name", request)
-        except ValueError:  # This happens if the asset_id is unknown
-            return None
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+        return CATAssetIDToNameResponse.from_json_dict(await self.fetch("cat_asset_id_to_name", request.to_json_dict()))
 
-        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(res["wallet_id"])
-        return wallet_id, res["name"]
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        return CATGetNameResponse.from_json_dict(await self.fetch("cat_get_name", request.to_json_dict()))
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("cat_get_name", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(str, response["name"])
-
-    async def set_cat_name(self, wallet_id: int, name: str) -> None:
-        request: dict[str, Any] = {
-            "wallet_id": wallet_id,
-            "name": name,
-        }
-        await self.fetch("cat_set_name", request)
+    async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
+        return CATSetNameResponse.from_json_dict(await self.fetch("cat_set_name", request.to_json_dict()))
 
     async def cat_spend(
         self,
@@ -736,9 +730,10 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
         return bytes32.from_hexstr(res["id"]), res["summary"]
 
-    async def check_offer_validity(self, offer: Offer) -> tuple[bytes32, bool]:
-        res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
-        return bytes32.from_hexstr(res["id"]), res["valid"]
+    async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
+        return CheckOfferValidityResponse.from_json_dict(
+            await self.fetch("check_offer_validity", request.to_json_dict())
+        )
 
     async def take_offer(
         self,

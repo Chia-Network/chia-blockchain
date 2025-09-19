@@ -104,7 +104,12 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
+    CATAssetIDToName,
+    CATGetAssetID,
+    CATGetName,
+    CATSetName,
     CheckDeleteKey,
+    CheckOfferValidity,
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
     DefaultCAT,
@@ -1203,25 +1208,23 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         env_0.wallet_states[uint32(env_0.wallet_aliases["cat0"])].balance.to_json_dict().items()
         <= (await env_0.rpc_client.get_wallet_balance(GetWalletBalance(cat_0_id))).wallet_balance.to_json_dict().items()
     )
-    asset_id = await env_0.rpc_client.get_cat_asset_id(cat_0_id)
-    assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == wallet_type.default_wallet_name_for_unknown_cat(
-        asset_id.hex()
-    )
-    await env_0.rpc_client.set_cat_name(cat_0_id, "My cat")
-    assert (await env_0.rpc_client.get_cat_name(cat_0_id)) == "My cat"
-    result = await env_0.rpc_client.cat_asset_id_to_name(asset_id)
-    assert result is not None
-    wid, name = result
-    assert wid == cat_0_id
-    assert name == "My cat"
-    result = await env_0.rpc_client.cat_asset_id_to_name(bytes32.zeros)
-    assert result is None
+    asset_id = (await env_0.rpc_client.get_cat_asset_id(CATGetAssetID(cat_0_id))).asset_id
+    assert (
+        await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))
+    ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id.hex())
+    await env_0.rpc_client.set_cat_name(CATSetName(cat_0_id, "My cat"))
+    assert (await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))).name == "My cat"
+    asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(CATAssetIDToName(asset_id))
+    assert asset_to_name_response.wallet_id == cat_0_id
+    assert asset_to_name_response.name == "My cat"
+    asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(CATAssetIDToName(bytes32.zeros))
+    assert asset_to_name_response.name is None
     verified_asset_id = next(iter(DEFAULT_CATS.items()))[1]["asset_id"]
-    result = await env_0.rpc_client.cat_asset_id_to_name(bytes32.from_hexstr(verified_asset_id))
-    assert result is not None
-    should_be_none, name = result
-    assert should_be_none is None
-    assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
+    asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(
+        CATAssetIDToName(bytes32.from_hexstr(verified_asset_id))
+    )
+    assert asset_to_name_response.wallet_id is None
+    assert asset_to_name_response.name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
     # Creates a second wallet with the same CAT
     res = await env_1.rpc_client.create_wallet_for_existing_cat(asset_id)
@@ -1395,8 +1398,8 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     await env_0.wallet_state_manager.interested_store.add_unacknowledged_token(
         asset_id, "Unknown", uint32(10000), bytes32(b"\00" * 32)
     )
-    cats = await env_0.rpc_client.get_stray_cats()
-    assert len(cats) == 1
+    stray_cats_response = await env_0.rpc_client.get_stray_cats()
+    assert len(stray_cats_response.stray_cats) == 1
 
     # Test CAT coin selection
     select_coins_response = await env_0.rpc_client.select_coins(
@@ -1564,8 +1567,9 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     }
     assert advanced_summary == summary
 
-    id, _valid = await env_1.rpc_client.check_offer_validity(offer)
-    assert id == offer.name()
+    offer_validity_response = await env_1.rpc_client.check_offer_validity(CheckOfferValidity(offer.to_bech32()))
+    assert offer_validity_response.id == offer.name()
+    assert offer_validity_response.valid
 
     all_offers = await env_1.rpc_client.get_all_offers(file_contents=True)
     assert len(all_offers) == 1
