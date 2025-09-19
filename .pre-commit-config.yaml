@@ -15,6 +15,13 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: generate-service-peer-schemas
+        name: Generate service peer schemas
+        entry: ./activated.py chia dev generate-service-peer-schemas
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: ruff_format
         name: ruff format
         entry: ./activated.py ruff format
