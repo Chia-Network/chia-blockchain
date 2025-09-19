@@ -2443,7 +2443,8 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
             ):
                 raise ValueError("Must specify all pooling options or none of them")
             else:
-                field_names = {  # replaces the two that are for all others
+                field_names = {  # leaves out wallet_id
+                    "type",
                     "total_fee",
                     "transaction",
                     "launcher_id",
@@ -2455,8 +2456,16 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        if "wallet_id" not in json_dict:
+            json_dict["wallet_id"] = uint32(0)
         if "transactions" not in json_dict:
             json_dict["transactions"] = []
         if "unsigned_transactions" not in json_dict:
             json_dict["unsigned_transactions"] = []
+        if "coin_list" in json_dict:
+            parent_hex, ph_hex, amt = json_dict["coin_list"]
+            json_dict["coin_list"] = Coin(
+                bytes32.from_hexstr(parent_hex), bytes32.from_hexstr(ph_hex), uint64(amt)
+            ).to_json_dict()
+
         return super().from_json_dict(json_dict)

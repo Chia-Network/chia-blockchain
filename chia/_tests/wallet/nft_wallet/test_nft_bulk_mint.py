@@ -276,7 +276,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
         wallet_environments.tx_config,
     )
 
-    await env_0.rpc_client.create_new_wallet(
+    await env_1.rpc_client.create_new_wallet(
         CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, name="NFT WALLET 2", did_id=None, push=True),
         wallet_environments.tx_config,
     )
