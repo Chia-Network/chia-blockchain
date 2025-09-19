@@ -248,6 +248,8 @@ from chia.wallet.wallet_request_types import (
     PWStatusResponse,
     SelectCoins,
     SelectCoinsResponse,
+    SendNotification,
+    SendNotificationResponse,
     SendTransaction,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -1937,22 +1939,24 @@ class WalletRpcApi:
         return Empty()
 
     @tx_endpoint(push=True)
+    @marshal
     async def send_notification(
         self,
-        request: dict[str, Any],
+        request: SendNotification,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> SendNotificationResponse:
         await self.service.wallet_state_manager.notification_manager.send_new_notification(
-            bytes32.from_hexstr(request["target"]),
-            bytes.fromhex(request["message"]),
-            uint64(request["amount"]),
+            request.target,
+            request.message,
+            request.amount,
             action_scope,
-            request.get("fee", uint64(0)),
+            request.fee,
             extra_conditions=extra_conditions,
         )
 
-        return {"tx": None, "transactions": None}  # tx_endpoint wrapper will take care of this
+        # tx_endpoint will take care of these default values
+        return SendNotificationResponse([], [], tx=REPLACEABLE_TRANSACTION_RECORD)
 
     @marshal
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:

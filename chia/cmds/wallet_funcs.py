@@ -74,6 +74,7 @@ from chia.wallet.wallet_request_types import (
     NFTSetNFTDID,
     NFTTransferNFT,
     RoyaltyAsset,
+    SendNotification,
     SendTransaction,
     SendTransactionResponse,
     SignMessageByAddress,
@@ -1576,19 +1577,25 @@ async def send_notification(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         amount: uint64 = cli_amount.convert_amount(units["chia"])
 
-        tx = await wallet_client.send_notification(
-            address.puzzle_hash,
-            message,
-            amount,
-            fee,
-            push=push,
+        response = await wallet_client.send_notification(
+            SendNotification(
+                address.puzzle_hash,
+                message,
+                amount,
+                fee=fee,
+                push=push,
+            ),
+            tx_config=DEFAULT_TX_CONFIG,
             timelock_info=condition_valid_times,
         )
 
         if push:
             print("Notification sent successfully.")
-            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx.name}")
-        return [tx]
+            print(
+                "To get status, use command: chia wallet get_transaction"
+                f" -f {fingerprint} -tx 0x{response.transactions[0].name}"
+            )
+        return response.transactions
 
 
 async def get_notifications(
