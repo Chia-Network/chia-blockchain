@@ -188,7 +188,7 @@ jobs:
       arch: arm
       arch-emoji: 💪
       collect-junit: false
-  windows:
+  windows-2022:
     if: github.event_name != 'workflow_dispatch' || inputs.run-windows
     uses: ./.github/workflows/test-single.yml
     needs: configure
@@ -196,11 +196,27 @@ jobs:
       os-emoji: 🪟
       matrix: windows
       name: Windows
-      file_name: windows
-      concurrency-name: windows
+      file_name: windows-2022
+      concurrency-name: windows-2022
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-2022
+      arch: intel
+      arch-emoji: 🌀
+      collect-junit: false
+  windows-2025:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-windows
+    uses: ./.github/workflows/test-single.yml
+    needs: configure
+    with:
+      os-emoji: 🪟
+      matrix: windows
+      name: Windows
+      file_name: windows-2025
+      concurrency-name: windows-2025
+      configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
+      runs-on: windows-2025
       arch: intel
       arch-emoji: 🌀
       collect-junit: false
