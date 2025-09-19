@@ -143,6 +143,26 @@ def skip_reward_chain_block(buf: memoryview) -> memoryview:
     return skip_bool(buf)  # is_transaction_block
 
 
+def height_from_reward_chain_block(buf: memoryview) -> tuple[memoryview, uint32]:
+    buf = skip_uint128(buf)  # weight
+    height = uint32.from_bytes(buf[:4])
+    buf = skip_uint32(buf)  # height
+    buf = skip_uint128(buf)  # total_iters
+    buf = skip_uint8(buf)  # signage_point_index
+    buf = skip_bytes32(buf)  # pos_ss_cc_challenge_hash
+
+    buf = skip_proof_of_space(buf)  # proof_of_space
+    buf = skip_optional(buf, skip_vdf_info)  # challenge_chain_sp_vdf
+    buf = skip_g2_element(buf)  # challenge_chain_sp_signature
+    buf = skip_vdf_info(buf)  # challenge_chain_ip_vdf
+    buf = skip_optional(buf, skip_vdf_info)  # reward_chain_sp_vdf
+    buf = skip_g2_element(buf)  # reward_chain_sp_signature
+    buf = skip_vdf_info(buf)  # reward_chain_ip_vdf
+    buf = skip_optional(buf, skip_vdf_info)  # infused_challenge_chain_ip_vdf
+    buf = skip_bool(buf)  # is_transaction_block
+    return buf, height
+
+
 def skip_pool_target(buf: memoryview) -> memoryview:
     # buf = skip_bytes32(buf)  # puzzle_hash
     # return skip_uint32(buf)  # max_height
@@ -228,13 +248,14 @@ def generator_from_block(buf: memoryview) -> Optional[bytes]:
 @dataclass(frozen=True)
 class GeneratorBlockInfo:
     prev_header_hash: bytes32
+    height: uint32
     transactions_generator: Optional[SerializedProgram]
     transactions_generator_ref_list: list[uint32]
 
 
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
-    buf = skip_reward_chain_block(buf)  # reward_chain_block
+    buf, height = height_from_reward_chain_block(buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
     buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
     buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
@@ -262,7 +283,7 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
         refs.append(uint32.from_bytes(buf[:4]))
         buf = buf[4:]
 
-    return GeneratorBlockInfo(prev_hash, generator, refs)
+    return GeneratorBlockInfo(prev_hash, height, generator, refs)
 
 
 def header_block_from_block(
