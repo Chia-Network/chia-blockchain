@@ -42,7 +42,6 @@ from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -53,6 +52,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
@@ -159,7 +159,7 @@ class FullNode:
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
     _block_store: Optional[BlockStore] = None
-    _coin_store: Optional[CoinStoreProtocol] = None
+    _coin_store: Optional[CoinStore] = None
     _mempool_manager: Optional[MempoolManager] = None
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     _blockchain: Optional[Blockchain] = None
@@ -269,11 +269,10 @@ class FullNode:
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
             selected_network = self.config.get("selected_network")
             height_map = await BlockHeightMap.create(self.db_path.parent, self._db_wrapper, selected_network)
+            consensus_store = ConsensusStoreSQLite3(self.block_store, self.coin_store, height_map)
             self._blockchain = await Blockchain.create(
-                coin_store=self.coin_store,
-                block_store=self.block_store,
+                consensus_store=consensus_store,
                 consensus_constants=self.constants,
-                height_map=height_map,
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
@@ -422,7 +421,7 @@ class FullNode:
         return self._blockchain
 
     @property
-    def coin_store(self) -> CoinStoreProtocol:
+    def coin_store(self) -> CoinStore:
         assert self._coin_store is not None
         return self._coin_store
 

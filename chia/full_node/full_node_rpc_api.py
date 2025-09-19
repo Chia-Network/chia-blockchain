@@ -470,7 +470,7 @@ class FullNodeRpcApi:
             record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB
-                record = await self.service.blockchain.block_store.get_block_record(header_hash)
+                record = await self.service.block_store.get_block_record(header_hash)
             if record is None:
                 raise ValueError(f"Block {header_hash.hex()} does not exist")
 
@@ -538,7 +538,7 @@ class FullNodeRpcApi:
         record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
-            record = await self.service.blockchain.block_store.get_block_record(header_hash)
+            record = await self.service.block_store.get_block_record(header_hash)
         if record is None:
             raise ValueError(f"Block {header_hash} does not exist")
         return {"block_record": record}
@@ -551,7 +551,7 @@ class FullNodeRpcApi:
         record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
-            record = await self.service.blockchain.block_store.get_block_record(header_hash)
+            record = await self.service.block_store.get_block_record(header_hash)
         if record is None:
             raise ValueError(f"Block {header_hash.hex()} does not exist")
 
@@ -634,7 +634,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -656,7 +656,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -668,7 +668,7 @@ class FullNodeRpcApi:
             raise ValueError("Name not in request")
         name = bytes32.from_hexstr(request["name"])
 
-        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
+        coin_record: Optional[CoinRecord] = await self.service.coin_store.get_coin_record(name)
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
@@ -692,7 +692,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -714,7 +714,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -743,7 +743,7 @@ class FullNodeRpcApi:
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
@@ -1018,7 +1018,7 @@ class FullNodeRpcApi:
             assert last_peak_timestamp is not None  # mypy
             assert last_tx_block.fees is not None  # mypy
 
-            record = await self.service.blockchain.block_store.get_full_block(last_tx_block.header_hash)
+            record = await self.service.block_store.get_full_block(last_tx_block.header_hash)
 
             last_block_cost = 0
             fee_rate_last_block = 0.0
