@@ -13,7 +13,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
-from chia._tests.cmds.wallet.test_consts import get_bytes32
+from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -25,17 +25,21 @@ from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcCl
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     CATAssetIDToName,
     CATAssetIDToNameResponse,
     CATGetName,
     CATGetNameResponse,
+    CreateNewWallet,
+    CreateNewWalletResponse,
+    CreateNewWalletType,
     GetSyncStatusResponse,
     GetTransaction,
     GetTransactionResponse,
@@ -231,6 +235,24 @@ class TestWalletRpcClient(TestRpcClient):
                 {asset.asset: (asset.royalty_address, asset.royalty_percentage) for asset in request.royalty_assets},
                 {asset.asset: asset.amount for asset in request.fungible_assets},
             )
+        )
+
+    async def create_new_wallet(
+        self,
+        request: CreateNewWallet,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> CreateNewWalletResponse:
+        self.add_to_log("create_new_wallet", (request, tx_config, extra_conditions, timelock_info))
+        return CreateNewWalletResponse(
+            [STD_UTX],
+            [STD_TX],
+            type=(
+                WalletType.NFT if request.wallet_type == CreateNewWalletType.NFT_WALLET else WalletType.DECENTRALIZED_ID
+            ).name,
+            wallet_id=uint32(4 if request.wallet_type == CreateNewWalletType.NFT_WALLET else 3),
+            my_did="did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
         )
 
 
