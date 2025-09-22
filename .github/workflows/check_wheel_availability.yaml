@@ -1,17 +1,16 @@
 name: 🚨 Check Dependency Artifacts
 
-# TODO: re-enable once we are using a release of chia_rs
 on:
   push:
     branches:
-      #      - "long_lived/**"
+      - "long_lived/**"
       - main
       - "release/**"
   release:
     types: [published]
-#  pull_request:
-#    branches:
-#      - "**"
+  pull_request:
+    branches:
+      - "**"
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
