@@ -965,7 +965,7 @@ description = "Chia vdf verification (wraps C++)"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-files = [ 
+files = [
     {file = "chiavdf-1.1.13-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:40b68c6739f9c93e7757b6ed7f5e33ac3333657a23dba9cbdb0c8bc487b63587"},
     {file = "chiavdf-1.1.13-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:871bb0af3f912ef548820d182ea6ead6d2b14903412b666c7651a8f23ef98c4e"},
     {file = "chiavdf-1.1.13-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:3ec591ff9aaf0f7ce870e907b1348c424630c69387cde5d5cd5ea54b54a6cb71"},
