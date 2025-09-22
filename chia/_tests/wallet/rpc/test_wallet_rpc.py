@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import random
+import re
 from collections.abc import AsyncIterator
 from operator import attrgetter
 from typing import Any, Optional
@@ -1268,6 +1269,45 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
                 excluded_coin_amounts=[uint64(100)],
                 excluded_coin_ids=[bytes32.zeros],
             ),
+        )
+
+    # Test some validation errors
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify "additions" or "amount"+"inner_address"+"memos", but not both.'),
+    ):
+        await env_0.rpc_client.cat_spend(
+            CATSpend(
+                wallet_id=cat_0_id,
+                amount=uint64(4),
+                inner_address=addr_1,
+                memos=["the cat memo"],
+                additions=[],
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ValueError, match=re.escape('Must specify "amount" and "inner_address" together.')):
+        await env_0.rpc_client.cat_spend(
+            CATSpend(
+                wallet_id=cat_0_id,
+                amount=uint64(4),
+                inner_address=None,
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify \\"extra_delta\\", \\"tail_reveal\\" and \\"tail_solution\\" together.'),
+    ):
+        await env_0.rpc_client.cat_spend(
+            CATSpend(
+                wallet_id=cat_0_id,
+                additions=[],
+                extra_delta="1",
+            ),
+            tx_config=wallet_environments.tx_config,
         )
 
     tx_res = await env_0.rpc_client.cat_spend(
