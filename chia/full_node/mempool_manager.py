@@ -760,7 +760,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
-            if not can_replace(conflicts, removal_names, potential):
+            if not can_replace(conflicts, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.monotonic() - start_time
@@ -1020,17 +1020,12 @@ def optional_max(a: Optional[T], b: Optional[T]) -> Optional[T]:
     return max((v for v in [a, b] if v is not None), default=None)
 
 
-def can_replace(
-    conflicting_items: list[MempoolItem],
-    removal_names: set[bytes32],
-    new_item: MempoolItem,
-) -> bool:
+def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> bool:
     """
     This function implements the mempool replacement rules. Given a Mempool item
     we're attempting to insert into the mempool (new_item) and the set of existing
     mempool items that conflict with it, this function answers the question whether
-    the existing items can be replaced by the new one. The removals parameter are
-    the coin IDs the new mempool item is spending.
+    the existing items can be replaced by the new one.
     """
 
     conflicting_fees = 0
@@ -1055,7 +1050,7 @@ def can_replace(
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
         for coin_id, bcs in item.bundle_coin_spends.items():
-            if coin_id not in removal_names:
+            if coin_id not in new_item.bundle_coin_spends:
                 log.debug("Rejecting conflicting tx as it does not spend conflicting coin %s", coin_id)
                 return False
             if bcs.supports_fast_forward:
