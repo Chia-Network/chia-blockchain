@@ -144,6 +144,7 @@ from chia.wallet.wallet_request_types import (
     PushTX,
     RoyaltyAsset,
     SelectCoins,
+    SendNotification,
     SendTransaction,
     SetWalletResyncOnStartup,
     SpendClawbackCoins,
@@ -2621,21 +2622,25 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     env.wallet_2.node.config["enable_notifications"] = True
     env.wallet_2.node.config["required_notification_amount"] = 100000000000
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        tx = await client.send_notification(
-            await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
-            b"hello",
-            uint64(100000000000),
-            fee=uint64(100000000000),
+        response = await client.send_notification(
+            SendNotification(
+                target=(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)),
+                message=b"hello",
+                amount=uint64(100000000000),
+                fee=uint64(100000000000),
+                push=True,
+            ),
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
-    assert tx.spend_bundle is not None
+    assert response.tx.spend_bundle is not None
     await time_out_assert(
         5,
         full_node_api.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.spend_bundle.name(),
+        response.tx.spend_bundle,
+        response.tx.spend_bundle.name(),
     )
-    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await farm_transaction(full_node_api, wallet_node, response.tx.spend_bundle)
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
@@ -2648,21 +2653,25 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        tx = await client.send_notification(
-            await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager),
-            b"hello",
-            uint64(100000000000),
-            fee=uint64(100000000000),
+        response = await client.send_notification(
+            SendNotification(
+                target=(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)),
+                message=b"hello",
+                amount=uint64(100000000000),
+                fee=uint64(100000000000),
+                push=True,
+            ),
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
-    assert tx.spend_bundle is not None
+    assert response.tx.spend_bundle is not None
     await time_out_assert(
         5,
         full_node_api.full_node.mempool_manager.get_spendbundle,
-        tx.spend_bundle,
-        tx.spend_bundle.name(),
+        response.tx.spend_bundle,
+        response.tx.spend_bundle.name(),
     )
-    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await farm_transaction(full_node_api, wallet_node, response.tx.spend_bundle)
     await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]

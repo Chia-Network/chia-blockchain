@@ -196,7 +196,7 @@ class SingletonFastForward:
         new_bundle_coin_spends = {}
         fast_forwarded_spends = 0
         for coin_id, spend_data in mempool_item.bundle_coin_spends.items():
-            if not spend_data.eligible_for_fast_forward:
+            if not spend_data.supports_fast_forward:
                 # Nothing to do for this spend, moving on
                 new_coin_spends.append(spend_data.coin_spend)
                 new_bundle_coin_spends[coin_id] = spend_data
@@ -210,8 +210,7 @@ class SingletonFastForward:
             unspent_lineage_info = self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash)
             if unspent_lineage_info is None:
                 # We didn't, so let's check the item's latest lineage info
-                if spend_data.latest_singleton_lineage is None:
-                    raise ValueError("Cannot proceed with singleton spend fast forward.")
+                assert spend_data.latest_singleton_lineage is not None
                 unspent_lineage_info = spend_data.latest_singleton_lineage
                 # See if we're the most recent version
                 if unspent_lineage_info.coin_id == coin_id:
@@ -235,9 +234,9 @@ class SingletonFastForward:
                 new_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                     coin_spend=new_coin_spend,
                     eligible_for_dedup=spend_data.eligible_for_dedup,
-                    eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
                     additions=patched_additions,
                     cost=spend_data.cost,
+                    latest_singleton_lineage=self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash),
                 )
                 # Update the list of coins spends that will make the new fast
                 # forward spend bundle
@@ -258,9 +257,9 @@ class SingletonFastForward:
             new_bundle_coin_spends[new_coin_spend.coin.name()] = BundleCoinSpend(
                 coin_spend=new_coin_spend,
                 eligible_for_dedup=spend_data.eligible_for_dedup,
-                eligible_for_fast_forward=spend_data.eligible_for_fast_forward,
                 additions=patched_additions,
                 cost=spend_data.cost,
+                latest_singleton_lineage=self.fast_forward_spends.get(spend_data.coin_spend.coin.puzzle_hash),
             )
             # Update the list of coins spends that make the new fast forward bundle
             new_coin_spends.append(new_coin_spend)

@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
@@ -109,6 +113,7 @@ jobs:
 
       - name: Run install-gui script (Windows)
         if: matrix.os.matrix == 'windows'
+        shell: pwsh
         run: |
           ./Install-gui.ps1
 
