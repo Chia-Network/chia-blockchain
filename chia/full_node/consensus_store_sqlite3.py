@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional
 from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Self, final
+from typing_extensions import final
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
@@ -56,12 +56,6 @@ class ConsensusStoreSQLite3Writer:
     ) -> None:
         await self.coin_store.new_block(height, timestamp, included_reward_coins, tx_additions, tx_removals)
 
-    @asynccontextmanager
-    async def writer(self) -> AsyncIterator[Self]:
-        # Return self as the writer facade
-        async with self.block_store.transaction():
-            yield self
-
 
 @dataclass
 class ConsensusStoreSQLite3:
@@ -105,8 +99,8 @@ class ConsensusStoreSQLite3:
     async def writer(self) -> AsyncIterator[ConsensusStoreSQLite3Writer]:
         """Async context manager that yields a writer facade for performing transactional writes."""
         csw = ConsensusStoreSQLite3Writer(self.block_store, self.coin_store)
-        async with csw.writer() as writer:
-            yield writer
+        async with self.block_store.transaction():
+            yield csw
 
     # Block store methods
 
