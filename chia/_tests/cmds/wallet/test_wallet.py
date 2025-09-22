@@ -51,6 +51,8 @@ from chia.wallet.wallet_request_types import (
     CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
+    CreateNewWallet,
+    CreateNewWalletType,
     CreateOfferForIDs,
     CreateOfferForIDsResponse,
     DeleteUnconfirmedTransactions,
@@ -83,6 +85,7 @@ from chia.wallet.wallet_request_types import (
     TakeOffer,
     TakeOfferResponse,
     TransactionRecordWithMetadata,
+    WalletCreationMode,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -707,10 +710,6 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
 
     # set RPC Client
     class AddTokenRpcClient(TestWalletRpcClient):
-        async def create_wallet_for_existing_cat(self, asset_id: bytes) -> dict[str, int]:
-            self.add_to_log("create_wallet_for_existing_cat", (asset_id,))
-            return {"wallet_id": 3}
-
         async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
             self.add_to_log("set_cat_name", (request.wallet_id, request.name))
             return CATSetNameResponse(wallet_id=request.wallet_id)
@@ -728,7 +727,19 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
 
     expected_calls: logType = {
         "cat_asset_id_to_name": [(get_bytes32(1),), (bytes32([1, 2] * 16),)],
-        "create_wallet_for_existing_cat": [(bytes32([1, 2] * 16),)],
+        "create_new_wallet": [
+            (
+                CreateNewWallet(
+                    wallet_type=CreateNewWalletType.CAT_WALLET,
+                    mode=WalletCreationMode.EXISTING,
+                    asset_id=bytes32([1, 2] * 16),
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+                tuple(),
+                ConditionValidTimes(),
+            )
+        ],
         "set_cat_name": [(2, "examplecat"), (3, "examplecat")],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
