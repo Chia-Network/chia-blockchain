@@ -276,7 +276,7 @@ async def create_new_plotnft(
         CreateNewWallet(
             wallet_type=CreateNewWalletType.POOL_WALLET,
             initial_target_state=NewPoolWalletInitialTargetState(
-                target_puzzle_hash=our_ph,
+                target_puzzle_hash=None if self_pool else our_ph,
                 state="SELF_POOLING" if self_pool else "FARMING_TO_POOL",
                 pool_url=None if self_pool else "http://pool.example.com",
                 relative_lock_height=None if self_pool else LOCK_HEIGHT,
