@@ -8,49 +8,21 @@ from pathlib import Path
 from typing import Optional
 
 import aiohttp
+from chia_rs.datalayer import DeltaReader
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
+from chia.data_layer.data_layer_util import (
+    PluginRemote,
+    Root,
+    ServerInfo,
+    get_delta_filename,
+    get_delta_filename_path,
+    get_full_tree_filename,
+    get_full_tree_filename_path,
+)
 from chia.data_layer.data_store import DataStore
-
-
-def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
-    if group_by_store:
-        return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"
-    return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
-
-
-def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
-    if group_by_store:
-        return f"{store_id}/{node_hash}-delta-{generation}-v1.0.dat"
-    return f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat"
-
-
-def get_full_tree_filename_path(
-    foldername: Path,
-    store_id: bytes32,
-    node_hash: bytes32,
-    generation: int,
-    group_by_store: bool = False,
-) -> Path:
-    if group_by_store:
-        path = foldername.joinpath(f"{store_id}")
-        return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
-    return foldername.joinpath(f"{store_id}-{node_hash}-full-{generation}-v1.0.dat")
-
-
-def get_delta_filename_path(
-    foldername: Path,
-    store_id: bytes32,
-    node_hash: bytes32,
-    generation: int,
-    group_by_store: bool = False,
-) -> Path:
-    if group_by_store:
-        path = foldername.joinpath(f"{store_id}")
-        return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
-    return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
+from chia.util.log_exceptions import log_exceptions
 
 
 def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
@@ -85,45 +57,6 @@ def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
     )
 
     return reformatted == filename
-
-
-async def insert_into_data_store_from_file(
-    data_store: DataStore,
-    store_id: bytes32,
-    root_hash: Optional[bytes32],
-    filename: Path,
-) -> int:
-    num_inserted = 0
-    with open(filename, "rb") as reader:
-        while True:
-            chunk = b""
-            while len(chunk) < 4:
-                size_to_read = 4 - len(chunk)
-                cur_chunk = reader.read(size_to_read)
-                if cur_chunk is None or cur_chunk == b"":
-                    if size_to_read < 4:
-                        raise Exception("Incomplete read of length.")
-                    break
-                chunk += cur_chunk
-            if chunk == b"":
-                break
-
-            size = int.from_bytes(chunk, byteorder="big")
-            serialize_nodes_bytes = b""
-            while len(serialize_nodes_bytes) < size:
-                size_to_read = size - len(serialize_nodes_bytes)
-                cur_chunk = reader.read(size_to_read)
-                if cur_chunk is None or cur_chunk == b"":
-                    raise Exception("Incomplete read of blob.")
-                serialize_nodes_bytes += cur_chunk
-            serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
-
-            node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
-            num_inserted += 1
-
-    await data_store.insert_root_with_ancestor_table(store_id=store_id, node_hash=root_hash, status=Status.COMMITTED)
-    return num_inserted
 
 
 @dataclass
@@ -165,14 +98,8 @@ async def write_files_for_root(
             pass
 
     try:
-        last_seen_generation = await data_store.get_last_tree_root_by_hash(
-            store_id, root.node_hash, max_generation=root.generation
-        )
-        if last_seen_generation is None:
-            with open(filename_diff_tree, mode) as writer:
-                await data_store.write_tree_to_file(root, node_hash, store_id, True, writer)
-        else:
-            open(filename_diff_tree, mode).close()
+        with open(filename_diff_tree, mode) as writer:
+            await data_store.write_tree_to_file(root, node_hash, store_id, True, writer)
         written = True
     except FileExistsError:
         pass
@@ -250,6 +177,8 @@ async def insert_from_delta_file(
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
+    delta_reader: Optional[DeltaReader] = None
+
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
@@ -281,33 +210,34 @@ async def insert_from_delta_file(
 
         log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
         try:
-            filename_full_tree = get_full_tree_filename_path(
-                client_foldername,
-                store_id,
-                root_hash,
-                existing_generation,
-                group_files_by_store,
-            )
-            num_inserted = await insert_into_data_store_from_file(
-                data_store,
-                store_id,
-                None if root_hash == bytes32.zeros else root_hash,
-                target_filename_path,
-            )
-            log.info(
-                f"Successfully inserted hash {root_hash} from delta file. "
-                f"Generation: {existing_generation}. Store id: {store_id}. Nodes inserted: {num_inserted}."
-            )
+            with log_exceptions(log=log, message="exception while inserting from delta file"):
+                filename_full_tree = get_full_tree_filename_path(
+                    client_foldername,
+                    store_id,
+                    root_hash,
+                    existing_generation,
+                    group_files_by_store,
+                )
+                delta_reader = await data_store.insert_into_data_store_from_file(
+                    store_id,
+                    None if root_hash == bytes32.zeros else root_hash,
+                    target_filename_path,
+                    delta_reader=delta_reader,
+                )
+                log.info(
+                    f"Successfully inserted hash {root_hash} from delta file. "
+                    f"Generation: {existing_generation}. Store id: {store_id}."
+                )
 
-            if target_generation - existing_generation <= maximum_full_file_count - 1:
-                root = await data_store.get_tree_root(store_id=store_id)
-                with open(filename_full_tree, "wb") as writer:
-                    await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
-                log.info(f"Successfully written full tree filename {filename_full_tree}.")
-            else:
-                log.info(f"Skipping full file generation for {existing_generation}")
+                if target_generation - existing_generation <= maximum_full_file_count - 1:
+                    root = await data_store.get_tree_root(store_id=store_id)
+                    with open(filename_full_tree, "wb") as writer:
+                        await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
+                    log.info(f"Successfully written full tree filename {filename_full_tree}.")
+                else:
+                    log.info(f"Skipping full file generation for {existing_generation}")
 
-            await data_store.received_correct_file(store_id, server_info)
+                await data_store.received_correct_file(store_id, server_info)
         except Exception:
             try:
                 target_filename_path.unlink()
@@ -326,7 +256,6 @@ async def insert_from_delta_file(
             if not filename_exists:
                 # Don't penalize this server if we didn't download the file from it.
                 await data_store.server_misses_file(store_id, server_info, timestamp)
-            await data_store.rollback_to_generation(store_id, existing_generation - 1)
             return False
 
     return True
@@ -386,4 +315,4 @@ async def http_download(
                     new_percentage = f"{progress_byte / size:.0%}"
                     if new_percentage != progress_percentage:
                         progress_percentage = new_percentage
-                        log.debug(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+                        log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")

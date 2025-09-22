@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
 
 import aiohttp
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -32,10 +33,9 @@ from chia.data_layer.data_layer_util import (
     PluginRemote,
     PluginStatus,
     Proof,
-    ProofOfInclusion,
-    ProofOfInclusionLayer,
     Root,
     ServerInfo,
+    Side,
     Status,
     StoreProofs,
     Subscription,
@@ -43,18 +43,16 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     Unspecified,
     UnsubscribeData,
+    calculate_sibling_sides_integer,
+    collect_sibling_hashes,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     leaf_hash,
     unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import (
-    delete_full_file_if_exists,
-    get_delta_filename_path,
-    get_full_tree_filename_path,
-    insert_from_delta_file,
-    write_files_for_root,
-)
+from chia.data_layer.download_data import delete_full_file_if_exists, insert_from_delta_file, write_files_for_root
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
@@ -120,6 +118,8 @@ class DataLayer:
         _protocol_check: ClassVar[RpcServiceProtocol] = cast("DataLayer", None)
 
     db_path: Path
+    merkle_blobs_path: Path
+    key_value_blobs_path: Path
     config: dict[str, Any]
     root_path: Path
     log: logging.Logger
@@ -189,6 +189,12 @@ class DataLayer:
         server_files_replaced = server_files_path_from_config(config, root_path)
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        merkle_blobs_path_replaced: str = config.get(
+            "merkle_blobs_path", "data_layer/db/merkle_blobs_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
+        key_value_blobs_path_replaced: str = config.get(
+            "key_value_blobs_path", "data_layer/db/key_value_blobs_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
 
         self = cls(
             config=config,
@@ -196,6 +202,8 @@ class DataLayer:
             wallet_rpc_init=wallet_rpc_init,
             log=logging.getLogger(name if name is None else __name__),
             db_path=path_from_root(root_path, db_path_replaced),
+            merkle_blobs_path=path_from_root(root_path, merkle_blobs_path_replaced),
+            key_value_blobs_path=path_from_root(root_path, key_value_blobs_path_replaced),
             server_files_location=server_files_replaced,
             downloaders=downloaders,
             uploaders=uploaders,
@@ -209,6 +217,8 @@ class DataLayer:
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.merkle_blobs_path.mkdir(parents=True, exist_ok=True)
+        self.key_value_blobs_path.mkdir(parents=True, exist_ok=True)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
 
         return self
@@ -219,11 +229,18 @@ class DataLayer:
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
+        cache_capacity = self.config.get("merkle_blobs_cache_size", 1)
 
-        async with DataStore.managed(database=self.db_path, sql_log_path=sql_log_path) as self._data_store:
+        async with DataStore.managed(
+            database=self.db_path,
+            merkle_blobs_path=self.merkle_blobs_path,
+            key_value_blobs_path=self.key_value_blobs_path,
+            sql_log_path=sql_log_path,
+            cache_capacity=cache_capacity,
+        ) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 
-            await self._data_store.migrate_db()
+            await self._data_store.migrate_db(self.server_files_location)
             self.periodically_manage_data_task = create_referenced_task(self.periodically_manage_data())
             try:
                 yield
@@ -278,7 +295,6 @@ class DataLayer:
     ) -> Optional[TransactionRecord]:
         status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
-        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             return await self.publish_update(store_id=store_id, fee=fee)
@@ -311,8 +327,6 @@ class DataLayer:
 
             status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
             await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
-
-        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             updates: list[LauncherRootPair] = []
@@ -570,7 +584,6 @@ class DataLayer:
                     and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                    await self.data_store.build_ancestor_table_for_latest_root(store_id=store_id)
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
@@ -877,8 +890,6 @@ class DataLayer:
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(DLStopTracking(store_id))
         await self.data_store.unsubscribe(store_id)
-        if not retain_data:
-            await self.data_store.delete_store_data(store_id)
 
         self.log.info(f"Unsubscribed to {store_id}")
         for file_path in paths:
@@ -1116,7 +1127,7 @@ class DataLayer:
                         node_hash=proof_of_inclusion.node_hash,
                         layers=tuple(
                             Layer(
-                                other_hash_side=layer.other_hash_side,
+                                other_hash_side=Side(layer.other_hash_side),
                                 other_hash=layer.other_hash,
                                 combined_hash=layer.combined_hash,
                             )
@@ -1183,7 +1194,6 @@ class DataLayer:
 
             verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
 
-        await self.data_store.clean_node_table()
         return offer
 
     async def take_offer(
@@ -1216,12 +1226,12 @@ class DataLayer:
                         for layer in proof.layers
                     ]
                     proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=layers)
-                    sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
+                    sibling_sides_integer = calculate_sibling_sides_integer(proof_of_inclusion)
                     proofs_of_inclusion.append(
                         (
                             root.hex(),
                             str(sibling_sides_integer),
-                            ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
+                            ["0x" + sibling_hash.hex() for sibling_hash in collect_sibling_hashes(proof_of_inclusion)],
                         )
                     )
 
@@ -1241,8 +1251,6 @@ class DataLayer:
                     for our_offer_store in taker
                 },
             }
-
-        await self.data_store.clean_node_table()
 
         # Excluding wallet from transaction since failures in the wallet may occur
         # after the transaction is submitted to the chain.  If we roll back data we

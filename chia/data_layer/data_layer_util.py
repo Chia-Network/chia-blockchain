@@ -4,9 +4,11 @@ import dataclasses
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from hashlib import sha256
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import aiosqlite
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 from typing_extensions import final
@@ -46,6 +48,45 @@ def leaf_hash(key: bytes, value: bytes) -> bytes32:
 def key_hash(key: bytes) -> bytes32:
     # see test for the definition this is optimized from
     return bytes32(sha256(b"\1" + key).digest())
+
+
+# TODO: allow Optional[bytes32] for `node_hash` and resolve the filenames here
+def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"
+    return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
+
+
+def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-delta-{generation}-v1.0.dat"
+    return f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat"
+
+
+def get_full_tree_filename_path(
+    foldername: Path,
+    store_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{store_id}")
+        return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-full-{generation}-v1.0.dat")
+
+
+def get_delta_filename_path(
+    foldername: Path,
+    store_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{store_id}")
+        return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -94,7 +135,6 @@ async def _dot_dump(
     root_hash: bytes32,
 ) -> str:
     terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
     n = 8
 
@@ -108,16 +148,7 @@ async def _dot_dump(
         value = terminal_node.value.hex()
         dot_nodes.append(f"""node_{hash} [shape=box, label="{hash[:n]}\\nkey: {key}\\nvalue: {value}"];""")
 
-    for internal_node in internal_nodes:
-        hash = internal_node.hash.hex()
-        left = internal_node.left_hash.hex()
-        right = internal_node.right_hash.hex()
-        dot_nodes.append(f"""node_{hash} [label="{hash[:n]}"]""")
-        dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
-        dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
-        dot_pair_boxes.append(
-            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
-        )
+    # TODO: implement for internal nodes. currently this prints only terminal nodes
 
     lines = [
         "digraph {",
@@ -128,11 +159,6 @@ async def _dot_dump(
     ]
 
     return "\n".join(lines)
-
-
-def row_to_node(row: aiosqlite.Row) -> Node:
-    cls = node_type_to_class[row["node_type"]]
-    return cls.from_row(row=row)
 
 
 class Status(IntEnum):
@@ -147,9 +173,9 @@ class NodeType(IntEnum):
 
 
 @final
-class Side(IntEnum):
-    LEFT = 0
-    RIGHT = 1
+class Side(uint8, Enum):
+    LEFT = uint8(0)
+    RIGHT = uint8(1)
 
     def other(self) -> Side:
         if self == Side.LEFT:
@@ -208,78 +234,12 @@ class TerminalNode:
         )
 
 
-@final
-@dataclass(frozen=True)
-class ProofOfInclusionLayer:
-    other_hash_side: Side
-    other_hash: bytes32
-    combined_hash: bytes32
-
-    @classmethod
-    def from_internal_node(
-        cls,
-        internal_node: InternalNode,
-        traversal_child_hash: bytes32,
-    ) -> ProofOfInclusionLayer:
-        return ProofOfInclusionLayer(
-            other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
-            other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
-            combined_hash=internal_node.hash,
-        )
-
-    @classmethod
-    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
-        combined_hash = calculate_internal_hash(
-            hash=primary_hash,
-            other_hash_side=other_hash_side,
-            other_hash=other_hash,
-        )
-
-        return cls(other_hash_side=other_hash_side, other_hash=other_hash, combined_hash=combined_hash)
+def calculate_sibling_sides_integer(proof: ProofOfInclusion) -> int:
+    return sum((1 << index if layer.other_hash_side == Side.LEFT else 0) for index, layer in enumerate(proof.layers))
 
 
-other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
-
-
-@dataclass(frozen=True)
-class ProofOfInclusion:
-    node_hash: bytes32
-    # children before parents
-    layers: list[ProofOfInclusionLayer]
-
-    @property
-    def root_hash(self) -> bytes32:
-        if len(self.layers) == 0:
-            return self.node_hash
-
-        return self.layers[-1].combined_hash
-
-    def sibling_sides_integer(self) -> int:
-        return sum(other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers))
-
-    def sibling_hashes(self) -> list[bytes32]:
-        return [layer.other_hash for layer in self.layers]
-
-    def as_program(self) -> Program:
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
-
-    def valid(self) -> bool:
-        existing_hash = self.node_hash
-
-        for layer in self.layers:
-            calculated_hash = calculate_internal_hash(
-                hash=existing_hash, other_hash_side=layer.other_hash_side, other_hash=layer.other_hash
-            )
-
-            if calculated_hash != layer.combined_hash:
-                return False
-
-            existing_hash = calculated_hash
-
-        if existing_hash != self.root_hash:
-            return False
-
-        return True
+def collect_sibling_hashes(proof: ProofOfInclusion) -> list[bytes32]:
+    return [layer.other_hash for layer in proof.layers]
 
 
 @final
