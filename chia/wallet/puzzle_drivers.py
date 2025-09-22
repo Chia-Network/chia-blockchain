@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Optional
 
 from clvm.SExp import SExp
 from clvm_tools.binutils import assemble, type_for_atom
 from ir.Type import Type
+from typing_extensions import Self
 
 from chia.types.blockchain_format.program import Program
 from chia.util.casts import int_from_bytes
@@ -17,7 +17,6 @@ When you access a value in the dictionary, it will be deserialized to a str, int
 """
 
 
-@dataclass(frozen=True)
 class PuzzleInfo:
     """
     There are two 'magic' keys in a PuzzleInfo object:
@@ -26,6 +25,10 @@ class PuzzleInfo:
     """
 
     info: dict[str, Any]
+
+    def __init__(self, info: dict[str, Any]) -> None:
+        self.info = info
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         if "type" not in self.info:
@@ -74,10 +77,24 @@ class PuzzleInfo:
         else:
             return False
 
+    # Methods to make this a valid Streamable member
+    # Should not be being serialized as bytes
+    stream = None
+    parse = None
 
-@dataclass(frozen=True)
+    def to_json_dict(self) -> dict[str, Any]:
+        return self.info
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(json_dict)
+
+
 class Solver:
     info: dict[str, Any]
+
+    def __init__(self, info: dict[str, Any]) -> None:
+        self.info = info
 
     def __getitem__(self, item: str) -> Any:
         value = self.info[item]
@@ -92,6 +109,17 @@ class Solver:
                 return False
         return True
 
+    # Methods to make this a valid Streamable member
+    stream = None
+    parse = None
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return self.info
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(json_dict)
+
 
 def decode_info_value(cls: Any, value: Any) -> Any:
     if isinstance(value, dict):
@@ -101,7 +129,7 @@ def decode_info_value(cls: Any, value: Any) -> Any:
     elif isinstance(value, Program) and value.atom is None:
         return value
     else:
-        if value == "()":  # special case
+        if value in {"()", ""}:  # special case
             return Program.to([])
         expression: SExp = assemble(value)
         if expression.atom is None:

@@ -81,6 +81,7 @@ from chia.wallet.conditions import (
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
@@ -114,6 +115,7 @@ from chia.wallet.wallet_request_types import (
     CheckOfferValidity,
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
+    CreateOfferForIDs,
     DefaultCAT,
     DeleteKey,
     DeleteNotifications,
@@ -1586,28 +1588,29 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         )
     # Create an offer of 5 chia for one CAT
     await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): -5, cat_asset_id.hex(): 1}, wallet_environments.tx_config, validate_only=True
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, validate_only=True),
+        tx_config=wallet_environments.tx_config,
     )
     all_offers = await env_1.rpc_client.get_all_offers()
     assert len(all_offers) == 0
 
-    driver_dict: dict[str, Any] = {
-        cat_asset_id.hex(): {
-            "type": "CAT",
-            "tail": "0x" + cat_asset_id.hex(),
-            **(
-                {}
-                if wallet_type is CATWallet
-                else {"also": {"type": "revocation layer", "hidden_puzzle_hash": "0x" + bytes32.zeros.hex()}}
-            ),
-        }
+    driver_dict = {
+        cat_asset_id: PuzzleInfo(
+            {
+                "type": "CAT",
+                "tail": "0x" + cat_asset_id.hex(),
+                **(
+                    {}
+                    if wallet_type is CATWallet
+                    else {"also": {"type": "revocation layer", "hidden_puzzle_hash": "0x" + bytes32.zeros.hex()}}
+                ),
+            }
+        )
     }
 
     create_res = await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): -5, cat_asset_id.hex(): 1},
-        wallet_environments.tx_config,
-        driver_dict=driver_dict,
-        fee=uint64(1),
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, driver_dict=driver_dict, fee=uint64(1)),
+        tx_config=wallet_environments.tx_config,
     )
     offer = create_res.offer
 
@@ -1618,7 +1621,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert summary == {
         "offered": {"xch": 5},
         "requested": {cat_asset_id.hex(): 1},
-        "infos": driver_dict,
+        "infos": {key.hex(): info.info for key, info in driver_dict.items()},
         "fees": 1,
         "additions": [c.name().hex() for c in offer.additions()],
         "removals": [c.name().hex() for c in offer.removals()],
@@ -1662,7 +1665,8 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
     create_res = await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): -5, cat_wallet_id: 1}, wallet_environments.tx_config, fee=uint64(1)
+        CreateOfferForIDs(offer={str(1): "-5", str(cat_wallet_id): "1"}, fee=uint64(1)),
+        tx_config=wallet_environments.tx_config,
     )
     all_offers = await env_1.rpc_client.get_all_offers()
     assert len(all_offers) == 2
@@ -1776,9 +1780,8 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert len(all_offers) == 2
 
     await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): -5, cat_asset_id.hex(): 1},
-        wallet_environments.tx_config,
-        driver_dict=driver_dict,
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, driver_dict=driver_dict),
+        tx_config=wallet_environments.tx_config,
     )
     assert (
         len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
@@ -1814,14 +1817,12 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
 
     await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): -5, cat_asset_id.hex(): 1},
-        wallet_environments.tx_config,
-        driver_dict=driver_dict,
+        CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, driver_dict=driver_dict),
+        tx_config=wallet_environments.tx_config,
     )
     await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): 5, cat_asset_id.hex(): -1},
-        wallet_environments.tx_config,
-        driver_dict=driver_dict,
+        CreateOfferForIDs(offer={str(1): "5", cat_asset_id.hex(): "-1"}, driver_dict=driver_dict),
+        tx_config=wallet_environments.tx_config,
     )
     assert (
         len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
@@ -1868,9 +1869,8 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
 
     await env_1.rpc_client.create_offer_for_ids(
-        {uint32(1): 5, cat_asset_id.hex(): -1},
-        wallet_environments.tx_config,
-        driver_dict=driver_dict,
+        CreateOfferForIDs(offer={str(1): "5", cat_asset_id.hex(): "-1"}, driver_dict=driver_dict),
+        tx_config=wallet_environments.tx_config,
     )
     assert (
         len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
@@ -1886,9 +1886,11 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
 
     with pytest.raises(ValueError, match="not currently supported"):
         await env_1.rpc_client.create_offer_for_ids(
-            {uint32(1): -5, cat_asset_id.hex(): 1},
+            CreateOfferForIDs(
+                offer={str(1): "-5", cat_asset_id.hex(): "1"},
+                driver_dict=driver_dict,
+            ),
             wallet_environments.tx_config,
-            driver_dict=driver_dict,
             timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
         )
 
