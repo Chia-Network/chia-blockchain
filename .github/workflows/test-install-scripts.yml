@@ -93,6 +93,13 @@ jobs:
         with:
           node-version-file: chia-blockchain-gui/.nvmrc
 
+      - name: Remove GUI submodule for gui script testing
+        env:
+          GUI_DIRECTORY: chia-blockchain-gui
+        run: |
+          [ -d "${GUI_DIRECTORY}" ]
+          rm -rf "${GUI_DIRECTORY}"
+
       - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
