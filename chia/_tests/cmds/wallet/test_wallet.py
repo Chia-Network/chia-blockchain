@@ -43,6 +43,10 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     BalanceResponse,
     CancelOfferResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATSetName,
+    CATSetNameResponse,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
     CreateOfferForIDsResponse,
@@ -683,8 +687,9 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
             self.add_to_log("create_wallet_for_existing_cat", (asset_id,))
             return {"wallet_id": 3}
 
-        async def set_cat_name(self, wallet_id: int, name: str) -> None:
-            self.add_to_log("set_cat_name", (wallet_id, name))
+        async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
+            self.add_to_log("set_cat_name", (request.wallet_id, request.name))
+            return CATSetNameResponse(wallet_id=request.wallet_id)
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -1051,14 +1056,14 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 ),
             )
 
-        async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
-            self.add_to_log("cat_asset_id_to_name", (asset_id,))
-            if asset_id == cat_offered_id:
-                return uint32(2), "offered cat"
-            elif asset_id == cat_requested_id:
-                return uint32(3), "requested cat"
+        async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+            self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
+            if request.asset_id == cat_offered_id:
+                return CATAssetIDToNameResponse(uint32(2), "offered cat")
+            elif request.asset_id == cat_requested_id:
+                return CATAssetIDToNameResponse(uint32(3), "requested cat")
             else:
-                return None
+                return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
     inst_rpc_client = TakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

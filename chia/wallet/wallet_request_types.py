@@ -596,6 +596,86 @@ class GetCATListResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CATSetName(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class CATSetNameResponse(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetName(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetNameResponse(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class StrayCAT(Streamable):
+    asset_id: bytes32
+    name: str
+    first_seen_height: uint32
+    sender_puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetStrayCATsResponse(Streamable):
+    stray_cats: list[StrayCAT]
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetAssetID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetAssetIDResponse(Streamable):
+    wallet_id: uint32
+    asset_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATAssetIDToName(Streamable):
+    asset_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATAssetIDToNameResponse(Streamable):
+    wallet_id: Optional[uint32]
+    name: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckOfferValidity(Streamable):
+    offer: str
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckOfferValidityResponse(Streamable):
+    valid: bool
+    id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str
