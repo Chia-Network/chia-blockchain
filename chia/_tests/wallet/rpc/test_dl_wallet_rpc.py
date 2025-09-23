@@ -13,13 +13,15 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
-from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror, SingletonDependencies, SingletonSummary
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_request_types import (
     CreateNewDL,
+    CreateOfferForIDs,
     DLDeleteMirror,
     DLGetMirrors,
     DLGetMirrorsResponse,
@@ -32,6 +34,7 @@ from chia.wallet.wallet_request_types import (
     DLUpdateMultiple,
     DLUpdateMultipleUpdates,
     DLUpdateRoot,
+    GetOfferSummary,
     LauncherRootPair,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -301,6 +304,39 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([]), DLGetMirrors(launcher_id))
+
+            offer_creation_response = await client.create_offer_for_ids(
+                CreateOfferForIDs(
+                    {launcher_id.hex(): "-1", launcher_id_2.hex(): "1"},
+                    driver_dict={},
+                    solver=Solver(
+                        {
+                            "0x" + launcher_id.hex(): {
+                                "new_root": "0x" + bytes32.zeros.hex(),
+                                "dependencies": [
+                                    {
+                                        "launcher_id": "0x" + launcher_id_2.hex(),
+                                        "values_to_prove": ["0x" + bytes32.zeros.hex()],
+                                    }
+                                ],
+                            }
+                        }
+                    ),
+                ),
+                tx_config=DEFAULT_TX_CONFIG,
+            )
+
+            assert (
+                await client.get_offer_summary(GetOfferSummary(offer=offer_creation_response.offer.to_bech32()))
+            ).data_layer_summary == DataLayerSummary(
+                [
+                    SingletonSummary(
+                        launcher_id=launcher_id,
+                        new_root=bytes32.zeros,
+                        dependencies=[SingletonDependencies(launcher_id_2, [bytes(32)])],
+                    )
+                ]
+            )
 
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
