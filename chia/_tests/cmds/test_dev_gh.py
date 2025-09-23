@@ -114,7 +114,7 @@ async def test_successfully_dispatches(
         assert by_name["macos-intel"]["conclusion"] == "skipped"
         assert by_name["windows"]["conclusion"] == "skipped"
 
-        versions = ["3.9", "3.10", "3.11", "3.12"]
+        versions = ["3.10", "3.11", "3.12"]
         runs_by_name: dict[str, list[str]] = {name: [] for name in ["ubuntu", "macos-arm"]}
         for name in by_name:
             platform, _, rest = name.partition(" / ")
