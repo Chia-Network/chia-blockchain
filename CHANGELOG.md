@@ -18,7 +18,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 
 * Upgraded electron dependency to 37.3.1 to fix GTK4 issue on some versions of Linux
-* Fixed GUI NFT offers
+* Fixed GUI NFT offer uploads
 * Fixed GUI pooling switch
 
 ## 2.5.5 Chia blockchain 2025-08-19
