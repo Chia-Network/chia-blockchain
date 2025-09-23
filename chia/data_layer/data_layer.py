@@ -83,6 +83,7 @@ from chia.wallet.wallet_request_types import (
     DLUpdateRoot,
     LauncherRootPair,
     LogIn,
+    TakeOffer,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
@@ -1231,22 +1232,26 @@ class DataLayer:
                         )
                     )
 
-            solver: dict[str, Any] = {
-                "proofs_of_inclusion": proofs_of_inclusion,
-                **{
-                    "0x" + our_offer_store.store_id.hex(): {
-                        "new_root": "0x" + root.hex(),
-                        "dependencies": [
-                            {
-                                "launcher_id": "0x" + their_offer_store.store_id.hex(),
-                                "values_to_prove": ["0x" + entry.node_hash.hex() for entry in their_offer_store.proofs],
-                            }
-                            for their_offer_store in maker
-                        ],
-                    }
-                    for our_offer_store in taker
-                },
-            }
+            solver = Solver(
+                {
+                    "proofs_of_inclusion": proofs_of_inclusion,
+                    **{
+                        "0x" + our_offer_store.store_id.hex(): {
+                            "new_root": "0x" + root.hex(),
+                            "dependencies": [
+                                {
+                                    "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                                    "values_to_prove": [
+                                        "0x" + entry.node_hash.hex() for entry in their_offer_store.proofs
+                                    ],
+                                }
+                                for their_offer_store in maker
+                            ],
+                        }
+                        for our_offer_store in taker
+                    },
+                }
+            )
 
         await self.data_store.clean_node_table()
 
@@ -1256,9 +1261,7 @@ class DataLayer:
 
         trade_record = (
             await self.wallet_rpc.take_offer(
-                offer=offer,
-                solver=solver,
-                fee=fee,
+                TakeOffer(offer=offer.to_bech32(), solver=solver, fee=fee, push=True),
                 # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
                 # This is not a change in behavior, the default was already implicit.
                 tx_config=DEFAULT_TX_CONFIG,
