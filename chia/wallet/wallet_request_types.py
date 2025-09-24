@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Optional, final
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
-from typing_extensions import Self, dataclass_transform
+from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
@@ -37,11 +37,6 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-
-@dataclass_transform(frozen_default=True, kw_only_default=True)
-def kw_only_dataclass(cls: type[Any]) -> type[Any]:
-    return dataclass(frozen=True, kw_only=True)(cls)
 
 
 def default_raise() -> Any:  # pragma: no cover
