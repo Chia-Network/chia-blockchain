@@ -67,7 +67,7 @@ MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
 @dataclass
 class MempoolRemoveInfo:
-    items: list[InternalMempoolItem]
+    items: dict[bytes32, InternalMempoolItem]
     reason: MempoolRemoveReason
 
 
@@ -340,7 +340,7 @@ class Mempool:
         Removes an item from the mempool.
         """
         if items == []:
-            return MempoolRemoveInfo([], reason)
+            return MempoolRemoveInfo({}, reason)
 
         removed_items: list[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
@@ -356,7 +356,7 @@ class Mempool:
                         item = MempoolItemInfo(int(row[1]), int(row[2]), internal_item.height_added_to_mempool)
                         removed_items.append(item)
 
-        removed_internal_items = [self._items.pop(name) for name in items]
+        removed_internal_items = {name: self._items.pop(name) for name in items}
 
         for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))

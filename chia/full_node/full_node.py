@@ -2903,7 +2903,7 @@ class FullNode:
         removals_to_send: dict[bytes32, list[RemovedMempoolItem]] = dict()
 
         for removal_info in mempool_removals:
-            for internal_mempool_item in removal_info.items:
+            for transaction_id, internal_mempool_item in removal_info.items.items():
                 conds = internal_mempool_item.conds
                 assert conds is not None
 
@@ -2914,8 +2914,6 @@ class FullNode:
 
                 if len(peer_ids) == 0:
                     continue
-
-                transaction_id = internal_mempool_item.spend_bundle.name()
 
                 self.log.debug(f"Broadcasting removed transaction {transaction_id} to wallet peers {peer_ids}")
 
