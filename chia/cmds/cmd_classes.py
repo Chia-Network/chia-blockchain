@@ -5,7 +5,6 @@ import collections
 import dataclasses
 import inspect
 import pathlib
-import sys
 from dataclasses import MISSING, dataclass, field, fields
 from typing import (
     Any,
