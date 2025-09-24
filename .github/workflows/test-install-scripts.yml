@@ -216,8 +216,8 @@ jobs:
         run: |
           yum install --assumeyes git sudo
           sudo dnf update -y
-          sudo dnf search python3.11
-          sudo dnf install python3.11 -y
+          sudo dnf search python3.12
+          sudo dnf install python3.12 -y
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
@@ -245,7 +245,10 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git sudo python310
+          yum install --assumeyes git sudo
+          sudo dnf update -y
+          sudo dnf search python3.12
+          sudo dnf install python3.12 -y
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
