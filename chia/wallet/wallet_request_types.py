@@ -125,6 +125,7 @@ class GenerateMnemonicResponse(Streamable):
 @dataclass(frozen=True)
 class AddKey(Streamable):
     mnemonic: list[str]
+    label: Optional[str] = None
 
 
 @streamable

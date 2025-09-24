@@ -810,7 +810,7 @@ class WalletRpcApi:
     async def add_key(self, request: AddKey) -> AddKeyResponse:
         # Adding a key from 24 word mnemonic
         try:
-            sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic))
+            sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic), label=request.label)
         except KeyError as e:
             raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
