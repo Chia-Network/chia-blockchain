@@ -2,7 +2,6 @@
 name = "chia-blockchain"
 dynamic = [ "dependencies", "version" ]
 description = "Chia blockchain full node, farmer, timelord, and wallet."
-# banning 3.9.0 and 3.9.1 for simplicity aligning with https://github.com/pyca/cryptography/pull/12045
 requires-python = ">=3.10, <4"
 authors = [
     {name="Mariano Sorgente", email="mariano@chia.net"}
