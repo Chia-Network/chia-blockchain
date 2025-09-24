@@ -215,6 +215,10 @@ jobs:
         if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
           yum install --assumeyes git sudo
+          # Search for Python 3.10 package
+          sudo dnf search python3.10
+          # Install Python 3.10
+          sudo dnf install python3.10 -y
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
@@ -242,7 +246,7 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git sudo python39
+          yum install --assumeyes git sudo python310
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
