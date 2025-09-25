@@ -125,6 +125,7 @@ if [ "$INSTALL_PYTHON_VERSION" = "" ]; then
 else
   echo "Python $INSTALL_PYTHON_VERSION is requested"
   INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
+  echo $($INSTALL_PYTHON_PATH --version)
   PY3_VER=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
   PYTHON_MAJOR_VER=$(echo "$PY3_VER" | cut -d'.' -f1)
   PYTHON_MINOR_VER=$(echo "$PY3_VER" | cut -d'.' -f2)
