@@ -1274,11 +1274,6 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     )
 
     async with AsyncExitStack() as async_exit_stack:
-        bt = await create_block_tools_async(
-            zero_bit_plot_filter_consts,
-            keychain=get_temp_keyring,
-        )
-
         config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
 
         bts = [
@@ -1309,10 +1304,10 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         ]
 
         [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
-            setup_farmer_solver_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
+            setup_farmer_solver_multi_harvester(bts[0], 1, tmp_path, bts[0].constants, start_services=True)
         )
 
-        yield farmer_service, harvester_service, simulators[0], simulators[1], bt
+        yield farmer_service, harvester_service, simulators[0], simulators[1], bts[0]
 
 
 @pytest.fixture(name="recording_web_server")
