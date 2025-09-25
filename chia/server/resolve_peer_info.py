@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 PEER_INFO_MAPPING: dict[NodeType, str] = {
     NodeType.FULL_NODE: "full_node_peer",
     NodeType.FARMER: "farmer_peer",
+    NodeType.SOLVER: "solver_peer",
 }
 
 
@@ -20,6 +21,10 @@ def get_unresolved_peer_infos(service_config: dict[str, Any], peer_type: NodeTyp
     peer_info: Optional[dict[str, Any]] = service_config.get(peer_info_key)
     if peer_info is not None:
         peer_infos.append(peer_info)
+
+    # Default solver peer if none configured
+    if peer_type == NodeType.SOLVER and not peer_infos:
+        peer_infos = [{"host": "localhost", "port": 8666}]
 
     return {UnresolvedPeerInfo(host=peer["host"], port=peer["port"]) for peer in peer_infos}
 

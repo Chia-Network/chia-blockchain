@@ -44,6 +44,7 @@ class Solver:
     def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
+        self.config = config
         self._shut_down = False
         num_threads = config["num_threads"]
         self.log.info(f"Initializing solver with {num_threads} threads")
@@ -78,7 +79,16 @@ class Solver:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
-        pass
+        if self.server.is_trusted_peer(connection, self.config.get("trusted_peers", {})):
+            self.log.info(f"Accepting connection from {connection.get_peer_logging()}")
+            return
+        if not self.config.get("trusted_peers_only", True):
+            self.log.info(
+                f"trusted peers check disabled, Accepting connection from untrusted {connection.get_peer_logging()}"
+            )
+            return
+        self.log.warning(f"Rejecting untrusted connection from {connection.get_peer_logging()}")
+        await connection.close()
 
     async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")

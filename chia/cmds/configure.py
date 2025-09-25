@@ -22,6 +22,7 @@ from chia.util.network import parse_host_port
 def configure(
     root_path: Path,
     set_farmer_peer: str,
+    set_solver_peer: str,
     set_node_introducer: str,
     set_fullnode_port: str,
     set_harvester_port: str,
@@ -35,6 +36,7 @@ def configure(
     crawler_minimum_version_count: Optional[int],
     seeder_domain_name: str,
     seeder_nameserver: str,
+    set_solver_trusted_peers_only: str,
 ) -> None:
     config_yaml = "config.yaml"
     with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
@@ -59,6 +61,25 @@ def configure(
                 change_made = True
             except ValueError:
                 print("Farmer address must be in format [IP:Port]")
+        if set_solver_peer:
+            try:
+                host, port = parse_host_port(set_solver_peer)
+                # ensure farmer section has solver_peers field
+                if "solver_peers" not in config["farmer"]:
+                    config["farmer"]["solver_peers"] = []
+                # Set single solver peer (overrides any existing)
+                config["farmer"]["solver_peers"] = [{"host": host, "port": port}]
+                print(f"Solver peer updated to {host}:{port}")
+                change_made = True
+            except ValueError:
+                print("Solver address must be in format [IP:Port]")
+        if set_solver_trusted_peers_only:
+            config["solver"]["trusted_peers_only"] = str2bool(set_solver_trusted_peers_only)
+            if str2bool(set_solver_trusted_peers_only):
+                print("Solver will only accept trusted peer connections")
+            else:
+                print("Solver will accept connections from all peers")
+            change_made = True
         if set_fullnode_port:
             config["full_node"]["port"] = int(set_fullnode_port)
             config["full_node"]["introducer_peer"]["port"] = int(set_fullnode_port)
@@ -237,6 +258,12 @@ def configure(
 )
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
+@click.option("--set-solver-peer", help="Set the solver peer for farmer - IP:Port", type=str)
+@click.option(
+    "--set-solver-trusted-peers-only",
+    help="Enable/disable trusted peer requirement for solver connections",
+    type=click.Choice(["true", "t", "false", "f"]),
+)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for testing",
@@ -292,6 +319,7 @@ def configure(
 def configure_cmd(
     ctx: click.Context,
     set_farmer_peer: str,
+    set_solver_peer: str,
     set_node_introducer: str,
     set_fullnode_port: str,
     set_harvester_port: str,
@@ -305,10 +333,12 @@ def configure_cmd(
     crawler_minimum_version_count: int,
     seeder_domain_name: str,
     seeder_nameserver: str,
+    set_solver_trusted_peers_only: str,
 ) -> None:
     configure(
         ChiaCliContext.set_default(ctx).root_path,
         set_farmer_peer,
+        set_solver_peer,
         set_node_introducer,
         set_fullnode_port,
         set_harvester_port,
@@ -322,4 +352,5 @@ def configure_cmd(
         crawler_minimum_version_count,
         seeder_domain_name,
         seeder_nameserver,
+        set_solver_trusted_peers_only,
     )

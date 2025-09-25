@@ -151,26 +151,31 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         prefer_ipv6 = self.config.get("prefer_ipv6", False)
         while True:
             for unresolved in self._connect_peers:
+                print(f"try peer {unresolved}")
                 resolved = resolved_peers.get(unresolved)
                 if resolved is None:
                     try:
                         resolved = PeerInfo(await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
                     except Exception as e:
+                        print(f"Failed to resolve {unresolved.host}: {e}")
                         self._log.warning(f"Failed to resolve {unresolved.host}: {e}")
                         continue
                     self._log.info(f"Add resolved {resolved}")
                     resolved_peers[unresolved] = resolved
 
                 if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
+                    print("step 1")
                     continue
                 if any(
                     connection.peer_info.host == resolved.host and connection.peer_server_port == resolved.port
                     for connection in self._server.all_connections.values()
                 ):
+                    print("step 2")
                     continue
 
                 if not await self._server.start_client(resolved, None):
                     self._log.info(f"Failed to connect to {resolved}")
+                    print(f"Failed to connect to {resolved}")
                     # Re-resolve to make sure the IP didn't change, this helps for example to keep dyndns hostnames
                     # up to date.
                     try:
@@ -179,9 +184,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                         )
                     except Exception as e:
                         self._log.warning(f"Failed to resolve after connection failure {unresolved.host}: {e}")
+                        print(f"Failed to resolve after connection failure {unresolved.host}: {e}")
                         continue
                     if resolved_new != resolved:
                         self._log.info(f"Host {unresolved.host} changed from {resolved} to {resolved_new}")
+                        print(f"Host {unresolved.host} changed from {resolved} to {resolved_new}")
                         resolved_peers[unresolved] = resolved_new
             await asyncio.sleep(self.reconnect_retry_seconds)
 

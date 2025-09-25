@@ -303,13 +303,14 @@ async def setup_simulators_and_wallets_inner(
 
 
 @asynccontextmanager
-async def setup_farmer_multi_harvester(
+async def setup_farmer_solver_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
@@ -320,6 +321,7 @@ async def setup_farmer_multi_harvester(
                 consensus_constants,
                 port=uint16(0),
                 start_service=start_services,
+                solver_peer=solver_peer,
             )
         )
         if start_services:
@@ -340,74 +342,6 @@ async def setup_farmer_multi_harvester(
         ]
 
         yield harvester_services, farmer_service, block_tools
-
-
-@asynccontextmanager
-async def setup_farmer_multi_harvester_with_solver(
-    block_tools: BlockTools,
-    harvester_count: int,
-    temp_dir: Path,
-    consensus_constants: ConsensusConstants,
-    *,
-    start_services: bool,
-) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, SolverService, BlockTools]]:
-    async with AsyncExitStack() as async_exit_stack:
-        farmer_service = await async_exit_stack.enter_async_context(
-            setup_farmer(
-                block_tools,
-                temp_dir / "farmer",
-                block_tools.config["self_hostname"],
-                consensus_constants,
-                port=uint16(0),
-                start_service=start_services,
-            )
-        )
-        if start_services:
-            farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], farmer_service._server.get_port())
-        else:
-            farmer_peer = None
-        harvester_services = [
-            await async_exit_stack.enter_async_context(
-                setup_harvester(
-                    block_tools,
-                    temp_dir / f"harvester_{i}",
-                    farmer_peer,
-                    consensus_constants,
-                    start_service=start_services,
-                )
-            )
-            for i in range(harvester_count)
-        ]
-
-        # Setup solver with farmer peer - CRITICAL: use same BlockTools root path for SSL CA consistency
-        solver_service = await async_exit_stack.enter_async_context(
-            setup_solver(
-                temp_dir / "solver",  # Use temp_dir like harvester, not block_tools.root_path
-                block_tools,  # Pass BlockTools so SSL CA can be consistent
-                consensus_constants,
-                start_service=start_services,
-                farmer_peer=farmer_peer,
-            )
-        )
-
-        # Wait for farmer to be fully started before expecting solver connection
-        if start_services:
-            import asyncio
-
-            # Wait for farmer to be fully initialized
-            timeout = 30
-            for i in range(timeout):
-                if farmer_service._node.started:
-                    print(f"Farmer fully started after {i} seconds")
-                    break
-                await asyncio.sleep(1)
-            else:
-                print(f"WARNING: Farmer not started after {timeout} seconds")
-
-            # Give solver additional time to connect
-            await asyncio.sleep(3)
-
-        yield harvester_services, farmer_service, solver_service, block_tools
 
 
 @asynccontextmanager
