@@ -10,19 +10,20 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 
 
 async def check_block_store_invariant(bc: Blockchain):
-    db_wrapper = bc.block_store.db_wrapper
+    assert isinstance(bc.consensus_store, ConsensusStoreSQLite3)
 
-    if db_wrapper.db_version == 1:
+    if bc.consensus_store.block_store.db_wrapper == 1:
         return
 
     in_chain = set()
     max_height = -1
-    async with bc.block_store.transaction() as conn:
+    async with bc.consensus_store.block_store.transaction() as conn:
         async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
             rows = await cursor.fetchall()
             for row in rows:
