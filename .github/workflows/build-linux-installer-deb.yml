@@ -97,12 +97,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Show available python binaries
+      - name: Test raw version command
         run: |
-          which python || echo "python not found"
-          which python3 || echo "python3 not found"
-          which python3.12 || echo "python3.12 not found"
-          ls -l $(dirname $(which python3)) | grep python
+          python3.12 --version
 
       - name: Setup Node per .nvmrc in GUI
         uses: actions/setup-node@v5
