@@ -23,7 +23,7 @@ while getopts c:h flag; do
     exit 0
     ;;
   *)
-    echo "temp"
+    echo
     usage
     exit 1
     ;;
