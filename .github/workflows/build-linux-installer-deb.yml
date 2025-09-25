@@ -59,11 +59,13 @@ jobs:
             madmax-suffix: "x86-64"
             bladebit-suffix: "ubuntu-x86-64.tar.gz"
             arch-artifact-name: intel
+            python-interpreter-arch: x64
           - runs-on: ubuntu-24.04-arm
             arch: arm64
             madmax-suffix: "arm64"
             bladebit-suffix: "ubuntu-arm64.tar.gz"
             arch-artifact-name: arm
+            python-interpreter-arch: arm64
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
@@ -96,6 +98,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          architecture: ${{ matrix.os.runs-on.python-interpreter-architecture }}
 
       - name: Test raw version command
         run: |
