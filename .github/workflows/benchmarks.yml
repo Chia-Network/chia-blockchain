@@ -73,6 +73,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - uses: chia-network/actions/cache-pip@main
         with:
           mode: poetry
