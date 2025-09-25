@@ -2,8 +2,7 @@
 name = "chia-blockchain"
 dynamic = [ "dependencies", "version" ]
 description = "Chia blockchain full node, farmer, timelord, and wallet."
-# banning 3.9.0 and 3.9.1 for simplicity aligning with https://github.com/pyca/cryptography/pull/12045
-requires-python = ">=3.9, <4, !=3.9.0, !=3.9.1"
+requires-python = ">=3.10, <4"
 authors = [
     {name="Mariano Sorgente", email="mariano@chia.net"}
 ]
@@ -107,8 +106,8 @@ lxml = { version = ">=5.2.2", optional = true }
 miniupnpc = {version = ">=2.3.2, <3", source = "chia", optional = true}
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
-# 	{version="<=1.24.4", python = "<3.9", optional = true},
-# 	{version=">=1.26.4", python = ">=3.9", optional = true}]
+# 	{version="<=1.24.4", python = "<3.10", optional = true},
+# 	{version=">=1.26.4", python = ">=3.10", optional = true}]
 ruff = { version = ">=0.8.1", optional = true }
 
 [project.optional-dependencies]
