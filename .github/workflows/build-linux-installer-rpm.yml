@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.10"]
         os:
           - arch-artifact-name: intel
 
@@ -82,10 +82,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # - name: Set up Python 3.12
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
 
       - name: Setup Node per .nvmrc in GUI
         uses: actions/setup-node@v5
