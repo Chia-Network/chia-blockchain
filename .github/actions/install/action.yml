@@ -42,8 +42,8 @@ runs:
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
-      # env:
-      #   INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
+      env:
+        INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
 
