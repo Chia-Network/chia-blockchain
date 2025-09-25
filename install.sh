@@ -128,7 +128,7 @@ else
   PY3_VER=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
   PYTHON_MAJOR_VER=$(echo "$PY3_VER" | cut -d'.' -f1)
   PYTHON_MINOR_VER=$(echo "$PY3_VER" | cut -d'.' -f2)
-  echo "$($INSTALL_PYTHON_PATH --version)"
+  echo $($INSTALL_PYTHON_PATH --version)
 fi
 
 if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
