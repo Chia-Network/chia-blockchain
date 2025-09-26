@@ -1978,7 +1978,7 @@ class SendTransactionMulti(TransactionEndpointRequest):
                 raise ValueError(
                     'Specified "morph_bytes" for a CAT-type wallet. Maybe you meant to specify an XCH wallet?'
                 )
-            elif self.coin_announcements or self.puzzle_announcements is not None:
+            elif self.coin_announcements is not None or self.puzzle_announcements is not None:
                 raise ValueError(
                     'Specified "coin/puzzle_announcements" for a CAT-type wallet.'
                     "Maybe you meant to specify an XCH wallet?"

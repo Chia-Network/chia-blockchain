@@ -157,6 +157,7 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoins,
     SplitCoins,
     TakeOffer,
+    VCSpend,
     VerifySignature,
     VerifySignatureResponse,
 )
@@ -4052,3 +4053,115 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
             )
         ]
     )
+
+
+def test_send_transaction_multi_post_init() -> None:
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "morph_bytes" for a CAT-type wallet. Maybe you meant to specify an XCH wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            morph_bytes=b"",
+        ).convert_to_proxy(CATSpend)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "coin/puzzle_announcements" for a CAT-type wallet.Maybe you meant to specify an XCH wallet?'
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            coin_announcements=[],
+        ).convert_to_proxy(CATSpend)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "coin/puzzle_announcements" for a CAT-type wallet.Maybe you meant to specify an XCH wallet?'
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            puzzle_announcements=[],
+        ).convert_to_proxy(CATSpend)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "amount" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            amount=uint64(100),
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "inner_address" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            inner_address="foo",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "memos" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            memos=["foo"],
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+            "Maybe you meant to specify a CAT-type wallet?"
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            extra_delta="1",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+            "Maybe you meant to specify a CAT-type wallet?"
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            tail_reveal=b"",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+            "Maybe you meant to specify a CAT-type wallet?"
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            tail_solution=b"",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"additions" are required for XCH wallets.'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("An unsupported wallet type was selected for `send_transaction_multi`"),
+    ):
+        SendTransactionMulti(  # type: ignore[type-var]
+            wallet_id=uint32(1),
+        ).convert_to_proxy(VCSpend)
