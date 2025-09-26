@@ -620,7 +620,7 @@ async def test_cat_trades(
 
     if credential_restricted:
         await client_maker.crcat_approve_pending(
-            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(2)),
+            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(2), push=True),
             wallet_environments.tx_config,
         )
 
@@ -959,7 +959,7 @@ async def test_cat_trades(
 
     if credential_restricted:
         await client_maker.crcat_approve_pending(
-            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(6)),
+            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(6), push=True),
             wallet_environments.tx_config,
         )
 
@@ -1196,7 +1196,7 @@ async def test_cat_trades(
 
     if credential_restricted:
         await client_maker.crcat_approve_pending(
-            CRCATApprovePending(wallet_id=cat_wallet_maker.id(), min_amount_to_claim=uint64(8)),
+            CRCATApprovePending(wallet_id=cat_wallet_maker.id(), min_amount_to_claim=uint64(8), push=True),
             wallet_environments.tx_config,
         )
 
@@ -1242,7 +1242,7 @@ async def test_cat_trades(
         )
 
         await client_maker.crcat_approve_pending(
-            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(9)),
+            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(9), push=True),
             wallet_environments.tx_config,
         )
 
@@ -1564,7 +1564,7 @@ async def test_cat_trades(
 
     if credential_restricted:
         await client_maker.crcat_approve_pending(
-            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(15)),
+            CRCATApprovePending(wallet_id=new_cat_wallet_maker.id(), min_amount_to_claim=uint64(15), push=True),
             wallet_environments.tx_config,
         )
 
