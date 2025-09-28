@@ -1307,10 +1307,13 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             )
             for index in range(len(bts))
         ]
-
-        [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
-            setup_farmer_solver_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
-        )
+        async with setup_solver(tmp_path / "solver", bt, bt.constants) as solver_service:
+            solver_peer = UnresolvedPeerInfo(bt.config["self_hostname"], solver_service._server.get_port())
+            [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
+                setup_farmer_solver_multi_harvester(
+                    bt, 1, tmp_path, bt.constants, start_services=True, solver_peer=solver_peer
+                )
+            )
 
         yield farmer_service, harvester_service, simulators[0], simulators[1], bt
 
