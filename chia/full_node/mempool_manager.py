@@ -934,8 +934,7 @@ class MempoolManager:
 
             removals: set[bytes32] = set()
             for item in old_pool.all_items():
-                for s in item.spend_bundle.coin_spends:
-                    removals.add(s.coin.name())
+                removals.update(item.bundle_coin_spends)
 
             for record in await self.get_coin_records(removals):
                 name = record.coin.name()
