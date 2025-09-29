@@ -92,6 +92,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
+
       - name: Get latest madmax plotter
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

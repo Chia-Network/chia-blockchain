@@ -11,6 +11,7 @@ from chia.cmds.cmds_util import format_bytes, format_minutes, get_any_service_cl
 from chia.cmds.units import units
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.util.network import is_localhost
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -217,3 +218,33 @@ async def summary(
             print("For details on farmed rewards and fees you should run 'chia wallet show'")
     else:
         print("Note: log into your key using 'chia wallet show' to see rewards for each key")
+
+
+async def solver_connect(root_path: Path, farmer_rpc_port: Optional[int], solver_address: str) -> None:
+    from chia.util.network import parse_host_port
+
+    try:
+        host, port = parse_host_port(solver_address)
+    except ValueError:
+        print("Solver address must be in format [IP:Port]")
+        return
+    try:
+        with lock_and_load_config(root_path, "config.yaml") as config:
+            config["farmer"]["solver_peers"] = [{"host": host, "port": port}]
+            save_config(root_path, "config.yaml", config)
+        print(f"✓ Updated config with solver peer {host}:{port}")
+    except Exception as e:
+        print(f"✗ Failed to update config: {e}")
+        return
+    try:
+        async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
+            result = await farmer_client.connect_to_solver(host, port)
+            if result.get("success"):
+                print(f"✓ Connected to solver at {host}:{port}")
+            else:
+                error = result.get("error", "Unknown error")
+                print(f"✗ Failed to connect to solver: {error}")
+    except CliRpcConnectionError:
+        print("✗ Could not connect to farmer. Make sure farmer is running.")
+    except Exception as e:
+        print(f"✗ Error connecting to solver: {e}")

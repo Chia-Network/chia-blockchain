@@ -30,7 +30,7 @@ jobs:
             matrix: macos
             runs-on:
               intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
-              arm: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-15' }}
+              arm: macos-latest
           - name: Windows
             matrix: windows
             runs-on:

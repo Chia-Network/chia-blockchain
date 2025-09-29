@@ -95,10 +95,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup Node 20.x
-        uses: actions/setup-node@v4
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
         with:
-          node-version: "20.x"
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Test for secrets access
         id: check_secrets

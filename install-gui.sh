@@ -29,14 +29,17 @@ fi
 # Allows overriding the branch or commit to build in chia-blockchain-gui
 SUBMODULE_BRANCH=$1
 
-nodejs_is_installed() {
-  if ! npm version >/dev/null 2>&1; then
-    return 1
+do_check_npm_install() {
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is not installed. Please install NodeJS>=20 and npm>=10 manually"
+    exit 1
   fi
-  return 0
-}
 
-do_install_npm_locally() {
+  if ! command -v node >/dev/null 2>&1; then
+    echo "NodeJS is not installed. Please install NodeJS>=20 and npm>=10 manually"
+    exit 1
+  fi
+
   NODEJS_VERSION="$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')"
   NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
 
@@ -48,42 +51,8 @@ do_install_npm_locally() {
       echo "Current npm version($(npm -v)) is less than 10. GUI app requires npm>=10."
     fi
 
-    if [ "$(uname)" = "OpenBSD" ] || [ "$(uname)" = "FreeBSD" ]; then
-      # `n` package does not support OpenBSD/FreeBSD
-      echo "Please install NodeJS>=20 and/or npm>=10 manually"
-      exit 1
-    fi
-
-    NPM_GLOBAL="${SCRIPT_DIR}/build_scripts/npm_global"
-    # install-gui.sh can be executed
-    echo "cd ${NPM_GLOBAL}"
-    cd "${NPM_GLOBAL}"
-    if [ "$NPM_VERSION" -lt "6" ]; then
-      # Ubuntu image of Amazon ec2 instance surprisingly uses nodejs@3.5.2
-      # which doesn't support `npm ci` as of 27th Jan, 2022
-      echo "npm install"
-      npm install
-    else
-      echo "npm ci"
-      npm ci
-    fi
-    export N_PREFIX=${SCRIPT_DIR}/.n
-    PATH="${N_PREFIX}/bin:$(npm prefix)/node_modules/.bin:${PATH}"
-    export PATH
-    # `n 20` here installs nodejs@20 under $N_PREFIX directory
-    echo "n 20"
-    n 20
-    echo "Current NodeJS version: $(node -v)"
-    echo "Current npm version: $(npm -v)"
-    if [ "$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')" -lt "20" ]; then
-      echo "Error: Failed to install NodeJS>=20"
-      exit 1
-    fi
-    if [ "$(npm -v | cut -d'.' -f 1)" -lt "10" ]; then
-      echo "Error: Failed to install npm>=10"
-      exit 1
-    fi
-    cd "${SCRIPT_DIR}"
+    echo "Please install NodeJS>=20 and/or npm>=10 manually"
+    exit 1
   else
     echo "Found NodeJS $(node -v)"
     echo "Found npm $(npm -v)"
@@ -106,79 +75,7 @@ patch_inconsistent_npm_issue() {
   ln -s "$(command -v npm)" "${node_module_dir}/.bin/npm"
 }
 
-# Manage npm and other install requirements on an OS specific basis
-if [ "$(uname)" = "Linux" ]; then
-  #LINUX=1
-  if type apt-get >/dev/null 2>&1; then
-    # Debian/Ubuntu
-
-    # Check if we are running a Raspberry PI 4
-    if [ "$(uname -m)" = "aarch64" ] &&
-      [ "$(uname -n)" = "raspberrypi" ]; then
-      # Check if NodeJS & NPM is installed
-      type npm >/dev/null 2>&1 || {
-        echo >&2 "Please install NODEJS&NPM manually"
-      }
-    else
-      if ! nodejs_is_installed; then
-        echo "nodejs is not installed. Installing..."
-        echo "sudo apt-get install -y npm nodejs libxss1"
-        sudo apt-get install -y npm nodejs libxss1
-      fi
-      do_install_npm_locally
-    fi
-  elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
-    # AMZN 2
-    if ! nodejs_is_installed; then
-      echo "Installing nodejs on Amazon Linux 2."
-      curl -sL https://rpm.nodesource.com/setup_20.x | sudo bash -
-      sudo yum install -y nodejs
-    fi
-    do_install_npm_locally
-  elif type yum >/dev/null 2>&1 && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
-    # CentOS or Redhat
-    if ! nodejs_is_installed; then
-      echo "Installing nodejs on CentOS/Redhat."
-      curl -sL https://rpm.nodesource.com/setup_20.x | sudo bash -
-      sudo yum install -y nodejs
-    fi
-    do_install_npm_locally
-  elif type yum >/dev/null 2>&1 && [ -f /etc/rocky-release ] || [ -f /etc/fedora-release ]; then
-    # RockyLinux
-    if ! nodejs_is_installed; then
-      echo "Installing nodejs on RockyLinux/Fedora"
-      sudo dnf module enable nodejs:20
-      sudo dnf install -y nodejs
-    fi
-    do_install_npm_locally
-  elif type pacman >/dev/null 2>&1 && [ -f /etc/arch-release ]; then
-    #Arch Linux
-    if ! nodejs_is_installed; then
-      echo "Installing nodejs on Arch Linux"
-      sudo pacman -S nodejs npm
-    fi
-    do_install_npm_locally
-  fi
-elif [ "$(uname)" = "Darwin" ] && type brew >/dev/null 2>&1; then
-  # MacOS
-  if ! nodejs_is_installed; then
-    echo "Installing nodejs on MacOS"
-    brew install npm
-  fi
-  do_install_npm_locally
-elif [ "$(uname)" = "OpenBSD" ]; then
-  if ! nodejs_is_installed; then
-    echo "Installing nodejs"
-    pkg_add node
-  fi
-  do_install_npm_locally
-elif [ "$(uname)" = "FreeBSD" ]; then
-  if ! nodejs_is_installed; then
-    echo "Installing nodejs"
-    pkg install node
-  fi
-  do_install_npm_locally
-fi
+do_check_npm_install
 
 echo ""
 
