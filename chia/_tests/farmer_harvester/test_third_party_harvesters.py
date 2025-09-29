@@ -84,17 +84,16 @@ async def test_harvester_receive_source_signing_data(
     full_node_1: FullNode = full_node_service_1._node
     full_node_2: FullNode = full_node_service_2._node
 
+    await time_out_assert(60, node_type_connected, True, farmer.server, NodeType.HARVESTER)
     # Connect peers to each other
     farmer_service.add_peer(
         UnresolvedPeerInfo(str(full_node_service_2.self_hostname), full_node_service_2._server.get_port())
     )
+    await time_out_assert(60, node_type_connected, True, farmer.server, NodeType.FULL_NODE)
     full_node_service_2.add_peer(
         UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
     )
-
-    await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
-    await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)  # Should already be connected
-    await wait_until_node_type_connected(full_node_1.server, NodeType.FULL_NODE)
+    await time_out_assert(60, node_type_connected, True, full_node_1.server, NodeType.FULL_NODE)
 
     # Prepare test data
     blocks: list[FullBlock]
@@ -429,12 +428,11 @@ async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: s
     return False
 
 
-async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType) -> WSChiaConnection:
-    while True:
-        for peer in server.all_connections.values():
-            if peer.connection_type == node_type.value:
-                return peer
-        await asyncio.sleep(1)
+def node_type_connected(server: ChiaServer, node_type: NodeType) -> bool:
+    for peer in server.all_connections.values():
+        if peer.connection_type == node_type.value:
+            return True
+    return False
 
 
 def decode_sp(
