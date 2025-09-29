@@ -83,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: "3.12"
 
