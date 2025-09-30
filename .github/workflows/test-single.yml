@@ -118,8 +118,8 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
-          // TODO: skipping macos-15-intel timelord cases until fixed
-          //       https://github.com/Chia-Network/chiavdf/pull/268
+          # TODO: skipping macos-15-intel timelord cases until fixed
+          #       https://github.com/Chia-Network/chiavdf/pull/268
           - os:
               matrix: macos-intel
             configuration:
