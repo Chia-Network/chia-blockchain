@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.5.6 Chia blockchain 2025-9-24
+
+## What's Changed
+
+### Changed
+
+- Supported previous harvester protocol for Dr. Plotter users
+- Updated Crowdin translations
+
+### Fixed
+
+- Upgraded electron dependency to 37.3.1 to fix GTK4 issue on some versions of Linux
+- Fixed GUI NFT offer uploads
+- Fixed GUI pooling switch
+
 ## 2.5.5 Chia blockchain 2025-08-19
 
 Note that protocol changes between node, farmer, and harvester will require all entities to be upgraded
