@@ -118,6 +118,12 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          # TODO: skipping macos-15-intel timelord cases until fixed
+          #       https://github.com/Chia-Network/chiavdf/pull/268
+          - os:
+              matrix: macos-intel
+            configuration:
+              install_timelord: true
           - python:
               exclude_from:
                 ${{ inputs.matrix_mode }}: True
