@@ -7,7 +7,7 @@ requires-python = ">=3.9, <4, !=3.9.0, !=3.9.1"
 authors = [
     {name="Mariano Sorgente", email="mariano@chia.net"}
 ]
-license = {text="Apache-2.0"}
+license = "Apache-2.0"
 readme = {file = "README.md", content-type = "text/markdown"}
 keywords= ["chia", "blockchain", "node"]
 homepage = "https://chia.net/"
