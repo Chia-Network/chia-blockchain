@@ -38,6 +38,11 @@ class KeyNotFoundError(Exception):
         super().__init__(f"Key not found: {key.hex()}")
 
 
+class MerkleBlobNotFoundError(Exception):
+    def __init__(self, root_hash: bytes32) -> None:
+        super().__init__(f"Cannot find merkle blob for root hash {root_hash.hex()}")
+
+
 class OfferIntegrityError(Exception):
     pass
 
