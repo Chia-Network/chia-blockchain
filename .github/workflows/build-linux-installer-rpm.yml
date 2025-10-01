@@ -83,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.12
-        uses: Chia-Network/actions/setup-python@main
+        uses: Chia-Network/actions/setup-python@quex.add_parametrizations_for_deb_rpm
         with:
           python-version: "3.12"
 
