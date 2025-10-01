@@ -268,9 +268,7 @@ class SingletonFastForward:
             # This item doesn't have any fast forward coins, nothing to do here
             return new_bundle_coin_spends
         # Update the mempool item after validating the new spend bundle
-        new_sb = SpendBundle(
-            coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
-        )
+        new_sb = SpendBundle(coin_spends=new_coin_spends, aggregated_signature=mempool_item.aggregated_signature)
         assert mempool_item.conds is not None
         try:
             # Run the new spend bundle to make sure it remains valid. What we
