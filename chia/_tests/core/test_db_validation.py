@@ -13,12 +13,10 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.simulator.block_tools import test_constants
 from chia.util.db_wrapper import DBWrapper2
 
@@ -138,11 +136,8 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
             await conn.execute("CREATE TABLE database_version(version int)")
             await conn.execute("INSERT INTO database_version VALUES (2)")
 
-        block_store = await BlockStore.create(db_wrapper)
-        coin_store = await CoinStore.create(db_wrapper)
-        height_map = await BlockHeightMap.create(Path("."), db_wrapper)
-
-        bc = await Blockchain.create(coin_store, block_store, height_map, test_constants, reserved_cores=0)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, Path("."))
+        bc = await Blockchain.create(consensus_store, test_constants, reserved_cores=0)
         sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:
