@@ -73,3 +73,6 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-upnp]: https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/
 [link-youtube]: https://www.youtube.com/chianetwork
 [logo-chia]: https://www.chia.net/wp-content/uploads/2022/09/chia-logo.svg "Chia logo"
+
+
+[Note]: Added CLI usage example for chia-blockchain.
