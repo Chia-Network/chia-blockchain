@@ -99,8 +99,8 @@ else
     echo "apt-get install libgmp-dev libboost-python-dev $PYTHON_DEV_DEPENDENCY libboost-system-dev build-essential -y"
     sudo apt-get install libgmp-dev libboost-python-dev "$PYTHON_DEV_DEPENDENCY" libboost-system-dev build-essential -y
     echo "Installing chiavdf from source on Ubuntu/Debian"
-    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
-    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    echo venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
     symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ] && test "$RHEL_BASED"; then
     echo "Installing chiavdf dependencies on RedHat/CentOS/Fedora"
@@ -108,8 +108,8 @@ else
     echo "$yumcmd"
     ${yumcmd}
     echo "Installing chiavdf from source on RedHat/CentOS/Fedora"
-    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
-    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    echo venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
     symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ] && test "$MACOS"; then
     echo "Installing chiavdf dependencies for MacOS."
@@ -124,14 +124,14 @@ else
     export CPPFLAGS="-I/usr/local/opt/boost@1.85/include"
     echo "Installing chiavdf from source."
     # User needs to provide required packages
-    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
-    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    echo venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
     symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ]; then
     echo "Installing chiavdf from source."
     # User needs to provide required packages
-    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
-    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    echo venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary 'git+https://github.com/chia-network/chiavdf@update_macos_runner_selections' "$CHIAVDF_VERSION"
     symlink_vdf_bench "$PYTHON_VERSION"
   else
     echo "No venv created yet, please run install.sh."
