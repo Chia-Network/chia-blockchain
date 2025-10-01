@@ -89,6 +89,8 @@ elif [ "$(uname)" = "Darwin" ]; then
   echo "Found MacOS."
 fi
 
+CHIAVDF_VERSION=
+
 if [ -e "$THE_PATH" ]; then
   echo "$THE_PATH"
   echo "vdf_client already exists, no action taken"
