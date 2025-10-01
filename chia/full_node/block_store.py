@@ -251,7 +251,10 @@ class BlockStore:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return GeneratorBlockInfo(
-                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
+                cached.foliage.prev_block_hash,
+                cached.height,
+                cached.transactions_generator,
+                cached.transactions_generator_ref_list,
             )
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
@@ -270,7 +273,7 @@ class BlockStore:
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
                 return GeneratorBlockInfo(
-                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                    b.foliage.prev_block_hash, b.height, b.transactions_generator, b.transactions_generator_ref_list
                 )
 
     async def get_generator(self, header_hash: bytes32) -> Optional[bytes]:
