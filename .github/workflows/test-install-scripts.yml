@@ -214,7 +214,7 @@ jobs:
       - name: Prepare Amazon Linux
         if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
-          yum install --assumeyes git sudo
+          dnf install --assumeyes git sudo
           sudo dnf update -y
           sudo dnf search python3.12
           sudo dnf install python3.12 -y
@@ -245,7 +245,7 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git sudo
+          dnf install --assumeyes git sudo
           sudo dnf update -y
           sudo dnf search python3.12
           sudo dnf install python3.12 -y
