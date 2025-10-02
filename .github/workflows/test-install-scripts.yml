@@ -216,7 +216,7 @@ jobs:
         run: |
           dnf update -y
           dnf search python3.12
-          dnf install python3.12 -y
+          dnf install git python3.12 -y
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
@@ -246,7 +246,7 @@ jobs:
         run: |
           dnf update -y
           dnf search python3.12
-          dnf install python3.12 -y
+          dnf install git python3.12 -y
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
