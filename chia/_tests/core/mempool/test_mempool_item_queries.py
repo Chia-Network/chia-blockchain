@@ -48,7 +48,7 @@ def make_item(coin_spends: list[CoinSpend]) -> MempoolItem:
     assert npc_result.conds is not None
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result.conds)
     return MempoolItem(
-        spend_bundle=spend_bundle,
+        aggregated_signature=spend_bundle.aggregated_signature,
         fee=fee,
         conds=npc_result.conds,
         spend_bundle_name=spend_bundle.name(),

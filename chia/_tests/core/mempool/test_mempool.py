@@ -117,7 +117,7 @@ def make_item(
 ) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
-        SpendBundle([], G2Element()),
+        G2Element(),
         fee,
         SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0, False, 0, 0, 0, 0, 0),
         spend_bundle_name,
@@ -2922,8 +2922,8 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
     last_fpc: Optional[float] = None
     for mi, expected_coin in zip(ordered_items, expected):
-        assert len(mi.spend_bundle.coin_spends) == 1
-        assert mi.spend_bundle.coin_spends[0].coin == expected_coin
+        assert len(mi.bundle_coin_spends) == 1
+        assert next(iter(mi.bundle_coin_spends.values())).coin_spend.coin == expected_coin
         assert last_fpc is None or last_fpc >= mi.fee_per_cost
         last_fpc = mi.fee_per_cost
 

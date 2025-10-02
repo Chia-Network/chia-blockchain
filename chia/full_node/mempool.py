@@ -158,7 +158,7 @@ class Mempool:
         item = self._items[name]
 
         return MempoolItem(
-            item.spend_bundle,
+            item.aggregated_signature,
             uint64(fee),
             item.conds,
             name,
@@ -481,7 +481,7 @@ class Mempool:
             conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
 
         self._items[item_name] = InternalMempoolItem(
-            item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
+            item.aggregated_signature, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
         )
         self._total_cost += item.cost
         self._total_fee += item.fee
@@ -653,7 +653,7 @@ class Mempool:
                     break
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
-                sigs.append(item.spend_bundle.aggregated_signature)
+                sigs.append(item.aggregated_signature)
                 cost_sum = new_cost_sum
                 fee_sum = new_fee_sum
                 processed_spend_bundles += 1
@@ -761,7 +761,7 @@ class Mempool:
                         break
 
                 batch_cost += cost - cost_saving
-                batch_transactions.append(SpendBundle(unique_coin_spends, item.spend_bundle.aggregated_signature))
+                batch_transactions.append(SpendBundle(unique_coin_spends, item.aggregated_signature))
                 batch_spends += len(unique_coin_spends)
                 batch_additions.extend(unique_additions)
                 fee_sum = new_fee_sum
