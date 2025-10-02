@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+echo "SCRIPT: PATH is $PATH"
 set -o errexit
 
 USAGE_TEXT="\

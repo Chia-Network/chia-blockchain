@@ -101,6 +101,12 @@ jobs:
         run: |
           python3.12 --version
 
+      - name: Dump env
+        run: |
+          echo "PATH is: $PATH"
+          which python3.12
+          python3.12 --version
+
       - name: Setup Node per .nvmrc in GUI
         uses: actions/setup-node@v5
         with:
