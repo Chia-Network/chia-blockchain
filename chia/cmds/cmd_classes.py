@@ -5,7 +5,6 @@ import collections
 import dataclasses
 import inspect
 import pathlib
-import sys
 from dataclasses import MISSING, dataclass, field, fields
 from typing import (
     Any,
@@ -45,12 +44,6 @@ ChiaCommand = Union[SyncChiaCommand, AsyncChiaCommand]
 
 
 def option(*param_decls: str, **kwargs: Any) -> Any:
-    if sys.version_info >= (3, 10):
-        default_default = MISSING
-    else:  # versions < 3.10 don't know about kw_only and they complain about lacks of defaults
-        # Can't get coverage on this because we only test on one version
-        default_default = None  # pragma: no cover
-
     return field(
         metadata=dict(
             option_args=dict(
@@ -58,7 +51,7 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
                 **kwargs,
             ),
         ),
-        default=kwargs.get("default", default_default),
+        default=kwargs.get("default", MISSING),
     )
 
 
@@ -270,16 +263,10 @@ def chia_command(
     def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
-        if sys.version_info >= (3, 10):
-            wrapped_cls: type[ChiaCommand] = dataclass(
-                frozen=True,
-                kw_only=True,
-            )(cls)
-        else:  # pragma: no cover
-            # stuff below 3.10 doesn't know about kw_only
-            wrapped_cls: type[ChiaCommand] = dataclass(
-                frozen=True,
-            )(cls)
+        wrapped_cls: type[ChiaCommand] = dataclass(
+            frozen=True,
+            kw_only=True,
+        )(cls)
 
         metadata = Metadata(
             command=click.command(
@@ -316,9 +303,6 @@ def get_chia_command_metadata(cls: type[ChiaCommand]) -> Metadata:
 
 @dataclass_transform(frozen_default=True)
 def command_helper(cls: type[Any]) -> type[Any]:
-    if sys.version_info >= (3, 10):
-        new_cls = dataclass(frozen=True, kw_only=True)(cls)
-    else:  # stuff below 3.10 doesn't support kw_only
-        new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
+    new_cls = dataclass(frozen=True, kw_only=True)(cls)
     setattr(new_cls, COMMAND_HELPER_ATTRIBUTE_NAME, True)
     return new_cls
