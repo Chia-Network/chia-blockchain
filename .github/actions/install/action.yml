@@ -39,18 +39,13 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Set up Python ${{ inputs.python-version }}
-      uses: Chia-Network/actions/setup-python@quex.add_parametrizations_for_deb_rpm
-      with:
-        python-version: ${{ inputs.python-version }}
-
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
+        ${{ inputs.command-prefix }} bash install.sh ${{ inputs.development == 'true' && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }} ${{ inputs.legacy_keyring && '-l' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }} ${{ (fromJSON(inputs.do-system-installs) != true) && '-s' || '' }}
 
     - name: Run install script (Windows)
       if: runner.os == 'windows'
