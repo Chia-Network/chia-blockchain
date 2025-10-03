@@ -76,6 +76,9 @@ jobs:
             apt: "3.10"
             install_sh: "3.10"
             matrix: "3.10"
+            exclude_from:
+              limited: True
+              main: True
           - name: "3.11"
             file_name: "3.11"
             action: "3.11"
@@ -87,15 +90,10 @@ jobs:
               main: True
           - name: "3.12"
             file_name: "3.12"
-            # TODO: https://github.com/python/cpython/issues/128479
-            #       return to just `3.12` after presumably 3.12.9 becomes available with the fix
-            action: "3.12.7"
+            action: "3.12"
             apt: "3.12"
             install_sh: "3.12"
             matrix: "3.12"
-            exclude_from:
-              limited: True
-              main: True
         exclude:
           - arch:
               matrix: arm
