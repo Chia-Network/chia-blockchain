@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 echo "SCRIPT: PATH is $PATH"
+if grep -qa 'docker\|containerd\|kubepods' /proc/1/cgroup || [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
+  echo "Detected container environment."
+  echo "in_container=true" >> "$GITHUB_OUTPUT"
+else
+  echo "Not running in container."
+  echo "in_container=false" >> "$GITHUB_OUTPUT"
+fi
 set -o errexit
 
 USAGE_TEXT="\
