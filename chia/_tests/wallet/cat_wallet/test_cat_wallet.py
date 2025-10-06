@@ -44,7 +44,7 @@ from chia.wallet.vc_wallet.vc_drivers import create_revocation_layer
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import GetTransactionMemo, PushTX
+from chia.wallet.wallet_request_types import GetTransactionMemo, PushTX, SendTransaction
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -377,9 +377,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
         if tx_record.spend_bundle is not None:
             tx_id = tx_record.name
     assert tx_id is not None
-    memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
-    assert len(memos.coins_with_memos) == 2
-    assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
+    memo_response = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+    assert len(memo_response.memo_dict) == 2
+    assert cat_2_hash in {memos[0] for memos in memo_response.memo_dict.values()}
 
     await wallet_environments.process_pending_states(
         [
@@ -454,9 +454,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework, wallet_type: 
     assert len(coins) == 1
     coin = coins.pop()
     tx_id = coin.name()
-    memos = await env_2.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
-    assert len(memos.coins_with_memos) == 2
-    assert cat_2_hash in {coin_w_memos.memos[0] for coin_w_memos in memos.coins_with_memos}
+    memo_response = await env_2.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+    assert len(memo_response.memo_dict) == 2
+    assert cat_2_hash in {memos[0] for memos in memo_response.memo_dict.values()}
     async with cat_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
@@ -1043,11 +1043,10 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework, wall
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
     for tx in txs:
         if tx.amount == 30:
-            memos = tx.get_memos()
-            assert len(memos) == 2  # One for tx, one for change
-            assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
+            assert len(tx.memos) == 2  # One for tx, one for change
+            assert b"Markus Walburg" in [v for v_list in tx.memos.values() for v in v_list]
             assert tx.spend_bundle is not None
-            assert next(iter(memos.keys())) in [a.name() for a in tx.spend_bundle.additions()]
+            assert next(iter(tx.memos.keys())) in [a.name() for a in tx.spend_bundle.additions()]
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
@@ -1154,7 +1153,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
 
     # 3) Generate transaction that is greater than limit
-    with pytest.raises(ValueError, match="Can't select amount higher than our spendable balance."):
+    with pytest.raises(ValueError, match="Can't select amount higher than our spendable balance"):
         async with cat_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
         ) as action_scope:
@@ -1430,7 +1429,12 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
 
-    tx = (await env.rpc_client.send_transaction(1, cat_amount_0, addr, wallet_environments.tx_config)).transaction
+    tx = (
+        await env.rpc_client.send_transaction(
+            SendTransaction(wallet_id=uint32(1), amount=cat_amount_0, address=addr, push=True),
+            wallet_environments.tx_config,
+        )
+    ).transaction
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 

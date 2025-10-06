@@ -11,13 +11,6 @@ SCRIPT_DIR=$(
 
 echo "### Checking GUI dependencies"
 
-if [ -d "${SCRIPT_DIR}/.n" ]; then
-  export N_PREFIX="${SCRIPT_DIR}/.n"
-  export PATH="${N_PREFIX}/bin:${PATH}"
-  echo "Loading nodejs/npm from"
-  echo "  ${N_PREFIX}"
-fi
-
 if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."
   echo "Execute '. ./activate' before running."
@@ -32,8 +25,8 @@ if ! npm version >/dev/null 2>&1; then
 fi
 
 NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
-if [ "$NPM_VERSION" -lt "9" ]; then
-  echo "Current npm version($(npm -v)) is less than 9. GUI app requires npm>=9."
+if [ "$NPM_VERSION" -lt "10" ]; then
+  echo "Current npm version($(npm -v)) is less than 10. GUI app requires npm>=10."
   exit 1
 else
   echo "Found npm $(npm -v)"

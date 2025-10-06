@@ -113,12 +113,11 @@ else
     symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ] && test "$MACOS"; then
     echo "Installing chiavdf dependencies for MacOS."
+    if ! cmake --version >/dev/null 2>&1; then
+      brew install --formula --quiet cmake
+    fi
     # The most recent boost version causes compile errors.
-    brew install --formula --quiet boost@1.85 cmake gmp
-    # boost@1.85 is keg-only, which means it was not symlinked into /usr/local,
-    # because this is an alternate version of another formula.
-    export LDFLAGS="-L/usr/local/opt/boost@1.85/lib"
-    export CPPFLAGS="-I/usr/local/opt/boost@1.85/include"
+    brew install --formula --quiet boost gmp
     echo "Installing chiavdf from source."
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"

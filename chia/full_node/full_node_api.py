@@ -72,6 +72,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
+from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.task_referencer import create_referenced_task
@@ -1001,14 +1002,14 @@ class FullNodeAPI:
             )
 
             # The block's timestamp must be greater than the previous transaction block's timestamp
-            timestamp = uint64(int(time.time()))
+            timestamp = uint64(time.time())
             curr: Optional[BlockRecord] = prev_b
             while curr is not None and not curr.is_transaction_block and curr.height != 0:
                 curr = self.full_node.blockchain.try_block_record(curr.prev_hash)
             if curr is not None:
                 assert curr.timestamp is not None
                 if timestamp <= curr.timestamp:
-                    timestamp = uint64(int(curr.timestamp + 1))
+                    timestamp = uint64(curr.timestamp + 1)
 
             self.log.info("Starting to make the unfinished block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
@@ -1133,6 +1134,12 @@ class FullNodeAPI:
         try:
             await self.full_node.add_unfinished_block(new_candidate, None, True)
         except Exception as e:
+            if isinstance(e, ValidationError) and e.code == Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH:
+                self.full_node.log.info(
+                    f"Failed to farm block {e}. Consensus rules prevent this block from being farmed. Not retrying"
+                )
+                return None
+
             # If we have an error with this block, try making an empty block
             self.full_node.log.error(f"Error farming block {e} {new_candidate}")
             candidate_tuple = self.full_node.full_node_store.get_candidate_block(
@@ -1393,14 +1400,11 @@ class FullNodeAPI:
             error_name = error.name if error is not None else None
             if status == MempoolInclusionStatus.SUCCESS:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+            # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+            elif self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+                response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None)
             else:
-                # If it failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
-                if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
-                    response = wallet_protocol.TransactionAck(
-                        spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None
-                    )
-                else:
-                    response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
+                response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
     @metadata.request()
@@ -1453,24 +1457,13 @@ class FullNodeAPI:
 
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-        if self.full_node.block_store.db_wrapper.db_version == 2:
-            try:
-                blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
-                    request.start_height, request.end_height
-                )
-            except ValueError:
-                return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        try:
+            blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
+                request.start_height, request.end_height
+            )
+        except ValueError:
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
 
-        else:
-            height_to_hash = self.full_node.blockchain.height_to_hash
-            header_hashes: list[bytes32] = []
-            for i in range(request.start_height, request.end_height + 1):
-                header_hash: Optional[bytes32] = height_to_hash(uint32(i))
-                if header_hash is None:
-                    return make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
-                header_hashes.append(header_hash)
-
-            blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
         if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
         return_filter = request.return_filter

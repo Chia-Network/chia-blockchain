@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
@@ -31,6 +31,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    GetTransactions,
     GetWallets,
     VCAddProofs,
     VCGet,
@@ -454,13 +455,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert await wallet_node_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("crcat")].match_hinted_coin(
         next(c for tx in txs for c in tx.additions if c.amount == 90), wallet_1_ph
     )
-    pending_tx = await client_1.get_transactions(
-        env_1.dealias_wallet_id("crcat"),
-        0,
-        1,
-        reverse=True,
-        type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
-    )
+    pending_tx = (
+        await client_1.get_transactions(
+            GetTransactions(
+                uint32(env_1.dealias_wallet_id("crcat")),
+                uint16(0),
+                uint16(1),
+                reverse=True,
+                type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
+            )
+        )
+    ).transactions
     assert len(pending_tx) == 1
 
     # Send the VC to wallet_1 to use for the CR-CATs

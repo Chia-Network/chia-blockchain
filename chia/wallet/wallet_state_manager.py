@@ -232,7 +232,7 @@ class WalletStateManager:
             self.initial_num_public_keys = min_num_public_keys
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
-        self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
+        self.tx_store = await WalletTransactionStore.create(self.db_wrapper, self.config)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
         self.user_store = await WalletUserStore.create(self.db_wrapper)
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
@@ -963,7 +963,7 @@ class WalletStateManager:
         assert len(clawback_coins) > 0
         coin_spends: list[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
-        now: uint64 = uint64(int(time.time()))
+        now: uint64 = uint64(time.time())
         derivation_record: Optional[DerivationRecord] = None
         amount: uint64 = uint64(0)
         for coin, metadata in clawback_coins.items():
@@ -988,7 +988,7 @@ class WalletStateManager:
                 assert derivation_record is not None
                 amount = uint64(amount + coin.amount)
                 # Remove the clawback hint since it is unnecessary for the XCH coin
-                memos: list[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
+                memos: list[bytes] = [] if len(incoming_tx.memos) == 0 else next(iter(incoming_tx.memos.items()))[1][1:]
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
@@ -1053,6 +1053,7 @@ class WalletStateManager:
             confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=derivation_record.puzzle_hash,
+            to_address=self.encode_puzzle_hash(derivation_record.puzzle_hash),
             amount=amount,
             fee_amount=uint64(fee),
             confirmed=False,
@@ -1065,7 +1066,7 @@ class WalletStateManager:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_CLAWBACK),
             name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
         async with action_scope.use() as interface:
@@ -1427,14 +1428,16 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            _new_did_id = get_new_owner_did(uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution))
+            parsed_did_id = get_new_owner_did(
+                uncurried_nft, Program.from_serialized(nft_data.parent_coin_spend.solution)
+            )
             old_did_id = uncurried_nft.owner_did
-            if _new_did_id is None:
+            if parsed_did_id is None:
                 new_did_id = old_did_id
-            elif _new_did_id == b"":
+            elif parsed_did_id == b"":
                 new_did_id = None
             else:
-                new_did_id = _new_did_id
+                new_did_id = parsed_did_id
         self.log.debug(
             "Handling NFT: %s, old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
@@ -1549,14 +1552,16 @@ class WalletStateManager:
                 clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                 clawback_spend_bundle = WalletSpendBundle([clawback_coin_spend], G2Element())
                 if await self.puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
+                    to_ph = (
+                        metadata.sender_puzzle_hash
+                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                        else metadata.recipient_puzzle_hash
+                    )
                     tx_record = TransactionRecord(
                         confirmed_at_height=uint32(coin_state.spent_height),
                         created_at_time=created_timestamp,
-                        to_puzzle_hash=(
-                            metadata.sender_puzzle_hash
-                            if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
-                            else metadata.recipient_puzzle_hash
-                        ),
+                        to_puzzle_hash=to_ph,
+                        to_address=self.encode_puzzle_hash(to_ph),
                         amount=uint64(coin_state.coin.amount),
                         fee_amount=uint64(0),
                         confirmed=True,
@@ -1569,7 +1574,7 @@ class WalletStateManager:
                         trade_id=None,
                         type=uint32(TransactionType.OUTGOING_CLAWBACK),
                         name=clawback_spend_bundle.name(),
-                        memos=list(compute_memos(clawback_spend_bundle).items()),
+                        memos=compute_memos(clawback_spend_bundle),
                         valid_times=ConditionValidTimes(),
                     )
                     await self.tx_store.add_transaction_record(tx_record)
@@ -1594,6 +1599,7 @@ class WalletStateManager:
                 confirmed_at_height=uint32(coin_state.created_height),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
+                to_address=self.encode_puzzle_hash(metadata.recipient_puzzle_hash),
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
                 confirmed=spent_height != 0,
@@ -1611,7 +1617,7 @@ class WalletStateManager:
                 ),
                 # Use coin ID as the TX ID to mapping with the coin table
                 name=coin_record.coin.name(),
-                memos=list(memos.items()),
+                memos=memos,
                 valid_times=ConditionValidTimes(),
             )
             await self.tx_store.add_transaction_record(tx_record)
@@ -1790,14 +1796,14 @@ class WalletStateManager:
                                 created_timestamp = await self.wallet_node.get_timestamp_for_height(
                                     uint32(coin_state.created_height)
                                 )
+                                to_ph = await self.convert_puzzle_hash(
+                                    wallet_identifier.id, coin_state.coin.puzzle_hash
+                                )
                                 tx_record = TransactionRecord(
                                     confirmed_at_height=uint32(coin_state.created_height),
                                     created_at_time=uint64(created_timestamp),
-                                    to_puzzle_hash=(
-                                        await self.convert_puzzle_hash(
-                                            wallet_identifier.id, coin_state.coin.puzzle_hash
-                                        )
-                                    ),
+                                    to_puzzle_hash=to_ph,
+                                    to_address=self.encode_puzzle_hash(to_ph),
                                     amount=uint64(coin_state.coin.amount),
                                     fee_amount=uint64(0),
                                     confirmed=True,
@@ -1810,7 +1816,7 @@ class WalletStateManager:
                                     trade_id=None,
                                     type=uint32(tx_type),
                                     name=bytes32.secret(),
-                                    memos=[],
+                                    memos={},
                                     valid_times=ConditionValidTimes(),
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
@@ -1872,13 +1878,13 @@ class WalletStateManager:
                                     for added_coin in additions:
                                         tx_name += bytes(added_coin.name())
                                     tx_name = std_hash(tx_name)
+                                    to_ph = await self.convert_puzzle_hash(wallet_identifier.id, to_puzzle_hash)
                                     tx_record = TransactionRecord(
                                         confirmed_at_height=uint32(coin_state.spent_height),
                                         created_at_time=uint64(spent_timestamp),
-                                        to_puzzle_hash=(
-                                            await self.convert_puzzle_hash(wallet_identifier.id, to_puzzle_hash)
-                                        ),
-                                        amount=uint64(int(amount)),
+                                        to_puzzle_hash=to_ph,
+                                        to_address=self.encode_puzzle_hash(to_ph),
+                                        amount=uint64(amount),
                                         fee_amount=uint64(fee),
                                         confirmed=True,
                                         sent=uint32(0),
@@ -1890,7 +1896,7 @@ class WalletStateManager:
                                         trade_id=None,
                                         type=uint32(TransactionType.OUTGOING_TX.value),
                                         name=tx_name,
-                                        memos=[],
+                                        memos={},
                                         valid_times=ConditionValidTimes(),
                                     )
 
@@ -1941,8 +1947,8 @@ class WalletStateManager:
                                         # No more singleton (maybe destroyed?)
                                         break
 
-                                    coin_name = new_singleton_coin.name()
-                                    existing = await self.coin_store.get_coin_record(coin_name)
+                                    new_singleton_name = new_singleton_coin.name()
+                                    existing = await self.coin_store.get_coin_record(new_singleton_name)
                                     if existing is None:
                                         await self.coin_added(
                                             new_singleton_coin,
@@ -1951,7 +1957,7 @@ class WalletStateManager:
                                             uint32(record.wallet_id),
                                             record.wallet_type,
                                             peer,
-                                            coin_name,
+                                            new_singleton_name,
                                             coin_data,
                                         )
                                     await self.coin_store.set_spent(
@@ -1959,7 +1965,7 @@ class WalletStateManager:
                                     )
                                     await self.add_interested_coin_ids([new_singleton_coin.name()])
                                     new_coin_state: list[CoinState] = await self.wallet_node.get_coin_state(
-                                        [coin_name], peer=peer, fork_height=fork_height
+                                        [new_singleton_name], peer=peer, fork_height=fork_height
                                     )
                                     assert len(new_coin_state) == 1
                                     curr_coin_state = new_coin_state[0]
@@ -2035,8 +2041,8 @@ class WalletStateManager:
                             launcher_spend_additions = compute_additions(launcher_spend)
                             assert len(launcher_spend_additions) == 1
                             coin_added = launcher_spend_additions[0]
-                            coin_name = coin_added.name()
-                            existing = await self.coin_store.get_coin_record(coin_name)
+                            coin_added_name = coin_added.name()
+                            existing = await self.coin_store.get_coin_record(coin_added_name)
                             if existing is None:
                                 await self.coin_added(
                                     coin_added,
@@ -2045,10 +2051,10 @@ class WalletStateManager:
                                     pool_wallet.id(),
                                     pool_wallet.type(),
                                     peer,
-                                    coin_name,
+                                    coin_added_name,
                                     coin_data,
                                 )
-                            await self.add_interested_coin_ids([coin_name])
+                            await self.add_interested_coin_ids([coin_added_name])
 
                     else:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
@@ -2199,10 +2205,12 @@ class WalletStateManager:
         clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
         if coinbase or clawback or (not coin_confirmed_transaction and not change):
+            to_ph = await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),
-                to_puzzle_hash=await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash),
+                to_puzzle_hash=to_ph,
+                to_address=self.encode_puzzle_hash(to_ph),
                 amount=uint64(coin.amount),
                 fee_amount=uint64(0),
                 confirmed=True,
@@ -2215,7 +2223,7 @@ class WalletStateManager:
                 trade_id=None,
                 type=uint32(tx_type),
                 name=coin_name,
-                memos=[],
+                memos={},
                 valid_times=ConditionValidTimes(),
             )
             if tx_record.amount > 0:
@@ -2605,20 +2613,20 @@ class WalletStateManager:
             [path_hint for pk in pks for path_hint in (await self.path_hint_for_pubkey(pk),) if path_hint is not None],
         )
 
-    async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
+    async def gather_signing_info(self, spends: list[Spend]) -> SigningInstructions:
         pks: list[bytes] = []
         signing_targets: list[SigningTarget] = []
-        for coin_spend in coin_spends:
-            _coin_spend = coin_spend.as_coin_spend()
+        for spend in spends:
+            coin_spend = spend.as_coin_spend()
             # Get AGG_SIG conditions
             conditions_dict = conditions_dict_for_solution(
-                Program.from_serialized(_coin_spend.puzzle_reveal),
-                Program.from_serialized(_coin_spend.solution),
+                Program.from_serialized(coin_spend.puzzle_reveal),
+                Program.from_serialized(coin_spend.solution),
                 self.constants.MAX_BLOCK_COST_CLVM,
             )
             # Create signature
             for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                conditions_dict, coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 pk_bytes = bytes(pk)
                 pks.append(pk_bytes)
@@ -2769,3 +2777,6 @@ class WalletStateManager:
     async def delete_wallet(self, wallet_id: uint32) -> None:
         await self.user_store.delete_wallet(wallet_id)
         await self.puzzle_store.delete_wallet(wallet_id)
+
+    def encode_puzzle_hash(self, puzzle_hash: bytes32) -> str:
+        return encode_puzzle_hash(puzzle_hash, AddressType.XCH.hrp(self.config))

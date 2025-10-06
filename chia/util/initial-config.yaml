@@ -209,6 +209,11 @@ farmer:
     - host: *self_hostname
       port: 8444
 
+  # The farmer will attempt to connect to these solvers for V2 plot solving
+  solver_peers:
+    - host: *self_hostname
+      port: 8666
+
   pool_public_keys: !!set {}
 
   # Replace this with a real receive address
@@ -628,6 +633,42 @@ wallet:
     batch_size: 50
 
   auto_sign_txs: True
+
+solver:
+  # The solver server will run on this port
+  port: 8666
+
+  # Enable or disable UPnP port forwarding
+  enable_upnp: False
+
+  # Node IDs of trusted solver peers, only these can connect by default
+  trusted_peers:
+    0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb7: Does_not_matter
+
+  # If False, accepts connections from all peers (not just trusted_peers)
+  # If True (default), only accepts localhost and trusted_peers connections
+  trusted_peers_only: True
+
+  # Logging configuration
+  logging: *logging
+
+  # Network overrides and selected network
+  network_overrides: *network_overrides
+  selected_network: *selected_network
+
+  # Number of threads for solver operations
+  num_threads: 4
+
+  # RPC server configuration
+  rpc_port: 8667
+  start_rpc_server: True
+
+  # SSL configuration
+  ssl:
+    private_crt: "config/ssl/solver/private_solver.crt"
+    private_key: "config/ssl/solver/private_solver.key"
+    public_crt: "config/ssl/solver/public_solver.crt"
+    public_key: "config/ssl/solver/public_solver.key"
 
 data_layer:
   # TODO: consider name

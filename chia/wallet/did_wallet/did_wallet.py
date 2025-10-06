@@ -324,7 +324,7 @@ class DIDWallet:
             for coin in record.additions:
                 hint_dict = {
                     coin_id: bytes32(memos[0])
-                    for coin_id, memos in record.memos
+                    for coin_id, memos in record.memos.items()
                     if len(memos) > 0 and len(memos[0]) == 32
                 }
                 if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict)) and (
@@ -648,12 +648,12 @@ class DIDWallet:
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
+        to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
+            created_at_time=uint64(time.time()),
+            to_puzzle_hash=to_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -666,7 +666,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32.secret(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
 
@@ -734,12 +734,12 @@ class DIDWallet:
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
+        to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
+            created_at_time=uint64(time.time()),
+            to_puzzle_hash=to_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             amount=uint64(coin.amount),
             fee_amount=fee,
             confirmed=False,
@@ -752,7 +752,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(compute_memos(spend_bundle).items()),
+            memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
 
@@ -817,8 +817,9 @@ class DIDWallet:
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         tx = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             to_puzzle_hash=p2_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(p2_ph),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -831,7 +832,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=unsigned_spend_bundle.name(),
-            memos=list(compute_memos(unsigned_spend_bundle).items()),
+            memos=compute_memos(unsigned_spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
         async with action_scope.use() as interface:
@@ -1024,13 +1025,13 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
 
+        to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
+            created_at_time=uint64(time.time()),
             amount=uint64(amount),
-            to_puzzle_hash=await action_scope.get_puzzle_hash(
-                self.wallet_state_manager, override_reuse_puzhash_with=True
-            ),
+            to_puzzle_hash=to_ph,
+            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
             fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
@@ -1042,7 +1043,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=full_spend.name(),
-            memos=[],
+            memos={},
             valid_times=ConditionValidTimes(),
         )
         async with action_scope.use() as interface:
@@ -1170,12 +1171,12 @@ class DIDWallet:
         :return: DIDInfo
         """
         details = backup_data.split(":")
-        origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(int(details[2])))
+        origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(details[2]))
         backup_ids = []
         if len(details[3]) > 0:
             for d in details[3].split(","):
                 backup_ids.append(bytes32.from_hexstr(d))
-        num_of_backup_ids_needed = uint64(int(details[5]))
+        num_of_backup_ids_needed = uint64(details[5])
         if num_of_backup_ids_needed > len(backup_ids):
             raise Exception
         innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))

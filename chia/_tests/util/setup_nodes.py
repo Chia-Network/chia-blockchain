@@ -18,11 +18,13 @@ from chia._tests.environments.full_node import FullNodeEnvironment
 from chia._tests.environments.wallet import WalletEnvironment
 from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.server.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -33,6 +35,7 @@ from chia.simulator.setup_services import (
     setup_full_node,
     setup_harvester,
     setup_introducer,
+    setup_solver,
     setup_timelord,
     setup_vdf_client,
     setup_vdf_clients,
@@ -40,12 +43,15 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
+from chia.solver.solver_service import SolverService
+from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 
 OldSimulatorsAndWallets = tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
@@ -60,6 +66,7 @@ class FullSystem:
     introducer: IntroducerAPI
     timelord: TimelordService
     timelord_bluebox: TimelordService
+    solver: SolverService
     daemon: WebSocketServer
 
 
@@ -296,13 +303,14 @@ async def setup_simulators_and_wallets_inner(
 
 
 @asynccontextmanager
-async def setup_farmer_multi_harvester(
+async def setup_farmer_solver_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
@@ -313,6 +321,7 @@ async def setup_farmer_multi_harvester(
                 consensus_constants,
                 port=uint16(0),
                 start_service=start_services,
+                solver_peer=solver_peer,
             )
         )
         if start_services:
@@ -469,6 +478,15 @@ async def setup_full_system_inner(
 
                 await asyncio.sleep(backoff)
 
+        solver_service = await async_exit_stack.enter_async_context(
+            setup_solver(
+                shared_b_tools.root_path / "solver",
+                shared_b_tools,
+                consensus_constants,
+                True,
+            )
+        )
+
         full_system = FullSystem(
             node_1=node_1,
             node_2=node_2,
@@ -477,6 +495,7 @@ async def setup_full_system_inner(
             introducer=introducer,
             timelord=timelord,
             timelord_bluebox=timelord_bluebox_service,
+            solver=solver_service,
             daemon=daemon_ws,
         )
         yield full_system

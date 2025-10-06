@@ -58,7 +58,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
-from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
+from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
@@ -68,6 +68,7 @@ from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSour
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import CoinStateUpdate, RemovedMempoolItem
 from chia.rpc.rpc_server import StateChangedProtocol
@@ -99,7 +100,8 @@ from chia.util.task_referencer import create_referenced_task
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: list[NewPeakItem]  # The new items from calling MempoolManager.new_peak
+    # The added transactions IDs from calling MempoolManager.new_peak
+    mempool_peak_added_tx_ids: list[bytes32]
     mempool_removals: list[MempoolRemoveInfo]  # The removed mempool items from calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: list[tuple[bytes32, bytes]]  # The hints added to the DB
@@ -321,7 +323,8 @@ class FullNode:
                 )
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                    assert len(pending_tx.items) == 0  # no pending transactions when starting up
+                    # No pending transactions when starting up
+                    assert len(pending_tx.spend_bundle_ids) == 0
 
                     full_peak: Optional[FullBlock] = await self.blockchain.get_full_peak()
                     assert full_peak is not None
@@ -500,11 +503,16 @@ class FullNode:
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
             self.log.debug(f"Cancelling _handle_one_transaction, closing: {error_stack}")
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error in _handle_one_transaction, closing: {error_stack}")
+        except ValidationError as e:
+            self.log.exception("ValidationError in _handle_one_transaction, closing")
             if peer is not None:
-                await peer.close()
+                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            entry.done.set((MempoolInclusionStatus.FAILED, e.code))
+        except Exception:
+            self.log.exception("Error in _handle_one_transaction, closing")
+            if peer is not None:
+                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            entry.done.set((MempoolInclusionStatus.FAILED, Err.UNKNOWN))
         finally:
             self.add_transaction_semaphore.release()
 
@@ -887,7 +895,7 @@ class FullNode:
 
     async def synced(self, block_is_current_at: Optional[uint64] = None) -> bool:
         if block_is_current_at is None:
-            block_is_current_at = uint64(int(time.time() - 60 * 7))
+            block_is_current_at = uint64(time.time() - 60 * 7)
         if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1090,13 +1098,13 @@ class FullNode:
         response = await weight_proof_peer.call_api(FullNodeAPI.request_proof_of_weight, request, timeout=wp_timeout)
         # Disconnect from this peer, because they have not behaved properly
         if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
-            await weight_proof_peer.close(600)
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
         if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
-            await weight_proof_peer.close(600)
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")
         if response.wp.recent_chain_data[-1].reward_chain_block.weight != peak_weight:
-            await weight_proof_peer.close(600)
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_info.host}")
         if self.in_bad_peak_cache(response.wp):
             raise ValueError("Weight proof failed bad peak cache validation")
@@ -1111,10 +1119,10 @@ class FullNode:
         try:
             validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
         except Exception as e:
-            await weight_proof_peer.close(600)
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise ValueError(f"Weight proof validation threw an error {e}")
         if not validated:
-            await weight_proof_peer.close(600)
+            await weight_proof_peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             raise ValueError("Weight proof validation failed")
         self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {peak_height}")
         self.sync_store.set_sync_mode(True)
@@ -1376,7 +1384,7 @@ class FullNode:
                     vs,
                 )
                 if err is not None:
-                    await peer.close(600)
+                    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}: {err}")
                 if end_height - block_rate_height > 100:
                     now = time.monotonic()
@@ -1939,7 +1947,7 @@ class FullNode:
         mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
 
         return PeakPostProcessingResult(
-            mempool_new_peak_result.items,
+            mempool_new_peak_result.spend_bundle_ids,
             mempool_new_peak_result.removals,
             fns_peak_result,
             hints_to_add,
@@ -1961,9 +1969,9 @@ class FullNode:
         record = state_change_summary.peak
         for signage_point in ppp_result.signage_points:
             await self.signage_point_post_processing(*signage_point)
-        for new_peak_item in ppp_result.mempool_peak_result:
-            self.log.debug(f"Added transaction to mempool: {new_peak_item.transaction_id}")
-            mempool_item = self.mempool_manager.get_mempool_item(new_peak_item.transaction_id)
+        for transaction_id in ppp_result.mempool_peak_added_tx_ids:
+            self.log.debug(f"Added transaction to mempool: {transaction_id}")
+            mempool_item = self.mempool_manager.get_mempool_item(transaction_id)
             assert mempool_item is not None
             await self.broadcast_added_tx(mempool_item)
 
@@ -2765,66 +2773,56 @@ class FullNode:
             return MempoolInclusionStatus.SUCCESS, None
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
-        self.mempool_manager.add_and_maybe_pop_seen(spend_name)
         self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing or if we have not yet received a block
         # the mempool must have a peak to validate transactions
         if self.sync_store.get_sync_mode() or self.mempool_manager.peak is None:
-            status = MempoolInclusionStatus.FAILED
-            error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
-            self.mempool_manager.remove_seen(spend_name)
-        else:
+            return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
+
+        cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name, self._bls_cache)
+
+        self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+
+        if self.config.get("log_mempool", False):  # pragma: no cover
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(
-                    transaction, spend_name, self._bls_cache
-                )
-            except ValidationError as e:
-                self.mempool_manager.remove_seen(spend_name)
-                return MempoolInclusionStatus.FAILED, e.code
+                mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{self.blockchain.get_peak_height()}"
+                mempool_dir.mkdir(parents=True, exist_ok=True)
+                with open(mempool_dir / f"{spend_name}.bundle", "wb+") as f:
+                    f.write(bytes(transaction))
             except Exception:
+                self.log.exception(f"Failed to log mempool item: {spend_name}")
+
+        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
+            if self.mempool_manager.get_spendbundle(spend_name) is not None:
                 self.mempool_manager.remove_seen(spend_name)
-                raise
+                return MempoolInclusionStatus.SUCCESS, None
+            if self.mempool_manager.peak is None:
+                return MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
+            info = await self.mempool_manager.add_spend_bundle(
+                transaction, cost_result, spend_name, self.mempool_manager.peak.height
+            )
+            status = info.status
+            error = info.error
+        if status == MempoolInclusionStatus.SUCCESS:
+            self.log.debug(
+                f"Added transaction to mempool: {spend_name} mempool size: "
+                f"{self.mempool_manager.mempool.total_mempool_cost()} normalized "
+                f"{self.mempool_manager.mempool.total_mempool_cost() / 5000000}"
+            )
 
-            if self.config.get("log_mempool", False):  # pragma: no cover
-                try:
-                    mempool_dir = path_from_root(self.root_path, "mempool-log") / f"{self.blockchain.get_peak_height()}"
-                    mempool_dir.mkdir(parents=True, exist_ok=True)
-                    with open(mempool_dir / f"{spend_name}.bundle", "wb+") as f:
-                        f.write(bytes(transaction))
-                except Exception:
-                    self.log.exception(f"Failed to log mempool item: {spend_name}")
+            # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
+            # vector.
+            mempool_item = self.mempool_manager.get_mempool_item(spend_name)
+            assert mempool_item is not None
+            await self.broadcast_removed_tx(info.removals)
+            await self.broadcast_added_tx(mempool_item, current_peer=peer)
 
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
-                if self.mempool_manager.get_spendbundle(spend_name) is not None:
-                    self.mempool_manager.remove_seen(spend_name)
-                    return MempoolInclusionStatus.SUCCESS, None
-                if self.mempool_manager.peak is None:
-                    return MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
-                info = await self.mempool_manager.add_spend_bundle(
-                    transaction, cost_result, spend_name, self.mempool_manager.peak.height
-                )
-                status = info.status
-                error = info.error
-            if status == MempoolInclusionStatus.SUCCESS:
-                self.log.debug(
-                    f"Added transaction to mempool: {spend_name} mempool size: "
-                    f"{self.mempool_manager.mempool.total_mempool_cost()} normalized "
-                    f"{self.mempool_manager.mempool.total_mempool_cost() / 5000000}"
-                )
+            if self.simulator_transaction_callback is not None:  # callback
+                await self.simulator_transaction_callback(spend_name)
 
-                # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
-                # vector.
-                mempool_item = self.mempool_manager.get_mempool_item(spend_name)
-                assert mempool_item is not None
-                await self.broadcast_removed_tx(info.removals)
-                await self.broadcast_added_tx(mempool_item, current_peer=peer)
-
-                if self.simulator_transaction_callback is not None:  # callback
-                    await self.simulator_transaction_callback(spend_name)
-
-            else:
-                self.mempool_manager.remove_seen(spend_name)
-                self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")
+        else:
+            self.mempool_manager.remove_seen(spend_name)
+            self.log.debug(f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}")
         return status, error
 
     async def broadcast_added_tx(
@@ -2905,7 +2903,7 @@ class FullNode:
         removals_to_send: dict[bytes32, list[RemovedMempoolItem]] = dict()
 
         for removal_info in mempool_removals:
-            for internal_mempool_item in removal_info.items:
+            for transaction_id, internal_mempool_item in removal_info.items.items():
                 conds = internal_mempool_item.conds
                 assert conds is not None
 
@@ -2916,8 +2914,6 @@ class FullNode:
 
                 if len(peer_ids) == 0:
                     continue
-
-                transaction_id = internal_mempool_item.spend_bundle.name()
 
                 self.log.debug(f"Broadcasting removed transaction {transaction_id} to wallet peers {peer_ids}")
 

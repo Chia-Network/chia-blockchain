@@ -9,7 +9,7 @@ import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -29,31 +29,52 @@ from chia.protocols.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    BalanceResponse,
     CancelOfferResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATSetName,
+    CATSetNameResponse,
     CATSpendResponse,
+    ClawbackPuzzleDecoratorOverride,
     CreateOfferForIDsResponse,
+    DeleteUnconfirmedTransactions,
+    ExtendDerivationIndex,
+    ExtendDerivationIndexResponse,
     FungibleAsset,
+    GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
+    GetTransaction,
+    GetTransactions,
+    GetTransactionsResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
     GetWallets,
     GetWalletsResponse,
     NFTCalculateRoyalties,
     NFTGetWalletDID,
     NFTGetWalletDIDResponse,
     RoyaltyAsset,
+    SendTransaction,
     SendTransactionResponse,
+    SpendClawbackCoins,
+    SpendClawbackCoinsResponse,
     TakeOfferResponse,
+    TransactionRecordWithMetadata,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
@@ -97,9 +118,9 @@ def test_get_transaction(capsys: object, get_test_cli_clients: tuple[TestRpcClie
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 3,
         "get_cat_name": [(1,)],
         "get_transaction": [
-            (bytes32.from_hexstr(bytes32_hexstr),),
-            (bytes32.from_hexstr(bytes32_hexstr),),
-            (bytes32.from_hexstr(bytes32_hexstr),),
+            (GetTransaction(bytes32.from_hexstr(bytes32_hexstr)),),
+            (GetTransaction(bytes32.from_hexstr(bytes32_hexstr)),),
+            (GetTransaction(bytes32.from_hexstr(bytes32_hexstr)),),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -110,27 +131,17 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
 
     # set RPC Client
     class GetTransactionsWalletRpcClient(TestWalletRpcClient):
-        async def get_transactions(
-            self,
-            wallet_id: int,
-            start: int,
-            end: int,
-            sort_key: Optional[SortKey] = None,
-            reverse: bool = False,
-            to_address: Optional[str] = None,
-            type_filter: Optional[TransactionTypeFilter] = None,
-            confirmed: Optional[bool] = None,
-        ) -> list[TransactionRecord]:
-            self.add_to_log(
-                "get_transactions", (wallet_id, start, end, sort_key, reverse, to_address, type_filter, confirmed)
-            )
+        async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
+            self.add_to_log("get_transactions", (request,))
             l_tx_rec = []
-            for i in range(start, end):
-                t_type = TransactionType.INCOMING_CLAWBACK_SEND if i == end - 1 else TransactionType.INCOMING_TX
-                tx_rec = TransactionRecord(
+            assert request.start is not None and request.end is not None
+            for i in range(request.start, request.end):
+                t_type = TransactionType.INCOMING_CLAWBACK_SEND if i == request.end - 1 else TransactionType.INCOMING_TX
+                tx_rec = TransactionRecordWithMetadata(
                     confirmed_at_height=uint32(1 + i),
                     created_at_time=uint64(1234 + i),
                     to_puzzle_hash=bytes32([1 + i] * 32),
+                    to_address=encode_puzzle_hash(bytes32([1 + i] * 32), "xch"),
                     amount=uint64(12345678 + i),
                     fee_amount=uint64(1234567 + i),
                     confirmed=False,
@@ -143,12 +154,12 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                     trade_id=None,
                     type=uint32(t_type.value),
                     name=bytes32([2 + i] * 32),
-                    memos=[(bytes32([3 + i] * 32), [bytes([4 + i] * 32)])],
+                    memos={bytes32([3 + i] * 32): [bytes([4 + i] * 32)]},
                     valid_times=ConditionValidTimes(),
                 )
                 l_tx_rec.append(tx_rec)
 
-            return l_tx_rec
+            return GetTransactionsResponse(l_tx_rec, request.wallet_id)
 
         async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
             self.add_to_log("get_coin_records", (request,))
@@ -197,8 +208,8 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     expected_calls: logType = {
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "get_transactions": [
-            (1, 2, 4, SortKey.RELEVANCE, True, None, None, None),
-            (1, 2, 4, SortKey.RELEVANCE, True, None, None, None),
+            (GetTransactions(uint32(1), uint16(2), uint16(4), SortKey.RELEVANCE.name, True, None, None, None),),
+            (GetTransactions(uint32(1), uint16(2), uint16(4), SortKey.RELEVANCE.name, True, None, None, None),),
         ],
         "get_coin_records": [
             (GetCoinRecords(coin_id_filter=HashFilter.include([expected_coin_id])),),
@@ -242,19 +253,23 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             self.add_to_log("get_height_info", ())
             return GetHeightInfoResponse(uint32(10))
 
-        async def get_wallet_balance(self, wallet_id: int) -> dict[str, uint64]:
-            self.add_to_log("get_wallet_balance", (wallet_id,))
-            if wallet_id == 1:
-                amount = uint64(1000000000)
-            elif wallet_id == 2:
-                amount = uint64(2000000000)
+        async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+            self.add_to_log("get_wallet_balance", (request,))
+            if request.wallet_id == 1:
+                amount = uint128(1000000000)
+            elif request.wallet_id == 2:
+                amount = uint128(2000000000)
             else:
-                amount = uint64(1)
-            return {
-                "confirmed_wallet_balance": amount,
-                "spendable_balance": amount,
-                "unconfirmed_wallet_balance": uint64(0),
-            }
+                amount = uint128(1)
+            return GetWalletBalanceResponse(
+                BalanceResponse(
+                    wallet_id=request.wallet_id,
+                    wallet_type=uint8(0),  # Doesn't matter
+                    confirmed_wallet_balance=amount,
+                    spendable_balance=amount,
+                    unconfirmed_wallet_balance=uint128(0),
+                )
+            )
 
         async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
             self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
@@ -307,7 +322,12 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         ],
         "get_sync_status": [(), ()],
         "get_height_info": [(), ()],
-        "get_wallet_balance": [(1,), (2,), (3,), (2,)],
+        "get_wallet_balance": [
+            (GetWalletBalance(wallet_id=uint32(1)),),
+            (GetWalletBalance(wallet_id=uint32(2)),),
+            (GetWalletBalance(wallet_id=uint32(3)),),
+            (GetWalletBalance(wallet_id=uint32(2)),),
+        ],
         "get_nft_wallet_did": [(3,)],
         "get_connections": [(None,), (None,)],
     }
@@ -321,25 +341,31 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     class SendWalletRpcClient(TestWalletRpcClient):
         async def send_transaction(
             self,
-            wallet_id: int,
-            amount: uint64,
-            address: str,
+            request: SendTransaction,
             tx_config: TXConfig,
-            fee: uint64 = uint64(0),
-            memos: Optional[list[str]] = None,
-            puzzle_decorator_override: Optional[list[dict[str, Union[str, int, bool]]]] = None,
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> SendTransactionResponse:
             self.add_to_log(
                 "send_transaction",
-                (wallet_id, amount, address, tx_config, fee, memos, puzzle_decorator_override, push, timelock_info),
+                (
+                    request.wallet_id,
+                    request.amount,
+                    request.address,
+                    tx_config,
+                    request.fee,
+                    request.memos,
+                    request.puzzle_decorator,
+                    request.push,
+                    timelock_info,
+                ),
             )
             name = get_bytes32(2)
             tx_rec = TransactionRecord(
                 confirmed_at_height=uint32(1),
                 created_at_time=uint64(1234),
                 to_puzzle_hash=get_bytes32(1),
+                to_address=encode_puzzle_hash(get_bytes32(1), "xch"),
                 amount=uint64(12345678),
                 fee_amount=uint64(1234567),
                 confirmed=False,
@@ -352,7 +378,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_CLAWBACK.value),
                 name=name,
-                memos=[(get_bytes32(3), [bytes([4] * 32)])],
+                memos={get_bytes32(3): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
             )
             return SendTransactionResponse([STD_UTX], [STD_TX], tx_rec, name)
@@ -450,7 +476,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 ),
                 500000000000,
                 ["0x6262626262626262626262626262626262626262626262626262626262626262"],
-                [{"decorator": "CLAWBACK", "clawback_timelock": 60}],
+                [ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(60))],
                 True,
                 test_condition_valid_times,
             )
@@ -476,7 +502,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 test_condition_valid_times,
             )
         ],
-        "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
+        "get_transaction": [(GetTransaction(get_bytes32(2)),), (GetTransaction(get_bytes32(2)),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -486,11 +512,11 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
 
     # set RPC Client
     class GetAddressWalletRpcClient(TestWalletRpcClient):
-        async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-            self.add_to_log("get_next_address", (wallet_id, new_address))
-            if new_address:
-                return encode_puzzle_hash(get_bytes32(3), "xch")
-            return encode_puzzle_hash(get_bytes32(4), "xch")
+        async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+            self.add_to_log("get_next_address", (request.wallet_id, request.new_address))
+            if request.new_address:
+                return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(3), "xch"))
+            return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(4), "xch"))
 
     inst_rpc_client = GetAddressWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -519,30 +545,25 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     class ClawbackWalletRpcClient(TestWalletRpcClient):
         async def spend_clawback_coins(
             self,
-            coin_ids: list[bytes32],
-            fee: int = 0,
-            force: bool = False,
-            push: bool = True,
+            request: SpendClawbackCoins,
+            tx_config: TXConfig,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> dict[str, Any]:
-            self.add_to_log("spend_clawback_coins", (coin_ids, fee, force, push, timelock_info))
-            tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
-            return {
-                "transaction_ids": tx_hex_list,
-                "transactions": [
-                    STD_TX.to_json_dict_convenience(
-                        {
-                            "selected_network": "mainnet",
-                            "network_overrides": {"config": {"mainnet": {"address_prefix": "xch"}}},
-                        }
-                    )
-                ],
-            }
+        ) -> SpendClawbackCoinsResponse:
+            self.add_to_log(
+                "spend_clawback_coins", (request.coin_ids, request.fee, request.force, request.push, timelock_info)
+            )
+            tx_list = [get_bytes32(6), get_bytes32(7), get_bytes32(8)]
+            return SpendClawbackCoinsResponse(
+                transaction_ids=tx_list,
+                transactions=[STD_TX],
+                unsigned_transactions=[STD_UTX],
+            )
 
     inst_rpc_client = ClawbackWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     tx_ids = [get_bytes32(3), get_bytes32(4), get_bytes32(5)]
-    r_tx_ids_hex = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
+    r_tx_ids_hex = ["0x" + get_bytes32(6).hex(), "0x" + get_bytes32(7).hex(), "0x" + get_bytes32(8).hex()]
     command_args = [
         "wallet",
         "clawback",
@@ -556,7 +577,7 @@ def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
         "--expires-at",
         "150",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", str(r_tx_ids_hex)])
+    run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", *r_tx_ids_hex])
     # these are various things that should be in the output
     expected_calls: logType = {
         "spend_clawback_coins": [(tx_ids, 500000000000, False, True, test_condition_valid_times)],
@@ -569,8 +590,8 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
 
     # set RPC Client
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
-        async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
-            self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
+        async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> None:
+            self.add_to_log("delete_unconfirmed_transactions", (request.wallet_id,))
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -594,9 +615,9 @@ def test_get_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRp
 
     # set RPC Client
     class GetDerivationIndexRpcClient(TestWalletRpcClient):
-        async def get_current_derivation_index(self) -> str:
+        async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
             self.add_to_log("get_current_derivation_index", ())
-            return str(520)
+            return GetCurrentDerivationIndexResponse(uint32(520))
 
     inst_rpc_client = GetDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -625,8 +646,9 @@ def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     # these are various things that should be in the output
     assert_list = [
         f"Message: {message.hex()}",
-        f"Public Key: {bytes([3] * 48).hex()}",
-        f"Signature: {bytes([6] * 576).hex()}",
+        "Public Key: b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4",
+        "Signature: c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-a{xch_addr}"], assert_list)
@@ -641,9 +663,9 @@ def test_update_derivation_index(capsys: object, get_test_cli_clients: tuple[Tes
 
     # set RPC Client
     class UpdateDerivationIndexRpcClient(TestWalletRpcClient):
-        async def extend_derivation_index(self, index: int) -> str:
-            self.add_to_log("extend_derivation_index", (index,))
-            return str(index)
+        async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
+            self.add_to_log("extend_derivation_index", (request.index,))
+            return ExtendDerivationIndexResponse(request.index)
 
     inst_rpc_client = UpdateDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -665,8 +687,9 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
             self.add_to_log("create_wallet_for_existing_cat", (asset_id,))
             return {"wallet_id": 3}
 
-        async def set_cat_name(self, wallet_id: int, name: str) -> None:
-            self.add_to_log("set_cat_name", (wallet_id, name))
+        async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
+            self.add_to_log("set_cat_name", (request.wallet_id, request.name))
+            return CATSetNameResponse(wallet_id=request.wallet_id)
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -1033,14 +1056,14 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 ),
             )
 
-        async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
-            self.add_to_log("cat_asset_id_to_name", (asset_id,))
-            if asset_id == cat_offered_id:
-                return uint32(2), "offered cat"
-            elif asset_id == cat_requested_id:
-                return uint32(3), "requested cat"
+        async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+            self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
+            if request.asset_id == cat_offered_id:
+                return CATAssetIDToNameResponse(uint32(2), "offered cat")
+            elif request.asset_id == cat_requested_id:
+                return CATAssetIDToNameResponse(uint32(3), "requested cat")
             else:
-                return None
+                return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
     inst_rpc_client = TakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

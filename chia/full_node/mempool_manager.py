@@ -11,10 +11,12 @@ from typing import Callable, Optional, TypeVar
 from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
+    MEMPOOL_MODE,
     BLSCache,
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
 )
@@ -24,7 +26,6 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.check_time_locks import check_time_locks
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -132,15 +133,8 @@ class SpendBundleAddInfo:
 
 @dataclass
 class NewPeakInfo:
-    items: list[NewPeakItem]
+    spend_bundle_ids: list[bytes32]
     removals: list[MempoolRemoveInfo]
-
-
-@dataclass
-class NewPeakItem:
-    transaction_id: bytes32
-    spend_bundle: SpendBundle
-    conds: SpendBundleConditions
 
 
 # For block overhead cost calculation
@@ -249,7 +243,7 @@ def check_removals(
     conflicts = set()
     for coin_id, coin_bcs in bundle_coin_spends.items():
         # 1. Checks if it's been spent already
-        if removals[coin_id].spent and not coin_bcs.eligible_for_fast_forward:
+        if removals[coin_id].spent and not coin_bcs.supports_fast_forward:
             return Err.DOUBLE_SPEND, []
 
         # 2. Checks if there's a mempool conflict
@@ -257,15 +251,30 @@ def check_removals(
         for item in conflicting_items:
             if item in conflicts:
                 continue
-            conflict_bcs = item.bundle_coin_spends[coin_id]
+            conflict_bcs = item.bundle_coin_spends.get(coin_id)
+            if conflict_bcs is None:
+                # Check if this is an item that spends an older ff singleton
+                # version with a latest version that matches our coin ID.
+                conflict_bcs = next(
+                    (
+                        bcs
+                        for bcs in item.bundle_coin_spends.values()
+                        if bcs.latest_singleton_lineage is not None and bcs.latest_singleton_lineage.coin_id == coin_id
+                    ),
+                    None,
+                )
+                # We're not expected to get here but let's handle it gracefully
+                if conflict_bcs is None:
+                    log.warning(f"Coin ID {coin_id} expected but not found in mempool item {item.name}")
+                    return Err.INVALID_SPEND_BUNDLE, []
             # if the spend we're adding to the mempool is not DEDUP nor FF, it's
             # just a regular conflict
-            if not coin_bcs.eligible_for_fast_forward and not coin_bcs.eligible_for_dedup:
+            if not coin_bcs.supports_fast_forward and not coin_bcs.eligible_for_dedup:
                 conflicts.add(item)
 
             # if the spend we're adding is FF, but there's a conflicting spend
             # that isn't FF, they can't be chained, so that's a conflict
-            elif coin_bcs.eligible_for_fast_forward and not conflict_bcs.eligible_for_fast_forward:
+            elif coin_bcs.supports_fast_forward and not conflict_bcs.supports_fast_forward:
                 conflicts.add(item)
 
             # if the spend we're adding is DEDUP, but there's a conflicting spend
@@ -440,19 +449,20 @@ class MempoolManager:
 
         self._worker_queue_size += 1
         try:
+            flags = get_flags_for_height_and_constants(self.peak.height, self.constants)
             sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
                 spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
-                self.peak.height,
+                flags | MEMPOOL_MODE,
             )
-        # validate_clvm_and_signature raises a TypeError with an error code
-        except Exception as e:
+        # validate_clvm_and_signature raises a ValueError with an error code
+        except ValueError as e:
             # Convert that to a ValidationError
-            if len(e.args) > 0:
-                error = Err(e.args[0])
+            if len(e.args) > 1:
+                error = Err(e.args[1])
                 raise ValidationError(error)
             else:
                 raise ValidationError(Err.UNKNOWN)  # pragma: no cover
@@ -462,8 +472,6 @@ class MempoolManager:
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
 
-        ret = NPCResult(None, sbc)
-
         if spend_bundle_id is None:
             spend_bundle_id = spend_bundle.name()
 
@@ -472,10 +480,7 @@ class MempoolManager:
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
             f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
-        if ret.error is not None:
-            raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")
-        assert ret.conds is not None
-        return ret.conds
+        return sbc
 
     async def add_spend_bundle(
         self,
@@ -489,14 +494,16 @@ class MempoolManager:
         ] = None,
     ) -> SpendBundleAddInfo:
         """
-        Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
-        The mempool should be locked during this call (blockchain lock). If there are mempool conflicts, the conflicting
-        spends might be removed (if the new spend is a superset of the previous). Otherwise, the new spend might be
+        Validates and adds to mempool a new_spend with the given
+        SpendBundleConditions, and spend_name, and the current mempool. The mempool
+        should be locked during this call (blockchain lock). If there are mempool
+        conflicts, the conflicting spends might be removed (if the new spend is
+        a superset of the previous). Otherwise, the new spend might be
         added to the potential pool.
 
         Args:
             new_spend: spend bundle to validate and add
-            conds: result of running the clvm transaction in a fake block
+            conds: SpendBundleConditions resulting from running the clvm in the spend bundle's coin spends
             spend_name: hash of the spend bundle data, passed in as an optimization
 
         Returns:
@@ -604,14 +611,16 @@ class MempoolManager:
                 return Err.INVALID_COIN_SOLUTION, None, []
 
             lineage_info = None
-            eligible_for_ff = bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend)
-            if eligible_for_ff:
+            if bool(spend_conds.flags & ELIGIBLE_FOR_FF) and supports_fast_forward(coin_spend):
                 # Make sure the fast forward spend still has a version that is
-                # still unspent, because if the singleton has been melted, the
-                # fast forward spend will never become valid.
-                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(bytes32(spend_conds.puzzle_hash))
-                if lineage_info is None:
-                    return Err.DOUBLE_SPEND, None, []
+                # still unspent, because if the singleton has been spent in a
+                # non-FF spend, this fast forward spend will never become valid.
+                # So treat this as a normal spend, which requires the exact coin
+                # to exist and be unspent.
+                # Singletons that were created before the optimization of using
+                # spent_index will also fail this test, and such spends will
+                # fall back to be treated as non-FF spends.
+                lineage_info = await get_unspent_lineage_info_for_puzzle_hash(spend_conds.puzzle_hash)
 
             spend_additions = []
             for puzzle_hash, amount, _ in spend_conds.create_coin:
@@ -623,15 +632,15 @@ class MempoolManager:
             bundle_coin_spends[coin_id] = BundleCoinSpend(
                 coin_spend=coin_spend,
                 eligible_for_dedup=bool(spend_conds.flags & ELIGIBLE_FOR_DEDUP),
-                eligible_for_fast_forward=eligible_for_ff,
                 additions=spend_additions,
+                cost=uint64(spend_conds.condition_cost + spend_conds.execution_cost),
                 latest_singleton_lineage=lineage_info,
             )
 
         # fast forward spends are only allowed when bundled with other, non-FF, spends
         # in order to evict an FF spend, it must be associated with a normal
         # spend that can be included in a block or invalidated some other way
-        if all([s.eligible_for_fast_forward for s in bundle_coin_spends.values()]):
+        if all([s.supports_fast_forward for s in bundle_coin_spends.values()]):
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
@@ -751,7 +760,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
-            if not can_replace(conflicts, removal_names, potential):
+            if not can_replace(conflicts, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.monotonic() - start_time
@@ -833,7 +842,7 @@ class MempoolManager:
             # rebasing a fast forward spend is more expensive than to just
             # evict the item. So, any FF spend we may need to rebase, defer
             # them until after we've gone through all spends
-            deferred_ff_items: set[tuple[bytes32, bytes32]] = set()
+            deferred_ff_items: set[tuple[bytes32, MempoolItem]] = set()
 
             for spend in spent_coins:
                 items = self.mempool.get_items_by_coin_id(spend)
@@ -856,7 +865,7 @@ class MempoolManager:
                         spendbundle_ids_to_remove.add(item_name)
                         continue
 
-                    deferred_ff_items.add((spend, item_name))
+                    deferred_ff_items.add((spend, item))
 
             # fast forward spends are indexed under the latest singleton coin ID
             # if it's spent, we need to update the index in the mempool. This
@@ -864,7 +873,8 @@ class MempoolManager:
             # new_coin_id, current_coin_id, mempool item name
             spends_to_update: list[tuple[bytes32, bytes32, bytes32]] = []
 
-            for spend, item_name in deferred_ff_items:
+            for spend, item in deferred_ff_items:
+                item_name = item.spend_bundle_name
                 if item_name in spendbundle_ids_to_remove:
                     continue
                 # there may be multiple matching spends in the mempool
@@ -924,8 +934,7 @@ class MempoolManager:
 
             removals: set[bytes32] = set()
             for item in old_pool.all_items():
-                for s in item.spend_bundle.coin_spends:
-                    removals.add(s.coin.name())
+                removals.update(item.bundle_coin_spends)
 
             for record in await self.get_coin_records(removals):
                 name = record.coin.name()
@@ -971,7 +980,7 @@ class MempoolManager:
                 lineage_cache.get_unspent_lineage_info,
             )
             if info.status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.conds))
+                txs_added.append(item.spend_bundle_name)
             mempool_item_removals.extend(info.removals)
         log.info(
             f"Size of mempool: {self.mempool.size()} spends, "
@@ -1010,17 +1019,12 @@ def optional_max(a: Optional[T], b: Optional[T]) -> Optional[T]:
     return max((v for v in [a, b] if v is not None), default=None)
 
 
-def can_replace(
-    conflicting_items: list[MempoolItem],
-    removal_names: set[bytes32],
-    new_item: MempoolItem,
-) -> bool:
+def can_replace(conflicting_items: list[MempoolItem], new_item: MempoolItem) -> bool:
     """
     This function implements the mempool replacement rules. Given a Mempool item
     we're attempting to insert into the mempool (new_item) and the set of existing
     mempool items that conflict with it, this function answers the question whether
-    the existing items can be replaced by the new one. The removals parameter are
-    the coin IDs the new mempool item is spending.
+    the existing items can be replaced by the new one.
     """
 
     conflicting_fees = 0
@@ -1045,10 +1049,10 @@ def can_replace(
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
         for coin_id, bcs in item.bundle_coin_spends.items():
-            if coin_id not in removal_names:
+            if coin_id not in new_item.bundle_coin_spends:
                 log.debug("Rejecting conflicting tx as it does not spend conflicting coin %s", coin_id)
                 return False
-            if bcs.eligible_for_fast_forward:
+            if bcs.supports_fast_forward:
                 existing_ff_spends.add(bytes32(coin_id))
             if bcs.eligible_for_dedup:
                 existing_dedup_spends.add(bytes32(coin_id))
@@ -1099,7 +1103,7 @@ def can_replace(
 
     if len(existing_ff_spends) > 0 or len(existing_dedup_spends) > 0:
         for coin_id, bcs in new_item.bundle_coin_spends.items():
-            if not bcs.eligible_for_fast_forward and coin_id in existing_ff_spends:
+            if not bcs.supports_fast_forward and coin_id in existing_ff_spends:
                 log.debug("Rejecting conflicting tx due to changing ELIGIBLE_FOR_FF of coin spend %s", coin_id)
                 return False
 

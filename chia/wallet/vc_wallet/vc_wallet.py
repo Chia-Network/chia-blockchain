@@ -200,7 +200,7 @@ class VCWallet:
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
         vc_record: VCRecord = VCRecord(vc, uint32(0))
@@ -210,6 +210,7 @@ class VCWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=inner_puzzle_hash,
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(inner_puzzle_hash),
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -222,7 +223,7 @@ class VCWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
@@ -339,7 +340,7 @@ class VCWallet:
                 )  # pragma: no cover
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
-        now = uint64(int(time.time()))
+        now = uint64(time.time())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -347,6 +348,7 @@ class VCWallet:
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=puzzle_hashes[0],
+                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
                     amount=uint64(1),
                     fee_amount=uint64(fee),
                     confirmed=False,
@@ -359,7 +361,7 @@ class VCWallet:
                     trade_id=None,
                     type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
+                    memos=compute_memos(spend_bundle),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
@@ -453,12 +455,10 @@ class VCWallet:
                     crcat_spends.append(crcat_spend)
                     if spend in offer._bundle.coin_spends:
                         spends_to_fix[spend.coin.name()] = spend
-                else:
-                    if spend in offer._bundle.coin_spends:  # pragma: no cover
-                        other_spends.append(spend)
-            else:
-                if spend in offer._bundle.coin_spends:
+                elif spend in offer._bundle.coin_spends:  # pragma: no cover
                     other_spends.append(spend)
+            elif spend in offer._bundle.coin_spends:
+                other_spends.append(spend)
 
         # Figure out what VC announcements are needed
         announcements_to_make: dict[bytes32, list[CreatePuzzleAnnouncement]] = {}

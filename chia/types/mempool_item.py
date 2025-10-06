@@ -22,16 +22,20 @@ class UnspentLineageInfo:
 class BundleCoinSpend:
     coin_spend: CoinSpend
     eligible_for_dedup: bool
-    eligible_for_fast_forward: bool
     additions: list[Coin]
-    # cost on the specific solution in this item
-    cost: Optional[uint64] = None
+    # cost on the specific solution in this item. The cost includes execution
+    # cost and conditions cost, not byte-cost.
+    cost: uint64
 
     # if this spend is eligible for fast forward, this may be set to the
     # current unspent lineage belonging to this singleton, that we would rebase
     # this spend on top of if we were to make a block now
     # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
-    latest_singleton_lineage: Optional[UnspentLineageInfo] = None
+    latest_singleton_lineage: Optional[UnspentLineageInfo]
+
+    @property
+    def supports_fast_forward(self) -> bool:
+        return self.latest_singleton_lineage is not None
 
 
 @dataclass(frozen=True)

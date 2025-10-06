@@ -13,8 +13,8 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_o
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
 from chia.farmer.farmer_rpc_api import FarmerRpcApi
+from chia.farmer.farmer_service import FarmerService
 from chia.protocols.outbound_message import NodeType
-from chia.server.aliases import FarmerService
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -62,7 +62,8 @@ def create_farmer_service(
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)
+        | get_unresolved_peer_infos(service_config, NodeType.SOLVER),
         on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
@@ -73,7 +74,7 @@ def create_farmer_service(
 
 async def async_main(root_path: pathlib.Path) -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(root_path, "config.yaml")
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     config_pool = load_config_cli(root_path, "config.yaml", "pool")

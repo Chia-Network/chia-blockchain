@@ -31,15 +31,17 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.harvester.harvester_service import HarvesterService
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
@@ -82,17 +84,16 @@ async def test_harvester_receive_source_signing_data(
     full_node_1: FullNode = full_node_service_1._node
     full_node_2: FullNode = full_node_service_2._node
 
+    await time_out_assert(60, node_type_connected, True, farmer.server, NodeType.HARVESTER)
     # Connect peers to each other
     farmer_service.add_peer(
         UnresolvedPeerInfo(str(full_node_service_2.self_hostname), full_node_service_2._server.get_port())
     )
+    await time_out_assert(60, node_type_connected, True, farmer.server, NodeType.FULL_NODE)
     full_node_service_2.add_peer(
         UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
     )
-
-    await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
-    await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)  # Should already be connected
-    await wait_until_node_type_connected(full_node_1.server, NodeType.FULL_NODE)
+    await time_out_assert(60, node_type_connected, True, full_node_1.server, NodeType.FULL_NODE)
 
     # Prepare test data
     blocks: list[FullBlock]
@@ -427,12 +428,11 @@ async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: s
     return False
 
 
-async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType) -> WSChiaConnection:
-    while True:
-        for peer in server.all_connections.values():
-            if peer.connection_type == node_type.value:
-                return peer
-        await asyncio.sleep(1)
+def node_type_connected(server: ChiaServer, node_type: NodeType) -> bool:
+    for peer in server.all_connections.values():
+        if peer.connection_type == node_type.value:
+            return True
+    return False
 
 
 def decode_sp(

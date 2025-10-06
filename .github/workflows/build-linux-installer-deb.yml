@@ -59,7 +59,7 @@ jobs:
             madmax-suffix: "x86-64"
             bladebit-suffix: "ubuntu-x86-64.tar.gz"
             arch-artifact-name: intel
-          - runs-on: [Linux, ARM64]
+          - runs-on: ubuntu-24.04-arm
             arch: arm64
             madmax-suffix: "arm64"
             bladebit-suffix: "ubuntu-arm64.tar.gz"
@@ -77,7 +77,7 @@ jobs:
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -91,6 +91,11 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Get latest madmax plotter
         env:
@@ -254,7 +259,7 @@ jobs:
       matrix:
         os:
           - runs-on:
-              arm: [linux, arm64]
+              arm: [ubuntu-24.04-arm]
               intel: [ubuntu-latest]
         distribution:
           - name: debian:bookworm
@@ -291,7 +296,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         id: download
         with:
           name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}

@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   mypy:
+    if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -38,12 +39,12 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
           - name: macOS
             matrix: macos
             emoji: 🍎
             runs-on:
-              intel: macos-13
+              intel: macos-13-intel
               arm: macos-13-arm64
           - name: Windows
             matrix: windows
@@ -73,6 +74,11 @@ jobs:
               matrix: windows
             arch:
               matrix: arm
+          # Back to self hosted mac intel runners, which we have very few of
+          - os:
+              matrix: macos
+            arch:
+              matrix: intel
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
@@ -80,7 +86,7 @@ jobs:
       - name: Add safe git directory
         uses: chia-network/actions/git-mark-workspace-safe@main
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -101,6 +107,7 @@ jobs:
           ${{ matrix.check.command }}
 
   check:
+    if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -113,7 +120,7 @@ jobs:
             emoji: 🐧
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
         arch:
           - name: Intel
             matrix: intel
@@ -145,7 +152,7 @@ jobs:
       - name: Add safe git directory
         uses: chia-network/actions/git-mark-workspace-safe@main
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -166,6 +173,7 @@ jobs:
           ${{ matrix.check.command }}
 
   upload_source_dist:
+    if: github.repository_owner == 'Chia-Network'
     name: Lint and Upload source distribution
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -183,7 +191,7 @@ jobs:
         uses: chia-network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive

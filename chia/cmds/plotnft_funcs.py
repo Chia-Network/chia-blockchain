@@ -43,6 +43,8 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    GetTransaction,
+    GetWalletBalance,
     GetWallets,
     PWAbsorbRewards,
     PWJoinPool,
@@ -120,7 +122,7 @@ async def create(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_info.client.get_transaction(tx_record.name)
+            tx = (await wallet_info.client.get_transaction(GetTransaction(tx_record.name))).transaction
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(wallet_info.fingerprint, tx_record.name))
@@ -161,8 +163,8 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances: dict[str, Any] = await wallet_client.get_wallet_balance(wallet_id)
-        balance = balances["confirmed_wallet_balance"]
+        balances = (await wallet_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))).wallet_balance
+        balance = balances.confirmed_wallet_balance
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
@@ -285,7 +287,7 @@ async def submit_tx_with_confirmation(
                 continue
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_record.name)
+                tx = (await wallet_client.get_transaction(GetTransaction(tx_record.name))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
@@ -444,8 +446,10 @@ async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, 
     for pool_config in old_configs:
         if pool_config.launcher_id == launcher_id:
             id_found = True
-            pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
-        new_pool_configs.append(pool_config)
+            new_pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
+        else:
+            new_pool_config = pool_config
+        new_pool_configs.append(new_pool_config)
     if id_found:
         print(f"Launcher Id: {launcher_id.hex()} Found, Updating Config.")
         await update_pool_config(root_path, new_pool_configs)

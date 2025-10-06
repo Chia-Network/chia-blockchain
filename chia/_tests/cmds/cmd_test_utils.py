@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, cast
 
-from chia_rs import BlockRecord, Coin, G2Element
+from chia_rs import BlockRecord, Coin, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -22,7 +22,6 @@ from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
@@ -31,10 +30,16 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetName,
+    CATGetNameResponse,
     GetSyncStatusResponse,
+    GetTransaction,
+    GetTransactionResponse,
     GetWallets,
     GetWalletsResponse,
     NFTCalculateRoyalties,
@@ -42,6 +47,10 @@ from chia.wallet.wallet_request_types import (
     NFTGetInfo,
     NFTGetInfoResponse,
     SendTransactionMultiResponse,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
     WalletInfoResponse,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -115,55 +124,77 @@ class TestWalletRpcClient(TestRpcClient):
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return GetWalletsResponse([WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")])
 
-    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (transaction_id,))
-        return TransactionRecord(
-            confirmed_at_height=uint32(1),
-            created_at_time=uint64(1234),
-            to_puzzle_hash=bytes32([1] * 32),
-            amount=uint64(12345678),
-            fee_amount=uint64(1234567),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=WalletSpendBundle([], G2Element()),
-            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-            wallet_id=uint32(1),
-            sent_to=[("aaaaa", uint8(1), None)],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32([2] * 32),
-            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
-            valid_times=ConditionValidTimes(),
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        self.add_to_log("get_transaction", (request,))
+        return GetTransactionResponse(
+            TransactionRecord(
+                confirmed_at_height=uint32(1),
+                created_at_time=uint64(1234),
+                to_puzzle_hash=bytes32([1] * 32),
+                to_address=encode_puzzle_hash(bytes32([1] * 32), "xch"),
+                amount=uint64(12345678),
+                fee_amount=uint64(1234567),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+                wallet_id=uint32(1),
+                sent_to=[("aaaaa", uint8(1), None)],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=bytes32([2] * 32),
+                memos={bytes32([3] * 32): [bytes([4] * 32)]},
+                valid_times=ConditionValidTimes(),
+            ),
+            bytes32([2] * 32),
         )
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        self.add_to_log("get_cat_name", (wallet_id,))
-        return "test" + str(wallet_id)
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        self.add_to_log("get_cat_name", (request.wallet_id,))
+        return CATGetNameResponse(request.wallet_id, "test" + str(request.wallet_id))
 
-    async def sign_message_by_address(self, address: str, message: str) -> tuple[str, str, str]:
-        self.add_to_log("sign_message_by_address", (address, message))
-        pubkey = bytes([3] * 48).hex()
-        signature = bytes([6] * 576).hex()
+    async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
+        self.add_to_log("sign_message_by_address", (request.address, request.message))
+        pubkey = G1Element.from_bytes(
+            bytes.fromhex(
+                "b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4"
+            )
+        )
+        signature = G2Element.from_bytes(
+            bytes.fromhex(
+                "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            )
+        )
         signing_mode = SigningMode.CHIP_0002.value
-        return pubkey, signature, signing_mode
+        return SignMessageByAddressResponse(pubkey, signature, signing_mode)
 
-    async def sign_message_by_id(self, id: str, message: str) -> tuple[str, str, str]:
-        self.add_to_log("sign_message_by_id", (id, message))
-        pubkey = bytes([4] * 48).hex()
-        signature = bytes([7] * 576).hex()
+    async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
+        self.add_to_log("sign_message_by_id", (request.id, request.message))
+        pubkey = G1Element.from_bytes(
+            bytes.fromhex(
+                "a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1"
+            )
+        )
+        signature = G2Element.from_bytes(
+            bytes.fromhex(
+                "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            )
+        )
         signing_mode = SigningMode.CHIP_0002.value
-        return pubkey, signature, signing_mode
+        return SignMessageByIDResponse(pubkey, signature, bytes32.zeros, signing_mode)
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
         """
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
-        self.add_to_log("cat_asset_id_to_name", (asset_id,))
+        self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
         for i in range(256):
-            if asset_id == get_bytes32(i):
-                return uint32(i + 1), "test" + str(i)
-        return None
+            if request.asset_id == get_bytes32(i):
+                return CATAssetIDToNameResponse(uint32(i + 1), "test" + str(i))
+        return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
     async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
         self.add_to_log("get_nft_info", (request.coin_id, request.latest))
@@ -204,54 +235,6 @@ class TestWalletRpcClient(TestRpcClient):
             )
         )
 
-    async def get_spendable_coins(
-        self,
-        wallet_id: int,
-        coin_selection_config: CoinSelectionConfig,
-    ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
-        """
-        We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
-        """
-        self.add_to_log(
-            "get_spendable_coins",
-            (wallet_id, coin_selection_config),
-        )
-        confirmed_records = [
-            CoinRecord(
-                Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
-                uint32(123456),
-                uint32(0),
-                False,
-                uint64(0),
-            ),
-            CoinRecord(
-                Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(1234560000)),
-                uint32(123456),
-                uint32(0),
-                False,
-                uint64(0),
-            ),
-        ]
-        unconfirmed_removals = [
-            CoinRecord(
-                Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(1234570000)),
-                uint32(123457),
-                uint32(0),
-                True,
-                uint64(0),
-            )
-        ]
-        unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
-        return confirmed_records, unconfirmed_removals, unconfirmed_additions
-
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        self.add_to_log("get_next_address", (wallet_id, new_address))
-        addr = encode_puzzle_hash(bytes32([self.wallet_index] * 32), "xch")
-        self.wallet_index += 1
-        if self.wallet_index > 254:
-            self.wallet_index = 1
-        return addr
-
     async def send_transaction_multi(
         self,
         wallet_id: int,
@@ -271,6 +254,7 @@ class TestWalletRpcClient(TestRpcClient):
                 confirmed_at_height=uint32(1),
                 created_at_time=uint64(1234),
                 to_puzzle_hash=bytes32([1] * 32),
+                to_address=encode_puzzle_hash(bytes32([1] * 32), "xch"),
                 amount=uint64(12345678),
                 fee_amount=uint64(1234567),
                 confirmed=False,
@@ -283,7 +267,7 @@ class TestWalletRpcClient(TestRpcClient):
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=name,
-                memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+                memos={bytes32([3] * 32): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
             ),
             name,

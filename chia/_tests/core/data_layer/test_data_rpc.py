@@ -44,6 +44,7 @@ from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
 from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.data_layer.data_layer_service import DataLayerService
 from chia.data_layer.data_layer_util import (
     HashOnlyProof,
     OfferStore,
@@ -56,8 +57,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
-from chia.server.aliases import DataLayerService, WalletService
-from chia.server.start_data_layer import create_data_layer_service
+from chia.data_layer.start_data_layer import create_data_layer_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -73,8 +73,9 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import DLLatestSingleton
+from chia.wallet.wallet_request_types import CheckOfferValidity, DLLatestSingleton
 from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_service import WalletService
 
 pytestmark = pytest.mark.data_layer
 nodes = tuple[WalletNode, FullNodeSimulator]
@@ -190,7 +191,7 @@ async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
     except ValueError:  # pragma: no cover
         return False
 
-    return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
+    return True if TransactionRecord.from_json_dict(val["transaction"]).confirmed else False  # mypy
 
 
 async def farm_block_with_spend(
@@ -221,7 +222,9 @@ async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
     await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    return (await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer))[1]
+    return (
+        await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(CheckOfferValidity(offer=offer.to_bech32()))
+    ).valid
 
 
 async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process:
@@ -1824,9 +1827,11 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     for _ in range(10):
         if not (
             await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-                offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])),
+                CheckOfferValidity(
+                    offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])).to_bech32()
+                ),
             )
-        )[1]:
+        ).valid:
             break
         await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)
@@ -2277,7 +2282,7 @@ async def test_unsubscribe_unknown(
     bare_data_layer_api: DataLayerRpcApi,
     seeded_random: random.Random,
 ) -> None:
-    with pytest.raises(RuntimeError, match="No subscription found for the given store_id."):
+    with pytest.raises(RuntimeError, match="No subscription found for the given store_id"):
         await bare_data_layer_api.unsubscribe(request={"id": bytes32.random(seeded_random).hex(), "retain": False})
 
 

@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -95,10 +95,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup Node 18.x
-        uses: actions/setup-node@v4
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
         with:
-          node-version: "18.x"
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Test for secrets access
         id: check_secrets
@@ -336,7 +336,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: chia-installers-windows-exe-intel
           path: packages
