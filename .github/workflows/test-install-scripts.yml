@@ -222,7 +222,7 @@ jobs:
         if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
-          pacman --noconfirm -S base git sudo openssl-1.1
+          pacman --noconfirm -S base git openssl-1.1
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
@@ -234,7 +234,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo python3-venv
+          apt-get install --yes git lsb-release python3-venv
 
       - name: Prepare Fedora
         if: ${{ matrix.distribution.type == 'fedora' }}
@@ -254,7 +254,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo
+          apt-get install --yes git lsb-release
           MINIMUM=3.10
           if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
