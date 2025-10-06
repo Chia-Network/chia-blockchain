@@ -87,10 +87,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Test raw version command
-        run: |
-          python3.12 --version
-
       - name: Setup Node per .nvmrc in GUI
         uses: actions/setup-node@v5
         with:

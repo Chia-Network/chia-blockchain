@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-echo "SCRIPT: PATH is $PATH"
-if grep -qa 'docker\|containerd\|kubepods' /proc/1/cgroup || [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
-  echo "Detected container environment."
-  echo "in_container=true" >> "$GITHUB_OUTPUT"
-else
-  echo "Not running in container."
-  echo "in_container=false" >> "$GITHUB_OUTPUT"
-fi
 set -o errexit
 
 USAGE_TEXT="\
@@ -132,7 +124,6 @@ if [ "$INSTALL_PYTHON_VERSION" = "" ]; then
 else
   echo "Python $INSTALL_PYTHON_VERSION is requested"
   INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
-  echo $($INSTALL_PYTHON_PATH --version 2>&1)"hello"
   PY3_VER=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
   PYTHON_MAJOR_VER=$(echo "$PY3_VER" | cut -d'.' -f1)
   PYTHON_MINOR_VER=$(echo "$PY3_VER" | cut -d'.' -f2)
