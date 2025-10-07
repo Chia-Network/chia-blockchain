@@ -53,7 +53,9 @@ def test_process_fast_forward_spends_nothing_to_do() -> None:
     item = mempool_item_from_spendbundle(sb)
     # This coin is not eligible for fast forward
     assert not item.bundle_coin_spends[TEST_COIN_ID].supports_fast_forward
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
+    internal_mempool_item = InternalMempoolItem(
+        sb.aggregated_signature, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
+    )
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
@@ -83,7 +85,9 @@ def test_process_fast_forward_spends_latest_unspent() -> None:
     item = mempool_item_from_spendbundle(sb)
     assert item.bundle_coin_spends[test_coin.name()].supports_fast_forward
     item.bundle_coin_spends[test_coin.name()].latest_singleton_lineage = test_unspent_lineage_info
-    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
+    internal_mempool_item = InternalMempoolItem(
+        sb.aggregated_signature, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
+    )
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
