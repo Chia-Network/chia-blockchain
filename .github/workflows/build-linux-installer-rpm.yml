@@ -48,7 +48,7 @@ jobs:
     needs:
       - version
     container:
-      image: chia-network/rocky8-builder:python312@sha256:9df1d49418fd3ba7f66f18f6ae76174e9d45897a4efdd8a2ffdaec3b57b51550
+      image: chia-network/rocky8-builder:sha-538229bf4c23a5bf4bcc2001c4cb68598556c0ef@sha256:9df1d49418fd3ba7f66f18f6ae76174e9d45897a4efdd8a2ffdaec3b57b51550
     timeout-minutes: 40
     strategy:
       fail-fast: false
