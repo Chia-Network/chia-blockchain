@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import logging
+import re
+import textwrap
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from logging import Logger
@@ -14,9 +17,12 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.streamable import Streamable
 
 
-class ApiProtocol(Protocol):
-    log: Logger
+class ApiSchemaProtocol(Protocol):
     metadata: ClassVar[ApiMetadata]
+
+
+class ApiProtocol(ApiSchemaProtocol, Protocol):
+    log: Logger
 
     def ready(self) -> bool: ...
 
@@ -114,3 +120,98 @@ class ApiMetadata:
             return wrapper
 
         return inner
+
+    def create_schema(self, api: type[ApiProtocol]) -> str:
+        # ruff will fixup imports
+        import_lines = [
+            "from __future__ import annotations",
+            "from typing import TYPE_CHECKING, ClassVar, Optional, cast",
+            "from chia.protocols.outbound_message import Message",
+            "from chia.protocols.protocol_message_types import ProtocolMessageTypes",
+            "from chia.server.api_protocol import ApiMetadata, ApiSchemaProtocol",
+            "from chia.server.ws_connection import WSChiaConnection",
+        ]
+
+        schema_class_name = api.__name__.replace("API", "ApiSchema")
+        class_lines = (
+            textwrap.dedent(
+                f"""
+            class {schema_class_name}:
+                if TYPE_CHECKING:
+                    _protocol_check: ApiSchemaProtocol = cast("{schema_class_name}", None)
+
+                metadata: ClassVar[ApiMetadata] = ApiMetadata()
+            """
+            )
+            .strip()
+            .splitlines()
+        )
+
+        method_lines = []
+
+        # First pass: collect method signatures and track usage
+        for request in self.message_type_to_request.values():
+            type_hints = get_type_hints(request.method)
+            source = inspect.getsource(request.method).splitlines()
+
+            # Collect the method signature lines
+            method_source = []
+            for line in source:
+                method_source.append(line)
+                if line.rstrip().endswith(":"):
+                    break
+
+            this_method_schema_source = "\n".join(method_source)
+
+            # Check for types used in parameters that appear in the signature
+            for param_name, hint in type_hints.items():
+                if param_name in {"self", "return"}:
+                    continue
+
+                module = hint.__module__
+                name = hint.__name__
+                protocol_match = re.match(r"(?P<base>chia\.protocols)\.(?P<protocol>[^. ]+_protocol)", module)
+                # Import from chia.protocols.*
+                if protocol_match is not None:
+                    base = protocol_match.group("base")
+                    protocol = protocol_match.group("protocol")
+                    if re.search(rf"(?<!\.){name}\b", this_method_schema_source) is not None:
+                        import_lines.append(f"from {base}.{protocol} import {name}")
+                    if re.search(rf"(?<!\.){protocol}\b", this_method_schema_source) is not None:
+                        import_lines.append(f"from {base} import {protocol}")
+                elif module.partition(".")[0] == "chia_rs":
+                    import_lines.append(f"from {module} import {name}")
+
+            # Check if method has a non-None return type that requires an ignore comment
+            return_hint = type_hints.get("return")
+            needs_ignore = False
+
+            if return_hint is not None and return_hint is not type(None):
+                # Check if it's Optional[something] - Optional types are fine with "..."
+                origin = getattr(return_hint, "__origin__", None)
+                if origin is Union:
+                    if type(None) not in return_hint.__args__:
+                        # Not Optional (e.g., just Message), needs ignore
+                        needs_ignore = True
+                    # else: is Optional, no ignore needed
+                else:
+                    # Direct return type (not Optional), needs ignore
+                    needs_ignore = True
+
+            for line in source:
+                stripped = line.strip()
+                final_line = line
+                if stripped.startswith(("async def", "def")):
+                    if needs_ignore:
+                        final_line = final_line.rstrip() + "  # type: ignore[empty-body]"
+
+                method_lines.append(final_line.rstrip())
+                if stripped.endswith(":"):
+                    break
+
+            method_lines.append("        ...")
+            method_lines.append("")
+
+        lines = [*import_lines, "", *class_lines, "", *method_lines]
+
+        return "\n".join(lines)
