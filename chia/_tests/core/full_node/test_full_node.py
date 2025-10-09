@@ -1375,7 +1375,7 @@ async def test_new_unfinished_block(
         assert res is not None
         assert res is not None and res.data == bytes(fnp.RequestUnfinishedBlock(unf.partial_hash))
 
-    # when we receive a new unfinished block, we advertize it to our peers.
+    # when we receive a new unfinished block, we advertise it to our peers.
     # We send new_unfinished_blocks to old peers (0.0.35 and earlier) and we
     # send new_unfinishe_blocks2 to new peers (0.0.6 and later). Test both
     peer.protocol_version = Version(peer_version)

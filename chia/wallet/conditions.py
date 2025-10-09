@@ -516,7 +516,7 @@ class MessageParticipant(Streamable):
         amount_committed: Optional[uint64] = None
         # This loop probably looks a little strange
         # It's trying to account for the fact that the arguments may be any 1 or 2 of these arguments in this order
-        # Not sure of a more elgant way to do it
+        # Not sure of a more elegant way to do it
         original_mode = mode
         for arg in args:
             if mode & 0b100:
