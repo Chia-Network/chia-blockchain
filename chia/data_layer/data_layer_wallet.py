@@ -6,13 +6,14 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import BlockRecord, CoinSpend, CoinState, G1Element, G2Element
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
-from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
+from chia.data_layer.data_layer_util import OfferStore, StoreProofs, leaf_hash
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -1226,7 +1227,7 @@ def verify_offer(
                 raise OfferIntegrityError("maker: invalid proof of inclusion found")
 
         # TODO: verify each kv hash to the proof's node hash
-        roots = {proof.root_hash for proof in proofs}
+        roots = {proof.root_hash() for proof in proofs}
         if len(roots) > 1:
             raise OfferIntegrityError("maker: multiple roots referenced for a single store id")
         if len(roots) < 1:

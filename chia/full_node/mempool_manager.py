@@ -741,7 +741,7 @@ class MempoolManager:
             return Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS, None, []  # MempoolInclusionStatus.FAILED
 
         potential = MempoolItem(
-            new_spend,
+            new_spend.aggregated_signature,
             uint64(fees),
             conds,
             spend_name,
@@ -781,7 +781,7 @@ class MempoolManager:
         """Returns a full SpendBundle if it's inside one the mempools"""
         item: Optional[MempoolItem] = self.mempool.get_item_by_id(bundle_hash)
         if item is not None:
-            return item.spend_bundle
+            return item.to_spend_bundle()
         return None
 
     def get_mempool_item(self, bundle_hash: bytes32, include_pending: bool = False) -> Optional[MempoolItem]:
@@ -950,7 +950,7 @@ class MempoolManager:
 
             for item in old_pool.all_items():
                 info = await self.add_spend_bundle(
-                    item.spend_bundle,
+                    item.to_spend_bundle(),
                     item.conds,
                     item.spend_bundle_name,
                     item.height_added_to_mempool,
@@ -972,7 +972,7 @@ class MempoolManager:
         txs_added = []
         for item in potential_txs.values():
             info = await self.add_spend_bundle(
-                item.spend_bundle,
+                item.to_spend_bundle(),
                 item.conds,
                 item.spend_bundle_name,
                 item.height_added_to_mempool,
@@ -1003,7 +1003,7 @@ class MempoolManager:
                 return items
             if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                 continue
-            items.append(item.spend_bundle)
+            items.append(item.to_spend_bundle())
 
         return items
 

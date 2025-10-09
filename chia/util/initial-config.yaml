@@ -678,6 +678,8 @@ data_layer:
     port: 9256
 
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
+  merkle_blobs_path: "data_layer/db/merkle_blobs_CHALLENGE"
+  key_value_blobs_path: "data_layer/db/key_value_blobs_CHALLENGE"
   # The location where the server files will be stored.
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # The timeout for the client to download a file from a server
@@ -719,6 +721,9 @@ data_layer:
   maximum_full_file_count: 1
   # Enable to store all .DAT files grouped by store id
   group_files_by_store: False
+
+  # Increasing this number may help sync old clients faster, at the expense of using more RAM memory
+  merkle_blobs_cache_size: 1
 
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool

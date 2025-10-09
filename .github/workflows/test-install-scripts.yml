@@ -214,13 +214,13 @@ jobs:
       - name: Prepare Amazon Linux
         if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
-          yum install --assumeyes git sudo
+          yum install --assumeyes git
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
-          pacman --noconfirm -S base git sudo openssl-1.1
+          pacman --noconfirm -S base git openssl-1.1
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
@@ -232,7 +232,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo python3-venv
+          apt-get install --yes git lsb-release python3-venv
 
       - name: Prepare Fedora
         if: ${{ matrix.distribution.type == 'fedora' }}
@@ -242,7 +242,7 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git sudo python39
+          yum install --assumeyes git python39
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
@@ -250,7 +250,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo
+          apt-get install --yes git lsb-release
           MINIMUM=3.9
           if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
