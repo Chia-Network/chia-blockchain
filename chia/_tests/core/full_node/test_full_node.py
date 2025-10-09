@@ -52,14 +52,14 @@ from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.full_node import WalletUpdate
+from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols.farmer_protocol import DeclareProofOfSpace
 from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
-from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
@@ -96,6 +96,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.casts import int_to_bytes
@@ -3357,3 +3358,54 @@ async def test_pending_tx_cache_retry_on_new_peak(
         assert f"Added transaction to mempool: {sb_name}\n" in caplog.text
         # Make sure the transaction was retried and got added to the mempool
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
+
+
+@pytest.mark.anyio
+async def test_ban_for_mismatched_tx_cost(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Tests that a peer gets banned if it sends a `NewTransaction` message with a
+    cost that doesn't match the transaction's validation cost.
+    We setup two full nodes with the test transaction as already seen, and we
+    check its validation cost against the cost specified in the
+    `NewTransaction` message.
+    """
+
+    async def generate_and_send_tx(node_to_add_tx_to: FullNode, ws_con: WSChiaConnection) -> MempoolItem:
+        wallet = WalletTool(test_constants)
+        wallet_ph = wallet.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=wallet_ph, pool_reward_puzzle_hash=wallet_ph
+        )
+        for block in blocks:
+            await node_to_add_tx_to.add_block(block)
+        coin = blocks[-1].get_included_reward_coins()[0]
+        spend_bundle = wallet.generate_signed_transaction(uint64(42), wallet_ph, coin)
+        sb_name = spend_bundle.name()
+        await node_to_add_tx_to.add_transaction(spend_bundle, sb_name, ws_con)
+        mempool_item = node_to_add_tx_to.mempool_manager.get_mempool_item(sb_name)
+        assert mempool_item is not None
+        return mempool_item
+
+    nodes, _, bt = setup_two_nodes_fixture
+    full_node_1, full_node_2 = nodes
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+    # Create a transaction and add it to the relevant full node's mempool
+    mempool_item = await generate_and_send_tx(full_node_1.full_node, ws_con_1)
+    # Now send a NewTransaction with a cost mismatch from the second full node
+    new_tx_with_bad_cost = NewTransaction(mempool_item.name, uint64(mempool_item.cost + 1), mempool_item.fee)
+    msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx_with_bad_cost)
+    # We won't ban localhost, so let's set a different ip address
+    full_node_2_ip = "1.3.3.7"
+    ws_con_1.peer_info = PeerInfo(full_node_2_ip, ws_con_1.peer_info.port)
+    await ws_con_2.send_message(msg)
+    # Make sure the first full node has banned the second as the item it has
+    # already seen has a different validation cost than the one from the
+    # NewTransaction message.
+    await time_out_assert(5, lambda: full_node_2_ip in server_1.banned_peers)
