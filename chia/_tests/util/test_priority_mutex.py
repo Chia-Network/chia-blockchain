@@ -381,7 +381,7 @@ def sane(requests: list[Request]) -> bool:
         return False
 
     ordered = sorted(requests)
-    return all(a.before(b) for a, b in zip(ordered, ordered[1:]))
+    return all(a.before(b) for a, b in itertools.pairwise(ordered))
 
 
 @dataclass

@@ -46,7 +46,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9"
+$supportedPythonVersions = "3.12", "3.11", "3.10"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION

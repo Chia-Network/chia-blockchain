@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Optional, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
-from typing_extensions import Self, dataclass_transform
+from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
@@ -38,14 +37,6 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-
-@dataclass_transform(frozen_default=True, kw_only_default=True)
-def kw_only_dataclass(cls: type[Any]) -> type[Any]:
-    if sys.version_info >= (3, 10):
-        return dataclass(frozen=True, kw_only=True)(cls)
-    else:
-        return dataclass(frozen=True)(cls)  # pragma: no cover
 
 
 def default_raise() -> Any:  # pragma: no cover
@@ -241,7 +232,7 @@ class GetWalletBalances(Streamable):
 
 # utility for GetWalletBalanceResponse(s)
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class BalanceResponse(Balance):
     wallet_id: uint32 = field(default_factory=default_raise)
     wallet_type: uint8 = field(default_factory=default_raise)
@@ -1236,7 +1227,7 @@ class ExecuteSigningInstructionsResponse(Streamable):
 # field(default_factory=default_raise)
 # (this is for < 3.10 compatibility)
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
@@ -1357,7 +1348,7 @@ class PushTransactionsResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SplitCoins(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     number_of_coins: uint16 = field(default_factory=default_raise)
@@ -1372,7 +1363,7 @@ class SplitCoinsResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class CombineCoins(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     number_of_coins: uint16 = uint16(500)
@@ -1389,7 +1380,7 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DIDMessageSpend(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     coin_announcements: list[bytes] = field(default_factory=list)
@@ -1403,7 +1394,7 @@ class DIDMessageSpendResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DIDUpdateMetadata(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     metadata: dict[str, str] = field(default_factory=dict)
@@ -1417,7 +1408,7 @@ class DIDUpdateMetadataResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DIDTransferDID(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     inner_address: str = field(default_factory=default_raise)
@@ -1437,7 +1428,7 @@ class DIDTransferDIDResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTMintNFTRequest(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     royalty_address: Optional[str] = field(default_factory=default_raise)
@@ -1463,7 +1454,7 @@ class NFTMintNFTResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTSetNFTDID(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     nft_coin_id: bytes32 = field(default_factory=default_raise)
@@ -1478,7 +1469,7 @@ class NFTSetNFTDIDResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -1493,7 +1484,7 @@ class NFTSetDIDBulkResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTTransferBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     target_address: str = field(default_factory=default_raise)
@@ -1508,7 +1499,7 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class CreateNewDL(TransactionEndpointRequest):
     root: bytes32 = field(default_factory=default_raise)
 
@@ -1520,7 +1511,7 @@ class CreateNewDLResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLUpdateRoot(TransactionEndpointRequest):
     launcher_id: bytes32 = field(default_factory=default_raise)
     new_root: bytes32 = field(default_factory=default_raise)
@@ -1564,7 +1555,7 @@ class DLUpdateMultipleUpdates(Streamable):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLUpdateMultiple(TransactionEndpointRequest):
     updates: DLUpdateMultipleUpdates = field(default_factory=default_raise)
 
@@ -1580,7 +1571,7 @@ class DLUpdateMultipleResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLNewMirror(TransactionEndpointRequest):
     launcher_id: bytes32 = field(default_factory=default_raise)
     amount: uint64 = field(default_factory=default_raise)
@@ -1594,7 +1585,7 @@ class DLNewMirrorResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLDeleteMirror(TransactionEndpointRequest):
     coin_id: bytes32 = field(default_factory=default_raise)
 

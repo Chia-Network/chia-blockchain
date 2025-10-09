@@ -99,6 +99,11 @@ ignore = [
     "S101", # assert
     "S404", # suspicious-subprocess-import
     "S607", # start-process-with-partial-path
+
+    # TODO: Remove these - it's a lot of errors
+    "UP045",
+    "UP007",
+    "UP035"
 ]
 
 [lint.per-file-ignores]
