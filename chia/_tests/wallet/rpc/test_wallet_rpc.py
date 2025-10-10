@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import random
+import re
 from collections.abc import AsyncIterator
 from operator import attrgetter
 from typing import Any, Optional
@@ -108,6 +109,7 @@ from chia.wallet.wallet_request_types import (
     CATGetAssetID,
     CATGetName,
     CATSetName,
+    CATSpend,
     CheckDeleteKey,
     CheckOfferValidity,
     ClawbackPuzzleDecoratorOverride,
@@ -1255,18 +1257,69 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     # Test CAT spend without a fee
     with pytest.raises(ValueError):
         await env_0.rpc_client.cat_spend(
-            cat_0_id,
-            DEFAULT_TX_CONFIG.override(
+            CATSpend(
+                wallet_id=cat_0_id,
+                amount=uint64(4),
+                inner_address=addr_1,
+                fee=uint64(0),
+                memos=["the cat memo"],
+                push=False,
+            ),
+            tx_config=wallet_environments.tx_config.override(
                 excluded_coin_amounts=[uint64(100)],
                 excluded_coin_ids=[bytes32.zeros],
             ),
-            uint64(4),
-            addr_1,
-            uint64(0),
-            ["the cat memo"],
         )
+
+    # Test some validation errors
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify "additions" or "amount"+"inner_address"+"memos", but not both.'),
+    ):
+        await env_0.rpc_client.cat_spend(
+            CATSpend(
+                wallet_id=cat_0_id,
+                amount=uint64(4),
+                inner_address=addr_1,
+                memos=["the cat memo"],
+                additions=[],
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ValueError, match=re.escape('Must specify "amount" and "inner_address" together.')):
+        await env_0.rpc_client.cat_spend(
+            CATSpend(
+                wallet_id=cat_0_id,
+                amount=uint64(4),
+                inner_address=None,
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify \\"extra_delta\\", \\"tail_reveal\\" and \\"tail_solution\\" together.'),
+    ):
+        await env_0.rpc_client.cat_spend(
+            CATSpend(
+                wallet_id=cat_0_id,
+                additions=[],
+                extra_delta="1",
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+
     tx_res = await env_0.rpc_client.cat_spend(
-        cat_0_id, wallet_environments.tx_config, uint64(4), addr_1, uint64(0), ["the cat memo"]
+        CATSpend(
+            wallet_id=cat_0_id,
+            amount=uint64(4),
+            inner_address=addr_1,
+            fee=uint64(0),
+            memos=["the cat memo"],
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
     )
 
     spend_bundle = tx_res.transaction.spend_bundle
@@ -1312,7 +1365,15 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
 
     # Test CAT spend with a fee
     tx_res = await env_0.rpc_client.cat_spend(
-        cat_0_id, wallet_environments.tx_config, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"]
+        CATSpend(
+            wallet_id=cat_0_id,
+            amount=uint64(1),
+            inner_address=addr_1,
+            fee=uint64(5_000_000),
+            memos=["the cat memo"],
+            push=True,
+        ),
+        wallet_environments.tx_config,
     )
 
     spend_bundle = tx_res.transaction.spend_bundle
@@ -1379,13 +1440,16 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         )
     )
     tx_res = await env_0.rpc_client.cat_spend(
-        cat_0_id,
+        CATSpend(
+            wallet_id=cat_0_id,
+            amount=uint64(1),
+            inner_address=addr_1,
+            fee=uint64(5_000_000),
+            memos=["the cat memo"],
+            coins=select_coins_response.coins,
+            push=True,
+        ),
         wallet_environments.tx_config,
-        uint64(1),
-        addr_1,
-        uint64(5_000_000),
-        ["the cat memo"],
-        removals=select_coins_response.coins,
     )
 
     spend_bundle = tx_res.transaction.spend_bundle
@@ -3109,11 +3173,16 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     # Attempt to melt it fully
     tx = (
         await client.cat_spend(
-            cat_wallet_id,
-            amount=uint64(0),
+            CATSpend(
+                wallet_id=cat_wallet_id,
+                amount=uint64(0),
+                inner_address=encode_puzzle_hash(our_ph, "txch"),
+                extra_delta=str(tx_amount * -1),
+                tail_reveal=b"\x80",
+                tail_solution=b"\x80",
+                push=True,
+            ),
             tx_config=DEFAULT_TX_CONFIG,
-            inner_address=encode_puzzle_hash(our_ph, "txch"),
-            cat_discrepancy=(tx_amount * -1, Program.to(None), Program.to(None)),
         )
     ).transaction
     transaction_id = tx.name
