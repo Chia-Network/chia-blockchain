@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
@@ -263,7 +263,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: windows
                 file-type:

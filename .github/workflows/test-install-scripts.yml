@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         python:
-          - major-dot-minor: "3.10"
+          - major-dot-minor: "3.12"
         os:
           - name: Linux
             emoji: 🐧
