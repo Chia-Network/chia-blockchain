@@ -92,7 +92,6 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
-    calculate_required_plot_strength,
     generate_plot_public_key,
     generate_taproot_sk,
     make_pos,
@@ -1505,8 +1504,6 @@ class BlockTools:
         rng = random.Random()
         rng.seed(seed)
 
-        required_plot_strength = calculate_required_plot_strength(constants, prev_transaction_b_height)
-
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1530,7 +1527,9 @@ class BlockTools:
             if v == PlotVersion.V1:
                 proofs = plot_info.prover.get_qualities_for_challenge(new_challenge)
             else:
-                proofs = plot_info.prover.get_partial_proofs_for_challenge(new_challenge, required_plot_strength)
+                proofs = plot_info.prover.get_partial_proofs_for_challenge(
+                    new_challenge, constants.PLOT_STRENGTH_INITIAL
+                )
 
             for proof_index, proof in enumerate(proofs):
                 if v == PlotVersion.V2:
