@@ -28,7 +28,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
-    calculate_required_plot_strength,
     generate_plot_public_key,
     make_pos,
     passes_plot_filter,
@@ -153,10 +152,6 @@ class HarvesterAPI:
         start = time.monotonic()
         assert len(new_challenge.challenge_hash) == 32
 
-        required_plot_strength = calculate_required_plot_strength(
-            self.harvester.constants, new_challenge.last_tx_height
-        )
-
         loop = asyncio.get_running_loop()
 
         def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> Optional[PartialProofsData]:
@@ -169,7 +164,7 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 )
                 partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(
-                    sp_challenge_hash, required_plot_strength
+                    sp_challenge_hash, self.harvester.constants.PLOT_STRENGTH_INITIAL
                 )
 
                 # If no partial proofs are found, return None

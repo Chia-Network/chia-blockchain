@@ -13,7 +13,6 @@ from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
-    calculate_required_plot_strength,
     check_plot_size,
     make_pos,
     passes_plot_filter,
@@ -201,29 +200,6 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
 
 
 @pytest.mark.parametrize(
-    "height, strength",
-    [
-        (0, 2),
-        (DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, 2),
-        (DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT, 2),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_4_HEIGHT - 1, 2),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_4_HEIGHT, 4),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_5_HEIGHT - 1, 4),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_5_HEIGHT, 5),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_6_HEIGHT - 1, 5),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_6_HEIGHT, 6),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_7_HEIGHT - 1, 6),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_7_HEIGHT, 7),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT - 1, 7),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT, 8),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT + 1000000, 8),
-    ],
-)
-def test_calculate_plot_strength(height: uint32, strength: uint8) -> None:
-    assert calculate_required_plot_strength(DEFAULT_CONSTANTS, height) == strength
-
-
-@pytest.mark.parametrize(
     "size, valid",
     [
         (PlotSize.make_v1(31), False),  # too small
@@ -272,12 +248,9 @@ class TestProofOfSpace:
 
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
-@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
-def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_size: PlotSize) -> None:
+def test_calculate_prefix_bits_clamp_zero_v1(height: uint32, expected: int) -> None:
     constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
-    if plot_size.size_v2 is not None:
-        expected = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    assert calculate_prefix_bits(constants, height, plot_size) == expected
+    assert calculate_prefix_bits(constants, height, PlotSize.make_v1(32)) == expected
 
 
 @pytest.mark.parametrize(
@@ -294,9 +267,20 @@ def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_si
         (20643000, 5),
     ],
 )
-@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
-def test_calculate_prefix_bits_default(height: uint32, expected: int, plot_size: PlotSize) -> None:
-    constants = DEFAULT_CONSTANTS
-    if plot_size.size_v2 is not None:
-        expected = DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    assert calculate_prefix_bits(constants, height, plot_size) == expected
+def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
+    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotSize.make_v1(32)) == expected
+
+
+@pytest.mark.parametrize(
+    argnames=["height", "expected"],
+    argvalues=[
+        (0, 5),
+        (0xFFFFFFFA, 5),
+        (0xFFFFFFFB, 6),
+        (0xFFFFFFFC, 7),
+        (0xFFFFFFFD, 8),
+        (0xFFFFFFFF, 8),
+    ],
+)
+def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
+    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotSize.make_v2(28)) == expected
