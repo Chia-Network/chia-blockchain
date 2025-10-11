@@ -16,7 +16,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_interval_iters,
 )
 from chia.harvester.harvester import Harvester
-from chia.plotting.prover import PlotVersion
+from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
@@ -31,7 +31,6 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     make_pos,
     passes_plot_filter,
-    quality_for_partial_proof,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -163,12 +162,12 @@ class HarvesterAPI:
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
-                partial_proofs = plot_info.prover.get_partial_proofs_for_challenge(
-                    sp_challenge_hash, self.harvester.constants.PLOT_STRENGTH_INITIAL
+                qualities = plot_info.prover.get_qualities_for_challenge(
+                    sp_challenge_hash, self.harvester.constants.QUALITY_PROOF_SCAN_FILTER
                 )
 
                 # If no partial proofs are found, return None
-                if len(partial_proofs) == 0:
+                if len(qualities) == 0:
                     return None
 
                 # Get the appropriate difficulty for this plot
@@ -186,11 +185,10 @@ class HarvesterAPI:
                 good_partial_proofs = []
                 sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
 
-                for partial_proof in partial_proofs:
-                    quality_str = quality_for_partial_proof(partial_proof, new_challenge.challenge_hash)
+                for quality in qualities:
                     required_iters: uint64 = calculate_iterations_quality(
                         self.harvester.constants,
-                        quality_str,
+                        quality.get_quality(),
                         plot_info.prover.get_size(),
                         difficulty,
                         new_challenge.sp_hash,
@@ -198,8 +196,14 @@ class HarvesterAPI:
                         new_challenge.last_tx_height,
                     )
 
-                    if required_iters < sp_interval_iters:
-                        good_partial_proofs.append(partial_proof)
+                    if required_iters >= sp_interval_iters:
+                        continue
+
+                    assert isinstance(plot_info.prover, V2Prover)
+                    assert isinstance(quality, V2Quality)
+
+                    partial_proof = plot_info.prover.get_partial_proof(quality)
+                    good_partial_proofs.append(partial_proof)
 
                 if len(good_partial_proofs) == 0:
                     return None
@@ -209,10 +213,12 @@ class HarvesterAPI:
                 return PartialProofsData(
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
-                    good_partial_proofs[0].hex() + str(filename.resolve()),
+                    str(filename.resolve()),
                     good_partial_proofs,
                     new_challenge.signage_point_index,
                     size,
+                    plot_info.prover.get_strength(),
+                    plot_id,
                     plot_info.pool_public_key,
                     plot_info.pool_contract_puzzle_hash,
                     plot_info.plot_public_key,
@@ -233,7 +239,9 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 )
                 try:
-                    quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                    qualities = plot_info.prover.get_qualities_for_challenge(
+                        sp_challenge_hash, self.harvester.constants.QUALITY_PROOF_SCAN_FILTER
+                    )
                 except RuntimeError as e:
                     if str(e) == "Timeout waiting for context queue.":
                         self.harvester.log.warning(
@@ -259,7 +267,7 @@ class HarvesterAPI:
                     return []
 
                 responses: list[tuple[bytes32, ProofOfSpace]] = []
-                if quality_strings is not None:
+                if len(qualities) > 0:
                     difficulty = new_challenge.difficulty
                     sub_slot_iters = new_challenge.sub_slot_iters
                     if plot_info.pool_contract_puzzle_hash is not None:
@@ -272,10 +280,10 @@ class HarvesterAPI:
                                 sub_slot_iters = pool_difficulty.sub_slot_iters
 
                     # Found proofs of space (on average 1 is expected per plot)
-                    for index, quality_str in enumerate(quality_strings):
+                    for index, quality in enumerate(qualities):
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
-                            quality_str,
+                            quality.get_quality(),
                             plot_info.prover.get_size(),
                             difficulty,
                             new_challenge.sp_hash,
@@ -287,6 +295,7 @@ class HarvesterAPI:
                             # Found a very good proof of space! will fetch the whole proof from disk,
                             # then send to farmer
                             try:
+                                assert isinstance(plot_info.prover, V1Prover)
                                 proof_xs = plot_info.prover.get_full_proof(
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
@@ -322,6 +331,7 @@ class HarvesterAPI:
                                 )
                                 continue
 
+                            quality_str = bytes32(quality.get_quality())
                             responses.append(
                                 (
                                     quality_str,

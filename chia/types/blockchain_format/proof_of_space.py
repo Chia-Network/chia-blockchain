@@ -24,12 +24,6 @@ def validate_proof_v2(
     raise NotImplementedError
 
 
-# this is compute intensive, solving a partial proof returning a full proof
-def solve_proof(partial_proof: bytes) -> bytes:
-    # TODO: todo_v2_plots call into new chiapos library
-    raise NotImplementedError
-
-
 # given a partial proof, computes the quality. This is used to compute required iters.
 def quality_for_partial_proof(partial_proof: bytes, challenge: bytes32) -> bytes32:
     # TODO: todo_v2_plots call into new chiapos library

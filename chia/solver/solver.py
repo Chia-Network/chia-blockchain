@@ -8,13 +8,14 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, solve_proof
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.proof_of_space import solve_proof
 
 log = logging.getLogger(__name__)
 
@@ -67,10 +68,10 @@ class Solver:
             self.executor.shutdown(wait=True)
             self.log.info("Solver service shutdown complete")
 
-    def solve(self, partial_proof: bytes) -> Optional[bytes]:
-        self.log.debug(f"Solve request: partial={partial_proof.hex()}")
+    def solve(self, partial_proof: list[uint64], plot_id: bytes32, strength: int, size: int) -> Optional[bytes]:
+        self.log.info(f"Solve request: partial={partial_proof[:5]} plot-id: {plot_id} k: {size}")
         try:
-            return solve_proof(partial_proof)
+            return solve_proof(partial_proof, plot_id, strength, size)
         except Exception:
             self.log.exception("solve_proof()")
         return None
