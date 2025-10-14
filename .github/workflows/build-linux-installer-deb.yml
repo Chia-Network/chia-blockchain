@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - version
-    container: chianetwork/ubuntu-22.04-builder:python312@sha256:1621d60bf4c3b8e93af9d99e4d9110c869772b8b665ba27b7c86769dd1c5ece7
+    container: chianetwork/ubuntu-22.04-builder:python312
     timeout-minutes: 120
     strategy:
       fail-fast: false
