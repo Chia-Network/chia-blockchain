@@ -70,15 +70,6 @@ jobs:
           - matrix: ${{ inputs.arch }}
             emoji: ${{ inputs.arch-emoji }}
         python:
-          - name: "3.9"
-            file_name: "3.9"
-            action: "3.9"
-            apt: "3.9"
-            install_sh: "3.9"
-            matrix: "3.9"
-            exclude_from:
-              limited: True
-              main: True
           - name: "3.10"
             file_name: "3.10"
             action: "3.10"
