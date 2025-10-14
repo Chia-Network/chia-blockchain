@@ -43,6 +43,11 @@ def make_pos(
 
 
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
+    plot_param = pos.param()
+    if plot_param.strength_v2 is not None:
+        assert pos.pool_contract_puzzle_hash is not None
+        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, plot_param.strength_v2)
+
     assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
     if pos.pool_public_key is None:
         assert pos.pool_contract_puzzle_hash is not None
@@ -122,6 +127,10 @@ def verify_and_get_quality_string(
         return None
 
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
+    # Except v2 plots, they only support pool contract puzzle hash
+    if plot_param.strength_v2 is not None and pos.pool_contract_puzzle_hash is None:
+        log.error("v2 plots require pool_contract_puzzle_hash, pool public key is not supported")
+        return None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")
         return None
@@ -213,6 +222,14 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 
 def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
     return std_hash(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
+
+
+def calculate_plot_id_v2(
+    pool_contract_puzzle_hash: bytes32,
+    plot_public_key: G1Element,
+    strength: uint8,
+) -> bytes32:
+    return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key) + bytes(strength))
 
 
 def calculate_plot_id_pk(
