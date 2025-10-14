@@ -69,37 +69,39 @@ ignore = [
     "UP007",
     "UP035",
 
-    # TODO: Review this for "should" fix
-    "COM812",  # trailing commas: ~5000 errors
-    "CPY001",  # copyright notices: ~900 errors
-    "BLE001",  # blind exceptions: ~300 errors
-    "D",  # docstrings: ~9000 errors,
+    # Should fix
     "FBT",  # boolean positional usage: ~2100 errors
-    "TC",  # type checking linting: ~1700 errors
-    "T",  # using print: ~1300 errors
-    "TRY",  # proper exception behavior: ~1300 errors
-    "ANN",  # function annotations: ~1100 errors
-    "EM",  # excetion messages: ~1000 errors
+    "ANN",  # function annotations: ~1100 errors  # Gets fixed with mypy-exclusion removal
     "G",  # logging format: ~1000 errors
-    "TD",  # formatting of TODOs: ~800 errors
-    "DOC",  # also docstrings: ~700 errors
     "RET",  # return linting: ~700 errors
     "B",  # potential bugs linting: ~600 errors
-    "C",  # comprehensions: ~600 errors
-    "SLF",  # private member access: ~600 errors
     "PT",  # pytest styling: ~600 errors
-    "ARG",  # unused arguments: ~500 errors
     "SIM",  # code simplifications: ~500 errors
-    "FIX",  # TODOs, etc: ~400 errors
-    "ERA",  # commented out code: ~400 errors
-    "PTH",  # pathlib linting: ~200 errors
-    "N",  # pep8 naming: ~200 errors
-    "PERF",  # anti-pattern linting: ~200 errors
-    "FURB",  # "refurbishing" and "modernizing": ~200 errors
     "A",  # bad behavior relative to builtins: ~200 errors
+    "PTH",  # pathlib linting: ~200 errors
     "PGH",  # cheap code quality improvements: ~100 errors
     "LOG",  # logging: <50 errors
-    "DTZ",  # datetimez:  <50 errors
+    # Might be nice, might be annoying
+    "BLE001",  # blind exceptions: ~300 errors
+    "D",  # docstrings: ~9000 errors,
+    "TRY",  # proper exception behavior: ~1300 errors
+    "EM",  # excetion messages: ~1000 errors
+    "C",  # comprehensions: ~600 errors
+    "SLF",  # private member access: ~600 errors
+    "FURB",  # "refurbishing" and "modernizing": ~200 errors
+    "PERF",  # anti-pattern linting: ~200 errors
+    "N",  # pep8 naming: ~200 errors
+    # Probably fine for our purposes
+    "COM812",  # trailing commas: ~5000 errors
+    "CPY001",  # copyright notices: ~900 errors
+    "TC",  # type checking linting: ~1700 errors  # Too much reliance on runtime types to enable this
+    "T",  # using print: ~1300 errors  # might want to enable this but not for CLI or tools/
+    "TD",  # formatting of TODOs: ~800 errors
+    "DOC",  # also docstrings: ~700 errors
+    "ARG",  # unused arguments: ~500 errors
+    "ERA",  # commented out code: ~400 errors
+    "DTZ",  # datetimez:  <50 errors  # likely needs the tzlocal library as a dependency
+    "FIX",  # TODOs, etc: ~400 errors
 ]
 
 [lint.per-file-ignores]
