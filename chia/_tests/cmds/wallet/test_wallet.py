@@ -26,7 +26,6 @@ from chia._tests.cmds.wallet.test_consts import (
 )
 from chia.cmds.cmds_util import TransactionBundle
 from chia.protocols.outbound_message import NodeType
-from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -47,6 +46,7 @@ from chia.wallet.wallet_request_types import (
     CATAssetIDToNameResponse,
     CATSetName,
     CATSetNameResponse,
+    CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
     CreateOfferForIDsResponse,
@@ -385,31 +385,24 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
         async def cat_spend(
             self,
-            wallet_id: int,
+            request: CATSpend,
             tx_config: TXConfig,
-            amount: Optional[uint64] = None,
-            inner_address: Optional[str] = None,
-            fee: uint64 = uint64(0),
-            memos: Optional[list[str]] = None,
-            additions: Optional[list[dict[str, Any]]] = None,
-            removals: Optional[list[Coin]] = None,
-            cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CATSpendResponse:
             self.add_to_log(
                 "cat_spend",
                 (
-                    wallet_id,
+                    request.wallet_id,
                     tx_config,
-                    amount,
-                    inner_address,
-                    fee,
-                    memos,
-                    additions,
-                    removals,
-                    cat_discrepancy,
-                    push,
+                    request.amount,
+                    request.inner_address,
+                    request.fee,
+                    request.memos,
+                    request.additions,
+                    request.coins,
+                    request.cat_discrepancy,
+                    request.push,
                     timelock_info,
                 ),
             )
