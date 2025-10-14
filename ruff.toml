@@ -2,43 +2,7 @@ line-length = 120
 
 [lint]
 preview = true
-select = [
-    "PL",  # Pylint
-    "I",  # Isort
-    "FA",  # Flake8: future-annotations
-    "UP",  # Pyupgrade
-    "RUF",  # Ruff specific
-    "F",  # Flake8 core
-    "ASYNC",  # Flake8 async
-    "ISC",  # flake8-implicit-str-concat
-    "TID",  # flake8-tidy-imports
-    "T10", # Debug statements
-    "EXE", # shebang usage
-    "ICN", # Import name conventions (i.e. import pandas as pd)
-    "INP", # Missing __init__.py
-    "Q",  # quotes
-    "SLOT",  # __slots__ usage
-    "TID",  # Tidy imports
-    "FLY",  # .join -> f-string
-    "PIE",  # flake8 plugin for extra lints
-    "PYI",  # type stubs linting
-    "RSE",  # Linting raises
-    "S",  # Potential security issues
-    # pycodestyle
-    "E",
-    "W",
-    # Trailing commas
-    # "COM812" # missing-trailing-comma (5105 errors)
-    "COM818",
-    "COM819",
-    # Libraries we don't use so might as well enable
-    "INT",
-    "AIR",
-    "FAST",
-    "DJ",
-    "NPY",
-    "PD",
-]
+select = ["ALL"]
 explicit-preview-rules = false
 ignore = [
     # Pylint convention
@@ -103,7 +67,41 @@ ignore = [
     # TODO: Remove these - it's a lot of errors
     "UP045",
     "UP007",
-    "UP035"
+    "UP035",
+
+    # Should fix
+    "FBT",  # boolean positional usage: ~2100 errors
+    "ANN",  # function annotations: ~1100 errors  # Gets fixed with mypy-exclusion removal
+    "G",  # logging format: ~1000 errors
+    "RET",  # return linting: ~700 errors
+    "B",  # potential bugs linting: ~600 errors
+    "PT",  # pytest styling: ~600 errors
+    "SIM",  # code simplifications: ~500 errors
+    "A",  # bad behavior relative to builtins: ~200 errors
+    "PTH",  # pathlib linting: ~200 errors
+    "PGH",  # cheap code quality improvements: ~100 errors
+    "LOG",  # logging: <50 errors
+    # Might be nice, might be annoying
+    "BLE001",  # blind exceptions: ~300 errors
+    "D",  # docstrings: ~9000 errors,
+    "TRY",  # proper exception behavior: ~1300 errors
+    "EM",  # excetion messages: ~1000 errors
+    "C",  # comprehensions: ~600 errors
+    "SLF",  # private member access: ~600 errors
+    "FURB",  # "refurbishing" and "modernizing": ~200 errors
+    "PERF",  # anti-pattern linting: ~200 errors
+    "N",  # pep8 naming: ~200 errors
+    # Probably fine for our purposes
+    "COM812",  # trailing commas: ~5000 errors
+    "CPY001",  # copyright notices: ~900 errors
+    "TC",  # type checking linting: ~1700 errors  # Too much reliance on runtime types to enable this
+    "T",  # using print: ~1300 errors  # might want to enable this but not for CLI or tools/
+    "TD",  # formatting of TODOs: ~800 errors
+    "DOC",  # also docstrings: ~700 errors
+    "ARG",  # unused arguments: ~500 errors
+    "ERA",  # commented out code: ~400 errors
+    "DTZ",  # datetimez:  <50 errors  # likely needs the tzlocal library as a dependency
+    "FIX",  # TODOs, etc: ~400 errors
 ]
 
 [lint.per-file-ignores]
