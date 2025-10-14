@@ -214,7 +214,9 @@ jobs:
       - name: Prepare Amazon Linux
         if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
-          yum install --assumeyes git
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
@@ -242,7 +244,9 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git python39
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
@@ -251,7 +255,7 @@ jobs:
         run: |
           apt-get --yes update
           apt-get install --yes git lsb-release
-          MINIMUM=3.9
+          MINIMUM=3.10
           if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
             apt-get install --yes python${MINIMUM}-venv
