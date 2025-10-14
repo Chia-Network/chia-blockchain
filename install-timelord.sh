@@ -117,11 +117,7 @@ else
       brew install --formula --quiet cmake
     fi
     # The most recent boost version causes compile errors.
-    brew install --formula --quiet boost@1.85 gmp
-    # boost@1.85 is keg-only, which means it was not symlinked into /usr/local,
-    # because this is an alternate version of another formula.
-    export LDFLAGS="-L/usr/local/opt/boost@1.85/lib"
-    export CPPFLAGS="-I/usr/local/opt/boost@1.85/include"
+    brew install --formula --quiet boost gmp
     echo "Installing chiavdf from source."
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"

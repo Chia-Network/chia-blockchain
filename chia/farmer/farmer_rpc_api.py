@@ -11,7 +11,10 @@ from typing_extensions import Protocol
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.types.peer_info import PeerInfo
+from chia.util.network import resolve
 from chia.util.paginator import Paginator
 from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -102,6 +105,7 @@ class FarmerRpcApi:
             "/get_harvester_plots_keys_missing": self.get_harvester_plots_keys_missing,
             "/get_harvester_plots_duplicates": self.get_harvester_plots_duplicates,
             "/get_pool_login_link": self.get_pool_login_link,
+            "/connect_to_solver": self.connect_to_solver,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
@@ -363,3 +367,19 @@ class FarmerRpcApi:
         if login_link is None:
             raise ValueError(f"Failed to generate login link for {launcher_id.hex()}")
         return {"login_link": login_link}
+
+    async def connect_to_solver(self, request: dict[str, Any]) -> EndpointResult:
+        for connection in self.service.server.get_connections(NodeType.SOLVER):
+            host = connection.peer_info.host
+            port = connection.peer_server_port
+            await connection.close()
+            self.service.log.info(f"Disconnected from solver at {host}:{port}")
+        host = request["host"]
+        port = request["port"]
+        target_node = PeerInfo(await resolve(host), port)
+        on_connect = getattr(self.service, "on_connect", None)
+        if await self.service.server.start_client(target_node, on_connect):
+            self.service.log.info(f"Connected to solver at {host}:{port}")
+            return {"success": True}
+        else:
+            return {"success": False, "error": f"Could not connect to solver at {host}:{port}"}

@@ -597,7 +597,7 @@ def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
     )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, conds)
     return MempoolItem(
-        spend_bundle=spend_bundle,
+        aggregated_signature=spend_bundle.aggregated_signature,
         fee=fee,
         conds=conds,
         spend_bundle_name=spend_bundle.name(),
@@ -927,7 +927,7 @@ def mk_item(
     spend_bundle = SpendBundle(coin_spends, G2Element())
     conds = make_test_conds(cost=cost, spend_ids=spend_ids)
     return MempoolItem(
-        spend_bundle=spend_bundle,
+        aggregated_signature=spend_bundle.aggregated_signature,
         fee=uint64(fee),
         conds=conds,
         spend_bundle_name=spend_bundle.name(),
@@ -3310,3 +3310,21 @@ async def test_new_peak_txs_added(condition_and_error: tuple[ConditionOpcode, Er
     # The item gets retried successfully now
     assert new_peak_info.spend_bundle_ids == [sb_name]
     assert mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
+
+
+@pytest.mark.anyio
+async def test_mempool_item_to_spend_bundle() -> None:
+    """
+    Tests that we can properly go back to a `SpendBundle` from a `MempoolItem`.
+    """
+    coins = [Coin(bytes32.random(), IDENTITY_PUZZLE_HASH, uint64(i + 1)) for i in range(random.randint(42, 1337))]
+    mempool_manager = await setup_mempool(TestCoins(coins, {}))
+    random_sample = random.sample(coins, 42)
+    sb = SpendBundle([CoinSpend(c, IDENTITY_PUZZLE, SerializedProgram.to(None)) for c in random_sample], G2Element())
+    sb_name = sb.name()
+    await add_spendbundle(mempool_manager, sb, sb_name)
+    mi = mempool_manager.get_mempool_item(sb_name)
+    assert mi is not None
+    result = mi.to_spend_bundle()
+    assert result == sb
+    assert result.name() == sb_name

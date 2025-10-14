@@ -42,7 +42,7 @@ def make_mempoolitem() -> MempoolItem:
     spends: list[SpendConditions] = []
     conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost, 0, 0, False, 0, 0, 0, 0, 0)
     mempool_item = MempoolItem(
-        spend_bundle,
+        spend_bundle.aggregated_signature,
         fee,
         conds,
         spend_bundle.name(),
