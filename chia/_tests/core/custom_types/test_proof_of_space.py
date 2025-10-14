@@ -114,7 +114,7 @@ def b32(key: str) -> bytes32:
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotSize.make_v2(0),
         plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         expected_error="Plot size is lower than the minimum",
     ),
     ProofOfSpaceCase(
@@ -122,20 +122,24 @@ def b32(key: str) -> bytes32:
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotSize.make_v2(34),
         plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         expected_error="Plot size is higher than the maximum",
     ),
     ProofOfSpaceCase(
-        id="Not passing the plot filter v2",
-        pos_challenge=b32("3d29ea79d19b3f7e99ebf764ae53697cbe143603909873946af6ab1ece606861"),
+        id="v2 Not passing the plot filter",
+        pos_challenge=b32("8147a0c9f351fb654d5c0054d01bdd70e9def1b5c7b43212ff44acb4378956b3"),
         plot_size=PlotSize.make_v2(32),
-        pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
-        ),
-        plot_public_key=g1(
-            "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
-        ),
+        plot_public_key=G1Element(),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         expected_error="Did not pass the plot filter",
+    ),
+    ProofOfSpaceCase(
+        id="v2 plot with pool pk",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=PlotSize.make_v2(28),
+        plot_public_key=G1Element(),
+        pool_public_key=G1Element(),
+        expected_error="v2 plots require pool_contract_puzzle_hash, pool public key is not supported",
     ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
@@ -160,15 +164,13 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 
 @datacases(
     ProofOfSpaceCase(
-        id="v2 plot are not implemented",
+        id="v2 plot",
         plot_size=PlotSize.make_v2(30),
-        pos_challenge=b32("47deb938e145d25d7b3b3c85ca9e3972b76c01aeeb78a02fe5d3b040d282317e"),
+        pos_challenge=b32("a5fd5287b295a3748e8498be03c6ce3d0f682d19613c003911aa6a65527d3ba4"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
-        pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
-        ),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         expected_error="NotImplementedError",
     ),
 )
@@ -189,7 +191,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
             pos=pos,
             constants=DEFAULT_CONSTANTS,
             original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
-            signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
+            signage_point=b32("0xf7c1bd874da5e709d4713d60c8a70639eb1167b367a9c3787c65c1e582e2e662"),
             height=case.height,
         )
     except NotImplementedError as e:
