@@ -222,3 +222,9 @@ class MerkleMountainRange(Streamable):
             peaks.append(MMRPeak.create(height, elements))
 
         return cls(peaks, size)
+
+    def copy(self) -> MerkleMountainRange:
+        # Copy peaks (preserve height and root, duplicate elements list)
+        new_peaks = [MMRPeak(peak.height, list(peak.elements), peak.root) for peak in self.peaks]
+        # Return a new MerkleMountainRange with copied peaks and same size
+        return MerkleMountainRange(new_peaks, uint64(self.size))
