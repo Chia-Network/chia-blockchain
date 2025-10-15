@@ -315,6 +315,7 @@ reward_chain_block = RewardChainBlock(
     vdf_info,
     vdf_info,
     False,
+    bytes32([0] * 32),  # header_mmr_root - dummy for test
 )
 
 foliage_block_data = FoliageBlockData(
@@ -1051,6 +1052,7 @@ sub_epoch_summary = SubEpochSummary(
     uint8(4),
     uint64(14666749803532899046),
     uint64(10901191956946573440),
+    bytes32.zeros,  # challenge_merkle_root placeholder
 )
 
 new_peak_timelord = timelord_protocol.NewPeakTimelord(

@@ -38,7 +38,7 @@ from packaging.version import Version
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_creation import unfinished_block_to_full_block
+from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -2628,8 +2628,11 @@ class FullNode:
                 unfinished_block.reward_chain_block.signage_point_index,
             )
         )
+        # add the mmr root to the block,
+        # maybe we checnge the back pointer to the prev mmr root instead of the previous header
+        # dont have the prev header hash present in the unfunished block add it when we finish the block
 
-        block: FullBlock = unfinished_block_to_full_block(
+        block: FullBlock = unfinished_block_to_full_block_with_mmr(
             unfinished_block,
             request.challenge_chain_ip_vdf,
             request.challenge_chain_ip_proof,

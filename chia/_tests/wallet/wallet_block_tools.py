@@ -188,6 +188,7 @@ def finish_block(
             DEFAULT_VDF_INFO,
             DEFAULT_VDF_INFO,
             prev_block is not None,
+            bytes32.zeros,  # header_mmr_root - dummy for test
         ),
         DEFAULT_VDF_PROOF,
         DEFAULT_VDF_PROOF,
