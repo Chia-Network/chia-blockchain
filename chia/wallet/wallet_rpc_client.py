@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
@@ -32,6 +31,7 @@ from chia.wallet.wallet_request_types import (
     CATGetNameResponse,
     CATSetName,
     CATSetNameResponse,
+    CATSpend,
     CATSpendResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
@@ -652,48 +652,16 @@ class WalletRpcClient(RpcClient):
 
     async def cat_spend(
         self,
-        wallet_id: int,
+        request: CATSpend,
         tx_config: TXConfig,
-        amount: Optional[uint64] = None,
-        inner_address: Optional[str] = None,
-        fee: uint64 = uint64(0),
-        memos: Optional[list[str]] = None,
-        additions: Optional[list[dict[str, Any]]] = None,
-        removals: Optional[list[Coin]] = None,
-        cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> CATSpendResponse:
-        send_dict: dict[str, Any] = {
-            "wallet_id": wallet_id,
-            "fee": fee,
-            "memos": memos if memos is not None else [],
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if amount is not None and inner_address is not None:
-            send_dict["amount"] = amount
-            send_dict["inner_address"] = inner_address
-        elif additions is not None:
-            additions_hex = []
-            for ad in additions:
-                additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
-                if "memos" in ad:
-                    additions_hex[-1]["memos"] = ad["memos"]
-            send_dict["additions"] = additions_hex
-        else:
-            raise ValueError("Must specify either amount and inner_address or additions")
-        if removals is not None and len(removals) > 0:
-            send_dict["coins"] = [c.to_json_dict() for c in removals]
-        if cat_discrepancy is not None:
-            send_dict["extra_delta"] = cat_discrepancy[0]
-            send_dict["tail_reveal"] = bytes(cat_discrepancy[1]).hex()
-            send_dict["tail_solution"] = bytes(cat_discrepancy[2]).hex()
-        res = await self.fetch("cat_spend", send_dict)
-        return json_deserialize_with_clvm_streamable(res, CATSpendResponse)
+        return CATSpendResponse.from_json_dict(
+            await self.fetch(
+                "cat_spend", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     # Offers
     async def create_offer_for_ids(

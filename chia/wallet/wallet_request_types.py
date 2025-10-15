@@ -1379,6 +1379,61 @@ class CombineCoinsResponse(TransactionEndpointResponse):
     pass
 
 
+# utility for CATSpend
+# unfortunate that we can't use CreateCoin but the memos are taken as strings not bytes
+@streamable
+@dataclass(frozen=True)
+class Addition(Streamable):
+    amount: uint64
+    puzzle_hash: bytes32
+    memos: Optional[list[str]] = None
+
+
+@streamable
+@kw_only_dataclass
+class CATSpend(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    additions: Optional[list[Addition]] = None
+    amount: Optional[uint64] = None
+    inner_address: Optional[str] = None
+    memos: Optional[list[str]] = None
+    coins: Optional[list[Coin]] = None
+    extra_delta: Optional[str] = None  # str to support negative ints :(
+    tail_reveal: Optional[bytes] = None
+    tail_solution: Optional[bytes] = None
+
+    def __post_init__(self) -> None:
+        if (
+            self.additions is not None
+            and (self.amount is not None or self.inner_address is not None or self.memos is not None)
+        ) or (self.additions is None and self.amount is None and self.inner_address is None and self.memos is None):
+            raise ValueError('Must specify "additions" or "amount"+"inner_address"+"memos", but not both.')
+        elif self.additions is None and None in {self.amount, self.inner_address}:
+            raise ValueError('Must specify "amount" and "inner_address" together.')
+        super().__post_init__()
+
+    @property
+    def cat_discrepancy(self) -> Optional[tuple[int, Program, Program]]:
+        if self.extra_delta is None and self.tail_reveal is None and self.tail_solution is None:
+            return None
+        elif None in {self.extra_delta, self.tail_reveal, self.tail_solution}:
+            raise ValueError('Must specify "extra_delta", "tail_reveal" and "tail_solution" together.')
+        else:
+            # Curious that mypy doesn't see the elif and know that none of these are None
+            return (
+                int(self.extra_delta),  # type: ignore[arg-type]
+                Program.from_bytes(self.tail_reveal),  # type: ignore[arg-type]
+                Program.from_bytes(self.tail_solution),  # type: ignore[arg-type]
+            )
+
+
+@streamable
+@dataclass(frozen=True)
+class CATSpendResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DIDMessageSpend(TransactionEndpointRequest):
@@ -1769,13 +1824,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class CATSpendResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable
