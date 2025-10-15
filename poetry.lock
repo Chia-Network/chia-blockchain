@@ -825,14 +825,14 @@ dev = ["black (>=23.1.0)", "pytest (>=7.2.1)", "ruff (>=0.0.252)"]
 
 [[package]]
 name = "chia-puzzles-py"
-version = "0.20.2"
+version = "0.20.3"
 description = "A collection of the currently deployed ChiaLisp puzzles."
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "chia_puzzles_py-0.20.2-py3-none-any.whl", hash = "sha256:17e8edb910009a2657809725e68aa4ba4a992e914d6ce98329c263abd448231b"},
-    {file = "chia_puzzles_py-0.20.2.tar.gz", hash = "sha256:12343f39ee5485d266634124521193a0fa2529000d664d4beff2ae9b42f0760d"},
+    {file = "chia_puzzles_py-0.20.3-py3-none-any.whl", hash = "sha256:cf55c342ec7827d244aea9f3d3e2fc7079807de6ab6c82d93c5d612c7f2ac1d2"},
+    {file = "chia_puzzles_py-0.20.3.tar.gz", hash = "sha256:059c314c8ac6bb8f6f89bdb9855e55b716475b61ba953801e5fff22683534193"},
 ]
 
 [package.dependencies]
