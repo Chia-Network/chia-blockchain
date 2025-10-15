@@ -879,6 +879,7 @@ def _map_sub_epoch_summaries(
             data.num_blocks_overflow,
             data.new_difficulty,
             data.new_sub_slot_iters,
+            bytes32([0] * 32),  # challenge_merkle_root - placeholder for now
         )
 
         if idx < len(sub_epoch_data) - 1:
@@ -1258,7 +1259,7 @@ def validate_recent_blocks(
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 expected_vs = ValidationState(ssi, diff, None)
                 caluclated_required_iters, error = validate_finished_header_block(
-                    constants, sub_blocks, block, False, expected_vs, ses_blocks > 2
+                    constants, sub_blocks, block, False, expected_vs, ses_blocks > 2, skip_commitment_validation=True
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")

@@ -18,6 +18,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.blockchain_mmr import compute_mmr_root_for_reorg_block
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge, prev_tx_block
@@ -50,6 +51,7 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
+    skip_commitment_validation: bool = False,
 ) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -443,6 +445,35 @@ def validate_unfinished_header_block(
                                 f"expected ses hash: {expected_hash} got {ses_hash} ",
                             ),
                         )
+
+                    # 3c.1. Validate challenge merkle root specifically (skip for limited history contexts)
+                    # This ensures the block count and challenges are correct
+                    if not skip_commitment_validation:
+                        ses_block = None
+                        for sub_slot in header_block.finished_sub_slots:
+                            if sub_slot.challenge_chain.subepoch_summary_hash is not None:
+                                ses_block = sub_slot
+                                break
+
+                        if ses_block is not None and ses_block.challenge_chain.subepoch_summary_included is not None:
+                            stored_challenge_root = (
+                                ses_block.challenge_chain.subepoch_summary_included.challenge_merkle_root
+                            )
+                            expected_challenge_root = expected_sub_epoch_summary.challenge_merkle_root
+
+                            if stored_challenge_root != expected_challenge_root:
+                                log.error(
+                                    f"Challenge merkle root mismatch at height {height}. "
+                                    f"Expected: {expected_challenge_root.hex()}, "
+                                    f"Got: {stored_challenge_root.hex()}"
+                                )
+                                return (
+                                    None,
+                                    ValidationError(
+                                        Err.INVALID_SUB_EPOCH_SUMMARY,
+                                        "challenge merkle root mismatch",
+                                    ),
+                                )
             elif new_sub_slot and not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
                 if can_finish_se or can_finish_epoch:
@@ -834,6 +865,7 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_vs: ValidationState,
     check_sub_epoch_summary: bool = True,
+    skip_commitment_validation: bool = False,
 ) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
@@ -857,6 +889,7 @@ def validate_finished_header_block(
         expected_vs,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
+        skip_commitment_validation=skip_commitment_validation,
     )
 
     genesis_block = False
@@ -1052,5 +1085,29 @@ def validate_finished_header_block(
         header_block.foliage.foliage_transaction_block_hash is not None
     ) != header_block.reward_chain_block.is_transaction_block:
         return None, ValidationError(Err.INVALID_FOLIAGE_BLOCK_PRESENCE)
+
+    # 34. Validate header MMR commitment (skip for weight proof validation)
+    if not skip_commitment_validation:
+        # Get MMR root from blockchain's MMR manager
+        expected_mmr_root = blocks.mmr_manager.get_mmr_root_at_height(header_block.height)
+        stored_mmr_root = header_block.reward_chain_block.header_mmr_root
+
+        # If MMR manager can't provide the root, fall back to computation
+        if expected_mmr_root is None:
+            expected_mmr_root = compute_mmr_root_for_reorg_block(header_block, blocks)
+
+        if stored_mmr_root != expected_mmr_root:
+            if expected_mmr_root is None:
+                log.error(
+                    f"Could not compute expected MMR root at height {header_block.height}. "
+                    f"Stored: {stored_mmr_root.hex()}"
+                )
+                return None, ValidationError(Err.INVALID_REWARD_BLOCK_HASH)
+            log.error(
+                f"Invalid header MMR root at height {header_block.height}. "
+                f"Expected: {expected_mmr_root.hex()}, "
+                f"Got: {stored_mmr_root.hex()}"
+            )
+            return None, ValidationError(Err.INVALID_REWARD_BLOCK_HASH)
 
     return required_iters, None
