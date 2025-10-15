@@ -425,6 +425,7 @@ def unfinished_block_to_full_block(
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
+    header_mmr_root: bytes32,
 ) -> FullBlock:
     """
     Converts an unfinished block to a finished block. Includes all the infusion point VDFs as well as tweaking
@@ -483,6 +484,7 @@ def unfinished_block_to_full_block(
         rc_ip_vdf,
         icc_ip_vdf,
         is_transaction_block,
+        header_mmr_root,
     )
     if prev_block is None:
         new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_chain_block.get_hash())
@@ -515,3 +517,50 @@ def unfinished_block_to_full_block(
         new_generator_ref_list,
     )
     return ret
+
+
+def unfinished_block_to_full_block_with_mmr(
+    unfinished_block: UnfinishedBlock,
+    cc_ip_vdf: VDFInfo,
+    cc_ip_proof: VDFProof,
+    rc_ip_vdf: VDFInfo,
+    rc_ip_proof: VDFProof,
+    icc_ip_vdf: Optional[VDFInfo],
+    icc_ip_proof: Optional[VDFProof],
+    finished_sub_slots: list[EndOfSubSlotBundle],
+    prev_block: Optional[BlockRecord],
+    blocks: BlockRecordsProtocol,
+    total_iters_sp: uint128,
+    difficulty: uint64,
+    
+) -> FullBlock:
+    """
+    Wrapper around unfinished_block_to_full_block that automatically computes the MMR root.
+    This maintains backward compatibility while adding MMR support.
+    """
+    # Compute the header MMR root for this block
+    if prev_block is None:
+        height = 0
+    else:
+        height = prev_block.height + 1
+
+    # Get MMR root from blockchain's MMR manager
+    header_mmr_root = blocks.mmr_manager.get_mmr_root_at_height(uint32(height))
+    assert header_mmr_root is not None
+    
+    # Call the original function with the computed MMR root
+    return unfinished_block_to_full_block(
+        unfinished_block,
+        cc_ip_vdf,
+        cc_ip_proof,
+        rc_ip_vdf,
+        rc_ip_proof,
+        icc_ip_vdf,
+        icc_ip_proof,
+        finished_sub_slots,
+        prev_block,
+        blocks,
+        total_iters_sp,
+        difficulty,
+        header_mmr_root,
+    )

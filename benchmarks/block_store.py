@@ -127,6 +127,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 rand_vdf(),  # reward_chain_ip_vdf
                 rand_vdf() if deficit < 16 else None,
                 is_transaction,
+                bytes32([0] * 32),  # header_mmr_root - dummy for benchmark
             )
 
             pool_target = PoolTarget(

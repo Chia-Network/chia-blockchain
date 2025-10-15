@@ -6,7 +6,8 @@ from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.blockchain_interface import BlocksProtocol
+from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.util.errors import Err
 
 
@@ -28,11 +29,18 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    mmr_manager: MMRManagerProtocol
 
-    def __init__(self, underlying: BlocksProtocol) -> None:
+    def __init__(self, underlying: BlocksProtocol, fork_height: Optional[int] = None) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        # Copy MMR manager and optionally rollback to fork point for reorg scenarios
+        self.mmr_manager = underlying.mmr_manager.copy()
+
+        if fork_height is not None and hasattr(self.mmr_manager, 'rollback_to_height'):
+            # For reorg scenarios, rollback MMR to the fork point
+            self.mmr_manager.rollback_to_height(fork_height, underlying)
 
     def _get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         eb = self._extra_blocks.get(header_hash)
@@ -44,6 +52,8 @@ class AugmentedBlockchain:
         assert block.header_hash == block_record.header_hash
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        # Update MMR with the new block
+        self.mmr_manager.add_block_to_mmr(block_record)
 
     def remove_extra_block(self, hh: bytes32) -> None:
         if hh not in self._extra_blocks:
@@ -142,3 +152,11 @@ class AugmentedBlockchain:
             else:
                 ret.extend(await self._underlying.prev_block_hash([hh]))
         return ret
+
+    def get_mmr_root_at_height(self, height: uint32) -> Optional[bytes32]:
+        return self.mmr_manager.get_mmr_root_at_height(height)
+    def get_current_mmr_root(self) -> bytes32: 
+        return self.mmr_manager.get_current_mmr_root()
+    def add_block_to_mmr(self, block_record: BlockRecord) -> None: 
+        self.mmr_manager.add_block_to_mmr(block_record)
+

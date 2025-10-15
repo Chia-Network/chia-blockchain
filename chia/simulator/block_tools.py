@@ -41,9 +41,10 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
-from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -242,6 +243,7 @@ class BlockTools:
     _block_cache_height_to_hash: dict[uint32, bytes32]
     _block_cache_difficulty: uint64
     _block_cache: dict[bytes32, BlockRecord]
+    mmr_manager: BlockchainMMRManager
 
     def __init__(
         self,
@@ -315,6 +317,9 @@ class BlockTools:
         updated_constants = replace_str_to_bytes(constants, **overrides)
         self.constants = updated_constants
 
+        # Initialize MMR manager for incremental MMR computation
+        self.mmr_manager = BlockchainMMRManager()
+
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
         self.plot_dir.mkdir(parents=True, exist_ok=True)
@@ -348,6 +353,16 @@ class BlockTools:
             refresh_callback=test_callback,
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
+
+    def get_blockchain_interface(self, blocks: dict[bytes32, BlockRecord]) -> BlockRecordsProtocol:
+        """
+        Create a blockchain interface with the BlockTools' MMR manager.
+        This allows proper MMR computation during block creation.
+        """
+        # Create a BlockCache but replace its stub MMR manager with our real one
+        block_cache = BlockCache(blocks)
+        block_cache.mmr_manager = self.mmr_manager
+        return block_cache
 
     def setup_new_gen(
         self,
@@ -771,6 +786,8 @@ class BlockTools:
             if force_plot_id is not None:
                 raise ValueError("Cannot specify plot_id for genesis block")
             initial_block_list_len = 0
+            # Reset MMR manager for fresh block generation
+            self.mmr_manager = BlockchainMMRManager()
             genesis = self.create_genesis_block(
                 constants,
                 seed,
@@ -778,6 +795,7 @@ class BlockTools:
                 skip_slots=skip_slots,
                 timestamp=(uint64(time.time()) if genesis_timestamp is None else genesis_timestamp),
             )
+            self.mmr_manager.add_block_to_mmr(genesis)
             self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
@@ -785,6 +803,10 @@ class BlockTools:
         else:
             initial_block_list_len = len(block_list)
             num_empty_slots_added = uint32(0)  # Allows forcing empty slots in the beginning, for testing purposes
+            # Reset MMR manager and rebuild from existing blocks
+            self.mmr_manager = BlockchainMMRManager()
+            for b in block_list:
+                self.mmr_manager.add_block_to_mmr(b)
 
         if num_blocks == 0:
             return block_list
@@ -794,7 +816,7 @@ class BlockTools:
             height_to_hash = self._block_cache_height_to_hash
             difficulty = self._block_cache_difficulty
             blocks = self._block_cache
-        else:
+        else:            
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
@@ -949,6 +971,7 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            mmr_manager=self.mmr_manager,
                             overflow_cc_challenge=None,
                             overflow_rc_challenge=None,
                         )
@@ -986,6 +1009,8 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
+                        # Add block to MMR manager for proper MMR computation
+                        self.mmr_manager.add_block_to_mmr(block_record)
                         self.log.info(f"Created block {block_record.height} ov=False, iters {block_record.total_iters}")
                         num_blocks -= 1
 
@@ -1243,6 +1268,7 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            mmr_manager=self.mmr_manager,
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
@@ -1280,6 +1306,8 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
+                        # Add block to MMR manager for proper MMR computation
+                        self.mmr_manager.add_block_to_mmr(block_record)
                         self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
@@ -1408,7 +1436,7 @@ class BlockTools:
                         )
                         assert unfinished_block is not None
                         total_iters_sp = uint128(sub_slot_total_iters + sp_iters)
-                        return unfinished_block_to_full_block(
+                        return unfinished_block_to_full_block_with_mmr(
                             unfinished_block,
                             cc_ip_vdf,
                             cc_ip_proof,
@@ -1473,7 +1501,7 @@ class BlockTools:
                             unfinished_block.reward_chain_block.signage_point_index,
                         )
                     )
-                    return unfinished_block_to_full_block(
+                    return unfinished_block_to_full_block_with_mmr(
                         unfinished_block,
                         cc_ip_vdf,
                         cc_ip_proof,
@@ -1661,7 +1689,8 @@ def finish_block(
     latest_block: BlockRecord,
     sub_slot_iters: uint64,
     difficulty: uint64,
-    normalized_to_identity_cc_ip: bool = False,
+    mmr_manager:BlockchainMMRManager,
+    normalized_to_identity_cc_ip: bool = False,    
 ) -> tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
@@ -1716,7 +1745,7 @@ def finish_block(
     sp_total_iters = uint128(
         sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     )
-    full_block: FullBlock = unfinished_block_to_full_block(
+    full_block: FullBlock = unfinished_block_to_full_block_with_mmr(
         unfinished_block,
         cc_ip_vdf,
         cc_ip_proof,
@@ -1726,7 +1755,7 @@ def finish_block(
         icc_ip_proof,
         finished_sub_slots,
         latest_block,
-        BlockCache(blocks),
+        BlockCache(blocks, mmr_manager=mmr_manager),
         sp_total_iters,
         difficulty,
     )
@@ -1789,6 +1818,7 @@ def load_block_list(
     sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
     height_to_hash: dict[uint32, bytes32] = {}
     blocks: dict[bytes32, BlockRecord] = {}
+
     prev_transaction_b_height = uint32(0)
     for full_block in block_list:
         if full_block.height != 0:
@@ -1914,6 +1944,7 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
+    mmr_manager:BlockchainMMRManager,
     overflow_cc_challenge: Optional[bytes32] = None,
     overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,
@@ -1973,6 +2004,7 @@ def get_full_block_and_block_record(
         prev_block,
         sub_slot_iters,
         difficulty,
+        mmr_manager,
         normalized_to_identity_cc_ip,
     )
 

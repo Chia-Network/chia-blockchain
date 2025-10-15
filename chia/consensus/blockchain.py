@@ -27,6 +27,8 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -105,6 +107,8 @@ class Blockchain:
     coin_store: CoinStoreProtocol
     # Store
     block_store: BlockStore
+    # MMR manager for incremental MMR computation
+    mmr_manager: MMRManagerProtocol
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -155,6 +159,7 @@ class Blockchain:
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
+        self.mmr_manager = BlockchainMMRManager()
         self._shut_down = False
         await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
@@ -172,7 +177,11 @@ class Blockchain:
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
-        for block in block_records.values():
+
+        # Sort blocks by height to build MMR properly
+        sorted_blocks = sorted(block_records.values(), key=lambda b: b.height)
+
+        for block in sorted_blocks:
             self.add_block_record(block)
 
         if len(block_records) == 0:
@@ -985,6 +994,9 @@ class Blockchain:
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
+        # Add block to MMR manager for incremental MMR computation
+        self.mmr_manager.add_block_to_mmr(block_record)
+
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
@@ -1069,3 +1081,13 @@ class Blockchain:
             generators.update(await self.block_store.get_generators_at(remaining_refs))
 
         return generators
+
+    def get_mmr_root_at_height(self, height: uint32) -> Optional[bytes32]: 
+        return self.mmr_manager.get_mmr_root_at_height(height)
+    
+    def get_current_mmr_root(self) -> bytes32: 
+        return self.mmr_manager.get_current_mmr_root()
+    
+    def add_block_to_mmr(self, block_record: BlockRecord) -> None: 
+        self.mmr_manager.add_block_to_mmr(block_record)
+
