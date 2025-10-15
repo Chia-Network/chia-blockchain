@@ -165,120 +165,121 @@ class TestBlockHeaderValidation:
         blocks = default_1000_blocks
         fork_info = ForkInfo(blocks[0].height - 1, blocks[0].height - 1, blocks[0].prev_header_hash)
         for block in blocks:
+            if (
+                len(block.finished_sub_slots) == 0
+                or block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is None
+            ):
+                await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
+                continue
+
             # TODO: deduplicate the test code, perhaps by parameterizing the
             # test
-            if (
-                len(block.finished_sub_slots) > 0
-                and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
-            ):
-                # Sub/Epoch. Try using a bad ssi and difficulty to test 2m and 2n
-                new_finished_ss = recursive_replace(
-                    block.finished_sub_slots[0],
-                    "challenge_chain.new_sub_slot_iters",
-                    uint64(10_000_000),
-                )
-                block_bad = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]]
-                )
-                header_block_bad = get_block_header(block_bad)
-                # TODO: Inspect these block values as they are currently None
-                expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
-                expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
-                _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
-                )
-                assert error is not None
-                assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
 
-                # Also fails calling the outer methods, but potentially with a different error
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
-                )
+            # Sub/Epoch. Try using a bad ssi and difficulty to test 2m and 2n
+            new_finished_ss = recursive_replace(
+                block.finished_sub_slots[0],
+                "challenge_chain.new_sub_slot_iters",
+                uint64(10_000_000),
+            )
+            block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]])
+            header_block_bad = get_block_header(block_bad)
+            # TODO: Inspect these block values as they are currently None
+            expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
+            expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
+            expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+            _, error = validate_finished_header_block(
+                empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            )
+            assert error is not None
+            assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
 
-                new_finished_ss = recursive_replace(
-                    block.finished_sub_slots[0],
-                    "challenge_chain.new_difficulty",
-                    uint64(10_000_000),
-                )
-                block_bad = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]]
-                )
+            # Also fails calling the outer methods, but potentially with a different error
+            await _validate_and_add_block(
+                empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+            )
 
-                header_block_bad = get_block_header(block_bad)
-                # TODO: Inspect these block values as they are currently None
-                expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
-                expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
-                _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
-                )
-                assert error is not None
-                assert error.code == Err.INVALID_NEW_DIFFICULTY
+            new_finished_ss = recursive_replace(
+                block.finished_sub_slots[0],
+                "challenge_chain.new_difficulty",
+                uint64(10_000_000),
+            )
+            block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss, *block.finished_sub_slots[1:]])
 
-                # Also fails calling the outer methods, but potentially with a different error
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
-                )
+            header_block_bad = get_block_header(block_bad)
+            # TODO: Inspect these block values as they are currently None
+            expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
+            expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
+            expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+            _, error = validate_finished_header_block(
+                empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            )
+            assert error is not None
+            assert error.code == Err.INVALID_NEW_DIFFICULTY
 
-                # 3c
-                new_finished_ss = recursive_replace(
-                    block.finished_sub_slots[0],
-                    "challenge_chain.subepoch_summary_hash",
-                    bytes([0] * 32),
-                )
-                new_finished_ss = recursive_replace(
-                    new_finished_ss,
-                    "reward_chain.challenge_chain_sub_slot_hash",
-                    new_finished_ss.challenge_chain.get_hash(),
-                )
-                log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
-                block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss])
+            # Also fails calling the outer methods, but potentially with a different error
+            await _validate_and_add_block(
+                empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+            )
 
-                header_block_bad = get_block_header(block_bad)
-                # TODO: Inspect these block values as they are currently None
-                expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
-                expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
-                _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
-                )
-                assert error is not None
-                assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
+            # 3c
+            new_finished_ss = recursive_replace(
+                block.finished_sub_slots[0],
+                "challenge_chain.subepoch_summary_hash",
+                bytes([0] * 32),
+            )
+            new_finished_ss = recursive_replace(
+                new_finished_ss,
+                "reward_chain.challenge_chain_sub_slot_hash",
+                new_finished_ss.challenge_chain.get_hash(),
+            )
+            log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
+            block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss])
 
-                # Also fails calling the outer methods, but potentially with a different error
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
-                )
+            header_block_bad = get_block_header(block_bad)
+            # TODO: Inspect these block values as they are currently None
+            expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
+            expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
+            expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+            _, error = validate_finished_header_block(
+                empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            )
+            assert error is not None
+            assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
 
-                # 3d
-                new_finished_ss = recursive_replace(
-                    block.finished_sub_slots[0],
-                    "challenge_chain.subepoch_summary_hash",
-                    std_hash(b"123"),
-                )
-                new_finished_ss = recursive_replace(
-                    new_finished_ss,
-                    "reward_chain.challenge_chain_sub_slot_hash",
-                    new_finished_ss.challenge_chain.get_hash(),
-                )
-                block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss])
+            # Also fails calling the outer methods, but potentially with a different error
+            await _validate_and_add_block(
+                empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+            )
 
-                header_block_bad = get_block_header(block_bad)
-                # TODO: Inspect these block values as they are currently None
-                expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
-                expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
-                _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
-                )
-                assert error is not None
-                assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
+            # 3d
+            new_finished_ss = recursive_replace(
+                block.finished_sub_slots[0],
+                "challenge_chain.subepoch_summary_hash",
+                std_hash(b"123"),
+            )
+            new_finished_ss = recursive_replace(
+                new_finished_ss,
+                "reward_chain.challenge_chain_sub_slot_hash",
+                new_finished_ss.challenge_chain.get_hash(),
+            )
+            block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss])
 
-                # Also fails calling the outer methods, but potentially with a different error
-                await _validate_and_add_block(
-                    empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
-                )
+            header_block_bad = get_block_header(block_bad)
+            # TODO: Inspect these block values as they are currently None
+            expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
+            expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
+            expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+            _, error = validate_finished_header_block(
+                empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+            )
+            assert error is not None
+            assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
+
+            # Also fails calling the outer methods, but potentially with a different error
+            await _validate_and_add_block(
+                empty_blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK, fork_info=fork_info
+            )
+
             await _validate_and_add_block(empty_blockchain, block, fork_info=fork_info)
             log.info(
                 f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
