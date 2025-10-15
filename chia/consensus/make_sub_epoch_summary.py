@@ -4,9 +4,11 @@ import logging
 from typing import Optional, Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, SubEpochSummary, UnfinishedBlock
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.challenge_tree import compute_challenge_merkle_root
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import (
     _get_next_difficulty,
@@ -53,6 +55,7 @@ def make_sub_epoch_summary(
             uint8(0),
             None,
             None,
+            compute_challenge_merkle_root(constants, blocks, blocks_included_height),
         )
     if prev_ses_block is None:
         curr: BlockRecord = prev_prev_block
@@ -64,12 +67,14 @@ def make_sub_epoch_summary(
     assert prev_ses_block.finished_reward_slot_hashes is not None
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
+
     return SubEpochSummary(
         prev_ses,
         prev_ses_block.finished_reward_slot_hashes[-1],
         uint8(prev_ses_block.height % constants.SUB_EPOCH_BLOCKS),
         new_difficulty,
         new_sub_slot_iters,
+        compute_challenge_merkle_root(constants, blocks, blocks_included_height),
     )
 
 
