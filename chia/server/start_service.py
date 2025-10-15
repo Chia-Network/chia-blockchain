@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import logging.config
 import os
 import signal
 from collections.abc import AsyncIterator, Awaitable, Coroutine
