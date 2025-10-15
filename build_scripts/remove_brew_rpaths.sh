@@ -12,7 +12,7 @@ echo "Stripping brew rpaths..."
 
 rpath_name=/opt/homebrew/lib
 
-so_path=$(find "dist/daemon/_internal/lib-dynload" -name "_ssl.cpython-*.so")
+so_path=$(find "dist/daemon/_internal/" -name "_ssl.cpython-*.so")
 if [[ -z "${so_path}" ]]; then
   >&2 echo "Failed to find _ssl.cpython-*.so"
 fi
