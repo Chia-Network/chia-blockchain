@@ -1390,7 +1390,7 @@ class Addition(Streamable):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class CATSpend(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     additions: Optional[list[Addition]] = None
