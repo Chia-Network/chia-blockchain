@@ -171,6 +171,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
         Plot(
             filename=str(x),
             size=uint8(0),
+            strength=uint8(0),
             plot_id=bytes32.random(seeded_random),
             pool_contract_puzzle_hash=None,
             pool_public_key=None,

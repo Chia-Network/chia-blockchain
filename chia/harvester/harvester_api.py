@@ -511,6 +511,7 @@ class HarvesterAPI:
                 Plot(
                     plot["filename"],
                     plot["size"],
+                    plot["strength"],
                     plot["plot_id"],
                     plot["pool_public_key"],
                     plot["pool_contract_puzzle_hash"],

@@ -916,6 +916,7 @@ respond_signatures = harvester_protocol.RespondSignatures(
 plot = harvester_protocol.Plot(
     "plot_1",
     uint8(124),
+    uint8(0),
     bytes32(bytes.fromhex("b2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98")),
     G1Element.from_bytes(
         bytes.fromhex(

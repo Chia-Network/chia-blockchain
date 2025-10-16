@@ -141,6 +141,7 @@ class RespondSignatures(Streamable):
 class Plot(Streamable):
     filename: str
     size: uint8
+    strength: uint8  # This is 0 for v1 plots
     plot_id: bytes32
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]

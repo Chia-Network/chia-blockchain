@@ -201,6 +201,7 @@ class Harvester:
                     {
                         "filename": str(path),
                         "size": k,
+                        "strength": prover.get_strength(),
                         "plot_id": prover.get_id(),
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
