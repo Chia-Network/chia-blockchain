@@ -10,9 +10,10 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint32
 from typing_extensions import Literal
 
-from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
@@ -35,12 +36,11 @@ from chia.plotting.util import (
     remove_plot_directory,
     update_harvester_config,
 )
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.cpu import available_logical_cores
-from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +94,9 @@ class Harvester:
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )
         self._shut_down = False
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=config["num_threads"], thread_name_prefix="harvester-"
+        )
         self._server = None
         self.constants = constants
         self.state_changed_callback: Optional[StateChangedProtocol] = None
@@ -188,10 +190,17 @@ class Harvester:
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
+                size = prover.get_size()
+                if size.size_v1 is not None:
+                    k = size.size_v1
+                else:
+                    assert size.size_v2 is not None
+                    k = size.size_v2
+                    # TODO: todo_v2_plots support v2 plots in RPC response
                 response_plots.append(
                     {
                         "filename": str(path),
-                        "size": prover.get_size(),
+                        "size": k,
                         "plot_id": prover.get_id(),
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,

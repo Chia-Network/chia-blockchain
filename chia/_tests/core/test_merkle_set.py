@@ -9,12 +9,12 @@ from typing import Optional
 
 import pytest
 from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
 
@@ -279,10 +279,7 @@ async def test_merkle_right_edge() -> None:
 
 
 def rand_hash(rng: random.Random) -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = rng.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random(r=rng)
 
 
 @pytest.mark.anyio

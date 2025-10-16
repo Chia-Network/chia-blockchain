@@ -19,7 +19,10 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 import anyio
+import chia_rs.datalayer
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -40,38 +43,41 @@ from chia.cmds.data_funcs import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
+from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.data_layer.data_layer_service import DataLayerService
 from chia.data_layer.data_layer_util import (
     HashOnlyProof,
     OfferStore,
     ProofLayer,
     Status,
     StoreProofs,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     key_hash,
     leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.server.start_data_layer import create_data_layer_service
+from chia.data_layer.start_data_layer import create_data_layer_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.aliases import DataLayerService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.task_referencer import create_referenced_task
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import CheckOfferValidity, DLLatestSingleton
+from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_service import WalletService
 
 pytestmark = pytest.mark.data_layer
 nodes = tuple[WalletNode, FullNodeSimulator]
@@ -129,6 +135,7 @@ async def init_data_layer(
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
     group_files_by_store: bool = False,
+    enable_batch_autoinsert: bool = True,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
         wallet_rpc_port,
@@ -137,7 +144,7 @@ async def init_data_layer(
         wallet_service,
         manage_data_interval,
         maximum_full_file_count,
-        True,
+        enable_batch_autoinsert,
         group_files_by_store,
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
@@ -159,7 +166,8 @@ async def init_wallet_and_node(
     wallet_node = wallet_service._node
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
@@ -186,7 +194,7 @@ async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:
     except ValueError:  # pragma: no cover
         return False
 
-    return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
+    return True if TransactionRecord.from_json_dict(val["transaction"]).confirmed else False  # mypy
 
 
 async def farm_block_with_spend(
@@ -212,12 +220,14 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
 
 
 async def check_singleton_confirmed(dl: DataLayer, store_id: bytes32) -> bool:
-    return await dl.wallet_rpc.dl_latest_singleton(store_id, True) is not None
+    return (await dl.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton is not None
 
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
     await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    return (await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer))[1]
+    return (
+        await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(CheckOfferValidity(offer=offer.to_bech32()))
+    ).valid
 
 
 async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process:
@@ -251,6 +261,7 @@ def create_mnemonic(seed: bytes = b"ab") -> str:
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_create_insert_get(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -330,6 +341,7 @@ async def test_create_insert_get(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_upsert(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -360,6 +372,7 @@ async def test_upsert(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_create_double_insert(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -397,6 +410,7 @@ async def test_create_double_insert(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_keys_values_ancestors(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -410,20 +424,26 @@ async def test_keys_values_ancestors(
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+        reference_hashes = []
         key1 = b"a"
         value1 = b"\x01\x02"
+        reference_hashes.append(leaf_hash(key=key1, value=value1))
         changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
+        reference_hashes.append(leaf_hash(key=key2, value=value2))
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
         key3 = b"c"
         value3 = b"\x04\x05"
+        reference_hashes.append(leaf_hash(key=key3, value=value3))
         changelist.append({"action": "insert", "key": key3.hex(), "value": value3.hex()})
         key4 = b"d"
         value4 = b"\x06\x03"
+        reference_hashes.append(leaf_hash(key=key4, value=value4))
         changelist.append({"action": "insert", "key": key4.hex(), "value": value4.hex()})
         key5 = b"e"
         value5 = b"\x07\x01"
+        reference_hashes.append(leaf_hash(key=key5, value=value5))
         changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
@@ -441,9 +461,9 @@ async def test_keys_values_ancestors(
         assert len(keys["keys"]) == len(dic)
         for key in keys["keys"]:
             assert key in dic
-        val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
+        val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": reference_hashes[4].hex()})
         # todo better assertions for get_ancestors result
-        assert len(val["ancestors"]) == 3
+        assert len(val["ancestors"]) == 2
         res_before = await data_rpc_api.get_root({"id": store_id.hex()})
         assert res_before["confirmed"] is True
         assert res_before["timestamp"] > 0
@@ -473,6 +493,7 @@ async def test_keys_values_ancestors(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_roots(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -526,6 +547,7 @@ async def test_get_roots(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_root_history(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -580,6 +602,7 @@ async def test_get_root_history(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_kv_diff(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -647,13 +670,19 @@ async def test_get_kv_diff(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_batch_update_matches_single_operations(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        enable_batch_autoinsert=False,
+    ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -719,6 +748,7 @@ async def test_batch_update_matches_single_operations(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_owned_stores(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -729,8 +759,9 @@ async def test_get_owned_stores(
     wallet_rpc_port = wallet_service.rpc_server.listen_port
     full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
-    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
-    for i in range(0, num_blocks):
+    async with wallet_node.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
+    for i in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
@@ -748,7 +779,7 @@ async def test_get_owned_stores(
             expected_store_ids.append(launcher_id)
 
         await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
-        for i in range(0, num_blocks):
+        for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.5)
 
@@ -759,6 +790,7 @@ async def test_get_owned_stores(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_subscriptions(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -999,10 +1031,8 @@ async def process_for_data_layer_keys(
     for sleep_time in backoff_times():
         try:
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
-        except Exception as e:
-            # TODO: more specific exceptions...
-            if "Key not found" not in str(e):
-                raise  # pragma: no cover
+        except chia_rs.datalayer.UnknownKeyError:
+            pass
         else:
             if expected_value is None or value == expected_value:
                 break
@@ -1591,6 +1621,7 @@ make_one_take_one_unpopulated_reference = MakeAndTakeReference(
     indirect=["offer_setup"],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1703,6 +1734,7 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
@@ -1721,6 +1753,7 @@ async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> N
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
@@ -1741,6 +1774,7 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None:
     # TODO: only needs the maker and db?  wallet?
     reference = make_one_take_one_reference
@@ -1783,6 +1817,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1819,9 +1854,11 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     for _ in range(10):
         if not (
             await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-                offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])),
+                CheckOfferValidity(
+                    offer=TradingOffer.from_bytes(hexstr_to_bytes(maker_response["offer"]["offer"])).to_bech32()
+                ),
             )
-        )[1]:
+        ).valid:
             break
         await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)
@@ -1859,6 +1896,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_cancel_offer_then_update(
     offer_setup: OfferSetup, reference: MakeAndTakeReference, secure: bool
 ) -> None:
@@ -1948,6 +1986,7 @@ async def test_make_and_cancel_offer_then_update(
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     offer_setup: OfferSetup,
     reference: MakeAndTakeReference,
@@ -1990,6 +2029,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_sync_status(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -2191,7 +2231,7 @@ async def test_issue_15955_deadlock(
         while time.monotonic() < end:
             with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
-                    *(asyncio.create_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
+                    *(create_referenced_task(data_layer.get_value(store_id=store_id, key=key)) for _ in range(10))
                 )
 
 
@@ -2272,7 +2312,7 @@ async def test_unsubscribe_unknown(
     bare_data_layer_api: DataLayerRpcApi,
     seeded_random: random.Random,
 ) -> None:
-    with pytest.raises(RuntimeError, match="No subscription found for the given store_id."):
+    with pytest.raises(RuntimeError, match="No subscription found for the given store_id"):
         await bare_data_layer_api.unsubscribe(request={"id": bytes32.random(seeded_random).hex(), "retain": False})
 
 
@@ -2969,18 +3009,18 @@ async def test_pagination_rpcs(
             "total_pages": 1,
             "total_bytes": 8,
             "diff": [
-                {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
                 {"type": "INSERT", "key": key6.hex(), "value": new_value.hex()},
+                {"type": "DELETE", "key": key6.hex(), "value": value6.hex()},
             ],
         }
         assert diff_res == diff_reference
 
-        with pytest.raises(Exception, match="Can't find keys"):
+        with pytest.raises(Exception, match="Cannot find merkle blob"):
             await data_rpc_api.get_keys(
                 {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
             )
 
-        with pytest.raises(Exception, match="Can't find keys and values"):
+        with pytest.raises(Exception, match="Cannot find merkle blob"):
             await data_rpc_api.get_keys_values(
                 {"id": store_id.hex(), "page": 0, "max_page_size": 100, "root_hash": bytes32([0] * 31 + [1]).hex()}
             )
@@ -3020,7 +3060,12 @@ async def test_pagination_cmds(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+    async with init_data_layer_service(
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        enable_batch_autoinsert=False,
+    ) as data_layer_service:
         assert data_layer_service.rpc_server is not None
         rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
@@ -3168,7 +3213,7 @@ async def test_pagination_cmds(
         if max_page_size is None or max_page_size == 100:
             assert keys == {
                 "keys": ["0x61616161", "0x6161"],
-                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
                 "success": True,
                 "total_bytes": 6,
                 "total_pages": 1,
@@ -3188,7 +3233,7 @@ async def test_pagination_cmds(
                         "value": "0x6161",
                     },
                 ],
-                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
                 "success": True,
                 "total_bytes": 9,
                 "total_pages": 1,
@@ -3205,7 +3250,7 @@ async def test_pagination_cmds(
         elif max_page_size == 5:
             assert keys == {
                 "keys": ["0x61616161"],
-                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
                 "success": True,
                 "total_bytes": 6,
                 "total_pages": 2,
@@ -3219,7 +3264,7 @@ async def test_pagination_cmds(
                         "value": "0x61",
                     }
                 ],
-                "root_hash": "0x889a4a61b17be799ae9d36831246672ef857a24091f54481431a83309d4e890e",
+                "root_hash": "0x3f4ae7b8e10ef48b3114843537d5def989ee0a3b6568af7e720a71730f260fa1",
                 "success": True,
                 "total_bytes": 9,
                 "total_pages": 2,
@@ -3406,7 +3451,10 @@ async def test_unsubmitted_batch_update(
             count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
         keys_values = await data_rpc_api.get_keys_values({"id": store_id.hex()})
-        assert keys_values == prev_keys_values
+        # order agnostic comparison of the list of dicts
+        assert {item["key"]: item for item in keys_values["keys_values"]} == {
+            item["key"]: item for item in prev_keys_values["keys_values"]
+        }
 
         pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is not None
@@ -3739,7 +3787,11 @@ async def test_unsubmitted_batch_db_migration(
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist, "submit_on_chain": False})
 
     # Artificially remove the first migration.
-    async with DataStore.managed(database=tmp_path.joinpath("db.sqlite")) as data_store:
+    async with DataStore.managed(
+        database=tmp_path.joinpath("db.sqlite"),
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as data_store:
         async with data_store.db_wrapper.writer() as writer:
             await writer.execute("DELETE FROM schema")
 
@@ -3756,7 +3808,9 @@ async def test_unsubmitted_batch_db_migration(
         update_tx_rec1 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         keys = await data_rpc_api.get_keys({"id": store_id.hex()})
-        assert keys == {"keys": ["0x30303031", "0x30303030"]}
+        # order agnostic comparison of the list
+        keys["keys"] = set(keys["keys"])
+        assert keys == {"keys": {"0x30303031", "0x30303030"}}
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
@@ -3784,7 +3838,7 @@ async def test_auto_subscribe_to_local_stores(
 
     with monkeypatch.context() as m:
         m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
-        m.setattr("chia.rpc.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
+        m.setattr("chia.wallet.wallet_rpc_client.WalletRpcClient.dl_track_new", mock_dl_track_new)
 
         config = bt.config
         config["data_layer"]["auto_subscribe_to_local_stores"] = auto_subscribe_to_local_stores

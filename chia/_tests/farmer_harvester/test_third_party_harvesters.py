@@ -10,41 +10,47 @@ from os.path import dirname
 from typing import Optional, Union, cast
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import (
+    ChallengeChainSubSlot,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    ProofOfSpace,
+    RewardChainSubSlot,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.harvester.harvester_service import HarvesterService
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
-from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
 SPList = list[SPType]
@@ -73,23 +79,21 @@ async def test_harvester_receive_source_signing_data(
         full_node_service_2,
         _,
     ) = farmer_harvester_2_simulators_zero_bits_plot_filter
-
     farmer: Farmer = farmer_service._node
     harvester: Harvester = harvester_service._node
     full_node_1: FullNode = full_node_service_1._node
     full_node_2: FullNode = full_node_service_2._node
 
+    await time_out_assert(60, node_type_connected, True, farmer.server, NodeType.HARVESTER)
     # Connect peers to each other
     farmer_service.add_peer(
         UnresolvedPeerInfo(str(full_node_service_2.self_hostname), full_node_service_2._server.get_port())
     )
+    await time_out_assert(60, node_type_connected, True, farmer.server, NodeType.FULL_NODE)
     full_node_service_2.add_peer(
         UnresolvedPeerInfo(str(full_node_service_1.self_hostname), full_node_service_1._server.get_port())
     )
-
-    await wait_until_node_type_connected(farmer.server, NodeType.FULL_NODE)
-    await wait_until_node_type_connected(farmer.server, NodeType.HARVESTER)  # Should already be connected
-    await wait_until_node_type_connected(full_node_1.server, NodeType.FULL_NODE)
+    await time_out_assert(60, node_type_connected, True, full_node_1.server, NodeType.FULL_NODE)
 
     # Prepare test data
     blocks: list[FullBlock]
@@ -102,6 +106,7 @@ async def test_harvester_receive_source_signing_data(
     # so that we have blocks generated that have our farmer reward address, instead
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
     await add_test_blocks_into_full_node(blocks, full_node_2)
+    await time_out_assert(60, full_node_2.blockchain.get_peak_height, blocks[-1].height)
 
     validated_foliage_data = False
     validated_foliage_transaction = False
@@ -360,6 +365,7 @@ def prepare_sp_and_pos_for_fee_test(
         sub_slot_iters=uint64(0),
         signage_point_index=uint8(0),
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
 
     pos = harvester_protocol.NewProofOfSpace(
@@ -371,7 +377,7 @@ def prepare_sp_and_pos_for_fee_test(
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=pubkey,
-            size=uint8(len(proof)),
+            version_and_size=uint8(32),
             proof=proof,
         ),
         signage_point_index=uint8(0),
@@ -422,12 +428,11 @@ async def scan_log_for_message(caplog: pytest.LogCaptureFixture, find_message: s
     return False
 
 
-async def wait_until_node_type_connected(server: ChiaServer, node_type: NodeType) -> WSChiaConnection:
-    while True:
-        for peer in server.all_connections.values():
-            if peer.connection_type == node_type.value:
-                return peer
-        await asyncio.sleep(1)
+def node_type_connected(server: ChiaServer, node_type: NodeType) -> bool:
+    for peer in server.all_connections.values():
+        if peer.connection_type == node_type.value:
+            return True
+    return False
 
 
 def decode_sp(

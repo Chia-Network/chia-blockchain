@@ -161,7 +161,7 @@ def find_all_dependency_paths(dependency_graph: dict[str, list[str]], start: str
         if current in visited:
             return
         if current == target and len(path) > 0:
-            all_paths.append(path[1:] + [current])
+            all_paths.append([*path[1:], current])
             return
         visited.add(current)
         for provider in sorted(dependency_graph.get(current, [])):
@@ -296,7 +296,7 @@ def parse_file_or_package(identifier: str) -> FileOrPackage:
         if "(" not in identifier:
             return File(Path(identifier))
         else:
-            return File(Path(identifier.split("(")[0].strip()))
+            return File(Path(identifier.split("(", maxsplit=1)[0].strip()))
 
     if ".py" not in identifier and identifier[0] == "(" and identifier[-1] == ")":
         return Package(identifier[1:-1])  # strip parens

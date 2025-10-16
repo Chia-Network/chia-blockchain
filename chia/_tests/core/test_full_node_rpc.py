@@ -1,47 +1,49 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import AugSchemeMPL
-from clvm.casts import int_to_bytes
+from chia_rs import AugSchemeMPL, BlockRecord, FullBlock, UnfinishedBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.rpc import validate_get_routes
+from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import Blockchain
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.signage_point import SignagePoint
+from chia.consensus.signage_point import SignagePoint
+from chia.full_node.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.protocols import full_node_protocol
-from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import compute_additions
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock
-from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint8
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @pytest.mark.anyio
-async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mode):
+async def test1(
+    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices, self_hostname: str, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 5
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
     full_node_api_1 = full_node_service_1._api
     full_node_api_2 = full_node_service_2._api
     server_2 = full_node_api_2.full_node.server
-
+    assert full_node_service_1.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service_1.rpc_server.listen_port,
@@ -81,14 +83,16 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             await full_node_api_1.full_node.add_block(block, None)
 
         assert len(await client.get_unfinished_block_headers()) > 0
-        assert len(await client.get_all_block(0, 2)) == 2
+        assert len(await client.get_all_block(uint32(0), uint32(2))) == 2
         state = await client.get_blockchain_state()
 
-        block = await client.get_block(state["peak"].header_hash)
-        assert block == blocks[-1]
-        assert (await client.get_block(bytes([1] * 32))) is None
-
-        assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
+        peak_block = await client.get_block(state["peak"].header_hash)
+        assert peak_block == blocks[-1]
+        with pytest.raises(ValueError, match="not found"):
+            await client.get_block(bytes32([1] * 32))
+        block_record = await client.get_block_record_by_height(2)
+        assert block_record is not None
+        assert block_record.header_hash == blocks[2].header_hash
 
         assert len(await client.get_block_records(0, 100)) == num_blocks * 2
 
@@ -146,8 +150,10 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert len(await client.get_all_mempool_items()) == 0
         assert len(await client.get_all_mempool_tx_ids()) == 0
-        assert (await client.get_mempool_item_by_tx_id(spend_bundle.name())) is None
-        assert (await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)) is None
+        with pytest.raises(ValueError, match="not in the mempool"):
+            await client.get_mempool_item_by_tx_id(spend_bundle.name())
+        with pytest.raises(ValueError, match="not in the mempool"):
+            await client.get_mempool_item_by_tx_id(spend_bundle.name(), False)
 
         await client.push_tx(spend_bundle)
         coin = spend_bundle.additions()[0]
@@ -161,13 +167,11 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             == spend_bundle
         )
         assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()
-        assert (
-            WalletSpendBundle.from_json_dict(
-                (await client.get_mempool_item_by_tx_id(spend_bundle.name()))["spend_bundle"]
-            )
-            == spend_bundle
-        )
-        assert (await client.get_coin_record_by_name(coin.name())) is None
+        mempool_item = await client.get_mempool_item_by_tx_id(spend_bundle.name())
+        assert mempool_item is not None
+        assert WalletSpendBundle.from_json_dict(mempool_item["spend_bundle"]) == spend_bundle
+        with pytest.raises(ValueError, match="not found"):
+            await client.get_coin_record_by_name(coin.name())
 
         # Verify that the include_pending arg to get_mempool_item_by_tx_id works
         coin_to_spend_pending = included_reward_coins[1]
@@ -180,23 +184,21 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             condition_dic=condition_dic,
         )
         await client.push_tx(spend_bundle_pending)
-        assert (
+        with pytest.raises(ValueError, match="not in the mempool"):
+            # not strictly in the mempool
             await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), False)
-        ) is None  # not strictly in the mempool
-        assert (
-            WalletSpendBundle.from_json_dict(
-                (await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True))["spend_bundle"]
-            )
-            == spend_bundle_pending  # pending entry into mempool, so include_pending fetches
-        )
+        # pending entry into mempool, so include_pending fetches
+        mempool_item = await client.get_mempool_item_by_tx_id(spend_bundle_pending.name(), True)
+        assert WalletSpendBundle.from_json_dict(mempool_item["spend_bundle"]) == spend_bundle_pending
 
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
         coin_record = await client.get_coin_record_by_name(coin.name())
+        assert coin_record is not None
         assert coin_record.coin == coin
-        assert coin in compute_additions(
-            await client.get_puzzle_and_solution(coin.parent_coin_info, coin_record.confirmed_block_index)
-        )
+        coin_spend = await client.get_puzzle_and_solution(coin.parent_coin_info, coin_record.confirmed_block_index)
+        assert coin_spend is not None
+        assert coin in compute_additions(coin_spend)
 
         assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1
         assert len(list(filter(lambda cr: not cr.spent, (await client.get_coin_records_by_puzzle_hash(ph))))) == 3
@@ -225,19 +227,19 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             )
 
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
-        block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
+        block = (await full_node_api_1.get_all_full_blocks())[-1]
 
         # since the hard fork, we no longer compress blocks using
         # block references anymore
         assert block.transactions_generator_ref_list == []
 
         block_spends = await client.get_block_spends(block.header_hash)
-
+        assert block_spends is not None
         assert len(block_spends) == 3
         assert sorted(block_spends, key=str) == sorted(coin_spends, key=str)
 
         block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
-
+        assert block_spends_with_conditions is not None
         assert len(block_spends_with_conditions) == 3
 
         block_spends_with_conditions = sorted(block_spends_with_conditions, key=lambda x: str(x.coin_spend))
@@ -247,17 +249,18 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000a"),
             bytes.fromhex("8488947a2213b2c2551fe019bbb708db86eab3dd5133eb57e801515e9e4ad82a"),
-            1750000000000,
+            uint64(1_750_000_000_000),
         )
-        assert coin_spend_with_conditions.coin_spend.puzzle_reveal.to_program() == Program.fromhex(
+        assert coin_spend_with_conditions.coin_spend.puzzle_reveal == SerializedProgram.fromhex(
             "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
         )
-        assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex(
+        assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
             "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa0a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee54798080ff8080"
         )
-        assert coin_spend_with_conditions.conditions == [
+
+        expected = [
             ConditionWithArgs(
-                b"2",
+                ConditionOpcode(b"2"),
                 [
                     bytes.fromhex(
                         "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
@@ -266,36 +269,38 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
                 ],
             ),
             ConditionWithArgs(
-                b"3",
+                ConditionOpcode(b"3"),
                 [
                     bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
                     bytes.fromhex("01977420dc00"),
                 ],
             ),
             ConditionWithArgs(
-                b"<",
+                ConditionOpcode(b"<"),
                 [
                     bytes.fromhex("a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee5479"),
                 ],
             ),
         ]
 
+        assert coin_spend_with_conditions.conditions == expected
+
         coin_spend_with_conditions = block_spends_with_conditions[2]
 
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000b"),
             bytes.fromhex("8488947a2213b2c2551fe019bbb708db86eab3dd5133eb57e801515e9e4ad82a"),
-            1750000000000,
+            uint64(1_750_000_000_000),
         )
-        assert coin_spend_with_conditions.coin_spend.puzzle_reveal.to_program() == Program.fromhex(
+        assert coin_spend_with_conditions.coin_spend.puzzle_reveal == SerializedProgram.fromhex(
             "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
         )
-        assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex(
+        assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
             "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa04f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f8080ff8080"
         )
         assert coin_spend_with_conditions.conditions == [
             ConditionWithArgs(
-                b"2",
+                ConditionOpcode(b"2"),
                 [
                     bytes.fromhex(
                         "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
@@ -304,14 +309,14 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
                 ],
             ),
             ConditionWithArgs(
-                b"3",
+                ConditionOpcode(b"3"),
                 [
                     bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
                     bytes.fromhex("01977420dc00"),
                 ],
             ),
             ConditionWithArgs(
-                b"<",
+                ConditionOpcode(b"<"),
                 [
                     bytes.fromhex("4f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f"),
                 ],
@@ -323,17 +328,17 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert coin_spend_with_conditions.coin_spend.coin == Coin(
             bytes.fromhex("27ae41e4649b934ca495991b7852b8550000000000000000000000000000000b"),
             bytes.fromhex("8488947a2213b2c2551fe019bbb708db86eab3dd5133eb57e801515e9e4ad82a"),
-            250000000000,
+            uint64(250_000_000_000),
         )
-        assert coin_spend_with_conditions.coin_spend.puzzle_reveal.to_program() == Program.fromhex(
+        assert coin_spend_with_conditions.coin_spend.puzzle_reveal == SerializedProgram.fromhex(
             "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
         )
-        assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex(
+        assert coin_spend_with_conditions.coin_spend.solution == SerializedProgram.fromhex(
             "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff853a3529440080ffff3cffa0617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f8080ff8080"
         )
         assert coin_spend_with_conditions.conditions == [
             ConditionWithArgs(
-                b"2",
+                ConditionOpcode(b"2"),
                 [
                     bytes.fromhex(
                         "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
@@ -342,29 +347,29 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
                 ],
             ),
             ConditionWithArgs(
-                b"3",
+                ConditionOpcode(b"3"),
                 [
                     bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
                     bytes.fromhex("3a35294400"),
                 ],
             ),
             ConditionWithArgs(
-                b"<",
+                ConditionOpcode(b"<"),
                 [
                     bytes.fromhex("617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f"),
                 ],
             ),
         ]
 
-        memo = 32 * b"\f"
+        memo = bytes32(32 * b"\f")
 
         for i in range(2):
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
             state = await client.get_blockchain_state()
-            block = await client.get_block(state["peak"].header_hash)
-
-            coin_to_spend = block.get_included_reward_coins()[0]
+            peak_block = await client.get_block(state["peak"].header_hash)
+            assert peak_block is not None
+            coin_to_spend = peak_block.get_included_reward_coins()[0]
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
             await client.push_tx(spend_bundle)
@@ -398,9 +403,10 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert len(await client.get_connections()) == 0
 
+        assert server_2._port is not None
         await client.open_connection(self_hostname, server_2._port)
 
-        async def num_connections():
+        async def num_connections() -> int:
             return len(await client.get_connections())
 
         await time_out_assert(10, num_connections, 1)
@@ -411,10 +417,12 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await client.close_connection(connections[0]["node_id"])
         await time_out_assert(10, num_connections, 0)
 
-        blocks: list[FullBlock] = await client.get_blocks(0, 5)
+        blocks = await client.get_blocks(0, 5)
         assert len(blocks) == 5
 
-        await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
+        await full_node_api_1.reorg_from_index_to_new_index(
+            ReorgProtocol(uint32(2), uint32(55), bytes32([0x2] * 32), None)
+        )
         new_blocks_0: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(new_blocks_0) == 7
 
@@ -427,7 +435,9 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
 
 @pytest.mark.anyio
-async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockchain):
+async def test_signage_points(
+    two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices, empty_blockchain: Blockchain
+) -> None:
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
     full_node_api_1 = full_node_service_1._api
@@ -439,7 +449,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
     self_hostname = config["self_hostname"]
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-
+    assert full_node_service_1.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service_1.rpc_server.listen_port,
@@ -447,17 +457,15 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
         full_node_service_1.config,
     ) as client:
         # Only provide one
-        res = await client.get_recent_signage_point_or_eos(None, None)
-        assert res is None
-        res = await client.get_recent_signage_point_or_eos(std_hash(b"0"), std_hash(b"1"))
-        assert res is None
-
+        with pytest.raises(ValueError, match="sp_hash or challenge_hash must be provided"):
+            await client.get_recent_signage_point_or_eos(None, None)
+        with pytest.raises(ValueError, match="Either sp_hash or challenge_hash must be provided, not both"):
+            await client.get_recent_signage_point_or_eos(std_hash(b"0"), std_hash(b"1"))
         # Not found
-        res = await client.get_recent_signage_point_or_eos(std_hash(b"0"), None)
-        assert res is None
-        res = await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
-        assert res is None
-
+        with pytest.raises(ValueError, match="in cache"):
+            await client.get_recent_signage_point_or_eos(std_hash(b"0"), None)
+        with pytest.raises(ValueError, match="in cache"):
+            await client.get_recent_signage_point_or_eos(None, std_hash(b"0"))
         blocks = bt.get_consecutive_blocks(5)
         for block in blocks:
             await full_node_api_1.full_node.add_block(block)
@@ -472,6 +480,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
         # Creates a signage point based on the last block
         peak_2 = second_blockchain.get_peak()
+        assert peak_2 is not None
         sp: SignagePoint = get_signage_point(
             bt.constants,
             blockchain,
@@ -481,10 +490,13 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
             [],
             peak_2.sub_slot_iters,
         )
-
+        assert sp.cc_proof is not None
+        assert sp.cc_vdf is not None
+        assert sp.rc_proof is not None
+        assert sp.rc_vdf is not None
         # Don't have SP yet
-        res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
-        assert res is None
+        with pytest.raises(ValueError, match="Did not find sp"):
+            await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
 
         # Add the last block
         await full_node_api_1.full_node.add_block(blocks[-1])
@@ -506,9 +518,8 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
         selected_eos = blocks[-1].finished_sub_slots[0]
 
         # Don't have EOS yet
-        res = await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
-        assert res is None
-
+        with pytest.raises(ValueError, match="Did not find eos"):
+            await client.get_recent_signage_point_or_eos(None, selected_eos.challenge_chain.get_hash())
         # Properly fetch an EOS
         for eos in blocks[-1].finished_sub_slots:
             await full_node_api_1.full_node.add_end_of_sub_slot(eos, peer)
@@ -537,6 +548,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
         # Signage point is no longer in the blockchain
         res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
+        assert res is not None
         assert res["reverted"]
         assert res["signage_point"] == sp
         assert "eos" not in res
@@ -550,10 +562,12 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
 
 @pytest.mark.anyio
-async def test_get_network_info(one_wallet_and_one_simulator_services, self_hostname):
+async def test_get_network_info(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+) -> None:
     nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
-
+    assert full_node_service_1.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service_1.rpc_server.listen_port,
@@ -571,9 +585,12 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
 
 
 @pytest.mark.anyio
-async def test_get_version(one_wallet_and_one_simulator_services, self_hostname):
+async def test_get_version(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+) -> None:
     nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
+    assert full_node_service_1.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service_1.rpc_server.listen_port,
@@ -588,12 +605,14 @@ async def test_get_version(one_wallet_and_one_simulator_services, self_hostname)
 
 
 @pytest.mark.anyio
-async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_hostname):
+async def test_get_blockchain_state(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
+) -> None:
     num_blocks = 5
     nodes, _, bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
     full_node_api_1 = full_node_service_1._api
-
+    assert full_node_service_1.rpc_server is not None
     try:
         client = await FullNodeRpcClient.create(
             self_hostname,
@@ -633,9 +652,11 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] > 0
         assert state["average_block_time"] > 0
 
-        block_records: list[BlockRecord] = [
-            await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash) for rec in blocks
-        ]
+        block_records = []
+        for rec in blocks:
+            record = await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash)
+            if record is not None:
+                block_records.append(record)
         first_non_transaction_block_index = -1
         for i, b in enumerate(block_records):
             if not b.is_transaction_block:
@@ -673,9 +694,9 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
 
 
 @pytest.mark.anyio
-async def test_coin_name_not_in_request(one_node, self_hostname):
+async def test_coin_name_not_in_request(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, _ = one_node
-
+    assert full_node_service.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service.rpc_server.listen_port,
@@ -687,9 +708,9 @@ async def test_coin_name_not_in_request(one_node, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
+async def test_coin_name_not_found_in_mempool(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, _ = one_node
-
+    assert full_node_service.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service.rpc_server.listen_port,
@@ -704,10 +725,10 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
 
 
 @pytest.mark.anyio
-async def test_coin_name_found_in_mempool(one_node, self_hostname):
+async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, bt = one_node
     full_node_api = full_node_service._api
-
+    assert full_node_service.rpc_server is not None
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
         full_node_service.rpc_server.listen_port,

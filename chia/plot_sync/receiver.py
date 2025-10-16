@@ -6,6 +6,9 @@ from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
+from chia_rs import PlotSize
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
@@ -30,11 +33,9 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
+from chia.protocols.outbound_message import make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -349,7 +350,11 @@ class Receiver:
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
         self._total_effective_plot_size = int(
-            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in self._plots.values())
+            # TODO: todo_v2_plots support v2 plots
+            sum(
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+                for plot in self._plots.values()
+            )
         )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync

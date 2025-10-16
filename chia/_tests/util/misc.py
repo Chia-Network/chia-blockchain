@@ -29,6 +29,9 @@ import pytest
 from _pytest.nodes import Node
 from aiohttp import web
 from chia_rs import Coin
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
+from typing_extensions import Self
 
 import chia
 import chia._tests
@@ -36,23 +39,21 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
-from chia.server.outbound_message import Message
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode
 
 
 class GcMode(enum.Enum):
-    nothing = enum.auto
-    precollect = enum.auto
-    disable = enum.auto
-    enable = enum.auto
+    nothing = enum.auto()
+    precollect = enum.auto()
+    disable = enum.auto()
+    enable = enum.auto()
 
 
 @contextlib.contextmanager
@@ -477,10 +478,25 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
 
 
 def invariant_check_mempool(mempool: Mempool) -> None:
-    with mempool._db_conn as conn:
-        cursor = conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
-        val = cursor.fetchone()
-        assert (mempool._total_cost, mempool._total_fee) == val
+    cursor = mempool._db_conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
+    val = cursor.fetchone()
+    assert (mempool._total_cost, mempool._total_fee) == val
+
+    cursor = mempool._db_conn.execute("SELECT coin_id, tx FROM spends")
+    for coin_id, item_id in cursor.fetchall():
+        item = mempool._items.get(item_id)
+        assert item is not None
+        # item is expected to contain a spend of coin_id, but it might be a
+        # fast-forward spend, in which case the dictionary won't help us,
+        # but we'll have to do a linear search
+        if coin_id in item.bundle_coin_spends:
+            assert item.bundle_coin_spends[coin_id].coin_spend.coin.name() == coin_id
+            continue
+
+        assert any(
+            i.latest_singleton_lineage is not None and i.latest_singleton_lineage.coin_id == coin_id
+            for i in item.bundle_coin_spends.values()
+        )
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
@@ -598,37 +614,37 @@ T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")
 
 
 class ComparableEnum(Enum):
-    def __lt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __lt__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__lt__(other.value)
 
-    def __le__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __le__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__le__(other.value)
 
-    def __eq__(self: T_ComparableEnum, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return False
 
-        return cast(bool, self.value.__eq__(cast(T_ComparableEnum, other).value))
+        return cast(bool, self.value.__eq__(cast(Self, other).value))
 
-    def __ne__(self: T_ComparableEnum, other: object) -> bool:
+    def __ne__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return True
 
-        return cast(bool, self.value.__ne__(cast(T_ComparableEnum, other).value))
+        return cast(bool, self.value.__ne__(cast(Self, other).value))
 
-    def __gt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __gt__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__gt__(other.value)
 
-    def __ge__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __ge__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 

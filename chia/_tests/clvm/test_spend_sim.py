@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G2Element, SpendBundle
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import compute_additions, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
+from chia.wallet.util.compute_additions import compute_additions
 
 
 @pytest.mark.anyio
 async def test_farming():
     async with sim_and_client(pass_prefarm=False) as (sim, _):
-        for i in range(0, 5):
+        for i in range(5):
             await sim.farm_block()
 
         assert len(sim.blocks) == 5
@@ -25,7 +25,7 @@ async def test_farming():
 @pytest.mark.anyio
 async def test_rewind():
     async with sim_and_client() as (sim, _):
-        for i in range(0, 5):
+        for i in range(5):
             await sim.farm_block()
 
         save_height = sim.get_height()
@@ -39,11 +39,11 @@ async def test_rewind():
 @pytest.mark.anyio
 async def test_all_endpoints():
     async with sim_and_client() as (sim, sim_client):
-        for i in range(0, 5):
+        for i in range(5):
             await sim.farm_block()
         await sim.farm_block(bytes32.zeros)
         await sim.farm_block(bytes32([1] * 32))
-        for i in range(0, 5):
+        for i in range(5):
             await sim.farm_block()
 
         # get_coin_records_by_hint

@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
 
-from chia.util.ssl_check import DEFAULT_PERMISSIONS_CERT_FILE, DEFAULT_PERMISSIONS_KEY_FILE
+from chia.ssl.ssl_check import DEFAULT_PERMISSIONS_CERT_FILE, DEFAULT_PERMISSIONS_KEY_FILE
 
 _all_private_node_names: list[str] = [
     "full_node",
@@ -24,8 +24,9 @@ _all_private_node_names: list[str] = [
     "crawler",
     "data_layer",
     "daemon",
+    "solver",
 ]
-_all_public_node_names: list[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
+_all_public_node_names: list[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer", "solver"]
 
 
 def get_chia_ca_crt_key() -> tuple[Any, Any]:
@@ -36,7 +37,7 @@ def get_chia_ca_crt_key() -> tuple[Any, Any]:
 
 
 def get_mozilla_ca_crt() -> str:
-    mozilla_path = Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
+    mozilla_path = Path(__file__).parent.absolute() / "cacert.pem"
     return str(mozilla_path)
 
 

@@ -4,12 +4,10 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element, G2Element, ProofOfSpace, RewardChainBlockUnfinished
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint8, uint32, uint64
 
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -45,6 +43,21 @@ class NewSignagePointHarvester(Streamable):
     filter_prefix_bits: uint8
 
 
+# this message has the same message ID as NewSignagePointHarvester, but this
+# message format is used if the protocol version is 0.0.37 or higher
+@streamable
+@dataclass(frozen=True)
+class NewSignagePointHarvester2(Streamable):
+    challenge_hash: bytes32
+    difficulty: uint64
+    sub_slot_iters: uint64
+    signage_point_index: uint8
+    sp_hash: bytes32
+    pool_difficulties: list[PoolDifficulty]
+    peak_height: uint32
+    last_tx_height: uint32
+
+
 @streamable
 @dataclass(frozen=True)
 class ProofOfSpaceFeeInfo(Streamable):
@@ -62,6 +75,20 @@ class NewProofOfSpace(Streamable):
     include_source_signature_data: bool
     farmer_reward_address_override: Optional[bytes32]
     fee_info: Optional[ProofOfSpaceFeeInfo]
+
+
+@streamable
+@dataclass(frozen=True)
+class PartialProofsData(Streamable):
+    challenge_hash: bytes32
+    sp_hash: bytes32
+    plot_identifier: str
+    partial_proofs: list[bytes]  # 16 * k bits blobs instead of 32-byte quality strings
+    signage_point_index: uint8
+    plot_size: uint8
+    pool_public_key: Optional[G1Element]
+    pool_contract_puzzle_hash: Optional[bytes32]
+    plot_public_key: G1Element
 
 
 # Source data corresponding to the hash that is sent to the Harvester for signing

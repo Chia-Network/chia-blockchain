@@ -11,28 +11,29 @@ from typing import Any, Callable, Optional, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
-from chia.rpc.wallet_request_types import LogIn
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.solver.solver_rpc_client import SolverRpcClient
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
+from chia.wallet.wallet_request_types import LogIn
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 NODE_TYPES: dict[str, type[RpcClient]] = {
     "base": RpcClient,
@@ -42,6 +43,7 @@ NODE_TYPES: dict[str, type[RpcClient]] = {
     "harvester": HarvesterRpcClient,
     "data_layer": DataLayerRpcClient,
     "simulator": SimulatorFullNodeRpcClient,
+    "solver": SolverRpcClient,
 }
 
 node_config_section_names: dict[type[RpcClient], str] = {
@@ -52,6 +54,7 @@ node_config_section_names: dict[type[RpcClient], str] = {
     HarvesterRpcClient: "harvester",
     DataLayerRpcClient: "data_layer",
     SimulatorFullNodeRpcClient: "full_node",
+    SolverRpcClient: "solver",
 }
 
 _T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)
@@ -141,9 +144,12 @@ async def get_any_service_client(
 
             if tb is not None:
                 print(f"Traceback:\n{tb}")
+        except (click.ClickException, click.Abort):
+            # this includes CliRpcConnectionError which is a subclass of click.ClickException
+            # raising here allows click to do it's normal click error handling
+            raise
         except Exception as e:  # this is only here to make the errors more user-friendly.
-            if not consume_errors or isinstance(e, (CliRpcConnectionError, click.Abort)):
-                # CliRpcConnectionError will be handled by click.
+            if not consume_errors:
                 raise
             print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
@@ -264,7 +270,7 @@ def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Abort
     response = input(input_message).lower()
     if response not in {"y", "yes"}:
         print(abort_message)
-        raise click.Abort()
+        raise click.Abort
 
 
 def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:

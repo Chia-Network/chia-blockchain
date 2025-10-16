@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -21,12 +21,12 @@ from types import FrameType
 from typing import Any, Optional, TextIO
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
@@ -38,7 +38,6 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
@@ -47,6 +46,7 @@ from chia.util.network import WebServer
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
@@ -54,15 +54,29 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import WSMsgType, web
+    from aiohttp import WSMessage, WSMsgType, web
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     sys.exit()
+
+
+def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass", "key", "secret", "mnemonic")) -> Any:
+    """Recursively redact sensitive data from nested dictionaries."""
+    if isinstance(obj, dict):
+        return {
+            key: "***<redacted>***"
+            if any(trigger.casefold() in key.casefold() for trigger in redaction_triggers)
+            else redact_sensitive_data(value, redaction_triggers)
+            for key, value in obj.items()
+        }
+    else:
+        return obj
 
 
 log = logging.getLogger(__name__)
@@ -211,7 +225,7 @@ class WebSocketServer:
                 "ECDHE-RSA-AES128-SHA256"
             )
 
-        self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
+        self.state_changed_task = create_referenced_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -248,7 +262,7 @@ class WebSocketServer:
         cancel_task_safe(self.state_changed_task, self.log)
         service_names = list(self.services.keys())
         stop_service_jobs = [
-            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+            create_referenced_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
         ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
@@ -265,7 +279,6 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug("Received message: %s", msg)
             decoded: WsRpcMessage = {
                 "command": "",
                 "ack": False,
@@ -279,6 +292,10 @@ class WebSocketServer:
                     decoded = json.loads(msg.data)
                     if "data" not in decoded:
                         decoded["data"] = {}
+
+                    redacted_data = redact_sensitive_data(decoded)
+                    redacted_message = WSMessage(msg.type, redacted_data, msg.extra)
+                    self.log.debug("Received message: %s", redacted_message)
 
                     maybe_response = await self.handle_message(ws, decoded)
                     if maybe_response is None:
@@ -295,6 +312,7 @@ class WebSocketServer:
 
                 await self.send_all_responses(connections, response)
             else:
+                self.log.debug("Received non-text message")
                 service_names = self.remove_connection(ws)
 
                 if len(service_names) == 0:
@@ -667,7 +685,7 @@ class WebSocketServer:
                     pk = sk.get_g1()
                 else:
                     pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
-                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
+                wallet_address = encode_puzzle_hash(puzzle_hash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
                 else:
@@ -1055,7 +1073,7 @@ class WebSocketServer:
                 break
 
         if next_plot_id is not None:
-            loop.create_task(self._start_plotting(next_plot_id, loop, queue))
+            create_referenced_task(self._start_plotting(next_plot_id, loop, queue))
 
     def _post_process_plotting_job(self, job: dict[str, Any]):
         id: str = job["id"]
@@ -1194,7 +1212,7 @@ class WebSocketServer:
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
                 # TODO: stop dropping tasks on the floor
-                loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
+                create_referenced_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1354,9 +1372,8 @@ class WebSocketServer:
                 "service": service,
                 "queue": self.extract_plot_queue(),
             }
-        else:
-            if self.ping_job is None:
-                self.ping_job = asyncio.create_task(self.ping_task())
+        elif self.ping_job is None:
+            self.ping_job = create_referenced_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response

@@ -9,8 +9,8 @@ from typing import Callable, ClassVar, Optional, TypeVar, Union, final, get_type
 
 from typing_extensions import Concatenate, ParamSpec, Protocol
 
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import Message
 from chia.util.streamable import Streamable
 
 

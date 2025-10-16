@@ -7,18 +7,18 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional
 
 import aiohttp
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
+from typing_extensions import Self
 
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.server import ssl_context_for_client
 from chia.server.ssl_context import private_ssl_ca_paths
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint16
-
-_T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
+from chia.util.task_referencer import create_referenced_task
 
 
 # It would be better to not inherit from ValueError.  This is being done to separate
@@ -49,12 +49,12 @@ class RpcClient:
 
     @classmethod
     async def create(
-        cls: type[_T_RpcClient],
+        cls,
         self_hostname: str,
         port: uint16,
         root_path: Optional[Path],
         net_config: Optional[dict[str, Any]],
-    ) -> _T_RpcClient:
+    ) -> Self:
         if (root_path is not None) != (net_config is not None):
             raise ValueError("Either both or neither of root_path and net_config must be provided")
 
@@ -88,12 +88,12 @@ class RpcClient:
     @classmethod
     @asynccontextmanager
     async def create_as_context(
-        cls: type[_T_RpcClient],
+        cls,
         self_hostname: str,
         port: uint16,
         root_path: Optional[Path] = None,
         net_config: Optional[dict[str, Any]] = None,
-    ) -> AsyncIterator[_T_RpcClient]:
+    ) -> AsyncIterator[Self]:
         self = await cls.create(
             self_hostname=self_hostname,
             port=port,
@@ -156,7 +156,7 @@ class RpcClient:
         return await self.fetch("reset_log_level", {})
 
     def close(self) -> None:
-        self.closing_task = asyncio.create_task(self.session.close())
+        self.closing_task = create_referenced_task(self.session.close())
 
     async def await_closed(self) -> None:
         if self.closing_task is not None:

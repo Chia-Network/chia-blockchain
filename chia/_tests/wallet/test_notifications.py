@@ -6,15 +6,15 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.wallet.notification_store import NotificationStore
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
@@ -65,8 +65,10 @@ async def test_notifications(
     wallet_1 = wsm_1.main_wallet
     wallet_2 = wsm_2.main_wallet
 
-    ph_1 = await wallet_1.get_new_puzzlehash()
-    ph_2 = await wallet_2.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_1 = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph_2 = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
     ph_token = bytes32.random(seeded_random)
 
     if trusted:
@@ -83,7 +85,7 @@ async def test_notifications(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    for i in range(0, 2):
+    for i in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)

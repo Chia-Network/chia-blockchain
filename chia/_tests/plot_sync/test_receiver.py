@@ -7,7 +7,9 @@ import time
 from typing import Any, Callable, Union
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, PlotSize
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.plot_sync.util import get_dummy_connection
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
@@ -24,9 +26,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64
+from chia.protocols.outbound_message import NodeType
 from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
         assert len(step_data) == 10
         # Invoke batches of: 1, 2, 3, 4 items and validate the data against plot store before and after
         indexes = [0, 1, 3, 6, 10]
-        for i in range(0, len(indexes) - 1):
+        for i in range(len(indexes) - 1):
             plots_processed_before = receiver.current_sync().plots_processed
             invoke_data = step_data[indexes[i] : indexes[i + 1]]
             pre_function_validate(receiver, invoke_data, sync_step.state)
@@ -166,7 +166,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
 
     # Create example plot data
-    path_list = [str(x) for x in range(0, 40)]
+    path_list = [str(x) for x in range(40)]
     plot_info_list = [
         Plot(
             filename=str(x),
@@ -185,8 +185,12 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
+    # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+        sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+            for plot in receiver.plots().values()
+        )
     )
     sync_steps: list[SyncStepData] = [
         SyncStepData(
@@ -266,7 +270,11 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_1["total_effective_plot_size"] == int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+        # TODO: todo_v2_plots support v2 plots
+        sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+            for plot in receiver.plots().values()
+        )
     )
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
@@ -312,8 +320,12 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
+    # TODO: todo_v2_plots support v2 plots
     assert plot_sync_dict_3["total_effective_plot_size"] == int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+        sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+            for plot in receiver.plots().values()
+        )
     )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None

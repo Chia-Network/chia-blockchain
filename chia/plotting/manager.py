@@ -9,10 +9,11 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from chia_rs import G1Element
-from chiapos import DiskProver, decompressor_context_queue
+from chiapos import decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
+from chia.plotting.prover import get_prover_from_file
 from chia.plotting.util import (
     HarvestingMode,
     PlotInfo,
@@ -323,7 +324,7 @@ class PlotManager:
                 cache_entry = self.cache.get(file_path)
                 cache_hit = cache_entry is not None
                 if not cache_hit:
-                    prover = DiskProver(str(file_path))
+                    prover = get_prover_from_file(str(file_path))
 
                     log.debug(f"process_file {file_path!s}")
 
@@ -332,18 +333,22 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
+                    k = prover.get_size()
                     level = prover.get_compression_level()
-                    if level == 0:
-                        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                            log.warning(
-                                f"Not farming plot {file_path}. "
-                                f"Size is {stat_info.st_size / (1024 ** 3)} GiB, "
-                                f"but expected at least: {expected_size / (1024 ** 3)} GiB. "
-                                "We assume the file is being copied."
-                            )
-                            return None
+                    if (
+                        level == 0
+                        and stat_info.st_size < 0.98 * expected_size
+                        and ((k.size_v1 is not None and k.size_v1 >= 30) or (k.size_v2 is not None and k.size_v2 >= 28))
+                    ):
+                        log.warning(
+                            f"Not farming plot {file_path}. "
+                            f"Size is {stat_info.st_size / (1024**3)} GiB, "
+                            f"but expected at least: {expected_size / (1024**3)} GiB. "
+                            "We assume the file is being copied."
+                        )
+                        return None
 
-                    cache_entry = CacheEntry.from_disk_prover(prover)
+                    cache_entry = CacheEntry.from_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
@@ -418,7 +423,7 @@ class PlotManager:
 
             return new_plot_info
 
-        with self, ThreadPoolExecutor() as executor:
+        with self, ThreadPoolExecutor(thread_name_prefix="plot-process-") as executor:
             plots_refreshed: dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:

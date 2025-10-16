@@ -15,33 +15,34 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 
+from chia_rs import (
+    ChallengeChainSubSlot,
+    ConsensusConstants,
+    EndOfSubSlotBundle,
+    InfusedChallengeChainSubSlot,
+    RewardChainBlock,
+    RewardChainSubSlot,
+    SubEpochSummary,
+    SubSlotProofs,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from chiavdf import create_discriminant, prove
 
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord_state import LastState
 from chia.timelord.types import Chain, IterationType, StateType
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import (
-    ChallengeChainSubSlot,
-    InfusedChallengeChainSubSlot,
-    RewardChainSubSlot,
-    SubSlotProofs,
-)
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -158,20 +159,20 @@ class Timelord:
         self.last_state: LastState = LastState(self.constants)
         slow_bluebox = self.config.get("slow_bluebox", False)
         if not self.bluebox_mode:
-            self.main_loop = asyncio.create_task(self._manage_chains())
+            self.main_loop = create_referenced_task(self._manage_chains())
+        elif os.name == "nt" or slow_bluebox:
+            # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
+            workers = self.config.get("slow_bluebox_process_count", 1)
+            self._executor_shutdown_tempfile = _create_shutdown_file()
+            self.bluebox_pool = ThreadPoolExecutor(
+                max_workers=workers,
+                thread_name_prefix="blue-box-",
+            )
+            self.main_loop = create_referenced_task(
+                self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
+            )
         else:
-            if os.name == "nt" or slow_bluebox:
-                # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
-                workers = self.config.get("slow_bluebox_process_count", 1)
-                self._executor_shutdown_tempfile = _create_shutdown_file()
-                self.bluebox_pool = ThreadPoolExecutor(
-                    max_workers=workers,
-                )
-                self.main_loop = asyncio.create_task(
-                    self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
-                )
-            else:
-                self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
+            self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
         log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
         try:
             yield
@@ -217,18 +218,17 @@ class Timelord:
 
     async def _stop_chain(self, chain: Chain) -> None:
         try:
-            _, _, stop_writer = self.chain_type_to_stream[chain]
+            _, _, stop_writer = self.chain_type_to_stream.pop(chain)
+            if chain not in self.unspawned_chains:
+                self.unspawned_chains.append(chain)
             if chain in self.allows_iters:
+                self.allows_iters.remove(chain)
                 stop_writer.write(b"010")
                 await stop_writer.drain()
-                self.allows_iters.remove(chain)
             else:
                 log.error(f"Trying to stop {chain} before its initialization.")
                 stop_writer.close()
                 await stop_writer.wait_closed()
-            if chain not in self.unspawned_chains:
-                self.unspawned_chains.append(chain)
-            del self.chain_type_to_stream[chain]
         except ConnectionResetError as e:
             log.error(f"{e}")
         except Exception as e:
@@ -253,6 +253,7 @@ class Timelord:
                 sub_slot_iters,
                 difficulty,
                 self.get_height(),
+                self.last_state.get_last_tx_height(),
             )
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
@@ -337,6 +338,11 @@ class Timelord:
                     self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
+
+        # remove overflow blocks that were moved to unfinished cache
+        for block in new_unfinished_blocks:
+            if block in self.overflow_blocks:
+                self.overflow_blocks.remove(block)
         # Signage points.
         if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
@@ -418,7 +424,7 @@ class Timelord:
             assert challenge is not None
             assert initial_form is not None
             self.process_communication_tasks.append(
-                asyncio.create_task(
+                create_referenced_task(
                     self._do_process_communication(
                         picked_chain, challenge, initial_form, ip, reader, writer, proof_label=self.num_resets
                     )
@@ -550,6 +556,7 @@ class Timelord:
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
                             self.get_height(),
+                            uint32(0),
                         )
                     except Exception as e:
                         log.error(f"Error {e}")
@@ -623,7 +630,7 @@ class Timelord:
                     ):
                         # We don't know when the last block was, so we can't make peaks
                         return
-
+                    assert self.last_state.last_tx_block_block_height is not None
                     sp_total_iters = (
                         ip_total_iters
                         - ip_iters
@@ -932,18 +939,13 @@ class Timelord:
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
         try:
-            # Depending on the flags 'fast_algorithm' and 'bluebox_mode',
-            # the timelord tells the vdf_client what to execute.
+            # Depending on the flag 'bluebox_mode', the timelord tells the vdf_client what to execute.
             async with self.lock:
                 if self.bluebox_mode:
                     writer.write(b"S")
                 else:
-                    if self.config["fast_algorithm"]:
-                        # Run n-wesolowski (fast) algorithm.
-                        writer.write(b"N")
-                    else:
-                        # Run two-wesolowski (slow) algorithm.
-                        writer.write(b"T")
+                    # Run two-wesolowski algorithm.
+                    writer.write(b"T")
                 await writer.drain()
 
             prefix = str(len(str(disc)))
@@ -1093,6 +1095,8 @@ class Timelord:
 
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
+        except Exception:
+            log.exception("VDF client communication terminated abruptly")
 
     async def _manage_discriminant_queue_sanitizer(self) -> None:
         while not self._shut_down:
@@ -1112,7 +1116,7 @@ class Timelord:
                             info = self.pending_bluebox_info[0]
                         ip, reader, writer = self.free_clients[0]
                         self.process_communication_tasks.append(
-                            asyncio.create_task(
+                            create_referenced_task(
                                 self._do_process_communication(
                                     Chain.BLUEBOX,
                                     info[1].new_proof_of_time.challenge,
@@ -1136,7 +1140,7 @@ class Timelord:
     async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ThreadPoolExecutor, counter: int) -> None:
         tasks = []
         for _ in range(counter):
-            tasks.append(asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow(pool)))
+            tasks.append(create_referenced_task(self._manage_discriminant_queue_sanitizer_slow(pool)))
         for task in tasks:
             await task
 
@@ -1167,6 +1171,7 @@ class Timelord:
                     t1 = time.time()
                     log.info(
                         f"Working on compact proof for height: {picked_info.height}. "
+                        f"VDF: {picked_info.field_vdf}. "
                         f"Iters: {picked_info.new_proof_of_time.number_of_iterations}."
                     )
                     bluebox_process_data = BlueboxProcessData(

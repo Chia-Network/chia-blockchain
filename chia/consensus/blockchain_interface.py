@@ -2,19 +2,16 @@ from __future__ import annotations
 
 from typing import Optional, Protocol
 
-from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.ints import uint32
+from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSummary
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 
 class BlockRecordsProtocol(Protocol):
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]: ...
     def block_record(self, header_hash: bytes32) -> BlockRecord: ...
     def contains_height(self, height: uint32) -> bool: ...
-    def contains_block(self, header_hash: bytes32) -> bool: ...
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool: ...
     def height_to_hash(self, height: uint32) -> Optional[bytes32]: ...
     def height_to_block_record(self, height: uint32) -> BlockRecord: ...
 

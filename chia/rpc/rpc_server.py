@@ -20,11 +20,12 @@ from aiohttp import (
     WSMsgType,
     web,
 )
+from chia_rs.sized_ints import uint16
 from typing_extensions import Protocol, final
 
 from chia import __version__
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.util import wrap_http_handler
-from chia.server.outbound_message import NodeType
 from chia.server.server import (
     ChiaServer,
     ssl_context_for_client,
@@ -35,9 +36,9 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chia_logging import default_log_level, set_log_level
 from chia.util.config import str2bool
-from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import WebServer, resolve
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import (
     WsRpcMessage,
     create_payload,
@@ -198,7 +199,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func, route)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
@@ -248,8 +249,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self._state_changed(change, change_data))  # noqa: RUF006
+        create_referenced_task(self._state_changed(change, change_data), known_unreferenced=True)
 
     @property
     def listen_port(self) -> uint16:
@@ -292,7 +292,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def open_connection(self, request: dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
-        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(int(port)))
+        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(port))
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
@@ -303,7 +303,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def close_connection(self, request: dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
-            raise web.HTTPInternalServerError()
+            raise web.HTTPInternalServerError
         connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
@@ -460,7 +460,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 self.client_session = None
                 await asyncio.sleep(2)
 
-        self.daemon_connection_task = asyncio.create_task(inner())
+        self.daemon_connection_task = create_referenced_task(inner())
 
     _routes: ClassVar[dict[str, Callable[..., Awaitable[object]]]] = {
         "/get_network_info": get_network_info,

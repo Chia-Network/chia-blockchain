@@ -7,15 +7,18 @@ from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass, field
 from math import ceil
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from chia.plotting.prover import ProverProtocol
 
 from chia_rs import G1Element
-from chiapos import DiskProver
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint64
 
+from chia.plotting.prover import get_prover_from_bytes
 from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, VersionedBlob, streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -43,7 +46,7 @@ class CacheDataV1(Streamable):
 
 @dataclass
 class CacheEntry:
-    prover: DiskProver
+    prover: ProverProtocol
     farmer_public_key: G1Element
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
@@ -51,7 +54,7 @@ class CacheEntry:
     last_use: float
 
     @classmethod
-    def from_disk_prover(cls, prover: DiskProver) -> CacheEntry:
+    def from_prover(cls, prover: ProverProtocol) -> CacheEntry:
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,
@@ -113,7 +116,7 @@ class Cache:
                     cache_entry.pool_public_key,
                     cache_entry.pool_contract_puzzle_hash,
                     cache_entry.plot_public_key,
-                    uint64(int(cache_entry.last_use)),
+                    uint64(cache_entry.last_use),
                 )
                 for path, cache_entry in self.items()
             }
@@ -149,8 +152,9 @@ class Cache:
                     39: 44367,
                 }
                 for path, cache_entry in cache_data.entries:
+                    prover: ProverProtocol = get_prover_from_bytes(path, cache_entry.prover_data)
                     new_entry = CacheEntry(
-                        DiskProver.from_bytes(cache_entry.prover_data),
+                        prover,
                         cache_entry.farmer_public_key,
                         cache_entry.pool_public_key,
                         cache_entry.pool_contract_puzzle_hash,
@@ -161,28 +165,33 @@ class Cache:
                     #       it's here to filter invalid cache entries coming from bladebit RAM plotting.
                     #       Related: - https://github.com/Chia-Network/chia-blockchain/issues/13084
                     #                - https://github.com/Chia-Network/chiapos/pull/337
-                    k = new_entry.prover.get_size()
-                    if k not in estimated_c2_sizes:
-                        estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
-                    memo_size = len(new_entry.prover.get_memo())
-                    prover_size = len(cache_entry.prover_data)
-                    # Estimated C2 size + memo size + 2000 (static data + path)
-                    # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
-                    # path: up to ~1870, all above will lead to false positive.
-                    # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
+                    ps = new_entry.prover.get_size()
+                    if ps.size_v1 is not None:
+                        k = ps.size_v1
+                        if k not in estimated_c2_sizes:
+                            estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
+                        memo_size = len(new_entry.prover.get_memo())
+                        prover_size = len(cache_entry.prover_data)
+                        # Estimated C2 size + memo size + 2000 (static data + path)
+                        # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
+                        # path: up to ~1870, all above will lead to false positive.
+                        # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
 
-                    # Use experimental measurements if more than estimates
-                    # https://github.com/Chia-Network/chia-blockchain/issues/16063
-                    check_size = estimated_c2_sizes[k] + memo_size + 2000
-                    if k in measured_sizes:
-                        check_size = max(check_size, measured_sizes[k])
+                        # Use experimental measurements if more than estimates
+                        # https://github.com/Chia-Network/chia-blockchain/issues/16063
+                        check_size = estimated_c2_sizes[k] + memo_size + 2000
+                        if k in measured_sizes:
+                            check_size = max(check_size, measured_sizes[k])
 
-                    if prover_size > check_size:
-                        log.warning(
-                            "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
-                            f"{self._path}, restart. Entry: size {prover_size}, path {path}"
-                        )
-                    else:
+                        if prover_size > check_size:
+                            log.warning(
+                                "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
+                                f"{self._path}, restart. Entry: size {prover_size}, path {path}"
+                            )
+                        else:
+                            self._data[Path(path)] = new_entry
+                    elif ps.size_v2 is not None:
+                        # TODO: todo_v2_plots validate prover size
                         self._data[Path(path)] = new_entry
 
                 log.info(f"Parsed {len(self._data)} cache entries in {time.time() - start:.2f}s")

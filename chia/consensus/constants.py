@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from chia_rs import ConsensusConstants as ConsensusConstants  # noqa: PLC0414
+from chia_rs import ConsensusConstants
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash

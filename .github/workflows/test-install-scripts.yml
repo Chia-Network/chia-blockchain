@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
@@ -33,14 +37,14 @@ jobs:
           - name: Linux
             emoji: 🐧
             runs-on:
-              arm: [Linux, ARM64]
+              arm: ubuntu-24.04-arm
               intel: ubuntu-latest
             matrix: linux
           - name: macOS
             emoji: 🍎
             runs-on:
-              arm: macos-latest
-              intel: macos-13
+              arm: macos-15
+              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
             matrix: macos
           - name: Windows
             emoji: 🪟
@@ -74,14 +78,27 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
+
+      - name: Remove GUI submodule for gui script testing
+        env:
+          GUI_DIRECTORY: chia-blockchain-gui
+        run: |
+          [ -d "${GUI_DIRECTORY}" ]
+          rm -rf "${GUI_DIRECTORY}"
 
       - uses: ./.github/actions/install
         with:
@@ -103,6 +120,7 @@ jobs:
 
       - name: Run install-gui script (Windows)
         if: matrix.os.matrix == 'windows'
+        shell: pwsh
         run: |
           ./Install-gui.ps1
 
@@ -144,7 +162,7 @@ jobs:
             matrix: linux
             runs-on:
               intel: ubuntu-latest
-              arm: [linux, arm64]
+              arm: ubuntu-24.04-arm
         distribution:
           - name: amazonlinux:2023
             type: amazon
@@ -152,10 +170,6 @@ jobs:
           - name: arch:latest
             type: arch
             url: "docker://archlinux:latest"
-          - name: debian:bullseye
-            type: debian
-            # https://packages.debian.org/bullseye/python/python3 (3.9)
-            url: "docker://debian:bullseye"
           - name: debian:bookworm
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
@@ -174,10 +188,6 @@ jobs:
           - name: rockylinux:9
             type: rocky
             url: "docker://rockylinux:9"
-          - name: ubuntu:focal (20.04)
-            type: ubuntu
-            # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-            url: "docker://ubuntu:focal"
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
@@ -194,24 +204,29 @@ jobs:
         exclude:
           - distribution:
               type: arch
-            arch:
-              matrix: arm
+          # TODO: arch brought in glibc 2.41 which became more sensitive around execstack
+          #       which is enabled in libbladebit.  fixes will be made to main and this
+          #       should be re-enabled then.
+          #    arch:
+          #      matrix: arm
 
     steps:
       - name: Prepare Amazon Linux
         if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
-          yum install --assumeyes git sudo
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
-          pacman --noconfirm -S base git sudo openssl-1.1
+          pacman --noconfirm -S base git openssl-1.1
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
-          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.11.8-1-x86_64.pkg.tar.zst
+          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.12.7-1-x86_64.pkg.tar.zst
 
       - name: Prepare Debian
         if: ${{ matrix.distribution.type == 'debian' }}
@@ -219,7 +234,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo python3-venv
+          apt-get install --yes git lsb-release python3-venv
 
       - name: Prepare Fedora
         if: ${{ matrix.distribution.type == 'fedora' }}
@@ -229,21 +244,19 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git sudo python39
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # for bionic
           apt-get --yes update
-          apt-get install --yes software-properties-common
-          add-apt-repository --yes ppa:git-core/ppa
-          apt-get --yes update
-          apt-get install --yes git lsb-release sudo
-          MINIMUM=3.9
-          if ! apt satisfy --yes "python3-venv (>= ${MINIMUM})"
+          apt-get install --yes git lsb-release
+          MINIMUM=3.10
+          if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
             apt-get install --yes python${MINIMUM}-venv
           fi
@@ -253,7 +266,7 @@ jobs:
 
       # after installing git so we use that copy
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 

@@ -5,33 +5,37 @@ from collections.abc import Generator, Iterator
 from typing import Optional
 
 import pytest
-from chia_rs import G1Element, G2Element
-
-from chia._tests.util.benchmarks import rand_bytes, rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import (
+from chia_rs import (
     ChallengeChainSubSlot,
+    EndOfSubSlotBundle,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    G2Element,
+    HeaderBlock,
     InfusedChallengeChainSubSlot,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlock,
     RewardChainSubSlot,
     SubSlotProofs,
+    TransactionsInfo,
 )
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.util.full_block_utils import (
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+
+from chia._tests.util.benchmarks import rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
+from chia.consensus.generator_tools import get_block_header
+from chia.full_node.full_block_utils import (
     block_info_from_block,
     generator_from_block,
     get_height_and_tx_status_from_block,
     header_block_from_block,
 )
-from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 
 test_g2s: list[G2Element] = [rand_g2() for _ in range(10)]
 test_g1s: list[G1Element] = [rand_g1() for _ in range(10)]
@@ -63,14 +67,15 @@ def vdf_proof() -> VDFProof:
 def get_proof_of_space() -> Generator[ProofOfSpace, None, None]:
     for pool_pk in [g1(), None]:
         for plot_hash in [hsh(), None]:
-            yield ProofOfSpace(
-                hsh(),  # challenge
-                pool_pk,
-                plot_hash,
-                g1(),  # plot_public_key
-                uint8(32),
-                rand_bytes(8 * 32),
-            )
+            for pos_version in [0, 0x80]:
+                yield ProofOfSpace(
+                    hsh(),  # challenge
+                    pool_pk,
+                    plot_hash,
+                    g1(),  # plot_public_key
+                    uint8(pos_version | 32),  # this is version and k-size
+                    random.randbytes(8 * 32),
+                )
 
 
 def get_reward_chain_block(height: uint32) -> Generator[RewardChainBlock, None, None]:
@@ -261,7 +266,11 @@ async def test_parser():
         assert height == block.height
         assert is_tx_block == (block.transactions_info is not None)
         gen = generator_from_block(block_bytes)
-        assert gen == bytes(block.transactions_generator)
+        if gen is None:
+            assert block.transactions_generator is None
+        else:
+            assert block.transactions_generator is not None
+            assert gen == bytes(block.transactions_generator)
         bi = block_info_from_block(block_bytes)
         assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash

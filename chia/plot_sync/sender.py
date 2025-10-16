@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
+from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -24,11 +25,11 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.batches import to_batches
-from chia.util.ints import int16, uint32, uint64
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -36,16 +37,19 @@ log = logging.getLogger(__name__)
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     converted: list[Plot] = []
     for plot_info in plot_infos:
+        # TODO: todo_v2_plots support v2 plots
+        k = plot_info.prover.get_size().size_v1
+        assert k is not None
         converted.append(
             Plot(
                 filename=plot_info.prover.get_filename(),
-                size=plot_info.prover.get_size(),
+                size=k,
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
-                time_modified=uint64(int(plot_info.time_modified)),
+                time_modified=uint64(plot_info.time_modified),
                 compression_level=plot_info.prover.get_compression_level(),
             )
         )
@@ -71,7 +75,7 @@ class MessageGenerator(Generic[T]):
     args: Iterable[object]
 
     def generate(self) -> tuple[PlotSyncIdentifier, T]:
-        identifier = PlotSyncIdentifier(uint64(int(time.time())), self.sync_id, self.message_id)
+        identifier = PlotSyncIdentifier(uint64(time.time()), self.sync_id, self.message_id)
         payload = self.payload_type(identifier, *self.args)
         return identifier, payload
 
@@ -120,11 +124,11 @@ class Sender:
         if self._task is not None and self._stop_requested:
             await self.await_closed()
         if self._task is None:
-            self._task = asyncio.create_task(self._run())
+            self._task = create_referenced_task(self._run())
             if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:
-            raise AlreadyStartedError()
+            raise AlreadyStartedError
 
     def stop(self) -> None:
         self._stop_requested = True
@@ -276,7 +280,7 @@ class Sender:
             PlotSyncStart,
             initial,
             self._last_sync_id,
-            uint32(int(count)),
+            uint32(count),
             self._harvesting_mode,
         )
 

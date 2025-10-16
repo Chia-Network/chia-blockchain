@@ -5,12 +5,21 @@ import logging
 import random
 from typing import Any, Optional, Union
 
-from chia_rs import compute_merkle_set_root, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia_rs import (
+    CoinSpend,
+    CoinState,
+    HeaderBlock,
+    RespondToPhUpdates,
+    compute_merkle_set_root,
+    confirm_included_already_hashed,
+    confirm_not_included_already_hashed,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
-    CoinState,
     RegisterForCoinUpdates,
     RegisterForPhUpdates,
     RejectAdditionsRequest,
@@ -28,14 +37,11 @@ from chia.protocols.wallet_protocol import (
     RespondPuzzleSolution,
     RespondRemovals,
     RespondToCoinUpdates,
-    RespondToPhUpdates,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32
+from chia.types.coin_spend import make_spend
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
 log = logging.getLogger(__name__)
@@ -55,10 +61,10 @@ async def subscribe_to_phs(
     """
     msg = RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
     all_coins_state: Optional[RespondToPhUpdates] = await peer.call_api(
-        FullNodeAPI.register_interest_in_puzzle_hash, msg, timeout=300
+        FullNodeAPI.register_for_ph_updates, msg, timeout=300
     )
     if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_info.host} for register_interest_in_puzzle_hash")
+        raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_ph_updates")
     return all_coins_state.coin_states
 
 
@@ -72,11 +78,11 @@ async def subscribe_to_coin_updates(
     """
     msg = RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
     all_coins_state: Optional[RespondToCoinUpdates] = await peer.call_api(
-        FullNodeAPI.register_interest_in_coin, msg, timeout=300
+        FullNodeAPI.register_for_coin_updates, msg, timeout=300
     )
 
     if all_coins_state is None:
-        raise ValueError(f"None response from peer {peer.peer_info.host} for register_interest_in_coin")
+        raise ValueError(f"None response from peer {peer.peer_info.host} for register_for_coin_updates")
     return all_coins_state.coin_states
 
 
@@ -316,7 +322,9 @@ async def fetch_header_blocks_in_range(
                 res_h_blocks = await res_h_blocks_task
         else:
             log.debug(f"Fetching: {start}-{end}")
-            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_start, request_end))
+            res_h_blocks_task = create_referenced_task(
+                _fetch_header_blocks_inner(all_peers, request_start, request_end)
+            )
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:

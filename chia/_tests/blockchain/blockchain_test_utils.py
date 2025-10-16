@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from typing import Optional
 
-from chia_rs import SpendBundleConditions
+from chia_rs import FullBlock, SpendBundleConditions
+from chia_rs.sized_ints import uint32, uint64
 
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
-from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -23,7 +22,7 @@ async def check_block_store_invariant(bc: Blockchain):
 
     in_chain = set()
     max_height = -1
-    async with db_wrapper.writer_maybe_transaction() as conn:
+    async with bc.block_store.transaction() as conn:
         async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
             rows = await cursor.fetchall()
             for row in rows:
@@ -77,7 +76,7 @@ async def _validate_and_add_block(
             conds = None
         else:
             # fake the signature validation. Just say True here.
-            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
         results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
         future = await pre_validate_block(
@@ -117,11 +116,10 @@ async def _validate_and_add_block(
         if err is not None:
             # Got an error
             raise AssertionError(err)
-    else:
-        # Here we will enforce checking of the exact error
-        if err != expected_error:
-            # Did not get the right error, or did not get an error
-            raise AssertionError(f"Expected {expected_error} but got {err}")
+    # Here we will enforce checking of the exact error
+    elif err != expected_error:
+        # Did not get the right error, or did not get an error
+        raise AssertionError(f"Expected {expected_error} but got {err}")
 
     if expected_result is not None and expected_result != result:
         raise AssertionError(f"Expected {expected_result} but got {result}")

@@ -6,6 +6,306 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.5.6 Chia blockchain 2025-9-24
+
+## What's Changed
+
+### Changed
+
+- Supported previous harvester protocol for Dr. Plotter users
+- Updated Crowdin translations
+
+### Fixed
+
+- Upgraded electron dependency to 37.3.1 to fix GTK4 issue on some versions of Linux
+- Fixed GUI NFT offer uploads
+- Fixed GUI pooling switch
+
+## 2.5.5 Chia blockchain 2025-08-19
+
+Note that protocol changes between node, farmer, and harvester will require all entities to be upgraded
+at the same time to 2.5.5. On a simple one machine setup, this will be handled by the installer.
+But if you have more complicated topologies with remote farmers or harvesters, you will need to upgrade
+all components.
+
+2.5.5 will also make changes to the blockchain database that are incompatible with previous versions. If you
+run 2.5.5 but later wish to downgrade to an earlier version, you will need to downgrade your database schema by
+running the following command:
+
+```
+python -c "import sqlite3, sys, os; conn = sqlite3.connect(os.path.expanduser(sys.argv[1])); cursor = conn.execute('UPDATE coin_record SET spent_index = 0 WHERE spent_index = -1'); print(f'Updated {cursor.rowcount} records'); conn.commit(); conn.close()" <path to the db>
+```
+
+Replacing `<path to the db>` with your actual database path.
+
+## What's Changed
+
+### Added
+
+- Add `chia dev mempool` CLI commands to import, export, and benchmark the mempool
+- Add new error logging if the block cost fails to compute
+- Add dicts to streamable
+- Add independant Full Node RPC Validation Tool (`tools\validate_rpcs.py`)
+- Add Revocable CAT support to wallet (Chip 38)
+- Add mempool optimizations and fixes in spend deduplication and singleton fast forward.
+- Add mempool vault fast forward support
+- Add unit tests to cover singleton fast forward dynamics
+- Add new optional block creation algorithm to maximize transactions (set config.yaml `full_node:block_creation` to `1`)
+- Add new config setting for block creation timeout (`full_node:block_creation_timeout`)
+- Add preparation for new plot format and expected hard fork (Chip 48)
+- Add canonical CLVM serialization requirement after expected hard fork
+
+### Changed
+
+- Harvester<->Farmer protocol change: compute plot filter on the harvester (Chip 48 prep)
+- Farmer<->Node protocol change (Chip 48 prep)
+- Backwards incompatible schema change for mempool fast-forward support
+- Remove problematic `coins_added_at_height_cache` cache
+- Remove no longer needed `item_inclusion_filter` in the mempool
+- Significantly speedup mempool manager tests by not forcing them to request unneeded fixtures
+- Refactor and add test for WSM puzzle hash endpoints
+- Removed unneeded call to compute block cost
+- Add puzzle hash generation to action scopes
+- Remove direct secret key access from pool wallet
+- Add ContextManager to FullNodePeers
+- Simplify DB checks in `invariant_check_mempool`
+- log how long it took to call `peak_post_processing_2`
+- move `chia.types.aliases` to `chia.server.aliases`
+- move tx processing queue entry classes
+- Improve the serialisation of AddressManager
+- Remove the dependency of `chia.consensus` on the module `chia.types`
+- Adapt `test_check_removals_with_block_creation` to cover both block generator creation versions
+- Use upstream miniupnpc 2.3.3
+- Don't return addition coin records in CoinStore's new_block
+- Avoid recomputing coin record names in `rollback_to_block` when we have access to them
+- move sp broadcast outside of blockchain mutex
+- use `pyproject.toml` `[project]` section (again)
+- Simplify `test_set_spent`
+- Leverage `execute_fetchall` in CoinStore's `rollback_to_block`
+- Insert DB values in CoinStore's `new_block` without creating coin records
+- Also log the VDF field being compacted (thanks @xearl4)
+- Avoid recomputing coin IDs in `run_new_block_benchmark`
+- Simplify `test_rollback`
+- Extract `_add_coin_records` out of CoinStore and simplify it
+- Simplify `test_num_unspent`
+- Simplify `test_basic_coin_store`
+- Optimize rolled back state construction in `_reconsider_peak`
+- Leverage CoinStore's `new_block` in SpendSim's `farm_block` instead of custom coin store manipulation
+- Port NFT, pooling, DID, and Datalayer RPCs to `@marshal` decorator
+- Simplify SpendSim's `farm_block`
+- Migrate away from `clvm` imports
+- Pass coin IDs from Blockchain's `_reconsider_peak` to CoinStore's `new_block` to avoid recomputing them
+- Unify fork peak and reward coins handling between ForkInfo's `include_spends` and `include_block`
+- Replace `CATWallet.create_new_cat_wallet` in `test_cat_wallet.py`
+- Change minimium node version to 20 and npm version to 10
+- Timelord: dont skip same peak if in unfinished cache
+- Set app minimum macos version to macOS 13
+- Bump `chia-rs` to `0.27.0`
+- Bump `chiavdf` to `1.1.11`
+- Bump `clvm` to `0.9.14`
+- Bump `clvm-tools-rs` to `0.1.48`
+
+### Fixed
+
+- Enable keccak softfork in the wallet (fixes #19480)
+- Add some checks when trying to join the same pool already joined (fixes #7592)
+- Allow DIDs from other wallets with NIL recovery lists (fixes #18947)
+- Set AGG_SIG_ME_ADDITIONAL_DATA in config.yaml for simulator
+- use index when fetching SP
+- redact daemon websocket message logging
+- less response failure error consumption
+- Fixed some typos in comments (thanks @timesince)
+- Fixed more typos in comments (thanks @racerole)
+- Fixed yet more typos in comments (thanks @yetyear)
+- Fixed typo in CONTRIBUTING.md (thanks @ctrlaltdel)
+
+### Removed
+
+- Testing and support for Ubuntu LTS 20.04
+- Testing and support for Debian 11 "Bullseye"
+
+## 2.5.4 Chia blockchain 2025-05-28
+
+## What's Changed
+
+### Added
+
+- Enabled Keccak support in the wallet
+- Improved logging and timing around block validation
+- Improved logging of block creation
+
+### Changed
+
+- Mempool: Optimized removal checking
+- Mempool: Optimized and hardened dedup logic
+- Mempool: Reject transactions that take too long to validate (2 seconds)
+
+### Fixed
+
+- Tighten chia_rs version to `>=0.21, <0.22` (Fixes #19613)
+- Fixed timelord peak selection to match the full node
+- Used monotonic clock for timing functions in harvester (Fixes "does not fit into uint" log errors)
+
+## 2.5.3 Chia blockchain 2025-03-25
+
+## What's Changed
+
+### Added
+
+- Add config constant support to `chia db validate`
+- Add names to threads in ThreadPoolExecutor
+- Add cache for `get_unspent_lineage_info()`
+
+### Changed
+
+- Mempool: Create a mempool item out of a copy of the input one when processing fast forward spends
+- Mempool: Validate fast forward spends before adding their spend bundle to the mempool
+- Mempool: make the super set rule stricter
+- Mempool: Add increment to skipped_items if we hit an Exception in mempool
+- Mempool: harden mempool fast-forward feature
+- Mempool: improve fast forward mempool eviction
+- Migrate puzzles away from `load_clvm` to import from chia_puzzles_py
+- Add singleton records to action scopes
+- Swap out `Payment` for `CreateCoin`
+- Remove old offer guards
+- Delete unused `chia/simulator/simulator_constants.py`
+- Port `test_dl_wallet.py` to `WalletTestFramework`
+- chia.types no longer depends upon chia.protocols
+- Standardize the `Wallet` API for `generate_signed_transaction`
+- Bring `VCWallet.generate_signed_transaction` into conformity
+- Add `generate_signed_transaction` to `WalletProtocol`
+- Refactor `create_block_generator`
+- bump `chia_rs` to `0.21.1`
+- bump `anyio` to `4.8.0`
+- bump `boto3` to `1.37.1`
+- bump `filelock` to `3.9`
+- bump `keyring` to `25.6.0`
+
+### Fixed
+
+- Allow coin selection of 0 value coins
+- Add some extra safety into `create_message_spend`
+- check on import that assertions are working
+- chore: fix some typos (thanks @lencap)
+- chore: fix 404 status URL (thanks @peicuiping)
+- Assert height to hash in contains block
+- Add DNS-based fallback for original introducer
+
+### Removed
+
+- Removed n-weso algorithm. Timelords use either 2-weso or H/W
+- Removed unused proof-of-concept DAO wallet
+
+## 2.5.2 Chia blockchain 2025-02-19
+
+## What's Changed
+
+### Fixed
+
+- Validate fast forward spends before adding their spend bundle to the mempool
+- Create a mempool item out of a copy of the input one when processing fast forward spends
+- Harden mempool fast forward feature
+- Improve handling when non-chia fork chains connect to chia nodes
+
+## 2.5.1 Chia blockchain 2025-02-15
+
+## What's Changed
+
+### Added
+
+- Add parsing for JSON formatted spend bundles in `/push_tx`
+- Add new config option `follow_links` to support recursively scanning and following links
+- add `/get_log_level`, `/reset_log_level`, and `/set_log_level` to all rpcs
+- Add support for a static list of peers to always have available in the dns_server
+- Add simulator to installers
+- Add ergonomic message condition drivers
+- Add `seeder.xchseeder.com` to dns_servers in config
+- New `Chia Tools` section in GUI with integrated Log Viewer
+
+### Changed
+
+- Add a time-out of adding more transactions to blocks during block creation
+- Add a configurable limit to the amount of DIDs that can be automatically added to the users wallet from transfer
+- validate blocks in thread pool (instead of process pool)
+- validate UnfinishedBlocks and signature in thread pool
+- Require fewer arguments for `chia wallet coins split` in the CLI
+- Remove Python 3.8 support and update source to 3.9 standards
+- pipeline block validation in `sync_from_fork_point()`
+- Don't import a `wallet` file from `util`.
+- Pace block requests
+- allow backcompat mode for logging
+- only attempt poetry install when not present
+- make timeloard launcher fail with a non-zero exit code on windows
+- Use `#!/usr/bin/env bash` in scripts
+- Logging changes for feeler connections (thanks @thesemaphoreslim)
+- Sort offers in CLI by `RELEVANCE`
+- check network errors and their `.__cause__` for expected error types
+- If 0 peers to crawl, sleep before trying to crawl again
+- improve sync timeouts by being more conservative the fewer peers we have
+- improve logging of rate limits
+- Add better `reuse_puzhash` checking to `WalletTestFramework`
+- show cli defaults by default
+- add new configuration option to log the first 6 hex digits of coins
+- port `chia plotnft` to `@chia_commands` framework
+- set the block fill rate limit to 100% when farming a block
+- add a feature to log spend bundles being added to the mempool
+- go back to `<4` as the python version upper limit
+- Name wallet protocol subscription messages consistently
+- bump `chia_rs` to `0.18.0`
+- bump `chiavdf` to `1.1.10`
+- bump `chiapos` to `2.0.10`
+- bump `chiabip158` to `1.5.2`
+- bump `clvm_tools_rs` to `0.1.45`
+- bump `clvm` to `0.9.11`
+- bump `clvm-tools` to `0.4.10`
+- bump `psutil` to `6.1.1`
+- bump `aiofiles` to `24.1.0`
+- bump `aiohttp` to `3.11.11`
+- bump `anyio` to `4.7.0`
+- bump `boto3` to `1.35.90`
+- bump `click` to `8.1.8`
+- bump `cryptography` to `43.0.3`
+- bump `dnslib` to `0.9.25`
+- bump `dnspython` to `2.7.0`
+- bump `filelock` to `3.16.1`
+- bump `keyring` to `25.5.0`
+- bump `pyyaml` to `6.0.2`
+- bump `watchdog` to `6.0.0`
+
+### Fixed
+
+- Fix install.sh upgrade issue (thanks @wallentx) (fixes #18672)
+- Fix incorrect comment about default hidden puzzle (fixes #11824)
+- Some daemon start cleanup (fixes #18677 and #16396)
+- Fixed missing incoming transactions for pool reward claims (fixes #13251)
+- Don't create zero amount royalty payments (fixes #19092)
+- Fixed an issue where cancelling NFT offer did not cancel other offers (fixes https://github.com/Chia-Network/chia-blockchain-gui/issues/2563)
+- Fix DID balance reporting, and port DID tests to WalletTestFramwork
+- Fix bluebox shutdown
+- Keep track of all long sync task references
+- correct wallet rpc api for get spendable coins with specified excluded coins
+- the mempool thread pool should not set the process name
+- save tasks for TX processing
+- fix the rollback of fork_info when validating a block fails
+- Update systemd templates to check if RPCs are up by using the chia rpc commands instead of nc
+- fix trusted wallet sync on deep reorg
+- add in_main_chain=1 to the SQL query, that just asks for heights
+- fix short_sync_backtrack
+- don't drop outgoing response messages
+- Track weight proof tasks
+- use height to hash in short sync
+- fix wrong param in prevalidate
+- Fix problems with startup timing and the Datalayer processing loop
+- remove redundant block record conversion
+- Fix timelord log spam
+- Fix peak_post_processing w/priority_mutex
+- avoid a traceback on failure
+- clean overflow blocks moved to unfinished block cache on reset chain
+- use underlying height_to_hash to check main chain
+- fix: typos in documentation files (thanks @leopardracer)
+- fix 404 status URL (thanks @thirdkeyword)
+- Minor grammatical correction in wallet_rpc_api.py (thanks @Jsewill)
+
 ## 2.5.0 Chia blockchain 2024-12-12
 
 ## What's Changed
@@ -726,7 +1026,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release 
 - Only subscribe to inner wallet puzzle hashes
 - Rpc: Fix and test `WalletRpcApi.get_coin_records_by_names`
 - Full_node: `uint32.MAXIMUM_EXCLUSIVE` -> `uint32.MAXIMUM`
-- Full_node: Don't send duplicates in `register_interest_in_puzzle_hash`
+- Full_node: Don't send duplicates in `register_for_ph_updates`
 - Wallet: Deduplicate coin states from peers
 - Build: include `puzzles` packages (#15508)
 - Handle VC syncing exceptions better

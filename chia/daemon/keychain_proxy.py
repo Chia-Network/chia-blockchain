@@ -31,6 +31,7 @@ from chia.util.errors import (
     KeychainProxyConnectionTimeout,
 )
 from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -96,10 +97,10 @@ class KeychainProxy(DaemonProxy):
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
-            raise KeychainProxyConnectionTimeout()
+            raise KeychainProxyConnectionTimeout
 
     async def start(self, wait_for_start: bool = False) -> None:
-        self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
+        self.keychain_connection_task = create_referenced_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 
     async def connect_to_keychain(self) -> None:
@@ -155,11 +156,11 @@ class KeychainProxy(DaemonProxy):
         if error:
             error_details = response["data"].get("error_details", {})
             if error == KEYCHAIN_ERR_LOCKED:
-                raise KeychainIsLocked()
+                raise KeychainIsLocked
             elif error == KEYCHAIN_ERR_NO_KEYS:
-                raise KeychainIsEmpty()
+                raise KeychainIsEmpty
             elif error == KEYCHAIN_ERR_KEY_NOT_FOUND:
-                raise KeychainKeyNotFound()
+                raise KeychainKeyNotFound
             elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
                 message = error_details.get("message", "")
                 raise KeychainMalformedRequest(message)
@@ -355,7 +356,7 @@ class KeychainProxy(DaemonProxy):
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets=private)
             if len(keys) == 0:
-                raise KeychainIsEmpty()
+                raise KeychainIsEmpty
             else:
                 selected_key = keys[0]
                 if fingerprint is not None:
@@ -383,6 +384,11 @@ class KeychainProxy(DaemonProxy):
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
                 elif private:
+                    if ent is None:
+                        err = f"Missing ent in {response.get('command')} response"
+                        self.log.error(f"{err}")
+                        raise KeychainMalformedResponse(f"{err}")
+
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)

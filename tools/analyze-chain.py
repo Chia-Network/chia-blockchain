@@ -7,7 +7,7 @@ import sys
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, cast
 
 import click
 import zstd
@@ -15,19 +15,19 @@ from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
     MEMPOOL_MODE,
     AugSchemeMPL,
+    FullBlock,
     G1Element,
     G2Element,
     SpendBundleConditions,
     run_block_generator,
 )
+from chia_rs.sized_bytes import bytes32
 
+from chia.consensus.condition_tools import pkm_pairs
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.full_block_utils import block_info_from_block, generator_from_block
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.util.condition_tools import pkm_pairs
-from chia.util.full_block_utils import block_info_from_block, generator_from_block
 
 
 # returns an optional error code and an optional SpendBundleConditions (from chia_rs)
@@ -55,10 +55,16 @@ def run_gen(
         return 117, None, 0
 
 
-def callable_for_module_function_path(call: str) -> Callable:
+def callable_for_module_function_path(
+    call: str,
+) -> Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]:
     module_name, function_name = call.split(":", 1)
     module = __import__(module_name, fromlist=[function_name])
-    return getattr(module, function_name)
+    # TODO: casting due to getattr type signature
+    return cast(
+        Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None],
+        getattr(module, function_name),
+    )
 
 
 @click.command()
@@ -70,7 +76,9 @@ def callable_for_module_function_path(call: str) -> Callable:
 @click.option("--start", default=225000, help="first block to examine")
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
-def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
+def main(
+    file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool
+) -> None:
     call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]
     if call is None:
         call_f = partial(default_call, verify_signatures)
@@ -93,7 +101,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
         if verify_signatures:
             block = FullBlock.from_bytes_unchecked(zstd.decompress(r[2]))
         else:
-            block = block_info_from_block(zstd.decompress(r[2]))
+            block = block_info_from_block(memoryview(zstd.decompress(r[2])))
 
         if block.transactions_generator is None:
             sys.stderr.write(f" no-generator. block {height}\r")
@@ -103,18 +111,17 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
         generator_blobs = []
         for h in block.transactions_generator_ref_list:
             ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (h,))
-            generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
+            generator = generator_from_block(memoryview(zstd.decompress(ref.fetchone()[0])))
             assert generator is not None
             generator_blobs.append(generator)
             ref.close()
 
         ref_lookup_time = time() - start_time
 
-        flags: int
+        flags = 0
+
         if mempool_mode:
-            flags = MEMPOOL_MODE
-        else:
-            flags = 0
+            flags |= MEMPOOL_MODE
 
         call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
 

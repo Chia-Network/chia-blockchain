@@ -11,43 +11,47 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Optional, Union
 
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
+
 from chia.cmds.init_funcs import init
-from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
+from chia.consensus.constants import replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.farmer.farmer_service import FarmerService
+from chia.farmer.start_farmer import create_farmer_service
+from chia.full_node.full_node_service import FullNodeService
+from chia.full_node.start_full_node import create_full_node_service
+from chia.harvester.harvester_service import HarvesterService
+from chia.harvester.start_harvester import create_harvester_service
+from chia.introducer.introducer_service import IntroducerService
+from chia.introducer.start_introducer import create_introducer_service
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability, default_capabilities
+from chia.seeder.crawler_service import CrawlerService
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
-from chia.server.outbound_message import NodeType
+from chia.server.resolve_peer_info import set_peer_info
 from chia.server.signal_handlers import SignalHandlers
-from chia.server.start_farmer import create_farmer_service
-from chia.server.start_full_node import create_full_node_service
-from chia.server.start_harvester import create_harvester_service
-from chia.server.start_introducer import create_introducer_service
-from chia.server.start_timelord import create_timelord_service
-from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.simulator.start_simulator import SimulatorFullNodeService, create_full_node_simulator_service
+from chia.solver.solver_service import SolverService
+from chia.solver.start_solver import create_solver_service
 from chia.ssl.create_ssl import create_all_ssl
+from chia.timelord.start_timelord import create_timelord_service
 from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
-from chia.types.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    IntroducerService,
-    TimelordService,
-    WalletService,
-)
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.util.task_referencer import create_referenced_task
+from chia.wallet.start_wallet import create_wallet_service
+from chia.wallet.wallet_service import WalletService
 
 log = logging.getLogger(__name__)
 
@@ -313,7 +317,6 @@ async def setup_wallet_node(
                         # filesystem operations are async on windows
                         # [WinError 32] The process cannot access the file because it is
                         # being used by another process
-                        pass
             keychain.delete_all_keys()
 
 
@@ -356,6 +359,7 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncGenerator[FarmerService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
@@ -382,6 +386,16 @@ async def setup_farmer(
     else:
         service_config.pop("full_node_peer", None)
         service_config.pop("full_node_peers", None)
+
+    if solver_peer:
+        service_config["solver_peers"] = [
+            {
+                "host": solver_peer.host,
+                "port": solver_peer.port,
+            },
+        ]
+    else:
+        service_config.pop("solver_peers", None)
 
     service = create_farmer_service(
         root_path,
@@ -413,7 +427,7 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Introduc
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
     find_vdf_client()  # raises FileNotFoundError if not found
     process_mgr = VDFClientProcessMgr()
-    vdf_task_1 = asyncio.create_task(
+    vdf_task_1 = create_referenced_task(
         spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
         name="vdf_client_1",
     )
@@ -447,7 +461,7 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
     prefer_ipv6 = bt.config.get("prefer_ipv6", False)
     for i in range(1, 4):
         tasks.append(
-            asyncio.create_task(
+            create_referenced_task(
                 spawn_process(
                     host=self_hostname, port=port, counter=i, process_mgr=process_mgr, prefer_ipv6=prefer_ipv6
                 ),
@@ -502,4 +516,29 @@ async def setup_timelord(
     )
 
     async with service.manage():
+        yield service
+
+
+@asynccontextmanager
+async def setup_solver(
+    root_path: Path,
+    b_tools: BlockTools,
+    consensus_constants: ConsensusConstants,
+    start_service: bool = True,
+) -> AsyncGenerator[SolverService, None]:
+    with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
+        config["logging"]["log_stdout"] = True
+        config["solver"]["enable_upnp"] = True
+        config["solver"]["selected_network"] = "testnet0"
+        config["solver"]["port"] = 0
+        config["solver"]["rpc_port"] = 0
+        config["solver"]["num_threads"] = 1
+        save_config(root_path, "config.yaml", config)
+    service = create_solver_service(
+        root_path,
+        config,
+        consensus_constants,
+    )
+
+    async with service.manage(start=start_service):
         yield service

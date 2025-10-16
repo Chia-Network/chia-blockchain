@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import copy
+import re
 from unittest import TestCase
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey, SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.pools.pool_puzzles import (
-    SINGLETON_MOD_HASH,
     create_absorb_spend,
     create_p2_singleton_puzzle,
     create_p2_singleton_puzzle_hash,
@@ -29,10 +31,8 @@ from chia.pools.pool_puzzles import (
 from chia.pools.pool_wallet_info import PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
+from chia.types.coin_spend import make_spend
+from chia.util.errors import Err
 from chia.wallet.puzzles import singleton_top_layer
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -41,6 +41,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD_HASH
 from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 
 """
@@ -243,7 +244,8 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError,
+            match=re.escape(f"condition validation failure {Err.ASSERT_ANNOUNCE_CONSUMED_FAILED!s}"),
         ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -270,7 +272,8 @@ class TestPoolPuzzles(TestCase):
         )
         # Spend it and hope it fails!
         with pytest.raises(
-            BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
+            BadSpendBundleError,
+            match=re.escape(f"condition validation failure {Err.ASSERT_ANNOUNCE_CONSUMED_FAILED!s}"),
         ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([singleton_coinsol, bad_coinsol], G2Element()), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -321,7 +324,10 @@ class TestPoolPuzzles(TestCase):
             (data + singleton.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
         )
         # Spend it and hope it fails!
-        with pytest.raises(BadSpendBundleError, match="condition validation failure Err.ASSERT_HEIGHT_RELATIVE_FAILED"):
+        with pytest.raises(
+            BadSpendBundleError,
+            match=re.escape(f"condition validation failure {Err.ASSERT_HEIGHT_RELATIVE_FAILED!s}"),
+        ):
             coin_db.update_coin_store_for_spend_bundle(
                 SpendBundle([return_coinsol], sig), time, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
             )

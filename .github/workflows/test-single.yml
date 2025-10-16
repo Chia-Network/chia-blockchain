@@ -70,15 +70,6 @@ jobs:
           - matrix: ${{ inputs.arch }}
             emoji: ${{ inputs.arch-emoji }}
         python:
-          - name: "3.9"
-            file_name: "3.9"
-            action: "3.9"
-            apt: "3.9"
-            install_sh: "3.9"
-            matrix: "3.9"
-            exclude_from:
-              limited: True
-              main: True
           - name: "3.10"
             file_name: "3.10"
             action: "3.10"
@@ -96,7 +87,9 @@ jobs:
               main: True
           - name: "3.12"
             file_name: "3.12"
-            action: "3.12"
+            # TODO: https://github.com/python/cpython/issues/128479
+            #       return to just `3.12` after presumably 3.12.9 becomes available with the fix
+            action: "3.12.7"
             apt: "3.12"
             install_sh: "3.12"
             matrix: "3.12"
@@ -116,6 +109,12 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          # TODO: skipping macos-15-intel timelord cases until fixed
+          #       https://github.com/Chia-Network/chiavdf/pull/268
+          - os:
+              matrix: macos-intel
+            configuration:
+              install_timelord: true
           - python:
               exclude_from:
                 ${{ inputs.matrix_mode }}: True
@@ -124,7 +123,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
-      BLOCKS_AND_PLOTS_VERSION: 0.40.0
+      BLOCKS_AND_PLOTS_VERSION: 0.44.0
 
     steps:
       - name: Configure git
@@ -132,7 +131,7 @@ jobs:
           git config --global core.autocrlf false
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -179,6 +178,7 @@ jobs:
           path: |
             ${{ github.workspace }}/.chia/blocks
             ${{ github.workspace }}/.chia/test-plots
+            ${{ github.workspace }}/.chia/test-bundles
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
       - name: Checkout test blocks and plots

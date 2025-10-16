@@ -7,10 +7,24 @@ import sys
 from pathlib import Path
 from time import monotonic
 
+from chia_rs import (
+    BlockRecord,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlock,
+    SubEpochSummary,
+    TransactionsInfo,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import (
     clvm_generator,
-    rand_bytes,
     rand_class_group_element,
     rand_g1,
     rand_g2,
@@ -19,17 +33,8 @@ from chia._tests.util.benchmarks import (
     rand_vdf_proof,
     rewards,
 )
-from chia.consensus.block_record import BlockRecord
 from chia.full_node.block_store import BlockStore
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 # to run this benchmark:
 # python -m benchmarks.coin_store
@@ -104,7 +109,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 rand_hash() if not has_pool_pk else None,
                 rand_g1(),  # plot_public_key
                 uint8(32),
-                rand_bytes(8 * 32),
+                random.randbytes(8 * 32),
             )
 
             reward_chain_block = RewardChainBlock(

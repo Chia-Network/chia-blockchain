@@ -3,19 +3,20 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
+from contextlib import AbstractAsyncContextManager
 from typing import Optional
 
+import aiosqlite
 import typing_extensions
 import zstd
+from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSegments
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
+from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
+from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
-from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -191,6 +192,12 @@ class BlockStore:
             return challenge_segments
         return None
 
+    def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
+        return self.db_wrapper.writer()
+
+    def get_block_from_cache(self, header_hash: bytes32) -> Optional[FullBlock]:
+        return self.block_cache.get(header_hash)
+
     def rollback_cache_block(self, header_hash: bytes32) -> None:
         try:
             self.block_cache.remove(header_hash)
@@ -232,7 +239,7 @@ class BlockStore:
         if len(heights) == 0:
             return []
 
-        formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights) - 1)}?)'
+        formatted_str = f"SELECT block from full_blocks WHERE height in ({'?,' * (len(heights) - 1)}?)"
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, heights) as cursor:
                 ret: list[FullBlock] = []
@@ -252,7 +259,7 @@ class BlockStore:
             row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
-            block_bytes = zstd.decompress(row[0])
+            block_bytes = memoryview(zstd.decompress(row[0]))
 
             try:
                 return block_info_from_block(block_bytes)
@@ -276,7 +283,7 @@ class BlockStore:
             row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
-            block_bytes = zstd.decompress(row[0])
+            block_bytes = memoryview(zstd.decompress(row[0]))
 
             try:
                 return generator_from_block(block_bytes)
@@ -294,13 +301,12 @@ class BlockStore:
 
         generators: dict[uint32, bytes] = {}
         formatted_str = (
-            f"SELECT block, height from full_blocks "
-            f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
+            f"SELECT block, height from full_blocks WHERE in_main_chain=1 AND height in ({'?,' * (len(heights) - 1)}?)"
         )
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, list(heights)) as cursor:
                 async for row in cursor:
-                    block_bytes = zstd.decompress(row[0])
+                    block_bytes = memoryview(zstd.decompress(row[0]))
 
                     try:
                         gen = generator_from_block(block_bytes)
@@ -325,20 +331,21 @@ class BlockStore:
         Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
         """
+
         if len(header_hashes) == 0:
             return []
 
         all_blocks: dict[bytes32, BlockRecord] = {}
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash,block_record "
-                "FROM full_blocks "
-                f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
-                header_hashes,
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    block_rec = BlockRecord.from_bytes(row[1])
-                    all_blocks[block_rec.header_hash] = block_rec
+        for batch in to_batches(header_hashes, self.db_wrapper.host_parameter_limit):
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(
+                    "SELECT header_hash,block_record FROM full_blocks "
+                    f"WHERE header_hash in ({'?,' * (len(batch.entries) - 1)}?)",
+                    batch.entries,
+                ) as cursor:
+                    for row in await cursor.fetchall():
+                        block_rec = BlockRecord.from_bytes(row[1])
+                        all_blocks[block_rec.header_hash] = block_rec
 
         ret: list[BlockRecord] = []
         for hh in header_hashes:
@@ -377,7 +384,7 @@ class BlockStore:
 
         assert len(header_hashes) < self.db_wrapper.host_parameter_limit
         formatted_str = (
-            f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
+            f"SELECT header_hash, block from full_blocks WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)"
         )
         all_blocks: dict[bytes32, bytes] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -405,7 +412,7 @@ class BlockStore:
             return []
 
         formatted_str = (
-            f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
+            f"SELECT header_hash, block from full_blocks WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)"
         )
         all_blocks: dict[bytes32, FullBlock] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:

@@ -47,7 +47,7 @@ jobs:
 
   build:
     name: Benchmarks
-    runs-on: benchmark
+    runs-on: ${{ github.repository_owner == 'Chia-Network' && 'benchmark' || 'ubuntu-latest' }}
     needs:
       - setup
     container:
@@ -59,7 +59,7 @@ jobs:
         python-version: ["3.10"]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      BLOCKS_AND_PLOTS_VERSION: 0.40.0
+      BLOCKS_AND_PLOTS_VERSION: 0.44.0
 
     steps:
       - name: Clean workspace
@@ -69,7 +69,7 @@ jobs:
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -78,7 +78,7 @@ jobs:
           mode: poetry
 
       - name: Checkout test blocks and plots
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: "Chia-Network/test-cache"
           path: ".chia"

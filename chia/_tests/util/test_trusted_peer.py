@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.network import is_trusted_peer
 
 

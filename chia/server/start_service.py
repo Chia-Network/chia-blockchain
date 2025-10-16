@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import logging.config
 import os
 import signal
 from collections.abc import AsyncIterator, Awaitable, Coroutine
@@ -11,12 +10,14 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
+from chia_rs.sized_ints import uint16
+
 from chia.daemon.server import service_launch_lock_path
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
-from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -24,11 +25,11 @@ from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.chia_version import chia_short_version
-from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -218,7 +219,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     except ValueError:
                         pass
 
-                    self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
+                    self._connect_peers_task = create_referenced_task(self._connect_peers_task_handler())
 
                     self._log.info(
                         f"Started {self._service_name} service on network_id: {self._network_id} "

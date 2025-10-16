@@ -14,14 +14,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, G2Element, PrivateKey, ProofOfSpace
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.outbound_message import NodeType, make_msg
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
     ErrorResponse,
@@ -35,21 +37,18 @@ from chia.protocols.pool_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
-from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer, ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
 from chia.util.profiler import profile_task
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
@@ -144,6 +143,9 @@ class Farmer:
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
         self.quality_str_to_identifiers: dict[bytes32, tuple[str, bytes32, bytes32, bytes32]] = {}
 
+        # Track pending solver requests, keyed by partial proof
+        self.pending_solver_requests: dict[bytes, dict[str, Any]] = {}
+
         # number of responses to each signage point
         self.number_of_responses: dict[bytes32, int] = {}
 
@@ -187,8 +189,8 @@ class Farmer:
             # succeeds or until we need to shut down.
             while not self._shut_down:
                 if await self.setup_keys():
-                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
-                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+                    self.update_pool_state_task = create_referenced_task(self._periodically_update_pool_state_task())
+                    self.cache_clear_task = create_referenced_task(self._periodically_clear_cache_and_refresh_task())
                     log.debug("start_task: initialized")
                     self.started = True
                     return
@@ -198,11 +200,9 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))  # noqa: RUF006
+                create_referenced_task(profile_task(self._root_path, "farmer", self.log), known_unreferenced=True)
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(start_task())  # noqa: RUF006
+        create_referenced_task(start_task(), known_unreferenced=True)
         try:
             yield
         finally:
@@ -229,7 +229,7 @@ class Farmer:
             else:
                 self.keychain_proxy = await connect_to_keychain_and_validate(self._root_path, self.log)
                 if not self.keychain_proxy:
-                    raise KeychainProxyConnectionFailure()
+                    raise KeychainProxyConnectionFailure
         return self.keychain_proxy
 
     async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:
@@ -313,7 +313,7 @@ class Farmer:
 
         if peer.connection_type is NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
-            self.harvester_handshake_task = asyncio.create_task(handshake_task())
+            self.harvester_handshake_task = create_referenced_task(handshake_task())
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
@@ -636,8 +636,7 @@ class Farmer:
                             )
                             if post_response is not None and "error_code" not in post_response:
                                 self.log.info(
-                                    f"Welcome message from {pool_config.pool_url}: "
-                                    f"{post_response['welcome_message']}"
+                                    f"Welcome message from {pool_config.pool_url}: {post_response['welcome_message']}"
                                 )
                                 # Now we should be able to update the local farmer info
                                 farmer_info, farmer_is_known = await update_pool_farmer_info()

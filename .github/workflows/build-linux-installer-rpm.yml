@@ -67,7 +67,7 @@ jobs:
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -81,6 +81,11 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Get latest madmax plotter
         env:
@@ -260,6 +265,9 @@ jobs:
           - name: amazonlinux:2023
             type: amazon
             url: "docker://amazonlinux:2023"
+            # bypass this error for now: Problem: The operation would result in removing the following protected packages: systemd-udev
+            noautoremove:
+              gui: --noautoremove
           - name: fedora:37
             type: fedora
             # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
@@ -299,7 +307,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         id: download
         with:
           name: chia-installers-linux-rpm-intel

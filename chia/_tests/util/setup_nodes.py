@@ -10,17 +10,21 @@ from pathlib import Path
 from typing import Optional, Union
 
 import anyio
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32
 
 from chia._tests.environments.full_node import FullNodeEnvironment
 from chia._tests.environments.wallet import WalletEnvironment
-from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_service import HarvesterService
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -31,6 +35,7 @@ from chia.simulator.setup_services import (
     setup_full_node,
     setup_harvester,
     setup_introducer,
+    setup_solver,
     setup_timelord,
     setup_vdf_client,
     setup_vdf_clients,
@@ -38,14 +43,15 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.aliases import FarmerService, FullNodeService, HarvesterService, TimelordService, WalletService
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.solver.solver_service import SolverService
+from chia.timelord.timelord_service import TimelordService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 
 OldSimulatorsAndWallets = tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
@@ -60,6 +66,7 @@ class FullSystem:
     introducer: IntroducerAPI
     timelord: TimelordService
     timelord_bluebox: TimelordService
+    solver: SolverService
     daemon: WebSocketServer
 
 
@@ -250,10 +257,10 @@ async def setup_simulators_and_wallets_inner(
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: list[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
-            for _ in range(0, simulator_count)
+            for _ in range(simulator_count)
         ]
         if wallet_count > simulator_count:
-            for _ in range(0, wallet_count - simulator_count):
+            for _ in range(wallet_count - simulator_count):
                 bt_tools.append(
                     await create_block_tools_async(
                         consensus_constants, keychain=keychain2, config_overrides=config_overrides
@@ -273,7 +280,7 @@ async def setup_simulators_and_wallets_inner(
                     disable_capabilities=disable_capabilities,
                 )
             )
-            for index in range(0, simulator_count)
+            for index in range(simulator_count)
         ]
 
         wallets: list[WalletService] = [
@@ -289,20 +296,21 @@ async def setup_simulators_and_wallets_inner(
                     initial_num_public_keys=initial_num_public_keys,
                 )
             )
-            for index in range(0, wallet_count)
+            for index in range(wallet_count)
         ]
 
         yield bt_tools, simulators, wallets
 
 
 @asynccontextmanager
-async def setup_farmer_multi_harvester(
+async def setup_farmer_solver_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
@@ -313,6 +321,7 @@ async def setup_farmer_multi_harvester(
                 consensus_constants,
                 port=uint16(0),
                 start_service=start_services,
+                solver_peer=solver_peer,
             )
         )
         if start_services:
@@ -329,7 +338,7 @@ async def setup_farmer_multi_harvester(
                     start_service=start_services,
                 )
             )
-            for i in range(0, harvester_count)
+            for i in range(harvester_count)
         ]
 
         yield harvester_services, farmer_service, block_tools
@@ -390,6 +399,7 @@ async def setup_full_system_inner(
         introducer_service = await async_exit_stack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
+        introducer.introducer.dns_servers = []
 
         # Then start the full node so we can use the port for the farmer and timelord
         node_1 = await async_exit_stack.enter_async_context(
@@ -468,6 +478,15 @@ async def setup_full_system_inner(
 
                 await asyncio.sleep(backoff)
 
+        solver_service = await async_exit_stack.enter_async_context(
+            setup_solver(
+                shared_b_tools.root_path / "solver",
+                shared_b_tools,
+                consensus_constants,
+                True,
+            )
+        )
+
         full_system = FullSystem(
             node_1=node_1,
             node_2=node_2,
@@ -476,6 +495,7 @@ async def setup_full_system_inner(
             introducer=introducer,
             timelord=timelord,
             timelord_bluebox=timelord_bluebox_service,
+            solver=solver_service,
             daemon=daemon_ws,
         )
         yield full_system

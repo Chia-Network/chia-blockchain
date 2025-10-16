@@ -11,21 +11,21 @@ from typing import Any, Optional, cast
 
 import aiohttp.client_exceptions
 import pytest
+from chia_rs.sized_ints import uint16
 from typing_extensions import Protocol
 
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.misc import closing_chia_root_popen
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.socket import find_available_listen_port
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint16
 from chia.util.timing import adjusted_timeout
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 if sys.platform == "win32" or sys.platform == "cygwin":
     termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
@@ -86,15 +86,15 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 @pytest.mark.parametrize(
     argnames=["create_service", "module_path", "service_config_name"],
     argvalues=[
-        [DataLayerRpcClient.create_as_context, "chia.server.start_data_layer", "data_layer"],
-        [FarmerRpcClient.create_as_context, "chia.server.start_farmer", "farmer"],
-        [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
-        [HarvesterRpcClient.create_as_context, "chia.server.start_harvester", "harvester"],
-        [WalletRpcClient.create_as_context, "chia.server.start_wallet", "wallet"],
-        [None, "chia.server.start_introducer", "introducer"],
+        [DataLayerRpcClient.create_as_context, "chia.data_layer.start_data_layer", "data_layer"],
+        [FarmerRpcClient.create_as_context, "chia.farmer.start_farmer", "farmer"],
+        [FullNodeRpcClient.create_as_context, "chia.full_node.start_full_node", "full_node"],
+        [HarvesterRpcClient.create_as_context, "chia.harvester.start_harvester", "harvester"],
+        [WalletRpcClient.create_as_context, "chia.wallet.start_wallet", "wallet"],
+        [None, "chia.introducer.start_introducer", "introducer"],
         # TODO: fails...  make it not do that
         # [None, "chia.seeder.start_crawler", "crawler"],
-        [None, "chia.server.start_timelord", "timelord"],
+        [None, "chia.timelord.start_timelord", "timelord"],
         pytest.param(
             None,
             "chia.timelord.timelord_launcher",
