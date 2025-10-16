@@ -117,7 +117,9 @@ async def async_main(
         plot_dir=plot_dir,
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-    await bt.setup_plots(num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE)
+    await bt.setup_plots(
+        num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE, num_v2_plots=PLOTS
+    )
     # Everything after this is not simulator specific, excluding the if test_mode.
     initialize_logging(
         service_name=SERVICE_NAME,
