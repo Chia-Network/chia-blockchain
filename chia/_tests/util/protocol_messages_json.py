@@ -2297,6 +2297,7 @@ respond_signatures_json: dict[str, Any] = {
 plot_json: dict[str, Any] = {
     "filename": "plot_1",
     "size": 124,
+    "strength": 0,
     "plot_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "pool_contract_puzzle_hash": "0x1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237",
@@ -2313,6 +2314,7 @@ respond_plots_json: dict[str, Any] = {
         {
             "filename": "plot_1",
             "size": 124,
+            "strength": 0,
             "plot_id": "0xb2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98",
             "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "pool_contract_puzzle_hash": "0x1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237",

@@ -17,6 +17,7 @@ def dummy_plot(path: str) -> Plot:
     return Plot(
         filename=path,
         size=uint8(32),
+        strength=uint8(0),
         plot_id=bytes32(b"\00" * 32),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=None,

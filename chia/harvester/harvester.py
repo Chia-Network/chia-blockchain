@@ -193,14 +193,16 @@ class Harvester:
                 size = prover.get_size()
                 if size.size_v1 is not None:
                     k = size.size_v1
+                    strength = 0
                 else:
                     assert size.size_v2 is not None
                     k = size.size_v2
-                    # TODO: todo_v2_plots support v2 plots in RPC response
+                    strength = prover.get_strength()
                 response_plots.append(
                     {
                         "filename": str(path),
                         "size": k,
+                        "strength": strength,
                         "plot_id": prover.get_id(),
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
