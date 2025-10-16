@@ -59,7 +59,7 @@ from chia.protocols import full_node_protocol, timelord_protocol, wallet_protoco
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols.farmer_protocol import DeclareProofOfSpace
 from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
-from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
@@ -3357,3 +3357,60 @@ async def test_pending_tx_cache_retry_on_new_peak(
         assert f"Added transaction to mempool: {sb_name}\n" in caplog.text
         # Make sure the transaction was retried and got added to the mempool
         assert full_node_api.full_node.mempool_manager.get_mempool_item(sb_name, include_pending=False) is not None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("mismatch_cost", [True, False])
+@pytest.mark.parametrize("mismatch_fee", [True, False])
+async def test_ban_for_mismatched_tx_cost_fee(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+    mismatch_cost: bool,
+    mismatch_fee: bool,
+) -> None:
+    """
+    Tests that a peer gets banned if it sends a `NewTransaction` message with a
+    cost and/or fee that doesn't match the transaction's validation cost/fee.
+    We setup two full nodes with the test transaction as already seen, and we
+    check its validation cost and fee against the ones specified in the
+    `NewTransaction` message.
+    """
+    nodes, _, bt = setup_two_nodes_fixture
+    full_node_1, full_node_2 = nodes
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+    wallet = WalletTool(test_constants)
+    wallet_ph = wallet.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=wallet_ph, pool_reward_puzzle_hash=wallet_ph
+    )
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+    # Create a transaction and add it to the relevant full node's mempool
+    coin = blocks[-1].get_included_reward_coins()[0]
+    sb = wallet.generate_signed_transaction(uint64(42), wallet_ph, coin)
+    sb_name = sb.name()
+    await full_node_1.full_node.add_transaction(sb, sb_name, ws_con_1)
+    mempool_item = full_node_1.full_node.mempool_manager.get_mempool_item(sb_name)
+    assert mempool_item is not None
+    # Now send a NewTransaction with a cost and/or fee mismatch from the second
+    # full node.
+    cost = uint64(mempool_item.cost + 1) if mismatch_cost else mempool_item.cost
+    fee = uint64(mempool_item.fee + 1) if mismatch_fee else mempool_item.fee
+    msg = make_msg(ProtocolMessageTypes.new_transaction, NewTransaction(mempool_item.name, cost, fee))
+    # We won't ban localhost, so let's set a different ip address for the
+    # second node.
+    full_node_2_ip = "1.3.3.7"
+    ws_con_1.peer_info = PeerInfo(full_node_2_ip, ws_con_1.peer_info.port)
+    # Send the NewTransaction message from the second node to the first
+    await ws_con_2.send_message(msg)
+    # Make sure the first full node has banned the second as the item it has
+    # already seen has a different validation cost and/or fee than the one from
+    # the NewTransaction message.
+    if mismatch_cost or mismatch_fee:
+        await time_out_assert(5, lambda: full_node_2_ip in server_1.banned_peers)
+    else:
+        await time_out_assert(5, lambda: full_node_2_ip not in server_1.banned_peers)
