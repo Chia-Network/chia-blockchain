@@ -1297,6 +1297,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                 num_og_plots=0,
                 num_pool_plots=0,
                 num_non_keychain_plots=0,
+                num_v2_plots=0,
                 config_overrides=config_overrides,
                 testrun_uid=testrun_uid,
             )

@@ -84,7 +84,7 @@ async def farmer_harvester_with_filter_size_9(
     await harvester_rpc_cl.await_closed()
 
 
-@pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
+@pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 9), (5496000, 10)])
 @pytest.mark.anyio
 async def test_filter_prefix_bits_with_farmer_harvester(
     farmer_harvester_with_filter_size_9: tuple[HarvesterService, FarmerAPI],

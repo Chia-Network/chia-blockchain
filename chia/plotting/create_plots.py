@@ -5,8 +5,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey, create_v2_plot
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -14,6 +15,7 @@ from chia.plotting.util import Params, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,
+    calculate_plot_id_v2,
     generate_plot_public_key,
 )
 from chia.util.bech32m import decode_puzzle_hash
@@ -269,6 +271,66 @@ async def create_plots(
             args.tmp2_dir.rmdir()
         except Exception:
             log.info(f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty.")
+
+    log.info(f"Created a total of {len(created_plots)} new plots")
+    for created_path in created_plots.values():
+        log.info(created_path.name)
+
+    return created_plots, existing_plots
+
+
+async def create_v2_plots(
+    final_dir: Path,
+    *,
+    pool_ph: bytes32,
+    farmer_pk: G1Element,
+    size: int = 28,
+    strength: int = 2,
+    num: int = 1,
+    use_datetime: bool = True,
+    test_private_keys: Optional[list[PrivateKey]] = None,
+) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
+    log.info(
+        f"Creating {num} plots of size {size}, pool contract address:  "
+        f"{pool_ph} farmer public key: {bytes(farmer_pk).hex()}"
+    )
+
+    final_dir.mkdir(parents=True, exist_ok=True)
+
+    created_plots: dict[bytes32, Path] = {}
+    existing_plots: dict[bytes32, Path] = {}
+    for i in range(num):
+        # Generate a random master secret key
+        if test_private_keys is not None:
+            assert len(test_private_keys) == num
+            sk: PrivateKey = test_private_keys[i]
+        else:
+            sk = AugSchemeMPL.key_gen(bytes32.secret())
+
+        # The plot public key is the combination of the harvester and farmer keys
+        # New plots will also include a taproot of the keys, for extensibility
+        plot_public_key = generate_plot_public_key(master_sk_to_local_sk(sk).get_g1(), farmer_pk, include_taproot=True)
+
+        # The plot id is based on the harvester, farmer, pool contract puzzle
+        # hash and strength
+        plot_id = calculate_plot_id_v2(pool_ph, plot_public_key, uint8(strength))
+        plot_memo = stream_plot_info_ph(pool_ph, farmer_pk, sk)
+
+        dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
+
+        if use_datetime:
+            filename: str = f"plot-k{size}-{dt_string}-{plot_id}.plot2"
+        else:
+            filename = f"plot-k{size}-{plot_id}.plot2"
+        full_path: Path = final_dir / filename
+
+        if not full_path.exists():
+            log.info(f"Starting plot {i + 1}/{num}")
+            create_v2_plot(str(full_path.absolute()), size, strength, plot_id, plot_memo)
+            created_plots[plot_id] = full_path
+        else:
+            log.info(f"Plot {filename} already exists")
+            existing_plots[plot_id] = full_path
 
     log.info(f"Created a total of {len(created_plots)} new plots")
     for created_path in created_plots.values():

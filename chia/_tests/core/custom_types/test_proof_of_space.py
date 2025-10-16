@@ -112,25 +112,23 @@ def b32(key: str) -> bytes32:
         id="v2 plot size 0",
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotSize.make_v2(0),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
         expected_error="Plot size (0) is lower than the minimum (28)",
     ),
     ProofOfSpaceCase(
         id="v2 plot size 34",
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotSize.make_v2(34),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
         expected_error="Plot size (34) is higher than the maximum (32)",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("3d29ea79d19b3f7e99ebf764ae53697cbe143603909873946af6ab1ece606861"),
+        pos_challenge=b32("4cfaacbd2782db64d07cf490ca938534adb07dfbd2f92b0e479e2e5b196178db"),
         plot_size=PlotSize.make_v2(32),
-        pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
-        ),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
             "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
         ),
@@ -160,16 +158,15 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 @datacases(
     ProofOfSpaceCase(
         id="v2 plot are not implemented",
-        plot_size=PlotSize.make_v2(30),
-        pos_challenge=b32("47deb938e145d25d7b3b3c85ca9e3972b76c01aeeb78a02fe5d3b040d282317e"),
+        plot_size=PlotSize.make_v2(28),
+        pos_challenge=b32("6a85c4c5f21e5728c6668b01c0758e33bb7f3ae20d38703d4863ad151f983d9c"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
-        pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
-        ),
-        expected_error="NotImplementedError",
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        expected_error="Did not pass the plot filter",
     ),
+    # TODO: todo_v2_plots add test case that passes the plot filter
 )
 def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
     pos = make_pos(
