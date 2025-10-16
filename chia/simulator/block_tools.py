@@ -63,7 +63,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
-from chia.plotting.create_plots import PlotKeys, create_plots
+from chia.plotting.create_plots import PlotKeys, create_plots, create_v2_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.prover import PlotVersion, QualityProtocol, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import (
@@ -319,6 +319,7 @@ class BlockTools:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: dict[bytes32, Path] = {}
         self.created_plots: int = 0
+        self.created_plots2: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
@@ -338,6 +339,29 @@ class BlockTools:
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0
+
+                expected_plots: set[str] = set()
+                found_plots: set[str] = set()
+                if len(self.plot_manager.plots) != len(self.expected_plots):
+                    for pid, filename in self.expected_plots.items():
+                        expected_plots.add(filename.name)
+                    for filename, _ in self.plot_manager.plots.items():
+                        found_plots.add(filename.name)
+                    print(f"directory: {self.plot_dir}")
+                    print(f"expected: {len(expected_plots)}")
+                    for f in expected_plots:
+                        print(f)
+                    print(f"plot manager: {len(found_plots)}")
+                    for f in found_plots:
+                        print(f)
+                    diff = found_plots.difference(expected_plots)
+                    print(f"found unexpected: {len(diff)}")
+                    for f in diff:
+                        print(f)
+                    diff = expected_plots.difference(found_plots)
+                    print(f"not found: {len(diff)}")
+                    for f in diff:
+                        print(f)
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
@@ -498,11 +522,25 @@ class BlockTools:
         num_og_plots: int = 15,
         num_pool_plots: int = 5,
         num_non_keychain_plots: int = 3,
+        num_v2_plots: int = 320,
         plot_size: int = 20,
         bitfield: bool = True,
     ) -> bool:
+        # we have 20 v1 plots, each about 16.6 MB
+        # in order to balance that out with v2 plots, we need approximately the
+        # same size on disk. A v2 k-18 plot is expected to be about 1 MB, so we
+        # need about 16 times more v2 plots, i.e. 320.
+        # Additionally, the current reference plots are quite a bit larger than
+        # the expected final plots. So until we have the optimized plot format
+        # completed, the actual disk space for the v2 plots will be larger.
+        print(
+            f"setup_plots({num_og_plots}, {num_pool_plots}, "
+            f"{num_non_keychain_plots}, {num_v2_plots}) "
+            f"plot-dir: {self.plot_dir}"
+        )
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
+        assert self.created_plots2 == 0
         existing_plots: bool = True
         # OG Plots
         for i in range(num_og_plots):
@@ -523,6 +561,11 @@ class BlockTools:
                 plot_size=plot_size,
                 bitfield=bitfield,
             )
+            if plot.new_plot:
+                existing_plots = False
+        # v2 plots
+        for i in range(num_v2_plots):
+            plot = await self.new_plot2(plot_size=18)
             if plot.new_plot:
                 existing_plots = False
         await self.refresh_plots()
@@ -603,6 +646,48 @@ class BlockTools:
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
+
+    async def new_plot2(
+        self,
+        path: Optional[Path] = None,
+        exclude_plots: bool = False,
+        plot_size: int = 18,
+    ) -> BlockToolsNewPlotResult:
+        final_dir = self.plot_dir
+        if path is not None:
+            final_dir = path
+            final_dir.mkdir(parents=True, exist_ok=True)
+
+        # No datetime in the filename, to get deterministic filenames and not re-plot
+        created, existed = await create_v2_plots(
+            final_dir=Path(final_dir),
+            size=plot_size,
+            pool_ph=self.pool_ph,
+            farmer_pk=self.farmer_pk,
+            use_datetime=False,
+            test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots2.to_bytes(2, "big")))],
+        )
+        self.created_plots2 += 1
+
+        plot_id_new: Optional[bytes32] = None
+        path_new: Optional[Path] = None
+        new_plot: bool = True
+
+        if len(created):
+            assert len(existed) == 0
+            plot_id_new, path_new = next(iter(created.items()))
+
+        if len(existed):
+            assert len(created) == 0
+            plot_id_new, path_new = next(iter(existed.items()))
+            new_plot = False
+        assert plot_id_new is not None
+        assert path_new is not None
+
+        if not exclude_plots:
+            self.expected_plots[plot_id_new] = path_new
+
+        return BlockToolsNewPlotResult(plot_id_new, new_plot)
 
     async def refresh_plots(self) -> None:
         self.plot_manager.refresh_parameter = replace(
@@ -2080,6 +2165,7 @@ async def create_block_tools_async(
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
+    num_v2_plots: int = 320,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2090,6 +2176,7 @@ async def create_block_tools_async(
         num_og_plots=num_og_plots,
         num_pool_plots=num_pool_plots,
         num_non_keychain_plots=num_non_keychain_plots,
+        num_v2_plots=num_v2_plots,
     )
 
     return bt

@@ -59,6 +59,14 @@ def make_pos(
 
 def get_plot_id(pos: ProofOfSpace) -> bytes32:
     assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
+
+    plot_size = pos.size()
+    if plot_size.size_v2 is not None:
+        assert pos.pool_contract_puzzle_hash
+        # v2 plots have a fixed k-size, so we store the *strength* in this field
+        # instead
+        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, uint8(plot_size.size_v2))
+
     if pos.pool_public_key is None:
         assert pos.pool_contract_puzzle_hash is not None
         return calculate_plot_id_ph(pos.pool_contract_puzzle_hash, pos.plot_public_key)
@@ -201,6 +209,10 @@ def calculate_plot_id_ph(
     plot_public_key: G1Element,
 ) -> bytes32:
     return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
+
+
+def calculate_plot_id_v2(pool_contract_puzzle_hash: bytes32, plot_public_key: G1Element, strength: uint8) -> bytes32:
+    return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key) + strength.stream_to_bytes())
 
 
 def generate_taproot_sk(local_pk: G1Element, farmer_pk: G1Element) -> PrivateKey:
