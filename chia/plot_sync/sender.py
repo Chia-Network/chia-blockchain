@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
-from chia_rs.sized_ints import int16, uint32, uint64
+from chia_rs.sized_ints import int16, uint8, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -37,13 +37,18 @@ log = logging.getLogger(__name__)
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     converted: list[Plot] = []
     for plot_info in plot_infos:
-        # TODO: todo_v2_plots support v2 plots
-        k = plot_info.prover.get_param().size_v1
-        assert k is not None
+        param = plot_info.prover.get_param()
+        k: uint8
+        if param.size_v1 is not None:
+            k = param.size_v1
+        else:
+            assert param.strength_v2 is not None
+            k = uint8(0x80 | param.strength_v2)
+
         converted.append(
             Plot(
                 filename=plot_info.prover.get_filename(),
-                size=k,
+                size=uint8(k),
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,

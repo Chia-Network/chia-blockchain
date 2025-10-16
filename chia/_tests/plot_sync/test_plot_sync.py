@@ -10,7 +10,7 @@ from shutil import copy
 from typing import Any, Callable, Optional
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, PlotParam
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -109,6 +109,10 @@ class ExpectedResult:
         self.duplicates_delta.removals += [str(x) for x in list_paths]
 
 
+def equal_param(a: PlotParam, b: PlotParam) -> bool:
+    return a.size_v1 == b.size_v1 and a.strength_v2 == b.strength_v2
+
+
 @dataclass
 class Environment:
     root_path: Path
@@ -195,8 +199,7 @@ class Environment:
             plot = harvester.plot_manager.plots.get(Path(path), None)
             assert plot is not None
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
-            # TODO: todo_v2_plots support v2 plots
-            assert plot.prover.get_param().size_v1 == delta.valid.additions[path].size
+            assert equal_param(plot.prover.get_param(), delta.valid.additions[path].param())
             assert plot.prover.get_id() == delta.valid.additions[path].plot_id
             assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
@@ -257,8 +260,7 @@ class Environment:
             for path, plot_info in plot_manager.plots.items():
                 assert str(path) in receiver.plots()
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
-                # TODO: todo_v2_plots support v2 plots
-                assert plot_info.prover.get_param().size_v1 == receiver.plots()[str(path)].size
+                assert equal_param(plot_info.prover.get_param(), receiver.plots()[str(path)].param())
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
                 assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
