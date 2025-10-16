@@ -110,7 +110,7 @@ test_constants_modified = test_constants.replace(
     EPOCH_BLOCKS=uint32(280),
     SUB_SLOT_ITERS_STARTING=uint64(2**20),
     NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(5),
-    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(7),
 )
 
 
@@ -207,15 +207,26 @@ def get_keychain():
 
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
+    # the hard fork introduced in Chia 2.0 (but really in 2.1)
     HARD_FORK_2_0 = 1
+    # the soft fork introduced in Chia 2.6
     SOFT_FORK_2_6 = 2
+    # the hard fork introduced in Chia 3.0
     HARD_FORK_3_0 = 3
+    # the hard fork introduced in Chia 3.0 but after v1 plots have been
+    # phased-out, and no longer valid
+    HARD_FORK_3_0_AFTER_PHASE_OUT = 4
 
 
 @pytest.fixture(
     scope="session",
-    # TODO: todo_v2_plots add HARD_FORK_3_0 mode as well as after phase-out
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_6],
+    params=[
+        ConsensusMode.PLAIN,
+        ConsensusMode.HARD_FORK_2_0,
+        ConsensusMode.SOFT_FORK_2_6,
+        ConsensusMode.HARD_FORK_3_0,
+        ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
+    ],
 )
 def consensus_mode(request):
     return request.param
@@ -224,26 +235,40 @@ def consensus_mode(request):
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     ret: ConsensusConstants = test_constants
-    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-        ret = ret.replace(
-            HARD_FORK_HEIGHT=uint32(2),
-            PLOT_FILTER_128_HEIGHT=uint32(10),
-            PLOT_FILTER_64_HEIGHT=uint32(15),
-            PLOT_FILTER_32_HEIGHT=uint32(20),
-        )
 
     if consensus_mode >= ConsensusMode.SOFT_FORK_2_6:
         ret = ret.replace(
             SOFT_FORK8_HEIGHT=uint32(2),
         )
 
-    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT:
+        ret = ret.replace(
+            HARD_FORK_HEIGHT=uint32(0),
+            HARD_FORK2_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(0),
+            # we don't have very much v2 space, and no phase-out means the
+            # difficulty won't adjust gradually. We need a lower difficulty
+            # level to start with
+            DIFFICULTY_STARTING=uint64(2),
+        )
+    elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        ret = ret.replace(
+            # TODO: todo_v2_plots we may want to tweak these test cases to
+            # activate the hard fork at some height > 0 (e.g. 5)
+            # and have a shorter phase-out period (e.g. 2 bits). We would have
+            # to regenerate the test chains and tweak some tests for this
+            HARD_FORK_HEIGHT=uint32(0),
+            HARD_FORK2_HEIGHT=uint32(0),
+            # we don't have very much v2 space. We need a lower difficulty
+            # level to start with
+            DIFFICULTY_STARTING=uint64(7),
+        )
+    elif consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(2),
             PLOT_FILTER_128_HEIGHT=uint32(10),
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
-            HARD_FORK2_HEIGHT=uint32(2),
         )
 
     return ret
@@ -1321,6 +1346,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                     num_og_plots=0,
                     num_pool_plots=0,
                     num_non_keychain_plots=0,
+                    num_v2_plots=0,
                     config_overrides=config_overrides,
                     testrun_uid=testrun_uid,
                 )
