@@ -109,7 +109,7 @@ class FarmerAPI:
                 prev_transaction_block_height=sp.last_tx_height,
             )
             if computed_quality_string is None:
-                plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
+                plotid: bytes32 = get_plot_id(self.farmer.constants, new_proof_of_space.proof)
                 self.farmer.log.error(f"Invalid proof of space: {plotid.hex()} proof: {new_proof_of_space.proof}")
                 return None
 
