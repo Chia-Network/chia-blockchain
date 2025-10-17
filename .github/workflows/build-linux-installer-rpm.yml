@@ -48,12 +48,12 @@ jobs:
     needs:
       - version
     container:
-      image: chianetwork/rocky8-builder:latest
+      image: chianetwork/rocky8-builder:python312
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
         os:
           - arch-artifact-name: intel
 
@@ -206,7 +206,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: redhat
                 file-type:
