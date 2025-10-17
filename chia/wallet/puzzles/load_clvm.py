@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 import importlib_resources
-from clvm_tools_rs import compile_clvm as compile_clvm_rust
+from chialisp import compile_clvm as compile_clvm_rust
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
