@@ -93,6 +93,9 @@ if ($openSSLVersion -lt 269488367)
     Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
 }
 
+$SQLiteVersionStr = (py -$pythonVersion -c 'import sys; import sqlite3; print(sqlite3.sqlite_version)')
+Write-Output "SQLite version is: $SQLiteVersionStr"
+
 $extras_cli = @()
 foreach ($extra in $extras)
 {

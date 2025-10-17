@@ -58,7 +58,7 @@ chiavdf = ">=1.1.10"  # timelord and vdf verification
 click = ">=8.1.7"  # For the CLI
 clvm = ">=0.9.14"
 clvm_tools = ">=0.4.9"  # Currying Program.to other conveniences
-clvm_tools_rs = ">=0.1.45"  # Rust implementation of clvm_tools' compiler
+chialisp = ">=0.4.1"  # Rust implementation of ChiaLisp compiler
 colorama = ">=0.4.6"  # Colorizes terminal output
 colorlog = ">=6.9.0"  # Adds color to logs
 concurrent_log_handler = ">=0.9.25"  # Concurrently log and rotate logs

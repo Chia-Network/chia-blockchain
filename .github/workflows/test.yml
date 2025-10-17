@@ -89,7 +89,7 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Generate matrix configuration
         id: configure
@@ -213,11 +213,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: "3.10"
-            action: "3.10"
-            apt: "3.10"
-            install_sh: "3.10"
-            matrix: "3.10"
+          - name: "3.12"
+            action: "3.12"
+            apt: "3.12"
+            install_sh: "3.12"
+            matrix: "3.12"
 
     steps:
       - uses: re-actors/alls-green@release/v1.2

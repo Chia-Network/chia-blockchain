@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import asyncio.events
-import asyncio.protocols
 import dataclasses
 import functools
 import logging.config

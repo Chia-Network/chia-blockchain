@@ -26,7 +26,7 @@ cache_path = root.joinpath(".chia_cache", "manage_clvm.json")
 # accessible via entry points.
 sys.path = [path for path in sys.path if path != os.fspath(here)]
 
-from clvm_tools_rs import compile_clvm  # noqa: E402
+from chialisp import compile_clvm  # noqa: E402
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram  # noqa: E402
 
