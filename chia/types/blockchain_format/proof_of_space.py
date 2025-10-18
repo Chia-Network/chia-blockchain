@@ -24,12 +24,6 @@ def validate_proof_v2(
     raise NotImplementedError
 
 
-# this is compute intensive, solving a partial proof returning a full proof
-def solve_proof(partial_proof: bytes) -> bytes:
-    # TODO: todo_v2_plots call into new chiapos library
-    raise NotImplementedError
-
-
 # given a partial proof, computes the quality. This is used to compute required iters.
 def quality_for_partial_proof(partial_proof: bytes, challenge: bytes32) -> bytes32:
     # TODO: todo_v2_plots call into new chiapos library
@@ -142,8 +136,9 @@ def verify_and_get_quality_string(
         # === V2 plots ===
         assert plot_size.size_v2 is not None
 
-        required_plot_strength = calculate_required_plot_strength(constants, height)
-        return validate_proof_v2(plot_id, plot_size.size_v2, required_plot_strength, pos.challenge, bytes(pos.proof))
+        return validate_proof_v2(
+            plot_id, plot_size.size_v2, constants.PLOT_STRENGTH_INITIAL, pos.challenge, bytes(pos.proof)
+        )
 
 
 def passes_plot_filter(
@@ -164,8 +159,13 @@ def passes_plot_filter(
 
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_size: PlotSize) -> int:
-    # v2 plots have a constant plot filter size
     if plot_size.size_v2 is not None:
+        if height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
+            return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 3
+        if height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
+            return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 2
+        if height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
+            return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 1
         return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
 
     prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V1)
@@ -179,21 +179,6 @@ def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_si
         prefix_bits -= 1
 
     return max(0, prefix_bits)
-
-
-def calculate_required_plot_strength(constants: ConsensusConstants, height: uint32) -> uint8:
-    if height < constants.PLOT_STRENGTH_4_HEIGHT:
-        return constants.PLOT_STRENGTH_INITIAL
-    if height < constants.PLOT_STRENGTH_5_HEIGHT:
-        return uint8(4)
-    if height < constants.PLOT_STRENGTH_6_HEIGHT:
-        return uint8(5)
-    if height < constants.PLOT_STRENGTH_7_HEIGHT:
-        return uint8(6)
-    if height < constants.PLOT_STRENGTH_8_HEIGHT:
-        return uint8(7)
-    else:
-        return uint8(8)
 
 
 def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:

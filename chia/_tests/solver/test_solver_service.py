@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 import pytest
 from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint64
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.solver_protocol import SolverInfo
@@ -21,7 +23,12 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
             solver = solver_service._node
             solver_api = solver_service._api
             assert solver_api.ready() is True
-            test_info = SolverInfo(partial_proof=b"test_partial_proof_42")
+            test_info = SolverInfo(
+                partial_proof=[uint64(1), uint64(2), uint64(3), uint64(4)],
+                plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+                strength=uint8(5),
+                size=uint8(28),
+            )
             expected_proof = b"test_proof_data_12345"
             with patch.object(solver, "solve", return_value=expected_proof):
                 api_result = await solver_api.solve(test_info)

@@ -15,6 +15,7 @@ from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.plotting.prover import V1Prover, V2Prover
 from chia.plotting.util import PlotInfo
 from chia.protocols import harvester_protocol
 from chia.protocols.harvester_protocol import PoolDifficulty
@@ -85,10 +86,16 @@ def create_test_setup(
 
 @contextmanager
 def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
-    with patch.object(plot_info.prover, "get_full_proof") as mock_get_proof:
-        mock_proof = MagicMock(spec=ProofOfSpace)
-        mock_get_proof.return_value = mock_proof, None
-        yield
+    if isinstance(plot_info.prover, V1Prover):
+        with patch.object(plot_info.prover, "get_full_proof") as mock_get_proof:
+            mock_proof = MagicMock(spec=ProofOfSpace)
+            mock_get_proof.return_value = mock_proof, None
+            yield
+    elif isinstance(plot_info.prover, V2Prover):
+        with patch.object(plot_info.prover, "get_partial_proof") as mock_get_proof:
+            mock_proof = MagicMock(spec=ProofOfSpace)
+            mock_get_proof.return_value = [uint64(1)] * 64, None
+            yield
 
 
 def assert_farming_info_sent(mock_peer: MagicMock) -> None:

@@ -507,11 +507,17 @@ class FarmerAPI:
 
         # Process each partial proof chain through solver service to get full proofs
         for partial_proof in partial_proof_data.partial_proofs:
-            solver_info = SolverInfo(partial_proof=partial_proof)
+            solver_info = SolverInfo(
+                partial_proof=partial_proof,
+                plot_id=partial_proof_data.plot_id,
+                strength=partial_proof_data.strength,
+                size=partial_proof_data.plot_size,
+            )
 
+            key = bytes(partial_proof)
             try:
                 # store pending request data for matching with response
-                self.farmer.pending_solver_requests[partial_proof] = {
+                self.farmer.pending_solver_requests[key] = {
                     "proof_data": partial_proof_data,
                     "peer": peer,
                 }
@@ -519,15 +525,13 @@ class FarmerAPI:
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.hex()[:10]}...")
+                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof[:5]}...")
 
             except Exception as e:
-                self.farmer.log.error(
-                    f"Failed to call solver service for partial proof {partial_proof.hex()[:10]}...: {e}"
-                )
+                self.farmer.log.error(f"Failed to call solver service for partial proof {partial_proof[:5]}...: {e}")
                 # clean up pending request
-                if partial_proof in self.farmer.pending_solver_requests:
-                    del self.farmer.pending_solver_requests[partial_proof]
+                if key in self.farmer.pending_solver_requests:
+                    del self.farmer.pending_solver_requests[key]
 
     @metadata.request()
     async def solution_response(self, response: SolverResponse, peer: WSChiaConnection) -> None:
@@ -539,14 +543,13 @@ class FarmerAPI:
 
         # find the matching pending request using partial_proof
 
-        if response.partial_proof not in self.farmer.pending_solver_requests:
-            self.farmer.log.warning(
-                f"Received solver response for unknown partial proof {response.partial_proof.hex()}"
-            )
+        key = bytes(response.partial_proof)
+        if key not in self.farmer.pending_solver_requests:
+            self.farmer.log.warning(f"Received solver response for unknown partial proof {response.partial_proof[:5]}")
             return
 
         # get the original request data
-        request_data = self.farmer.pending_solver_requests.pop(response.partial_proof)
+        request_data = self.farmer.pending_solver_requests.pop(key)
         proof_data = request_data["proof_data"]
         original_peer = request_data["peer"]
         partial_proof = response.partial_proof
@@ -554,7 +557,7 @@ class FarmerAPI:
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.hex()}...")
+            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof[:5]}...")
             return
 
         sp_challenge_hash = proof_data.challenge_hash

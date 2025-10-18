@@ -97,7 +97,7 @@ def validate_pospace_and_get_required_iters(
 
 def calculate_iterations_quality(
     constants: ConsensusConstants,
-    quality_string: bytes32,
+    quality_string: bytes,
     size: PlotSize,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,

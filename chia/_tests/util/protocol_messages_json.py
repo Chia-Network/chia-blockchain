@@ -69,9 +69,11 @@ partial_proof_json: dict[str, Any] = {
     "challenge_hash": "0x42743566108589c11bb3811b347900b6351fd3e25bad6c956c0bf1c05a4d93fb",
     "sp_hash": "0x8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_identifier": "plot-filename",
-    "partial_proofs": ["0x7061727469616c2d70726f6f6631", "0x7061727469616c2d70726f6f6632"],
+    "partial_proofs": [[1, 2, 3, 4], [2, 3, 4, 5]],
     "signage_point_index": 4,
     "plot_size": 32,
+    "strength": 5,
+    "plot_id": "0x346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a8a",
     "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "pool_contract_puzzle_hash": "0x91240fbacdf93b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
@@ -2730,9 +2732,11 @@ error_without_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "dat
 
 error_with_data_json: dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}
 
-solver_info_json: dict[str, Any] = {"partial_proof": "0x7061727469616c2d70726f6f66"}
-
-solver_response_json: dict[str, Any] = {
-    "partial_proof": "0x7061727469616c2d70726f6f66",
-    "proof": "0x66756c6c2d70726f6f66",
+solver_info_json: dict[str, Any] = {
+    "partial_proof": [1, 2, 3, 4],
+    "plot_id": "0x071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442",
+    "strength": 5,
+    "size": 28,
 }
+
+solver_response_json: dict[str, Any] = {"partial_proof": [1, 2, 3, 4], "proof": "0x66756c6c2d70726f6f66"}
