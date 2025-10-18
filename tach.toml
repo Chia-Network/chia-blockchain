@@ -88,12 +88,6 @@ depends_on = [
 [[modules]]
 path = "chia.apis"
 depends_on = [
-    { path = "chia.harvester", deprecated = false },
-    { path = "chia.farmer", deprecated = false },
-    { path = "chia.introducer", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
-    { path = "chia.full_node", deprecated = false },
-    { path = "chia.timelord", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.server", deprecated = false },
 ]
@@ -212,6 +206,8 @@ depends_on = [
     { path = "chia.simulator", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.data_layer", deprecated = false },
+    { path = "chia.introducer", deprecated = false },
+    { path = "chia.timelord", deprecated = false },
 ]
 
 [[modules]]
