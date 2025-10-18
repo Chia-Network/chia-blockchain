@@ -14,7 +14,7 @@ from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
-from benchmarks.utils import EnumType, get_commit_hash
+from benchmarks.utils import get_commit_hash
 from chia._tests.util.benchmarks import rand_full_block, rand_hash
 from chia.util.streamable import Streamable, streamable
 
@@ -226,8 +226,8 @@ def compare_results(
 
 
 @click.command()
-@click.option("-d", "--data", default=Data.all, type=EnumType(Data))
-@click.option("-m", "--mode", default=Mode.all, type=EnumType(Mode))
+@click.option("-d", "--data", default=Data.all, type=click.Choice(Data))
+@click.option("-m", "--mode", default=Mode.all, type=click.Choice(Mode))
 @click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
 @click.option("-t", "--ms", default=50, help="Milliseconds per run")
 @click.option("--live/--no-live", default=False, help="Print live results (slower)")
