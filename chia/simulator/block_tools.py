@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -37,6 +37,7 @@ from chia_rs import (
     SubSlotProofs,
     UnfinishedBlock,
     solution_generator,
+    solve_proof,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -62,9 +63,9 @@ from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
-from chia.plotting.create_plots import PlotKeys, create_plots
+from chia.plotting.create_plots import PlotKeys, create_plots, create_v2_plots
 from chia.plotting.manager import PlotManager
-from chia.plotting.prover import PlotVersion
+from chia.plotting.prover import PlotVersion, QualityProtocol, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import (
     Params,
     PlotRefreshEvents,
@@ -92,13 +93,10 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
-    calculate_required_plot_strength,
     generate_plot_public_key,
     generate_taproot_sk,
     make_pos,
     passes_plot_filter,
-    quality_for_partial_proof,
-    solve_proof,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -321,6 +319,7 @@ class BlockTools:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: dict[bytes32, Path] = {}
         self.created_plots: int = 0
+        self.created_plots2: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
@@ -340,6 +339,29 @@ class BlockTools:
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0
+
+                expected_plots: set[str] = set()
+                found_plots: set[str] = set()
+                if len(self.plot_manager.plots) != len(self.expected_plots):
+                    for pid, filename in self.expected_plots.items():
+                        expected_plots.add(filename.name)
+                    for filename, _ in self.plot_manager.plots.items():
+                        found_plots.add(filename.name)
+                    print(f"directory: {self.plot_dir}")
+                    print(f"expected: {len(expected_plots)}")
+                    for f in expected_plots:
+                        print(f)
+                    print(f"plot manager: {len(found_plots)}")
+                    for f in found_plots:
+                        print(f)
+                    diff = found_plots.difference(expected_plots)
+                    print(f"found unexpected: {len(diff)}")
+                    for f in diff:
+                        print(f)
+                    diff = expected_plots.difference(found_plots)
+                    print(f"not found: {len(diff)}")
+                    for f in diff:
+                        print(f)
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
@@ -500,11 +522,18 @@ class BlockTools:
         num_og_plots: int = 15,
         num_pool_plots: int = 5,
         num_non_keychain_plots: int = 3,
+        num_v2_plots: int = 15,
         plot_size: int = 20,
         bitfield: bool = True,
     ) -> bool:
+        print(
+            f"setup_plots({num_og_plots}, {num_pool_plots}, "
+            f"{num_non_keychain_plots}, {num_v2_plots}) "
+            f"plot-dir: {self.plot_dir}"
+        )
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
+        assert self.created_plots2 == 0
         existing_plots: bool = True
         # OG Plots
         for i in range(num_og_plots):
@@ -525,6 +554,11 @@ class BlockTools:
                 plot_size=plot_size,
                 bitfield=bitfield,
             )
+            if plot.new_plot:
+                existing_plots = False
+        # v2 plots
+        for i in range(num_v2_plots):
+            plot = await self.new_plot2(plot_size=18)
             if plot.new_plot:
                 existing_plots = False
         await self.refresh_plots()
@@ -605,6 +639,48 @@ class BlockTools:
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
+
+    async def new_plot2(
+        self,
+        path: Optional[Path] = None,
+        exclude_plots: bool = False,
+        plot_size: int = 18,
+    ) -> BlockToolsNewPlotResult:
+        final_dir = self.plot_dir
+        if path is not None:
+            final_dir = path
+            final_dir.mkdir(parents=True, exist_ok=True)
+
+        # No datetime in the filename, to get deterministic filenames and not re-plot
+        created, existed = await create_v2_plots(
+            final_dir=Path(final_dir),
+            size=plot_size,
+            pool_ph=self.pool_ph,
+            farmer_pk=self.farmer_pk,
+            use_datetime=False,
+            test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots2.to_bytes(2, "big")))],
+        )
+        self.created_plots2 += 1
+
+        plot_id_new: Optional[bytes32] = None
+        path_new: Optional[Path] = None
+        new_plot: bool = True
+
+        if len(created):
+            assert len(existed) == 0
+            plot_id_new, path_new = next(iter(created.items()))
+
+        if len(existed):
+            assert len(created) == 0
+            plot_id_new, path_new = next(iter(existed.items()))
+            new_plot = False
+        assert plot_id_new is not None
+        assert path_new is not None
+
+        if not exclude_plots:
+            self.expected_plots[plot_id_new] = path_new
+
+        return BlockToolsNewPlotResult(plot_id_new, new_plot)
 
     async def refresh_plots(self) -> None:
         self.plot_manager.refresh_parameter = replace(
@@ -1505,8 +1581,6 @@ class BlockTools:
         rng = random.Random()
         rng.seed(seed)
 
-        required_plot_strength = calculate_required_plot_strength(constants, prev_transaction_b_height)
-
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1515,32 +1589,28 @@ class BlockTools:
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
 
-            # v2 plots aren't valid until after the hard fork
-            if (
-                prev_transaction_b_height < constants.HARD_FORK2_HEIGHT
-                and plot_info.prover.get_version() == PlotVersion.V2
-            ):
-                continue
+            if plot_info.prover.get_version() == PlotVersion.V2:
+                # v2 plots aren't valid until after the hard fork
+                if prev_transaction_b_height < constants.HARD_FORK2_HEIGHT:
+                    continue
+
+                if plot_info.prover.get_strength() < constants.PLOT_STRENGTH_INITIAL:
+                    self.log.warn(
+                        f"Plot strength ({plot_info.prover.get_strength()}) too low, "
+                        f"cannot be used for farming: {plot_info.prover.get_filename()}"
+                    )
+                    continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
-            # these are either qualities (v1) or partial proofs (v2)
-            proofs: Sequence[Union[bytes32, bytes]]
-            v = plot_info.prover.get_version()
-            if v == PlotVersion.V1:
-                proofs = plot_info.prover.get_qualities_for_challenge(new_challenge)
-            else:
-                proofs = plot_info.prover.get_partial_proofs_for_challenge(new_challenge, required_plot_strength)
+            qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(
+                new_challenge, constants.QUALITY_PROOF_SCAN_FILTER
+            )
 
-            for proof_index, proof in enumerate(proofs):
-                if v == PlotVersion.V2:
-                    quality_str = quality_for_partial_proof(proof, new_challenge)
-                elif v == PlotVersion.V1:
-                    quality_str = bytes32(proof)
-
+            for idx, quality in enumerate(qualities):
                 required_iters = calculate_iterations_quality(
                     constants,
-                    quality_str,
+                    quality.get_quality(),
                     plot_info.prover.get_size(),
                     difficulty,
                     signage_point,
@@ -1550,11 +1620,16 @@ class BlockTools:
                 if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
                     continue
 
-                proof_xs: bytes
-                if v == PlotVersion.V1:
-                    proof_xs = plot_info.prover.get_full_proof(new_challenge, proof_index)
-                else:
-                    proof_xs = solve_proof(proof)
+                proof = b""
+                if isinstance(plot_info.prover, V1Prover):
+                    proof = plot_info.prover.get_full_proof(new_challenge, idx)
+                elif isinstance(plot_info.prover, V2Prover):
+                    assert isinstance(quality, V2Quality)
+                    partial_proof = plot_info.prover.get_partial_proof(quality)
+                    k_size = plot_info.prover.get_size().size_v2
+                    strength = plot_info.prover.get_strength()
+                    assert k_size is not None
+                    proof = solve_proof(partial_proof, plot_id, strength, k_size)
 
                 # Look up local_sk from plot to save locked memory
                 (
@@ -1576,7 +1651,7 @@ class BlockTools:
                     plot_info.pool_contract_puzzle_hash,
                     plot_pk,
                     plot_info.prover.get_size(),
-                    proof_xs,
+                    proof,
                 )
                 found_proofs.append((required_iters, proof_of_space))
         random_sample = found_proofs
@@ -2083,6 +2158,7 @@ async def create_block_tools_async(
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
+    num_v2_plots: int = 15,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2093,6 +2169,7 @@ async def create_block_tools_async(
         num_og_plots=num_og_plots,
         num_pool_plots=num_pool_plots,
         num_non_keychain_plots=num_non_keychain_plots,
+        num_v2_plots=num_v2_plots,
     )
 
     return bt

@@ -338,9 +338,11 @@ async def test_v2_partial_proofs_new_sp_hash(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[b"test_partial_proof_1"],
+        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        strength=uint8(5),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         pool_public_key=None,
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -367,9 +369,11 @@ async def test_v2_partial_proofs_missing_sp_hash(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[b"test_partial_proof_1"],
+        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        strength=uint8(5),
         pool_public_key=None,
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -409,9 +413,11 @@ async def test_v2_partial_proofs_with_existing_sp(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[b"test_partial_proof_1", b"test_partial_proof_2"],
+        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        strength=uint8(5),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -441,9 +447,11 @@ async def test_solution_response_handler(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[b"test_partial_proof_for_quality"],
+        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        strength=uint8(5),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -452,7 +460,8 @@ async def test_solution_response_handler(
     harvester_peer = await get_harvester_peer(farmer)
 
     # manually add pending request
-    farmer.pending_solver_requests[partial_proofs.partial_proofs[0]] = {
+    key = bytes(partial_proofs.partial_proofs[0])
+    farmer.pending_solver_requests[key] = {
         "proof_data": partial_proofs,
         "peer": harvester_peer,
     }
@@ -477,7 +486,8 @@ async def test_solution_response_handler(
         assert original_peer == harvester_peer
 
         # verify pending request was removed
-        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
+        key = bytes(partial_proofs.partial_proofs[0])
+        assert key not in farmer.pending_solver_requests
 
 
 @pytest.mark.anyio
@@ -492,7 +502,9 @@ async def test_solution_response_unknown_quality(
     solver_peer = await get_solver_peer(farmer)
 
     # create solution response with unknown quality
-    solution_response = solver_protocol.SolverResponse(partial_proof=bytes(b"1" * 32), proof=b"test_proof")
+    solution_response = solver_protocol.SolverResponse(
+        partial_proof=[uint64(1), uint64(2), uint64(3), uint64(4)], proof=b"test_proof"
+    )
 
     with unittest.mock.patch.object(farmer_api, "new_proof_of_space", new_callable=AsyncMock) as mock_new_proof:
         await farmer_api.solution_response(solution_response, solver_peer)
@@ -518,9 +530,11 @@ async def test_solution_response_empty_proof(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[b"test_partial_proof_for_quality"],
+        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        strength=uint8(5),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -530,8 +544,9 @@ async def test_solution_response_empty_proof(
     harvester_peer.peer_node_id = "harvester_peer"
 
     # manually add pending request
-    farmer.pending_solver_requests[partial_proofs.partial_proofs[0]] = {
-        "proof_data": partial_proofs.partial_proofs[0],
+    key = bytes(partial_proofs.partial_proofs[0])
+    farmer.pending_solver_requests[key] = {
+        "proof_data": partial_proofs,
         "peer": harvester_peer,
     }
 
@@ -548,7 +563,8 @@ async def test_solution_response_empty_proof(
         mock_new_proof.assert_not_called()
 
         # verify pending request was removed (cleanup still happens)
-        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
+        key = bytes(partial_proofs.partial_proofs[0])
+        assert key not in farmer.pending_solver_requests
 
 
 @pytest.mark.anyio
@@ -579,9 +595,11 @@ async def test_v2_partial_proofs_solver_exception(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[b"test_partial_proof_1"],
+        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        strength=uint8(5),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -594,4 +612,5 @@ async def test_v2_partial_proofs_solver_exception(
         await farmer_api.partial_proofs(partial_proofs, harvester_peer)
 
         # verify pending request was cleaned up after exception
-        assert partial_proofs.partial_proofs[0] not in farmer.pending_solver_requests
+        key = bytes(partial_proofs.partial_proofs[0])
+        assert key not in farmer.pending_solver_requests

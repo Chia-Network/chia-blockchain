@@ -13,7 +13,6 @@ from chia._tests.util.misc import Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
-    calculate_required_plot_strength,
     check_plot_size,
     make_pos,
     passes_plot_filter,
@@ -113,25 +112,23 @@ def b32(key: str) -> bytes32:
         id="v2 plot size 0",
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotSize.make_v2(0),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
         expected_error="Plot size is lower than the minimum",
     ),
     ProofOfSpaceCase(
         id="v2 plot size 34",
         pos_challenge=bytes32(b"1" * 32),
         plot_size=PlotSize.make_v2(34),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
         expected_error="Plot size is higher than the maximum",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("3d29ea79d19b3f7e99ebf764ae53697cbe143603909873946af6ab1ece606861"),
+        pos_challenge=b32("4cfaacbd2782db64d07cf490ca938534adb07dfbd2f92b0e479e2e5b196178db"),
         plot_size=PlotSize.make_v2(32),
-        pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
-        ),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
             "879526b4e7b616cfd64984d8ad140d0798b048392a6f11e2faf09054ef467ea44dc0dab5e5edb2afdfa850c5c8b629cc"
         ),
@@ -161,16 +158,15 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 @datacases(
     ProofOfSpaceCase(
         id="v2 plot are not implemented",
-        plot_size=PlotSize.make_v2(30),
-        pos_challenge=b32("47deb938e145d25d7b3b3c85ca9e3972b76c01aeeb78a02fe5d3b040d282317e"),
+        plot_size=PlotSize.make_v2(28),
+        pos_challenge=b32("6a85c4c5f21e5728c6668b01c0758e33bb7f3ae20d38703d4863ad151f983d9c"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
-        pool_public_key=g1(
-            "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
-        ),
-        expected_error="NotImplementedError",
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        expected_error="Did not pass the plot filter",
     ),
+    # TODO: todo_v2_plots add test case that passes the plot filter
 )
 def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
     pos = make_pos(
@@ -198,29 +194,6 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
     else:
         assert quality_string is None
         assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
-
-
-@pytest.mark.parametrize(
-    "height, strength",
-    [
-        (0, 2),
-        (DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, 2),
-        (DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT, 2),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_4_HEIGHT - 1, 2),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_4_HEIGHT, 4),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_5_HEIGHT - 1, 4),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_5_HEIGHT, 5),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_6_HEIGHT - 1, 5),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_6_HEIGHT, 6),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_7_HEIGHT - 1, 6),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_7_HEIGHT, 7),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT - 1, 7),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT, 8),
-        (DEFAULT_CONSTANTS.PLOT_STRENGTH_8_HEIGHT + 1000000, 8),
-    ],
-)
-def test_calculate_plot_strength(height: uint32, strength: uint8) -> None:
-    assert calculate_required_plot_strength(DEFAULT_CONSTANTS, height) == strength
 
 
 @pytest.mark.parametrize(
@@ -272,12 +245,9 @@ class TestProofOfSpace:
 
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
-@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
-def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_size: PlotSize) -> None:
+def test_calculate_prefix_bits_clamp_zero_v1(height: uint32, expected: int) -> None:
     constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(3))
-    if plot_size.size_v2 is not None:
-        expected = constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    assert calculate_prefix_bits(constants, height, plot_size) == expected
+    assert calculate_prefix_bits(constants, height, PlotSize.make_v1(32)) == expected
 
 
 @pytest.mark.parametrize(
@@ -294,9 +264,20 @@ def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int, plot_si
         (20643000, 5),
     ],
 )
-@pytest.mark.parametrize("plot_size", [PlotSize.make_v1(32), PlotSize.make_v2(28)])
-def test_calculate_prefix_bits_default(height: uint32, expected: int, plot_size: PlotSize) -> None:
-    constants = DEFAULT_CONSTANTS
-    if plot_size.size_v2 is not None:
-        expected = DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER_V2
-    assert calculate_prefix_bits(constants, height, plot_size) == expected
+def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
+    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotSize.make_v1(32)) == expected
+
+
+@pytest.mark.parametrize(
+    argnames=["height", "expected"],
+    argvalues=[
+        (0, 5),
+        (0xFFFFFFFA, 5),
+        (0xFFFFFFFB, 6),
+        (0xFFFFFFFC, 7),
+        (0xFFFFFFFD, 8),
+        (0xFFFFFFFF, 8),
+    ],
+)
+def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
+    assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotSize.make_v2(28)) == expected

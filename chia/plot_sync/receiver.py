@@ -113,8 +113,8 @@ class Receiver:
     async def trigger_callback(self, update: Optional[Delta] = None) -> None:
         try:
             await self._update_callback(self._connection.peer_node_id, update)
-        except Exception as e:
-            log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
+        except Exception:
+            log.exception(f"_update_callback: node_id {self.connection().peer_node_id}")
 
     def reset(self) -> None:
         log.info(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
@@ -181,13 +181,13 @@ class Receiver:
             await method(message)
             await send_response()
         except InvalidIdentifierError as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, InvalidIdentifierError {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier))
         except PlotSyncException as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, Error {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", None))
         except Exception as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, Exception {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:
@@ -349,12 +349,16 @@ class Receiver:
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
+
+        def expected_plot_size(pi: Plot) -> int:
+            if pi.strength == 0:
+                plot_size = PlotSize.make_v1(pi.size)
+            else:
+                plot_size = PlotSize.make_v2(pi.size)
+            return int(_expected_plot_size(plot_size))
+
         self._total_effective_plot_size = int(
-            # TODO: todo_v2_plots support v2 plots
-            sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
-                for plot in self._plots.values()
-            )
+            sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * expected_plot_size(plot) for plot in self._plots.values())
         )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync

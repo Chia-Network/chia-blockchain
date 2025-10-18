@@ -294,7 +294,7 @@ async def test_farmer_get_pool_state_plot_count(
     await farmer_api.farmer.update_pool_state()
 
     pool_plot_count: int = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
-    assert pool_plot_count == 5
+    assert pool_plot_count == 20
 
     # TODO: Maybe improve this to not remove from Receiver directly but instead from the harvester and then wait for
     #       plot sync event.
@@ -334,8 +334,8 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
 @pytest.mark.parametrize(
     "endpoint, filtering, sort_key, reverse, expected_plot_count",
     [
-        (FarmerRpcClient.get_harvester_plots_valid, [], "filename", False, 20),
-        (FarmerRpcClient.get_harvester_plots_valid, [], "size", True, 20),
+        (FarmerRpcClient.get_harvester_plots_valid, [], "filename", False, 35),
+        (FarmerRpcClient.get_harvester_plots_valid, [], "size", True, 35),
         (
             FarmerRpcClient.get_harvester_plots_valid,
             [FilterItem("pool_contract_puzzle_hash", None)],
@@ -349,6 +349,20 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
             "plot_id",
             False,
             4,
+        ),
+        (
+            FarmerRpcClient.get_harvester_plots_valid,
+            [FilterItem("strength", "2")],
+            "size",
+            True,
+            15,
+        ),
+        (
+            FarmerRpcClient.get_harvester_plots_valid,
+            [FilterItem("strength", "0")],
+            "size",
+            True,
+            20,
         ),
         (FarmerRpcClient.get_harvester_plots_invalid, [], None, True, 13),
         (FarmerRpcClient.get_harvester_plots_invalid, ["invalid_0"], None, False, 6),

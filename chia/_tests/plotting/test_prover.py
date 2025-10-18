@@ -12,57 +12,6 @@ from chia.plotting.prover import PlotVersion, V1Prover, V2Prover, get_prover_fro
 
 
 class TestProver:
-    def test_v2_prover_init_with_nonexistent_file(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        assert prover.get_version() == PlotVersion.V2
-        assert prover.get_filename() == "/nonexistent/path/test.plot2"
-
-    def test_v2_prover_get_size_raises_error(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_size()
-
-    def test_v2_prover_get_memo_raises_error(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_memo()
-
-    def test_v2_prover_get_compression_level(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        assert prover.get_compression_level() == uint8(0)
-
-    def test_v2_prover_get_id_raises_error(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_id()
-
-    def test_v2_prover_get_qualities_for_challenge_raises_error(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(
-            AssertionError, match="V2 plot format does not support qualities directly, use partial proofs"
-        ):
-            prover.get_qualities_for_challenge(bytes32(b"1" * 32))
-
-    def test_v2_prover_get_full_proof_raises_error(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(AssertionError, match="V2 plot format require solver to get full proof"):
-            prover.get_full_proof(bytes32(b"1" * 32), 0)
-
-    def test_v2_prover_bytes_raises_error(self) -> None:
-        prover = V2Prover("/nonexistent/path/test.plot2")
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            bytes(prover)
-
-    def test_v2_prover_from_bytes_raises_error(self) -> None:
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            V2Prover.from_bytes(b"test_data")
-
-    def test_get_prover_from_file(self) -> None:
-        prover = get_prover_from_file("/nonexistent/path/test.plot2")
-        assert prover.get_version() == PlotVersion.V2
-        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_size()
-
     def test_get_prover_from_file_with_plot1_still_works(self) -> None:
         with tempfile.NamedTemporaryFile(suffix=".plot", delete=False) as f:
             temp_path = f.name
@@ -78,6 +27,56 @@ class TestProver:
             get_prover_from_file("/nonexistent/path/test.txt")
 
 
+# TODO: todo_v2_plots enable these tests once we have test plots we can load
+@pytest.mark.skip("we don't have v2 test plots yet")
+class TestV2Prover:
+    def test_v2_prover_init_with_nonexistent_file(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        assert prover.get_version() == PlotVersion.V2
+        assert prover.get_filename() == "/nonexistent/path/test.plot2"
+
+    def test_v2_prover_get_size_raises_error(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+            prover.get_size()
+
+    def test_v2_prover_get_memo_raises_error(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+            prover.get_memo()
+
+    def test_v2_prover_get_compression_level(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        assert prover.get_compression_level() == uint8(0)
+
+    def test_v2_prover_get_id_raises_error(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+            prover.get_id()
+
+    def test_v2_prover_get_qualities_for_challenge_raises_error(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        with pytest.raises(
+            AssertionError, match="V2 plot format does not support qualities directly, use partial proofs"
+        ):
+            prover.get_qualities_for_challenge(bytes32(b"1" * 32), uint8(5))
+
+    def test_v2_prover_bytes_raises_error(self) -> None:
+        prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
+        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+            bytes(prover)
+
+    def test_v2_prover_from_bytes_raises_error(self) -> None:
+        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+            V2Prover.from_bytes(b"test_data")
+
+    def test_get_prover_from_file(self) -> None:
+        prover = get_prover_from_file("/nonexistent/path/test.plot2")
+        assert prover.get_version() == PlotVersion.V2
+        with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
+            prover.get_size()
+
+
 class TestV1Prover:
     def test_v1_prover_get_version(self) -> None:
         """Test that V1Prover.get_version() returns PlotVersion.V1"""
@@ -87,13 +86,6 @@ class TestV1Prover:
 
 
 class TestGetProverFromBytes:
-    def test_get_prover_from_bytes_v2_plot(self) -> None:
-        with patch("chia.plotting.prover.V2Prover.from_bytes") as mock_v2_from_bytes:
-            mock_prover = MagicMock()
-            mock_v2_from_bytes.return_value = mock_prover
-            result = get_prover_from_bytes("test.plot2", b"test_data")
-            assert result == mock_prover
-
     def test_get_prover_from_bytes_v1_plot(self) -> None:
         with patch("chia.plotting.prover.DiskProver") as mock_disk_prover_class:
             mock_disk_prover = MagicMock()
@@ -102,5 +94,5 @@ class TestGetProverFromBytes:
             assert isinstance(result, V1Prover)
 
     def test_get_prover_from_bytes_unsupported_extension(self) -> None:
-        with pytest.raises(ValueError, match="Unsupported plot file"):
+        with pytest.raises((RuntimeError, ValueError)):
             get_prover_from_bytes("test.txt", b"test_data")
