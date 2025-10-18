@@ -83,8 +83,8 @@ async def check_spend_bundle_validity(
 
         if expected_err is None:
             await _validate_and_add_block(blockchain, newest_block)
-            coins_added = await blockchain.coin_store.get_coins_added_at_height(uint32(len(blocks)))
-            coins_removed = await blockchain.coin_store.get_coins_removed_at_height(uint32(len(blocks)))
+            coins_added = await blockchain.consensus_store.get_coins_added_at_height(uint32(len(blocks)))
+            coins_removed = await blockchain.consensus_store.get_coins_removed_at_height(uint32(len(blocks)))
         else:
             await _validate_and_add_block(blockchain, newest_block, expected_error=expected_err)
             coins_added = []
