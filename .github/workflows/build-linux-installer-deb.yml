@@ -266,19 +266,27 @@ jobs:
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
+            skip: gui
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
             url: "docker://ubuntu:jammy"
+            skip: gui
           - name: ubuntu:noble (24.04)
             type: ubuntu
             # https://packages.ubuntu.com/noble/python3 (24.04, 3.12)
             url: "docker://ubuntu:noble"
+            skip: gui
+          - name: webtop:ubuntu-kde
+            type: ubuntu
+            url: lscr.io/linuxserver/webtop:ubuntu-kde
         mode:
           - name: GUI
+            matrix: gui
             file: chia-blockchain_*.deb
             package: chia-blockchain
           - name: CLI
+            matrix: cli
             file: chia-blockchain-cli_*.deb
             package: chia-blockchain-cli
         arch:
@@ -288,6 +296,15 @@ jobs:
           - name: Intel
             matrix: intel
             artifact-name: intel
+        exclude:
+          - mode:
+              matrix: gui
+            distribution:
+              skip: gui
+          - mode:
+              matrix: cli
+            distribution:
+              skip: cli
 
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -317,7 +334,12 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
+          USERNAME=testuser
+          USER_UID=2001
+          USER_GID=${USER_UID}
+          groupadd --gid $USER_GID $USERNAME
+          useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+          su $USERNAME -c 'chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}" ${{ matrix.mode.matrix == 'gui' && '--gui-command chia-blockchain' || '' }}'
 
       - name: Verify /opt/chia present
         run: |
@@ -329,7 +351,7 @@ jobs:
 
       - name: Check permissions of /opt/chia/chrome-sandbox
         shell: bash
-        if: matrix.mode.name == 'GUI'
+        if: matrix.mode.matrix == 'gui'
         run: |
           [ "$(stat -c %a:%G:%U /opt/chia/chrome-sandbox)" == "4755:root:root" ]
 
