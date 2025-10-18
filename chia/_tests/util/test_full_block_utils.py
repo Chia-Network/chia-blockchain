@@ -275,6 +275,7 @@ async def test_parser():
         assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash
         assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
+        assert block.height == bi.height
         # this doubles the run-time of this test, with questionable utility
         # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
 
