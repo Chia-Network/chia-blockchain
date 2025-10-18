@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -41,6 +41,7 @@ from chia.wallet.wallet_request_types import (
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    CreateOfferForIDs,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
@@ -666,31 +667,16 @@ class WalletRpcClient(RpcClient):
     # Offers
     async def create_offer_for_ids(
         self,
-        offer_dict: dict[Union[uint32, str], int],
+        request: CreateOfferForIDs,
         tx_config: TXConfig,
-        driver_dict: Optional[dict[str, Any]] = None,
-        solver: Optional[dict[str, Any]] = None,
-        fee: int = 0,
-        validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> CreateOfferForIDsResponse:
-        send_dict: dict[str, int] = {str(key): value for key, value in offer_dict.items()}
-
-        req = {
-            "offer": send_dict,
-            "validate_only": validate_only,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if driver_dict is not None:
-            req["driver_dict"] = driver_dict
-        if solver is not None:
-            req["solver"] = solver
-        res = await self.fetch("create_offer_for_ids", req)
-        return json_deserialize_with_clvm_streamable(res, CreateOfferForIDsResponse)
+        return CreateOfferForIDsResponse.from_json_dict(
+            await self.fetch(
+                "create_offer_for_ids", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def get_offer_summary(
         self, offer: Offer, advanced: bool = False

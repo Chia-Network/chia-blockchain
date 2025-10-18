@@ -294,6 +294,8 @@ def recurse_jsonify(
     """
     if next_recursion_step is None:
         next_recursion_step = recurse_jsonify
+    if getattr(d, "json_serialization_override", None) is not None:
+        return d.json_serialization_override(d)
     if dataclasses.is_dataclass(d):
         new_dict = {}
         for field in dataclasses.fields(d):

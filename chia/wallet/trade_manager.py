@@ -429,7 +429,7 @@ class TradeManager:
         validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
-    ) -> Union[tuple[Literal[True], TradeRecord, None], tuple[Literal[False], None, str]]:
+    ) -> tuple[Literal[True], TradeRecord, None]:
         if driver_dict is None:
             driver_dict = {}
         if solver is None:

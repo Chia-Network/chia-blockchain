@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Optional, final
+from typing import Any, BinaryIO, Optional, Union, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -18,6 +18,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
@@ -1829,8 +1830,18 @@ class CreateSignedTransactionsResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True)
 class _OfferEndpointResponse(TransactionEndpointResponse):
-    offer: Offer
+    offer: Offer  # gotta figure out how to ignore this in streamable
     trade_record: TradeRecord
+
+    def to_json_dict(self) -> dict[str, Any]:
+        old_offer_override = getattr(self.offer, "json_serialization_override", None)
+        object.__setattr__(self.offer, "json_serialization_override", lambda o: o.to_bech32())
+        try:
+            response = {**super().to_json_dict(), "trade_record": self.trade_record.to_json_dict_convenience()}
+        except Exception:
+            object.__setattr__(self.offer, "json_serialization_override", old_offer_override)
+            raise
+        return response
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
@@ -1844,6 +1855,27 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
             offer=offer,
             trade_record=TradeRecord.from_json_dict_convenience(json_dict["trade_record"], bytes(offer).hex()),
         )
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateOfferForIDs(TransactionEndpointRequest):
+    # a hack for dict[str, int] because streamable doesn't support negative ints
+    offer: dict[str, str] = field(default_factory=default_raise)
+    driver_dict: Optional[dict[bytes32, PuzzleInfo]] = None
+    solver: Optional[Solver] = None
+    validate_only: bool = False
+
+    @property
+    def offer_spec(self) -> dict[Union[int, bytes32], int]:
+        modified_offer: dict[Union[int, bytes32], int] = {}
+        for wallet_identifier, change in self.offer.items():
+            if len(wallet_identifier) > 16:  # wallet IDs are uint32 therefore no longer than 8 bytes :P
+                modified_offer[bytes32.from_hexstr(wallet_identifier)] = int(change)
+            else:
+                modified_offer[int(wallet_identifier)] = int(change)
+
+        return modified_offer
 
 
 @streamable
