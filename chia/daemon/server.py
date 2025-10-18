@@ -207,23 +207,22 @@ class WebSocketServer:
     async def run(self) -> AsyncIterator[None]:
         self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
-        # Note: the minimum_version has been already set to TLSv1_2
+        # Note: the minimum_version has been already set to TLSv1_3
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
-        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
-            try:
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
-            except ValueError:
-                # in case the attempt above confused the config, set it again (likely not needed but doesn't hurt)
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-
-        if self.ssl_context.minimum_version is not ssl.TLSVersion.TLSv1_3:
-            self.log.warning(
-                (
-                    "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
-                    "A future version of Chia will require TLS1.3."
-                ),
-                ssl.OPENSSL_VERSION,
+        # Daemon is internal connections, so override to TLSv1_2 only if specified in the config
+        if self.net_config.get("daemon_allow_tls_1_2", False):
+            self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+            self.ssl_context.set_ciphers(
+                "ECDHE-ECDSA-AES256-GCM-SHA384:"
+                "ECDHE-RSA-AES256-GCM-SHA384:"
+                "ECDHE-ECDSA-CHACHA20-POLY1305:"
+                "ECDHE-RSA-CHACHA20-POLY1305:"
+                "ECDHE-ECDSA-AES128-GCM-SHA256:"
+                "ECDHE-RSA-AES128-GCM-SHA256:"
+                "ECDHE-ECDSA-AES256-SHA384:"
+                "ECDHE-RSA-AES256-SHA384:"
+                "ECDHE-ECDSA-AES128-SHA256:"
+                "ECDHE-RSA-AES128-SHA256"
             )
 
         self.state_changed_task = create_referenced_task(self._process_state_changed_queue())
