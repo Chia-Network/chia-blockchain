@@ -762,10 +762,7 @@ class WalletRpcApi:
     @marshal
     async def get_public_keys(self, request: Empty) -> GetPublicKeysResponse:
         try:
-            fingerprints = [
-                uint32(sk.get_g1().get_fingerprint())
-                for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
-            ]
+            fingerprints = [key_data.fingerprint for key_data in await self.service.keychain_proxy.get_keys()]
         except KeychainIsLocked:
             return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
