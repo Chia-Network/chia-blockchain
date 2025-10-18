@@ -55,6 +55,7 @@ network_overrides: &network_overrides
       MIN_PLOT_SIZE_V2: 20
       NETWORK_TYPE: 1
       SUB_SLOT_ITERS_STARTING: 67108864
+      HARD_FORK_HEIGHT: 3693395
   config:
     mainnet:
       address_prefix: "xch"
