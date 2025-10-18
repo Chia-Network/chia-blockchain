@@ -226,7 +226,7 @@ jobs:
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
-          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.12.7-1-x86_64.pkg.tar.zst
+          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.13.5-1-x86_64.pkg.tar.zst
 
       - name: Prepare Debian
         if: ${{ matrix.distribution.type == 'debian' }}
