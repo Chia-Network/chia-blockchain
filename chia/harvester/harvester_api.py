@@ -188,7 +188,7 @@ class HarvesterAPI:
                 for quality in qualities:
                     required_iters: uint64 = calculate_iterations_quality(
                         self.harvester.constants,
-                        quality.get_quality(),
+                        quality.get_string(),
                         plot_info.prover.get_size(),
                         difficulty,
                         new_challenge.sp_hash,
@@ -283,7 +283,7 @@ class HarvesterAPI:
                     for index, quality in enumerate(qualities):
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
-                            quality.get_quality(),
+                            quality.get_string(),
                             plot_info.prover.get_size(),
                             difficulty,
                             new_challenge.sp_hash,
@@ -331,7 +331,7 @@ class HarvesterAPI:
                                 )
                                 continue
 
-                            quality_str = bytes32(quality.get_quality())
+                            quality_str = bytes32(quality.get_string())
                             responses.append(
                                 (
                                     quality_str,

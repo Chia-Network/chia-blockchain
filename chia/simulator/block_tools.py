@@ -1532,7 +1532,7 @@ class BlockTools:
             for idx, quality in enumerate(qualities):
                 required_iters = calculate_iterations_quality(
                     constants,
-                    quality.get_quality(),
+                    quality.get_string(),
                     plot_info.prover.get_size(),
                     difficulty,
                     signage_point,

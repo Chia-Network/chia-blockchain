@@ -209,7 +209,7 @@ def check_plots(
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
                         proof_start_time = round(monotonic() * 1000)
-                        quality_str = quality.get_quality()
+                        quality_str = quality.get_string()
 
                         if isinstance(pr, V1Prover):
                             full_proof = pr.get_full_proof(challenge, index, parallel_read)
