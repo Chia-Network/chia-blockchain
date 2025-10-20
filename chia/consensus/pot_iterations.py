@@ -109,6 +109,7 @@ def calculate_iterations_quality(
     times a random number between 0 and 1 (based on quality string), divided by plot size.
     """
     if size.size_v1 is not None:
+        assert len(quality_string) == 32
         assert size.size_v2 is None
         phase_out = calculate_phase_out(constants, ssi, prev_transaction_block_height)
     else:

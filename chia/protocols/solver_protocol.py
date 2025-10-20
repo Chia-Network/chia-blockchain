@@ -11,7 +11,7 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclass(frozen=True)
 class SolverInfo(Streamable):
-    partial_proof: list[uint64]  # 16 * k bits blob, k (plot size) can be derived from this
+    partial_proof: list[uint64]  # 64 proof fragments
     plot_id: bytes32
     strength: uint8
     size: uint8  # k-size
