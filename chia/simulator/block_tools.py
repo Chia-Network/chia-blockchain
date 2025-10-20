@@ -150,6 +150,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
     NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(1),
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
@@ -1615,6 +1616,8 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
+            elif prev_transaction_b_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
+                continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
@@ -1632,7 +1635,7 @@ class BlockTools:
                     sub_slot_iters,
                     prev_transaction_b_height,
                 )
-                if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
+                if required_iters is None or required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
                     continue
 
                 proof = b""
