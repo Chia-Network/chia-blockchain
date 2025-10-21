@@ -61,12 +61,14 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.util.async_pool import Job, QueuedAsyncPool
 from chia.util.path import path_from_root
 from chia.util.task_referencer import create_referenced_task
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_request_types import (
     CreateNewDL,
+    CreateOfferForIDs,
     DLDeleteMirror,
     DLGetMirrors,
     DLHistory,
@@ -1148,34 +1150,38 @@ class DataLayer:
         async with self.data_store.transaction():
             our_store_proofs = await self.process_offered_stores(offer_stores=maker)
 
-            offer_dict: dict[Union[uint32, str], int] = {
-                **{offer_store.store_id.hex(): -1 for offer_store in maker},
-                **{offer_store.store_id.hex(): 1 for offer_store in taker},
+            offer_dict: dict[str, str] = {
+                **{offer_store.store_id.hex(): "-1" for offer_store in maker},
+                **{offer_store.store_id.hex(): "1" for offer_store in taker},
             }
 
-            solver: dict[str, Any] = {
-                "0x" + our_offer_store.store_id.hex(): {
-                    "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].root().hex(),
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + their_offer_store.store_id.hex(),
-                            "values_to_prove": [
-                                "0x" + leaf_hash(key=entry.key, value=entry.value).hex()
-                                for entry in their_offer_store.inclusions
-                            ],
-                        }
-                        for their_offer_store in taker
-                    ],
+            solver = Solver(
+                {
+                    "0x" + our_offer_store.store_id.hex(): {
+                        "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].root().hex(),
+                        "dependencies": [
+                            {
+                                "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                                "values_to_prove": [
+                                    "0x" + leaf_hash(key=entry.key, value=entry.value).hex()
+                                    for entry in their_offer_store.inclusions
+                                ],
+                            }
+                            for their_offer_store in taker
+                        ],
+                    }
+                    for our_offer_store in maker
                 }
-                for our_offer_store in maker
-            }
+            )
 
             res = await self.wallet_rpc.create_offer_for_ids(
-                offer_dict=offer_dict,
-                solver=solver,
-                driver_dict={},
-                fee=fee,
-                validate_only=False,
+                CreateOfferForIDs(
+                    offer=offer_dict,
+                    solver=solver,
+                    driver_dict={},
+                    fee=fee,
+                    validate_only=False,
+                ),
                 # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
                 # This is not a change in behavior, the default was already implicit.
                 tx_config=DEFAULT_TX_CONFIG,
