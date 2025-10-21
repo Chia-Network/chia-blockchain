@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import operator
-import sys
 import time
 from collections.abc import Awaitable
 from math import ceil
