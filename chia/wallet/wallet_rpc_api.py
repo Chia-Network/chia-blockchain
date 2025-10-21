@@ -31,7 +31,6 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -104,7 +103,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
@@ -835,9 +834,10 @@ class WalletRpcApi:
         except Exception as e:
             log.error(f"Failed to delete key by fingerprint: {e}")
             raise e
-        path = path_from_root(
+        path = get_wallet_db_path(
             self.service.root_path,
-            f"{self.service.config['database_path']}-{request.fingerprint}",
+            self.service.config,
+            str(request.fingerprint),
         )
         if path.exists():
             path.unlink()
@@ -925,14 +925,20 @@ class WalletRpcApi:
     @marshal
     async def delete_all_keys(self, request: Empty) -> Empty:
         await self._stop_wallet()
+        all_key_datas = await self.service.keychain_proxy.get_keys()
         try:
             await self.service.keychain_proxy.delete_all_keys()
         except Exception as e:
             log.error(f"Failed to delete all keys: {e}")
             raise e
-        path = path_from_root(self.service.root_path, self.service.config["database_path"])
-        if path.exists():
-            path.unlink()
+        for key_data in all_key_datas:
+            path = get_wallet_db_path(
+                self.service.root_path,
+                self.service.config,
+                str(key_data.fingerprint),
+            )
+            if path.exists():
+                path.unlink()
         return Empty()
 
     ##########################################################################################

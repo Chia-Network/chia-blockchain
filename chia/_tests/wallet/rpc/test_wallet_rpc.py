@@ -101,7 +101,7 @@ from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
@@ -2340,7 +2340,9 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert delete_key_resp.used_for_farmer_rewards is False
     assert delete_key_resp.used_for_pool_rewards is False
 
+    assert get_wallet_db_path(wallet_node.root_path, wallet_node.config, str(pks[0])).exists()
     await client.delete_key(DeleteKey(pks[0]))
+    assert not get_wallet_db_path(wallet_node.root_path, wallet_node.config, str(pks[0])).exists()
     await client.log_in(LogIn(uint32(pks[1])))
     assert len((await client.get_public_keys()).pk_fingerprints) == 1
 
@@ -2357,7 +2359,13 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
         )
 
     # Delete all keys
+    resp = await client.generate_mnemonic()
+    add_key_resp = await client.add_key(AddKey(resp.mnemonic))
+    assert get_wallet_db_path(wallet_node.root_path, wallet_node.config, str(pks[1])).exists()
+    assert get_wallet_db_path(wallet_node.root_path, wallet_node.config, str(add_key_resp.fingerprint)).exists()
     await client.delete_all_keys()
+    assert not get_wallet_db_path(wallet_node.root_path, wallet_node.config, str(pks[1])).exists()
+    assert not get_wallet_db_path(wallet_node.root_path, wallet_node.config, str(add_key_resp.fingerprint)).exists()
     assert len((await client.get_public_keys()).pk_fingerprints) == 0
 
 
