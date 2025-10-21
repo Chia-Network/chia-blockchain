@@ -94,7 +94,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --duplicates 5 --per file --only wallet/rpc/test_wallet_rpc.py --verbose ${{ inputs.build-job-matrix-arguments }} > matrix.json
+          python chia/_tests/build-job-matrix.py --duplicates 15 --per file --only wallet/rpc/test_wallet_rpc.py --verbose ${{ inputs.build-job-matrix-arguments }} > matrix.json
           cat matrix.json
           echo "configuration=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
           echo matrix_mode=${{
