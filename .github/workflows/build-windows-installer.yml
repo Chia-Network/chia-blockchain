@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
@@ -95,10 +95,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup Node 20.x
-        uses: actions/setup-node@v4
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.x"
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Test for secrets access
         id: check_secrets
@@ -263,7 +263,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: windows
                 file-type:
@@ -336,7 +336,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: chia-installers-windows-exe-intel
           path: packages

@@ -48,12 +48,12 @@ jobs:
     needs:
       - version
     container:
-      image: chianetwork/rocky8-builder:latest
+      image: chianetwork/rocky8-builder:python312
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
         os:
           - arch-artifact-name: intel
 
@@ -81,6 +81,11 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Get latest madmax plotter
         env:
@@ -201,7 +206,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: redhat
                 file-type:
@@ -302,7 +307,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         id: download
         with:
           name: chia-installers-linux-rpm-intel

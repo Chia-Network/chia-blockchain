@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import sys
 
 __version__: str
 try:
@@ -15,3 +16,6 @@ except AssertionError:
     pass
 else:
     raise Exception("asserts are not working and _must_ be enabled, do not run with an optimized build of python")
+
+if not getattr(sys, "_is_gil_enabled", lambda: True)():
+    raise Exception("freethreading is not supported, do not run with a freethreaded build of python")

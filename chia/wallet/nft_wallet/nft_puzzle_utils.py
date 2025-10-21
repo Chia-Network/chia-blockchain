@@ -217,7 +217,7 @@ def create_ownership_layer_transfer_solution(
         "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s puzhash:%s",
         new_did.hex(),
         new_did_inner_hash.hex(),
-        str(trade_prices_list),
+        trade_prices_list,
         new_puzhash.hex(),
     )
     condition_list = [[51, new_puzhash, 1, [new_puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]

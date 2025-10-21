@@ -47,12 +47,12 @@ jobs:
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - version
-    container: chianetwork/ubuntu-22.04-builder:latest
+    container: chianetwork/ubuntu-22.04-builder:python312
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
         os:
           - runs-on: ubuntu-latest
             arch: amd64
@@ -91,6 +91,11 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Get latest madmax plotter
         env:
@@ -202,7 +207,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: debian
                 file-type:
@@ -291,7 +296,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         id: download
         with:
           name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}

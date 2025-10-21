@@ -66,8 +66,8 @@ def test_list_parsing(id: ValueAndArgs, show_unconfirmed: ValueAndArgs, paginate
         {
             "num_environments": 1,
             "blocks_needed": [3],  # 6 coins to test pagination
-            "reuse_puzhash": True,  # irrelevent
-            "trusted": True,  # irrelevent
+            "reuse_puzhash": True,  # irrelevant
+            "trusted": True,  # irrelevant
         }
     ],
     indirect=True,

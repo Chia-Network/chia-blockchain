@@ -59,7 +59,6 @@ jobs:
             emoji: 🌀
             matrix: intel
         python:
-          - major_dot_minor: "3.9"
           - major_dot_minor: "3.10"
           - major_dot_minor: "3.11"
           - major_dot_minor: "3.12"
@@ -126,7 +125,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: "3.10"
+          - major_dot_minor: "3.12"
         check:
           - name: ruff
             command: ruff format --check --diff .
@@ -184,7 +183,7 @@ jobs:
     strategy:
       matrix:
         python:
-          - major_dot_minor: "3.10"
+          - major_dot_minor: "3.12"
         os: [ubuntu-latest]
 
     steps:

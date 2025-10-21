@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from clvm_tools_rs import start_clvm_program
+from chialisp import start_clvm_program
 
 factorial = (
     "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02"

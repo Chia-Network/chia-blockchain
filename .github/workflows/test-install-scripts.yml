@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
@@ -28,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         python:
-          - major-dot-minor: "3.10"
+          - major-dot-minor: "3.12"
         os:
           - name: Linux
             emoji: 🐧
@@ -77,11 +81,24 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
+
+      - name: Remove GUI submodule for gui script testing
+        env:
+          GUI_DIRECTORY: chia-blockchain-gui
+        run: |
+          [ -d "${GUI_DIRECTORY}" ]
+          rm -rf "${GUI_DIRECTORY}"
 
       - uses: ./.github/actions/install
         with:
@@ -103,6 +120,7 @@ jobs:
 
       - name: Run install-gui script (Windows)
         if: matrix.os.matrix == 'windows'
+        shell: pwsh
         run: |
           ./Install-gui.ps1
 
@@ -196,13 +214,15 @@ jobs:
       - name: Prepare Amazon Linux
         if: ${{ matrix.distribution.type == 'amazon' }}
         run: |
-          yum install --assumeyes git sudo
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Arch
         if: ${{ matrix.distribution.type == 'arch' }}
         run: |
           pacman --noconfirm -Syu
-          pacman --noconfirm -S base git sudo openssl-1.1
+          pacman --noconfirm -S base git openssl-1.1
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
@@ -214,7 +234,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo python3-venv
+          apt-get install --yes git lsb-release python3-venv
 
       - name: Prepare Fedora
         if: ${{ matrix.distribution.type == 'fedora' }}
@@ -224,7 +244,9 @@ jobs:
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
-          yum install --assumeyes git sudo python39
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Ubuntu
         if: ${{ matrix.distribution.type == 'ubuntu' }}
@@ -232,8 +254,8 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
-          apt-get install --yes git lsb-release sudo
-          MINIMUM=3.9
+          apt-get install --yes git lsb-release
+          MINIMUM=3.10
           if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
           then
             apt-get install --yes python${MINIMUM}-venv

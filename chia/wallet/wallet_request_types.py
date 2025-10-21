@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO, Optional, final
 
 from chia_rs import Coin, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
-from typing_extensions import Self, dataclass_transform
+from typing_extensions import Self
 
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
+from chia.types.coin_record import CoinRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
@@ -32,19 +32,11 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
-from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-
-@dataclass_transform(frozen_default=True, kw_only_default=True)
-def kw_only_dataclass(cls: type[Any]) -> type[Any]:
-    if sys.version_info >= (3, 10):
-        return dataclass(frozen=True, kw_only=True)(cls)
-    else:
-        return dataclass(frozen=True)(cls)  # pragma: no cover
 
 
 def default_raise() -> Any:  # pragma: no cover
@@ -124,6 +116,7 @@ class GenerateMnemonicResponse(Streamable):
 @dataclass(frozen=True)
 class AddKey(Streamable):
     mnemonic: list[str]
+    label: Optional[str] = None
 
 
 @streamable
@@ -239,7 +232,7 @@ class GetWalletBalances(Streamable):
 
 # utility for GetWalletBalanceResponse(s)
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class BalanceResponse(Balance):
     wallet_id: uint32 = field(default_factory=default_raise)
     wallet_type: uint8 = field(default_factory=default_raise)
@@ -482,6 +475,79 @@ class DeleteUnconfirmedTransactions(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class SelectCoins(CoinSelectionConfigLoader):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    exclude_coins: Optional[list[Coin]] = None  # for backwards compatibility
+
+    def __post_init__(self) -> None:
+        if self.excluded_coin_ids is not None and self.exclude_coins is not None:
+            raise ValueError(
+                "Cannot specify both excluded_coin_ids/excluded_coins and exclude_coins (the latter is deprecated)"
+            )
+        super().__post_init__()
+
+    @classmethod
+    def from_coin_selection_config(
+        cls, wallet_id: uint32, amount: uint64, coin_selection_config: CoinSelectionConfig
+    ) -> Self:
+        return cls(
+            wallet_id=wallet_id,
+            amount=amount,
+            min_coin_amount=coin_selection_config.min_coin_amount,
+            max_coin_amount=coin_selection_config.max_coin_amount,
+            excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
+            excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class SelectCoinsResponse(Streamable):
+    coins: list[Coin]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetSpendableCoins(CoinSelectionConfigLoader):
+    wallet_id: uint32 = field(default_factory=default_raise)
+
+    @classmethod
+    def from_coin_selection_config(cls, wallet_id: uint32, coin_selection_config: CoinSelectionConfig) -> Self:
+        return cls(
+            wallet_id=wallet_id,
+            min_coin_amount=coin_selection_config.min_coin_amount,
+            max_coin_amount=coin_selection_config.max_coin_amount,
+            excluded_coin_amounts=coin_selection_config.excluded_coin_amounts,
+            excluded_coin_ids=coin_selection_config.excluded_coin_ids,
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetSpendableCoinsResponse(Streamable):
+    confirmed_records: list[CoinRecord]
+    unconfirmed_removals: list[CoinRecord]
+    unconfirmed_additions: list[Coin]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCoinRecordsByNames(Streamable):
+    names: list[bytes32]
+    start_height: Optional[uint32] = None
+    end_height: Optional[uint32] = None
+    include_spent_coins: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCoinRecordsByNamesResponse(Streamable):
+    coin_records: list[CoinRecord]
+
+
+@streamable
+@dataclass(frozen=True)
 class GetCurrentDerivationIndexResponse(Streamable):
     index: Optional[uint32]
 
@@ -518,6 +584,86 @@ class DefaultCAT(Streamable):
 @dataclass(frozen=True)
 class GetCATListResponse(Streamable):
     cat_list: list[DefaultCAT]
+
+
+@streamable
+@dataclass(frozen=True)
+class CATSetName(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class CATSetNameResponse(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetName(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetNameResponse(Streamable):
+    wallet_id: uint32
+    name: str
+
+
+@streamable
+@dataclass(frozen=True)
+class StrayCAT(Streamable):
+    asset_id: bytes32
+    name: str
+    first_seen_height: uint32
+    sender_puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetStrayCATsResponse(Streamable):
+    stray_cats: list[StrayCAT]
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetAssetID(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATGetAssetIDResponse(Streamable):
+    wallet_id: uint32
+    asset_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATAssetIDToName(Streamable):
+    asset_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CATAssetIDToNameResponse(Streamable):
+    wallet_id: Optional[uint32]
+    name: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckOfferValidity(Streamable):
+    offer: str
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckOfferValidityResponse(Streamable):
+    valid: bool
+    id: bytes32
 
 
 @streamable
@@ -1081,7 +1227,7 @@ class ExecuteSigningInstructionsResponse(Streamable):
 # field(default_factory=default_raise)
 # (this is for < 3.10 compatibility)
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
@@ -1162,6 +1308,20 @@ class SpendClawbackCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @dataclass(frozen=True)
+class SendNotification(TransactionEndpointRequest):
+    target: bytes32 = field(default_factory=default_raise)
+    message: bytes = field(default_factory=default_raise)
+    amount: uint64 = uint64(0)
+
+
+@streamable
+@dataclass(frozen=True)
+class SendNotificationResponse(TransactionEndpointResponse):
+    tx: TransactionRecord
+
+
+@streamable
+@dataclass(frozen=True)
 class PushTransactions(TransactionEndpointRequest):
     transactions: list[TransactionRecord] = field(default_factory=default_raise)
     push: Optional[bool] = True
@@ -1188,7 +1348,7 @@ class PushTransactionsResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SplitCoins(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     number_of_coins: uint16 = field(default_factory=default_raise)
@@ -1203,7 +1363,7 @@ class SplitCoinsResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class CombineCoins(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     number_of_coins: uint16 = uint16(500)
@@ -1219,8 +1379,63 @@ class CombineCoinsResponse(TransactionEndpointResponse):
     pass
 
 
+# utility for CATSpend
+# unfortunate that we can't use CreateCoin but the memos are taken as strings not bytes
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True)
+class Addition(Streamable):
+    amount: uint64
+    puzzle_hash: bytes32
+    memos: Optional[list[str]] = None
+
+
+@streamable
+@dataclass(frozen=True, kw_only=True)
+class CATSpend(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    additions: Optional[list[Addition]] = None
+    amount: Optional[uint64] = None
+    inner_address: Optional[str] = None
+    memos: Optional[list[str]] = None
+    coins: Optional[list[Coin]] = None
+    extra_delta: Optional[str] = None  # str to support negative ints :(
+    tail_reveal: Optional[bytes] = None
+    tail_solution: Optional[bytes] = None
+
+    def __post_init__(self) -> None:
+        if (
+            self.additions is not None
+            and (self.amount is not None or self.inner_address is not None or self.memos is not None)
+        ) or (self.additions is None and self.amount is None and self.inner_address is None and self.memos is None):
+            raise ValueError('Must specify "additions" or "amount"+"inner_address"+"memos", but not both.')
+        elif self.additions is None and None in {self.amount, self.inner_address}:
+            raise ValueError('Must specify "amount" and "inner_address" together.')
+        super().__post_init__()
+
+    @property
+    def cat_discrepancy(self) -> Optional[tuple[int, Program, Program]]:
+        if self.extra_delta is None and self.tail_reveal is None and self.tail_solution is None:
+            return None
+        elif None in {self.extra_delta, self.tail_reveal, self.tail_solution}:
+            raise ValueError('Must specify "extra_delta", "tail_reveal" and "tail_solution" together.')
+        else:
+            # Curious that mypy doesn't see the elif and know that none of these are None
+            return (
+                int(self.extra_delta),  # type: ignore[arg-type]
+                Program.from_bytes(self.tail_reveal),  # type: ignore[arg-type]
+                Program.from_bytes(self.tail_solution),  # type: ignore[arg-type]
+            )
+
+
+@streamable
+@dataclass(frozen=True)
+class CATSpendResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True, kw_only=True)
 class DIDMessageSpend(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     coin_announcements: list[bytes] = field(default_factory=list)
@@ -1234,7 +1449,7 @@ class DIDMessageSpendResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DIDUpdateMetadata(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     metadata: dict[str, str] = field(default_factory=dict)
@@ -1248,7 +1463,7 @@ class DIDUpdateMetadataResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DIDTransferDID(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     inner_address: str = field(default_factory=default_raise)
@@ -1268,7 +1483,7 @@ class DIDTransferDIDResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTMintNFTRequest(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     royalty_address: Optional[str] = field(default_factory=default_raise)
@@ -1294,7 +1509,7 @@ class NFTMintNFTResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTSetNFTDID(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
     nft_coin_id: bytes32 = field(default_factory=default_raise)
@@ -1309,7 +1524,7 @@ class NFTSetNFTDIDResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTSetDIDBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
@@ -1324,7 +1539,7 @@ class NFTSetDIDBulkResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class NFTTransferBulk(TransactionEndpointRequest):
     nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     target_address: str = field(default_factory=default_raise)
@@ -1339,7 +1554,7 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class CreateNewDL(TransactionEndpointRequest):
     root: bytes32 = field(default_factory=default_raise)
 
@@ -1351,7 +1566,7 @@ class CreateNewDLResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLUpdateRoot(TransactionEndpointRequest):
     launcher_id: bytes32 = field(default_factory=default_raise)
     new_root: bytes32 = field(default_factory=default_raise)
@@ -1395,7 +1610,7 @@ class DLUpdateMultipleUpdates(Streamable):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLUpdateMultiple(TransactionEndpointRequest):
     updates: DLUpdateMultipleUpdates = field(default_factory=default_raise)
 
@@ -1411,7 +1626,7 @@ class DLUpdateMultipleResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLNewMirror(TransactionEndpointRequest):
     launcher_id: bytes32 = field(default_factory=default_raise)
     amount: uint64 = field(default_factory=default_raise)
@@ -1425,7 +1640,7 @@ class DLNewMirrorResponse(TransactionEndpointResponse):
 
 
 @streamable
-@kw_only_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DLDeleteMirror(TransactionEndpointRequest):
     coin_id: bytes32 = field(default_factory=default_raise)
 
@@ -1609,13 +1824,6 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class CATSpendResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
 
 
 @streamable
