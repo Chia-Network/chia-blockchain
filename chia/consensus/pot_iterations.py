@@ -97,7 +97,7 @@ def validate_pospace_and_get_required_iters(
 
 def calculate_iterations_quality(
     constants: ConsensusConstants,
-    quality_string: bytes,
+    quality_string: bytes32,
     size: PlotSize,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,
@@ -109,7 +109,6 @@ def calculate_iterations_quality(
     times a random number between 0 and 1 (based on quality string), divided by plot size.
     """
     if size.size_v1 is not None:
-        assert len(quality_string) == 32
         assert size.size_v2 is None
         phase_out = calculate_phase_out(constants, ssi, prev_transaction_block_height)
     else:

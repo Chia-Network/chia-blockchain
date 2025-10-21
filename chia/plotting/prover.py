@@ -21,7 +21,7 @@ class PlotVersion(IntEnum):
 
 
 class QualityProtocol(Protocol):
-    def get_string(self) -> bytes: ...
+    def get_string(self) -> bytes32: ...
 
 
 class ProverProtocol(Protocol):
@@ -45,7 +45,7 @@ class ProverProtocol(Protocol):
 class V2Quality(QualityProtocol):
     _quality_proof: QualityProof
 
-    def get_string(self) -> bytes:
+    def get_string(self) -> bytes32:
         return self._quality_proof.serialize()
 
 
@@ -102,9 +102,9 @@ class V2Prover:
 
 @dataclass(frozen=True)
 class V1Quality(QualityProtocol):
-    _quality: bytes
+    _quality: bytes32
 
-    def get_string(self) -> bytes:
+    def get_string(self) -> bytes32:
         return self._quality
 
 
