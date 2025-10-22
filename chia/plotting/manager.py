@@ -278,8 +278,8 @@ class PlotManager:
                     f"total_result.removed {len(total_result.removed)}, "
                     f"total_duration {total_result.duration:.2f} seconds"
                 )
-            except Exception as e:
-                log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
+            except Exception:
+                log.exception("_refresh_callback raised")
                 self.reset()
 
     def refresh_batch(self, plot_paths: list[Path], plot_directories: set[Path]) -> PlotRefreshResult:

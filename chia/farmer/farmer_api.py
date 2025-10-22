@@ -49,6 +49,13 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 
 
+def serialize(partial_proof: list[uint64]) -> bytes:
+    key = bytearray()
+    for val in partial_proof:
+        key += val.stream_to_bytes()
+    return bytes(key)
+
+
 class FarmerAPI:
     if TYPE_CHECKING:
         from chia.server.api_protocol import ApiProtocol
@@ -514,7 +521,7 @@ class FarmerAPI:
                 size=partial_proof_data.plot_size,
             )
 
-            key = bytes(partial_proof)
+            key = serialize(partial_proof)
             try:
                 # store pending request data for matching with response
                 self.farmer.pending_solver_requests[key] = {
@@ -543,7 +550,7 @@ class FarmerAPI:
 
         # find the matching pending request using partial_proof
 
-        key = bytes(response.partial_proof)
+        key = serialize(response.partial_proof)
         if key not in self.farmer.pending_solver_requests:
             self.farmer.log.warning(f"Received solver response for unknown partial proof {response.partial_proof[:5]}")
             return

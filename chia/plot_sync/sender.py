@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
-from chia_rs.sized_ints import int16, uint32, uint64
+from chia_rs.sized_ints import int16, uint8, uint32, uint64
 from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
@@ -37,13 +37,23 @@ log = logging.getLogger(__name__)
 def _convert_plot_info_list(plot_infos: list[PlotInfo]) -> list[Plot]:
     converted: list[Plot] = []
     for plot_info in plot_infos:
-        # TODO: todo_v2_plots support v2 plots
-        k = plot_info.prover.get_size().size_v1
-        assert k is not None
+        plot_size = plot_info.prover.get_size()
+        if plot_size.size_v1 is not None:
+            k = plot_size.size_v1
+            strength = 0
+        else:
+            # todo_v2_plots the k-size should probably be set to the constant,
+            # fixed k-size for v2 plots. Then we would need access to
+            # ConsensusConstants in here.
+            assert plot_size.size_v2 is not None
+            k = plot_size.size_v2
+            strength = plot_info.prover.get_strength()
+
         converted.append(
             Plot(
                 filename=plot_info.prover.get_filename(),
-                size=k,
+                size=uint8(k),
+                strength=uint8(strength),
                 plot_id=plot_info.prover.get_id(),
                 pool_public_key=plot_info.pool_public_key,
                 pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
