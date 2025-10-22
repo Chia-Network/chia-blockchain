@@ -76,20 +76,20 @@ def check_plot_size(constants: ConsensusConstants, ps: PlotSize) -> bool:
     if size_v1 is not None:
         assert ps.size_v2 is None
         if size_v1 < constants.MIN_PLOT_SIZE_V1:
-            log.error("Plot size is lower than the minimum")
+            log.error(f"Plot size ({size_v1}) is lower than the minimum ({constants.MIN_PLOT_SIZE_V1})")
             return False
         if size_v1 > constants.MAX_PLOT_SIZE_V1:
-            log.error("Plot size is higher than the maximum")
+            log.error(f"Plot size ({size_v1}) is higher than the maximum ({constants.MAX_PLOT_SIZE_V1})")
             return False
         return True
 
     size_v2 = ps.size_v2
     assert size_v2 is not None
     if size_v2 < constants.MIN_PLOT_SIZE_V2:
-        log.error("Plot size is lower than the minimum")
+        log.error(f"Plot size ({size_v2}) is lower than the minimum ({constants.MIN_PLOT_SIZE_V2})")
         return False
     if size_v2 > constants.MAX_PLOT_SIZE_V2:
-        log.error("Plot size is higher than the maximum")
+        log.error(f"Plot size ({size_v2}) is higher than the maximum ({constants.MAX_PLOT_SIZE_V2})")
         return False
     if (size_v2 & 1) == 1:
         log.error("Plot size is odd")
