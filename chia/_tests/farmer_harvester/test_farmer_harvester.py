@@ -17,6 +17,7 @@ from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import serialize
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.harvester.harvester_service import HarvesterService
@@ -460,7 +461,7 @@ async def test_solution_response_handler(
     harvester_peer = await get_harvester_peer(farmer)
 
     # manually add pending request
-    key = bytes(partial_proofs.partial_proofs[0])
+    key = serialize(partial_proofs.partial_proofs[0])
     farmer.pending_solver_requests[key] = {
         "proof_data": partial_proofs,
         "peer": harvester_peer,
@@ -486,7 +487,7 @@ async def test_solution_response_handler(
         assert original_peer == harvester_peer
 
         # verify pending request was removed
-        key = bytes(partial_proofs.partial_proofs[0])
+        key = serialize(partial_proofs.partial_proofs[0])
         assert key not in farmer.pending_solver_requests
 
 
@@ -544,7 +545,7 @@ async def test_solution_response_empty_proof(
     harvester_peer.peer_node_id = "harvester_peer"
 
     # manually add pending request
-    key = bytes(partial_proofs.partial_proofs[0])
+    key = serialize(partial_proofs.partial_proofs[0])
     farmer.pending_solver_requests[key] = {
         "proof_data": partial_proofs,
         "peer": harvester_peer,
@@ -563,7 +564,7 @@ async def test_solution_response_empty_proof(
         mock_new_proof.assert_not_called()
 
         # verify pending request was removed (cleanup still happens)
-        key = bytes(partial_proofs.partial_proofs[0])
+        key = serialize(partial_proofs.partial_proofs[0])
         assert key not in farmer.pending_solver_requests
 
 
@@ -612,5 +613,5 @@ async def test_v2_partial_proofs_solver_exception(
         await farmer_api.partial_proofs(partial_proofs, harvester_peer)
 
         # verify pending request was cleaned up after exception
-        key = bytes(partial_proofs.partial_proofs[0])
+        key = serialize(partial_proofs.partial_proofs[0])
         assert key not in farmer.pending_solver_requests
