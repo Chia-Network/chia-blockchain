@@ -980,7 +980,7 @@ class BlockTools:
                                         available_coins.remove(rem)
                                     available_coins.extend(new_gen.additions)
 
-                        if full_block.transactions_generator is not None:
+                        if full_block.is_transaction_block():
                             tx_block_heights.append(full_block.height)
                             prev_tx_height = full_block.height
 
@@ -1274,7 +1274,7 @@ class BlockTools:
                                         available_coins.remove(rem)
                                     available_coins.extend(new_gen.additions)
 
-                        if full_block.transactions_generator is not None:
+                        if full_block.is_transaction_block():
                             tx_block_heights.append(full_block.height)
                             prev_tx_height = full_block.height
 

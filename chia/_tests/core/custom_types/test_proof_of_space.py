@@ -66,7 +66,7 @@ def b32(key: str) -> bytes32:
         plot_size=PlotSize.make_v1(31),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
-        expected_error="Plot size is lower than the minimum",
+        expected_error="Plot size (31) is lower than the minimum (32)",
     ),
     ProofOfSpaceCase(
         id="Higher than maximum plot size",
@@ -74,7 +74,7 @@ def b32(key: str) -> bytes32:
         plot_size=PlotSize.make_v1(51),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
-        expected_error="Plot size is higher than the maximum",
+        expected_error="Plot size (51) is higher than the maximum (50)",
     ),
     ProofOfSpaceCase(
         id="Different challenge",
@@ -115,7 +115,7 @@ def b32(key: str) -> bytes32:
         plot_size=PlotSize.make_v2(0),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
-        expected_error="Plot size is lower than the minimum",
+        expected_error="Plot size (0) is lower than the minimum (28)",
     ),
     ProofOfSpaceCase(
         id="v2 plot size 34",
@@ -123,7 +123,7 @@ def b32(key: str) -> bytes32:
         plot_size=PlotSize.make_v2(34),
         plot_public_key=G1Element(),
         pool_public_key=G1Element(),
-        expected_error="Plot size is higher than the maximum",
+        expected_error="Plot size (34) is higher than the maximum (32)",
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
