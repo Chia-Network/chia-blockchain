@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import operator
-import sys
 import time
 from collections.abc import Awaitable
 from math import ceil
@@ -360,7 +359,6 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
     ],
 )
 @pytest.mark.anyio
-@pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[dict[str, Any]]],
