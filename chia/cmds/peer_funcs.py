@@ -20,7 +20,7 @@ async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> Non
         except Exception:
             print(f"Failed to connect to {host}:{port}")
     except ValueError:
-        print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
+        print("Enter a valid IP and port in the following format: 10.5.4.3:8444 or [2606:f6c0:80:5::a]:8444")
 
 
 async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) -> None:

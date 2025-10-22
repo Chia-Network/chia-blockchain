@@ -241,6 +241,16 @@ jobs:
         run: |
           yum install --assumeyes git
 
+      - name: Set rocky8 repo
+        if: ${{ matrix.distribution.name == 'rockylinux:8' }}
+        run: |
+          sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/Rocky-*.repo
+
+      - name: Set rocky9 repo
+        if: ${{ matrix.distribution.name == 'rockylinux:9' }}
+        run: |
+          sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
+
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
         run: |
