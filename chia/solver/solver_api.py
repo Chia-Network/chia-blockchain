@@ -40,12 +40,12 @@ class SolverAPI:
             self.log.error("Solver is not started")
             return None
 
-        self.log.debug(f"Solving partial {request.partial_proof.hex()}")
+        self.log.debug(f"Solving partial {request.partial_proof[:5]}")
 
         try:
-            proof = self.solver.solve(request.partial_proof)
+            proof = self.solver.solve(request.partial_proof, request.plot_id, request.strength, request.size)
             if proof is None:
-                self.log.warning(f"Solver returned no proof for parital {request.partial_proof.hex()}")
+                self.log.warning(f"Solver returned no proof for parital {request.partial_proof[:5]}")
                 return None
 
             self.log.debug(f"Successfully solved partial proof, returning {len(proof)} byte proof")
@@ -55,5 +55,5 @@ class SolverAPI:
             )
 
         except Exception as e:
-            self.log.error(f"Error solving parital {request.partial_proof.hex()}: {e}")
+            self.log.error(f"Error solving parital {request.partial_proof[:5]}: {e}")
             return None

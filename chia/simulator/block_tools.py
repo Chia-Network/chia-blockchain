@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -37,6 +37,7 @@ from chia_rs import (
     SubSlotProofs,
     UnfinishedBlock,
     solution_generator,
+    solve_proof,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -64,7 +65,7 @@ from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_va
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
-from chia.plotting.prover import PlotVersion
+from chia.plotting.prover import PlotVersion, QualityProtocol, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import (
     Params,
     PlotRefreshEvents,
@@ -92,13 +93,10 @@ from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, P
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
-    calculate_required_plot_strength,
     generate_plot_public_key,
     generate_taproot_sk,
     make_pos,
     passes_plot_filter,
-    quality_for_partial_proof,
-    solve_proof,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -1505,8 +1503,6 @@ class BlockTools:
         rng = random.Random()
         rng.seed(seed)
 
-        required_plot_strength = calculate_required_plot_strength(constants, prev_transaction_b_height)
-
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1515,32 +1511,28 @@ class BlockTools:
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
 
-            # v2 plots aren't valid until after the hard fork
-            if (
-                prev_transaction_b_height < constants.HARD_FORK2_HEIGHT
-                and plot_info.prover.get_version() == PlotVersion.V2
-            ):
-                continue
+            if plot_info.prover.get_version() == PlotVersion.V2:
+                # v2 plots aren't valid until after the hard fork
+                if prev_transaction_b_height < constants.HARD_FORK2_HEIGHT:
+                    continue
+
+                if plot_info.prover.get_strength() < constants.PLOT_STRENGTH_INITIAL:
+                    self.log.warn(
+                        f"Plot strength ({plot_info.prover.get_strength()}) too low, "
+                        f"cannot be used for farming: {plot_info.prover.get_filename()}"
+                    )
+                    continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
-            # these are either qualities (v1) or partial proofs (v2)
-            proofs: Sequence[Union[bytes32, bytes]]
-            v = plot_info.prover.get_version()
-            if v == PlotVersion.V1:
-                proofs = plot_info.prover.get_qualities_for_challenge(new_challenge)
-            else:
-                proofs = plot_info.prover.get_partial_proofs_for_challenge(new_challenge, required_plot_strength)
+            qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(
+                new_challenge, constants.QUALITY_PROOF_SCAN_FILTER
+            )
 
-            for proof_index, proof in enumerate(proofs):
-                if v == PlotVersion.V2:
-                    quality_str = quality_for_partial_proof(proof, new_challenge)
-                elif v == PlotVersion.V1:
-                    quality_str = bytes32(proof)
-
+            for idx, quality in enumerate(qualities):
                 required_iters = calculate_iterations_quality(
                     constants,
-                    quality_str,
+                    quality.get_string(),
                     plot_info.prover.get_size(),
                     difficulty,
                     signage_point,
@@ -1550,11 +1542,16 @@ class BlockTools:
                 if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
                     continue
 
-                proof_xs: bytes
-                if v == PlotVersion.V1:
-                    proof_xs = plot_info.prover.get_full_proof(new_challenge, proof_index)
-                else:
-                    proof_xs = solve_proof(proof)
+                proof = b""
+                if isinstance(plot_info.prover, V1Prover):
+                    proof = plot_info.prover.get_full_proof(new_challenge, idx)
+                elif isinstance(plot_info.prover, V2Prover):
+                    assert isinstance(quality, V2Quality)
+                    partial_proof = plot_info.prover.get_partial_proof(quality)
+                    k_size = plot_info.prover.get_size().size_v2
+                    strength = plot_info.prover.get_strength()
+                    assert k_size is not None
+                    proof = solve_proof(partial_proof, plot_id, strength, k_size)
 
                 # Look up local_sk from plot to save locked memory
                 (
@@ -1576,7 +1573,7 @@ class BlockTools:
                     plot_info.pool_contract_puzzle_hash,
                     plot_pk,
                     plot_info.prover.get_size(),
-                    proof_xs,
+                    proof,
                 )
                 found_proofs.append((required_iters, proof_of_space))
         random_sample = found_proofs
