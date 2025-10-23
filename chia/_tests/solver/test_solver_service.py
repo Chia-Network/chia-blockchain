@@ -24,7 +24,7 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
             solver_api = solver_service._api
             assert solver_api.ready() is True
             test_info = SolverInfo(
-                partial_proof=[uint64(1), uint64(2), uint64(3), uint64(4)],
+                partial_proof=[uint64(1000), uint64(2000), uint64(3000), uint64(4000)],
                 plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
                 strength=uint8(5),
                 size=uint8(28),

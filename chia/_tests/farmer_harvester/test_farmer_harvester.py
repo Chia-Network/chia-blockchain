@@ -17,6 +17,7 @@ from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import serialize
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_rpc_client import HarvesterRpcClient
 from chia.harvester.harvester_service import HarvesterService
@@ -338,7 +339,7 @@ async def test_v2_partial_proofs_new_sp_hash(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)]],
+        partial_proofs=[[uint64(100), uint64(200), uint64(300), uint64(400)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         strength=uint8(5),
@@ -369,7 +370,7 @@ async def test_v2_partial_proofs_missing_sp_hash(
         challenge_hash=bytes32(b"2" * 32),
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)]],
+        partial_proofs=[[uint64(100), uint64(200), uint64(300), uint64(400)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -413,7 +414,10 @@ async def test_v2_partial_proofs_with_existing_sp(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
+        partial_proofs=[
+            [uint64(100), uint64(200), uint64(300), uint64(400)],
+            [uint64(2222), uint64(3333), uint64(4444), uint64(5555)],
+        ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -447,7 +451,7 @@ async def test_solution_response_handler(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)]],
+        partial_proofs=[[uint64(1111), uint64(2222), uint64(3333), uint64(4444)]],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -460,7 +464,7 @@ async def test_solution_response_handler(
     harvester_peer = await get_harvester_peer(farmer)
 
     # manually add pending request
-    key = bytes(partial_proofs.partial_proofs[0])
+    key = serialize(partial_proofs.partial_proofs[0])
     farmer.pending_solver_requests[key] = {
         "proof_data": partial_proofs,
         "peer": harvester_peer,
@@ -486,7 +490,7 @@ async def test_solution_response_handler(
         assert original_peer == harvester_peer
 
         # verify pending request was removed
-        key = bytes(partial_proofs.partial_proofs[0])
+        key = serialize(partial_proofs.partial_proofs[0])
         assert key not in farmer.pending_solver_requests
 
 
@@ -530,7 +534,10 @@ async def test_solution_response_empty_proof(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
+        partial_proofs=[
+            [uint64(100), uint64(200), uint64(300), uint64(400)],
+            [uint64(2222), uint64(3333), uint64(4444), uint64(5555)],
+        ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -544,7 +551,7 @@ async def test_solution_response_empty_proof(
     harvester_peer.peer_node_id = "harvester_peer"
 
     # manually add pending request
-    key = bytes(partial_proofs.partial_proofs[0])
+    key = serialize(partial_proofs.partial_proofs[0])
     farmer.pending_solver_requests[key] = {
         "proof_data": partial_proofs,
         "peer": harvester_peer,
@@ -563,7 +570,7 @@ async def test_solution_response_empty_proof(
         mock_new_proof.assert_not_called()
 
         # verify pending request was removed (cleanup still happens)
-        key = bytes(partial_proofs.partial_proofs[0])
+        key = serialize(partial_proofs.partial_proofs[0])
         assert key not in farmer.pending_solver_requests
 
 
@@ -595,7 +602,10 @@ async def test_v2_partial_proofs_solver_exception(
         challenge_hash=challenge_hash,
         sp_hash=sp_hash,
         plot_identifier="test_plot_id",
-        partial_proofs=[[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
+        partial_proofs=[
+            [uint64(100), uint64(200), uint64(300), uint64(400)],
+            [uint64(2222), uint64(3333), uint64(4444), uint64(5555)],
+        ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
@@ -612,5 +622,5 @@ async def test_v2_partial_proofs_solver_exception(
         await farmer_api.partial_proofs(partial_proofs, harvester_peer)
 
         # verify pending request was cleaned up after exception
-        key = bytes(partial_proofs.partial_proofs[0])
+        key = serialize(partial_proofs.partial_proofs[0])
         assert key not in farmer.pending_solver_requests

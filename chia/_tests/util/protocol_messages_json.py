@@ -69,7 +69,7 @@ partial_proof_json: dict[str, Any] = {
     "challenge_hash": "0x42743566108589c11bb3811b347900b6351fd3e25bad6c956c0bf1c05a4d93fb",
     "sp_hash": "0x8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a",
     "plot_identifier": "plot-filename",
-    "partial_proofs": [[1, 2, 3, 4], [2, 3, 4, 5]],
+    "partial_proofs": [[1111, 2222, 3333, 4444], [2222, 3333, 4444, 5555]],
     "signage_point_index": 4,
     "plot_size": 32,
     "strength": 5,
