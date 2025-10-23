@@ -237,7 +237,7 @@ jobs:
       - name: Prepare Fedora
         if: ${{ matrix.distribution.type == 'fedora' }}
         run: |
-          yum install --assumeyes git
+          yum install --assumeyes git python
 
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}
