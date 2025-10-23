@@ -226,8 +226,16 @@ class FullNodeAPI:
                         await random_peer.send_message(msg)
                         await asyncio.sleep(5)
                         counter += 1
-                        if full_node.mempool_manager.seen(transaction_id):
-                            break
+                        mempool_item = full_node.mempool_manager.get_mempool_item(transaction_id)
+                        if mempool_item is not None:
+                            if mempool_item.cost == transaction.cost and mempool_item.fee == transaction.fees:
+                                break
+                            self.log.warning(
+                                f"Banning peer {peer.peer_node_id}. Sent us a new tx {transaction_id} with mismatch "
+                                f"on cost {transaction.cost} vs validation cost {mempool_item.cost} and/or "
+                                f"fee {transaction.fees} vs {mempool_item.fee}."
+                            )
+                            await peer.close(RATE_LIMITER_BAN_SECONDS)
                 except asyncio.CancelledError:
                     pass
                 finally:
