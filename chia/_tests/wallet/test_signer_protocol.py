@@ -687,6 +687,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         )
 
 
+@pytest.mark.filterwarnings("ignore:The parameter .* is used more than once:UserWarning")
 def test_signer_command_default_parsing() -> None:
     check_click_parsing(
         GatherSigningInfoCMD(

@@ -94,7 +94,7 @@ def get_transaction_cmd(
     "--limit",
     help="Max number of transactions to return",
     type=int,
-    default=(2**32 - 1),
+    default=(2**16 - 1),
     show_default=True,
     required=False,
 )
@@ -105,19 +105,19 @@ def get_transaction_cmd(
     help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
 @click.option(
+    "--sort-by-relevance",
+    "sort_key",
+    flag_value=SortKey.RELEVANCE,
+    type=SortKey,
+    default=SortKey.RELEVANCE,
+    help="Sort transactions by {confirmed, height, time}",
+)
+@click.option(
     "--sort-by-height",
     "sort_key",
     flag_value=SortKey.CONFIRMED_AT_HEIGHT,
     type=SortKey,
     help="Sort transactions by height",
-)
-@click.option(
-    "--sort-by-relevance",
-    "sort_key",
-    flag_value=SortKey.RELEVANCE,
-    type=SortKey,
-    default=True,
-    help="Sort transactions by {confirmed, height, time}",
 )
 @click.option(
     "--reverse",
