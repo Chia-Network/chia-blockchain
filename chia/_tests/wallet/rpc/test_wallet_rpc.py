@@ -3130,7 +3130,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     # Send to a CAT with an anyone can spend TAIL
     async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         our_ph = await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager)
-    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), Program.to(1))
+    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), Program.to(1))
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),
         "txch",
@@ -3175,7 +3175,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     await farm_transaction(full_node_api, wallet_node, eve_spend)
 
     # Make sure we have the CAT
-    res = await client.create_wallet_for_existing_cat(Program.to(None).get_tree_hash())
+    res = await client.create_wallet_for_existing_cat(Program.NIL.get_tree_hash())
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
     await time_out_assert(20, get_confirmed_balance, tx_amount, client, cat_wallet_id)

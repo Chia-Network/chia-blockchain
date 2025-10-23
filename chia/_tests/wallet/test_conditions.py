@@ -285,9 +285,7 @@ class TimelockInfo:
     ],
 )
 def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
-    assert timelock_info.parsed_info == parse_timelock_info(
-        [UnknownCondition(Program.to(None), []), *timelock_info.drivers]
-    )
+    assert timelock_info.parsed_info == parse_timelock_info([UnknownCondition(Program.NIL, []), *timelock_info.drivers])
     assert timelock_info.parsed_info.to_conditions() == (
         timelock_info.conditions_after if timelock_info.conditions_after is not None else timelock_info.drivers
     )

@@ -77,4 +77,4 @@ class TransferProgramPuzzle:
         return None
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        return Program.to(None)
+        return Program.NIL

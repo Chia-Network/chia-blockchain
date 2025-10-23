@@ -2606,7 +2606,7 @@ class WalletRpcApi:
         assert num_verification_int is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
             num_verification_int,
             singleton_struct,
             metadata,

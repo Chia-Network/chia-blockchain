@@ -65,7 +65,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
             curry_and_treehash(
                 Program.to((1, EXTIGENT_METADATA_LAYER_HASH)).get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH),
                 Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
-                Program.to(None).get_tree_hash(),
+                Program.NIL.get_tree_hash(),
                 GUARANTEED_NIL_TP_HASH,
                 Program.to(GUARANTEED_NIL_TP_HASH).get_tree_hash(),
                 P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
@@ -615,7 +615,7 @@ class CRCATSpend:
             inner_puzzle,
             inner_solution,
             CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
-            Program.from_serialized(spend.solution).at("f").at("rrrrf") == Program.to(None),
+            Program.from_serialized(spend.solution).at("f").at("rrrrf") == Program.NIL,
             list(inner_conditions.as_iter()),
             Program.from_serialized(spend.solution).at("f").at("f"),
         )
@@ -628,7 +628,7 @@ class ProofsChecker(Streamable):
 
     def as_program(self) -> Program:
         def byte_sort_flags(f1: str, f2: str) -> int:
-            return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.to(None) else -1
+            return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.NIL else -1
 
         return PROOF_FLAGS_CHECKER.curry(
             [

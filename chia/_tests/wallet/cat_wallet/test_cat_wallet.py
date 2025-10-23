@@ -19,7 +19,7 @@ from chia._tests.environments.wallet import (
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import NIL, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
@@ -82,7 +82,9 @@ async def mint_cat(
                 1,
                 [
                     CreateCoin(wrapped_inner_puzzle_hash, amount, memos=[inner_puzzle_hash]).to_program(),
-                    UnknownCondition(opcode=Program.to(51), args=[NIL, Program.to(-113), tail, NIL]).to_program(),
+                    UnknownCondition(
+                        opcode=Program.to(51), args=[Program.NIL, Program.to(-113), tail, Program.NIL]
+                    ).to_program(),
                 ],
             )
         )
@@ -112,7 +114,7 @@ async def mint_cat(
                             cat_addition,
                             tail_hash,
                             eve_inner_puzzle,
-                            NIL,
+                            Program.NIL,
                         )
                     ],
                 )
@@ -1411,7 +1413,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
     if wallet_type is RCATWallet:
         inner_puzhash = create_revocation_layer(bytes32.zeros, inner_puzhash).get_tree_hash()
     puzzlehash_unhardened = construct_cat_puzzle(
-        CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
+        CAT_MOD, Program.NIL.get_tree_hash(), inner_puzhash
     ).get_tree_hash_precalc(inner_puzhash)
     change_derivation = DerivationRecord(
         uint32(0), puzzlehash_unhardened, pubkey_unhardened, WalletType.CAT, uint32(2), False
@@ -1422,7 +1424,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
         our_puzzle = await action_scope.get_puzzle(wallet.wallet_state_manager)
     cat_puzzle = construct_cat_puzzle(
         CAT_MOD,
-        Program.to(None).get_tree_hash(),
+        Program.NIL.get_tree_hash(),
         Program.to(1),
     )
     addr = encode_puzzle_hash(cat_puzzle.get_tree_hash(), "txch")
@@ -1451,7 +1453,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == cat_amount_0)
     next_coin = Coin(
         cat_coin.name(),
-        construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), our_puzzle).get_tree_hash(),
+        construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), our_puzzle).get_tree_hash(),
         cat_amount_0,
     )
     eve_spend, _ = await wsm.sign_bundle(
@@ -1478,7 +1480,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework, wa
             ),
             make_spend(
                 next_coin,
-                construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), our_puzzle),
+                construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), our_puzzle),
                 Program.to(
                     [
                         [
@@ -1660,7 +1662,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                         conditions=(
                             UnknownCondition(
                                 opcode=Program.to(51),
-                                args=[Program.to(None), Program.to(-113), Program.to(ACS_TAIL), Program.to(None)],
+                                args=[Program.NIL, Program.to(-113), Program.to(ACS_TAIL), Program.NIL],
                             ),
                         ),
                     ),

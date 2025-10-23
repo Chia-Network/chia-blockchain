@@ -502,7 +502,7 @@ class CRCATWallet(CATWallet):
                 cat_condition = UnknownCondition(
                     opcode=Program.to(51),
                     args=[
-                        Program.to(None),
+                        Program.NIL,
                         Program.to(-113),
                         tail_reveal,
                         tail_solution,
@@ -583,7 +583,7 @@ class CRCATWallet(CATWallet):
         expected_announcements, coin_spends, _ = CRCAT.spend_many(
             inner_spends,
             proof_of_inclusions,
-            Program.to(None),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
+            Program.NIL,  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
             vc.proof_provider,
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash() if add_authorizations_to_cr_cats else None,
@@ -756,7 +756,7 @@ class CRCATWallet(CATWallet):
                 for crcat, inner_puzhash in crcats_and_puzhashes
             ],
             proof_of_inclusions,
-            Program.to(None),  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
+            Program.NIL,  # TODO: With more proofs checkers, this may need to be flexible. For now, it's hardcoded.
             vc.proof_provider,
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash(),
