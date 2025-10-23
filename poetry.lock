@@ -225,7 +225,7 @@ description = "Python graph (network) package"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "altgraph-0.17.4-py2.py3-none-any.whl", hash = "sha256:642743b4750de17e655e6711601b077bc6598dbfa3ba5fa2b2a35ce12b508dff"},
     {file = "altgraph-0.17.4.tar.gz", hash = "sha256:1b5afbb98f6c4dcadb2e2ae6ab9fa994bbb8c1d75f4fa96d340f9437ae454406"},
@@ -2059,7 +2059,7 @@ description = "Mach-O header analysis and editing"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\" and sys_platform == \"darwin\""
+markers = "extra == \"dev\" and python_version < \"3.14\" and sys_platform == \"darwin\""
 files = [
     {file = "macholib-1.16.3-py2.py3-none-any.whl", hash = "sha256:0e315d7583d38b8c77e815b1ecbdbf504a8258d8b3e17b61165c6feb60d18f2c"},
     {file = "macholib-1.16.3.tar.gz", hash = "sha256:07ae9e15e8e4cd9a788013d81f5908b3609aa76f9b1421bae9c4d7606ec86a30"},
@@ -2511,7 +2511,7 @@ description = "Python PE parsing module"
 optional = true
 python-versions = ">=3.6.0"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\" and sys_platform == \"win32\""
+markers = "extra == \"dev\" and python_version < \"3.14\" and sys_platform == \"win32\""
 files = [
     {file = "pefile-2023.2.7-py3-none-any.whl", hash = "sha256:da185cd2af68c08a6cd4481f7325ed600a88f6a813bad9dea07ab3ef73d8d8d6"},
     {file = "pefile-2023.2.7.tar.gz", hash = "sha256:82e6114004b3d6911c77c3953e3838654b04511b8b66e8583db70c65998017dc"},
@@ -2848,7 +2848,7 @@ description = "PyInstaller bundles a Python application and all its dependencies
 optional = true
 python-versions = "<3.15,>=3.8"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "pyinstaller-6.16.0-py3-none-macosx_10_13_universal2.whl", hash = "sha256:7fd1c785219a87ca747c21fa92f561b0d2926a7edc06d0a0fe37f3736e00bd7a"},
     {file = "pyinstaller-6.16.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:b756ddb9007b8141c5476b553351f9d97559b8af5d07f9460869bfae02be26b0"},
@@ -2884,7 +2884,7 @@ description = "Community maintained hooks for PyInstaller"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"dev\" and python_version <= \"3.12\""
+markers = "extra == \"dev\" and python_version < \"3.14\""
 files = [
     {file = "pyinstaller_hooks_contrib-2025.8-py3-none-any.whl", hash = "sha256:8d0b8cfa0cb689a619294ae200497374234bd4e3994b3ace2a4442274c899064"},
     {file = "pyinstaller_hooks_contrib-2025.8.tar.gz", hash = "sha256:3402ad41dfe9b5110af134422e37fc5d421ba342c6cb980bd67cb30b7415641c"},
@@ -3009,6 +3009,23 @@ psutil = ">=5.1.0"
 pytest = "*"
 requests = "*"
 wheel = "*"
+
+[[package]]
+name = "pytest-rerunfailures"
+version = "16.1"
+description = "pytest plugin to re-run tests to eliminate flaky failures"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "pytest_rerunfailures-16.1-py3-none-any.whl", hash = "sha256:5d11b12c0ca9a1665b5054052fcc1084f8deadd9328962745ef6b04e26382e86"},
+    {file = "pytest_rerunfailures-16.1.tar.gz", hash = "sha256:c38b266db8a808953ebd71ac25c381cb1981a78ff9340a14bcb9f1b9bff1899e"},
+]
+
+[package.dependencies]
+packaging = ">=17.1"
+pytest = ">=7.4,<8.2.2 || >8.2.2"
 
 [[package]]
 name = "pytest-xdist"
@@ -3934,7 +3951,7 @@ description = "ZSTD Bindings for Python"
 optional = false
 python-versions = "*"
 groups = ["main"]
-markers = "python_version == \"3.12\""
+markers = "python_version >= \"3.12\""
 files = [
     {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b5cd20afab8d13c52d2b2219bf18cc765eae87b8219343bce20647007890adab"},
     {file = "zstd-1.5.5.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:0f467ab9b57ab8b4b874e6974d38b802f20406803bb7ec9308df923553cd48f7"},
@@ -3990,11 +4007,11 @@ url = "https://pypi.chia.net/simple"
 reference = "chia"
 
 [extras]
-dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "6ed8a051283de31228deb72a90abdf55ef4d6aa8fb70cd8173950a6b93c710fd"
+content-hash = "68e16b12829b9ca104c35c22ea22775fc3f3f10b49c018764449c49ec294bb4d"
