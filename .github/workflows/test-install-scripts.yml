@@ -174,6 +174,10 @@ jobs:
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
+          - name: debian:trixie
+            type: debian
+            # https://packages.debian.org/trixie/python/python3 (3.13)
+            url: "docker://debian:trixie"
           - name: fedora:37
             type: fedora
             # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
