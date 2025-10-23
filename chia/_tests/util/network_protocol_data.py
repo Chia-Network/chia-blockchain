@@ -155,7 +155,10 @@ partial_proof = harvester_protocol.PartialProofsData(
     bytes32.fromhex("42743566108589c11bb3811b347900b6351fd3e25bad6c956c0bf1c05a4d93fb"),
     bytes32.fromhex("8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a"),
     "plot-filename",
-    [[uint64(1), uint64(2), uint64(3), uint64(4)], [uint64(2), uint64(3), uint64(4), uint64(5)]],
+    [
+        [uint64(1111), uint64(2222), uint64(3333), uint64(4444)],
+        [uint64(2222), uint64(3333), uint64(4444), uint64(5555)],
+    ],
     uint8(4),
     uint8(32),
     uint8(5),
