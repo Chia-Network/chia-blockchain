@@ -87,6 +87,27 @@ class Mirror(Streamable):
         return [url.decode("utf8") for url in urls]
 
 
+@streamable
+@dataclasses.dataclass(frozen=True)
+class SingletonDependencies(Streamable):
+    launcher_id: bytes32
+    values_to_prove: list[bytes]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class SingletonSummary(Streamable):
+    launcher_id: bytes32
+    new_root: bytes32
+    dependencies: list[SingletonDependencies]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class DataLayerSummary(Streamable):
+    offered: list[SingletonSummary]
+
+
 @final
 class DataLayerWallet:
     if TYPE_CHECKING:
@@ -1146,8 +1167,8 @@ class DataLayerWallet:
         return Offer({}, WalletSpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
 
     @staticmethod
-    async def get_offer_summary(offer: Offer) -> dict[str, Any]:
-        summary: dict[str, Any] = {"offered": []}
+    async def get_offer_summary(offer: Offer) -> DataLayerSummary:
+        singleton_summaries = []
         for spend in offer.coin_spends():
             solution = Program.from_serialized(spend.solution)
             matched, curried_args = match_dl_singleton(spend.puzzle_reveal)
@@ -1162,21 +1183,22 @@ class DataLayerWallet:
                         cs for cs in offer.coin_spends() if cs.coin.parent_coin_info == spend.coin.name()
                     )
                     _, child_curried_args = match_dl_singleton(child_spend.puzzle_reveal)
-                    singleton_summary = {
-                        "launcher_id": list(curried_args)[2].as_python().hex(),
-                        "new_root": list(child_curried_args)[1].as_python().hex(),
-                        "dependencies": [],
-                    }
                     _, singleton_structs, _, values_to_prove = graftroot_curried_args.as_iter()
+                    dependencies = []
                     for struct, values in zip(singleton_structs.as_iter(), values_to_prove.as_iter()):
-                        singleton_summary["dependencies"].append(
-                            {
-                                "launcher_id": struct.at("rf").as_python().hex(),
-                                "values_to_prove": [value.as_python().hex() for value in values.as_iter()],
-                            }
+                        dependencies.append(
+                            SingletonDependencies(
+                                launcher_id=bytes32(struct.at("rf").as_atom()),
+                                values_to_prove=[value.as_atom() for value in values.as_iter()],
+                            )
                         )
-                    summary["offered"].append(singleton_summary)
-        return summary
+                    singleton_summary = SingletonSummary(
+                        launcher_id=bytes32(list(curried_args)[2].as_atom()),
+                        new_root=bytes32(list(child_curried_args)[1].as_atom()),
+                        dependencies=dependencies,
+                    )
+                    singleton_summaries.append(singleton_summary)
+        return DataLayerSummary(offered=singleton_summaries)
 
     async def select_coins(
         self,
@@ -1192,7 +1214,7 @@ class DataLayerWallet:
 def verify_offer(
     maker: tuple[StoreProofs, ...],
     taker: tuple[OfferStore, ...],
-    summary: dict[str, Any],
+    summary: DataLayerSummary,
 ) -> None:
     # TODO: consistency in error messages
     # TODO: custom exceptions
@@ -1234,10 +1256,7 @@ def verify_offer(
             raise OfferIntegrityError("maker: no roots referenced for store id")
 
     # TODO: what about validating duplicate entries are consistent?
-    maker_from_offer = {
-        bytes32.from_hexstr(offered["launcher_id"]): bytes32.from_hexstr(offered["new_root"])
-        for offered in summary["offered"]
-    }
+    maker_from_offer = {offered.launcher_id: offered.new_root for offered in summary.offered}
 
     maker_from_reference = {
         # verified above that there is at least one proof and all combined hashes match
@@ -1249,11 +1268,9 @@ def verify_offer(
         raise OfferIntegrityError("maker: offered stores and their roots do not match the reference data")
 
     taker_from_offer = {
-        bytes32.from_hexstr(dependency["launcher_id"]): [
-            bytes32.from_hexstr(value) for value in dependency["values_to_prove"]
-        ]
-        for offered in summary["offered"]
-        for dependency in offered["dependencies"]
+        dependency.launcher_id: [bytes32(value) for value in dependency.values_to_prove]
+        for offered in summary.offered
+        for dependency in offered.dependencies
     }
 
     taker_from_reference = {

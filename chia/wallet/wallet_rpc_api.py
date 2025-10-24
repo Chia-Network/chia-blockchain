@@ -81,7 +81,7 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
@@ -197,6 +197,8 @@ from chia.wallet.wallet_request_types import (
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
+    GetOfferSummary,
+    GetOfferSummaryResponse,
     GetPrivateKey,
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
@@ -2259,65 +2261,61 @@ class WalletRpcApi:
             trade_record=result[1],
         )
 
-    async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos, valid_times = offer.summary()
-
-        if request.get("advanced", False):
-            response = {
-                "summary": {
-                    "offered": offered,
-                    "requested": requested,
-                    "fees": offer.fees(),
-                    "infos": infos,
-                    "additions": [c.name().hex() for c in offer.additions()],
-                    "removals": [c.name().hex() for c in offer.removals()],
-                    "valid_times": {
-                        k: v
-                        for k, v in valid_times.to_json_dict().items()
-                        if k
-                        not in {
-                            "max_secs_after_created",
-                            "min_secs_since_created",
-                            "max_blocks_after_created",
-                            "min_blocks_since_created",
-                        }
-                    },
-                },
-                "id": offer.name(),
-            }
+    @marshal
+    async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
+        dl_summary = None
+        if not request.advanced:
+            dl_summary = await self.service.wallet_state_manager.trade_manager.get_dl_offer_summary(
+                request.parsed_offer
+            )
+        if dl_summary is not None:
+            response = GetOfferSummaryResponse(
+                data_layer_summary=dl_summary,
+                id=request.parsed_offer.name(),
+            )
         else:
-            response = {
-                "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
-                "id": offer.name(),
-            }
+            offered, requested, infos, valid_times = request.parsed_offer.summary()
+            response = GetOfferSummaryResponse(
+                summary=OfferSummary(
+                    offered=offered,
+                    requested=requested,
+                    fees=uint64(request.parsed_offer.fees()),
+                    infos=infos,
+                    additions=[c.name() for c in request.parsed_offer.additions()],
+                    removals=[c.name() for c in request.parsed_offer.removals()],
+                    valid_times=valid_times.only_absolutes(),
+                ),
+                id=request.parsed_offer.name(),
+            )
 
         # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
         # A more general solution surely exists, but I'm not sure what it is right now
-        return {
-            **response,
-            "summary": {
-                **response["summary"],  # type: ignore[dict-item]
-                "infos": {
+        return dataclasses.replace(
+            response,
+            summary=dataclasses.replace(
+                response.summary,
+                infos={
                     key: (
-                        {
-                            **info,
-                            "also": {
-                                **info["also"],
-                                "flags": ProofsChecker.from_program(
-                                    uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
-                                ).flags,
-                            },
-                        }
-                        if "also" in info and "proofs_checker" in info["also"]
+                        PuzzleInfo(
+                            {
+                                **info.info,
+                                "also": {
+                                    **info.info["also"],
+                                    "flags": ProofsChecker.from_program(
+                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
+                                    ).flags,
+                                },
+                            }
+                        )
+                        if "also" in info.info and "proofs_checker" in info.info["also"]
                         else info
                     )
-                    for key, info in response["summary"]["infos"].items()  # type: ignore[index]
+                    for key, info in response.summary.infos.items()
                 },
-            },
-        }
+            )
+            if response.summary is not None
+            else None,
+        )
 
     @marshal
     async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:

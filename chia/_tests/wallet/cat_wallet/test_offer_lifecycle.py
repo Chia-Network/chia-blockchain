@@ -173,7 +173,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
                 {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("blue").hex()}
             ),
         }
-        driver_dict_as_infos = {key.hex(): value.info for key, value in driver_dict.items()}
+        driver_dict_as_summary = {key.hex(): value for key, value in driver_dict.items()}
 
         # Create an XCH Offer for RED
         chia_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
@@ -239,9 +239,9 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         }
         assert new_offer.get_requested_amounts() == {None: 900, str_to_tail_hash("red"): 350}
         assert new_offer.summary() == (
-            {"xch": 1000, str_to_tail_hash("red").hex(): 350, str_to_tail_hash("blue").hex(): 2000},
-            {"xch": 900, str_to_tail_hash("red").hex(): 350},
-            driver_dict_as_infos,
+            {"xch": "1000", str_to_tail_hash("red").hex(): "350", str_to_tail_hash("blue").hex(): "2000"},
+            {"xch": "900", str_to_tail_hash("red").hex(): "350"},
+            driver_dict_as_summary,
             ConditionValidTimes(),
         )
         assert new_offer.get_pending_amounts() == {

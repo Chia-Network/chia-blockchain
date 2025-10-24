@@ -1406,36 +1406,53 @@ def conditions_to_json_dicts(conditions: Iterable[Condition]) -> list[dict[str, 
 
 @streamable
 @dataclass(frozen=True)
-class ConditionValidTimes(Streamable):
-    min_secs_since_created: Optional[uint64] = None  # ASSERT_SECONDS_RELATIVE
+class ConditionValidTimesAbsolute(Streamable):
     min_time: Optional[uint64] = None  # ASSERT_SECONDS_ABSOLUTE
-    min_blocks_since_created: Optional[uint32] = None  # ASSERT_HEIGHT_RELATIVE
     min_height: Optional[uint32] = None  # ASSERT_HEIGHT_ABSOLUTE
-    max_secs_after_created: Optional[uint64] = None  # ASSERT_BEFORE_SECONDS_RELATIVE
     max_time: Optional[uint64] = None  # ASSERT_BEFORE_SECONDS_ABSOLUTE
-    max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
     max_height: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_ABSOLUTE
 
     def to_conditions(self) -> list[Condition]:
         final_condition_list: list[Condition] = []
-        if self.min_secs_since_created is not None:
-            final_condition_list.append(AssertSecondsRelative(self.min_secs_since_created))
         if self.min_time is not None:
             final_condition_list.append(AssertSecondsAbsolute(self.min_time))
-        if self.min_blocks_since_created is not None:
-            final_condition_list.append(AssertHeightRelative(self.min_blocks_since_created))
         if self.min_height is not None:
             final_condition_list.append(AssertHeightAbsolute(self.min_height))
-        if self.max_secs_after_created is not None:
-            final_condition_list.append(AssertBeforeSecondsRelative(self.max_secs_after_created))
         if self.max_time is not None:
             final_condition_list.append(AssertBeforeSecondsAbsolute(self.max_time))
-        if self.max_blocks_after_created is not None:
-            final_condition_list.append(AssertBeforeHeightRelative(self.max_blocks_after_created))
         if self.max_height is not None:
             final_condition_list.append(AssertBeforeHeightAbsolute(self.max_height))
+        return final_condition_list
+
+
+@streamable
+@dataclass(frozen=True)
+class ConditionValidTimes(ConditionValidTimesAbsolute):
+    min_secs_since_created: Optional[uint64] = None  # ASSERT_SECONDS_RELATIVE
+    min_blocks_since_created: Optional[uint32] = None  # ASSERT_HEIGHT_RELATIVE
+    max_secs_after_created: Optional[uint64] = None  # ASSERT_BEFORE_SECONDS_RELATIVE
+    max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
+
+    def to_conditions(self) -> list[Condition]:
+        final_condition_list = super().to_conditions()
+        if self.min_secs_since_created is not None:
+            final_condition_list.append(AssertSecondsRelative(self.min_secs_since_created))
+        if self.min_blocks_since_created is not None:
+            final_condition_list.append(AssertHeightRelative(self.min_blocks_since_created))
+        if self.max_secs_after_created is not None:
+            final_condition_list.append(AssertBeforeSecondsRelative(self.max_secs_after_created))
+        if self.max_blocks_after_created is not None:
+            final_condition_list.append(AssertBeforeHeightRelative(self.max_blocks_after_created))
 
         return final_condition_list
+
+    def only_absolutes(self) -> ConditionValidTimesAbsolute:
+        return ConditionValidTimesAbsolute(
+            min_time=self.min_time,
+            min_height=self.min_height,
+            max_time=self.max_time,
+            max_height=self.max_height,
+        )
 
 
 condition_valid_times_hints = get_type_hints(ConditionValidTimes)

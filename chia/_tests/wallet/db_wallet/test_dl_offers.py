@@ -8,7 +8,7 @@ from chia_rs.sized_ints import uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerSummary, DataLayerWallet, SingletonDependencies, SingletonSummary
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -179,20 +179,20 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
     assert success is True
     assert offer_maker is not None
 
-    assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
-        "offered": [
-            {
-                "launcher_id": launcher_id_maker.hex(),
-                "new_root": maker_root.hex(),
-                "dependencies": [
-                    {
-                        "launcher_id": launcher_id_taker.hex(),
-                        "values_to_prove": [taker_branch.hex()],
-                    }
+    assert await trade_manager_taker.get_dl_offer_summary(Offer.from_bytes(offer_maker.offer)) == DataLayerSummary(
+        offered=[
+            SingletonSummary(
+                launcher_id=launcher_id_maker,
+                new_root=maker_root,
+                dependencies=[
+                    SingletonDependencies(
+                        launcher_id=launcher_id_taker,
+                        values_to_prove=[taker_branch],
+                    )
                 ],
-            }
+            )
         ]
-    }
+    )
 
     [_maker_offer], signing_response = await wsm_maker.sign_offers([Offer.from_bytes(offer_maker.offer)])
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -231,30 +231,30 @@ async def test_dl_offers(wallet_environments: WalletTestFramework) -> None:
         )
     assert offer_taker is not None
 
-    assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
-        "offered": [
-            {
-                "launcher_id": launcher_id_maker.hex(),
-                "new_root": maker_root.hex(),
-                "dependencies": [
-                    {
-                        "launcher_id": launcher_id_taker.hex(),
-                        "values_to_prove": [taker_branch.hex()],
-                    }
+    assert await trade_manager_maker.get_dl_offer_summary(Offer.from_bytes(offer_taker.offer)) == DataLayerSummary(
+        offered=[
+            SingletonSummary(
+                launcher_id=launcher_id_maker,
+                new_root=maker_root,
+                dependencies=[
+                    SingletonDependencies(
+                        launcher_id=launcher_id_taker,
+                        values_to_prove=[taker_branch],
+                    )
                 ],
-            },
-            {
-                "launcher_id": launcher_id_taker.hex(),
-                "new_root": taker_root.hex(),
-                "dependencies": [
-                    {
-                        "launcher_id": launcher_id_maker.hex(),
-                        "values_to_prove": [maker_branch.hex()],
-                    }
+            ),
+            SingletonSummary(
+                launcher_id=launcher_id_taker,
+                new_root=taker_root,
+                dependencies=[
+                    SingletonDependencies(
+                        launcher_id=launcher_id_maker,
+                        values_to_prove=[maker_branch],
+                    ),
                 ],
-            },
+            ),
         ]
-    }
+    )
 
     await wallet_environments.process_pending_states(
         [
