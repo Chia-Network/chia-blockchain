@@ -1,0 +1,21 @@
+; This is a restriction on delegated puzzles intended to force a coin announcement
+;
+; The idea behind enforcing this is that it makes the current coin spend non-replayable since it will be implictly
+; asserting that a specific coin ID is spent in tandem.
+(mod
+  (
+    Conditions
+  )
+
+  (include condition_codes.clib)
+
+  (defun check_conditions (conditions)
+    ; If we run out of conditions without finding an assertion, this will raise with "path into atom"
+    (if (= (f (f conditions)) ASSERT_COIN_ANNOUNCEMENT)
+        conditions
+        (c (f conditions) (check_conditions (r conditions)))
+    )
+  )
+
+  (check_conditions Conditions)
+)
