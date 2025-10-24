@@ -134,7 +134,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     # TODO: todo_v2_plots decide on v2 test plot k-size
     MIN_PLOT_SIZE_V2=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
-    DIFFICULTY_STARTING=uint64(2**10),
+    DIFFICULTY_STARTING=uint64(2**5),
     DISCRIMINANT_SIZE_BITS=uint16(16),
     SUB_EPOCH_BLOCKS=uint32(170),
     WEIGHT_PROOF_THRESHOLD=uint8(2),
