@@ -24,7 +24,7 @@ class VCProofs:
 
     def as_program(self) -> Program:
         def byte_sort_pairs(f1: tuple[str, str], f2: tuple[str, str]) -> int:
-            return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.to(None) else -1
+            return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.NIL else -1
 
         prog: Program = Program.to(
             list_to_binary_tree(

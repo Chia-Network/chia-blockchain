@@ -587,14 +587,14 @@ class VerifiedCredential(Streamable):
             )
             inner_puzzle_hash = bytes32(new_singleton_condition.at("rf").as_atom())
             magic_condition = next(c for c in conditions if c.at("f").as_int() == -10)
-            if magic_condition.at("rrrf") == Program.to(None):
+            if magic_condition.at("rrrf") == Program.NIL:
                 proof_hash_as_prog: Program = metadata_layer.args.at("rfr")
             elif magic_condition.at("rrrf").atom is not None:
                 raise ValueError("Specified VC was cleared")
             else:
                 proof_hash_as_prog = magic_condition.at("rrrfrrf")
 
-            proof_hash = None if proof_hash_as_prog == Program.to(None) else bytes32(proof_hash_as_prog.as_atom())
+            proof_hash = None if proof_hash_as_prog == Program.NIL else bytes32(proof_hash_as_prog.as_atom())
 
             proof_provider = bytes32(metadata_layer.args.at("rff").as_atom())
 
@@ -606,7 +606,7 @@ class VerifiedCredential(Streamable):
                     bytes32(uncurry_puzzle(metadata_layer.args.at("rrrrf")).args.at("rrf").as_atom()),
                 ).get_tree_hash(),
                 amount=uint64(parent_coin.amount),
-                parent_proof_hash=None if parent_proof_hash == Program.to(None) else parent_proof_hash,
+                parent_proof_hash=None if parent_proof_hash == Program.NIL else parent_proof_hash,
             )
 
         new_vc: Self = cls(
@@ -778,7 +778,7 @@ class VerifiedCredential(Streamable):
         )
 
         expected_announcement: CreatePuzzleAnnouncement = CreatePuzzleAnnouncement(
-            std_hash(self.coin.name() + Program.to(None).get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
+            std_hash(self.coin.name() + Program.NIL.get_tree_hash() + ACS_TRANSFER_PROGRAM.get_tree_hash())
         )
 
         return (

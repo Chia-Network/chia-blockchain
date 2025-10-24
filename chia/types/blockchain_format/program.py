@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TypeVar, Union
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, tree_hash
 from chia_rs.sized_bytes import bytes32
@@ -29,6 +29,8 @@ class Program(SExp):
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
+
+    NIL: ClassVar[Program]
 
     @classmethod
     def parse(cls, f) -> Self:
@@ -247,7 +249,7 @@ def _tree_hash(node: SExp, precalculated: set[bytes32]) -> bytes32:
     return bytes32(std_hash(s))
 
 
-NIL = Program.from_bytes(b"\x80")
+Program.NIL = Program.to(None)
 
 
 # real return type is more like Union[T_Program, CastableType] when considering corner and terminal cases

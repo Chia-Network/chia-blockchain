@@ -16,7 +16,6 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 def test_ownership_outer_puzzle() -> None:
     ACS = Program.to(1)
-    NIL = Program.to([])
     owner = bytes32.zeros
     # (mod (current_owner conditions solution)
     #     (list current_owner () conditions)
@@ -28,7 +27,7 @@ def test_ownership_outer_puzzle() -> None:
     )
     transfer_program_default: Program = puzzle_for_transfer_program(bytes32([1] * 32), bytes32([2] * 32), uint16(5000))
     ownership_puzzle: Program = puzzle_for_ownership_layer(owner, Program.to(transfer_program), ACS)
-    ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, Program.to(transfer_program), ACS)
+    ownership_puzzle_empty: Program = puzzle_for_ownership_layer(Program.NIL, Program.to(transfer_program), ACS)
     ownership_puzzle_default: Program = puzzle_for_ownership_layer(owner, transfer_program_default, ACS)
     ownership_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle))
     ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_empty))
@@ -41,7 +40,7 @@ def test_ownership_outer_puzzle() -> None:
     assert transfer_program_driver is not None
     assert ownership_driver.type() == "ownership"
     assert ownership_driver["owner"] == owner
-    assert ownership_driver_empty["owner"] == NIL
+    assert ownership_driver_empty["owner"] == Program.NIL
     assert ownership_driver["transfer_program"] == transfer_program
     assert ownership_driver_default["transfer_program"] == transfer_program_driver
     assert transfer_program_driver.type() == "royalty transfer program"

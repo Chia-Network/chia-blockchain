@@ -174,6 +174,10 @@ jobs:
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
+          - name: debian:trixie
+            type: debian
+            # https://packages.debian.org/trixie/python/python3 (3.13)
+            url: "docker://debian:trixie"
           - name: fedora:41
             type: fedora
             url: "docker://fedora:41"
@@ -224,7 +228,7 @@ jobs:
           # The behavior we follow in install.sh is unique with Arch in that
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
-          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.12.7-1-x86_64.pkg.tar.zst
+          pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.13.5-1-x86_64.pkg.tar.zst
 
       - name: Prepare Debian
         if: ${{ matrix.distribution.type == 'debian' }}
@@ -238,6 +242,16 @@ jobs:
         if: ${{ matrix.distribution.type == 'fedora' }}
         run: |
           yum install --assumeyes git python
+
+      - name: Set rocky8 repo
+        if: ${{ matrix.distribution.name == 'rockylinux:8' }}
+        run: |
+          sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/Rocky-*.repo
+
+      - name: Set rocky9 repo
+        if: ${{ matrix.distribution.name == 'rockylinux:9' }}
+        run: |
+          sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
 
       - name: Prepare Rocky
         if: ${{ matrix.distribution.type == 'rocky' }}

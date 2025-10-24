@@ -266,6 +266,10 @@ jobs:
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
+          - name: debian:trixie
+            type: debian
+            # https://packages.debian.org/trixie/python/python3 (3.13)
+            url: "docker://debian:trixie"
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)

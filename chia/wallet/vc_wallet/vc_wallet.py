@@ -196,7 +196,7 @@ class VCWallet:
             extra_conditions=extra_conditions,
         )
         for dpuz, coin in zip(dpuzs, coins):
-            solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
+            solution = solution_for_delegated_puzzle(dpuz, Program.NIL)
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
@@ -497,7 +497,7 @@ class VCWallet:
                         bytes32(cc.at("rf").as_atom()) == crcat_spend.crcat.inner_puzzle_hash
                     )
                     or (  # it's going to the pending state
-                        cc.at("rrr") != Program.to(None)
+                        cc.at("rrr") != Program.NIL
                         and cc.at("rrrf").atom is None
                         and bytes32(cc.at("rf").as_atom())
                         == construct_pending_approval_state(
@@ -542,7 +542,7 @@ class VCWallet:
                             solution=Program.from_serialized(spend_to_fix.solution)
                             .replace(
                                 ff=coin_args[coin_name][0],
-                                frf=Program.to(None),  # not general
+                                frf=Program.NIL,  # not general
                                 frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
                                 frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
                                 frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
