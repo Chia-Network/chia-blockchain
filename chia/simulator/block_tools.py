@@ -520,10 +520,10 @@ class BlockTools:
 
     async def setup_plots(
         self,
-        num_og_plots: int = 15,
-        num_pool_plots: int = 5,
+        num_og_plots: int = 8,
+        num_pool_plots: int = 3,
         num_non_keychain_plots: int = 3,
-        num_v2_plots: int = 320,
+        num_v2_plots: int = 150,
         plot_size: int = 20,
         bitfield: bool = True,
         testrun_uid: Optional[str] = None,
@@ -2170,10 +2170,10 @@ async def create_block_tools_async(
     root_path: Optional[Path] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[dict[str, Any]] = None,
-    num_og_plots: int = 15,
-    num_pool_plots: int = 5,
+    num_og_plots: int = 8,
+    num_pool_plots: int = 3,
     num_non_keychain_plots: int = 3,
-    num_v2_plots: int = 320,
+    num_v2_plots: int = 150,
     testrun_uid: Optional[str] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
