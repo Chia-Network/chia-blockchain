@@ -2004,6 +2004,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
 
     # Update metadata
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
@@ -2019,6 +2020,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
 
     # Transfer DID
     async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -2032,6 +2034,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
 
     async def num_wallets() -> int:
         return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
@@ -2059,6 +2063,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_2_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
 
     next_did_coin = await did_wallet_2.get_coin()
     assert next_did_coin.parent_coin_info == last_did_coin.name()
@@ -2071,6 +2077,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_2_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
 
     next_did_coin = await did_wallet_2.get_coin()
     assert next_did_coin.parent_coin_info == last_did_coin.name()
