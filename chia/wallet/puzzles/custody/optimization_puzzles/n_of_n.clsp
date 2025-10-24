@@ -1,0 +1,34 @@
+(mod
+  (
+    MEMBERS
+    delegated_puzzle_hash
+    member_solutions
+  )
+
+  ; utility
+  (include sha256tree.clib)
+  (defun merge_list (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge_list (r list_a) list_b))
+        list_b
+    )
+  )
+
+  ; streamlined M of N
+  (defun run_member (MEMBER member_solution delegated_puzzle_hash)
+    (a MEMBER (c delegated_puzzle_hash member_solution))
+  )
+
+  (defun approve_delegated_puzzle (MEMBERS member_solutions delegated_puzzle_hash)
+    (if (r MEMBERS)  ; assumes at least 1 member at start
+        (merge_list
+          (run_member (f MEMBERS) (f member_solutions) delegated_puzzle_hash)
+          (approve_delegated_puzzle (r MEMBERS) (r member_solutions) delegated_puzzle_hash)
+        )
+        (run_member (f MEMBERS) (f member_solutions) delegated_puzzle_hash)
+    )
+  )
+
+  ; main
+  (approve_delegated_puzzle MEMBERS member_solutions delegated_puzzle_hash)
+)
