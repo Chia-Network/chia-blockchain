@@ -52,6 +52,7 @@ depends_on = [
     { path = "chia.apis", deprecated = false },
     { path = "chia.cmds", deprecated = false },
     { path = "chia.protocols", deprecated = false },
+    { path = "chia.solver", deprecated = false },
     { path = "chia.timelord", deprecated = false },
     { path = "chia.harvester", deprecated = false },
     { path = "chia.daemon", deprecated = false },
@@ -88,12 +89,6 @@ depends_on = [
 [[modules]]
 path = "chia.apis"
 depends_on = [
-    { path = "chia.harvester", deprecated = false },
-    { path = "chia.farmer", deprecated = false },
-    { path = "chia.introducer", deprecated = false },
-    { path = "chia.wallet", deprecated = false },
-    { path = "chia.full_node", deprecated = false },
-    { path = "chia.timelord", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.server", deprecated = false },
 ]
@@ -210,6 +205,7 @@ depends_on = [
     { path = "chia.rpc", deprecated = false },
     { path = "chia.server", deprecated = false },
     { path = "chia.simulator", deprecated = false },
+    { path = "chia.solver", deprecated = false },
     { path = "chia.protocols", deprecated = false },
     { path = "chia.data_layer", deprecated = false },
 ]
@@ -261,6 +257,18 @@ depends_on = [
     "chia.consensus",
     { path = "chia.wallet", deprecated = false },
     { path = "chia.daemon", deprecated = false },
+]
+
+[[modules]]
+path = "chia.solver"
+depends_on = [
+    "chia.protocols",
+    "chia.types",
+    "chia.util",
+    { path = "chia.apis", deprecated = false },
+    { path = "chia.consensus", deprecated = false },
+    { path = "chia.rpc", deprecated = false },
+    { path = "chia.server", deprecated = false },
 ]
 
 [[modules]]
