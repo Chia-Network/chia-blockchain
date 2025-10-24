@@ -245,7 +245,7 @@ class CreateCoin(Condition):
             uint64(program.at("rrf").as_int()),
             (
                 None
-                if potential_memos == Program.to(None)
+                if potential_memos == Program.NIL
                 else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
             ),
         )
@@ -966,9 +966,7 @@ class UnknownCondition(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> UnknownCondition:
-        return cls(
-            program.at("f"), [] if program.at("r") == Program.to(None) else [p for p in program.at("r").as_iter()]
-        )
+        return cls(program.at("f"), [] if program.at("r") == Program.NIL else [p for p in program.at("r").as_iter()])
 
 
 # Abstractions

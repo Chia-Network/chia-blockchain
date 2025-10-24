@@ -96,7 +96,7 @@ class NotificationManager:
         notification_spend = make_spend(
             notification_coin,
             notification_puzzle,
-            Program.to(None),
+            Program.NIL,
         )
         extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
         await self.wallet_state_manager.main_wallet.generate_signed_transaction(

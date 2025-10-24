@@ -10,7 +10,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.types.blockchain_format.program import NIL, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
@@ -42,7 +42,7 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
     argnames=["program", "result"],
     argvalues=[
         (Program.to(NIL_TREEHASH), True),
-        (NIL, True),
+        (Program.NIL, True),
         (Program.to(bytes32([1] * 32)), False),
     ],
 )

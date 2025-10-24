@@ -56,7 +56,7 @@ def compute_spend_hints_and_additions(
         coin: Coin = Coin(cs.coin.name(), bytes32(rf), uint64(condition.at("rrf").as_int()))
         hint: Optional[bytes32] = None
         if (
-            condition.at("rrr") != Program.to(None)  # There's more than two arguments
+            condition.at("rrr") != Program.NIL  # There's more than two arguments
             and condition.at("rrrf").atom is None  # The 3rd argument is a cons
         ):
             potential_hint: Optional[bytes] = condition.at("rrrff").atom

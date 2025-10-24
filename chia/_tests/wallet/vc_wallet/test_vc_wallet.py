@@ -55,7 +55,7 @@ async def mint_cr_cat(
     full_node_api: FullNodeSimulator,
     tx_config: TXConfig,
     authorized_providers: list[bytes32] = [],
-    tail: Program = Program.to(None),
+    tail: Program = Program.NIL,
     proofs_checker: ProofsChecker = ProofsChecker(["foo", "bar"]),
 ) -> None:
     async with wallet_0.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
@@ -849,7 +849,7 @@ async def test_cat_wallet_conversion(
 
     # Key point of test: create a normal CAT wallet first, and see if it gets converted to CR-CAT wallet
     await CATWallet.get_or_create_wallet_for_cat(
-        wallet_node_0.wallet_state_manager, wallet_0, Program.to(None).get_tree_hash().hex()
+        wallet_node_0.wallet_state_manager, wallet_0, Program.NIL.get_tree_hash().hex()
     )
 
     did_id = bytes32.zeros

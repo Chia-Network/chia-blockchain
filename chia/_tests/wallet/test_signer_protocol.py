@@ -135,7 +135,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         [coin] = await wallet.select_coins(uint64(0), action_scope)
     puzzle: Program = await wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
-    delegated_puzzle: Program = Program.to(None)
+    delegated_puzzle: Program = Program.NIL
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
     solution: Program = Program.to([None, None, None])
 

@@ -50,7 +50,7 @@ def test_debug_spend_bundle(capsys: pytest.CaptureFixture[str]) -> None:
                 make_spend(
                     coin_bad_reveal,
                     ACS,
-                    Program.to(None),
+                    Program.NIL,
                 ),
                 make_spend(
                     coin,
@@ -60,7 +60,7 @@ def test_debug_spend_bundle(capsys: pytest.CaptureFixture[str]) -> None:
                 make_spend(
                     child_coin,
                     ACS,
-                    Program.to(None),
+                    Program.NIL,
                 ),
             ],
             sig,
