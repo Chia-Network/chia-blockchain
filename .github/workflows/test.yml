@@ -128,6 +128,7 @@ jobs:
       runs-on: macos-15-intel
       arch: intel
       arch-emoji: 🌀
+      collect-junit: false
   macos-arm:
     if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
     uses: ./.github/workflows/test-single.yml
