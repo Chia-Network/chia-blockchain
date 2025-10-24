@@ -178,14 +178,12 @@ jobs:
             type: debian
             # https://packages.debian.org/trixie/python/python3 (3.13)
             url: "docker://debian:trixie"
-          - name: fedora:37
+          - name: fedora:41
             type: fedora
-            # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
-            url: "docker://fedora:37"
-          - name: fedora:38
+            url: "docker://fedora:41"
+          - name: fedora:42
             type: fedora
-            # (38, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+38&start=0
-            url: "docker://fedora:38"
+            url: "docker://fedora:42"
           - name: rockylinux:8
             type: rocky
             url: "docker://rockylinux:8"
@@ -243,7 +241,7 @@ jobs:
       - name: Prepare Fedora
         if: ${{ matrix.distribution.type == 'fedora' }}
         run: |
-          yum install --assumeyes git
+          yum install --assumeyes git python
 
       - name: Set rocky8 repo
         if: ${{ matrix.distribution.name == 'rockylinux:8' }}
