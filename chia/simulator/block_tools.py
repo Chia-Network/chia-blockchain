@@ -500,34 +500,55 @@ class BlockTools:
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
+        testrun_uid: Optional[str] = None,
     ) -> bool:
-        self.add_plot_directory(self.plot_dir)
-        assert self.created_plots == 0
-        existing_plots: bool = True
-        # OG Plots
-        for i in range(num_og_plots):
-            plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
-            if plot.new_plot:
-                existing_plots = False
-        # Pool Plots
-        for i in range(num_pool_plots):
-            plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
-            if plot.new_plot:
-                existing_plots = False
-        # Some plots with keys that are not in the keychain
-        for i in range(num_non_keychain_plots):
-            plot = await self.new_plot(
-                path=self.plot_dir / "not_in_keychain",
-                plot_keys=PlotKeys(G1Element(), G1Element(), None),
-                exclude_plots=True,
-                plot_size=plot_size,
-                bitfield=bitfield,
-            )
-            if plot.new_plot:
-                existing_plots = False
-        await self.refresh_plots()
-        assert len(self.plot_manager.plots) == len(self.expected_plots)
-        return existing_plots
+        if testrun_uid is None:
+            lock_file_name = self.plot_dir / ".lockfile"
+        else:
+            lock_file_name = self.plot_dir / (testrun_uid + ".lockfile")
+
+        while True:
+            try:
+                lockfile = open(lock_file_name, "x")
+                # we got the lock, continue
+                break
+            except OSError:
+                # some other process is holding the lock, retry periodically for it
+                # to be released.
+                await asyncio.sleep(1)
+
+        try:
+            self.add_plot_directory(self.plot_dir)
+            assert self.created_plots == 0
+            existing_plots: bool = True
+            # OG Plots
+            for i in range(num_og_plots):
+                plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+                if plot.new_plot:
+                    existing_plots = False
+            # Pool Plots
+            for i in range(num_pool_plots):
+                plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+                if plot.new_plot:
+                    existing_plots = False
+            # Some plots with keys that are not in the keychain
+            for i in range(num_non_keychain_plots):
+                plot = await self.new_plot(
+                    path=self.plot_dir / "not_in_keychain",
+                    plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                    exclude_plots=True,
+                    plot_size=plot_size,
+                    bitfield=bitfield,
+                )
+                if plot.new_plot:
+                    existing_plots = False
+            await self.refresh_plots()
+            assert len(self.plot_manager.plots) == len(self.expected_plots)
+            return existing_plots
+        finally:
+            # release lock
+            lockfile.close()
+            lock_file_name.unlink()
 
     async def new_plot(
         self,
@@ -2080,6 +2101,7 @@ async def create_block_tools_async(
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
+    testrun_uid: Optional[str] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2090,6 +2112,7 @@ async def create_block_tools_async(
         num_og_plots=num_og_plots,
         num_pool_plots=num_pool_plots,
         num_non_keychain_plots=num_non_keychain_plots,
+        testrun_uid=testrun_uid,
     )
 
     return bt
