@@ -41,6 +41,7 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+from filelock import FileLock
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
@@ -338,6 +339,29 @@ class BlockTools:
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0
+
+                expected_plots: set[str] = set()
+                found_plots: set[str] = set()
+                if len(self.plot_manager.plots) != len(self.expected_plots):  # pragma: no cover
+                    for pid, filename in self.expected_plots.items():
+                        expected_plots.add(filename.name)
+                    for filename, _ in self.plot_manager.plots.items():
+                        found_plots.add(filename.name)
+                    print(f"directory: {self.plot_dir}")
+                    print(f"expected: {len(expected_plots)}")
+                    for f in expected_plots:
+                        print(f)
+                    print(f"plot manager: {len(found_plots)}")
+                    for f in found_plots:
+                        print(f)
+                    diff = found_plots.difference(expected_plots)
+                    print(f"found unexpected: {len(diff)}")
+                    for f in diff:
+                        print(f)
+                    diff = expected_plots.difference(found_plots)
+                    print(f"not found: {len(diff)}")
+                    for f in diff:
+                        print(f)
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
@@ -500,34 +524,41 @@ class BlockTools:
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
+        testrun_uid: Optional[str] = None,
     ) -> bool:
-        self.add_plot_directory(self.plot_dir)
-        assert self.created_plots == 0
-        existing_plots: bool = True
-        # OG Plots
-        for i in range(num_og_plots):
-            plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
-            if plot.new_plot:
-                existing_plots = False
-        # Pool Plots
-        for i in range(num_pool_plots):
-            plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
-            if plot.new_plot:
-                existing_plots = False
-        # Some plots with keys that are not in the keychain
-        for i in range(num_non_keychain_plots):
-            plot = await self.new_plot(
-                path=self.plot_dir / "not_in_keychain",
-                plot_keys=PlotKeys(G1Element(), G1Element(), None),
-                exclude_plots=True,
-                plot_size=plot_size,
-                bitfield=bitfield,
-            )
-            if plot.new_plot:
-                existing_plots = False
-        await self.refresh_plots()
-        assert len(self.plot_manager.plots) == len(self.expected_plots)
-        return existing_plots
+        if testrun_uid is None:
+            lock_file_name = self.plot_dir / ".lockfile"
+        else:
+            lock_file_name = self.plot_dir / (testrun_uid + ".lockfile")
+
+        with FileLock(lock_file_name):
+            self.add_plot_directory(self.plot_dir)
+            assert self.created_plots == 0
+            existing_plots: bool = True
+            # OG Plots
+            for i in range(num_og_plots):
+                plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+                if plot.new_plot:
+                    existing_plots = False
+            # Pool Plots
+            for i in range(num_pool_plots):
+                plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+                if plot.new_plot:
+                    existing_plots = False
+            # Some plots with keys that are not in the keychain
+            for i in range(num_non_keychain_plots):
+                plot = await self.new_plot(
+                    path=self.plot_dir / "not_in_keychain",
+                    plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                    exclude_plots=True,
+                    plot_size=plot_size,
+                    bitfield=bitfield,
+                )
+                if plot.new_plot:
+                    existing_plots = False
+            await self.refresh_plots()
+            assert len(self.plot_manager.plots) == len(self.expected_plots)
+            return existing_plots
 
     async def new_plot(
         self,
@@ -2080,6 +2111,7 @@ async def create_block_tools_async(
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
+    testrun_uid: Optional[str] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2090,6 +2122,7 @@ async def create_block_tools_async(
         num_og_plots=num_og_plots,
         num_pool_plots=num_pool_plots,
         num_non_keychain_plots=num_non_keychain_plots,
+        testrun_uid=testrun_uid,
     )
 
     return bt
