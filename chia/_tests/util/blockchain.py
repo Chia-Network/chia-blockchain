@@ -3,13 +3,13 @@ from __future__ import annotations
 import contextlib
 import os
 import pickle  # noqa: S403  # TODO: use explicit serialization instead of pickle
-import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Optional
 
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint64
+from filelock import FileLock
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
@@ -68,17 +68,7 @@ def persistent_blocks(
 
     block_path_dir.mkdir(parents=True, exist_ok=True)
 
-    # first acquire the lock
-    while True:
-        try:
-            lockfile = open(lock_file_path, "x")
-            break
-        except OSError:
-            # some other process is already holding the lock, wait for the file
-            # to appear
-            time.sleep(1)
-
-    try:
+    with FileLock(lock_file_path):
         if file_path.exists():
             print(f"File found at: {file_path}")
             try:
@@ -113,9 +103,6 @@ def persistent_blocks(
             dummy_block_references=dummy_block_references,
             include_transactions=include_transactions,
         )
-    finally:
-        lockfile.close()
-        lock_file_path.unlink()
 
 
 def new_test_db(

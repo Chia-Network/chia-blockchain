@@ -41,6 +41,7 @@ from chia_rs import (
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
+from filelock import FileLock
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
@@ -530,17 +531,7 @@ class BlockTools:
         else:
             lock_file_name = self.plot_dir / (testrun_uid + ".lockfile")
 
-        while True:
-            try:
-                lockfile = open(lock_file_name, "x")
-                # we got the lock, continue
-                break
-            except OSError:
-                # some other process is holding the lock, retry periodically for it
-                # to be released.
-                await asyncio.sleep(1)
-
-        try:
+        with FileLock(lock_file_name):
             self.add_plot_directory(self.plot_dir)
             assert self.created_plots == 0
             existing_plots: bool = True
@@ -568,10 +559,6 @@ class BlockTools:
             await self.refresh_plots()
             assert len(self.plot_manager.plots) == len(self.expected_plots)
             return existing_plots
-        finally:
-            # release lock
-            lockfile.close()
-            lock_file_name.unlink()
 
     async def new_plot(
         self,
