@@ -867,6 +867,7 @@ async def offer_setup_fixture(
         wallets.append(wallet)
 
         await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet, timeout=60)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: list[StoreSetup] = []

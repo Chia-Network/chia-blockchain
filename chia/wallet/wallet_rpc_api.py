@@ -320,6 +320,9 @@ def tx_endpoint(
         async def rpc_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
+            if await self.service.wallet_state_manager.synced() is False:
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
+
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
@@ -1111,9 +1114,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_state_manager = self.service.wallet_state_manager
-
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         main_wallet = wallet_state_manager.main_wallet
         fee = uint64(request.get("fee", 0))
 
@@ -1629,9 +1629,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
-
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Wallet)
 
         # TODO: Add support for multiple puzhash/amount/memo sets
@@ -2152,8 +2149,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
     ) -> CATSpendResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
 
         amounts: list[uint64] = []
@@ -2862,8 +2857,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> DIDTransferDIDResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         puzzle_hash: bytes32 = decode_puzzle_hash(request.inner_address)
         async with self.service.wallet_state_manager.lock:
@@ -3333,8 +3326,6 @@ class WalletRpcApi:
     ) -> NFTMintBulkResponse:
         if action_scope.config.push:
             raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_address in {None, ""}:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
@@ -3612,9 +3603,6 @@ class WalletRpcApi:
     ) -> PWJoinPoolResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         if (
             pool_wallet_info.current.state == FARMING_TO_POOL.value
@@ -3654,9 +3642,6 @@ class WalletRpcApi:
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
         total_fee = await wallet.self_pool(request.fee, action_scope)
         # tx_endpoint will take care of filling in these default values
         return PWSelfPoolResponse(
@@ -3676,8 +3661,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> PWAbsorbRewardsResponse:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before collecting rewards")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
