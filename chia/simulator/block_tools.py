@@ -338,6 +338,29 @@ class BlockTools:
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0
+
+                expected_plots: set[str] = set()
+                found_plots: set[str] = set()
+                if len(self.plot_manager.plots) != len(self.expected_plots):  # pragma: no cover
+                    for pid, filename in self.expected_plots.items():
+                        expected_plots.add(filename.name)
+                    for filename, _ in self.plot_manager.plots.items():
+                        found_plots.add(filename.name)
+                    print(f"directory: {self.plot_dir}")
+                    print(f"expected: {len(expected_plots)}")
+                    for f in expected_plots:
+                        print(f)
+                    print(f"plot manager: {len(found_plots)}")
+                    for f in found_plots:
+                        print(f)
+                    diff = found_plots.difference(expected_plots)
+                    print(f"found unexpected: {len(diff)}")
+                    for f in diff:
+                        print(f)
+                    diff = expected_plots.difference(found_plots)
+                    print(f"not found: {len(diff)}")
+                    for f in diff:
+                        print(f)
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
