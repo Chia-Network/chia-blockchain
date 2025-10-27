@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -31,7 +31,6 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -104,7 +103,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
@@ -112,12 +111,27 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetAssetID,
+    CATGetAssetIDResponse,
+    CATGetName,
+    CATGetNameResponse,
+    CATSetName,
+    CATSetNameResponse,
+    CATSpend,
+    CATSpendResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
+    CheckOfferValidity,
+    CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    CreateOfferForIDs,
+    CreateOfferForIDsResponse,
+    DefaultCAT,
     DeleteKey,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
@@ -172,6 +186,7 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
@@ -181,12 +196,14 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffersCountResponse,
     GetPrivateKey,
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
+    GetStrayCATsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -248,6 +265,8 @@ from chia.wallet.wallet_request_types import (
     PWStatusResponse,
     SelectCoins,
     SelectCoinsResponse,
+    SendNotification,
+    SendNotificationResponse,
     SendTransaction,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -259,6 +278,7 @@ from chia.wallet.wallet_request_types import (
     SpendClawbackCoinsResponse,
     SplitCoins,
     SplitCoinsResponse,
+    StrayCAT,
     SubmitTransactions,
     SubmitTransactionsResponse,
     TransactionRecordWithMetadata,
@@ -743,10 +763,7 @@ class WalletRpcApi:
     @marshal
     async def get_public_keys(self, request: Empty) -> GetPublicKeysResponse:
         try:
-            fingerprints = [
-                uint32(sk.get_g1().get_fingerprint())
-                for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
-            ]
+            fingerprints = [key_data.fingerprint for key_data in await self.service.keychain_proxy.get_keys()]
         except KeychainIsLocked:
             return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
@@ -793,7 +810,7 @@ class WalletRpcApi:
     async def add_key(self, request: AddKey) -> AddKeyResponse:
         # Adding a key from 24 word mnemonic
         try:
-            sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic))
+            sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic), label=request.label)
         except KeyError as e:
             raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
@@ -819,9 +836,10 @@ class WalletRpcApi:
         except Exception as e:
             log.error(f"Failed to delete key by fingerprint: {e}")
             raise e
-        path = path_from_root(
+        path = get_wallet_db_path(
             self.service.root_path,
-            f"{self.service.config['database_path']}-{request.fingerprint}",
+            self.service.config,
+            str(request.fingerprint),
         )
         if path.exists():
             path.unlink()
@@ -909,14 +927,20 @@ class WalletRpcApi:
     @marshal
     async def delete_all_keys(self, request: Empty) -> Empty:
         await self._stop_wallet()
+        all_key_datas = await self.service.keychain_proxy.get_keys()
         try:
             await self.service.keychain_proxy.delete_all_keys()
         except Exception as e:
             log.error(f"Failed to delete all keys: {e}")
             raise e
-        path = path_from_root(self.service.root_path, self.service.config["database_path"])
-        if path.exists():
-            path.unlink()
+        for key_data in all_key_datas:
+            path = get_wallet_db_path(
+                self.service.root_path,
+                self.service.config,
+                str(key_data.fingerprint),
+            )
+            if path.exists():
+                path.unlink()
         return Empty()
 
     ##########################################################################################
@@ -1937,22 +1961,24 @@ class WalletRpcApi:
         return Empty()
 
     @tx_endpoint(push=True)
+    @marshal
     async def send_notification(
         self,
-        request: dict[str, Any],
+        request: SendNotification,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> SendNotificationResponse:
         await self.service.wallet_state_manager.notification_manager.send_new_notification(
-            bytes32.from_hexstr(request["target"]),
-            bytes.fromhex(request["message"]),
-            uint64(request["amount"]),
+            request.target,
+            request.message,
+            request.amount,
             action_scope,
-            request.get("fee", uint64(0)),
+            request.fee,
             extra_conditions=extra_conditions,
         )
 
-        return {"tx": None, "transactions": None}  # tx_endpoint wrapper will take care of this
+        # tx_endpoint will take care of these default values
+        return SendNotificationResponse([], [], tx=REPLACEABLE_TRANSACTION_RECORD)
 
     @marshal
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
@@ -2091,97 +2117,74 @@ class WalletRpcApi:
     # CATs and Trading
     ##########################################################################################
 
-    async def get_cat_list(self, request: dict[str, Any]) -> EndpointResult:
-        return {"cat_list": list(DEFAULT_CATS.values())}
+    @marshal
+    async def get_cat_list(self, request: Empty) -> GetCATListResponse:
+        return GetCATListResponse([DefaultCAT.from_json_dict(default_cat) for default_cat in DEFAULT_CATS.values()])
 
-    async def cat_set_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
-        await wallet.set_name(str(request["name"]))
-        return {"wallet_id": wallet_id}
+    @marshal
+    async def cat_set_name(self, request: CATSetName) -> CATSetNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
+        await wallet.set_name(request.name)
+        return CATSetNameResponse(wallet_id=request.wallet_id)
 
-    async def cat_get_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+    @marshal
+    async def cat_get_name(self, request: CATGetName) -> CATGetNameResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
         name: str = wallet.get_name()
-        return {"wallet_id": wallet_id, "name": name}
+        return CATGetNameResponse(wallet_id=request.wallet_id, name=name)
 
-    async def get_stray_cats(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_stray_cats(self, request: Empty) -> GetStrayCATsResponse:
         """
         Get a list of all unacknowledged CATs
         :param request: RPC request
         :return: A list of unacknowledged CATs
         """
         cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
-        return {"stray_cats": cats}
+        return GetStrayCATsResponse(stray_cats=[StrayCAT.from_json_dict(cat) for cat in cats])
 
     @tx_endpoint(push=True)
+    @marshal
     async def cat_spend(
         self,
-        request: dict[str, Any],
+        request: CATSpend,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
-    ) -> EndpointResult:
+    ) -> CATSpendResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
 
         amounts: list[uint64] = []
         puzzle_hashes: list[bytes32] = []
         memos: list[list[bytes]] = []
-        additions: Optional[list[dict[str, Any]]] = request.get("additions")
-        if not isinstance(request["fee"], int) or (additions is None and not isinstance(request["amount"], int)):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        if additions is not None:
-            for addition in additions:
-                receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
-                if len(receiver_ph) != 32:
-                    raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
-                amount = uint64(addition["amount"])
-                if amount > self.service.constants.MAX_COIN_AMOUNT:
+        if request.additions is not None:
+            for addition in request.additions:
+                if addition.amount > self.service.constants.MAX_COIN_AMOUNT:
                     raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-                amounts.append(amount)
-                puzzle_hashes.append(receiver_ph)
-                if "memos" in addition:
-                    memos.append([mem.encode("utf-8") for mem in addition["memos"]])
+                amounts.append(addition.amount)
+                puzzle_hashes.append(addition.puzzle_hash)
+                if addition.memos is not None:
+                    memos.append([mem.encode("utf-8") for mem in addition.memos])
         else:
-            amounts.append(uint64(request["amount"]))
-            puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
-            if "memos" in request:
-                memos.append([mem.encode("utf-8") for mem in request["memos"]])
+            # Our __post_init__ guards against these not being None
+            amounts.append(request.amount)  # type: ignore[arg-type]
+            puzzle_hashes.append(decode_puzzle_hash(request.inner_address))  # type: ignore[arg-type]
+            if request.memos is not None:
+                memos.append([mem.encode("utf-8") for mem in request.memos])
         coins: Optional[set[Coin]] = None
-        if "coins" in request and len(request["coins"]) > 0:
-            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
-        fee: uint64 = uint64(request.get("fee", 0))
+        if request.coins is not None and len(request.coins) > 0:
+            coins = set(request.coins)
 
-        cat_discrepancy_params: tuple[Optional[int], Optional[str], Optional[str]] = (
-            request.get("extra_delta", None),
-            request.get("tail_reveal", None),
-            request.get("tail_solution", None),
-        )
-        cat_discrepancy: Optional[tuple[int, Program, Program]] = None
-        if cat_discrepancy_params != (None, None, None):
-            if None in cat_discrepancy_params:
-                raise ValueError("Specifying extra_delta, tail_reveal, or tail_solution requires specifying the others")
-            else:
-                assert cat_discrepancy_params[0] is not None
-                assert cat_discrepancy_params[1] is not None
-                assert cat_discrepancy_params[2] is not None
-                cat_discrepancy = (
-                    cat_discrepancy_params[0],  # mypy sanitization
-                    Program.fromhex(cat_discrepancy_params[1]),
-                    Program.fromhex(cat_discrepancy_params[2]),
-                )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
                 await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     action_scope,
-                    fee,
-                    cat_discrepancy=cat_discrepancy,
+                    request.fee,
+                    cat_discrepancy=request.cat_discrepancy,
                     coins=coins,
                     memos=memos if memos else None,
                     extra_conditions=extra_conditions,
@@ -2191,96 +2194,70 @@ class WalletRpcApi:
                 amounts,
                 puzzle_hashes,
                 action_scope,
-                fee,
-                cat_discrepancy=cat_discrepancy,
+                request.fee,
+                cat_discrepancy=request.cat_discrepancy,
                 coins=coins,
                 memos=memos if memos else None,
                 extra_conditions=extra_conditions,
             )
 
-        return {
-            "transaction": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "transaction_id": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will fill in these default values
+        return CATSpendResponse([], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros)
 
-    async def cat_get_asset_id(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=CATWallet)
+    @marshal
+    async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
         asset_id: str = wallet.get_asset_id()
-        return {"asset_id": asset_id, "wallet_id": wallet_id}
+        return CATGetAssetIDResponse(asset_id=bytes32.from_hexstr(asset_id), wallet_id=request.wallet_id)
 
-    async def cat_asset_id_to_name(self, request: dict[str, Any]) -> EndpointResult:
-        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request["asset_id"])
+    @marshal
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request.asset_id.hex())
         if wallet is None:
-            if request["asset_id"] in DEFAULT_CATS:
-                return {"wallet_id": None, "name": DEFAULT_CATS[request["asset_id"]]["name"]}
+            if request.asset_id.hex() in DEFAULT_CATS:
+                return CATAssetIDToNameResponse(wallet_id=None, name=DEFAULT_CATS[request.asset_id.hex()]["name"])
             else:
-                raise ValueError("The asset ID specified does not belong to a wallet")
+                return CATAssetIDToNameResponse(wallet_id=None, name=None)
         else:
-            return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
+            return CATAssetIDToNameResponse(wallet_id=wallet.id(), name=wallet.get_name())
 
     @tx_endpoint(push=False)
+    @marshal
     async def create_offer_for_ids(
         self,
-        request: dict[str, Any],
+        request: CreateOfferForIDs,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CreateOfferForIDsResponse:
         if action_scope.config.push:
-            raise ValueError("Cannot push an incomplete spend")  # pragma: no cover
-
-        offer: dict[str, int] = request["offer"]
-        fee: uint64 = uint64(request.get("fee", 0))
-        validate_only: bool = request.get("validate_only", False)
-        driver_dict_str: Optional[dict[str, Any]] = request.get("driver_dict", None)
-        marshalled_solver = request.get("solver")
-        solver: Optional[Solver]
-        if marshalled_solver is None:
-            solver = None
-        else:
-            solver = Solver(info=marshalled_solver)
+            raise ValueError("Cannot push an incomplete spend")
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: dict[bytes32, PuzzleInfo] = {}
-        if driver_dict_str is None:
-            for key, amount in offer.items():
-                if amount > 0:
-                    try:
-                        driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
-                            {"type": AssetType.CAT.value, "tail": "0x" + key}
-                        )
-                    except ValueError:
-                        pass
+        if request.driver_dict is None:
+            for key, amount in request.offer_spec.items():
+                if amount > 0 and isinstance(key, bytes32):
+                    driver_dict[key] = PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + key.hex()})
         else:
-            for key, value in driver_dict_str.items():
-                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
-
-        modified_offer: dict[Union[int, bytes32], int] = {}
-        for wallet_identifier, change in offer.items():
-            try:
-                modified_offer[bytes32.from_hexstr(wallet_identifier)] = change
-            except ValueError:
-                modified_offer[int(wallet_identifier)] = change
+            driver_dict = request.driver_dict
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer,
+                request.offer_spec,
                 action_scope,
                 driver_dict,
-                solver=solver,
-                fee=fee,
-                validate_only=validate_only,
+                solver=request.solver,
+                fee=request.fee,
+                validate_only=request.validate_only,
                 extra_conditions=extra_conditions,
             )
-        if result[0]:
-            _success, trade_record, _error = result
-            return {
-                "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
-                "trade_record": trade_record.to_json_dict_convenience(),
-                "transactions": None,  # tx_endpoint wrapper will take care of this
-            }
-        raise ValueError(result[2])
+
+        return CreateOfferForIDsResponse(
+            [],
+            [],
+            offer=Offer.from_bytes(result[1].offer),
+            trade_record=result[1],
+        )
 
     async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -2342,15 +2319,14 @@ class WalletRpcApi:
             },
         }
 
-    async def check_offer_validity(self, request: dict[str, Any]) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
+    @marshal
+    async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
+        offer = Offer.from_bech32(request.offer)
         peer = self.service.get_full_node_peer()
-        return {
-            "valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
-            "id": offer.name(),
-        }
+        return CheckOfferValidityResponse(
+            valid=(await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer)),
+            id=offer.name(),
+        )
 
     @tx_endpoint(push=True)
     async def take_offer(
@@ -2436,12 +2412,15 @@ class WalletRpcApi:
 
         return {"trade_records": result, "offers": offer_values}
 
-    async def get_offers_count(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_offers_count(self, request: Empty) -> GetOffersCountResponse:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
 
-        return {"total": total, "my_offers_count": my_offers_count, "taken_offers_count": taken_offers_count}
+        return GetOffersCountResponse(
+            total=uint16(total), my_offers_count=uint16(my_offers_count), taken_offers_count=uint16(taken_offers_count)
+        )
 
     @tx_endpoint(push=True)
     async def cancel_offer(
@@ -2627,7 +2606,7 @@ class WalletRpcApi:
         assert num_verification_int is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
             num_verification_int,
             singleton_struct,
             metadata,

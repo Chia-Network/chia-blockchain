@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import operator
-import sys
 import time
 from collections.abc import Awaitable
 from math import ceil
@@ -30,11 +29,15 @@ from chia.farmer.farmer_rpc_api import (
     plot_matches_filter,
 )
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.farmer.farmer_service import FarmerService
+from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
-from chia.simulator.block_tools import get_plot_dir
+from chia.rpc.rpc_client import ResponseFailureError
+from chia.simulator.block_tools import BlockTools, get_plot_dir
+from chia.solver.solver_service import SolverService
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
@@ -356,7 +359,6 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
     ],
 )
 @pytest.mark.anyio
-@pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[dict[str, Any]]],
@@ -503,3 +505,32 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment: Harves
     added_directories = await harvester_rpc_client.get_plot_directories()
     assert str(test_path) in added_directories
     assert str(test_path_other) in added_directories
+
+
+@pytest.mark.anyio
+async def test_farmer_connect_to_solver(
+    farmer_one_harvester_solver: tuple[list[HarvesterService], FarmerService, SolverService, BlockTools],
+) -> None:
+    _, farmer_service, solver_service, bt = farmer_one_harvester_solver
+    assert farmer_service.rpc_server is not None
+    farmer_rpc_client = await FarmerRpcClient.create(
+        bt.config["self_hostname"],
+        farmer_service.rpc_server.listen_port,
+        farmer_service.root_path,
+        farmer_service.config,
+    )
+
+    try:
+        # Test successful connection to existing solver
+        solver_host = bt.config["self_hostname"]
+        solver_port = solver_service._server.get_port()
+        result = await farmer_rpc_client.connect_to_solver(solver_host, solver_port)
+        assert result["success"] is True
+
+        # Test connection failure to non-existent solver
+        with pytest.raises(ResponseFailureError) as exc_info:
+            await farmer_rpc_client.connect_to_solver("localhost", 65000)
+        assert "Could not connect to solver" in exc_info.value.response["error"]
+    finally:
+        farmer_rpc_client.close()
+        await farmer_rpc_client.await_closed()

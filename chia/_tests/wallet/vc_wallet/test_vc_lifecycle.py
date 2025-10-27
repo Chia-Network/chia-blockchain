@@ -117,7 +117,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 inner_puzzle_hash=ACS_PH,
                                 amount=uint64(acs_coin.amount),
                             ),
-                            Program.to(None),
+                            Program.NIL,
                             Program.to([[51, covenant_puzzle_hash, acs_coin.amount]]),
                         ),
                     ),
@@ -139,7 +139,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                 covenant_puzzle,
                                 solve_covenant_layer(
                                     LineageProof(parent_name=parent.parent_coin_info, amount=uint64(parent.amount)),
-                                    Program.to(None),
+                                    Program.NIL,
                                     Program.to([[51, covenant_puzzle_hash, cov.amount]]),
                                 ),
                             ),
@@ -173,7 +173,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
                                     inner_puzzle_hash=ACS_PH,
                                     amount=uint64(acs_cov.amount),
                                 ),
-                                Program.to(None),
+                                Program.NIL,
                                 Program.to([[51, covenant_puzzle_hash, new_acs_cov.amount]]),
                             ),
                         ),
@@ -335,7 +335,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
                         p2_either_puzzle,
                         solve_revocation_layer(
                             ACS,
-                            Program.to(None),
+                            Program.NIL,
                             hidden=True,
                         ),
                     )
@@ -616,16 +616,16 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
                 cr_coin_1,
                 CreateCoin(ACS_PH, uint64(cr_coin_1.amount)),
-                Program.to(None),
-                Program.to(None),
+                Program.NIL,
+                Program.NIL,
                 AUTHORIZED_PROVIDERS,
                 proofs_checker.as_program(),
             )
             dpuz_2, launch_crcat_spend_2, cr_2 = CRCAT.launch(
                 cr_coin_2,
                 CreateCoin(ACS_PH, uint64(cr_coin_2.amount)),
-                Program.to(None),
-                Program.to(None),
+                Program.NIL,
+                Program.NIL,
                 AUTHORIZED_PROVIDERS,
                 proofs_checker.as_program(),
             )
@@ -700,7 +700,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                     ),
                 ],
                 NEW_PROOFS if error != "use_malicious_cats" else MALICIOUS_PROOFS,
-                Program.to(None),
+                Program.NIL,
                 launcher_id,
                 vc.launcher_id,
                 vc.wrap_inner_with_backdoor().get_tree_hash(),

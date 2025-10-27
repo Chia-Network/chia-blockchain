@@ -263,7 +263,7 @@ class TestConfig:
         Test whether multiple readers/writers encounter data corruption. When using non-atomic operations
         to write to the config, partial/incomplete writes can cause readers to yield bad/corrupt data.
         """
-        # Artifically inflate the size of the default config. This is done to (hopefully) force
+        # Artificially inflate the size of the default config. This is done to (hopefully) force
         # save_config() to require multiple writes. When save_config() was using shutil.move()
         # multiple writes were observed, leading to read failures when data was partially written.
         default_config_dict["xyz"] = "x" * 32768

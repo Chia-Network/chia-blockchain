@@ -46,7 +46,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9"
+$supportedPythonVersions = "3.13", "3.12", "3.11", "3.10"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -92,6 +92,9 @@ if ($openSSLVersion -lt 269488367)
     Write-Output "Found Python with OpenSSL version:" $openSSLVersionStr
     Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
 }
+
+$SQLiteVersionStr = (py -$pythonVersion -c 'import sys; import sqlite3; print(sqlite3.sqlite_version)')
+Write-Output "SQLite version is: $SQLiteVersionStr"
 
 $extras_cli = @()
 foreach ($extra in $extras)

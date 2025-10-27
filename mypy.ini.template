@@ -50,7 +50,7 @@ ignore_missing_imports = True
 [mypy-chiavdf.*]
 ignore_missing_imports = True
 
-[mypy-clvm_tools_rs.*]
+[mypy-chialisp.*]
 ignore_missing_imports = True
 
 [mypy-colorama.*]

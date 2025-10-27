@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
+
 from chia.util.lru_cache import LRUCache
 
 
@@ -54,3 +56,17 @@ class TestLRUCache(unittest.TestCase):
         assert len(cache.cache) == 5
         assert cache.get(b"0") is None
         assert cache.get(b"1") == 1
+
+
+@pytest.mark.parametrize(argnames="capacity", argvalues=[-10, -1, 0])
+def test_with_zero_capacity(capacity: int) -> None:
+    cache: LRUCache[bytes, int] = LRUCache(capacity=capacity)
+    cache.put(b"0", 1)
+    assert cache.get(b"0") is None
+    assert len(cache.cache) == 0
+
+
+@pytest.mark.parametrize(argnames="capacity", argvalues=[-10, -1, 0, 1, 5, 10])
+def test_get_capacity(capacity: int) -> None:
+    cache: LRUCache[object, object] = LRUCache(capacity=capacity)
+    assert cache.get_capacity() == capacity

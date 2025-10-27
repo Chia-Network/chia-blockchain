@@ -33,7 +33,7 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
@@ -883,7 +883,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
+                bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -1309,7 +1309,7 @@ class WalletStateManager:
             )
             alt_did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle,
-                NIL,
+                Program.NIL,
                 uint64(0),
                 parent_data.singleton_struct,
                 parent_data.metadata,

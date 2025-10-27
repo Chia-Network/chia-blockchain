@@ -70,21 +70,15 @@ jobs:
           - matrix: ${{ inputs.arch }}
             emoji: ${{ inputs.arch-emoji }}
         python:
-          - name: "3.9"
-            file_name: "3.9"
-            action: "3.9"
-            apt: "3.9"
-            install_sh: "3.9"
-            matrix: "3.9"
-            exclude_from:
-              limited: True
-              main: True
           - name: "3.10"
             file_name: "3.10"
             action: "3.10"
             apt: "3.10"
             install_sh: "3.10"
             matrix: "3.10"
+            exclude_from:
+              limited: True
+              main: True
           - name: "3.11"
             file_name: "3.11"
             action: "3.11"
@@ -96,12 +90,16 @@ jobs:
               main: True
           - name: "3.12"
             file_name: "3.12"
-            # TODO: https://github.com/python/cpython/issues/128479
-            #       return to just `3.12` after presumably 3.12.9 becomes available with the fix
-            action: "3.12.7"
+            action: "3.12"
             apt: "3.12"
             install_sh: "3.12"
             matrix: "3.12"
+          - name: "3.13"
+            file_name: "3.13"
+            action: "3.13"
+            apt: "3.13"
+            install_sh: "3.13"
+            matrix: "3.13"
             exclude_from:
               limited: True
               main: True
@@ -118,6 +116,12 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          # TODO: skipping macos-15-intel timelord cases until fixed
+          #       https://github.com/Chia-Network/chiavdf/pull/268
+          - os:
+              matrix: macos-intel
+            configuration:
+              install_timelord: true
           - python:
               exclude_from:
                 ${{ inputs.matrix_mode }}: True
@@ -249,7 +253,13 @@ jobs:
         run: |
           mv chia/ notchia/
 
+      - name: Test blockchain code with pytest with windows and 3.13 and reruns
+        if: matrix.os.name == 'windows' && matrix.python.name == '3.13'
+        run: |
+          pytest --reruns 1 --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+
       - name: Test blockchain code with pytest
+        if: ${{ !(matrix.os.name == 'windows' && matrix.python.name == '3.13') }}
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |

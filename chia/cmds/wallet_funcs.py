@@ -45,8 +45,14 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetName,
+    CATSetName,
+    CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
+    CreateOfferForIDs,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
     DIDFindLostDID,
@@ -74,6 +80,7 @@ from chia.wallet.wallet_request_types import (
     NFTSetNFTDID,
     NFTTransferNFT,
     RoyaltyAsset,
+    SendNotification,
     SendTransaction,
     SendTransactionResponse,
     SignMessageByAddress,
@@ -91,7 +98,7 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
-CATNameResolver = Callable[[bytes32], Awaitable[Optional[tuple[Optional[uint32], str]]]]
+CATNameResolver = Callable[[CATAssetIDToName], Awaitable[CATAssetIDToNameResponse]]
 
 transaction_type_descriptions = {
     TransactionType.INCOMING_TX: "received",
@@ -183,7 +190,7 @@ async def get_unit_name_for_wallet_id(
     }:
         name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
-        name = await wallet_client.get_cat_name(wallet_id=wallet_id)
+        name = (await wallet_client.get_cat_name(CATGetName(wallet_id=uint32(wallet_id)))).name
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
@@ -396,18 +403,20 @@ async def send(
         elif typ in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             print("Submitting transaction...")
             res = await wallet_client.cat_spend(
-                wallet_id,
-                CMDTXConfigLoader(
+                CATSpend(
+                    wallet_id=uint32(wallet_id),
+                    amount=final_amount,
+                    inner_address=address.original_address,
+                    fee=fee,
+                    memos=memos,
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
-                final_amount,
-                address.original_address,
-                fee,
-                memos,
-                push=push,
                 timelock_info=condition_valid_times,
             )
         else:
@@ -468,21 +477,19 @@ async def add_token(
     root_path: pathlib.Path, wallet_rpc_port: Optional[int], fp: Optional[int], asset_id: bytes32, token_name: str
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        existing_info: Optional[tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id)
-        if existing_info is None:
-            wallet_id = None
-            old_name = None
-        else:
-            wallet_id, old_name = existing_info
+        existing_info = await wallet_client.cat_asset_id_to_name(CATAssetIDToName(asset_id))
 
-        if wallet_id is None:
+        if existing_info.wallet_id is None:
             response = await wallet_client.create_wallet_for_existing_cat(asset_id)
             wallet_id = response["wallet_id"]
-            await wallet_client.set_cat_name(wallet_id, token_name)
+            await wallet_client.set_cat_name(CATSetName(wallet_id, token_name))
             print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
         else:
-            await wallet_client.set_cat_name(wallet_id, token_name)
-            print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
+            await wallet_client.set_cat_name(CATSetName(existing_info.wallet_id, token_name))
+            print(
+                f"Successfully renamed {existing_info.name} with wallet_id {existing_info.wallet_id}"
+                f" on key {fingerprint} to {token_name}"
+            )
 
 
 async def make_offer(
@@ -501,8 +508,8 @@ async def make_offer(
         if offers == [] or requests == []:
             print("Not creating offer: Must be offering and requesting at least one asset")
         else:
-            offer_dict: dict[Union[uint32, str], int] = {}
-            driver_dict: dict[str, Any] = {}
+            offer_dict: dict[str, str] = {}
+            driver_dict: dict[bytes32, PuzzleInfo] = {}
             printable_dict: dict[str, tuple[str, int, int]] = {}  # dict[asset_name, tuple[amount, unit, multiplier]]
             royalty_assets: list[RoyaltyAsset] = []
             fungible_assets: list[FungibleAsset] = []
@@ -510,10 +517,10 @@ async def make_offer(
                 name, amount = tuple(item.split(":")[0:2])
                 try:
                     b32_id = bytes32.from_hexstr(name)
-                    id: Union[uint32, str] = b32_id.hex()
-                    result = await wallet_client.cat_asset_id_to_name(b32_id)
-                    if result is not None:
-                        name = result[1]
+                    id: str = b32_id.hex()
+                    result = await wallet_client.cat_asset_id_to_name(CATAssetIDToName(b32_id))
+                    if result.name is not None:
+                        name = result.name
                     else:
                         name = "Unknown CAT"
                     unit = units["cat"]
@@ -529,7 +536,7 @@ async def make_offer(
                             id = info.launcher_id.hex()
                             assert isinstance(id, str)
                             if item in requests:
-                                driver_dict[id] = {
+                                puzzle_info_dict: dict[str, Any] = {
                                     "type": "singleton",
                                     "launcher_id": "0x" + id,
                                     "launcher_ph": "0x" + info.launcher_puzhash.hex(),
@@ -542,7 +549,7 @@ async def make_offer(
                                 if info.supports_did:
                                     assert info.royalty_puzzle_hash is not None
                                     assert info.royalty_percentage is not None
-                                    driver_dict[id]["also"]["also"] = {
+                                    puzzle_info_dict["also"]["also"] = {
                                         "type": "ownership",
                                         "owner": "()",
                                         "transfer_program": {
@@ -559,17 +566,18 @@ async def make_offer(
                                             info.royalty_percentage,
                                         )
                                     )
+                                driver_dict[info.launcher_id] = PuzzleInfo(puzzle_info_dict)
                         else:
                             id = decode_puzzle_hash(name).hex()
                             assert hrp is not None
                             unit = units[hrp]
                     except ValueError:
-                        id = uint32(name)
-                        if id == 1:
+                        id = str(uint32(name))
+                        if id == "1":
                             name = "XCH"
                             unit = units["chia"]
                         else:
-                            name = await wallet_client.get_cat_name(id)
+                            name = (await wallet_client.get_cat_name(CATGetName(uint32(name)))).name
                             unit = units["cat"]
                         if item in offers:
                             fungible_assets.append(FungibleAsset(name, uint64(abs(int(Decimal(amount) * unit)))))
@@ -579,7 +587,7 @@ async def make_offer(
                     print("Not creating offer: Cannot offer and request the same asset in a trade")
                     break
                 else:
-                    offer_dict[id] = int(Decimal(amount) * unit) * multiplier
+                    offer_dict[id] = str(int(Decimal(amount) * unit) * multiplier)
             else:
                 print("Creating Offer")
                 print("--------------")
@@ -636,9 +644,11 @@ async def make_offer(
 
                 with filepath.open(mode="w") as file:
                     res = await wallet_client.create_offer_for_ids(
-                        offer_dict,
-                        driver_dict=driver_dict,
-                        fee=fee,
+                        CreateOfferForIDs(
+                            offer=offer_dict,
+                            driver_dict=driver_dict,
+                            fee=fee,
+                        ),
                         tx_config=CMDTXConfigLoader(
                             reuse_puzhash=reuse_puzhash,
                         ).to_tx_config(units["chia"], config, fingerprint),
@@ -677,10 +687,10 @@ async def print_offer_summary(
                     description = " [Typically represents change returned from the included fee]"
             else:
                 unit = units["cat"]
-                result = await cat_name_resolver(bytes32.from_hexstr(asset_id))
-                if result is not None:
-                    wid = str(result[0])
-                    name = result[1]
+                result = await cat_name_resolver(CATAssetIDToName(bytes32.from_hexstr(asset_id)))
+                if result.name is not None:
+                    wid = str(result.wallet_id)
+                    name = result.name
         output: str = f"    - {name}"
         mojo_str: str = f"{mojo_amount} {'mojo' if mojo_amount == 1 else 'mojos'}"
         if len(wid) > 0:
@@ -843,9 +853,9 @@ async def take_offer(
                     if fungible_asset_id is None:
                         nft_royalty_currency = network_xch
                     else:
-                        result = await wallet_client.cat_asset_id_to_name(fungible_asset_id)
-                        if result is not None:
-                            nft_royalty_currency = result[1]
+                        result = await wallet_client.cat_asset_id_to_name(CATAssetIDToName(fungible_asset_id))
+                        if result.name is not None:
+                            nft_royalty_currency = result.name
                     fungible_assets.append(
                         FungibleAsset(nft_royalty_currency, uint64(requested[fungible_asset_id_str]))
                     )
@@ -1576,19 +1586,25 @@ async def send_notification(
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         amount: uint64 = cli_amount.convert_amount(units["chia"])
 
-        tx = await wallet_client.send_notification(
-            address.puzzle_hash,
-            message,
-            amount,
-            fee,
-            push=push,
+        response = await wallet_client.send_notification(
+            SendNotification(
+                address.puzzle_hash,
+                message,
+                amount,
+                fee=fee,
+                push=push,
+            ),
+            tx_config=DEFAULT_TX_CONFIG,
             timelock_info=condition_valid_times,
         )
 
         if push:
             print("Notification sent successfully.")
-            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx.name}")
-        return [tx]
+            print(
+                "To get status, use command: chia wallet get_transaction"
+                f" -f {fingerprint} -tx 0x{response.transactions[0].name}"
+            )
+        return response.transactions
 
 
 async def get_notifications(

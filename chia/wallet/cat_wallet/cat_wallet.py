@@ -683,7 +683,7 @@ class CATWallet:
                 cat_condition = UnknownCondition(
                     opcode=Program.to(51),
                     args=[
-                        Program.to(None),
+                        Program.NIL,
                         Program.to(-113),
                         tail_reveal,
                         tail_solution,

@@ -80,6 +80,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
+    # TODO: todo_v2_plots finalize fork height
     HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
     # starting at the hard fork 2 height, v1 plots will gradually be phased out,
     # and stop working entirely after this many blocks
@@ -91,11 +92,11 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
     PLOT_STRENGTH_INITIAL=uint8(2),
-    PLOT_STRENGTH_4_HEIGHT=uint32(0xFFFFFFFB),
-    PLOT_STRENGTH_5_HEIGHT=uint32(0xFFFFFFFC),
-    PLOT_STRENGTH_6_HEIGHT=uint32(0xFFFFFFFD),
-    PLOT_STRENGTH_7_HEIGHT=uint32(0xFFFFFFFE),
-    PLOT_STRENGTH_8_HEIGHT=uint32(0xFFFFFFFF),
+    QUALITY_PROOF_SCAN_FILTER=uint8(5),
+    # TODO: todo_v2_plots finalize plot filter schedule
+    PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
+    PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
+    PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),
 )
 
 
@@ -110,3 +111,6 @@ def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None
     if network_id in {"testnet11", "testneta"}:
         if "MIN_PLOT_SIZE_V2" not in overrides:
             overrides["MIN_PLOT_SIZE_V2"] = 18
+    if network_id == "testneta":
+        if "HARD_FORK_HEIGHT" not in overrides:
+            overrides["HARD_FORK_HEIGHT"] = 3693395

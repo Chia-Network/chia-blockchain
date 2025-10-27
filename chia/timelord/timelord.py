@@ -511,7 +511,7 @@ class Timelord:
                 to_remove.append((signage_iter, signage_point_index))
 
                 self.proofs_finished = self._clear_proof_list(signage_iter)
-                # Send the next 3 signage point to the chains.
+                # Send the next 10 signage point to the chains.
                 next_iters_count = 0
                 for next_sp, k in self.signage_point_iters:
                     for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN]:

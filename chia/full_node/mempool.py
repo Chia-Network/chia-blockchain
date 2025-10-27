@@ -67,7 +67,7 @@ MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
 @dataclass
 class MempoolRemoveInfo:
-    items: list[InternalMempoolItem]
+    items: dict[bytes32, InternalMempoolItem]
     reason: MempoolRemoveReason
 
 
@@ -158,7 +158,7 @@ class Mempool:
         item = self._items[name]
 
         return MempoolItem(
-            item.spend_bundle,
+            item.aggregated_signature,
             uint64(fee),
             item.conds,
             name,
@@ -340,7 +340,7 @@ class Mempool:
         Removes an item from the mempool.
         """
         if items == []:
-            return MempoolRemoveInfo([], reason)
+            return MempoolRemoveInfo({}, reason)
 
         removed_items: list[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
@@ -356,7 +356,7 @@ class Mempool:
                         item = MempoolItemInfo(int(row[1]), int(row[2]), internal_item.height_added_to_mempool)
                         removed_items.append(item)
 
-        removed_internal_items = [self._items.pop(name) for name in items]
+        removed_internal_items = {name: self._items.pop(name) for name in items}
 
         for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))
@@ -481,7 +481,7 @@ class Mempool:
             conn.executemany("INSERT OR IGNORE INTO spends VALUES(?, ?)", all_coin_spends)
 
         self._items[item_name] = InternalMempoolItem(
-            item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
+            item.aggregated_signature, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
         )
         self._total_cost += item.cost
         self._total_fee += item.fee
@@ -611,7 +611,7 @@ class Mempool:
                     # might fit, but we also want to avoid spending too much
                     # time on potentially expensive ones, hence this shortcut.
                     if any(
-                        sd.eligible_for_dedup or sd.eligible_for_fast_forward for sd in item.bundle_coin_spends.values()
+                        sd.eligible_for_dedup or sd.supports_fast_forward for sd in item.bundle_coin_spends.values()
                     ):
                         log.info(f"Skipping transaction with dedup or FF spends {name}")
                         continue
@@ -653,7 +653,7 @@ class Mempool:
                     break
                 coin_spends.extend(unique_coin_spends)
                 additions.extend(unique_additions)
-                sigs.append(item.spend_bundle.aggregated_signature)
+                sigs.append(item.aggregated_signature)
                 cost_sum = new_cost_sum
                 fee_sum = new_fee_sum
                 processed_spend_bundles += 1
@@ -761,7 +761,7 @@ class Mempool:
                         break
 
                 batch_cost += cost - cost_saving
-                batch_transactions.append(SpendBundle(unique_coin_spends, item.spend_bundle.aggregated_signature))
+                batch_transactions.append(SpendBundle(unique_coin_spends, item.aggregated_signature))
                 batch_spends += len(unique_coin_spends)
                 batch_additions.extend(unique_additions)
                 fee_sum = new_fee_sum

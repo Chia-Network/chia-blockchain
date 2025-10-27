@@ -245,7 +245,7 @@ class CreateCoin(Condition):
             uint64(program.at("rrf").as_int()),
             (
                 None
-                if potential_memos == Program.to(None)
+                if potential_memos == Program.NIL
                 else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
             ),
         )
@@ -516,7 +516,7 @@ class MessageParticipant(Streamable):
         amount_committed: Optional[uint64] = None
         # This loop probably looks a little strange
         # It's trying to account for the fact that the arguments may be any 1 or 2 of these arguments in this order
-        # Not sure of a more elgant way to do it
+        # Not sure of a more elegant way to do it
         original_mode = mode
         for arg in args:
             if mode & 0b100:
@@ -966,9 +966,7 @@ class UnknownCondition(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> UnknownCondition:
-        return cls(
-            program.at("f"), [] if program.at("r") == Program.to(None) else [p for p in program.at("r").as_iter()]
-        )
+        return cls(program.at("f"), [] if program.at("r") == Program.NIL else [p for p in program.at("r").as_iter()])
 
 
 # Abstractions
@@ -1472,9 +1470,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
         elif isinstance(condition, Timelock):
             timelock = condition
         else:
-            # Something about python 3.9 makes this be not covered but on 3.10+ it is covered
-            # https://github.com/nedbat/coveragepy/issues/1530
-            continue  # pragma: no cover
+            continue
 
         properties_left = properties.copy()
         min_not_max: bool = True

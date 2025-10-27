@@ -11,7 +11,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
-from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
+from chia._tests.util.setup_nodes import setup_farmer_solver_multi_harvester
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_api import FarmerAPI
 from chia.farmer.farmer_rpc_client import FarmerRpcClient
@@ -60,7 +60,7 @@ async def farmer_harvester_with_filter_size_9(
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
-    async with setup_farmer_multi_harvester(
+    async with setup_farmer_solver_multi_harvester(
         local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
     ) as (harvesters, farmer_service, _):
         harvester_service = harvesters[0]

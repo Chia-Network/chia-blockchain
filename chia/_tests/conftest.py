@@ -92,7 +92,7 @@ from pathlib import Path
 from chia_rs.sized_ints import uint128
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
-from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
+from chia._tests.util.setup_nodes import setup_farmer_solver_multi_harvester
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
@@ -230,9 +230,11 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
 
 
 @pytest.fixture(scope="session", name="bt")
-async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend) -> BlockTools:
+async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend, testrun_uid: str) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    shared_block_tools = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
+    shared_block_tools = await create_block_tools_async(
+        constants=blockchain_constants, keychain=get_keychain, testrun_uid=testrun_uid
+    )
     return shared_block_tools
 
 
@@ -866,7 +868,7 @@ async def farmer_one_harvester_simulator_wallet(
     ]
 ]:
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as (nodes, wallets, bt):
-        async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
+        async with setup_farmer_solver_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
             harvester_services,
             farmer_service,
             _,
@@ -879,7 +881,9 @@ FarmerOneHarvester = tuple[list[HarvesterService], FarmerService, BlockTools]
 
 @pytest.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[FarmerOneHarvester]:
-    async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True) as _:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True
+    ) as _:
         yield _
 
 
@@ -890,13 +894,11 @@ FarmerOneHarvesterSolver = tuple[list[HarvesterService], FarmerService, SolverSe
 async def farmer_one_harvester_solver(
     tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[FarmerOneHarvesterSolver]:
-    async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True) as (
-        harvester_services,
-        farmer_service,
-        bt,
-    ):
-        farmer_peer = UnresolvedPeerInfo(bt.config["self_hostname"], farmer_service._server.get_port())
-        async with setup_solver(tmp_path / "solver", bt, bt.constants, farmer_peer=farmer_peer) as solver_service:
+    async with setup_solver(tmp_path / "solver", get_b_tools, get_b_tools.constants) as solver_service:
+        solver_peer = UnresolvedPeerInfo(get_b_tools.config["self_hostname"], solver_service._server.get_port())
+        async with setup_farmer_solver_multi_harvester(
+            get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True, solver_peer=solver_peer
+        ) as (harvester_services, farmer_service, bt):
             yield harvester_services, farmer_service, solver_service, bt
 
 
@@ -904,7 +906,9 @@ async def farmer_one_harvester_solver(
 async def farmer_one_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
-    async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False) as _:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False
+    ) as _:
         yield _
 
 
@@ -912,7 +916,9 @@ async def farmer_one_harvester_not_started(
 async def farmer_two_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
-    async with setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False) as _:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False
+    ) as _:
         yield _
 
 
@@ -920,7 +926,9 @@ async def farmer_two_harvester_not_started(
 async def farmer_three_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
-    async with setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False) as _:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False
+    ) as _:
         yield _
 
 
@@ -944,13 +952,17 @@ def get_temp_keyring():
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools_1(get_temp_keyring):
-    return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+async def get_b_tools_1(get_temp_keyring, testrun_uid: str):
+    return await create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    )
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools(get_temp_keyring):
-    local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+async def get_b_tools(get_temp_keyring, testrun_uid):
+    local_b_tools = await create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
     return local_b_tools
@@ -1252,7 +1264,9 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 
 @pytest.fixture(scope="function")
 async def farmer_harvester_2_simulators_zero_bits_plot_filter(
-    tmp_path: Path, get_temp_keyring: Keychain
+    tmp_path: Path,
+    get_temp_keyring: Keychain,
+    testrun_uid,
 ) -> AsyncIterator[
     tuple[
         FarmerService,
@@ -1271,6 +1285,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         bt = await create_block_tools_async(
             zero_bit_plot_filter_consts,
             keychain=get_temp_keyring,
+            testrun_uid=testrun_uid,
         )
 
         config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
@@ -1283,6 +1298,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                 num_pool_plots=0,
                 num_non_keychain_plots=0,
                 config_overrides=config_overrides,
+                testrun_uid=testrun_uid,
             )
             for _ in range(2)
         ]
@@ -1301,10 +1317,13 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             )
             for index in range(len(bts))
         ]
-
-        [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
-            setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
-        )
+        async with setup_solver(tmp_path / "solver", bt, bt.constants) as solver_service:
+            solver_peer = UnresolvedPeerInfo(bt.config["self_hostname"], solver_service._server.get_port())
+            [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
+                setup_farmer_solver_multi_harvester(
+                    bt, 1, tmp_path, bt.constants, start_services=True, solver_peer=solver_peer
+                )
+            )
 
         yield farmer_service, harvester_service, simulators[0], simulators[1], bt
 

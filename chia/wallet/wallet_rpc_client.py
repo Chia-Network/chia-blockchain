@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
@@ -24,13 +23,25 @@ from chia.wallet.wallet_request_types import (
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetAssetID,
+    CATGetAssetIDResponse,
+    CATGetName,
+    CATGetNameResponse,
+    CATSetName,
+    CATSetNameResponse,
+    CATSpend,
     CATSpendResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
+    CheckOfferValidity,
+    CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    CreateOfferForIDs,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
     DeleteKey,
@@ -102,6 +113,7 @@ from chia.wallet.wallet_request_types import (
     GetPublicKeysResponse,
     GetSpendableCoins,
     GetSpendableCoinsResponse,
+    GetStrayCATsResponse,
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
@@ -162,6 +174,8 @@ from chia.wallet.wallet_request_types import (
     PWStatusResponse,
     SelectCoins,
     SelectCoinsResponse,
+    SendNotification,
+    SendNotificationResponse,
     SendTransaction,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -622,111 +636,47 @@ class WalletRpcClient(RpcClient):
         request = {"wallet_type": "cat_wallet", "asset_id": asset_id.hex(), "mode": "existing"}
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_asset_id(self, wallet_id: int) -> bytes32:
-        request = {"wallet_id": wallet_id}
-        return bytes32.from_hexstr((await self.fetch("cat_get_asset_id", request))["asset_id"])
+    async def get_cat_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
+        return CATGetAssetIDResponse.from_json_dict(await self.fetch("cat_get_asset_id", request.to_json_dict()))
 
-    async def get_stray_cats(self) -> list[dict[str, Any]]:
-        response = await self.fetch("get_stray_cats", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(list[dict[str, Any]], response["stray_cats"])
+    async def get_stray_cats(self) -> GetStrayCATsResponse:
+        return GetStrayCATsResponse.from_json_dict(await self.fetch("get_stray_cats", {}))
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
-        request = {"asset_id": asset_id.hex()}
-        try:
-            res = await self.fetch("cat_asset_id_to_name", request)
-        except ValueError:  # This happens if the asset_id is unknown
-            return None
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+        return CATAssetIDToNameResponse.from_json_dict(await self.fetch("cat_asset_id_to_name", request.to_json_dict()))
 
-        wallet_id: Optional[uint32] = None if res["wallet_id"] is None else uint32(res["wallet_id"])
-        return wallet_id, res["name"]
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        return CATGetNameResponse.from_json_dict(await self.fetch("cat_get_name", request.to_json_dict()))
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("cat_get_name", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(str, response["name"])
-
-    async def set_cat_name(self, wallet_id: int, name: str) -> None:
-        request: dict[str, Any] = {
-            "wallet_id": wallet_id,
-            "name": name,
-        }
-        await self.fetch("cat_set_name", request)
+    async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
+        return CATSetNameResponse.from_json_dict(await self.fetch("cat_set_name", request.to_json_dict()))
 
     async def cat_spend(
         self,
-        wallet_id: int,
+        request: CATSpend,
         tx_config: TXConfig,
-        amount: Optional[uint64] = None,
-        inner_address: Optional[str] = None,
-        fee: uint64 = uint64(0),
-        memos: Optional[list[str]] = None,
-        additions: Optional[list[dict[str, Any]]] = None,
-        removals: Optional[list[Coin]] = None,
-        cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> CATSpendResponse:
-        send_dict: dict[str, Any] = {
-            "wallet_id": wallet_id,
-            "fee": fee,
-            "memos": memos if memos is not None else [],
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if amount is not None and inner_address is not None:
-            send_dict["amount"] = amount
-            send_dict["inner_address"] = inner_address
-        elif additions is not None:
-            additions_hex = []
-            for ad in additions:
-                additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
-                if "memos" in ad:
-                    additions_hex[-1]["memos"] = ad["memos"]
-            send_dict["additions"] = additions_hex
-        else:
-            raise ValueError("Must specify either amount and inner_address or additions")
-        if removals is not None and len(removals) > 0:
-            send_dict["coins"] = [c.to_json_dict() for c in removals]
-        if cat_discrepancy is not None:
-            send_dict["extra_delta"] = cat_discrepancy[0]
-            send_dict["tail_reveal"] = bytes(cat_discrepancy[1]).hex()
-            send_dict["tail_solution"] = bytes(cat_discrepancy[2]).hex()
-        res = await self.fetch("cat_spend", send_dict)
-        return json_deserialize_with_clvm_streamable(res, CATSpendResponse)
+        return CATSpendResponse.from_json_dict(
+            await self.fetch(
+                "cat_spend", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     # Offers
     async def create_offer_for_ids(
         self,
-        offer_dict: dict[Union[uint32, str], int],
+        request: CreateOfferForIDs,
         tx_config: TXConfig,
-        driver_dict: Optional[dict[str, Any]] = None,
-        solver: Optional[dict[str, Any]] = None,
-        fee: int = 0,
-        validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> CreateOfferForIDsResponse:
-        send_dict: dict[str, int] = {str(key): value for key, value in offer_dict.items()}
-
-        req = {
-            "offer": send_dict,
-            "validate_only": validate_only,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if driver_dict is not None:
-            req["driver_dict"] = driver_dict
-        if solver is not None:
-            req["solver"] = solver
-        res = await self.fetch("create_offer_for_ids", req)
-        return json_deserialize_with_clvm_streamable(res, CreateOfferForIDsResponse)
+        return CreateOfferForIDsResponse.from_json_dict(
+            await self.fetch(
+                "create_offer_for_ids", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def get_offer_summary(
         self, offer: Offer, advanced: bool = False
@@ -734,9 +684,10 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
         return bytes32.from_hexstr(res["id"]), res["summary"]
 
-    async def check_offer_validity(self, offer: Offer) -> tuple[bytes32, bool]:
-        res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
-        return bytes32.from_hexstr(res["id"]), res["valid"]
+    async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
+        return CheckOfferValidityResponse.from_json_dict(
+            await self.fetch("check_offer_validity", request.to_json_dict())
+        )
 
     async def take_offer(
         self,
@@ -1088,27 +1039,16 @@ class WalletRpcClient(RpcClient):
 
     async def send_notification(
         self,
-        target: bytes32,
-        msg: bytes,
-        amount: uint64,
-        fee: uint64 = uint64(0),
+        request: SendNotification,
+        tx_config: TXConfig,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
-    ) -> TransactionRecord:
-        response = await self.fetch(
-            "send_notification",
-            {
-                "target": target.hex(),
-                "message": msg.hex(),
-                "amount": amount,
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **timelock_info.to_json_dict(),
-            },
+    ) -> SendNotificationResponse:
+        return SendNotificationResponse.from_json_dict(
+            await self.fetch(
+                "send_notification", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-        return TransactionRecord.from_json_dict(response["tx"])
 
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         return SignMessageByAddressResponse.from_json_dict(

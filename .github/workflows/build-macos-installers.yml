@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
         os:
           - runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
             name: intel
@@ -176,10 +176,10 @@ jobs:
 
       - uses: chia-network/actions/activate-venv@main
 
-      - name: Setup Node 20.x
-        uses: actions/setup-node@v4
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
         with:
-          node-version: "20.x"
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Prepare GUI cache
         id: gui-ref
@@ -242,7 +242,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: macos
                 file-type:
@@ -322,7 +322,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         id: download
         with:
           name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}

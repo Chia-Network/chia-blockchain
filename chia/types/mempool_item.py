@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from chia_rs import CoinSpend, SpendBundle, SpendBundleConditions
+from chia_rs import CoinSpend, G2Element, SpendBundle, SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -22,7 +22,6 @@ class UnspentLineageInfo:
 class BundleCoinSpend:
     coin_spend: CoinSpend
     eligible_for_dedup: bool
-    eligible_for_fast_forward: bool
     additions: list[Coin]
     # cost on the specific solution in this item. The cost includes execution
     # cost and conditions cost, not byte-cost.
@@ -32,12 +31,16 @@ class BundleCoinSpend:
     # current unspent lineage belonging to this singleton, that we would rebase
     # this spend on top of if we were to make a block now
     # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
-    latest_singleton_lineage: Optional[UnspentLineageInfo] = None
+    latest_singleton_lineage: Optional[UnspentLineageInfo]
+
+    @property
+    def supports_fast_forward(self) -> bool:
+        return self.latest_singleton_lineage is not None
 
 
 @dataclass(frozen=True)
 class MempoolItem:
-    spend_bundle: SpendBundle
+    aggregated_signature: G2Element
     fee: uint64
     conds: SpendBundleConditions
     spend_bundle_name: bytes32
@@ -84,11 +87,11 @@ class MempoolItem:
 
     @property
     def removals(self) -> list[Coin]:
-        return self.spend_bundle.removals()
+        return [bcs.coin_spend.coin for bcs in self.bundle_coin_spends.values()]
 
     def to_json_dict(self) -> dict[str, Any]:
         return {
-            "spend_bundle": recurse_jsonify(self.spend_bundle),
+            "spend_bundle": recurse_jsonify(self.to_spend_bundle()),
             "fee": recurse_jsonify(self.fee),
             "npc_result": {"Error": None, "conds": recurse_jsonify(self.conds)},
             "cost": recurse_jsonify(self.cost),
@@ -96,3 +99,6 @@ class MempoolItem:
             "additions": recurse_jsonify(self.additions),
             "removals": recurse_jsonify(self.removals),
         }
+
+    def to_spend_bundle(self) -> SpendBundle:
+        return SpendBundle([bcs.coin_spend for bcs in self.bundle_coin_spends.values()], self.aggregated_signature)

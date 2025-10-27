@@ -26,10 +26,10 @@ from chia._tests.cmds.wallet.test_consts import (
 )
 from chia.cmds.cmds_util import TransactionBundle
 from chia.protocols.outbound_message import NodeType
-from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -43,8 +43,14 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
     BalanceResponse,
     CancelOfferResponse,
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATSetName,
+    CATSetNameResponse,
+    CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
+    CreateOfferForIDs,
     CreateOfferForIDsResponse,
     DeleteUnconfirmedTransactions,
     ExtendDerivationIndex,
@@ -74,6 +80,29 @@ from chia.wallet.wallet_request_types import (
     WalletInfoResponse,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+TEMP = PuzzleInfo(
+    {
+        "type": "singleton",
+        "launcher_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+        "launcher_ph": "0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
+        "also": {
+            "type": "metadata",
+            "metadata": "",
+            "updater_hash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+            "also": {
+                "type": "ownership",
+                "owner": "()",
+                "transfer_program": {
+                    "type": "royalty transfer program",
+                    "launcher_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+                    "royalty_address": "0x0303030303030303030303030303030303030303030303030303030303030303",
+                    "royalty_percentage": "1000",
+                },
+            },
+        },
+    }
+)
 
 test_offer_file_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("test_offer.toffer")
 test_offer_file_bech32 = test_offer_file_path.read_text(encoding="utf-8")
@@ -381,31 +410,24 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
         async def cat_spend(
             self,
-            wallet_id: int,
+            request: CATSpend,
             tx_config: TXConfig,
-            amount: Optional[uint64] = None,
-            inner_address: Optional[str] = None,
-            fee: uint64 = uint64(0),
-            memos: Optional[list[str]] = None,
-            additions: Optional[list[dict[str, Any]]] = None,
-            removals: Optional[list[Coin]] = None,
-            cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CATSpendResponse:
             self.add_to_log(
                 "cat_spend",
                 (
-                    wallet_id,
+                    request.wallet_id,
                     tx_config,
-                    amount,
-                    inner_address,
-                    fee,
-                    memos,
-                    additions,
-                    removals,
-                    cat_discrepancy,
-                    push,
+                    request.amount,
+                    request.inner_address,
+                    request.fee,
+                    request.memos,
+                    request.additions,
+                    request.coins,
+                    request.cat_discrepancy,
+                    request.push,
                     timelock_info,
                 ),
             )
@@ -683,8 +705,9 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
             self.add_to_log("create_wallet_for_existing_cat", (asset_id,))
             return {"wallet_id": 3}
 
-        async def set_cat_name(self, wallet_id: int, name: str) -> None:
-            self.add_to_log("set_cat_name", (wallet_id, name))
+        async def set_cat_name(self, request: CATSetName) -> CATSetNameResponse:
+            self.add_to_log("set_cat_name", (request.wallet_id, request.name))
+            return CATSetNameResponse(wallet_id=request.wallet_id)
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -765,17 +788,22 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     class MakeOfferRpcClient(TestWalletRpcClient):
         async def create_offer_for_ids(
             self,
-            offer_dict: dict[uint32, int],
+            request: CreateOfferForIDs,
             tx_config: TXConfig,
-            driver_dict: Optional[dict[str, Any]] = None,
-            solver: Optional[dict[str, Any]] = None,
-            fee: uint64 = uint64(0),
-            validate_only: bool = False,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CreateOfferForIDsResponse:
             self.add_to_log(
                 "create_offer_for_ids",
-                (offer_dict, tx_config, driver_dict, solver, fee, validate_only, timelock_info),
+                (
+                    request.offer,
+                    tx_config,
+                    request.driver_dict,
+                    request.solver,
+                    request.fee,
+                    request.validate_only,
+                    timelock_info,
+                ),
             )
 
             created_offer = Offer({}, WalletSpendBundle([], G2Element()), {})
@@ -868,35 +896,39 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "create_offer_for_ids": [
             (
                 {
-                    1: -10000000000000,
-                    3: -100000,
-                    "0404040404040404040404040404040404040404040404040404040404040404": -100000,
-                    "0202020202020202020202020202020202020202020202020202020202020202": 10000,
-                    "0101010101010101010101010101010101010101010101010101010101010101": 1,
+                    "1": "-10000000000000",
+                    "3": "-100000",
+                    "0404040404040404040404040404040404040404040404040404040404040404": "-100000",
+                    "0202020202020202020202020202020202020202020202020202020202020202": "10000",
+                    "0101010101010101010101010101010101010101010101010101010101010101": "1",
                 },
                 DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
                 {
-                    "0101010101010101010101010101010101010101010101010101010101010101": {
-                        "type": "singleton",
-                        "launcher_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
-                        "launcher_ph": "0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
-                        "also": {
-                            "type": "metadata",
-                            "metadata": "",
-                            "updater_hash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+                    bytes32([1] * 32): PuzzleInfo(
+                        {
+                            "type": "singleton",
+                            "launcher_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+                            "launcher_ph": "0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
                             "also": {
-                                "type": "ownership",
-                                "owner": "()",
-                                "transfer_program": {
-                                    "type": "royalty transfer program",
-                                    "launcher_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
-                                    "royalty_address": "0x0303030303030303030303030303030303030303030"
-                                    "303030303030303030303",
-                                    "royalty_percentage": "1000",
+                                "type": "metadata",
+                                "metadata": "",
+                                "updater_hash": "0x0707070707070707070707070707070707070707070707070707070707070707",
+                                "also": {
+                                    "type": "ownership",
+                                    "owner": "()",
+                                    "transfer_program": {
+                                        "type": "royalty transfer program",
+                                        "launcher_id": (
+                                            "0x0101010101010101010101010101010101010101010101010101010101010101"
+                                        ),
+                                        "royalty_address": "0x0303030303030303030303030303030303030303030"
+                                        "303030303030303030303",
+                                        "royalty_percentage": "1000",
+                                    },
                                 },
                             },
-                        },
-                    }
+                        }
+                    )
                 },
                 None,
                 500000000000,
@@ -1051,14 +1083,14 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 ),
             )
 
-        async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
-            self.add_to_log("cat_asset_id_to_name", (asset_id,))
-            if asset_id == cat_offered_id:
-                return uint32(2), "offered cat"
-            elif asset_id == cat_requested_id:
-                return uint32(3), "requested cat"
+        async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
+            self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
+            if request.asset_id == cat_offered_id:
+                return CATAssetIDToNameResponse(uint32(2), "offered cat")
+            elif request.asset_id == cat_requested_id:
+                return CATAssetIDToNameResponse(uint32(3), "requested cat")
             else:
-                return None
+                return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
     inst_rpc_client = TakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
