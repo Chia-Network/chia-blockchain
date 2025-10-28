@@ -172,7 +172,7 @@ jobs:
           bash build_linux_rpm-2-installer.sh amd64
 
       - name: Upload fpm-generated rpm spec files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           if-no-files-found: error
           name: spec
@@ -181,7 +181,7 @@ jobs:
             build_scripts/dist/gui.spec
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: chia-installers-linux-rpm-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
