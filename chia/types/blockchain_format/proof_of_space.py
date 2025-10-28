@@ -4,7 +4,7 @@ import logging
 from typing import Optional, cast
 
 from bitstring import BitArray
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotSize, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotSize, PrivateKey, ProofOfSpace, validate_proof_v2
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
@@ -12,22 +12,6 @@ from chiapos import Verifier
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
-
-# These are temporary stubs for chiapos2, that we build against until it's ready to be integrated.
-
-
-# returns quality string for v2 plot, or None if invalid
-def validate_proof_v2(
-    plot_id: bytes32, size: uint8, required_plot_strength: uint8, challenge: bytes32, proof: bytes
-) -> Optional[bytes32]:
-    # TODO: todo_v2_plots call into new chiapos library
-    raise NotImplementedError
-
-
-# given a partial proof, computes the quality. This is used to compute required iters.
-def quality_for_partial_proof(partial_proof: bytes, challenge: bytes32) -> bytes32:
-    # TODO: todo_v2_plots call into new chiapos library
-    return std_hash(partial_proof + challenge)
 
 
 def make_pos(
@@ -115,7 +99,7 @@ def verify_and_get_quality_string(
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
-        log.error("Calculated pos challenge doesn't match the provided one")
+        log.error(f"Calculated pos challenge doesn't match the provided one {new_challenge}")
         return None
 
     # we use different plot filter prefix sizes depending on v1 or v2 plots
@@ -137,7 +121,12 @@ def verify_and_get_quality_string(
         assert plot_size.size_v2 is not None
 
         return validate_proof_v2(
-            plot_id, plot_size.size_v2, constants.PLOT_STRENGTH_INITIAL, pos.challenge, bytes(pos.proof)
+            plot_id,
+            plot_size.size_v2,
+            pos.challenge,
+            constants.PLOT_STRENGTH_INITIAL,
+            constants.QUALITY_PROOF_SCAN_FILTER,
+            pos.proof,
         )
 
 
