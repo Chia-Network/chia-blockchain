@@ -13,6 +13,7 @@ from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSe
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.block_versioning import full_block_from_bytes
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -23,7 +24,9 @@ log = logging.getLogger(__name__)
 
 
 def decompress(block_bytes: bytes) -> FullBlock:
-    return FullBlock.from_bytes(zstd.decompress(block_bytes))
+    # Uses versioned deserialization to handle both v1 and v2 formats
+    # we can do this better, we can know the hight and therefore the version
+    return full_block_from_bytes(zstd.decompress(block_bytes))
 
 
 def compress(block: FullBlock) -> bytes:

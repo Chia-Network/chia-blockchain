@@ -7,6 +7,7 @@ from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpoch
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.types.blockchain_format.vdf import VDFInfo
 
 
@@ -15,6 +16,8 @@ class StubMMRManager:
     Stub MMR manager for test mocks that cannot compute full MMR roots.
     Used in tests where MMR validation may be skipped or not relevant.
     """
+    _protocol_check: ClassVar[MMRManagerProtocol] = cast("StubMMRManager", None)
+
 
     def get_mmr_root_at_height(self, height: uint32) -> bytes32:
         # Return empty bytes for test contexts
@@ -27,6 +30,10 @@ class StubMMRManager:
         # No-op for stub manager
         pass
 
+    def copy(self) -> "StubMMRManager":
+        # Return a new instance (stateless)
+        return StubMMRManager()
+
 
 # implements BlockchainInterface
 class BlockchainMock:
@@ -35,7 +42,7 @@ class BlockchainMock:
 
         _protocol_check: ClassVar[BlocksProtocol] = cast("BlockchainMock", None)
 
-    mmr_manager: StubMMRManager
+    mmr_manager: MMRManagerProtocol
 
     def __init__(
         self,

@@ -31,6 +31,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.fork_hash_utils import get_reward_chain_block_hash_with_fork_validation
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -426,6 +427,7 @@ def unfinished_block_to_full_block(
     total_iters_sp: uint128,
     difficulty: uint64,
     header_mmr_root: bytes32,
+    constants: ConsensusConstants,
 ) -> FullBlock:
     """
     Converts an unfinished block to a finished block. Includes all the infusion point VDFs as well as tweaking
@@ -486,8 +488,14 @@ def unfinished_block_to_full_block(
         is_transaction_block,
         header_mmr_root,
     )
+
+    # Compute reward chain block hash with fork validation
+    reward_block_hash = get_reward_chain_block_hash_with_fork_validation(
+        reward_chain_block, constants.HARD_FORK2_HEIGHT
+    )
+
     if prev_block is None:
-        new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_chain_block.get_hash())
+        new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_block_hash)
     else:
         if is_transaction_block:
             new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
@@ -497,7 +505,7 @@ def unfinished_block_to_full_block(
             new_fbs = None
         assert (new_fbh is None) == (new_fbs is None)
         new_foliage = unfinished_block.foliage.replace(
-            reward_block_hash=reward_chain_block.get_hash(),
+            reward_block_hash=reward_block_hash,
             prev_block_hash=prev_block.header_hash,
             foliage_transaction_block_hash=new_fbh,
             foliage_transaction_block_signature=new_fbs,
@@ -532,7 +540,7 @@ def unfinished_block_to_full_block_with_mmr(
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
-    
+    constants: ConsensusConstants,
 ) -> FullBlock:
     """
     Wrapper around unfinished_block_to_full_block that automatically computes the MMR root.
@@ -563,4 +571,5 @@ def unfinished_block_to_full_block_with_mmr(
         total_iters_sp,
         difficulty,
         header_mmr_root,
+        constants,
     )

@@ -845,7 +845,7 @@ class BlockTools:
             height_to_hash = self._block_cache_height_to_hash
             difficulty = self._block_cache_difficulty
             blocks = self._block_cache
-        else:            
+        else:
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
@@ -1718,7 +1718,7 @@ def finish_block(
     sub_slot_iters: uint64,
     difficulty: uint64,
     mmr_manager:BlockchainMMRManager,
-    normalized_to_identity_cc_ip: bool = False,    
+    normalized_to_identity_cc_ip: bool = False,
 ) -> tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge

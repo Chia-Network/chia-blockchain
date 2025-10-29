@@ -16,11 +16,13 @@ from chia_rs import (
     ConsensusConstants,
     EndOfSubSlotBundle,
     HeaderBlock,
+    HeaderBlockOld,
     RewardChainSubSlot,
     SubEpochChallengeSegment,
     SubEpochData,
     SubEpochSegments,
     SubEpochSummary,
+    SubEpochSummaryOld,
     SubSlotData,
 )
 from chia_rs.sized_bytes import bytes32
@@ -103,7 +105,9 @@ class WeightProofHandler:
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_height:
                 break
-            ses = self.blockchain.get_ses(ses_height)
+            ses_new = self.blockchain.get_ses(ses_height)
+            # Convert new format to old format for weight proof
+            ses = ses_new.to_old()
             log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
@@ -183,8 +187,8 @@ class WeightProofHandler:
         seed = ses.get_hash()
         return seed
 
-    async def _get_recent_chain(self, tip_height: uint32) -> Optional[list[HeaderBlock]]:
-        recent_chain: list[HeaderBlock] = []
+    async def _get_recent_chain(self, tip_height: uint32) -> Optional[list[HeaderBlockOld]]:
+        recent_chain: list[HeaderBlockOld] = []
         ses_heights = self.blockchain.get_ses_heights()
         min_height = 0
         count_ses = 0
@@ -195,7 +199,9 @@ class WeightProofHandler:
                 min_height = ses_height - 1
                 break
         log.debug(f"start {min_height} end {tip_height}")
-        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
+        headers_new = await self.blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
+        # Convert new format headers to old format for weight proof
+        headers = {h: hb.to_old() for h, hb in headers_new.items()}
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0
         curr_height = tip_height
@@ -301,10 +307,12 @@ class WeightProofHandler:
         blocks = await self.blockchain.get_block_records_in_range(
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
-        header_blocks = await self.blockchain.get_header_blocks_in_range(
+        header_blocks_new = await self.blockchain.get_header_blocks_in_range(
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS, tx_filter=False
         )
-        curr: Optional[HeaderBlock] = header_blocks[se_start.header_hash]
+        # Convert new format headers to old format for weight proof
+        header_blocks = {h: hb.to_old() for h, hb in header_blocks_new.items()}
+        curr: Optional[HeaderBlockOld] = header_blocks[se_start.header_hash]
         height = se_start.height
         assert curr is not None
         first = True
@@ -349,9 +357,9 @@ class WeightProofHandler:
 
     async def _create_challenge_segment(
         self,
-        header_block: HeaderBlock,
+        header_block: HeaderBlockOld,
         sub_epoch_n: uint32,
-        header_blocks: dict[bytes32, HeaderBlock],
+        header_blocks: dict[bytes32, HeaderBlockOld],
         blocks: dict[bytes32, BlockRecord],
         first_segment_in_sub_epoch: bool,
     ) -> tuple[Optional[SubEpochChallengeSegment], uint32]:
@@ -397,8 +405,8 @@ class WeightProofHandler:
     # returns a challenge chain vdf from slot start to signage point
     async def __first_sub_slot_vdfs(
         self,
-        header_block: HeaderBlock,
-        header_blocks: dict[bytes32, HeaderBlock],
+        header_block: HeaderBlockOld,
+        header_blocks: dict[bytes32, HeaderBlockOld],
         blocks: dict[bytes32, BlockRecord],
         first_in_sub_epoch: bool,
     ) -> tuple[Optional[list[SubSlotData]], Optional[VDFInfo]]:
@@ -473,9 +481,9 @@ class WeightProofHandler:
 
     def first_rc_end_of_slot_vdf(
         self,
-        header_block: HeaderBlock,
+        header_block: HeaderBlockOld,
         blocks: dict[bytes32, BlockRecord],
-        header_blocks: dict[bytes32, HeaderBlock],
+        header_blocks: dict[bytes32, HeaderBlockOld],
     ) -> Optional[VDFInfo]:
         curr = blocks[header_block.header_hash]
         while curr.height > 0 and not curr.sub_epoch_summary_included:
@@ -483,7 +491,7 @@ class WeightProofHandler:
         return header_blocks[curr.header_hash].finished_sub_slots[-1].reward_chain.end_of_slot_vdf
 
     async def __slot_end_vdf(
-        self, start_height: uint32, header_blocks: dict[bytes32, HeaderBlock], blocks: dict[bytes32, BlockRecord]
+        self, start_height: uint32, header_blocks: dict[bytes32, HeaderBlockOld], blocks: dict[bytes32, BlockRecord]
     ) -> tuple[Optional[list[SubSlotData]], uint32]:
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
@@ -517,7 +525,7 @@ class WeightProofHandler:
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
         return sub_slots_data, curr.height
 
-    def handle_block_vdfs(self, curr: HeaderBlock, blocks: dict[bytes32, BlockRecord]) -> SubSlotData:
+    def handle_block_vdfs(self, curr: HeaderBlockOld, blocks: dict[bytes32, BlockRecord]) -> SubSlotData:
         cc_sp_proof = None
         icc_ip_proof = None
         cc_sp_info = None
@@ -593,7 +601,7 @@ class WeightProofHandler:
         fork_point, _ = self.get_fork_point(summaries)
         return True, fork_point
 
-    async def validate_weight_proof(self, weight_proof: WeightProof) -> tuple[bool, uint32, list[SubEpochSummary]]:
+    async def validate_weight_proof(self, weight_proof: WeightProof) -> tuple[bool, uint32, list[SubEpochSummaryOld]]:
         assert self.blockchain is not None
         if len(weight_proof.sub_epochs) == 0:
             return False, uint32(0), []
@@ -634,7 +642,7 @@ class WeightProofHandler:
                 valid, _ = await task
         return valid, fork_point, summaries
 
-    def get_fork_point(self, received_summaries: list[SubEpochSummary]) -> tuple[uint32, int]:
+    def get_fork_point(self, received_summaries: list[SubEpochSummaryOld]) -> tuple[uint32, int]:
         # returns the fork height and ses index
         # iterate through sub epoch summaries to find fork point
         fork_point_index = 0
@@ -658,7 +666,7 @@ class WeightProofHandler:
 
 
 def _get_weights_for_sampling(
-    rng: random.Random, total_weight: uint128, recent_chain: list[HeaderBlock]
+    rng: random.Random, total_weight: uint128, recent_chain: list[HeaderBlockOld]
 ) -> Optional[list[uint128]]:
     weight_to_check = []
     last_l_weight = recent_chain[-1].reward_chain_block.weight - recent_chain[0].reward_chain_block.weight
@@ -707,7 +715,7 @@ def _sample_sub_epoch(
 
 # wp creation methods
 def _create_sub_epoch_data(
-    sub_epoch_summary: SubEpochSummary,
+    sub_epoch_summary: SubEpochSummaryOld,
 ) -> SubEpochData:
     reward_chain_hash: bytes32 = sub_epoch_summary.reward_chain_hash
     #  Number of subblocks overflow in previous slot
@@ -720,7 +728,7 @@ def _create_sub_epoch_data(
 
 async def _challenge_block_vdfs(
     constants: ConsensusConstants,
-    header_block: HeaderBlock,
+    header_block: HeaderBlockOld,
     block_rec: BlockRecord,
     sub_blocks: dict[bytes32, BlockRecord],
 ) -> SubSlotData:
@@ -833,7 +841,7 @@ def handle_end_of_slot(
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
     weight_proof: WeightProof,
-) -> tuple[Optional[list[SubEpochSummary]], Optional[list[uint128]]]:
+) -> tuple[Optional[list[SubEpochSummaryOld]], Optional[list[uint128]]]:
     last_ses_hash, last_ses_sub_height = _get_last_ses_hash(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
@@ -868,18 +876,17 @@ def _map_sub_epoch_summaries(
     ses_hash: bytes32,
     sub_epoch_data: list[SubEpochData],
     curr_difficulty: uint64,
-) -> tuple[list[SubEpochSummary], uint128, list[uint128]]:
+) -> tuple[list[SubEpochSummaryOld], uint128, list[uint128]]:
     total_weight: uint128 = uint128(0)
-    summaries: list[SubEpochSummary] = []
+    summaries: list[SubEpochSummaryOld] = []
     sub_epoch_weight_list: list[uint128] = []
     for idx, data in enumerate(sub_epoch_data):
-        ses = SubEpochSummary(
+        ses = SubEpochSummaryOld(
             ses_hash,
             data.reward_chain_hash,
             data.num_blocks_overflow,
             data.new_difficulty,
             data.new_sub_slot_iters,
-            bytes32([0] * 32),  # challenge_merkle_root - placeholder for now
         )
 
         if idx < len(sub_epoch_data) - 1:
@@ -908,7 +915,7 @@ def _map_sub_epoch_summaries(
 def _validate_summaries_weight(
     constants: ConsensusConstants,
     sub_epoch_data_weight: uint128,
-    summaries: list[SubEpochSummary],
+    summaries: list[SubEpochSummaryOld],
     weight_proof: WeightProof,
 ) -> bool:
     num_over = summaries[-1].num_blocks_overflow
@@ -937,7 +944,7 @@ def _validate_sub_epoch_segments(
     total_blocks, total_ip_iters = 0, 0
     total_slot_iters, total_slots = 0, 0
     total_ip_iters = 0
-    prev_ses: Optional[SubEpochSummary] = None
+    prev_ses: Optional[SubEpochSummaryOld] = None
     segments_by_sub_epoch = map_segments_by_sub_epoch(sub_epoch_segments.challenge_segments)
     curr_ssi = constants.SUB_SLOT_ITERS_STARTING
     vdfs_to_validate = []
@@ -989,7 +996,7 @@ def _validate_segment(
     curr_ssi: uint64,
     prev_ssi: uint64,
     curr_difficulty: uint64,
-    ses: Optional[SubEpochSummary],
+    ses: Optional[SubEpochSummaryOld],
     first_segment_in_se: bool,
     sampled: bool,
     height: uint32,
@@ -1258,8 +1265,10 @@ def validate_recent_blocks(
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 expected_vs = ValidationState(ssi, diff, None)
+                # Convert to new format for validation
+                block_new = block.to_new()
                 caluclated_required_iters, error = validate_finished_header_block(
-                    constants, sub_blocks, block, False, expected_vs, ses_blocks > 2, skip_commitment_validation=True
+                    constants, sub_blocks, block_new, False, expected_vs, ses_blocks > 2, skip_commitment_validation=True
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
@@ -1275,9 +1284,12 @@ def validate_recent_blocks(
                 required_iters = ret
             validated_block_count += 1
 
-        curr_block_ses = None if not ses else summaries[ses_idx - 1]
+        curr_block_ses_old = None if not ses else summaries[ses_idx - 1]
+        # Convert to new format for block record creation
+        block_new = block.to_new()
+        curr_block_ses = None if curr_block_ses_old is None else curr_block_ses_old.to_new()
         block_record = header_block_to_sub_block_record(
-            constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
+            constants, required_iters, block_new, ssi, overflow, deficit, height, curr_block_ses
         )
         log.debug(f"add block {block_record.height} to tmp sub blocks")
         sub_blocks.add_block(block_record)
@@ -1308,7 +1320,7 @@ def validate_recent_blocks(
 def _validate_pospace_recent_chain(
     constants: ConsensusConstants,
     blocks: BlockCache,
-    block: HeaderBlock,
+    block: HeaderBlockOld,
     challenge: bytes32,
     diff: uint64,
     ssi: uint64,
@@ -1345,7 +1357,7 @@ def __validate_pospace(
     idx: int,
     curr_diff: uint64,
     curr_sub_slot_iters: uint64,
-    ses: Optional[SubEpochSummary],
+    ses: Optional[SubEpochSummaryOld],
     first_in_sub_epoch: bool,
     height: uint32,
 ) -> Optional[uint64]:
@@ -1391,7 +1403,7 @@ def __validate_pospace(
 def __get_rc_sub_slot(
     constants: ConsensusConstants,
     segment: SubEpochChallengeSegment,
-    summaries: list[SubEpochSummary],
+    summaries: list[SubEpochSummaryOld],
     curr_ssi: uint64,
 ) -> RewardChainSubSlot:
     ses = summaries[uint32(segment.sub_epoch_n - 1)]
@@ -1472,7 +1484,7 @@ def __get_rc_sub_slot(
     return rc_sub_slot
 
 
-def __get_cc_sub_slot(sub_slots: list[SubSlotData], idx: int, ses: Optional[SubEpochSummary]) -> ChallengeChainSubSlot:
+def __get_cc_sub_slot(sub_slots: list[SubSlotData], idx: int, ses: Optional[SubEpochSummaryOld]) -> ChallengeChainSubSlot:
     sub_slot: Optional[SubSlotData] = None
     for i in reversed(range(idx)):
         sub_slot = sub_slots[i]
@@ -1498,7 +1510,7 @@ def __get_cc_sub_slot(sub_slots: list[SubSlotData], idx: int, ses: Optional[SubE
 
 
 def _get_curr_diff_ssi(
-    constants: ConsensusConstants, idx: int, summaries: list[SubEpochSummary]
+    constants: ConsensusConstants, idx: int, summaries: list[SubEpochSummaryOld]
 ) -> tuple[uint64, uint64]:
     curr_difficulty = constants.DIFFICULTY_STARTING
     curr_ssi = constants.SUB_SLOT_ITERS_STARTING
@@ -1512,7 +1524,7 @@ def _get_curr_diff_ssi(
     return curr_difficulty, curr_ssi
 
 
-def vars_to_bytes(summaries: list[SubEpochSummary], weight_proof: WeightProof) -> tuple[list[bytes], bytes, bytes]:
+def vars_to_bytes(summaries: list[SubEpochSummaryOld], weight_proof: WeightProof) -> tuple[list[bytes], bytes, bytes]:
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))
     summary_bytes = []
@@ -1521,15 +1533,15 @@ def vars_to_bytes(summaries: list[SubEpochSummary], weight_proof: WeightProof) -
     return summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
 
 
-def summaries_from_bytes(summaries_bytes: list[bytes]) -> list[SubEpochSummary]:
+def summaries_from_bytes(summaries_bytes: list[bytes]) -> list[SubEpochSummaryOld]:
     summaries = []
     for summary in summaries_bytes:
-        summaries.append(SubEpochSummary.from_bytes(summary))
+        summaries.append(SubEpochSummaryOld.from_bytes(summary))
     return summaries
 
 
 def _get_last_ses_hash(
-    constants: ConsensusConstants, recent_reward_chain: list[HeaderBlock]
+    constants: ConsensusConstants, recent_reward_chain: list[HeaderBlockOld]
 ) -> tuple[Optional[bytes32], uint32]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
         if (block.reward_chain_block.height % constants.SUB_EPOCH_BLOCKS) == 0:
@@ -1548,7 +1560,7 @@ def _get_last_ses_hash(
     return None, uint32(0)
 
 
-def _get_ses_idx(recent_reward_chain: list[HeaderBlock]) -> list[int]:
+def _get_ses_idx(recent_reward_chain: list[HeaderBlockOld]) -> list[int]:
     idxs: list[int] = []
     for idx, curr in enumerate(recent_reward_chain):
         if len(curr.finished_sub_slots) > 0:
@@ -1657,7 +1669,7 @@ async def validate_weight_proof_inner(
     shutdown_file_name: str,
     num_processes: int,
     weight_proof: WeightProof,
-    summaries: list[SubEpochSummary],
+    summaries: list[SubEpochSummaryOld],
     sub_epoch_weight_list: list[uint128],
     skip_segment_validation: bool,
     validate_from: int,

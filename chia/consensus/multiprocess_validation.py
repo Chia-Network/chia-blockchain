@@ -87,6 +87,7 @@ def _pre_validate_block(
     prev_generators: Optional[list[bytes]],
     conds: Optional[SpendBundleConditions],
     expected_vs: ValidationState,
+    skip_commitment_validation: bool = False,
 ) -> PreValidationResult:
     """
     Args:
@@ -97,6 +98,8 @@ def _pre_validate_block(
         conds:
         expected_vs: The validation state that we calculate for the next block
             if it's validated.
+        skip_commitment_validation: If True, skips validation of MMR roots (for weight proofs without full history).
+            Challenge merkle tree validation is gated by HARD_FORK2_HEIGHT, not this flag.
     """
 
     try:
@@ -136,6 +139,7 @@ def _pre_validate_block(
             get_block_header(block, removals_and_additions),
             True,  # check_filter
             expected_vs,
+            skip_commitment_validation=skip_commitment_validation,
         )
         error_int: Optional[uint16] = None
         if error is not None:
@@ -164,6 +168,7 @@ async def pre_validate_block(
     vs: ValidationState,
     *,
     wp_summaries: Optional[list[SubEpochSummary]] = None,
+    skip_commitment_validation: bool = False,
 ) -> Awaitable[PreValidationResult]:
     """
     This method must be called under the blockchain lock
@@ -266,6 +271,7 @@ async def pre_validate_block(
         previous_generators,
         conds,
         copy.copy(vs),
+        skip_commitment_validation,
     )
 
     if block_rec.sub_epoch_summary_included is not None:

@@ -9,6 +9,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain import AddBlockResult
+from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.validation_state import ValidationState
@@ -37,6 +38,10 @@ class StubMMRManager:
         # No-op for stub manager
         pass
 
+    def copy(self) -> "StubMMRManager":
+        # Return a new instance (stateless)
+        return StubMMRManager()
+
 
 # implements BlockchainInterface
 class WalletBlockchain:
@@ -59,7 +64,7 @@ class WalletBlockchain:
     _sub_slot_iters: uint64
     _difficulty: uint64
     CACHE_SIZE: int
-    mmr_manager: StubMMRManager
+    mmr_manager: MMRManagerProtocol
 
     @staticmethod
     async def create(_basic_store: KeyValStore, constants: ConsensusConstants) -> WalletBlockchain:
@@ -110,7 +115,7 @@ class WalletBlockchain:
             self._difficulty = uint64(records[-1].weight - records[-2].weight)
             await self._basic_store.set_object("SUB_SLOT_ITERS", self._sub_slot_iters)
             await self._basic_store.set_object("DIFFICULTY", self._difficulty)
-            await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
+            await self.set_peak_block(weight_proof.recent_chain_data[-1].to_new(), latest_timestamp)
             await self.clean_block_records()
 
     async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Optional[Err]]:

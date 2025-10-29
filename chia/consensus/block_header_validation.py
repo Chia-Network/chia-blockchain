@@ -20,6 +20,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import compute_mmr_root_for_reorg_block
 from chia.consensus.deficit import calculate_deficit
+from chia.consensus.fork_hash_utils import get_reward_chain_block_hash_with_fork_validation
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge, prev_tx_block
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -1077,7 +1078,10 @@ def validate_finished_header_block(
         return None, ValidationError(Err.INVALID_ICC_VDF)
 
     # 32. Check reward block hash
-    if header_block.foliage.reward_block_hash != header_block.reward_chain_block.get_hash():
+    expected_reward_hash = get_reward_chain_block_hash_with_fork_validation(
+        header_block.reward_chain_block, constants.HARD_FORK2_HEIGHT
+    )
+    if header_block.foliage.reward_block_hash != expected_reward_hash:
         return None, ValidationError(Err.INVALID_REWARD_BLOCK_HASH)
 
     # 33. Check reward block is_transaction_block

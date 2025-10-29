@@ -2651,6 +2651,7 @@ class FullNode:
             self.blockchain,
             sp_total_iters,
             difficulty,
+            self.constants,
         )
         if not self.has_valid_pool_sig(block):
             self.log.warning("Trying to make a pre-farm block but height is not 0")

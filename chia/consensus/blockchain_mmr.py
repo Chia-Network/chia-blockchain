@@ -91,7 +91,8 @@ class BlockchainMMRManager:
             return self._mmr.get_root()
 
         if height - 1 < self._last_height:
-            log.warning(f"Requested MMR root at height {height}, but MMR is at height {self._last_height}")
+            # This is expected during reorgs, historical queries, or when computing summaries for past blocks
+            log.debug(f"Requested MMR root at height {height}, but MMR is at height {self._last_height}")
             return None
 
         log.warning(f"Requested MMR root at height {height}, but MMR only has blocks up to {self._last_height}")
