@@ -2780,3 +2780,38 @@ class WalletStateManager:
 
     def encode_puzzle_hash(self, puzzle_hash: bytes32) -> str:
         return encode_puzzle_hash(puzzle_hash, AddressType.XCH.hrp(self.config))
+
+    def new_outgoing_transaction(
+        self,
+        *,
+        wallet_id: uint32,
+        puzzle_hash: bytes32,
+        amount: uint64,
+        fee: uint64,
+        spend_bundle: WalletSpendBundle,
+        additions: list[Coin],
+        removals: list[Coin],
+        name: bytes32,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        trade_id: bytes32 | None = None,
+    ) -> TransactionRecord:
+        return TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(time.time()),
+            to_puzzle_hash=puzzle_hash,
+            to_address=self.encode_puzzle_hash(puzzle_hash),
+            amount=amount,
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=additions,
+            removals=removals,
+            wallet_id=wallet_id,
+            sent_to=[],
+            trade_id=trade_id,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=name,
+            memos=compute_memos(spend_bundle),
+            valid_times=parse_timelock_info(extra_conditions),
+        )

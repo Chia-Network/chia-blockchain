@@ -659,25 +659,17 @@ class CRCATWallet(CATWallet):
                 addition for tx in interface.side_effects.transactions for addition in tx.additions
             }
             tx_list = [
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(time.time()),
-                    to_puzzle_hash=payment.puzzle_hash,
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(payment.puzzle_hash),
-                    amount=payment.amount,
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=spend_bundle if i == 0 else None,
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=payment.puzzle_hash,
+                    amount=uint64(payment.amount),
+                    fee=fee,
+                    # semantics guarantee not None here
+                    spend_bundle=spend_bundle if i == 0 else None,  # type: ignore[arg-type]
                     additions=list(set(spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
                     removals=list(set(spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
-                    memos=compute_memos(spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
                 for i, payment in enumerate(payments)
             ]
