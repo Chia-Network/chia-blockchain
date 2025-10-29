@@ -33,6 +33,7 @@ SERVERS = [
     "farmer",
     "introducer",
     "timelord",
+    "solver"
 ]
 
 if THIS_IS_WINDOWS:
