@@ -398,6 +398,11 @@ class HarvesterAPI:
                     )
                     passed += 1
                 else:
+                    constants = self.harvester.constants
+                    # after the phase-out, ignore v1 plots
+                    if new_challenge.last_tx_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
+                        continue
+
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")

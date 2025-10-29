@@ -1553,6 +1553,8 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
+            elif prev_transaction_b_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
+                continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
