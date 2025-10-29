@@ -550,14 +550,7 @@ class ChiaServer:
                 )
                 ban_time = 0
         if ban_time > 0:
-            ban_until: float = time.time() + ban_time
-            self.log.warning(f"Banning {connection.peer_info.host} for {ban_time} seconds")
-            if connection.peer_info.host in self.banned_peers:
-                self.banned_peers[connection.peer_info.host] = max(
-                    ban_until, self.banned_peers[connection.peer_info.host]
-                )
-            else:
-                self.banned_peers[connection.peer_info.host] = ban_until
+            self.ban_peer(connection.peer_info.host, ban_time)
 
         present_connection = self.all_connections.get(connection.peer_node_id)
         if present_connection is connection:
@@ -737,3 +730,11 @@ class ChiaServer:
 
     def set_capabilities(self, capabilities: list[tuple[uint16, str]]) -> None:
         self._local_capabilities_for_handshake = capabilities
+
+    def ban_peer(self, host: str, ban_time: int) -> None:
+        ban_until: float = time.time() + ban_time
+        self.log.warning(f"Banning {host} for {ban_time} seconds")
+        if host in self.banned_peers:
+            self.banned_peers[host] = max(ban_until, self.banned_peers[host])
+        else:
+            self.banned_peers[host] = ban_until

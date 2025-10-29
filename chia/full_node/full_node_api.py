@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import time
 import traceback
@@ -44,13 +45,13 @@ from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
-from chia.full_node.tx_processing_queue import TransactionQueueEntry, TransactionQueueFull
+from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_timing import RATE_LIMITER_BAN_SECONDS
+from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS, RATE_LIMITER_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     PuzzleSolutionResponse,
@@ -89,6 +90,10 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
     receive it or timeout.
     """
     counter = 0
+    # Make a copy as we'll pop from it here. We keep the original intact as we
+    # need it in `respond_transaction` when constructing `TransactionQueueEntry`
+    # to put into `transaction_queue`.
+    peers_with_tx = copy.copy(full_node.full_node_store.peers_with_tx.get(transaction_id, {}))
     try:
         while True:
             # Limit to asking a few peers, it's possible that this tx got included on chain already
@@ -98,10 +103,9 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
                 break
             if transaction_id not in full_node.full_node_store.peers_with_tx:
                 break
-            peers_with_tx: set[bytes32] = full_node.full_node_store.peers_with_tx[transaction_id]
             if len(peers_with_tx) == 0:
                 break
-            peer_id = peers_with_tx.pop()
+            peer_id, _ = peers_with_tx.popitem()
             assert full_node.server is not None
             if peer_id not in full_node.server.all_connections:
                 continue
@@ -221,28 +225,44 @@ class FullNodeAPI:
                     f"with mismatch on cost {transaction.cost} vs validation cost {mempool_item.cost} and/or "
                     f"fee {transaction.fees} vs {mempool_item.fee}."
                 )
-                await peer.close(RATE_LIMITER_BAN_SECONDS)
+                await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             return None
 
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             # If there's current pending request just add this peer to the set of peers that have this tx
             if transaction.transaction_id in self.full_node.full_node_store.pending_tx_request:
-                if transaction.transaction_id in self.full_node.full_node_store.peers_with_tx:
-                    current_set = self.full_node.full_node_store.peers_with_tx[transaction.transaction_id]
-                    if peer.peer_node_id in current_set:
-                        return None
-                    current_set.add(peer.peer_node_id)
+                current_map = self.full_node.full_node_store.peers_with_tx.get(transaction.transaction_id)
+                if current_map is None:
+                    self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = {
+                        peer.peer_node_id: PeerWithTx(
+                            peer_host=peer.peer_info.host,
+                            advertised_fee=transaction.fees,
+                            advertised_cost=transaction.cost,
+                        )
+                    }
                     return None
-                else:
-                    new_set = set()
-                    new_set.add(peer.peer_node_id)
-                    self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
+                prev = current_map.get(peer.peer_node_id)
+                if prev is not None:
+                    if prev.advertised_fee != transaction.fees or prev.advertised_cost != transaction.cost:
+                        self.log.warning(
+                            f"Banning peer {peer.peer_node_id}. Sent us a new tx {transaction.transaction_id} with "
+                            f"mismatch on cost {transaction.cost} vs previous advertised cost {prev.advertised_cost} "
+                            f"and/or fee {transaction.fees} vs previous advertised fee {prev.advertised_fee}."
+                        )
+                        await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
                     return None
+                current_map[peer.peer_node_id] = PeerWithTx(
+                    peer_host=peer.peer_info.host, advertised_fee=transaction.fees, advertised_cost=transaction.cost
+                )
+                return None
 
             self.full_node.full_node_store.pending_tx_request[transaction.transaction_id] = peer.peer_node_id
-            new_set = set()
-            new_set.add(peer.peer_node_id)
-            self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
+            self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = {
+                peer.peer_node_id: PeerWithTx(
+                    peer_host=peer.peer_info.host, advertised_fee=transaction.fees, advertised_cost=transaction.cost
+                )
+            }
+
             task_id: bytes32 = bytes32.secret()
             fetch_task = create_referenced_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
@@ -282,13 +302,15 @@ class FullNodeAPI:
         spend_name = std_hash(tx_bytes)
         if spend_name in self.full_node.full_node_store.pending_tx_request:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
-            self.full_node.full_node_store.peers_with_tx.pop(spend_name)
+            peers_with_tx = self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
             await self.full_node.transaction_queue.put(
-                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test), peer.peer_node_id
+                TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test, peers_with_tx),
+                peer.peer_node_id,
             )
         except TransactionQueueFull:
             pass  # we can't do anything here, the tx will be dropped. We might do something in the future.

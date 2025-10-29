@@ -61,7 +61,7 @@ from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
-from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
+from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
@@ -498,7 +498,9 @@ class FullNode:
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
         peer = entry.peer
         try:
-            inc_status, err = await self.add_transaction(entry.transaction, entry.spend_name, peer, entry.test)
+            inc_status, err = await self.add_transaction(
+                entry.transaction, entry.spend_name, peer, entry.test, entry.peers_with_tx
+            )
             entry.done.set((inc_status, err))
         except asyncio.CancelledError:
             error_stack = traceback.format_exc()
@@ -2761,7 +2763,14 @@ class FullNode:
         return None, False
 
     async def add_transaction(
-        self, transaction: SpendBundle, spend_name: bytes32, peer: Optional[WSChiaConnection] = None, test: bool = False
+        self,
+        transaction: SpendBundle,
+        spend_name: bytes32,
+        peer: Optional[WSChiaConnection] = None,
+        test: bool = False,
+        # Map of peer ID to its hostname, the fee and the cost it advertised
+        # for this transaction.
+        peers_with_tx: dict[bytes32, PeerWithTx] = {},
     ) -> tuple[MempoolInclusionStatus, Optional[Err]]:
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
@@ -2810,10 +2819,25 @@ class FullNode:
                 f"{self.mempool_manager.mempool.total_mempool_cost() / 5000000}"
             )
 
-            # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
-            # vector.
             mempool_item = self.mempool_manager.get_mempool_item(spend_name)
             assert mempool_item is not None
+            # Now that we validated this transaction, check what fees and
+            # costs the peers have advertised for it.
+            for peer_id, entry in peers_with_tx.items():
+                if entry.advertised_fee == mempool_item.fee and entry.advertised_cost == mempool_item.cost:
+                    continue
+                self.log.warning(
+                    f"Banning peer {peer_id}. Sent us a new tx {spend_name} with mismatch "
+                    f"on cost {entry.advertised_cost} vs validation cost {mempool_item.cost} and/or "
+                    f"fee {entry.advertised_fee} vs {mempool_item.fee}."
+                )
+                peer = self.server.all_connections.get(peer_id)
+                if peer is None:
+                    self.server.ban_peer(entry.peer_host, CONSENSUS_ERROR_BAN_SECONDS)
+                else:
+                    await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
+            # vector.
             await self.broadcast_removed_tx(info.removals)
             await self.broadcast_added_tx(mempool_item, current_peer=peer)
 
