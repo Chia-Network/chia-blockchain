@@ -27,6 +27,7 @@ from chia_rs import (
     PoolTarget,
     SpendBundle,
     SubEpochSummary,
+    SubEpochSummaryOld,
     UnfinishedBlock,
     get_flags_for_height_and_constants,
     run_block_generator,
@@ -257,7 +258,7 @@ class FullNode:
                                 # empty except it has the database_version table
                                 pass
 
-            self._block_store = await BlockStore.create(self.db_wrapper)
+            self._block_store = await BlockStore.create(self.db_wrapper, self.constants)
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
             self.log.info("Initializing blockchain from disk")
@@ -1073,7 +1074,7 @@ class FullNode:
 
     async def request_validate_wp(
         self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
-    ) -> tuple[uint32, list[SubEpochSummary]]:
+    ) -> tuple[uint32, list[SubEpochSummaryOld]]:
         if self.weight_proof_handler is None:
             raise RuntimeError("Weight proof handler is None")
         peers_with_peak = self.get_peers_with_peak(peak_header_hash)
@@ -1127,6 +1128,8 @@ class FullNode:
         self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {peak_height}")
         self.sync_store.set_sync_mode(True)
         self._state_changed("sync_mode")
+        # Convert Old format summaries to new format
+
         return fork_point, summaries
 
     async def sync_from_fork_point(

@@ -9,11 +9,10 @@ from typing import Optional
 import aiosqlite
 import typing_extensions
 import zstd
-from chia_rs import BlockRecord, FullBlock, SubEpochChallengeSegment, SubEpochSegments
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, FullBlockOld, SubEpochChallengeSegment, SubEpochSegments
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_versioning import full_block_from_bytes
 from chia.full_node.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -23,14 +22,48 @@ from chia.util.lru_cache import LRUCache
 log = logging.getLogger(__name__)
 
 
-def decompress(block_bytes: bytes) -> FullBlock:
-    # Uses versioned deserialization to handle both v1 and v2 formats
-    # we can do this better, we can know the hight and therefore the version
-    return full_block_from_bytes(zstd.decompress(block_bytes))
+def decompress(block_bytes: bytes, height: uint32, constants: ConsensusConstants) -> FullBlock:
+    """
+    Decompress and deserialize block using height-based format detection.
+
+    Args:
+        block_bytes: compressed block bytes from DB
+        height: block height (from DB height column)
+        constants: consensus constants (for fork height)
+
+    Returns:
+        FullBlock in new format (with header_mmr_root field)
+    """
+    uncompressed = zstd.decompress(block_bytes)
+
+    if height < constants.HARD_FORK2_HEIGHT:
+        # pre-fork: stored as Old format
+        return FullBlockOld.from_bytes(uncompressed).to_new()
+    else:
+        # post-fork: stored as new format
+        return FullBlock.from_bytes(uncompressed)
 
 
-def compress(block: FullBlock) -> bytes:
-    ret: bytes = zstd.compress(bytes(block))
+def compress(block: FullBlock, constants: ConsensusConstants) -> bytes:
+    """
+    Serialize and compress block using height-based format selection.
+
+    Args:
+        block: block to compress
+        constants: consensus constants (for fork height)
+
+    Returns:
+        compressed block bytes for DB storage
+    """
+    height = block.reward_chain_block.height
+
+    if height < constants.HARD_FORK2_HEIGHT:
+        # pre-fork: save as Old format (saves space, matches existing blocks)
+        ret: bytes = zstd.compress(bytes(block.to_old()))
+    else:
+        # post-fork: save as new format
+        ret = zstd.compress(bytes(block))
+
     return ret
 
 
@@ -45,16 +78,19 @@ class BlockStore:
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
     ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]
+    constants: ConsensusConstants
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
+    async def create(
+        cls, db_wrapper: DBWrapper2, constants: ConsensusConstants, *, use_cache: bool = True
+    ) -> BlockStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"BlockStore does not support database schema v{db_wrapper.db_version}")
 
         if use_cache:
-            self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
+            self = cls(LRUCache(1000), db_wrapper, LRUCache(50), constants)
         else:
-            self = cls(LRUCache(0), db_wrapper, LRUCache(0))
+            self = cls(LRUCache(0), db_wrapper, LRUCache(0), constants)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating block store tables and indexes.")
@@ -120,7 +156,7 @@ class BlockStore:
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
         assert header_hash == block.header_hash
 
-        block_bytes: bytes = compress(block)
+        block_bytes: bytes = compress(block, self.constants)
 
         self.block_cache.put(header_hash, block)
 
@@ -160,7 +196,7 @@ class BlockStore:
                     ses,
                     int(block.is_fully_compactified()),
                     False,  # in_main_chain
-                    compress(block),
+                    compress(block, self.constants),
                     bytes(block_record),
                 ),
             )
@@ -214,10 +250,12 @@ class BlockStore:
         if cached is not None:
             return cached
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
+            async with conn.execute(
+                "SELECT block, height from full_blocks WHERE header_hash=?", (header_hash,)
+            ) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
-            block = decompress(row[0])
+            block = decompress(row[0], uint32(row[1]), self.constants)
             self.block_cache.put(header_hash, block)
             return block
         return None
@@ -242,12 +280,12 @@ class BlockStore:
         if len(heights) == 0:
             return []
 
-        formatted_str = f"SELECT block from full_blocks WHERE height in ({'?,' * (len(heights) - 1)}?)"
+        formatted_str = f"SELECT block, height from full_blocks WHERE height in ({'?,' * (len(heights) - 1)}?)"
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, heights) as cursor:
                 ret: list[FullBlock] = []
                 for row in await cursor.fetchall():
-                    ret.append(decompress(row[0]))
+                    ret.append(decompress(row[0], uint32(row[1]), self.constants))
                 return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
@@ -415,14 +453,15 @@ class BlockStore:
             return []
 
         formatted_str = (
-            f"SELECT header_hash, block from full_blocks WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)"
+            f"SELECT header_hash, block, height from full_blocks "
+            f"WHERE header_hash in ({'?,' * (len(header_hashes) - 1)}?)"
         )
         all_blocks: dict[bytes32, FullBlock] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
-                    full_block: FullBlock = decompress(row[1])
+                    full_block: FullBlock = decompress(row[1], uint32(row[2]), self.constants)
                     all_blocks[header_hash] = full_block
                     self.block_cache.put(header_hash, full_block)
         ret: list[FullBlock] = []

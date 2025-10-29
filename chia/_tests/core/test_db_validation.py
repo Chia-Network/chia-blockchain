@@ -138,7 +138,7 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
             await conn.execute("CREATE TABLE database_version(version int)")
             await conn.execute("INSERT INTO database_version VALUES (2)")
 
-        block_store = await BlockStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, test_constants)
         coin_store = await CoinStore.create(db_wrapper)
         height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 

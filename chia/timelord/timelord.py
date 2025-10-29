@@ -670,6 +670,7 @@ class Timelord:
                         rc_info,
                         icc_info,
                         is_transaction_block,
+                        bytes32.zeros,  # Timelord doesn't track MMR yet TODO v2_WP
                     )
                     if self.last_state.state_type == StateType.FIRST_SUB_SLOT:
                         # Genesis

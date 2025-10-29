@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import BlockRecord, ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -17,7 +16,7 @@ from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.util.hash import std_hash
-from chia.wallet.util.merkle_tree import MerkleTree
+from chia.util.merkle_tree import MerkleTree
 
 log = logging.getLogger(__name__)
 

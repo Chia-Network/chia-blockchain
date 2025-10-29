@@ -1478,6 +1478,7 @@ class BlockTools:
                             BlockCache({}),
                             total_iters_sp,
                             constants.DIFFICULTY_STARTING,
+                            constants,
                         )
 
                 if signage_point_index == constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA - 1:
@@ -1543,6 +1544,7 @@ class BlockTools:
                         BlockCache({}),
                         total_iters_sp,
                         constants.DIFFICULTY_STARTING,
+                        constants,
                     )
             sub_slot_total_iters = uint128(sub_slot_total_iters + constants.SUB_SLOT_ITERS_STARTING)
 
@@ -1717,7 +1719,7 @@ def finish_block(
     latest_block: BlockRecord,
     sub_slot_iters: uint64,
     difficulty: uint64,
-    mmr_manager:BlockchainMMRManager,
+    mmr_manager: BlockchainMMRManager,
     normalized_to_identity_cc_ip: bool = False,
 ) -> tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
@@ -1786,6 +1788,7 @@ def finish_block(
         BlockCache(blocks, mmr_manager=mmr_manager),
         sp_total_iters,
         difficulty,
+        constants,
     )
 
     block_record = block_to_block_record(
@@ -1972,7 +1975,7 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
-    mmr_manager:BlockchainMMRManager,
+    mmr_manager: BlockchainMMRManager,
     overflow_cc_challenge: Optional[bytes32] = None,
     overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,

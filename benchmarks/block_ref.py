@@ -63,7 +63,7 @@ async def main(db_path: Path) -> None:
         db_wrapper = DBWrapper2(connection, db_version=db_version)
         await db_wrapper.add_connection(await aiosqlite.connect(db_path))
 
-        block_store = await BlockStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, DEFAULT_CONSTANTS)
         coin_store = await CoinStore.create(db_wrapper)
 
         start_time = monotonic()

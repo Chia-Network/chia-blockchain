@@ -386,13 +386,13 @@ header_block = HeaderBlock(
 )
 
 recent_chain_data = RecentChainData(
-    [header_block],
+    [header_block.to_old()],
 )
 
 weight_proof = WeightProof(
     [sub_epochs],
     [sub_epoch_challenge_segments],
-    [header_block],
+    [header_block.to_old()],
 )
 
 respond_proof_of_weight = full_node_protocol.RespondProofOfWeight(

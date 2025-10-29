@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Union
 
-from chia_rs import BlockRecord, FullBlock
+from chia_rs import BlockRecord, FullBlock, HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
