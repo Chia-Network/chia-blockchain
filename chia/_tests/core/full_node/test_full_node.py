@@ -3362,39 +3362,58 @@ async def test_pending_tx_cache_retry_on_new_peak(
 @pytest.mark.anyio
 @pytest.mark.parametrize("mismatch_cost", [True, False])
 @pytest.mark.parametrize("mismatch_fee", [True, False])
+@pytest.mark.parametrize("tx_already_seen", [True, False])
+@pytest.mark.parametrize("mismatch_on_reannounce", [True, False])
 async def test_ban_for_mismatched_tx_cost_fee(
-    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    three_nodes: list[FullNodeAPI],
+    bt: BlockTools,
     self_hostname: str,
     mismatch_cost: bool,
     mismatch_fee: bool,
+    tx_already_seen: bool,
+    mismatch_on_reannounce: bool,
 ) -> None:
     """
     Tests that a peer gets banned if it sends a `NewTransaction` message with a
     cost and/or fee that doesn't match the transaction's validation cost/fee.
-    We setup two full nodes with the test transaction as already seen, and we
-    check its validation cost and fee against the ones specified in the
-    `NewTransaction` message.
+    We setup full nodes, and with `tx_already_seen` we control whether the
+    first full node has this transaction already or it needs to request it.
+    In both cases we check the transaction's validation cost and fee against
+    the ones specified in the `NewTransaction` message.
+    With `mismatch_on_reannounce` we control whether the peer sent us the same
+    transaction twice with different cost and fee.
     """
-    nodes, _, bt = setup_two_nodes_fixture
-    full_node_1, full_node_2 = nodes
+    full_node_1, full_node_2, full_node_3 = three_nodes
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
+    server_3 = full_node_3.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
     ws_con_1 = next(iter(server_1.all_connections.values()))
     ws_con_2 = next(iter(server_2.all_connections.values()))
+    ws_con_3 = next(iter(server_3.all_connections.values()))
     wallet = WalletTool(test_constants)
     wallet_ph = wallet.get_new_puzzlehash()
+    # If we're covering that the first full node has this transaction already
+    # we must add it accordingly, otherwise we'll add it to the second node so
+    # that the first node requests it, reacting to the NewTransaction message.
+    if tx_already_seen:
+        node = full_node_1.full_node
+        ws_con = ws_con_1
+    else:
+        node = full_node_2.full_node
+        ws_con = ws_con_2
     blocks = bt.get_consecutive_blocks(
         3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=wallet_ph, pool_reward_puzzle_hash=wallet_ph
     )
     for block in blocks:
-        await full_node_1.full_node.add_block(block)
+        await node.add_block(block)
     # Create a transaction and add it to the relevant full node's mempool
     coin = blocks[-1].get_included_reward_coins()[0]
     sb = wallet.generate_signed_transaction(uint64(42), wallet_ph, coin)
     sb_name = sb.name()
-    await full_node_1.full_node.add_transaction(sb, sb_name, ws_con_1)
-    mempool_item = full_node_1.full_node.mempool_manager.get_mempool_item(sb_name)
+    await node.add_transaction(sb, sb_name, ws_con)
+    mempool_item = node.mempool_manager.get_mempool_item(sb_name)
     assert mempool_item is not None
     # Now send a NewTransaction with a cost and/or fee mismatch from the second
     # full node.
@@ -3405,8 +3424,35 @@ async def test_ban_for_mismatched_tx_cost_fee(
     # second node.
     full_node_2_ip = "1.3.3.7"
     ws_con_1.peer_info = PeerInfo(full_node_2_ip, ws_con_1.peer_info.port)
+
     # Send the NewTransaction message from the second node to the first
-    await ws_con_2.send_message(msg)
+    async def send_from_node_2() -> None:
+        await ws_con_2.send_message(msg)
+
+    # Send this message from the third node as well, just to end up with two
+    # peers advertising the same transaction at the same time.
+    async def send_from_node_3() -> None:
+        await ws_con_3.send_message(msg)
+
+    await asyncio.gather(send_from_node_2(), send_from_node_3())
+    if mismatch_on_reannounce and (mismatch_cost or mismatch_fee):
+        # Send a second NewTransaction that doesn't match the first
+        reannounce_cost = uint64(cost + 1) if mismatch_cost else cost
+        reannounce_fee = uint64(fee + 1) if mismatch_fee else fee
+        reannounce_msg = make_msg(
+            ProtocolMessageTypes.new_transaction, NewTransaction(mempool_item.name, reannounce_cost, reannounce_fee)
+        )
+        await ws_con_2.send_message(reannounce_msg)
+        # Make sure the peer is banned as it sent the same transaction twice
+        # with different cost and/or fee.
+        await time_out_assert(5, lambda: full_node_2_ip in server_1.banned_peers)
+        return
+    if not tx_already_seen:
+        # When the first full node receives the NewTransaction message and it
+        # hasn't seen the transaction before, it will issue a transaction
+        # request. We need to wait until it receives the transaction and add it
+        # to its mempool.
+        await time_out_assert(30, lambda: full_node_1.full_node.mempool_manager.seen(mempool_item.name))
     # Make sure the first full node has banned the second as the item it has
     # already seen has a different validation cost and/or fee than the one from
     # the NewTransaction message.

@@ -16,6 +16,7 @@ from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
 from chia.consensus.signage_point import SignagePoint
+from chia.full_node.tx_processing_queue import PeerWithTx
 from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -132,7 +133,9 @@ class FullNodeStore:
     recent_eos: LRUCache[bytes32, tuple[EndOfSubSlotBundle, float]]
 
     pending_tx_request: dict[bytes32, bytes32]  # tx_id: peer_id
-    peers_with_tx: dict[bytes32, set[bytes32]]  # tx_id: set[peer_ids}
+    # Map of transaction ID to the map of peer ID to its hostname, fee and cost
+    # it advertised for that transaction.
+    peers_with_tx: dict[bytes32, dict[bytes32, PeerWithTx]]
     tx_fetch_tasks: dict[bytes32, asyncio.Task[None]]  # Task id: task
     serialized_wp_message: Optional[Message]
     serialized_wp_message_tip: Optional[bytes32]
