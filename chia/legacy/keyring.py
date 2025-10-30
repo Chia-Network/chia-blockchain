@@ -19,7 +19,7 @@ try:
 except ImportError:
     if sys.platform == "linux":
         sys.exit("Use `install.sh -l` to install the legacy_keyring dependency.")
-
+    CryptFileKeyring = None
 
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
