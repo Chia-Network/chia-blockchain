@@ -18,7 +18,7 @@ from chia.util.errors import Err
 async def check_block_store_invariant(bc: Blockchain):
     assert isinstance(bc.consensus_store, ConsensusStoreSQLite3)
 
-    if bc.consensus_store.block_store.db_wrapper == 1:
+    if bc.consensus_store.block_store.db_wrapper.db_version == 1:
         return
 
     in_chain = set()

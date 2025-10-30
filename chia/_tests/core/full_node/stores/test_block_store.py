@@ -388,7 +388,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
 
             # make sure we get the same result when we hit the database
             # itself (and not just the block cache)
-            consensus_store.rollback_cache_block(block.header_hash)
+            block_store.rollback_cache_block(block.header_hash)
             b = await block_store.get_full_block(block.header_hash)
             assert b is not None
             assert b.challenge_chain_ip_proof == proof
