@@ -13,7 +13,11 @@ from chia.server.api_protocol import ApiMetadata
 
 
 class SolverApiStub:
-    """Lightweight API stub for SolverAPI to break circular dependencies."""
+    """Non-functional API stub for SolverAPI to break circular dependencies.
+
+    This is a protocol definition only - methods are not implemented and should
+    never be called. Use the actual SolverAPI implementation at runtime.
+    """
 
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ApiProtocol] = cast("SolverApiStub", None)
@@ -23,9 +27,9 @@ class SolverApiStub:
 
     def ready(self) -> bool:
         """Check if the solver is ready."""
-        return True
+        ...
 
     @metadata.request(peer_required=False)
     async def solve(self, request: SolverInfo) -> Optional[Message]:
         """Handle solver request."""
-        return None
+        ...

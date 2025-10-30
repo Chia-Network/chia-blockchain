@@ -16,7 +16,11 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class HarvesterApiStub:
-    """Lightweight API stub for HarvesterAPI to break circular dependencies."""
+    """Non-functional API stub for HarvesterAPI to break circular dependencies.
+
+    This is a protocol definition only - methods are not implemented and should
+    never be called. Use the actual HarvesterAPI implementation at runtime.
+    """
 
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ApiProtocol] = cast("HarvesterApiStub", None)
@@ -26,30 +30,33 @@ class HarvesterApiStub:
 
     def ready(self) -> bool:
         """Check if the harvester is ready."""
-        return True
+        ...
 
     @metadata.request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ) -> None:
         """Handshake between the harvester and farmer."""
+        ...
 
     @metadata.request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ) -> None:
         """Handle new signage point from farmer."""
+        ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """Handle signature request from farmer."""
-        return None
+        ...
 
     @metadata.request()
     async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         """Handle request for plot information."""
-        raise NotImplementedError("Stub method should not be called")
+        ...
 
     @metadata.request()
     async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         """Handle plot sync response."""
+        ...

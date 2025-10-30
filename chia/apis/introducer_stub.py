@@ -14,7 +14,11 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class IntroducerApiStub:
-    """Lightweight API stub for IntroducerAPI to break circular dependencies."""
+    """Non-functional API stub for IntroducerAPI to break circular dependencies.
+
+    This is a protocol definition only - methods are not implemented and should
+    never be called. Use the actual IntroducerAPI implementation at runtime.
+    """
 
     if TYPE_CHECKING:
         _protocol_check: ClassVar[ApiProtocol] = cast("IntroducerApiStub", None)
@@ -24,7 +28,7 @@ class IntroducerApiStub:
 
     def ready(self) -> bool:
         """Check if the introducer is ready."""
-        return True
+        ...
 
     @metadata.request(peer_required=True)
     async def request_peers_introducer(
@@ -33,4 +37,4 @@ class IntroducerApiStub:
         peer: WSChiaConnection,
     ) -> Optional[Message]:
         """Handle request for peers from a node."""
-        return None
+        ...
