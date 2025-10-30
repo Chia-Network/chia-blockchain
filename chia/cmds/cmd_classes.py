@@ -12,7 +12,6 @@ from typing import (
     ClassVar,
     Optional,
     Protocol,
-    Union,
     final,
     get_args,
     get_origin,
@@ -40,7 +39,7 @@ class AsyncChiaCommand(Protocol):
     async def run(self) -> None: ...
 
 
-ChiaCommand = Union[SyncChiaCommand, AsyncChiaCommand]
+ChiaCommand = SyncChiaCommand | AsyncChiaCommand
 
 
 def option(*param_decls: str, **kwargs: Any) -> Any:

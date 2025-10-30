@@ -60,7 +60,6 @@ from __future__ import annotations
 
 import hashlib
 from functools import lru_cache
-from typing import Union
 
 from chia_puzzles_py.programs import P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE
 from chia_rs import G1Element, PrivateKey
@@ -79,7 +78,7 @@ MOD = Program.from_bytes(P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE)
 
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 
-PublicKeyProgram = Union[bytes, Program]
+PublicKeyProgram = bytes | Program
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 

@@ -1096,16 +1096,16 @@ class AssertAnnouncement(Condition):
         )
 
 
-TIMELOCK_TYPES = Union[
-    AssertSecondsRelative,
-    AssertHeightRelative,
-    AssertSecondsAbsolute,
-    AssertHeightAbsolute,
-    AssertBeforeSecondsRelative,
-    AssertBeforeHeightRelative,
-    AssertBeforeSecondsAbsolute,
-    AssertBeforeHeightAbsolute,
-]
+TIMELOCK_TYPES = (
+    AssertSecondsRelative
+    | AssertHeightRelative
+    | AssertSecondsAbsolute
+    | AssertHeightAbsolute
+    | AssertBeforeSecondsRelative
+    | AssertBeforeHeightRelative
+    | AssertBeforeSecondsAbsolute
+    | AssertBeforeHeightAbsolute
+)
 
 
 TIMELOCK_DRIVERS: tuple[
