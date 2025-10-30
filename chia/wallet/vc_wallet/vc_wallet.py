@@ -201,7 +201,7 @@ class VCWallet:
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
                 self.wallet_state_manager.new_outgoing_transaction(
-                    wallet_id=self.id(),
+                    wallet_id=uint32(1),
                     puzzle_hash=inner_puzzle_hash,
                     amount=uint64(1),
                     fee=fee,
