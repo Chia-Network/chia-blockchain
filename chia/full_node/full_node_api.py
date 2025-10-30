@@ -170,8 +170,16 @@ class FullNodeAPI:
         if not (await self.full_node.synced()):
             return None
 
-        # Ignore if already seen
-        if self.full_node.mempool_manager.seen(transaction.transaction_id):
+        # If already seen, the cost and fee must match, otherwise ban the peer
+        mempool_item = self.full_node.mempool_manager.get_mempool_item(transaction.transaction_id, include_pending=True)
+        if mempool_item is not None:
+            if mempool_item.cost != transaction.cost or mempool_item.fee != transaction.fees:
+                self.log.warning(
+                    f"Banning peer {peer.peer_node_id}. Sent us an already seen tx {transaction.transaction_id} "
+                    f"with mismatch on cost {transaction.cost} vs validation cost {mempool_item.cost} and/or "
+                    f"fee {transaction.fees} vs {mempool_item.fee}."
+                )
+                await peer.close(RATE_LIMITER_BAN_SECONDS)
             return None
 
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
