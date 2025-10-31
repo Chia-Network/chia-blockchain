@@ -1,0 +1,11 @@
+; this puzzle follows the Managed Inner Puzzle Spec MIPS01 as a Member Puzzle
+; this code offers a secure approval of a delegated puzzle passed in as a Truth to be run elsewhere
+
+(mod (SECP_PK Delegated_Puzzle_Hash my_id signature)  ; delegated puzzle is passed in from the above M of N layer
+  (include condition_codes.clib)
+
+  (c
+    (list ASSERT_MY_COIN_ID my_id)
+    (secp256r1_verify SECP_PK (sha256 Delegated_Puzzle_Hash my_id) signature)
+  )
+)
