@@ -431,7 +431,7 @@ async def test_sync_keys_missing(environment: Environment) -> None:
     # Run again two times to make sure we still get the same results in repeated refresh intervals
     await env.run_sync_test()
     await env.run_sync_test()
-    # Drop all but 2 plots with missing keys and test sync inbetween
+    # Drop all but 2 plots with missing keys and test sync in between
     assert len(env.dir_keys_missing) > 2
     for _ in range(len(env.dir_keys_missing) - 2):
         drop_plot = env.dir_keys_missing.path_list()[0]
