@@ -120,21 +120,21 @@ legacy_keyring = ["keyrings.cryptfile"]
 enable = true
 vcs = "git"
 pattern = "default-unprefixed"
-format-jinja = """
-    {%- if distance == 0 -%}
-        {%- if stage is none -%}
-            {{ base }}
-        {%- else -%}
-            {{ base }}-{{stage}}{{revision}}
-        {%- endif -%}
-    {%- else -%}
-        {%- if stage is none -%}
-            {{ base }}-dev{{ distance }}
-        {%- else -%}
-            {{ base }}-{{stage}}{{revision}}.dev{{ distance }}
-        {%- endif -%}
-    {%- endif -%}
-"""
+#format-jinja = """
+#    {%- if distance == 0 -%}
+#        {%- if stage is none -%}
+#            {{ base }}
+#        {%- else -%}
+#            {{ base }}-{{stage}}{{revision}}
+#        {%- endif -%}
+#    {%- else -%}
+#        {%- if stage is none -%}
+#            {{ base }}-dev{{ distance }}
+#        {%- else -%}
+#            {{ base }}-{{stage}}{{revision}}.dev{{ distance }}
+#        {%- endif -%}
+#    {%- endif -%}
+#"""
 #format-jinja = """
 #    {%- if distance == 0 -%}
 #        {{ serialize_pep440(base, stage, revision) }}
