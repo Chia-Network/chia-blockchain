@@ -12,7 +12,6 @@ SERVICES_FOR_GROUP: dict[str, list[str]] = {
         "chia_wallet",
         "chia_data_layer",
         "chia_data_layer_http",
-        "chia_solver",
     ],
     "daemon": [],
     # TODO: should this be `data_layer`?
@@ -20,7 +19,7 @@ SERVICES_FOR_GROUP: dict[str, list[str]] = {
     "data_layer_http": ["chia_data_layer_http"],
     "node": ["chia_full_node"],
     "harvester": ["chia_harvester"],
-    "farmer": ["chia_harvester", "chia_farmer", "chia_full_node", "chia_wallet", "chia_solver"],
+    "farmer": ["chia_harvester", "chia_farmer", "chia_full_node", "chia_wallet"],
     "farmer-no-wallet": ["chia_harvester", "chia_farmer", "chia_full_node"],
     "farmer-only": ["chia_farmer"],
     "timelord": ["chia_timelord_launcher", "chia_timelord", "chia_full_node"],
@@ -32,7 +31,6 @@ SERVICES_FOR_GROUP: dict[str, list[str]] = {
     "crawler": ["chia_crawler"],
     "seeder": ["chia_crawler", "chia_seeder"],
     "seeder-only": ["chia_seeder"],
-    "solver": ["chia_solver"],
 }
 
 
