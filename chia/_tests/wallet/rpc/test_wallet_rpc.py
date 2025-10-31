@@ -965,7 +965,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
             batch_size=uint16(1),
         )
     )
-    # claim spend, 2 coins, with fee - NEEDED (only one coin already)
+    # claim spend, 2 coins, with fee - covered already
     resp = await wallet_2_rpc.spend_clawback_coins(
         SpendClawbackCoins(coin_ids=[clawback_coin_id_1, clawback_coin_id_2], fee=uint64(100), push=True),
         tx_config=DEFAULT_TX_CONFIG,
