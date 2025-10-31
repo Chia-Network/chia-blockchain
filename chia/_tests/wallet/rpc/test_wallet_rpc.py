@@ -906,14 +906,14 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_2_rpc, 1)
     await asyncio.sleep(10)
     # Test coin ID is not a Clawback coin
-    # no transaction from invalid coins specified - NEEDED (kind of)
+    # no transaction from invalid coins specified - covered already
     invalid_coin_id = tx.removals[0].name()
     resp = await wallet_2_rpc.spend_clawback_coins(
         SpendClawbackCoins(coin_ids=[invalid_coin_id], fee=uint64(500), push=True), tx_config=DEFAULT_TX_CONFIG
     )
     assert resp.transaction_ids == []
     # Test unsupported wallet
-    # no transaction from invalid wallet specified - NEEDED
+    # no transaction from invalid wallet specified - covered already
     coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_1)
     assert coin_record is not None
     await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
@@ -924,14 +924,14 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     )
     assert len(resp.transaction_ids) == 0
     # Test missing metadata
-    # no transaction from missing metadata - NEEDED
+    # no transaction from missing metadata - covered already
     await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, metadata=None))
     resp = await wallet_1_rpc.spend_clawback_coins(
         SpendClawbackCoins(coin_ids=[clawback_coin_id_1], fee=uint64(100), push=True), tx_config=DEFAULT_TX_CONFIG
     )
     assert len(resp.transaction_ids) == 0
     # Test missing incoming tx
-    # no transaction from missing corresponding TX record - NEEDED
+    # no transaction from missing corresponding TX record - covered already
     coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_2)
     assert coin_record is not None
     fake_coin = Coin(coin_record.coin.parent_coin_info, wallet_2_puzhash, coin_record.coin.amount)
@@ -943,7 +943,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     )
     assert resp.transaction_ids == []
     # Test coin puzzle hash doesn't match the puzzle
-    # no transaction from coin that doesn't belong to wallet - NEEDED
+    # no transaction from coin that doesn't belong to wallet - covered already
     farmed_tx = (await wallet_1.wallet_state_manager.tx_store.get_farming_rewards())[0]
     await wallet_1.wallet_state_manager.tx_store.add_transaction_record(
         dataclasses.replace(farmed_tx, name=fake_coin.name())
@@ -980,7 +980,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     await farm_transaction_block(full_node_api, wallet_2_node)
     await time_out_assert(20, get_confirmed_balance, generated_funds + 300, wallet_2_rpc, 1)
     # Test spent coin
-    # no transaction for attempting to claim a coin already claimed - NEEDED
+    # no transaction for attempting to claim a coin already claimed - covered already
     resp = await wallet_2_rpc.spend_clawback_coins(
         SpendClawbackCoins(coin_ids=[clawback_coin_id_1], fee=uint64(500), push=True), tx_config=DEFAULT_TX_CONFIG
     )

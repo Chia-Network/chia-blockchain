@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
@@ -28,9 +28,14 @@ from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.util.wallet_types import CoinType
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
-from chia.wallet.wallet_request_types import GetTransactionMemo
+from chia.wallet.wallet_request_types import (
+    ClawbackPuzzleDecoratorOverride,
+    GetTransactionMemo,
+    SendTransaction,
+    SpendClawbackCoins,
+)
 
 
 class TestWalletSimulator:
@@ -166,6 +171,119 @@ class TestWalletSimulator:
                 )
             ]
         )
+
+    @pytest.mark.parametrize(
+        "wallet_environments",
+        [{"num_environments": 2, "blocks_needed": [1, 1], "reuse_puzhash": True}],
+        indirect=True,
+    )
+    @pytest.mark.limit_consensus_modes(reason="irrelevant")
+    @pytest.mark.anyio
+    async def test_wallet_clawback_errors(self, wallet_environments: WalletTestFramework) -> None:
+        env_1 = wallet_environments.environments[0]
+        env_2 = wallet_environments.environments[1]
+        env_1.wallet_aliases = {"xch": 1}
+        env_2.wallet_aliases = {"xch": 1}
+
+        async with env_2.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            wallet_2_puzhash = await action_scope.get_puzzle_hash(env_2.wallet_state_manager)
+
+        send_response = await env_1.rpc_client.send_transaction(
+            SendTransaction(
+                wallet_id=uint32(1),
+                amount=uint64(500),
+                address=encode_puzzle_hash(wallet_2_puzhash, "txch"),
+                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
+                push=True,
+            ),
+            tx_config=wallet_environments.tx_config,
+        )
+        clawback_coin_id = send_response.transactions[0].additions[0].name()
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={"xch": {"set_remainder": True}},
+                    post_block_balance_updates={"xch": {"set_remainder": True}},
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={"xch": {"set_remainder": True}},
+                    post_block_balance_updates={"xch": {"set_remainder": True}},
+                ),
+            ]
+        )
+        await wallet_environments.full_node.farm_blocks_to_puzzlehash(1)  # make clawback expire
+
+        # no transaction from invalid coins specified
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[bytes32.zeros]), tx_config=wallet_environments.tx_config
+        )
+        assert resp.transaction_ids == []
+
+        # no transaction from invalid wallet specified
+        coin_record = await env_2.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id)
+        assert coin_record is not None
+        await env_2.wallet_state_manager.coin_store.add_coin_record(
+            dataclasses.replace(coin_record, wallet_type=WalletType.CAT)
+        )
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[clawback_coin_id]), tx_config=wallet_environments.tx_config
+        )
+        assert resp.transaction_ids == []
+
+        # no transaction from missing metadata
+        await env_2.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, metadata=None))
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[clawback_coin_id]), tx_config=wallet_environments.tx_config
+        )
+        assert resp.transaction_ids == []
+
+        # reset
+        await env_2.wallet_state_manager.coin_store.add_coin_record(coin_record)
+
+        # no transaction from missing corresponding TX record
+        fake_coin = Coin(coin_record.coin.parent_coin_info, bytes32.zeros, coin_record.coin.amount)
+        await env_2.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, coin=fake_coin))
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[fake_coin.name()]), tx_config=wallet_environments.tx_config
+        )
+        assert resp.transaction_ids == []
+
+        # no transaction from coin that doesn't belong to wallet
+        farmed_tx = (await env_2.wallet_state_manager.tx_store.get_farming_rewards())[0]
+        await env_2.wallet_state_manager.tx_store.add_transaction_record(
+            dataclasses.replace(farmed_tx, name=fake_coin.name())
+        )
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[fake_coin.name()]), tx_config=wallet_environments.tx_config
+        )
+        assert resp.transaction_ids == []
+
+        # reset and claim the coin
+        await env_2.wallet_state_manager.coin_store.add_coin_record(coin_record)
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[clawback_coin_id], push=True), tx_config=wallet_environments.tx_config
+        )
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={"xch": {"set_remainder": True}},
+                    post_block_balance_updates={"xch": {"set_remainder": True}},
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={"xch": {"set_remainder": True}},
+                    post_block_balance_updates={"xch": {"set_remainder": True}},
+                ),
+            ]
+        )
+
+        # no transaction for attempting to claim a coin already claimed
+        resp = await env_2.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(coin_ids=[clawback_coin_id]), tx_config=wallet_environments.tx_config
+        )
+        assert resp.transaction_ids == []
 
     @pytest.mark.parametrize(
         "wallet_environments",
