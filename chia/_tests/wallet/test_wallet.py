@@ -21,11 +21,9 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err
-from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.estimate_fees import estimate_fees
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
@@ -1706,26 +1704,15 @@ class TestWalletSimulator:
 
         # get a legit signature
         stolen_sb, _ = await wallet.wallet_state_manager.sign_bundle([stolen_cs])
-        name = stolen_sb.name()
-        stolen_tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(0),
-            to_puzzle_hash=bytes32(32 * b"0"),
-            to_address=encode_puzzle_hash(bytes32(32 * b"0"), "txch"),
+        stolen_tx = wallet.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=wallet.id(),
+            puzzle_hash=bytes32.zeros,
             amount=uint64(0),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
+            fee=uint64(0),
             spend_bundle=stolen_sb,
             additions=[],
             removals=[],
-            wallet_id=wallet.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=name,
-            memos={},
-            valid_times=ConditionValidTimes(),
+            name=stolen_sb.name(),
         )
         [stolen_tx] = await wallet.wallet_state_manager.add_pending_transactions([stolen_tx])
 

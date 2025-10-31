@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import CoinSpend, G1Element, G2Element
@@ -41,11 +40,10 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
+from chia.wallet.conditions import AssertCoinAnnouncement, Condition
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions
-from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -523,25 +521,15 @@ class PoolWallet:
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(time.time()),
-                    to_puzzle_hash=new_full_puzzle.get_tree_hash(),
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(new_full_puzzle.get_tree_hash()),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=new_full_puzzle.get_tree_hash(),
                     amount=uint64(1),
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=unsigned_spend_bundle,
                     additions=unsigned_spend_bundle.additions(),
                     removals=unsigned_spend_bundle.removals(),
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    memos={},
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=unsigned_spend_bundle.name(),
-                    valid_times=ConditionValidTimes(),
                 )
             )
 
@@ -793,29 +781,18 @@ class PoolWallet:
                 ),
             )
 
-        current_time = uint64(time.time())
         # The claim spend, minus the fee amount from the main wallet
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=current_time,
-                    to_puzzle_hash=current_state.current.target_puzzle_hash,
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(current_state.current.target_puzzle_hash),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=uint32(self.wallet_id),
+                    puzzle_hash=current_state.current.target_puzzle_hash,
                     amount=uint64(total_amount),
-                    fee_amount=fee,  # This will not be double counted in self.standard_wallet
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=claim_spend,
                     additions=[add for add in claim_spend.additions() if add.amount == last_solution.coin.amount],
                     removals=claim_spend.removals(),
-                    wallet_id=uint32(self.wallet_id),
-                    sent_to=[],
-                    memos={},
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=claim_spend.name(),
-                    valid_times=ConditionValidTimes(),
                 )
             )
 

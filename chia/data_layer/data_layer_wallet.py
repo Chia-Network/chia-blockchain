@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import BlockRecord, CoinSpend, CoinState, G1Element, G2Element
@@ -29,7 +28,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     UnknownCondition,
-    parse_timelock_info,
 )
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
@@ -52,9 +50,7 @@ from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_additions import compute_additions
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
-from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -556,25 +552,16 @@ class DataLayerWallet:
         if announce_new_state:
             spend_bundle = WalletSpendBundle([coin_spend, second_coin_spend], spend_bundle.aggregated_signature)
 
-        dl_tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=new_puz_hash,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(new_puz_hash),
+        dl_tx = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=new_puz_hash,
             amount=uint64(singleton_record.lineage_proof.amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
+            fee=fee,
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            memos=compute_memos(spend_bundle),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
-            valid_times=parse_timelock_info(extra_conditions),
+            extra_conditions=extra_conditions,
         )
         assert dl_tx.spend_bundle is not None
         if fee > 0:
@@ -751,25 +738,16 @@ class DataLayerWallet:
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(time.time()),
-                    to_puzzle_hash=new_puzhash,
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(new_puzhash),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=new_puzhash,
                     amount=uint64(mirror_coin.amount),
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(10),
+                    fee=fee,
                     spend_bundle=mirror_bundle,
                     additions=mirror_bundle.additions(),
                     removals=mirror_bundle.removals(),
-                    memos=compute_memos(mirror_bundle),
-                    wallet_id=self.id(),  # This is being called before the wallet is created so we're using a ID of 0
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=mirror_bundle.name(),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 
