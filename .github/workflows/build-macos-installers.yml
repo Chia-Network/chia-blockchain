@@ -217,7 +217,7 @@ jobs:
           sh build_macos-2-installer.sh
 
       - name: Upload MacOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
