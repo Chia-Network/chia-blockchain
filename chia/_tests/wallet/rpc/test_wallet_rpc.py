@@ -160,6 +160,7 @@ from chia.wallet.wallet_request_types import (
     SetWalletResyncOnStartup,
     SpendClawbackCoins,
     SplitCoins,
+    TakeOffer,
     VerifySignature,
     VerifySignatureResponse,
 )
@@ -1647,7 +1648,16 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert offer_count.my_offers_count == 1
     assert offer_count.taken_offers_count == 0
 
-    trade_record = (await env_2.rpc_client.take_offer(offer, wallet_environments.tx_config, fee=uint64(1))).trade_record
+    trade_record = (
+        await env_2.rpc_client.take_offer(
+            TakeOffer(
+                offer=offer.to_bech32(),
+                fee=uint64(1),
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
+    ).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
     await env_1.rpc_client.cancel_offer(offer.name(), wallet_environments.tx_config, secure=False)

@@ -1932,6 +1932,17 @@ class CreateOfferForIDsResponse(_OfferEndpointResponse):
 
 @streamable
 @dataclass(frozen=True)
+class TakeOffer(TransactionEndpointRequest):
+    offer: str = field(default_factory=default_raise)
+    solver: Optional[Solver] = None
+
+    @cached_property
+    def parsed_offer(self) -> Offer:
+        return Offer.from_bech32(self.offer)
+
+
+@streamable
+@dataclass(frozen=True)
 class TakeOfferResponse(_OfferEndpointResponse):  # Inheriting for de-dup sake
     pass
 
