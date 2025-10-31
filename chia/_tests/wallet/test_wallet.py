@@ -341,6 +341,7 @@ class TestWalletSimulator:
             normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
 
         # Transfer to normal wallet
+        # clawback send, no fee
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 [uint64(tx_amount)],
@@ -351,6 +352,7 @@ class TestWalletSimulator:
                 memos=[[b"Test"]],
             )
 
+        # process transaction (1)
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
@@ -388,6 +390,7 @@ class TestWalletSimulator:
         )
         # clawback merkle coin
         [tx] = action_scope.side_effects.transactions
+        # extract clawback coin from first addition
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         interested_coins = await wsm_2.interested_store.get_interested_coin_ids()
         assert merkle_coin.name() in set(interested_coins)
@@ -396,6 +399,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == "0x" + merkle_coin.name().hex()
 
+        # no transaction from invalid coins specified
         test_fee = 10
         resp = await api_0.spend_clawback_coins(
             {
@@ -406,6 +410,7 @@ class TestWalletSimulator:
         )
         assert len(resp["transaction_ids"]) == 1
 
+        # process transaction (2)
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
