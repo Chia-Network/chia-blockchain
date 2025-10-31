@@ -839,6 +839,7 @@ class TestPoolWalletRpc:
             our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
         await full_node_api.wait_transaction_records_entered_mempool(records=[creation_tx])
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", uint32(0), f"{self_hostname}:5001", "new", "SELF_POOLING", fee
         )
