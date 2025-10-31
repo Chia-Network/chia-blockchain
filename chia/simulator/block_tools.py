@@ -373,7 +373,7 @@ class BlockTools:
 
     def setup_new_gen(
         self,
-        tx_block_heights: list[uint32],
+        generator_block_heights: list[uint32],
         curr: BlockRecordProtocol,
         wallet: Optional[WalletTool],
         rng: Optional[random.Random],
@@ -391,11 +391,11 @@ class BlockTools:
         # available_coins) until it's confirmed the block
         # generator made it into the block.
         dummy_refs: list[uint32]
-        if dummy_block_references and len(tx_block_heights) > 4:
+        if dummy_block_references and len(generator_block_heights) > 4:
             dummy_refs = [
-                tx_block_heights[1],
-                tx_block_heights[len(tx_block_heights) // 2],
-                tx_block_heights[-2],
+                generator_block_heights[1],
+                generator_block_heights[len(generator_block_heights) // 2],
+                generator_block_heights[-2],
             ]
         else:
             dummy_refs = []
@@ -754,13 +754,17 @@ class BlockTools:
         else:
             block_list = []
 
-        tx_block_heights: list[uint32] = []
+        # these are heights of blocks that have transactions generators. Note
+        # that there may be transactions blocks without generators. These are
+        # used to generate dummy block references. Block references require
+        # generators, not just transaction blocks.
+        generator_block_heights: list[uint32] = []
         if dummy_block_references:
             # block references can only point to transaction blocks, so we need
             # to record which ones are
             for b in block_list:
                 if b.transactions_generator is not None:
-                    tx_block_heights.append(b.height)
+                    generator_block_heights.append(b.height)
 
         constants = self.constants
 
@@ -909,7 +913,7 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
-                        tx_block_heights[-1] if len(tx_block_heights) > 0 else uint32(0),
+                        prev_tx_height,
                         force_plot_id=force_plot_id,
                     )
 
@@ -937,7 +941,7 @@ class BlockTools:
                             pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         new_gen = self.setup_new_gen(
-                            tx_block_heights,
+                            generator_block_heights,
                             curr,
                             wallet,
                             rng,
@@ -1009,8 +1013,10 @@ class BlockTools:
                                         available_coins.remove(rem)
                                     available_coins.extend(new_gen.additions)
 
+                        if full_block.transactions_generator is not None:
+                            generator_block_heights.append(full_block.height)
+
                         if full_block.is_transaction_block():
-                            tx_block_heights.append(full_block.height)
                             prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
@@ -1212,7 +1218,7 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
-                        tx_block_heights[-1] if len(tx_block_heights) > 0 else uint32(0),
+                        prev_tx_height,
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1231,7 +1237,7 @@ class BlockTools:
                             pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         new_gen = self.setup_new_gen(
-                            tx_block_heights,
+                            generator_block_heights,
                             curr,
                             wallet,
                             rng,
@@ -1303,8 +1309,10 @@ class BlockTools:
                                         available_coins.remove(rem)
                                     available_coins.extend(new_gen.additions)
 
+                        if full_block.transactions_generator is not None:
+                            generator_block_heights.append(full_block.height)
+
                         if full_block.is_transaction_block():
-                            tx_block_heights.append(full_block.height)
                             prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
@@ -1527,7 +1535,7 @@ class BlockTools:
         difficulty: uint64,
         sub_slot_iters: uint64,
         height: uint32,
-        prev_transaction_b_height: uint32,
+        prev_tx_height: uint32,
         force_plot_id: Optional[bytes32] = None,
     ) -> list[tuple[uint64, ProofOfSpace]]:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
@@ -1544,7 +1552,7 @@ class BlockTools:
 
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
-                if prev_transaction_b_height < constants.HARD_FORK2_HEIGHT:
+                if prev_tx_height < constants.HARD_FORK2_HEIGHT:
                     continue
 
                 if plot_info.prover.get_strength() < constants.PLOT_STRENGTH_INITIAL:
@@ -1553,7 +1561,7 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-            elif prev_transaction_b_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
+            elif prev_tx_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
                 continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
@@ -1570,7 +1578,7 @@ class BlockTools:
                     difficulty,
                     signage_point,
                     sub_slot_iters,
-                    prev_transaction_b_height,
+                    prev_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
                     continue
