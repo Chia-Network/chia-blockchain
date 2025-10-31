@@ -73,6 +73,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
     ConditionValidTimes,
+    ConditionValidTimesAbsolute,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     Remark,
@@ -86,7 +87,7 @@ from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -133,6 +134,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetNextAddress,
     GetNotifications,
+    GetOfferSummary,
     GetPrivateKey,
     GetSpendableCoins,
     GetSyncStatusResponse,
@@ -1614,25 +1616,22 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
     offer = create_res.offer
 
-    id, summary = await env_1.rpc_client.get_offer_summary(offer)
-    assert id == offer.name()
-    id, advanced_summary = await env_1.rpc_client.get_offer_summary(offer, advanced=True)
-    assert id == offer.name()
-    assert summary == {
-        "offered": {"xch": 5},
-        "requested": {cat_asset_id.hex(): 1},
-        "infos": {key.hex(): info.info for key, info in driver_dict.items()},
-        "fees": 1,
-        "additions": [c.name().hex() for c in offer.additions()],
-        "removals": [c.name().hex() for c in offer.removals()],
-        "valid_times": {
-            "max_height": None,
-            "max_time": None,
-            "min_height": None,
-            "min_time": None,
-        },
-    }
-    assert advanced_summary == summary
+    offer_summary_response = await env_1.rpc_client.get_offer_summary(GetOfferSummary(offer.to_bech32()))
+    assert offer_summary_response.id == offer.name()
+    offer_summary_response_advanced = await env_1.rpc_client.get_offer_summary(
+        GetOfferSummary(offer.to_bech32(), advanced=True)
+    )
+    assert offer_summary_response_advanced.id == offer.name()
+    assert offer_summary_response_advanced.summary == OfferSummary(
+        offered={"xch": "5"},
+        requested={cat_asset_id.hex(): "1"},
+        infos={key.hex(): info for key, info in driver_dict.items()},
+        fees=uint64(1),
+        additions=[c.name() for c in offer.additions()],
+        removals=[c.name() for c in offer.removals()],
+        valid_times=ConditionValidTimesAbsolute(),
+    )
+    assert offer_summary_response_advanced.summary == offer_summary_response.summary
 
     offer_validity_response = await env_1.rpc_client.check_offer_validity(CheckOfferValidity(offer.to_bech32()))
     assert offer_validity_response.id == offer.name()
