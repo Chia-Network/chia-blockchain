@@ -500,7 +500,6 @@ def validate_unfinished_header_block(
         header_block.reward_chain_block.proof_of_space,
         challenge,
         cc_sp_hash,
-        height,
         expected_vs.difficulty,
         expected_vs.ssi,
         prev_tx_block(blocks, prev_b),

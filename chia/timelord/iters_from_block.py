@@ -32,7 +32,6 @@ def iters_from_block(
         reward_chain_block.proof_of_space,
         reward_chain_block.pos_ss_cc_challenge_hash,
         cc_sp,
-        height,
         difficulty,
         sub_slot_iters,
         prev_transaction_block_height,

@@ -1850,7 +1850,6 @@ def load_block_list(
             full_block.reward_chain_block.proof_of_space,
             challenge,
             sp_hash,
-            full_block.height,
             uint64(difficulty),
             sub_slot_iters,
             prev_transaction_b_height,
