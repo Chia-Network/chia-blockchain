@@ -877,21 +877,28 @@ class FullNodeAPI:
             new_block_gen: Optional[NewBlockGenerator]
             async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+                tx_peak: Optional[BlockRecord] = self.full_node.blockchain.get_tx_peak()
 
                 # Checks that the proof of space is valid
                 height: uint32
-                if peak is None:
+                tx_height: uint32
+                if peak is None or tx_peak is None:
                     height = uint32(0)
+                    tx_height = uint32(0)
                 else:
                     height = peak.height
+                    tx_height = tx_peak.height
                 quality_string: Optional[bytes32] = verify_and_get_quality_string(
                     request.proof_of_space,
                     self.full_node.constants,
                     cc_challenge_hash,
                     request.challenge_chain_sp,
                     height=height,
+                    prev_transaction_block_height=tx_height,
                 )
-                assert quality_string is not None and len(quality_string) == 32
+                if quality_string is None:
+                    self.log.warning("Received invalid proof of space in DeclareProofOfSpace from farmer")
+                    return None
 
                 if peak is not None:
                     # Finds the last transaction block before this one
@@ -1024,8 +1031,6 @@ class FullNodeAPI:
                 request.proof_of_space.size(),
                 difficulty,
                 request.challenge_chain_sp,
-                sub_slot_iters,
-                tx_peak.height if tx_peak is not None else uint32(0),
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(

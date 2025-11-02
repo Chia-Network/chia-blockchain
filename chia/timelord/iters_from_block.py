@@ -34,7 +34,6 @@ def iters_from_block(
         cc_sp,
         height,
         difficulty,
-        sub_slot_iters,
         prev_transaction_block_height,
     )
     assert required_iters is not None
