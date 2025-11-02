@@ -28,25 +28,6 @@ def calculate_sp_iters(constants: ConsensusConstants, sub_slot_iters: uint64, si
     return uint64(calculate_sp_interval_iters(constants, sub_slot_iters) * signage_point_index)
 
 
-def calculate_phase_out(
-    constants: ConsensusConstants,
-    sub_slot_iters: uint64,
-    prev_transaction_block_height: uint32,
-) -> uint64:
-    if prev_transaction_block_height <= constants.HARD_FORK2_HEIGHT:
-        return uint64(0)
-    elif uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) >= constants.PLOT_V1_PHASE_OUT:
-        return uint64(calculate_sp_interval_iters(constants, sub_slot_iters))
-
-    return uint64(
-        (
-            uint32(prev_transaction_block_height - constants.HARD_FORK2_HEIGHT)
-            * calculate_sp_interval_iters(constants, sub_slot_iters)
-        )
-        // constants.PLOT_V1_PHASE_OUT
-    )
-
-
 def calculate_ip_iters(
     constants: ConsensusConstants,
     sub_slot_iters: uint64,
@@ -75,11 +56,15 @@ def validate_pospace_and_get_required_iters(
     cc_sp_hash: bytes32,
     height: uint32,
     difficulty: uint64,
-    sub_slot_iters: uint64,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
 ) -> Optional[uint64]:
     q_str: Optional[bytes32] = verify_and_get_quality_string(
-        proof_of_space, constants, challenge, cc_sp_hash, height=height
+        proof_of_space,
+        constants,
+        challenge,
+        cc_sp_hash,
+        height=height,
+        prev_transaction_block_height=prev_transaction_block_height,
     )
     if q_str is None:
         return None
@@ -90,8 +75,6 @@ def validate_pospace_and_get_required_iters(
         proof_of_space.size(),
         difficulty,
         cc_sp_hash,
-        sub_slot_iters,
-        prev_transaction_block_height,
     )
 
 
@@ -101,27 +84,17 @@ def calculate_iterations_quality(
     size: PlotSize,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,
-    ssi: uint64,
-    prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor
     times a random number between 0 and 1 (based on quality string), divided by plot size.
     """
-    if size.size_v1 is not None:
-        assert size.size_v2 is None
-        phase_out = calculate_phase_out(constants, ssi, prev_transaction_block_height)
-    else:
-        phase_out = uint64(0)
 
     sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
     iters = uint64(
-        (
-            int(difficulty)
-            * int(constants.DIFFICULTY_CONSTANT_FACTOR)
-            * int.from_bytes(sp_quality_string, "big", signed=False)
-            // (int(pow(2, 256)) * int(_expected_plot_size(size)))
-        )
-        + phase_out
+        int(difficulty)
+        * int(constants.DIFFICULTY_CONSTANT_FACTOR)
+        * int.from_bytes(sp_quality_string, "big", signed=False)
+        // (int(pow(2, 256)) * int(_expected_plot_size(size)))
     )
     return max(iters, uint64(1))

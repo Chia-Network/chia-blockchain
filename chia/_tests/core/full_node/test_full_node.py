@@ -3224,12 +3224,15 @@ async def declare_pos_unfinished_block(
         include_signature_source_data=True,
     )
     await full_node_api.declare_proof_of_space(pospace, dummy_peer)
+    tx_peak = blockchain.get_tx_peak()
+    assert tx_peak is not None
     q_str: Optional[bytes32] = verify_and_get_quality_string(
         block.reward_chain_block.proof_of_space,
         blockchain.constants,
         challenge,
         challenge_chain_sp,
         height=block.reward_chain_block.height,
+        prev_transaction_block_height=tx_peak.height,
     )
     assert q_str is not None
     unfinised_block = None

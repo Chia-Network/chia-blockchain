@@ -10,7 +10,6 @@ from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
-    calculate_phase_out,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
@@ -129,9 +128,7 @@ class TestPotIterations:
                         quality = std_hash(
                             slot_index.to_bytes(4, "big") + plot_k_val.to_bytes(1, "big") + bytes(farmer_index)
                         )
-                        required_iters = calculate_iterations_quality(
-                            constants, quality, k, difficulty, sp_hash, sub_slot_iters, height
-                        )
+                        required_iters = calculate_iterations_quality(constants, quality, k, difficulty, sp_hash)
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1
@@ -151,36 +148,6 @@ class TestPotIterations:
         for k in farmer_ks.keys():
             # Win rate is proportional to percentage of space
             assert abs(win_percentage[k] - percentage_space[k]) < 0.01
-
-    @pytest.mark.parametrize("sp_interval", [uint64(6250000000), uint64(1), uint64(2), uint64(10), uint64(10000000000)])
-    def test_calculate_phase_out(self, sp_interval: uint64):
-        constants = test_constants
-        sub_slot_iters = uint64(sp_interval * constants.NUM_SPS_SUB_SLOT)
-        # Before or at HARD_FORK2_HEIGHT, should return 0
-        assert calculate_phase_out(constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT - 1)) == 0
-        assert calculate_phase_out(constants, sub_slot_iters, constants.HARD_FORK2_HEIGHT) == 0
-        # after HARD_FORK2_HEIGHT, should return value = delta/phase_out_period * sp_interval
-        assert (
-            calculate_phase_out(constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT + 1))
-            == sp_interval // constants.PLOT_V1_PHASE_OUT
-        )
-        assert (
-            calculate_phase_out(
-                constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT // 2)
-            )
-            == sp_interval // 2
-        )
-        assert (
-            calculate_phase_out(
-                constants, sub_slot_iters, uint32(constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT)
-            )
-            == sp_interval
-        )
-
-        # Test with maximum uint32 height to ensure no overflow
-        max_uint32_height = uint32(0xFFFFFFFF)
-        result_max_height = calculate_phase_out(constants, sub_slot_iters, max_uint32_height)
-        assert result_max_height == sp_interval  # Should cap at sp_interval
 
 
 def test_expected_plot_size_v1() -> None:

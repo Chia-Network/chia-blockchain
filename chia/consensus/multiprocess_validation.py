@@ -220,7 +220,6 @@ async def pre_validate_block(
         cc_sp_hash,
         block.height,
         vs.difficulty,
-        vs.ssi,
         prev_tx_block(blockchain, prev_b),
     )
     if required_iters is None:
