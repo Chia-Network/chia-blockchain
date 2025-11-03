@@ -52,7 +52,7 @@ from chia.types.validation_state import ValidationState
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 
-SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
+SPType = timelord_protocol.NewEndOfSubSlotVDF | timelord_protocol.NewSignagePointVDF
 SPList = list[SPType]
 
 

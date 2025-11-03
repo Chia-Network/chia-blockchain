@@ -374,8 +374,8 @@ def test_not_lists() -> None:
 
 
 def test_basic_optional() -> None:
-    assert is_type_SpecificOptional(Optional[int])
-    assert is_type_SpecificOptional(Optional[int])
+    assert is_type_SpecificOptional(int | None)
+    assert is_type_SpecificOptional(int | None)
     assert not is_type_SpecificOptional(list[int])
 
 

@@ -398,7 +398,7 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args: list[str]) -> Iterator[su
 
 
 # https://github.com/pytest-dev/pytest/blob/7.3.1/src/_pytest/mark/__init__.py#L45
-Marks = Union[pytest.MarkDecorator, Collection[Union[pytest.MarkDecorator, pytest.Mark]]]
+Marks = pytest.MarkDecorator | Collection[pytest.MarkDecorator | pytest.Mark]
 
 
 class DataCase(Protocol):

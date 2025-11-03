@@ -7,7 +7,7 @@ import time
 import traceback
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
@@ -43,7 +43,7 @@ from chia.util.task_referencer import create_referenced_task
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
 
-WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
+WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
 error_response_version = Version("0.0.35")

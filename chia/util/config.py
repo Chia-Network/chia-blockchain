@@ -254,7 +254,7 @@ def traverse_dict(d: dict[str, Any], key_path: str) -> Any:
 
 
 method_strings = Literal["default", "python_default", "fork", "forkserver", "spawn"]
-method_values = Optional[Literal["fork", "forkserver", "spawn"]]
+method_values = Literal["fork", "forkserver", "spawn"] | None
 start_methods: dict[method_strings, method_values] = {
     "default": None,
     "python_default": None,

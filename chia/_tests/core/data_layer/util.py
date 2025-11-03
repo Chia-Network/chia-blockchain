@@ -17,7 +17,7 @@ from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 
 # from subprocess.pyi
-_FILE = Union[int, IO[Any], None]
+_FILE = int | IO[Any] | None
 
 
 if TYPE_CHECKING:

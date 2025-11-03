@@ -7,7 +7,7 @@ import time
 from getpass import getpass
 from pathlib import Path
 from sys import platform
-from typing import ClassVar, Optional, Union, overload
+from typing import ClassVar, Optional, overload
 
 import colorama
 from keyring.backends.macOS import Keyring as MacKeyring
@@ -30,7 +30,7 @@ MASTER_PASSPHRASE_SERVICE_NAME = "Chia Passphrase"  # noqa: S105
 MASTER_PASSPHRASE_USER_NAME = "Chia Passphrase"  # noqa: S105
 
 
-OSPassphraseStore = Union[MacKeyring, WinKeyring]
+OSPassphraseStore = MacKeyring | WinKeyring
 
 
 def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
