@@ -1367,6 +1367,9 @@ def __validate_pospace(
     # validate proof of space
     assert sub_slot_data.proof_of_space is not None
 
+    # when sampling blocks as part of weight proof validation, the previous
+    # transaction height is a conservative estimate, since we don't have direct
+    # access to it.
     required_iters = validate_pospace_and_get_required_iters(
         constants,
         sub_slot_data.proof_of_space,
@@ -1374,7 +1377,7 @@ def __validate_pospace(
         cc_sp_hash,
         height,
         curr_diff,
-        uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
+        uint32(max(0, height - constants.MAX_SUB_SLOT_BLOCKS)),
     )
     if required_iters is None:
         log.error("could not verify proof of space")

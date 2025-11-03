@@ -109,8 +109,6 @@ def is_v1_phased_out(
     return proof_value > epoch_counter
 
 
-# TODO: the "height" parameter is a bit suspect. It can probably be removed in
-# favor of prev_transaction_block_height
 def verify_and_get_quality_string(
     pos: ProofOfSpace,
     constants: ConsensusConstants,
@@ -123,6 +121,7 @@ def verify_and_get_quality_string(
     plot_size = pos.size()
 
     if plot_size.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
+        log.info("v1 proof has been phased-out and is no longer valid")
         return None
 
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
