@@ -73,7 +73,6 @@ from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import CheckOfferValidity, DLLatestSingleton
 from chia.wallet.wallet_rpc_api import WalletRpcApi
@@ -763,6 +762,7 @@ async def test_get_owned_stores(
         ph = await action_scope.get_puzzle_hash(wallet_node.wallet_state_manager)
     for i in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await full_node_api.wait_for_wallet_synced(wallet_node, timeout=30)
     funds = sum(
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
@@ -845,6 +845,11 @@ class OfferSetup:
     maker: StoreSetup
     taker: StoreSetup
     full_node_api: FullNodeSimulator
+    wallet_nodes: list[WalletNode]
+
+    async def wait_for_wallets_synced(self, timeout: int = 30) -> None:
+        for node in self.wallet_nodes:
+            await self.full_node_api.wait_for_wallet_synced(wallet_node=node, timeout=timeout)
 
 
 @pytest.fixture(name="offer_setup")
@@ -857,16 +862,17 @@ async def offer_setup_fixture(
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     enable_batch_autoinsertion_settings = getattr(request, "param", (True, True))
     full_node_api = full_node_service._api
-    wallets: list[Wallet] = []
+    wallets: list[WalletNode] = []
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None
         await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
         assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallets.append(wallet)
+        wallets.append(wallet_node)
 
         await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet, timeout=60)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: list[StoreSetup] = []
@@ -951,6 +957,7 @@ async def offer_setup_fixture(
                 data_rpc_client=taker.data_rpc_client,
             ),
             full_node_api=full_node_api,
+            wallet_nodes=wallets,
         )
 
         maker.data_rpc_client.close()
@@ -1018,6 +1025,7 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
             data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
         full_node_api=offer_setup.full_node_api,
+        wallet_nodes=offer_setup.wallet_nodes,
     )
 
 
@@ -1843,6 +1851,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     # due to differences in chain progression, the exact offer and trade id may differ from the reference
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
+    await offer_setup.wait_for_wallets_synced()
 
     cancel_request = {
         "trade_id": maker_response["offer"]["trade_id"],
@@ -1926,6 +1935,7 @@ async def test_make_and_cancel_offer_then_update(
     # due to differences in chain progression, the exact offer and trade id may differ from the reference
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
+    await offer_setup.wait_for_wallets_synced()
 
     cancel_request = {
         "trade_id": maker_response["offer"]["trade_id"],
@@ -2015,6 +2025,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     # due to differences in chain progression, the exact offer and trade id may differ from the reference
     # assert maker_response == {"success": True, "offer": reference.make_offer_response}
     assert maker_response["success"] is True
+    await offer_setup.wait_for_wallets_synced()
 
     cancel_request = {
         "trade_id": maker_response["offer"]["trade_id"],
@@ -2568,6 +2579,7 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
             data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
         full_node_api=offer_setup.full_node_api,
+        wallet_nodes=offer_setup.wallet_nodes,
     )
 
 

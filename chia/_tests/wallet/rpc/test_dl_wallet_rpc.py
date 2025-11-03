@@ -77,6 +77,7 @@ class TestWalletRpc:
             calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
         )
 
+        await full_node_api.wait_for_wallet_synced(wallet_node)
         await time_out_assert(15, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(15, wallet.get_unconfirmed_balance, initial_funds)
 
@@ -111,6 +112,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
                 rec = (await rpc_client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
@@ -131,6 +133,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             new_singleton_record = (await client.dl_latest_singleton(DLLatestSingleton(launcher_id))).singleton
             assert new_singleton_record is not None
@@ -219,6 +222,7 @@ class TestWalletRpc:
             launcher_id_2 = (
                 await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
             ).launcher_id
+            await full_node_api.wait_for_wallet_synced(wallet_node)
             launcher_id_3 = (
                 await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
             ).launcher_id
@@ -226,6 +230,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
@@ -248,6 +253,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
@@ -283,6 +289,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
             additions = []
             for tx in txs:
                 if tx.spend_bundle is not None:
