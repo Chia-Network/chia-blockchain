@@ -615,20 +615,23 @@ class TestWalletSimulator:
         env = wallet_environments.environments[0]
         wsm = env.wallet_state_manager
         wallet = env.xch_wallet
-        api_0 = env.rpc_api
 
         tx_amount = 500
         # Transfer to normal wallet
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             normal_puzhash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [normal_puzhash],
-                action_scope,
-                uint64(0),
-                puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
-                memos=[[b"Test"]],
-            )
+
+        send_response = await env.rpc_client.send_transaction(
+            SendTransaction(
+                wallet_id=env.xch_wallet.id(),
+                amount=uint64(tx_amount),
+                address=env.wallet_state_manager.encode_puzzle_hash(normal_puzhash),
+                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
+                memos=["Test"],
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
 
         await wallet_environments.process_pending_states(
             [
@@ -662,17 +665,18 @@ class TestWalletSimulator:
         # Check merkle coins
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # Claim merkle coin
-        [tx] = action_scope.side_effects.transactions
+        [tx] = send_response.transactions
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
         test_fee = 10
-        resp = await api_0.spend_clawback_coins(
-            {
-                "coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()],
-                "fee": test_fee,
-                **wallet_environments.tx_config.to_json_dict(),
-            }
+        resp = await env.rpc_client.spend_clawback_coins(
+            SpendClawbackCoins(
+                coin_ids=[merkle_coin.name()],
+                fee=uint64(test_fee),
+                push=True,
+            ),
+            wallet_environments.tx_config,
         )
-        assert len(resp["transaction_ids"]) == 1
+        assert len(resp.transaction_ids) == 1
         # Wait mempool update
         await wallet_environments.process_pending_states(
             [
@@ -705,20 +709,23 @@ class TestWalletSimulator:
         )
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
 
-        txs = await api_0.get_transactions(
-            dict(
-                type_filter={
-                    "values": [TransactionType.INCOMING_CLAWBACK_SEND.value, TransactionType.OUTGOING_CLAWBACK.value],
-                    "mode": 1,
-                },
-                wallet_id=1,
-            )
+        txs_response = await env.rpc_client.get_transactions(
+            GetTransactions(
+                wallet_id=env.xch_wallet.id(),
+                type_filter=TransactionTypeFilter(
+                    values=[
+                        uint8(TransactionType.INCOMING_CLAWBACK_SEND.value),
+                        uint8(TransactionType.OUTGOING_CLAWBACK.value),
+                    ],
+                    mode=uint8(1),
+                ),
+            ),
         )
-        assert len(txs["transactions"]) == 2
-        assert txs["transactions"][0]["confirmed"]
-        assert txs["transactions"][1]["confirmed"]
-        assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert "0x" + b"Test".hex() in next(iter(txs["transactions"][0]["memos"].values()))
+        assert len(txs_response.transactions) == 2
+        assert txs_response.transactions[0].confirmed
+        assert txs_response.transactions[1].confirmed
+        assert txs_response.transactions[0].memos != txs_response.transactions[1].memos
+        assert b"Test" in next(iter(txs_response.transactions[0].memos.values()))
 
     @pytest.mark.parametrize(
         "wallet_environments",
