@@ -83,7 +83,6 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
@@ -2782,33 +2781,6 @@ async def test_verify_signature(
         VerifySignature.from_json_dict(updated_request)
     )
     assert res == rpc_response
-
-
-@pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
-    await generate_funds(full_node_api, env.wallet_1)
-    assert rpc_server is not None
-    api: WalletRpcApi = rpc_server.rpc_api
-    req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
-    has_exception = False
-    try:
-        # Manually using API to test error condition
-        await api.set_auto_claim(req)
-    except ConversionError:
-        has_exception = True
-    assert has_exception
-    req = {"enabled": False, "batch_size": 0, "min_amount": 100}
-    res = await env.wallet_1.rpc_client.set_auto_claim(
-        AutoClaimSettings(enabled=False, batch_size=uint16(0), min_amount=uint64(100))
-    )
-    assert not res.enabled
-    assert res.tx_fee == 0
-    assert res.min_amount == 100
-    assert res.batch_size == 50
 
 
 @pytest.mark.anyio

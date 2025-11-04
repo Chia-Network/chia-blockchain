@@ -403,7 +403,7 @@ class TestWalletSimulator:
         assert coin_record is not None
         await wsm_1.coin_store.add_coin_record(dataclasses.replace(coin_record, metadata=None))
         # Claim merkle coin
-        env_1.node.set_auto_claim(AutoClaimSettings(enabled=True, batch_size=uint16(2)))
+        await env_1.rpc_client.set_auto_claim(AutoClaimSettings(enabled=True, batch_size=uint16(2)))
         # Trigger auto claim
         await wallet_environments.process_pending_states(
             [
@@ -980,7 +980,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
 
         # Claim merkle coin
-        env_2.node.set_auto_claim(AutoClaimSettings(enabled=True))
+        await env_2.rpc_client.set_auto_claim(AutoClaimSettings(enabled=True))
         # clawback merkle coin
         await wallet_environments.process_pending_states(
             [
