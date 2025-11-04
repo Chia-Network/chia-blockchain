@@ -2784,21 +2784,6 @@ async def test_verify_signature(
 
 
 @pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
-    await generate_funds(full_node_api, env.wallet_1)
-    assert rpc_server is not None
-    res = await env.wallet_1.rpc_client.get_auto_claim()
-    assert not res.enabled
-    assert res.tx_fee == 0
-    assert res.min_amount == 0
-    assert res.batch_size == 50
-
-
-@pytest.mark.anyio
 async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api

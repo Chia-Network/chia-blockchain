@@ -403,7 +403,11 @@ class TestWalletSimulator:
         assert coin_record is not None
         await wsm_1.coin_store.add_coin_record(dataclasses.replace(coin_record, metadata=None))
         # Claim merkle coin
+        original_settings = AutoClaimSettings.from_json_dict(env_1.wallet_state_manager.config["auto_claim"])
         await env_1.rpc_client.set_auto_claim(AutoClaimSettings(enabled=True, batch_size=uint16(2)))
+        assert await env_1.rpc_client.get_auto_claim() == dataclasses.replace(
+            original_settings, enabled=True, batch_size=uint16(2)
+        )
         # Trigger auto claim
         await wallet_environments.process_pending_states(
             [
