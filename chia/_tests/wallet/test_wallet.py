@@ -29,6 +29,7 @@ from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_request_types import (
     ClawbackPuzzleDecoratorOverride,
@@ -1076,18 +1077,18 @@ class TestWalletSimulator:
     async def test_get_clawback_coins(self, wallet_environments: WalletTestFramework) -> None:
         env = wallet_environments.environments[0]
         wsm = env.wallet_state_manager
-        wallet = env.xch_wallet
 
         tx_amount = 500
-        # Transfer to normal wallet
-        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [bytes32.zeros],
-                action_scope,
-                uint64(0),
-                puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
-            )
+        send_response = await env.rpc_client.send_transaction(
+            SendTransaction(
+                wallet_id=env.xch_wallet.id(),
+                amount=uint64(tx_amount),
+                address=env.wallet_state_manager.encode_puzzle_hash(bytes32.zeros),
+                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
 
         await wallet_environments.process_pending_states(
             [
@@ -1121,9 +1122,9 @@ class TestWalletSimulator:
         # Check merkle coins
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
         # clawback merkle coin
-        [tx] = action_scope.side_effects.transactions
+        [tx] = send_response.transactions
         merkle_coin = tx.additions[0] if tx.additions[0].amount == tx_amount else tx.additions[1]
-        resp = await env.rpc_api.get_coin_records({"wallet_id": 1, "coin_type": 1})
+        resp = await env.rpc_client.get_coin_records(GetCoinRecords(wallet_id=uint32(1), coin_type=uint8(1)))
         assert len(resp["coin_records"]) == 1
         assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
 
