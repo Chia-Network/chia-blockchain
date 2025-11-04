@@ -298,25 +298,27 @@ class TestWalletSimulator:
     ) -> None:
         env = wallet_environments.environments[0]
         env_1 = wallet_environments.environments[1]
-        wallet = env.xch_wallet
-        wallet_1 = env_1.xch_wallet
         wsm = env.wallet_state_manager
         wsm_1 = env_1.wallet_state_manager
 
         tx_amount = 500
-        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+        async with env_1.xch_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(env_1.xch_wallet.wallet_state_manager)
 
         # Transfer to normal wallet
         for _ in range(number_of_coins):
-            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-                await wallet.generate_signed_transaction(
-                    [uint64(tx_amount)],
-                    [normal_puzhash],
-                    action_scope,
-                    uint64(0),
-                    puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
-                )
+            await env.rpc_client.send_transaction(
+                SendTransaction(
+                    wallet_id=env.xch_wallet.id(),
+                    amount=uint64(tx_amount),
+                    address=env.wallet_state_manager.encode_puzzle_hash(normal_puzhash),
+                    puzzle_decorator=[
+                        ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(10))
+                    ],
+                    push=True,
+                ),
+                wallet_environments.tx_config,
+            )
 
         await wallet_environments.process_pending_states(
             [
@@ -352,15 +354,17 @@ class TestWalletSimulator:
             20, wsm_1.coin_store.count_small_unspent, number_of_coins, tx_amount * 2, CoinType.CLAWBACK
         )
 
-        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [normal_puzhash],
-                action_scope,
-                uint64(0),
-                puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
-            )
-        [tx_bad] = action_scope.side_effects.transactions
+        bad_send = await env.rpc_client.send_transaction(
+            SendTransaction(
+                wallet_id=env.xch_wallet.id(),
+                amount=uint64(tx_amount),
+                address=env.wallet_state_manager.encode_puzzle_hash(normal_puzhash),
+                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(10))],
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
+        [tx_bad] = bad_send.transactions
 
         await wallet_environments.process_pending_states(
             [
