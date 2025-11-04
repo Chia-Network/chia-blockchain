@@ -56,6 +56,7 @@ def check_plots(
         open_no_key_filenames=True,
         refresh_parameter=plot_refresh_parameter,
         refresh_callback=plot_refresh_callback,
+        constants=DEFAULT_CONSTANTS,
     )
 
     context_count = config["harvester"].get("parallel_decompressor_count", 5)
@@ -137,7 +138,7 @@ def check_plots(
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots_v1: Counter[uint8] = Counter()
-    total_good_plots_v2: Counter[uint8] = Counter()
+    total_good_plots_v2: int = 0
     total_size = 0
     bad_plots_list: list[Path] = []
 
@@ -160,7 +161,7 @@ def check_plots(
             local_sk = master_sk_to_local_sk(local_master_sk)
 
             with lock:
-                log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+                log.info(f"Testing plot {plot_path} k={pr.get_param()}")
                 if plot_info.pool_public_key is not None:
                     log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
                 if plot_info.pool_contract_puzzle_hash is not None:
@@ -177,7 +178,7 @@ def check_plots(
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
                     quality_start_time = round(monotonic() * 1000)
-                    qualities = pr.get_qualities_for_challenge(challenge, DEFAULT_CONSTANTS.PLOT_STRENGTH_INITIAL)
+                    qualities = pr.get_qualities_for_challenge(challenge, DEFAULT_CONSTANTS.QUALITY_PROOF_SCAN_FILTER)
                     quality_spent_time = round(monotonic() * 1000) - quality_start_time
                     if quality_spent_time > 8000:
                         log.warning(
@@ -218,9 +219,9 @@ def check_plots(
                             assert isinstance(quality, V2Quality)
                             partial_proof = pr.get_partial_proof(quality)
                             proof_spent_time = round(monotonic() * 1000) - proof_start_time
-                            size = pr.get_size().size_v2
-                            assert size is not None
-                            full_proof = solve_proof(partial_proof, pr.get_id(), pr.get_strength(), size)
+                            full_proof = solve_proof(
+                                partial_proof, pr.get_id(), pr.get_strength(), DEFAULT_CONSTANTS.PLOT_SIZE_V2
+                            )
 
                         if proof_spent_time > 15000:
                             log.warning(
@@ -230,7 +231,7 @@ def check_plots(
                         else:
                             log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
 
-                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size().size_v1, challenge, full_proof)
+                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_param().size_v1, challenge, full_proof)
                         if quality_str == ver_quality_str:
                             total_proofs += 1
                         else:
@@ -251,15 +252,13 @@ def check_plots(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
-                version_and_size = pr.get_size()
-                if version_and_size.size_v1 is not None:
-                    k = version_and_size.size_v1
+                param = pr.get_param()
+                if param.size_v1 is not None:
+                    k = param.size_v1
                     total_good_plots_v1[k] += 1
                     total_size += plot_path.stat().st_size
                 else:
-                    assert version_and_size.size_v2 is not None
-                    k = version_and_size.size_v2
-                    total_good_plots_v2[k] += 1
+                    total_good_plots_v2 += 1
                     total_size += plot_path.stat().st_size
             else:
                 log.error(
@@ -282,12 +281,11 @@ def check_plots(
     log.info("")
     log.info("")
     log.info("Summary")
-    total_plots: int = sum(list(total_good_plots_v1.values()) + list(total_good_plots_v2.values()))
+    total_plots: int = sum(list(total_good_plots_v1.values())) + total_good_plots_v2
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
     for k, count in sorted(dict(total_good_plots_v1).items()):
         log.info(f"{count} v1 plots of size {k}")
-    for k, count in sorted(dict(total_good_plots_v2).items()):
-        log.info(f"{count} v2 plots of size {k}")
+    log.info(f"{total_good_plots_v2} v2 plots")
     grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")

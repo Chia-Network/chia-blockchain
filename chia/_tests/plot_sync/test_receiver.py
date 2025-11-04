@@ -7,11 +7,12 @@ import time
 from typing import Any, Callable, Union
 
 import pytest
-from chia_rs import G1Element, PlotSize
+from chia_rs import G1Element, PlotParam
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.plot_sync.util import get_dummy_connection
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
@@ -163,7 +164,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
 
 def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncStepData]]:
     harvester_connection = get_dummy_connection(NodeType.HARVESTER, bytes32.random(seeded_random))
-    receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
+    receiver = Receiver(harvester_connection, dummy_callback, DEFAULT_CONSTANTS)  # type:ignore[arg-type]
 
     # Create example plot data
     path_list = [str(x) for x in range(40)]
@@ -188,7 +189,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotParam.make_v1(plot.size), DEFAULT_CONSTANTS))
             for plot in receiver.plots().values()
         )
     )
@@ -221,6 +222,7 @@ def test_default_values(seeded_random: random.Random) -> None:
                 bytes32.random(seeded_random),
             ),  # type:ignore[arg-type]
             dummy_callback,  # type:ignore[arg-type]
+            DEFAULT_CONSTANTS,
         )
     )
 
@@ -272,7 +274,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert plot_sync_dict_1["total_effective_plot_size"] == int(
         # TODO: todo_v2_plots support v2 plots
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotParam.make_v1(plot.size), DEFAULT_CONSTANTS))
             for plot in receiver.plots().values()
         )
     )
@@ -323,7 +325,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     # TODO: todo_v2_plots support v2 plots
     assert plot_sync_dict_3["total_effective_plot_size"] == int(
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotParam.make_v1(plot.size), DEFAULT_CONSTANTS))
             for plot in receiver.plots().values()
         )
     )

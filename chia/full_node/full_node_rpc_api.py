@@ -11,7 +11,7 @@ from chia_rs import (
     BlockRecord,
     CoinSpend,
     FullBlock,
-    PlotSize,
+    PlotParam,
     SpendBundle,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
@@ -606,7 +606,7 @@ class FullNodeRpcApi:
 
         # TODO: todo_v2_plots Update this calculation to take v2 plots into
         # account
-        plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotSize.make_v1(32))
+        plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotParam.make_v1(32))
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR

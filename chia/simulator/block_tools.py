@@ -132,8 +132,7 @@ GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GE
 
 test_constants = DEFAULT_CONSTANTS.replace(
     MIN_PLOT_SIZE_V1=uint8(18),
-    # TODO: todo_v2_plots decide on v2 test plot k-size
-    MIN_PLOT_SIZE_V2=uint8(18),
+    PLOT_SIZE_V2=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**10),
     DISCRIMINANT_SIZE_BITS=uint16(16),
@@ -154,7 +153,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
-    PLOT_V1_PHASE_OUT=uint32(5 * 340),
+    PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(3),
 )
 
 
@@ -370,6 +369,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
+            constants=self.constants,
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
@@ -1552,22 +1552,26 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_size())
+            prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
 
-            # TODO: todo_v2_plots change the existing PLOT_V1_PHASE_OUT constant to
-            # direclty specify the power-of-two epochs to phase-out over
-            phase_out_epochs = 1 << (constants.PLOT_V1_PHASE_OUT // constants.EPOCH_BLOCKS).bit_length()
+            phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
 
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
                 if prev_tx_height < constants.HARD_FORK2_HEIGHT:
                     continue
 
-                if plot_info.prover.get_strength() < constants.PLOT_STRENGTH_INITIAL:
+                if plot_info.prover.get_strength() < constants.MIN_PLOT_STRENGTH:
                     self.log.warn(
                         f"Plot strength ({plot_info.prover.get_strength()}) too low, "
+                        f"cannot be used for farming: {plot_info.prover.get_filename()}"
+                    )
+                    continue
+                if plot_info.prover.get_strength() > constants.MAX_PLOT_STRENGTH:
+                    self.log.warn(
+                        f"Plot strength ({plot_info.prover.get_strength()}) too high, "
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
@@ -1584,7 +1588,7 @@ class BlockTools:
                 required_iters = calculate_iterations_quality(
                     constants,
                     quality.get_string(),
-                    plot_info.prover.get_size(),
+                    plot_info.prover.get_param(),
                     difficulty,
                     signage_point,
                 )
@@ -1599,10 +1603,8 @@ class BlockTools:
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
                     partial_proof = plot_info.prover.get_partial_proof(quality)
-                    k_size = plot_info.prover.get_size().size_v2
                     strength = plot_info.prover.get_strength()
-                    assert k_size is not None
-                    proof = solve_proof(partial_proof, plot_id, strength, k_size)
+                    proof = solve_proof(partial_proof, plot_id, strength, constants.PLOT_SIZE_V2)
 
                 # Look up local_sk from plot to save locked memory
                 (
@@ -1623,7 +1625,7 @@ class BlockTools:
                     plot_info.pool_public_key,
                     plot_info.pool_contract_puzzle_hash,
                     plot_pk,
-                    plot_info.prover.get_size(),
+                    plot_info.prover.get_param(),
                     proof,
                 )
                 found_proofs.append((required_iters, proof_of_space))

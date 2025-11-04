@@ -8,7 +8,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from chia_rs import G1Element
+from chia_rs import ConsensusConstants, G1Element
 from chiapos import decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
@@ -48,11 +48,13 @@ class PlotManager:
     _initial: bool
     max_compression_level_allowed: int
     context_count: int
+    constants: ConsensusConstants
 
     def __init__(
         self,
         root_path: Path,
         refresh_callback: Callable,
+        constants: ConsensusConstants,
         match_str: Optional[str] = None,
         open_no_key_filenames: bool = False,
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
@@ -82,6 +84,7 @@ class PlotManager:
         self._initial = True
         self.max_compression_level_allowed = 0
         self.context_count = 0
+        self.constants = constants
 
     def __enter__(self):
         self._lock.acquire()
@@ -328,17 +331,20 @@ class PlotManager:
 
                     log.debug(f"process_file {file_path!s}")
 
-                    expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    expected_size = (
+                        _expected_plot_size(prover.get_param(), self.constants) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    )
 
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    k = prover.get_size()
+                    param = prover.get_param()
                     level = prover.get_compression_level()
                     if (
                         level == 0
                         and stat_info.st_size < 0.98 * expected_size
-                        and ((k.size_v1 is not None and k.size_v1 >= 30) or (k.size_v2 is not None and k.size_v2 >= 28))
+                        and param.size_v1 is not None
+                        and param.size_v1 >= 30
                     ):
                         log.warning(
                             f"Not farming plot {file_path}. "
@@ -419,7 +425,7 @@ class PlotManager:
                 log.error(f"Failed to open file {file_path}. {e} {tb}")
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
-            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
+            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_param()}, cache_hit: {cache_hit}")
 
             return new_plot_info
 

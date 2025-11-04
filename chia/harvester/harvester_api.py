@@ -57,7 +57,7 @@ class HarvesterAPI:
         filter_prefix_bits = calculate_prefix_bits(
             self.harvester.constants,
             challenge.peak_height,
-            plot_info.prover.get_size(),
+            plot_info.prover.get_param(),
         )
         return passes_plot_filter(
             filter_prefix_bits,
@@ -190,7 +190,7 @@ class HarvesterAPI:
                     required_iters: uint64 = calculate_iterations_quality(
                         self.harvester.constants,
                         quality.get_string(),
-                        plot_info.prover.get_size(),
+                        plot_info.prover.get_param(),
                         difficulty,
                         new_challenge.sp_hash,
                     )
@@ -207,15 +207,13 @@ class HarvesterAPI:
                 if len(good_partial_proofs) == 0:
                     return None
 
-                size = plot_info.prover.get_size().size_v2
-                assert size is not None
                 return PartialProofsData(
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                     str(filename.resolve()),
                     good_partial_proofs,
                     new_challenge.signage_point_index,
-                    size,
+                    self.harvester.constants.PLOT_SIZE_V2,
                     plot_info.prover.get_strength(),
                     plot_id,
                     plot_info.pool_public_key,
@@ -283,7 +281,7 @@ class HarvesterAPI:
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
                             quality.get_string(),
-                            plot_info.prover.get_size(),
+                            plot_info.prover.get_param(),
                             difficulty,
                             new_challenge.sp_hash,
                         )
@@ -348,7 +346,7 @@ class HarvesterAPI:
                                         plot_info.pool_public_key,
                                         plot_info.pool_contract_puzzle_hash,
                                         plot_info.plot_public_key,
-                                        plot_info.prover.get_size(),
+                                        plot_info.prover.get_param(),
                                         proof_xs,
                                     ),
                                 )
@@ -408,7 +406,11 @@ class HarvesterAPI:
                 else:
                     constants = self.harvester.constants
                     # after the phase-out, ignore v1 plots
-                    if new_challenge.last_tx_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
+                    if (
+                        new_challenge.last_tx_height
+                        >= constants.HARD_FORK2_HEIGHT
+                        + (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) * constants.EPOCH_BLOCKS
+                    ):
                         continue
 
                     passed += 1

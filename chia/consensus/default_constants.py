@@ -34,8 +34,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
     MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
     MAX_PLOT_SIZE_V1=uint8(50),
-    MIN_PLOT_SIZE_V2=uint8(28),
-    MAX_PLOT_SIZE_V2=uint8(32),
+    PLOT_SIZE_V2=uint8(28),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     NUM_SP_INTERVALS_EXTRA=uint8(3),  # The number of sp intervals to add to the signage point
     MAX_FUTURE_TIME2=uint32(2 * 60),  # The next block can have a timestamp of at most these many seconds in the future
@@ -83,15 +82,16 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # TODO: todo_v2_plots finalize fork height
     HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
     # starting at the hard fork 2 height, v1 plots will gradually be phased out,
-    # and stop working entirely after this many blocks
-    PLOT_V1_PHASE_OUT=uint32(255 * 4608),
+    # and stop working entirely after (1 << this) many epochs
+    PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
-    PLOT_STRENGTH_INITIAL=uint8(2),
+    MIN_PLOT_STRENGTH=uint8(2),
+    MAX_PLOT_STRENGTH=uint8(32),
     QUALITY_PROOF_SCAN_FILTER=uint8(5),
     # TODO: todo_v2_plots finalize plot filter schedule
     PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
@@ -109,8 +109,8 @@ def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None
         overrides["MAX_PLOT_SIZE_V1"] = overrides["MAX_PLOT_SIZE"]
         overrides.pop("MAX_PLOT_SIZE")
     if network_id in {"testnet11", "testneta"}:
-        if "MIN_PLOT_SIZE_V2" not in overrides:
-            overrides["MIN_PLOT_SIZE_V2"] = 18
+        if "PLOT_SIZE_V2" not in overrides:
+            overrides["PLOT_SIZE_V2"] = 28
     if network_id == "testneta":
         if "HARD_FORK_HEIGHT" not in overrides:
             overrides["HARD_FORK_HEIGHT"] = 3693395

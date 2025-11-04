@@ -312,7 +312,7 @@ class Farmer:
             self.harvester_handshake_task = None
 
         if peer.connection_type is NodeType.HARVESTER:
-            self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
+            self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback, self.constants)
             self.harvester_handshake_task = create_referenced_task(handshake_task())
 
     def set_server(self, server: ChiaServer) -> None:
