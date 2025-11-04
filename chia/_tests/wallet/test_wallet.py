@@ -891,21 +891,21 @@ class TestWalletSimulator:
         env_2 = wallet_environments.environments[1]
         wsm = env.wallet_state_manager
         wsm_2 = env_2.wallet_state_manager
-        wallet = env.xch_wallet
-        wallet_1 = env_2.xch_wallet
 
         tx_amount = 500
-        async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            normal_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
+        async with wsm_2.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            normal_puzhash = await action_scope.get_puzzle_hash(wsm_2)
         # Transfer to normal wallet
-        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(
-                [uint64(tx_amount)],
-                [normal_puzhash],
-                action_scope,
-                uint64(0),
-                puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
-            )
+        await env.rpc_client.send_transaction(
+            SendTransaction(
+                wallet_id=env.xch_wallet.id(),
+                amount=uint64(tx_amount),
+                address=env.wallet_state_manager.encode_puzzle_hash(normal_puzhash),
+                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
+                push=True,
+            ),
+            wallet_environments.tx_config,
+        )
 
         await wallet_environments.process_pending_states(
             [
