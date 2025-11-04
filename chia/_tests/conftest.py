@@ -200,7 +200,8 @@ class ConsensusMode(ComparableEnum):
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    # TODO: todo_v2_plots add HARD_FORK_3_0 mode as well as after phase-out
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
 )
 def consensus_mode(request):
     return request.param
