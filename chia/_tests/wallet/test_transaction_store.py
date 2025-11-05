@@ -31,24 +31,24 @@ coin_2 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded
 coin_3 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312 - 1234))
 
 tr1 = TransactionRecord(
-    uint32(0),  # confirmed height
-    uint64(1000),  # created_at_time
-    bytes32(bytes32.zeros),  # to_puzzle_hash
-    uint64(1234),  # amount
-    uint64(12),  # fee_amount
-    False,  # confirmed
-    uint32(0),  # sent
-    None,  # Optional[SpendBundle] spend_bundle
-    [coin_2, coin_3],  # additions
-    [coin_1],  # removals
-    uint32(1),  # wallet_id
-    [],  # list[tuple[str, uint8, Optional[str]]] sent_to
-    bytes32(bytes32.random(module_seeded_random)),  # trade_id
-    uint32(TransactionType.OUTGOING_TX),  # type
-    bytes32(bytes32.random(module_seeded_random)),  # name
-    {},  # memos
-    ConditionValidTimes(),
-    encode_puzzle_hash(bytes32(bytes32.zeros), "txch"),
+    confirmed_at_height=uint32(0),
+    created_at_time=uint64(1000),
+    to_puzzle_hash=bytes32(bytes32.zeros),
+    to_address=encode_puzzle_hash(bytes32(bytes32.zeros), "txch"),
+    amount=uint64(1234),
+    fee_amount=uint64(12),
+    confirmed=False,
+    sent=uint32(0),
+    spend_bundle=None,
+    additions=[coin_2, coin_3],
+    removals=[coin_1],
+    wallet_id=uint32(1),
+    sent_to=[],
+    trade_id=bytes32(bytes32.random(module_seeded_random)),
+    type=uint32(TransactionType.OUTGOING_TX),
+    name=bytes32(bytes32.random(module_seeded_random)),
+    memos={},
+    valid_times=ConditionValidTimes(),
 )
 
 MINIMUM_CONFIG = {
