@@ -2498,7 +2498,8 @@ class WalletStateManager:
     async def get_spendable_coins_for_wallet(
         self, wallet_id: int, records: Optional[set[WalletCoinRecord]] = None
     ) -> set[WalletCoinRecord]:
-        wallet_type = self.wallets[uint32(wallet_id)].type()
+        wallet = self.wallets[uint32(wallet_id)]
+        wallet_type = wallet.type()
         if records is None:
             if wallet_type == WalletType.CRCAT:
                 records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, CoinType.CRCAT)
@@ -2523,7 +2524,12 @@ class WalletStateManager:
                 continue
             if record.coin.name() in removal_dict:
                 continue
+            if hasattr(wallet, "is_coin_spendable") and not await wallet.is_coin_spendable(record):
+                continue
             filtered.add(record)
+
+        if hasattr(wallet, "get_max_spendable_coins"):
+            return await wallet.get_max_spendable_coins(filtered)  # type: ignore[no-any-return]
 
         return filtered
 
