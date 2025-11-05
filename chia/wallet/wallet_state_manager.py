@@ -2168,7 +2168,7 @@ class WalletStateManager:
         wallet_type: WalletType,
         peer: WSChiaConnection,
         coin_name: bytes32,
-        coin_data: Optional[Streamable],
+        coin_data: Optional[object],
     ) -> None:
         """
         Adding coin to DB
