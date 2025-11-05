@@ -247,19 +247,20 @@ class TestWalletSimulator:
 
         # no transaction from missing corresponding TX record
         fake_coin = Coin(coin_record.coin.parent_coin_info, bytes32.zeros, coin_record.coin.amount)
+        fake_coin_id = fake_coin.name()
         await env_2.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, coin=fake_coin))
         resp = await env_2.rpc_client.spend_clawback_coins(
-            SpendClawbackCoins(coin_ids=[fake_coin.name()]), tx_config=wallet_environments.tx_config
+            SpendClawbackCoins(coin_ids=[fake_coin_id]), tx_config=wallet_environments.tx_config
         )
         assert resp.transaction_ids == []
 
         # no transaction from coin that doesn't belong to wallet
         farmed_tx = (await env_2.wallet_state_manager.tx_store.get_farming_rewards())[0]
         await env_2.wallet_state_manager.tx_store.add_transaction_record(
-            dataclasses.replace(farmed_tx, name=fake_coin.name())
+            dataclasses.replace(farmed_tx, name=fake_coin_id)
         )
         resp = await env_2.rpc_client.spend_clawback_coins(
-            SpendClawbackCoins(coin_ids=[fake_coin.name()]), tx_config=wallet_environments.tx_config
+            SpendClawbackCoins(coin_ids=[fake_coin_id]), tx_config=wallet_environments.tx_config
         )
         assert resp.transaction_ids == []
 
