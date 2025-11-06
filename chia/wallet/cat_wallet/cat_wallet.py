@@ -338,15 +338,13 @@ class CATWallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
-        spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
-        )
-        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
-        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
-
     async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
+        return uint128(
+            sum(
+                cr.coin.amount
+                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+            )
+        )
 
     def get_name(self) -> str:
         return self.wallet_info.name

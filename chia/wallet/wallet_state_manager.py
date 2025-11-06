@@ -2528,8 +2528,10 @@ class WalletStateManager:
                 continue
             filtered.add(record)
 
-        if hasattr(wallet, "get_max_spendable_coins"):
-            return await wallet.get_max_spendable_coins(filtered)  # type: ignore[no-any-return]
+        if hasattr(wallet, "max_send_quantity"):
+            filtered_as_list = list(filtered)
+            filtered_as_list.sort(reverse=True, key=lambda rec: rec.coin.amount)
+            return set(filtered_as_list[0 : min(len(filtered_as_list), wallet.max_send_quantity)])
 
         return filtered
 
