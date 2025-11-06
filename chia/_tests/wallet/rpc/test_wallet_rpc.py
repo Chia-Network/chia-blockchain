@@ -83,7 +83,6 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trade_record import TradeRecord
@@ -844,132 +843,6 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
 
     await it_does_not_include_the_excluded_coins()
     await it_throws_an_error_when_all_spendable_coins_are_excluded()
-
-
-@pytest.mark.anyio
-async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-
-    wallet_1_node: WalletNode = env.wallet_1.node
-    wallet_2_node: WalletNode = env.wallet_2.node
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
-    wallet_1 = wallet_1_node.wallet_state_manager.main_wallet
-    wallet_2 = wallet_2_node.wallet_state_manager.main_wallet
-    full_node_api: FullNodeSimulator = env.full_node.api
-
-    generated_funds = await generate_funds(full_node_api, env.wallet_1, 1)
-    await generate_funds(full_node_api, env.wallet_2, 1)
-    async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        wallet_1_puzhash = await action_scope.get_puzzle_hash(wallet_1.wallet_state_manager)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        wallet_2_puzhash = await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)
-    tx = (
-        await wallet_1_rpc.send_transaction(
-            SendTransaction(
-                wallet_id=uint32(1),
-                amount=uint64(500),
-                address=encode_puzzle_hash(wallet_2_puzhash, "txch"),
-                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
-                push=True,
-            ),
-            tx_config=DEFAULT_TX_CONFIG,
-        )
-    ).transaction
-    clawback_coin_id_1 = tx.additions[0].name()
-    assert tx.spend_bundle is not None
-    await farm_transaction(full_node_api, wallet_1_node, tx.spend_bundle)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
-    tx = (
-        await wallet_2_rpc.send_transaction(
-            SendTransaction(
-                wallet_id=uint32(1),
-                amount=uint64(500),
-                address=encode_puzzle_hash(wallet_1_puzhash, "txch"),
-                puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
-                push=True,
-            ),
-            tx_config=DEFAULT_TX_CONFIG,
-        )
-    ).transaction
-    assert tx.spend_bundle is not None
-    clawback_coin_id_2 = tx.additions[0].name()
-    await farm_transaction(full_node_api, wallet_2_node, tx.spend_bundle)
-    await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_1_rpc, 1)
-    await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_2_rpc, 1)
-    await asyncio.sleep(10)
-    # Test coin ID is not a Clawback coin
-    invalid_coin_id = tx.removals[0].name()
-    resp = await wallet_2_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[invalid_coin_id], fee=uint64(500), push=True), tx_config=DEFAULT_TX_CONFIG
-    )
-    assert resp.transaction_ids == []
-    # Test unsupported wallet
-    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_1)
-    assert coin_record is not None
-    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
-        dataclasses.replace(coin_record, wallet_type=WalletType.CAT)
-    )
-    resp = await wallet_1_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[clawback_coin_id_1], fee=uint64(100), push=True), tx_config=DEFAULT_TX_CONFIG
-    )
-    assert len(resp.transaction_ids) == 0
-    # Test missing metadata
-    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, metadata=None))
-    resp = await wallet_1_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[clawback_coin_id_1], fee=uint64(100), push=True), tx_config=DEFAULT_TX_CONFIG
-    )
-    assert len(resp.transaction_ids) == 0
-    # Test missing incoming tx
-    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_2)
-    assert coin_record is not None
-    fake_coin = Coin(coin_record.coin.parent_coin_info, wallet_2_puzhash, coin_record.coin.amount)
-    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
-        dataclasses.replace(coin_record, coin=fake_coin)
-    )
-    resp = await wallet_1_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[fake_coin.name()], fee=uint64(100), push=True), tx_config=DEFAULT_TX_CONFIG
-    )
-    assert resp.transaction_ids == []
-    # Test coin puzzle hash doesn't match the puzzle
-    farmed_tx = (await wallet_1.wallet_state_manager.tx_store.get_farming_rewards())[0]
-    await wallet_1.wallet_state_manager.tx_store.add_transaction_record(
-        dataclasses.replace(farmed_tx, name=fake_coin.name())
-    )
-    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
-        dataclasses.replace(coin_record, coin=fake_coin)
-    )
-    resp = await wallet_1_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[fake_coin.name()], fee=uint64(100), push=True), tx_config=DEFAULT_TX_CONFIG
-    )
-    assert resp.transaction_ids == []
-    # Test claim spend
-    await wallet_2_rpc.set_auto_claim(
-        AutoClaimSettings(
-            enabled=False,
-            tx_fee=uint64(100),
-            min_amount=uint64(0),
-            batch_size=uint16(1),
-        )
-    )
-    resp = await wallet_2_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[clawback_coin_id_1, clawback_coin_id_2], fee=uint64(100), push=True),
-        tx_config=DEFAULT_TX_CONFIG,
-    )
-    assert len(resp.transaction_ids) == 2
-    for clawback_tx in resp.transactions:
-        if clawback_tx.spend_bundle is not None:
-            await time_out_assert_not_none(
-                10, full_node_api.full_node.mempool_manager.get_spendbundle, clawback_tx.spend_bundle.name()
-            )
-    await farm_transaction_block(full_node_api, wallet_2_node)
-    await time_out_assert(20, get_confirmed_balance, generated_funds + 300, wallet_2_rpc, 1)
-    # Test spent coin
-    resp = await wallet_2_rpc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[clawback_coin_id_1], fee=uint64(500), push=True), tx_config=DEFAULT_TX_CONFIG
-    )
-    assert resp.transaction_ids == []
 
 
 @pytest.mark.anyio
@@ -2926,48 +2799,6 @@ async def test_verify_signature(
         VerifySignature.from_json_dict(updated_request)
     )
     assert res == rpc_response
-
-
-@pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
-    await generate_funds(full_node_api, env.wallet_1)
-    assert rpc_server is not None
-    api: WalletRpcApi = rpc_server.rpc_api
-    req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
-    has_exception = False
-    try:
-        # Manually using API to test error condition
-        await api.set_auto_claim(req)
-    except ConversionError:
-        has_exception = True
-    assert has_exception
-    req = {"enabled": False, "batch_size": 0, "min_amount": 100}
-    res = await env.wallet_1.rpc_client.set_auto_claim(
-        AutoClaimSettings(enabled=False, batch_size=uint16(0), min_amount=uint64(100))
-    )
-    assert not res.enabled
-    assert res.tx_fee == 0
-    assert res.min_amount == 100
-    assert res.batch_size == 50
-
-
-@pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
-    await generate_funds(full_node_api, env.wallet_1)
-    assert rpc_server is not None
-    res = await env.wallet_1.rpc_client.get_auto_claim()
-    assert not res.enabled
-    assert res.tx_fee == 0
-    assert res.min_amount == 0
-    assert res.batch_size == 50
 
 
 @pytest.mark.anyio
