@@ -387,6 +387,10 @@ class BlockTools:
         transaction_data: Optional[SpendBundle],
         block_refs: list[uint32],
     ) -> Optional[NewBlockGenerator]:
+        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
+            assert block_refs == [], "block references are not allowed after hard fork 2"
+            dummy_block_references = False
+
         # we don't know if the new block will be a transaction
         # block or not, so even though we prepare a block
         # generator, we can't update our state (like,
