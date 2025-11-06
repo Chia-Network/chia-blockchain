@@ -192,6 +192,7 @@ from chia.wallet.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    TakeOffer,
     TakeOfferResponse,
     VCAddProofs,
     VCGet,
@@ -690,26 +691,16 @@ class WalletRpcClient(RpcClient):
 
     async def take_offer(
         self,
-        offer: Offer,
+        request: TakeOffer,
         tx_config: TXConfig,
-        solver: Optional[dict[str, Any]] = None,
-        fee: int = 0,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> TakeOfferResponse:
-        req = {
-            "offer": offer.to_bech32(),
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if solver is not None:
-            req["solver"] = solver
-        res = await self.fetch("take_offer", req)
-        return json_deserialize_with_clvm_streamable(res, TakeOfferResponse)
+        return TakeOfferResponse.from_json_dict(
+            await self.fetch(
+                "take_offer", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
         res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})

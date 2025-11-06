@@ -88,6 +88,7 @@ from chia.wallet.wallet_request_types import (
     SignMessageByID,
     SignMessageByIDResponse,
     SpendClawbackCoins,
+    TakeOffer,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -892,11 +893,9 @@ async def take_offer(
             print()
             cli_confirm("Would you like to take this offer? (y/n): ")
             res = await wallet_client.take_offer(
-                offer,
-                fee=fee,
-                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-                push=push,
+                TakeOffer(offer=offer.to_bech32(), fee=fee, push=push),
                 timelock_info=condition_valid_times,
+                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             )
             if push:
                 print(f"Accepted offer with ID {res.trade_record.trade_id}")

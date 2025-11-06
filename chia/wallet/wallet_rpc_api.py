@@ -70,7 +70,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
@@ -283,6 +283,8 @@ from chia.wallet.wallet_request_types import (
     StrayCAT,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    TakeOffer,
+    TakeOfferResponse,
     TransactionRecordWithMetadata,
     VCAddProofs,
     VCGet,
@@ -2322,44 +2324,34 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def take_offer(
         self,
-        request: dict[str, Any],
+        request: TakeOffer,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
-        fee: uint64 = uint64(request.get("fee", 0))
-        maybe_marshalled_solver: Optional[dict[str, Any]] = request.get("solver")
-        solver: Optional[Solver]
-        if maybe_marshalled_solver is None:
-            solver = None
-        else:
-            solver = Solver(info=maybe_marshalled_solver)
-
+    ) -> TakeOfferResponse:
         peer = self.service.get_full_node_peer()
         trade_record = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-            offer,
+            request.parsed_offer,
             peer,
             action_scope,
-            fee=fee,
-            solver=solver,
+            fee=request.fee,
+            solver=request.solver,
             extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
             interface.side_effects.signing_responses.append(
-                SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)
+                SigningResponse(bytes(request.parsed_offer._bundle.aggregated_signature), trade_record.trade_id)
             )
 
-        return {
-            "trade_record": trade_record.to_json_dict_convenience(),
-            "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "signing_responses": None,  # tx_endpoint wrapper will take care of this
-        }
+        return TakeOfferResponse(
+            [],  # tx_endpoint will fill in this default value
+            [],  # tx_endpoint will fill in this default value
+            Offer.from_bytes(trade_record.offer),
+            trade_record,
+        )
 
     async def get_offer(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
