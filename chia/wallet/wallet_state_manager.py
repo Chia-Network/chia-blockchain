@@ -2496,7 +2496,7 @@ class WalletStateManager:
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(
-        self, wallet_id: int, records: Optional[set[WalletCoinRecord]] = None
+        self, wallet_id: int, records: Optional[set[WalletCoinRecord]] = None, in_one_block: bool = False
     ) -> set[WalletCoinRecord]:
         wallet = self.wallets[uint32(wallet_id)]
         wallet_type = wallet.type()
@@ -2528,7 +2528,7 @@ class WalletStateManager:
                 continue
             filtered.add(record)
 
-        if hasattr(wallet, "max_send_quantity"):
+        if hasattr(wallet, "max_send_quantity") and in_one_block:
             filtered_as_list = list(filtered)
             filtered_as_list.sort(reverse=True, key=lambda rec: rec.coin.amount)
             return set(filtered_as_list[0 : min(len(filtered_as_list), wallet.max_send_quantity)])

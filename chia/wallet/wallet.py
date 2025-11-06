@@ -100,7 +100,9 @@ class Wallet:
         return uint128(
             sum(
                 cr.coin.amount
-                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.id(), records, in_one_block=True
+                )
             )
         )
 
@@ -204,7 +206,7 @@ class Wallet:
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
         spendable_coins: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), in_one_block=True)
         )
 
         # Try to use coins from the store, if there isn't enough of "unused"
