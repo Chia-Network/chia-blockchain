@@ -408,7 +408,7 @@ class WalletStateManager:
                     if _commit_previous_result:
                         await previous_result.commit(self)
                 targets = list(self.wallets.keys())
-                self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
+                self.log.debug("Target wallets to generate puzzle hashes for: %r", targets)
                 unused: Optional[uint32] = (
                     up_to_index if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
                 )
