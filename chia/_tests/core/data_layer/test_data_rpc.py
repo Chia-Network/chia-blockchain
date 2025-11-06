@@ -1873,6 +1873,8 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     else:  # pragma: no cover
         assert False, "offer was not cancelled"
 
+    await offer_setup.wait_for_wallets_synced()
+
     taker_request = {
         "offer": maker_response["offer"],
         "fee": 0,
