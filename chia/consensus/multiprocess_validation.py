@@ -218,7 +218,6 @@ async def pre_validate_block(
         block.reward_chain_block.proof_of_space,
         challenge,
         cc_sp_hash,
-        block.height,
         vs.difficulty,
         vs.ssi,
         prev_tx_block(blockchain, prev_b),

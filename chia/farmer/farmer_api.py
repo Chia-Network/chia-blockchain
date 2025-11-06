@@ -110,7 +110,7 @@ class FarmerAPI:
                 self.farmer.constants,
                 new_proof_of_space.challenge_hash,
                 new_proof_of_space.sp_hash,
-                height=sp.peak_height,
+                prev_tx_height=sp.last_tx_height,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
@@ -812,7 +812,7 @@ class FarmerAPI:
             return None
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
-        peak_height = sps[0].peak_height
+        prev_tx_height = sps[0].last_tx_height
         signage_point_index = sps[0].signage_point_index
         found_sp_hash_debug = False
         for sp_candidate in sps:
@@ -831,7 +831,7 @@ class FarmerAPI:
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = verify_and_get_quality_string(
-            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, height=peak_height
+            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, prev_tx_height=prev_tx_height
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")

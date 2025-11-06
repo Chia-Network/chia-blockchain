@@ -40,12 +40,12 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
+        # TODO: todo_v2_plots fix passing in the correct prev_tx_block height to this call
         required_iters = validate_pospace_and_get_required_iters(
             constants,
             block.reward_chain_block.proof_of_space,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,
-            block.height,
             difficulty,
             sub_slot_iters,
             uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here

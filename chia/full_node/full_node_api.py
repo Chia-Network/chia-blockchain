@@ -889,7 +889,7 @@ class FullNodeAPI:
                     self.full_node.constants,
                     cc_challenge_hash,
                     request.challenge_chain_sp,
-                    height=height,
+                    prev_tx_height=height,
                 )
                 assert quality_string is not None and len(quality_string) == 32
 

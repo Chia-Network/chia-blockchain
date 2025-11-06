@@ -149,7 +149,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         constants=DEFAULT_CONSTANTS,
         original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
         signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
-        height=case.height,
+        prev_tx_height=case.height,
     )
     assert quality_string is None
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
@@ -186,7 +186,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
             constants=DEFAULT_CONSTANTS,
             original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
             signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
-            height=case.height,
+            prev_tx_height=case.height,
         )
     except NotImplementedError as e:
         assert case.expected_error is not None

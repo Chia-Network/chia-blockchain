@@ -81,7 +81,7 @@ def verify_and_get_quality_string(
     original_challenge_hash: bytes32,
     signage_point: bytes32,
     *,
-    height: uint32,
+    prev_tx_height: uint32,
 ) -> Optional[bytes32]:
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
@@ -103,7 +103,7 @@ def verify_and_get_quality_string(
         return None
 
     # we use different plot filter prefix sizes depending on v1 or v2 plots
-    prefix_bits = calculate_prefix_bits(constants, height, plot_size)
+    prefix_bits = calculate_prefix_bits(constants, prev_tx_height, plot_size)
     if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
         log.error("Did not pass the plot filter")
         return None
@@ -147,24 +147,24 @@ def passes_plot_filter(
     return cast(bool, plot_filter[:prefix_bits].uint == 0)
 
 
-def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_size: PlotSize) -> int:
+def calculate_prefix_bits(constants: ConsensusConstants, prev_tx_height: uint32, plot_size: PlotSize) -> int:
     if plot_size.size_v2 is not None:
-        if height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
+        if prev_tx_height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
             return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 3
-        if height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
+        if prev_tx_height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
             return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 2
-        if height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
+        if prev_tx_height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
             return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 1
         return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
 
     prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V1)
-    if height >= constants.PLOT_FILTER_32_HEIGHT:
+    if prev_tx_height >= constants.PLOT_FILTER_32_HEIGHT:
         prefix_bits -= 4
-    elif height >= constants.PLOT_FILTER_64_HEIGHT:
+    elif prev_tx_height >= constants.PLOT_FILTER_64_HEIGHT:
         prefix_bits -= 3
-    elif height >= constants.PLOT_FILTER_128_HEIGHT:
+    elif prev_tx_height >= constants.PLOT_FILTER_128_HEIGHT:
         prefix_bits -= 2
-    elif height >= constants.HARD_FORK_HEIGHT:
+    elif prev_tx_height >= constants.HARD_FORK_HEIGHT:
         prefix_bits -= 1
 
     return max(0, prefix_bits)

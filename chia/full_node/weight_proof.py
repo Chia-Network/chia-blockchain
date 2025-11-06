@@ -927,7 +927,7 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: list[bytes],
-    height: uint32,
+    prev_tx_height: uint32,
     validate_from: int = 0,
 ) -> Optional[list[tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
     summaries = summaries_from_bytes(summaries_bytes)
@@ -968,7 +968,7 @@ def _validate_sub_epoch_segments(
                 prev_ses,
                 idx == 0,
                 sampled_seg_index == idx,
-                height,
+                prev_tx_height,
             )
             vdfs_to_validate.extend(vdf_list)
             if not valid_segment:
@@ -991,7 +991,7 @@ def _validate_segment(
     ses: Optional[SubEpochSummary],
     first_segment_in_se: bool,
     sampled: bool,
-    height: uint32,
+    prev_tx_height: uint32,
 ) -> tuple[bool, int, int, int, list[tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
@@ -1000,7 +1000,7 @@ def _validate_segment(
         if sampled and sub_slot_data.is_challenge():
             after_challenge = True
             required_iters = __validate_pospace(
-                constants, segment, idx, curr_difficulty, curr_ssi, ses, first_segment_in_se, height
+                constants, segment, idx, curr_difficulty, curr_ssi, ses, first_segment_in_se, prev_tx_height
             )
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
@@ -1326,7 +1326,6 @@ def _validate_pospace_recent_chain(
         block.reward_chain_block.proof_of_space,
         challenge if not overflow else prev_challenge,
         cc_sp_hash,
-        block.height,
         diff,
         ssi,
         prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
@@ -1346,7 +1345,7 @@ def __validate_pospace(
     curr_sub_slot_iters: uint64,
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
-    height: uint32,
+    prev_tx_height: uint32,
 ) -> Optional[uint64]:
     if first_in_sub_epoch and segment.sub_epoch_n == 0 and idx == 0:
         cc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -1375,10 +1374,9 @@ def __validate_pospace(
         sub_slot_data.proof_of_space,
         challenge,
         cc_sp_hash,
-        height,
         curr_diff,
         curr_sub_slot_iters,
-        uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
+        prev_tx_height,
     )
     if required_iters is None:
         log.error("could not verify proof of space")
