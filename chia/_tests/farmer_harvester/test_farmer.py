@@ -626,7 +626,14 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     }
 
     assert (
-        verify_and_get_quality_string(pos, DEFAULT_CONSTANTS, case.challenge_hash, case.sp_hash, height=uint32(1))
+        verify_and_get_quality_string(
+            pos,
+            DEFAULT_CONSTANTS,
+            case.challenge_hash,
+            case.sp_hash,
+            height=uint32(1),
+            prev_transaction_block_height=uint32(1),
+        )
         is not None
     )
 
@@ -883,7 +890,12 @@ async def test_farmer_pool_response(
 
     assert (
         verify_and_get_quality_string(
-            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+            pos,
+            DEFAULT_CONSTANTS,
+            sp.challenge_hash,
+            sp.challenge_chain_sp,
+            height=uint32(1),
+            prev_transaction_block_height=uint32(1),
         )
         is not None
     )
@@ -1251,7 +1263,12 @@ async def test_farmer_additional_headers_on_partial_submit(
 
     assert (
         verify_and_get_quality_string(
-            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+            pos,
+            DEFAULT_CONSTANTS,
+            sp.challenge_hash,
+            sp.challenge_chain_sp,
+            height=uint32(1),
+            prev_transaction_block_height=uint32(1),
         )
         is not None
     )

@@ -75,6 +75,40 @@ def check_plot_size(constants: ConsensusConstants, ps: PlotSize) -> bool:
     return True
 
 
+def is_v1_phased_out(
+    proof: bytes,
+    prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
+    constants: ConsensusConstants,
+) -> bool:
+    if prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
+        return False
+
+    # This is a v1 plot and the phase-out period has started
+    # The probability of having been phased out is proportional on the
+    # number of epochs since hard fork activation
+
+    # TODO: todo_v2_plots change the existing PLOT_V1_PHASE_OUT constant to
+    # direclty specify the power-of-two epochs to phase-out over
+    phase_out_epoch_bits = (constants.PLOT_V1_PHASE_OUT // constants.EPOCH_BLOCKS).bit_length()
+
+    phase_out_epoch_mask = (1 << phase_out_epoch_bits) - 1
+
+    # we just look at one byte so the mask can't be bigger than that
+    assert phase_out_epoch_mask < 256
+
+    # this counter is counting down to zero
+    epoch_counter = (1 << phase_out_epoch_bits) - (
+        prev_transaction_block_height - constants.HARD_FORK2_HEIGHT
+    ) // constants.EPOCH_BLOCKS
+
+    # if we're past the phase-out, v1 plots are unconditionally invalid
+    if epoch_counter <= 0:
+        return True
+
+    proof_value = std_hash(proof + b"chia proof-of-space v1 phase-out")[0] & phase_out_epoch_mask
+    return proof_value > epoch_counter
+
+
 def verify_and_get_quality_string(
     pos: ProofOfSpace,
     constants: ConsensusConstants,
@@ -82,7 +116,14 @@ def verify_and_get_quality_string(
     signage_point: bytes32,
     *,
     height: uint32,
+    prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
 ) -> Optional[bytes32]:
+    plot_size = pos.size()
+
+    if plot_size.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
+        log.info("v1 proof has been phased-out and is no longer valid")
+        return None
+
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")
@@ -91,7 +132,6 @@ def verify_and_get_quality_string(
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
 
-    plot_size = pos.size()
     if not check_plot_size(constants, plot_size):
         return None
 

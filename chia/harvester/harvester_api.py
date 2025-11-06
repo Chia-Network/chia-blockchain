@@ -29,6 +29,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
+    is_v1_phased_out,
     make_pos,
     passes_plot_filter,
 )
@@ -192,8 +193,6 @@ class HarvesterAPI:
                         plot_info.prover.get_size(),
                         difficulty,
                         new_challenge.sp_hash,
-                        sub_slot_iters,
-                        new_challenge.last_tx_height,
                     )
 
                     if required_iters >= sp_interval_iters:
@@ -287,8 +286,6 @@ class HarvesterAPI:
                             plot_info.prover.get_size(),
                             difficulty,
                             new_challenge.sp_hash,
-                            sub_slot_iters,
-                            new_challenge.last_tx_height,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
@@ -299,6 +296,17 @@ class HarvesterAPI:
                                 proof_xs = plot_info.prover.get_full_proof(
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
+
+                                if is_v1_phased_out(proof_xs, new_challenge.last_tx_height, constants):
+                                    self.harvester.log.info(
+                                        f"Proof dropped due to hard fork phase-out of v1 plots: {filename}"
+                                    )
+                                    self.harvester.log.info(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                    continue
+
                             except RuntimeError as e:
                                 if str(e) == "GRResult_NoProof received":
                                     self.harvester.log.info(

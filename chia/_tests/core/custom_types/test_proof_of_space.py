@@ -14,6 +14,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     check_plot_size,
+    is_v1_phased_out,
     make_pos,
     passes_plot_filter,
     verify_and_get_quality_string,
@@ -150,6 +151,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
         signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
         height=case.height,
+        prev_transaction_block_height=case.height,
     )
     assert quality_string is None
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
@@ -187,6 +189,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
             original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
             signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
             height=case.height,
+            prev_transaction_block_height=case.height,
         )
     except NotImplementedError as e:
         assert case.expected_error is not None
@@ -281,3 +284,30 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
     assert calculate_prefix_bits(DEFAULT_CONSTANTS, height, PlotSize.make_v2(28)) == expected
+
+
+def test_v1_phase_out() -> None:
+    constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500000))
+    rng = random.Random()
+
+    phase_out_epochs = 1 << (constants.PLOT_V1_PHASE_OUT // constants.EPOCH_BLOCKS).bit_length()
+    print(f"phase-out epochs: {phase_out_epochs}")
+
+    for epoch in range(-5, phase_out_epochs + 5):
+        prev_tx_height = uint32(constants.HARD_FORK2_HEIGHT + epoch * constants.EPOCH_BLOCKS)
+        num_phased_out = 0
+        rng.seed(1337)
+        for i in range(1000):
+            proof = rng.randbytes(32)
+            if is_v1_phased_out(proof, prev_tx_height, constants):
+                num_phased_out += 1
+
+        expect = min(1.0, max(0.0, epoch / phase_out_epochs))
+
+        print(
+            f"height: {prev_tx_height} "
+            f"epoch: {epoch} "
+            f"phased-out: {num_phased_out / 10:0.2f}% "
+            f"expect: {expect * 100.0:0.2f}%"
+        )
+        assert abs((num_phased_out / 1000) - expect) < 0.05

@@ -502,7 +502,6 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        expected_vs.ssi,
         prev_tx_block(blocks, prev_b),
     )
     if required_iters is None:

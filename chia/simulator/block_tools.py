@@ -96,6 +96,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
+    is_v1_phased_out,
     make_pos,
     passes_plot_filter,
 )
@@ -153,6 +154,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
+    PLOT_V1_PHASE_OUT=uint32(5 * 340),
 )
 
 
@@ -1550,6 +1552,10 @@ class BlockTools:
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
 
+            # TODO: todo_v2_plots change the existing PLOT_V1_PHASE_OUT constant to
+            # direclty specify the power-of-two epochs to phase-out over
+            phase_out_epochs = 1 << (constants.PLOT_V1_PHASE_OUT // constants.EPOCH_BLOCKS).bit_length()
+
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
                 if prev_tx_height < constants.HARD_FORK2_HEIGHT:
@@ -1561,7 +1567,7 @@ class BlockTools:
                         f"cannot be used for farming: {plot_info.prover.get_filename()}"
                     )
                     continue
-            elif prev_tx_height >= constants.HARD_FORK2_HEIGHT + constants.PLOT_V1_PHASE_OUT:
+            elif prev_tx_height >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS:
                 continue
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
@@ -1577,8 +1583,6 @@ class BlockTools:
                     plot_info.prover.get_size(),
                     difficulty,
                     signage_point,
-                    sub_slot_iters,
-                    prev_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
                     continue
@@ -1586,6 +1590,8 @@ class BlockTools:
                 proof = b""
                 if isinstance(plot_info.prover, V1Prover):
                     proof = plot_info.prover.get_full_proof(new_challenge, idx)
+                    if is_v1_phased_out(proof, prev_tx_height, constants):
+                        continue
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
                     partial_proof = plot_info.prover.get_partial_proof(quality)
@@ -1852,7 +1858,6 @@ def load_block_list(
             sp_hash,
             full_block.height,
             uint64(difficulty),
-            sub_slot_iters,
             prev_transaction_b_height,
         )
         assert required_iters is not None

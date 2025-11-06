@@ -1000,7 +1000,7 @@ def _validate_segment(
         if sampled and sub_slot_data.is_challenge():
             after_challenge = True
             required_iters = __validate_pospace(
-                constants, segment, idx, curr_difficulty, curr_ssi, ses, first_segment_in_se, height
+                constants, segment, idx, curr_difficulty, ses, first_segment_in_se, height
             )
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
@@ -1267,7 +1267,7 @@ def validate_recent_blocks(
                 required_iters = caluclated_required_iters
             else:
                 ret = _validate_pospace_recent_chain(
-                    constants, sub_blocks, block, challenge, diff, ssi, overflow, prev_challenge
+                    constants, sub_blocks, block, challenge, diff, overflow, prev_challenge
                 )
                 if ret is None:
                     return False, []
@@ -1310,7 +1310,6 @@ def _validate_pospace_recent_chain(
     block: HeaderBlock,
     challenge: bytes32,
     diff: uint64,
-    ssi: uint64,
     overflow: bool,
     prev_challenge: bytes32,
 ) -> Optional[uint64]:
@@ -1328,7 +1327,6 @@ def _validate_pospace_recent_chain(
         cc_sp_hash,
         block.height,
         diff,
-        ssi,
         prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
     )
     if required_iters is None:
@@ -1343,7 +1341,6 @@ def __validate_pospace(
     segment: SubEpochChallengeSegment,
     idx: int,
     curr_diff: uint64,
-    curr_sub_slot_iters: uint64,
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
     height: uint32,
@@ -1370,6 +1367,9 @@ def __validate_pospace(
     # validate proof of space
     assert sub_slot_data.proof_of_space is not None
 
+    # when sampling blocks as part of weight proof validation, the previous
+    # transaction height is a conservative estimate, since we don't have direct
+    # access to it.
     required_iters = validate_pospace_and_get_required_iters(
         constants,
         sub_slot_data.proof_of_space,
@@ -1377,8 +1377,7 @@ def __validate_pospace(
         cc_sp_hash,
         height,
         curr_diff,
-        curr_sub_slot_iters,
-        uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
+        uint32(max(0, height - constants.MAX_SUB_SLOT_BLOCKS)),
     )
     if required_iters is None:
         log.error("could not verify proof of space")
