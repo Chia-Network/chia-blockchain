@@ -29,7 +29,7 @@ class ItemAndTransactionRecords(Generic[T]):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class TransactionRecordOld(Streamable):
     """
     Used for storing transaction data and status in wallets.
@@ -100,7 +100,7 @@ class TransactionRecordOld(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class TransactionRecord(TransactionRecordOld):
     valid_times: ConditionValidTimes
     to_address: str
