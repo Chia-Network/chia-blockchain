@@ -14,7 +14,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -481,9 +480,7 @@ class Wallet:
             return await self.select_coins(amount, sandbox)
 
     # WSChiaConnection is only imported for type checking
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[object]) -> None:
         pass
 
     def get_name(self) -> str:
