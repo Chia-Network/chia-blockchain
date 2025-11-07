@@ -62,8 +62,7 @@ def create_farmer_service(
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)
-        | get_unresolved_peer_infos(service_config, NodeType.SOLVER),
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
