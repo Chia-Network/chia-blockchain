@@ -597,18 +597,27 @@ async def test_get_farmed_amount(wallet_environments: WalletTestFramework) -> No
     assert get_farmed_amount_result == expected_result
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env = wallet_rpc_environment
-    wallet: Wallet = env.wallet_1.wallet
-    full_node_api: FullNodeSimulator = env.full_node.api
-    wallet_rpc_client = env.wallet_1.rpc_client
-    wallet_node: WalletNode = env.wallet_1.node
-
-    await generate_funds(full_node_api, env.wallet_1)
+async def test_get_farmed_amount_with_fee(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    wallet_rpc_client = env.rpc_client
+    wallet_node: WalletNode = env.node
 
     fee_amount = 100
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await wallet.generate_signed_transaction(
             amounts=[uint64(5)],
             puzzle_hashes=[bytes32.zeros],
