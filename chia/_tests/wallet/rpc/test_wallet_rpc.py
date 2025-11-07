@@ -531,15 +531,25 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
     assert resp["success"]
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env = wallet_rpc_environment
-    wallet: Wallet = env.wallet_1.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    wallet_rpc_client = env.wallet_1.rpc_client
-    await full_node_api.farm_blocks_to_wallet(2, wallet)
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+async def test_get_balance(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    wallet_rpc_client = env.rpc_client
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
