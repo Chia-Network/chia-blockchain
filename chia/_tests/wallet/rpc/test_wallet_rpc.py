@@ -385,18 +385,28 @@ async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int) -> ui
     ).wallet_balance.unconfirmed_wallet_balance
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_send_transaction(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+    wallet_2: Wallet = env_2.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    client: WalletRpcClient = env.rpc_client
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-
-    generated_funds = await generate_funds(full_node_api, env.wallet_1)
-
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    INITIAL_FUNDS = await env.xch_wallet.get_confirmed_balance()
+    async with wallet_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     tx_amount = uint64(15600000)
     with pytest.raises(ValueError):
@@ -413,7 +423,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
             SendTransaction(
                 wallet_id=uint32(1), amount=tx_amount, address=addr, memos=["this is a basic tx"], push=False
             ),
-            tx_config=DEFAULT_TX_CONFIG.override(
+            tx_config=wallet_environments.tx_config.override(
                 excluded_coin_amounts=[uint64(250000000000)],
                 excluded_coin_ids=[non_existent_coin.name()],
                 reuse_puzhash=True,
@@ -453,7 +463,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     assert spend_bundle is not None
 
     await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
-    await time_out_assert(20, get_unconfirmed_balance, generated_funds - tx_amount, client, 1)
+    await time_out_assert(20, get_unconfirmed_balance, INITIAL_FUNDS - tx_amount, client, 1)
 
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
@@ -464,7 +474,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     assert [b"this is a basic tx"] in tx_confirmed.memos.values()
     assert next(iter(tx_confirmed.memos.keys())) in [a.name() for a in spend_bundle.additions()]
 
-    await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
+    await time_out_assert(20, get_confirmed_balance, INITIAL_FUNDS - tx_amount, client, 1)
 
 
 @pytest.mark.anyio
