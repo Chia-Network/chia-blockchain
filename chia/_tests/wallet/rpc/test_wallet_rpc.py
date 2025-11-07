@@ -477,30 +477,39 @@ async def test_send_transaction(wallet_environments: WalletTestFramework) -> Non
     await time_out_assert(20, get_confirmed_balance, INITIAL_FUNDS - tx_amount, client, 1)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_push_transactions(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
 
-    wallet: Wallet = env.wallet_1.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-
-    await generate_funds(full_node_api, env.wallet_1, num_blocks=2)
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    client: WalletRpcClient = env.rpc_client
 
     outputs = await create_tx_outputs(wallet, [(1234321, None)])
 
     tx = (
         await client.create_signed_transactions(
             outputs,
-            tx_config=DEFAULT_TX_CONFIG,
+            tx_config=wallet_environments.tx_config,
             fee=uint64(100),
         )
     ).signed_tx
 
     resp_client = await client.push_transactions(
         PushTransactions(transactions=[tx], fee=uint64(10)),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
     )
     resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
