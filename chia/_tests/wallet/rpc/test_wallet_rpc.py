@@ -565,12 +565,7 @@ async def test_get_balance(wallet_environments: WalletTestFramework) -> None:
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [2],
-        }
-    ],
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
@@ -599,12 +594,7 @@ async def test_get_farmed_amount(wallet_environments: WalletTestFramework) -> No
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [
-        {
-            "num_environments": 1,
-            "blocks_needed": [2],
-        }
-    ],
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
