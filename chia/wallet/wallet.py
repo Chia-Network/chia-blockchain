@@ -398,7 +398,7 @@ class Wallet:
         """
         non_change_amount = uint64(sum(amounts))
 
-        self.log.debug("Generating transaction for: %s %s %s", puzzle_hashes, amounts, repr(coins))
+        self.log.debug("Generating transaction for: %s %s %r", puzzle_hashes, amounts, coins)
         transaction = await self._generate_unsigned_transaction(
             amounts,
             puzzle_hashes,
