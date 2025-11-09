@@ -1245,7 +1245,7 @@ def validate_recent_blocks(
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
-        if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 1:
+        if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 2:
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
                 assert prev_block_record is not None

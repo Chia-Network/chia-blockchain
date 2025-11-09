@@ -109,24 +109,14 @@ def prev_tx_block(
     sp_index: uint8,
     first_in_sub_slot: bool,
 ) -> uint32:
-    # todo add check to make sure we dont return tx block from same sp as block we are validating
-    # todo check genesis hash not optional
-
     if prev_b_hash == constants.GENESIS_CHALLENGE:
         return uint32(0)
-    prev_b = blocks.block_record(prev_b_hash)
-    if (prev_b.prev_transaction_block_hash is not None and first_in_sub_slot) or prev_b.signage_point_index < sp_index:
-        return prev_b.height
-    else:
-        curr = prev_b
-    before_slot, before_sp = False, False
+    curr = blocks.block_record(prev_b_hash)
+    before_slot = first_in_sub_slot
     while curr.height > 0:
-        curr = blocks.block_record(curr.prev_hash)
+        if curr.is_transaction_block and (before_slot or curr.signage_point_index < sp_index):
+            break
         if curr.first_in_sub_slot:
             before_slot = True
-        if curr.signage_point_index < sp_index:
-            before_sp = True
-        if curr.prev_transaction_block_hash is not None and (before_slot or before_sp):
-            break
-
+        curr = blocks.block_record(curr.prev_hash)
     return curr.height
