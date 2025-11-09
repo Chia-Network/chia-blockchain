@@ -1327,7 +1327,13 @@ def _validate_pospace_recent_chain(
         cc_sp_hash,
         block.height,
         diff,
-        prev_tx_block(blocks, blocks.block_record(block.prev_header_hash)),
+        prev_tx_block(
+            constants,
+            blocks,
+            block.prev_header_hash,
+            block.reward_chain_block.signage_point_index,
+            block.first_in_sub_slot,
+        ),
     )
     if required_iters is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
