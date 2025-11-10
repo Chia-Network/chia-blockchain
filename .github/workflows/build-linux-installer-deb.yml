@@ -182,7 +182,7 @@ jobs:
           sh build_linux_deb-2-installer.sh ${{ matrix.os.arch }}
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: chia-installers-linux-deb-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
