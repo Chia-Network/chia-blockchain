@@ -37,7 +37,7 @@ class HarvesterApiStub(ApiProtocol, Protocol):
 
     @metadata.request(peer_required=True)
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+        self, new_challenge: harvester_protocol.NewSignagePointHarvester2, peer: WSChiaConnection
     ) -> None:
         """Handle new signage point from farmer."""
         ...
