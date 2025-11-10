@@ -155,7 +155,7 @@ class TestGenesisBlock:
     async def test_genesis_validate_1(
         self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Monkey patch prev_tx_block in multiprocess_validation to return 0
+        # Monkey patch prev_tx_block so we dont throw there
         monkeypatch.setattr(
             "chia.consensus.multiprocess_validation.prev_tx_block",
             lambda *args, **kwargs: uint32(0),
