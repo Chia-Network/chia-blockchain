@@ -699,6 +699,10 @@ class Blockchain:
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
+        prev_b = self.try_block_record(block.prev_header_hash)
+        if prev_b is None and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
+            return None, Err.INVALID_PREV_BLOCK_HASH
+
         prev_tx_height = prev_tx_block(
             constants=self.constants,
             blocks=self,
