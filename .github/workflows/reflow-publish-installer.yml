@@ -60,7 +60,7 @@ jobs:
           directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
       - name: Download constraints file
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: constraints-file-${{ matrix.arch.artifact-name }}
           path: venv
@@ -70,7 +70,7 @@ jobs:
           pip install --constraint venv/constraints.txt py3createtorrent
 
       - name: Download packages
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
           path: artifacts/

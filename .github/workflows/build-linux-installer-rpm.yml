@@ -312,7 +312,7 @@ jobs:
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
 
       - name: Download packages
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         id: download
         with:
           name: chia-installers-linux-rpm-intel
