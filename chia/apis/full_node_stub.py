@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
-
-if TYPE_CHECKING:
-    from chia.server.api_protocol import ApiProtocol
+from typing import ClassVar, Optional
 
 # Minimal imports to avoid circular dependencies
 from chia_rs.sized_bytes import bytes32
+from typing_extensions import Protocol
 
 from chia.protocols import (
     farmer_protocol,
@@ -18,19 +16,16 @@ from chia.protocols import (
 )
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
-class FullNodeApiStub:
+class FullNodeApiStub(ApiProtocol, Protocol):
     """Non-functional API stub for FullNodeAPI to break circular dependencies.
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual FullNodeAPI implementation at runtime.
     """
-
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ApiProtocol] = cast("FullNodeApiStub", None)
 
     log: logging.Logger
     metadata: ClassVar[ApiMetadata] = ApiMetadata()

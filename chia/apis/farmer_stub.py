@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import ClassVar, Optional
 
-if TYPE_CHECKING:
-    from chia.server.api_protocol import ApiProtocol
+from typing_extensions import Protocol
 
 # Minimal imports to avoid circular dependencies
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -17,21 +16,19 @@ from chia.protocols.harvester_protocol import (
     RespondSignatures,
 )
 from chia.protocols.outbound_message import Message
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
-class FarmerApiStub:
+class FarmerApiStub(ApiProtocol, Protocol):
     """Non-functional API stub for FarmerAPI to break circular dependencies.
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual FarmerAPI implementation at runtime.
     """
 
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ApiProtocol] = cast("FarmerApiStub", None)
-
     log: logging.Logger
+    # Create a concrete instance for decorators while keeping the ClassVar type hint for mypy
     metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def ready(self) -> bool:

@@ -5,7 +5,7 @@ import pathlib
 import sys
 from typing import Any, Optional
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.introducer.introducer_service import IntroducerService
@@ -60,7 +60,7 @@ def create_introducer_service(
         service_name=SERVICE_NAME,
         network_id=network_id,
         connect_to_daemon=connect_to_daemon,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 

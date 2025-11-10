@@ -1,27 +1,23 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import ClassVar, Optional
 
-if TYPE_CHECKING:
-    from chia.server.api_protocol import ApiProtocol
+from typing_extensions import Protocol
 
 # Minimal imports to avoid circular dependencies
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.outbound_message import Message
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
-class IntroducerApiStub:
+class IntroducerApiStub(ApiProtocol, Protocol):
     """Non-functional API stub for IntroducerAPI to break circular dependencies.
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual IntroducerAPI implementation at runtime.
     """
-
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ApiProtocol] = cast("IntroducerApiStub", None)
 
     log: logging.Logger
     metadata: ClassVar[ApiMetadata] = ApiMetadata()

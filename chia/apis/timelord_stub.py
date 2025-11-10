@@ -1,25 +1,21 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import ClassVar
 
-if TYPE_CHECKING:
-    from chia.server.api_protocol import ApiProtocol
+from typing_extensions import Protocol
 
 # Minimal imports to avoid circular dependencies
 from chia.protocols.timelord_protocol import NewPeakTimelord, NewUnfinishedBlockTimelord, RequestCompactProofOfTime
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 
 
-class TimelordApiStub:
+class TimelordApiStub(ApiProtocol, Protocol):
     """Non-functional API stub for TimelordAPI to break circular dependencies.
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual TimelordAPI implementation at runtime.
     """
-
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ApiProtocol] = cast("TimelordApiStub", None)
 
     log: logging.Logger
     metadata: ClassVar[ApiMetadata] = ApiMetadata()

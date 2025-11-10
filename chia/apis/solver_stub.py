@@ -1,26 +1,22 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import ClassVar, Optional
 
-if TYPE_CHECKING:
-    from chia.server.api_protocol import ApiProtocol
+from typing_extensions import Protocol
 
 # Minimal imports to avoid circular dependencies
 from chia.protocols.outbound_message import Message
 from chia.protocols.solver_protocol import SolverInfo
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 
 
-class SolverApiStub:
+class SolverApiStub(ApiProtocol, Protocol):
     """Non-functional API stub for SolverAPI to break circular dependencies.
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual SolverAPI implementation at runtime.
     """
-
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ApiProtocol] = cast("SolverApiStub", None)
 
     log: logging.Logger
     metadata: ClassVar[ApiMetadata] = ApiMetadata()

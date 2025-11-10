@@ -84,7 +84,7 @@ class WSChiaConnection:
     close_callback: Optional[ConnectionClosedCallbackProtocol] = field(repr=False)
     outbound_rate_limiter: RateLimiter
     inbound_rate_limiter: RateLimiter
-    class_for_type: dict[NodeType, type[ApiProtocol]] = field(repr=False)
+    stub_metadata_for_type: dict[NodeType, ApiMetadata] = field(repr=False)
 
     # connection properties
     is_outbound: bool
@@ -140,7 +140,7 @@ class WSChiaConnection:
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         local_capabilities_for_handshake: list[tuple[uint16, str]],
-        class_for_type: dict[NodeType, type[ApiProtocol]],
+        stub_metadata_for_type: dict[NodeType, ApiMetadata],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
         assert ws._writer is not None
@@ -172,7 +172,7 @@ class WSChiaConnection:
             inbound_rate_limiter=RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent),
             is_outbound=is_outbound,
             received_message_callback=received_message_callback,
-            class_for_type=class_for_type,
+            stub_metadata_for_type=stub_metadata_for_type,
             session=session,
         )
 
@@ -407,7 +407,7 @@ class WSChiaConnection:
 
             if full_message.type == ProtocolMessageTypes.error.value:
                 error = Error.from_bytes(full_message.data)
-                self.api.log.warning(f"ApiError: {error} from {self.peer_node_id}, {self.peer_info}")
+                self.log.warning(f"ApiError: {error} from {self.peer_node_id}, {self.peer_info}")
                 return None
 
             bare_message_type = ProtocolMessageTypes(full_message.type)
@@ -545,7 +545,7 @@ class WSChiaConnection:
         assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
         if (
             request_metadata.request_type
-            not in self.class_for_type[self.connection_type].metadata.message_type_to_request
+            not in self.stub_metadata_for_type[self.connection_type].message_type_to_request
         ):
             raise AttributeError(
                 f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}"
@@ -572,7 +572,7 @@ class WSChiaConnection:
             await self.ban_peer_bad_protocol(error_message)
             raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-        recv_method = self.class_for_type[self.local_type].metadata.message_type_to_request[recv_message_type].method
+        recv_method = self.stub_metadata_for_type[self.local_type].message_type_to_request[recv_message_type].method
         receive_metadata = ApiMetadata.from_bound_method(recv_method)
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)

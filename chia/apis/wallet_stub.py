@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, cast
-
-if TYPE_CHECKING:
-    from chia.server.api_protocol import ApiProtocol
+from typing import ClassVar
 
 # Minimal imports to avoid circular dependencies
 from chia_rs import RespondToPhUpdates
+from typing_extensions import Protocol
 
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import (
@@ -29,19 +27,16 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     TransactionAck,
 )
-from chia.server.api_protocol import ApiMetadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.ws_connection import WSChiaConnection
 
 
-class WalletNodeApiStub:
+class WalletNodeApiStub(ApiProtocol, Protocol):
     """Non-functional API stub for WalletNodeAPI to break circular dependencies.
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual WalletNodeAPI implementation at runtime.
     """
-
-    if TYPE_CHECKING:
-        _protocol_check: ClassVar[ApiProtocol] = cast("WalletNodeApiStub", None)
 
     log: logging.Logger
     metadata: ClassVar[ApiMetadata] = ApiMetadata()

@@ -8,14 +8,14 @@ from chia.apis.solver_stub import SolverApiStub
 from chia.apis.timelord_stub import TimelordApiStub
 from chia.apis.wallet_stub import WalletNodeApiStub
 from chia.protocols.outbound_message import NodeType
-from chia.server.api_protocol import ApiProtocol
+from chia.server.api_protocol import ApiMetadata
 
-ApiProtocolRegistry: dict[NodeType, type[ApiProtocol]] = {
-    NodeType.FULL_NODE: FullNodeApiStub,
-    NodeType.WALLET: WalletNodeApiStub,
-    NodeType.INTRODUCER: IntroducerApiStub,
-    NodeType.TIMELORD: TimelordApiStub,
-    NodeType.FARMER: FarmerApiStub,
-    NodeType.HARVESTER: HarvesterApiStub,
-    NodeType.SOLVER: SolverApiStub,
+StubMetadataRegistry: dict[NodeType, ApiMetadata] = {
+    NodeType.FULL_NODE: FullNodeApiStub.metadata,
+    NodeType.WALLET: WalletNodeApiStub.metadata,
+    NodeType.INTRODUCER: IntroducerApiStub.metadata,
+    NodeType.TIMELORD: TimelordApiStub.metadata,
+    NodeType.FARMER: FarmerApiStub.metadata,
+    NodeType.HARVESTER: HarvesterApiStub.metadata,
+    NodeType.SOLVER: SolverApiStub.metadata,
 }
