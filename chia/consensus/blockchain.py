@@ -703,7 +703,13 @@ class Blockchain:
         if prev_b is None and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
-        prev_tx_height = prev_tx_block(self, prev_b)
+        prev_tx_height = prev_tx_block(
+            constants=self.constants,
+            blocks=self,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+        )
 
         # With hard fork 2 we ban transactions_generator_ref_list.
         if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT and block.transactions_generator_ref_list != []:

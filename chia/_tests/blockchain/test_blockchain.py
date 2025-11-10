@@ -152,7 +152,14 @@ class TestGenesisBlock:
         await _validate_and_add_block(empty_blockchain, genesis)
 
     @pytest.mark.anyio
-    async def test_genesis_validate_1(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    async def test_genesis_validate_1(
+        self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Monkey patch prev_tx_block so we dont throw there
+        monkeypatch.setattr(
+            "chia.consensus.multiprocess_validation.prev_tx_block",
+            lambda *args, **kwargs: uint32(0),
+        )
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         bad_prev = bytes([1] * 32)
         genesis = recursive_replace(genesis, "foliage.prev_block_hash", bad_prev)

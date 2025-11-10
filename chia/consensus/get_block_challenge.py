@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Union
+from typing import Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -102,28 +102,25 @@ def get_block_challenge(
     return challenge
 
 
+# Returns the height of the previous transaction block up to the blocks signage point
+# we use this for block validation since when the block is farmed we do not know the latest transaction block
+# since a new one might be infused by the time the block is infused
 def prev_tx_block(
+    constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
-    prev_b: Optional[Union[BlockRecord, FullBlock, HeaderBlock]],
+    *,
+    prev_b_hash: bytes32,
+    sp_index: uint8,
+    first_in_sub_slot: bool,
 ) -> uint32:
-    # todo add check to make sure we dont return tx block from same sp as block we are validating
-    if prev_b is None:
+    if prev_b_hash == constants.GENESIS_CHALLENGE:
         return uint32(0)
-    if isinstance(prev_b, BlockRecord):
-        if prev_b.prev_transaction_block_hash is not None:
-            return prev_b.height
-        else:
-            curr = prev_b
-    elif isinstance(prev_b, FullBlock):
-        if prev_b.foliage_transaction_block is not None:
-            return prev_b.height
-        else:
-            curr = blocks.block_record(prev_b.header_hash)
-    elif isinstance(prev_b, HeaderBlock):
-        if prev_b.foliage_transaction_block is not None:
-            return prev_b.height
-        else:
-            curr = blocks.block_record(prev_b.header_hash)
-    while curr.is_transaction_block is False and curr.height > 0:
+    curr = blocks.block_record(prev_b_hash)
+    before_slot = first_in_sub_slot
+    while curr.height > 0:
+        if curr.is_transaction_block and (before_slot or curr.signage_point_index < sp_index):
+            break
+        if curr.first_in_sub_slot:
+            before_slot = True
         curr = blocks.block_record(curr.prev_hash)
     return curr.height

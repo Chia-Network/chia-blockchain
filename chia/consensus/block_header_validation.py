@@ -502,7 +502,13 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        prev_tx_block(blocks, prev_b),
+        prev_tx_block(
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=header_block.prev_header_hash,
+            sp_index=header_block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+        ),
     )
     if required_iters is None:
         return None, ValidationError(Err.INVALID_POSPACE)
