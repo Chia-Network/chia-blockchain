@@ -12,8 +12,20 @@ from chia.util.block_cache import BlockCache
 
 def test_prev_tx_block_none() -> None:
     # If prev_b is None, should return 0
-    assert prev_tx_block(test_constants, BlockCache({}), test_constants.GENESIS_CHALLENGE, uint8(0), False) == uint32(0)
-    assert prev_tx_block(test_constants, BlockCache({}), test_constants.GENESIS_CHALLENGE, uint8(1), True) == uint32(0)
+    assert prev_tx_block(
+        constants=test_constants,
+        blocks=BlockCache({}),
+        prev_b_hash=test_constants.GENESIS_CHALLENGE,
+        sp_index=uint8(0),
+        first_in_sub_slot=False,
+    ) == uint32(0)
+    assert prev_tx_block(
+        constants=test_constants,
+        blocks=BlockCache({}),
+        prev_b_hash=test_constants.GENESIS_CHALLENGE,
+        sp_index=uint8(1),
+        first_in_sub_slot=True,
+    ) == uint32(0)
 
 
 def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
@@ -29,11 +41,11 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert latest_tx_before_sp is not None
     assert (
         prev_tx_block(
-            test_constants,
-            BlockCache(blocks),
-            block.prev_header_hash,
-            block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
+            constants=test_constants,
+            blocks=BlockCache(blocks),
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
         )
         == latest_tx_before_sp.height
     )
@@ -42,11 +54,11 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert latest_tx_before_sp is not None
     assert (
         prev_tx_block(
-            test_constants,
-            BlockCache(blocks),
-            block.prev_header_hash,
-            block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
+            constants=test_constants,
+            blocks=BlockCache(blocks),
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
         )
         == latest_tx_before_sp.height
     )
@@ -55,11 +67,11 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert latest_tx_before_sp is not None
     assert (
         prev_tx_block(
-            test_constants,
-            BlockCache(blocks),
-            block.prev_header_hash,
-            block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
+            constants=test_constants,
+            blocks=BlockCache(blocks),
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
         )
         == latest_tx_before_sp.height
     )
@@ -81,11 +93,11 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
     latest_tx_before_sp = find_tx_before_sp(block_list)
     assert latest_tx_before_sp is not None
     assert prev_tx_block(
-        test_constants,
-        BlockCache(blocks),
-        block.prev_header_hash,
-        block.reward_chain_block.signage_point_index,
-        len(block.finished_sub_slots) > 0,
+        constants=test_constants,
+        blocks=BlockCache(blocks),
+        prev_b_hash=block.prev_header_hash,
+        sp_index=block.reward_chain_block.signage_point_index,
+        first_in_sub_slot=len(block.finished_sub_slots) > 0,
     ) == uint32(latest_tx_before_sp.height)
 
 

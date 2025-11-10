@@ -700,11 +700,11 @@ class Blockchain:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
         prev_tx_height = prev_tx_block(
-            self.constants,
-            self,
-            block.prev_header_hash,
-            block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
+            constants=self.constants,
+            blocks=self,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
         )
 
         # With hard fork 2 we ban transactions_generator_ref_list.

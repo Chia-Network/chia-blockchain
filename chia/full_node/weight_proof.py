@@ -1245,6 +1245,8 @@ def validate_recent_blocks(
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
+        # we need at least two challenges and more than 2 transaction blocks in the cache to validate pospace
+        # otherwise we might fail to validate due to lack of information
         if (challenge is not None) and (prev_challenge is not None) and transaction_blocks > 2:
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             if not adjusted:
@@ -1328,11 +1330,11 @@ def _validate_pospace_recent_chain(
         block.height,
         diff,
         prev_tx_block(
-            constants,
-            blocks,
-            block.prev_header_hash,
-            block.reward_chain_block.signage_point_index,
-            block.first_in_sub_slot,
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
         ),
     )
     if required_iters is None:

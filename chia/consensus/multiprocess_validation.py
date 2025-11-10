@@ -221,11 +221,11 @@ async def pre_validate_block(
         block.height,
         vs.difficulty,
         prev_tx_block(
-            constants,
-            blockchain,
-            block.prev_header_hash,
-            block.reward_chain_block.signage_point_index,
-            len(block.finished_sub_slots) > 0,
+            constants=constants,
+            blocks=blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
         ),
     )
     if required_iters is None:

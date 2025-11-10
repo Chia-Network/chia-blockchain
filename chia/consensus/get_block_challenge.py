@@ -102,9 +102,13 @@ def get_block_challenge(
     return challenge
 
 
+# Returns the height of the previous transaction block up to the blocks signage point
+# we use this for block validation since when the block is farmed we do not know the latest transaction block
+# since a new one might be infused by the time the block is infused
 def prev_tx_block(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
+    *,
     prev_b_hash: bytes32,
     sp_index: uint8,
     first_in_sub_slot: bool,

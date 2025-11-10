@@ -503,11 +503,11 @@ def validate_unfinished_header_block(
         height,
         expected_vs.difficulty,
         prev_tx_block(
-            constants,
-            blocks,
-            header_block.prev_header_hash,
-            header_block.reward_chain_block.signage_point_index,
-            len(header_block.finished_sub_slots) > 0,
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=header_block.prev_header_hash,
+            sp_index=header_block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
         ),
     )
     if required_iters is None:
