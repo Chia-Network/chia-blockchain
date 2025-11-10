@@ -307,6 +307,8 @@ class MempoolManager:
     # cache of MempoolItems with height conditions making them not valid yet
     _pending_cache: PendingTxCache
     seen_cache_size: int
+    # the peak is only ever set to a transaction block. We use it to validate
+    # timelocks against, so it must have a timestamp.
     peak: Optional[BlockRecordProtocol]
     mempool: Mempool
     _worker_queue_size: int

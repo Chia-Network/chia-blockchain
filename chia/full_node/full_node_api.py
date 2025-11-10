@@ -39,6 +39,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
@@ -1274,7 +1275,14 @@ class FullNodeAPI:
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
 
-            flags = get_flags_for_height_and_constants(request.height, self.full_node.constants)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.full_node.constants,
+                blocks=self.full_node.blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.full_node.constants)
             additions, removals = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
                 additions_and_removals,
