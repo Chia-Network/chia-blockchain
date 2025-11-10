@@ -11,7 +11,6 @@ from typing import Optional
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
-    MEMPOOL_MODE,
     AugSchemeMPL,
     BlockBuilder,
     Coin,
@@ -535,7 +534,7 @@ class Mempool:
             f"spends: {len(removals)} additions: {len(additions)}",
         )
 
-        flags = get_flags_for_height_and_constants(height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
+        flags = get_flags_for_height_and_constants(height, constants) | DONT_VALIDATE_SIGNATURE
 
         err, conds = run_block_generator2(
             block_program,
