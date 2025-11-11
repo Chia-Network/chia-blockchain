@@ -846,18 +846,20 @@ async def test_create_signed_transaction(
             assert found
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_create_signed_transaction_with_coin_announcement(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
-) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_create_signed_transaction_with_coin_announcement(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    client_node: FullNodeRpcClient = env.full_node.rpc_client
-
-    await generate_funds(full_node_api, env.wallet_1)
+    wallet_2: Wallet = env_2.xch_wallet
+    client: WalletRpcClient = env.rpc_client
+    client_node: FullNodeRpcClient = wallet_environments.full_node_rpc_client
 
     signed_tx_amount = uint64(888000)
     tx_coin_announcements = [
@@ -873,25 +875,27 @@ async def test_create_signed_transaction_with_coin_announcement(
     outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
     tx_res: TransactionRecord = (
         await client.create_signed_transactions(
-            outputs, tx_config=DEFAULT_TX_CONFIG, extra_conditions=(*tx_coin_announcements,)
+            outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_coin_announcements,)
         )
     ).signed_tx
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_create_signed_transaction_with_puzzle_announcement(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
-) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_create_signed_transaction_with_puzzle_announcement(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    client_node: FullNodeRpcClient = env.full_node.rpc_client
-
-    await generate_funds(full_node_api, env.wallet_1)
+    wallet_2: Wallet = env_2.xch_wallet
+    client: WalletRpcClient = env.rpc_client
+    client_node: FullNodeRpcClient = wallet_environments.full_node_rpc_client
 
     signed_tx_amount = uint64(888000)
     tx_puzzle_announcements = [
@@ -907,7 +911,7 @@ async def test_create_signed_transaction_with_puzzle_announcement(
     outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
     tx_res = (
         await client.create_signed_transactions(
-            outputs, tx_config=DEFAULT_TX_CONFIG, extra_conditions=(*tx_puzzle_announcements,)
+            outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_puzzle_announcements,)
         )
     ).signed_tx
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
