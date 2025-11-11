@@ -4,7 +4,7 @@ import logging
 from typing import Optional, cast
 
 from bitstring import BitArray
-from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotSize, PrivateKey, ProofOfSpace, validate_proof_v2
+from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotParam, PrivateKey, ProofOfSpace, validate_proof_v2
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
@@ -19,16 +19,17 @@ def make_pos(
     pool_public_key: Optional[G1Element],
     pool_contract_puzzle_hash: Optional[bytes32],
     plot_public_key: G1Element,
-    version_and_size: PlotSize,
+    version_and_size: PlotParam,
     proof: bytes,
 ) -> ProofOfSpace:
     k: int
     if version_and_size.size_v1 is not None:
         k = version_and_size.size_v1
     else:
-        assert version_and_size.size_v2 is not None
-        k = version_and_size.size_v2
+        assert version_and_size.strength_v2 is not None
+        k = version_and_size.strength_v2
         assert k is not None
+        assert k <= 0x3F
         k |= 0x80
 
     return ProofOfSpace(
@@ -49,28 +50,24 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
     return calculate_plot_id_pk(pos.pool_public_key, pos.plot_public_key)
 
 
-def check_plot_size(constants: ConsensusConstants, ps: PlotSize) -> bool:
+def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
     size_v1 = ps.size_v1
-    if size_v1 is not None:
-        assert ps.size_v2 is None
-        if size_v1 < constants.MIN_PLOT_SIZE_V1:
-            log.error(f"Plot size ({size_v1}) is lower than the minimum ({constants.MIN_PLOT_SIZE_V1})")
+    strength_v2 = ps.strength_v2
+    if strength_v2 is not None:
+        if strength_v2 < constants.MIN_PLOT_STRENGTH:
+            log.error(f"Plot strength ({strength_v2}) is lower than the minimum ({constants.MIN_PLOT_STRENGTH})")
             return False
-        if size_v1 > constants.MAX_PLOT_SIZE_V1:
-            log.error(f"Plot size ({size_v1}) is higher than the maximum ({constants.MAX_PLOT_SIZE_V1})")
+        if strength_v2 > constants.MAX_PLOT_STRENGTH:
+            log.error(f"Plot strength ({strength_v2}) is too high (max is {constants.MAX_PLOT_STRENGTH})")
             return False
         return True
 
-    size_v2 = ps.size_v2
-    assert size_v2 is not None
-    if size_v2 < constants.MIN_PLOT_SIZE_V2:
-        log.error(f"Plot size ({size_v2}) is lower than the minimum ({constants.MIN_PLOT_SIZE_V2})")
+    assert size_v1 is not None
+    if size_v1 < constants.MIN_PLOT_SIZE_V1:
+        log.error(f"Plot size ({size_v1}) is lower than the minimum ({constants.MIN_PLOT_SIZE_V1})")
         return False
-    if size_v2 > constants.MAX_PLOT_SIZE_V2:
-        log.error(f"Plot size ({size_v2}) is higher than the maximum ({constants.MAX_PLOT_SIZE_V2})")
-        return False
-    if (size_v2 & 1) == 1:
-        log.error("Plot size is odd")
+    if size_v1 > constants.MAX_PLOT_SIZE_V1:
+        log.error(f"Plot size ({size_v1}) is higher than the maximum ({constants.MAX_PLOT_SIZE_V1})")
         return False
     return True
 
@@ -86,11 +83,7 @@ def is_v1_phased_out(
     # This is a v1 plot and the phase-out period has started
     # The probability of having been phased out is proportional on the
     # number of epochs since hard fork activation
-
-    # TODO: todo_v2_plots change the existing PLOT_V1_PHASE_OUT constant to
-    # direclty specify the power-of-two epochs to phase-out over
-    phase_out_epoch_bits = (constants.PLOT_V1_PHASE_OUT // constants.EPOCH_BLOCKS).bit_length()
-
+    phase_out_epoch_bits = constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
     phase_out_epoch_mask = (1 << phase_out_epoch_bits) - 1
 
     # we just look at one byte so the mask can't be bigger than that
@@ -118,9 +111,9 @@ def verify_and_get_quality_string(
     height: uint32,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
 ) -> Optional[bytes32]:
-    plot_size = pos.size()
+    plot_param = pos.param()
 
-    if plot_size.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
+    if plot_param.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
         log.info("v1 proof has been phased-out and is no longer valid")
         return None
 
@@ -132,7 +125,7 @@ def verify_and_get_quality_string(
         log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
 
-    if not check_plot_size(constants, plot_size):
+    if not check_plot_param(constants, plot_param):
         return None
 
     plot_id: bytes32 = get_plot_id(pos)
@@ -143,28 +136,28 @@ def verify_and_get_quality_string(
         return None
 
     # we use different plot filter prefix sizes depending on v1 or v2 plots
-    prefix_bits = calculate_prefix_bits(constants, height, plot_size)
+    prefix_bits = calculate_prefix_bits(constants, height, plot_param)
     if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
         log.error("Did not pass the plot filter")
         return None
 
-    if plot_size.size_v1 is not None:
+    if plot_param.size_v1 is not None:
         # === V1 plots ===
-        assert plot_size.size_v2 is None
+        assert plot_param.strength_v2 is None
 
-        quality_str = Verifier().validate_proof(plot_id, plot_size.size_v1, pos.challenge, bytes(pos.proof))
+        quality_str = Verifier().validate_proof(plot_id, plot_param.size_v1, pos.challenge, bytes(pos.proof))
         if not quality_str:
             return None
         return bytes32(quality_str)
     else:
         # === V2 plots ===
-        assert plot_size.size_v2 is not None
+        assert plot_param.strength_v2 is not None
 
         return validate_proof_v2(
             plot_id,
-            plot_size.size_v2,
+            constants.PLOT_SIZE_V2,
             pos.challenge,
-            constants.PLOT_STRENGTH_INITIAL,
+            plot_param.strength_v2,
             constants.QUALITY_PROOF_SCAN_FILTER,
             pos.proof,
         )
@@ -187,8 +180,8 @@ def passes_plot_filter(
     return cast(bool, plot_filter[:prefix_bits].uint == 0)
 
 
-def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_size: PlotSize) -> int:
-    if plot_size.size_v2 is not None:
+def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_param: PlotParam) -> int:
+    if plot_param.strength_v2 is not None:
         if height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
             return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 3
         if height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:

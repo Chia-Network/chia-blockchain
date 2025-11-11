@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia_rs import PlotSize
+from chia_rs import PlotParam
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
@@ -88,16 +88,16 @@ class TestPotIterations:
         with the assumption that all farmers have access to the same VDF speed.
         """
         farmer_ks = {
-            PlotSize.make_v1(32): 100,
-            PlotSize.make_v1(33): 100,
-            PlotSize.make_v1(34): 100,
-            PlotSize.make_v1(35): 100,
-            PlotSize.make_v1(36): 100,
-            PlotSize.make_v2(28): 200,
-            PlotSize.make_v2(30): 200,
-            PlotSize.make_v2(32): 200,
+            PlotParam.make_v1(32): 100,
+            PlotParam.make_v1(33): 100,
+            PlotParam.make_v1(34): 100,
+            PlotParam.make_v1(35): 100,
+            PlotParam.make_v1(36): 100,
+            PlotParam.make_v2(2): 200,
+            PlotParam.make_v2(3): 200,
+            PlotParam.make_v2(4): 200,
         }
-        farmer_space = {k: _expected_plot_size(k) * count for k, count in farmer_ks.items()}
+        farmer_space = {k: _expected_plot_size(k, test_constants) * count for k, count in farmer_ks.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
 
         constants = test_constants.replace(DIFFICULTY_CONSTANT_FACTOR=uint128(2**25))
@@ -112,7 +112,7 @@ class TestPotIterations:
                 sp_hash = std_hash(slot_index.to_bytes(4, "big") + sp_index.to_bytes(4, "big"))
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
-                        plot_k_val = k.size_v1 if k.size_v2 is None else k.size_v2
+                        plot_k_val = k.size_v1 if k.size_v1 is not None else constants.PLOT_SIZE_V2
                         assert plot_k_val is not None
                         quality = std_hash(
                             slot_index.to_bytes(4, "big") + plot_k_val.to_bytes(1, "big") + bytes(farmer_index)
@@ -134,14 +134,12 @@ class TestPotIterations:
 def test_expected_plot_size_v1() -> None:
     last_size = 2_400_000
     for k in range(18, 50):
-        plot_size = _expected_plot_size(PlotSize.make_v1(k))
+        plot_size = _expected_plot_size(PlotParam.make_v1(k), test_constants)
         assert plot_size > last_size * 2
         last_size = plot_size
 
 
 def test_expected_plot_size_v2() -> None:
-    last_size = 100_000
-    for k in range(16, 32, 2):
-        plot_size = _expected_plot_size(PlotSize.make_v2(k))
-        assert plot_size > last_size * 2
-        last_size = plot_size
+    for strength in [2, 3, 4, 5, 6, 7]:
+        plot_size = _expected_plot_size(PlotParam.make_v2(strength), test_constants)
+        assert plot_size == 1_879_213_114

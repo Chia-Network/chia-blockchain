@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PlotSize, PoolTarget, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from packaging.version import Version
@@ -47,13 +47,6 @@ from chia.types.blockchain_format.proof_of_space import (
     get_plot_id,
     verify_and_get_quality_string,
 )
-
-
-def serialize(partial_proof: list[uint64]) -> bytes:
-    key = bytearray()
-    for val in partial_proof:
-        key += val.stream_to_bytes()
-    return bytes(key)
 
 
 class FarmerAPI:
@@ -123,7 +116,7 @@ class FarmerAPI:
             required_iters: uint64 = calculate_iterations_quality(
                 self.farmer.constants,
                 computed_quality_string,
-                new_proof_of_space.proof.size(),
+                new_proof_of_space.proof.param(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
             )
@@ -230,7 +223,7 @@ class FarmerAPI:
                 required_iters = calculate_iterations_quality(
                     self.farmer.constants,
                     computed_quality_string,
-                    new_proof_of_space.proof.size(),
+                    new_proof_of_space.proof.param(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
                 )
@@ -518,7 +511,7 @@ class FarmerAPI:
                 size=partial_proof_data.plot_size,
             )
 
-            key = serialize(partial_proof)
+            key = bytes(partial_proof)
             try:
                 # store pending request data for matching with response
                 self.farmer.pending_solver_requests[key] = {
@@ -529,10 +522,12 @@ class FarmerAPI:
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof[:5]}...")
+                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.proof_fragments[:5]}...")
 
             except Exception as e:
-                self.farmer.log.error(f"Failed to call solver service for partial proof {partial_proof[:5]}...: {e}")
+                self.farmer.log.error(
+                    f"Failed to call solver service for partial proof {partial_proof.proof_fragments[:5]}...: {e}"
+                )
                 # clean up pending request
                 if key in self.farmer.pending_solver_requests:
                     del self.farmer.pending_solver_requests[key]
@@ -547,9 +542,11 @@ class FarmerAPI:
 
         # find the matching pending request using partial_proof
 
-        key = serialize(response.partial_proof)
+        key = bytes(response.partial_proof)
         if key not in self.farmer.pending_solver_requests:
-            self.farmer.log.warning(f"Received solver response for unknown partial proof {response.partial_proof[:5]}")
+            self.farmer.log.warning(
+                f"Received solver response for unknown partial proof {response.partial_proof.proof_fragments[:5]}"
+            )
             return
 
         # get the original request data
@@ -561,7 +558,9 @@ class FarmerAPI:
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof[:5]}...")
+            self.farmer.log.warning(
+                f"Received empty proof from solver for proof {partial_proof.proof_fragments[:5]}..."
+            )
             return
 
         sp_challenge_hash = proof_data.challenge_hash
@@ -658,7 +657,7 @@ class FarmerAPI:
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
                 uint8(
-                    calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height, PlotSize.make_v1(32))
+                    calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height, PlotParam.make_v1(32))
                 ),
             )
 

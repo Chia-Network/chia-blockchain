@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from chia_rs import ConsensusConstants, PlotSize, ProofOfSpace
+from chia_rs import ConsensusConstants, PlotParam, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -72,7 +72,7 @@ def validate_pospace_and_get_required_iters(
     return calculate_iterations_quality(
         constants,
         q_str,
-        proof_of_space.size(),
+        proof_of_space.param(),
         difficulty,
         cc_sp_hash,
     )
@@ -81,7 +81,7 @@ def validate_pospace_and_get_required_iters(
 def calculate_iterations_quality(
     constants: ConsensusConstants,
     quality_string: bytes32,
-    size: PlotSize,
+    size: PlotParam,
     difficulty: uint64,
     cc_sp_output_hash: bytes32,
 ) -> uint64:
@@ -95,6 +95,6 @@ def calculate_iterations_quality(
         int(difficulty)
         * int(constants.DIFFICULTY_CONSTANT_FACTOR)
         * int.from_bytes(sp_quality_string, "big", signed=False)
-        // (int(pow(2, 256)) * int(_expected_plot_size(size)))
+        // (int(pow(2, 256)) * int(_expected_plot_size(size, constants)))
     )
     return max(iters, uint64(1))

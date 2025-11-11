@@ -1028,7 +1028,7 @@ class FullNodeAPI:
             required_iters: uint64 = calculate_iterations_quality(
                 self.full_node.constants,
                 quality_string,
-                request.proof_of_space.size(),
+                request.proof_of_space.param(),
                 difficulty,
                 request.challenge_chain_sp,
             )

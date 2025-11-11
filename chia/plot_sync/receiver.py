@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
-from chia_rs import PlotSize
+from chia_rs import ConsensusConstants, PlotParam
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
@@ -92,11 +92,13 @@ class Receiver:
     _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
     _harvesting_mode: Optional[HarvestingMode]
+    _constants: ConsensusConstants
 
     def __init__(
         self,
         connection: WSChiaConnection,
         update_callback: ReceiverUpdateCallback,
+        constants: ConsensusConstants,
     ) -> None:
         self._connection = connection
         self._current_sync = Sync()
@@ -109,6 +111,7 @@ class Receiver:
         self._total_effective_plot_size = 0
         self._update_callback = update_callback
         self._harvesting_mode = None
+        self._constants = constants
 
     async def trigger_callback(self, update: Optional[Delta] = None) -> None:
         try:
@@ -349,10 +352,12 @@ class Receiver:
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
+
         self._total_effective_plot_size = int(
             # TODO: todo_v2_plots support v2 plots
             sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                * int(_expected_plot_size(PlotParam.make_v1(plot.size), self._constants))
                 for plot in self._plots.values()
             )
         )

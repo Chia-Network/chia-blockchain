@@ -35,10 +35,10 @@ class TestV2Prover:
         assert prover.get_version() == PlotVersion.V2
         assert prover.get_filename() == "/nonexistent/path/test.plot2"
 
-    def test_v2_prover_get_size_raises_error(self) -> None:
+    def test_v2_prover_get_param_raises_error(self) -> None:
         prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_size()
+            prover.get_param()
 
     def test_v2_prover_get_memo_raises_error(self) -> None:
         prover = V2Prover.from_filename("/nonexistent/path/test.plot2")
@@ -74,7 +74,7 @@ class TestV2Prover:
         prover = get_prover_from_file("/nonexistent/path/test.plot2")
         assert prover.get_version() == PlotVersion.V2
         with pytest.raises(NotImplementedError, match="V2 plot format is not yet implemented"):
-            prover.get_size()
+            prover.get_param()
 
 
 class TestV1Prover:

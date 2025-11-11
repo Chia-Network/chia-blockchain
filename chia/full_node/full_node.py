@@ -2269,8 +2269,8 @@ class FullNode:
 
         state_changed_data: dict[str, Any] = {
             "transaction_block": False,
-            "k_size": block.reward_chain_block.proof_of_space.size().size_v1,
-            "k_size2": block.reward_chain_block.proof_of_space.size().size_v2,
+            "k_size": block.reward_chain_block.proof_of_space.param().size_v1,
+            "strength": block.reward_chain_block.proof_of_space.param().strength_v2,
             "header_hash": block.header_hash,
             "fork_height": None,
             "rolled_back_records": None,

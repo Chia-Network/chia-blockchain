@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-from chia_rs import G1Element, G2Element, ProofOfSpace, RewardChainBlockUnfinished
+from chia_rs import G1Element, G2Element, PartialProof, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint32, uint64
 
@@ -83,7 +83,7 @@ class PartialProofsData(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str
-    partial_proofs: list[list[uint64]]  # 16 * k bits blobs instead of 32-byte quality strings
+    partial_proofs: list[PartialProof]  # 16 * k bits blobs instead of 32-byte quality strings
     signage_point_index: uint8
     plot_size: uint8
     strength: uint8

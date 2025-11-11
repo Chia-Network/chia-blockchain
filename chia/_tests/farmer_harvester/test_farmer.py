@@ -9,7 +9,7 @@ from typing import Any, Optional, Union, cast
 from unittest.mock import ANY
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotSize, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotParam, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
@@ -134,7 +134,7 @@ class NewProofOfSpaceCase:
     plot_identifier: str
     signage_point_index: uint8
     plot_id: bytes32
-    plot_size: PlotSize
+    plot_size: PlotParam
     plot_challenge: bytes32
     plot_public_key: G1Element
     pool_public_key: Optional[G1Element]
@@ -189,7 +189,7 @@ class NewProofOfSpaceCase:
             plot_identifier="test",
             signage_point_index=uint8(1),
             plot_id=bytes32.fromhex("baaa6780c53d4b3739b8807b4ae79a76644ddf0d9e03dc7d0a6a0e613e764d9f"),
-            plot_size=PlotSize.make_v1(32),
+            plot_size=PlotParam.make_v1(32),
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
