@@ -51,6 +51,7 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.get_block_challenge import pre_sp_tx_block
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -842,7 +843,7 @@ class BlockTools:
             curr = blocks[curr.prev_hash]
         assert curr.timestamp is not None
         last_timestamp = float(curr.timestamp)
-        prev_tx_height = curr.height
+        prev_tx_height = uint32(0)
 
         curr = latest_block
         blocks_added_this_sub_slot = 1
@@ -910,6 +911,16 @@ class BlockTools:
                     else:
                         assert signage_point.cc_vdf is not None
                         cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
+
+                    prev_tx = pre_sp_tx_block(
+                        constants=constants,
+                        blocks=BlockCache(blocks),
+                        prev_b_hash=latest_block.prev_hash,
+                        sp_index=latest_block.signage_point_index,
+                        first_in_sub_slot=latest_block.first_in_sub_slot,
+                    )
+                    if prev_tx is not None:
+                        prev_tx_height = prev_tx.height
 
                     qualified_proofs: list[tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                         constants,
@@ -1021,9 +1032,6 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             generator_block_heights.append(full_block.height)
-
-                        if full_block.is_transaction_block():
-                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
@@ -1216,6 +1224,15 @@ class BlockTools:
                         cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
 
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                    prev_tx = pre_sp_tx_block(
+                        constants=constants,
+                        blocks=BlockCache(blocks),
+                        prev_b_hash=latest_block.prev_hash,
+                        sp_index=latest_block.signage_point_index,
+                        first_in_sub_slot=latest_block.first_in_sub_slot,
+                    )
+                    if prev_tx is not None:
+                        prev_tx_height = prev_tx.height
                     qualified_proofs = self.get_pospaces_for_challenge(
                         constants,
                         slot_cc_challenge,
@@ -1317,9 +1334,6 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             generator_block_heights.append(full_block.height)
-
-                        if full_block.is_transaction_block():
-                            prev_tx_height = full_block.height
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
