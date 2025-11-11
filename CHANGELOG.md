@@ -10,21 +10,43 @@ for setuptools_scm/PEP 440 reasons.
 
 ## What's Changed
 
-### Changed
+<!-- Release notes generated using configuration in .github/release.yml at release/2.5.7 -->
 
-- Updated ChiaLisp dependency from 'clvm_tools_rs' to new repo 'chialisp'
-- Update error message for invalid IP and port format to clarify ipv6
-- Fix a large number of spelling issues in comments (thanks @joemicky)
-- Fix typo for Timelord._check_for_new_sp comments by (thanks @wanziforever)
-- Set minimum to TLSv1.3
-- Fix some typos in comments (thanks @rocksload)
-- fix some minor issues in comment (thanks @deepdring)
-- Removed python 3.9 support
+## What's Changed
 
 ### Added
 
-- PoS2-prover
-- python 3.13 support
+- New Datalayer delta file format for improved performance
+- New Datalayer delta file migration and increased logging
+- New Datalayer config option `merkle_blobs_cache_size`
+- Work in Progress - preliminary support for V2 plot format (eg: `chia plots check`)
+- Add Enum support to `streamable` framework
+- New option `-i/--include-pool-rewards` for `chia farm summary` (thanks @wallentx)
+
+### Changed
+
+- Improved Datalayer performance significantly with migration to Rust (via `chia_rs`)
+- Improved Mempool performance and fast forward support
+- Modified wallet RPC `add_key` to support providing a key label
+- Integrated `PLOT_V1_PHASE_OUT` constant
+- Optimixed code related to node handling of new peaks
+- Simplified `install-gui.sh` script to remove code that attempts to find and install NodeJS
+- Bump `chia_rs` to `0.30`
+- Bump `chiavdf` to `1.1.13`
+- Bump `cryptography` to `45.0.5`
+- Bump `cffi` to `1.17.1`
+- Bump `markupsafe` to `3.0.2`
+
+### Fixed
+
+- Changed logging of `NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH` from `error` to `info` as this is expected in certain situations
+- Fixed signage point lookup edge case at genesis in the first slot
+- Change default limit for `get_transactions` to 65536 (uint16)
+
+### Removed
+
+- Removed the following unsupported Wallet RPC APIs: `did_update_recovery_ids`, `did_recovery_spend`, `did_get_recovery_list`, `did_create_attest`, `did_get_information_needed_for_recovery`
+- Python 3.9 is no longer supported
 
 ## 2.5.6 Chia blockchain 2025-9-24
 
