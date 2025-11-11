@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.5.7 Chia blockchain 2025-11-12
+
+## What's Changed
+
+### Changed
+
+- Updated ChiaLisp dependency from 'clvm_tools_rs' to new repo 'chialisp'
+- Update error message for invalid IP and port format to clarify ipv6
+- Fix a large number of spelling issues in comments (thanks @joemicky)
+- Fix typo for Timelord._check_for_new_sp comments by (thanks @wanziforever)
+- Set minimum to TLSv1.3
+- Fix some typos in comments (thanks @rocksload)
+- fix some minor issues in comment (thanks @deepdring)
+- Removed python 3.9 support
+
+### Added
+
+- PoS2-prover
+- python 3.13 support
+
 ## 2.5.6 Chia blockchain 2025-9-24
 
 ## What's Changed
