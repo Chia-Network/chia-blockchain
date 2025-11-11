@@ -918,19 +918,25 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_environ
     await assert_push_tx_error(client_node, tx_res)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    wallet_1: Wallet = env.wallet_1.wallet
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
-    full_node_rpc: FullNodeRpcClient = env.full_node.rpc_client
-    await generate_funds(full_node_api, env.wallet_1)
+async def test_create_signed_transaction_with_excluded_coins(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_1: Wallet = env.xch_wallet
+    wallet_1_rpc: WalletRpcClient = env.rpc_client
+    full_node_rpc: FullNodeRpcClient = wallet_environments.full_node_rpc_client
 
     async def it_does_not_include_the_excluded_coins() -> None:
         select_coins_response = await wallet_1_rpc.select_coins(
             SelectCoins.from_coin_selection_config(
-                amount=uint64(250000000000), wallet_id=uint32(1), coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+                amount=uint64(250000000000),
+                wallet_id=uint32(1),
+                coin_selection_config=wallet_environments.tx_config.coin_selection_config,
             )
         )
         assert len(select_coins_response.coins) == 1
@@ -939,7 +945,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
         tx = (
             await wallet_1_rpc.create_signed_transactions(
                 outputs,
-                DEFAULT_TX_CONFIG.override(
+                wallet_environments.tx_config.override(
                     excluded_coin_ids=[c.name() for c in select_coins_response.coins],
                 ),
             )
@@ -953,7 +959,9 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
     async def it_throws_an_error_when_all_spendable_coins_are_excluded() -> None:
         select_coins_response = await wallet_1_rpc.select_coins(
             SelectCoins.from_coin_selection_config(
-                amount=uint64(1750000000000), wallet_id=uint32(1), coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+                amount=uint64(1750000000000),
+                wallet_id=uint32(1),
+                coin_selection_config=wallet_environments.tx_config.coin_selection_config,
             )
         )
         assert len(select_coins_response.coins) == 1
@@ -962,7 +970,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
         with pytest.raises(ValueError):
             await wallet_1_rpc.create_signed_transactions(
                 outputs,
-                DEFAULT_TX_CONFIG.override(
+                wallet_environments.tx_config.override(
                     excluded_coin_ids=[c.name() for c in select_coins_response.coins],
                 ),
             )
