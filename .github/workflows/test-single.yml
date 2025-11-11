@@ -271,7 +271,7 @@ jobs:
 
       - name: Publish JUnit results
         if: inputs.collect-junit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}
           path: junit-data/*
@@ -286,7 +286,7 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
