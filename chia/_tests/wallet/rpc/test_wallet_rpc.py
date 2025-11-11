@@ -979,20 +979,29 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
     await it_throws_an_error_when_all_spendable_coins_are_excluded()
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_send_transaction_multi(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_2: Wallet = env_2.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    client: WalletRpcClient = env.rpc_client
 
-    generated_funds = await generate_funds(full_node_api, env.wallet_1)
+    INITIAL_BALANCE = await env.xch_wallet.get_confirmed_balance()
 
     select_coins_response = await client.select_coins(
         SelectCoins.from_coin_selection_config(
-            amount=uint64(1750000000000), wallet_id=uint32(1), coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+            amount=uint64(1750000000000),
+            wallet_id=uint32(1),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config,
         )
     )  # we want a coin that won't be selected by default
     outputs = await create_tx_outputs(wallet_2, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])])
@@ -1003,7 +1012,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
         await client.send_transaction_multi(
             1,
             outputs,
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
             coins=select_coins_response.coins,
             fee=amount_fee,
         )
@@ -1017,7 +1026,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
-    await time_out_assert(20, get_confirmed_balance, generated_funds - amount_outputs - amount_fee, client, 1)
+    await time_out_assert(20, get_confirmed_balance, INITIAL_BALANCE - amount_outputs - amount_fee, client, 1)
 
     # Checks that the memo can be retrieved
     tx_confirmed = (await client.get_transaction(GetTransaction(send_tx_res.name))).transaction
@@ -1032,16 +1041,20 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
         assert key in [a.name() for a in spend_bundle.additions()]
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [5]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_get_transactions(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
 
-    wallet: Wallet = env.wallet_1.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-
-    await generate_funds(full_node_api, env.wallet_1, 5)
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    client: WalletRpcClient = env.rpc_client
 
     all_transactions = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
     assert len(all_transactions) >= 10
@@ -1060,12 +1073,12 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
 
     # Test RELEVANCE
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         puzhash = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(
         SendTransaction(wallet_id=uint32(1), amount=uint64(1), address=encode_puzzle_hash(puzhash, "txch"), push=True),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
     )  # Create a pending tx
 
     with pytest.raises(ValueError, match="There is no known sort foo"):
@@ -1088,20 +1101,20 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted_transactions
 
     # Test get_transactions to address
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph_by_addr = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(
         SendTransaction(
             wallet_id=uint32(1), amount=uint64(1), address=encode_puzzle_hash(ph_by_addr, "txch"), push=True
         ),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     tx_for_address = (
         await client.get_transactions(GetTransactions(uint32(1), to_address=encode_puzzle_hash(ph_by_addr, "txch")))
     ).transactions
-    assert len(tx_for_address) == 1
+    assert len(tx_for_address) == 12 if wallet_environments.tx_config.reuse_puzhash else 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
 
     # Test type filter
