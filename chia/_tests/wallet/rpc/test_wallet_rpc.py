@@ -655,41 +655,59 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
         ([(120000000000, None), (120000000000, None)], 10000000000, True, False),
     ],
 )
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [2, 1], "config_overrides": {"automatically_add_unknown_cats": True}}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
 async def test_create_signed_transaction(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
+    wallet_environments: WalletTestFramework,
     output_args: list[tuple[int, Optional[list[str]]]],
     fee: int,
     select_coin: bool,
     is_cat: bool,
 ) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_1_node: WalletNode = env.wallet_1.node
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
-    full_node_rpc: FullNodeRpcClient = env.full_node.rpc_client
+    wallet_2: Wallet = env_2.xch_wallet
+    wallet_1_rpc: WalletRpcClient = env.rpc_client
+    full_node_rpc: FullNodeRpcClient = wallet_environments.full_node_rpc_client
 
-    generated_funds = await generate_funds(full_node_api, env.wallet_1)
-
-    wallet_id = 1
-    if is_cat:
-        generated_funds = 10**9
-
-        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds), test=True)
-        assert res["success"]
-        wallet_id = res["wallet_id"]
-
-        await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-        for _ in range(5):
-            if check_mempool_spend_count(full_node_api, 0):
-                break
-            await farm_transaction_block(full_node_api, wallet_1_node)
+    env.wallet_aliases = {"xch": 1, "cat": 2}
+    env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     outputs = await create_tx_outputs(wallet_2, output_args)
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(fee)
+
+    wallet_id = 1
+    if is_cat:
+        # +1 assures we'll have change
+        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(amount_outputs + 1), test=True)
+        assert res["success"]
+        wallet_id = res["wallet_id"]
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        "xch": {"set_remainder": True},
+                        "cat": {"init": True, "set_remainder": True},
+                    },
+                    post_block_balance_updates={
+                        "xch": {"set_remainder": True},
+                        "cat": {"set_remainder": True},
+                    },
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={},
+                ),
+            ]
+        )
 
     if is_cat:
         amount_total = amount_outputs
@@ -700,7 +718,9 @@ async def test_create_signed_transaction(
     if select_coin:
         select_coins_response = await wallet_1_rpc.select_coins(
             SelectCoins.from_coin_selection_config(
-                amount=amount_total, wallet_id=uint32(wallet_id), coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+                amount=amount_total,
+                wallet_id=uint32(wallet_id),
+                coin_selection_config=wallet_environments.tx_config.coin_selection_config,
             )
         )
         assert len(select_coins_response.coins) == 1
@@ -713,7 +733,7 @@ async def test_create_signed_transaction(
             fee=amount_fee,
             wallet_id=wallet_id,
             # shouldn't actually block it
-            tx_config=DEFAULT_TX_CONFIG.override(
+            tx_config=wallet_environments.tx_config.override(
                 excluded_coin_amounts=[uint64(selected_coin.amount)] if selected_coin is not None else [],
             ),
             push=True,
@@ -725,8 +745,72 @@ async def test_create_signed_transaction(
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = txs[0].spend_bundle
     assert spend_bundle is not None
-    await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
-    await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
+    xch_delta = amount_total if not is_cat else amount_fee
+    cat_delta = amount_total if is_cat else 0
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={  # type: ignore[arg-type]
+                    "xch": {
+                        "unconfirmed_wallet_balance": -xch_delta,
+                        "<=#spendable_balance": -xch_delta,
+                        "<=#max_send_amount": -xch_delta,
+                        ">=#pending_change": 0,
+                        "pending_coin_removal_count": 1,
+                    }
+                }
+                | (
+                    {
+                        "cat": {
+                            "unconfirmed_wallet_balance": -cat_delta,
+                            "<=#spendable_balance": -cat_delta,
+                            "<=#max_send_amount": -cat_delta,
+                            ">=#pending_change": 1 if is_cat else 0,
+                            "pending_coin_removal_count": 1 if is_cat else 0,
+                        }
+                    }
+                    if is_cat
+                    else {}
+                ),
+                post_block_balance_updates={  # type: ignore[arg-type]
+                    "xch": {
+                        "confirmed_wallet_balance": -xch_delta,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 0,
+                    }
+                }
+                | (
+                    {
+                        "cat": {
+                            "confirmed_wallet_balance": -cat_delta,
+                            ">=#spendable_balance": 1 if is_cat else 0,
+                            ">=#max_send_amount": 1 if is_cat else 0,
+                            "<=#pending_change": -1 if is_cat else 0,
+                            "pending_coin_removal_count": -1 if is_cat else 0,
+                        }
+                    }
+                    if is_cat
+                    else {}
+                ),
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "cat" if is_cat else "xch": {
+                        "init": is_cat,
+                        "confirmed_wallet_balance": amount_outputs,
+                        "unconfirmed_wallet_balance": amount_outputs,
+                        "spendable_balance": amount_outputs,
+                        "max_send_amount": amount_outputs,
+                        "unspent_coin_count": len(outputs),
+                    }
+                },
+            ),
+        ]
+    )
 
     # Assert every coin comes from the same parent
     additions: list[Coin] = spend_bundle.additions()
