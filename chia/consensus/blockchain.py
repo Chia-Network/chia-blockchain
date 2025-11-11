@@ -270,6 +270,10 @@ class Blockchain:
         additions: list[tuple[Coin, Optional[bytes]]] = []
         removals: list[tuple[bytes32, Coin]] = []
         if block.transactions_generator is not None:
+            block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
+            assert block_generator is not None
+            assert block.transactions_info is not None
+            assert block.foliage_transaction_block is not None
             prev_tx_height = pre_sp_tx_block_height(
                 constants=self.constants,
                 blocks=self,
@@ -277,10 +281,6 @@ class Blockchain:
                 sp_index=block.reward_chain_block.signage_point_index,
                 first_in_sub_slot=len(block.finished_sub_slots) > 0,
             )
-            block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
-            assert block_generator is not None
-            assert block.transactions_info is not None
-            assert block.foliage_transaction_block is not None
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
             additions, removals = additions_and_removals(
                 bytes(block.transactions_generator),
