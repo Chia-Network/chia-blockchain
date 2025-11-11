@@ -5,7 +5,6 @@ from typing import ClassVar, Optional
 
 from typing_extensions import Protocol
 
-# Minimal imports to avoid circular dependencies
 from chia.protocols import harvester_protocol
 from chia.protocols.harvester_protocol import PlotSyncResponse
 from chia.protocols.outbound_message import Message
@@ -15,7 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class HarvesterApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for HarvesterAPI to break circular dependencies.
+    """Non-functional API stub for HarvesterAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual HarvesterAPI implementation at runtime.

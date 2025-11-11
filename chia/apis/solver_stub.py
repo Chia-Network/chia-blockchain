@@ -5,14 +5,13 @@ from typing import ClassVar, Optional
 
 from typing_extensions import Protocol
 
-# Minimal imports to avoid circular dependencies
 from chia.protocols.outbound_message import Message
 from chia.protocols.solver_protocol import SolverInfo
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 
 
 class SolverApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for SolverAPI to break circular dependencies.
+    """Non-functional API stub for SolverAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual SolverAPI implementation at runtime.

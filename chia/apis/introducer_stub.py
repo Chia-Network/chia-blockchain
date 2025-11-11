@@ -5,7 +5,6 @@ from typing import ClassVar, Optional
 
 from typing_extensions import Protocol
 
-# Minimal imports to avoid circular dependencies
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.outbound_message import Message
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
@@ -13,7 +12,7 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class IntroducerApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for IntroducerAPI to break circular dependencies.
+    """Non-functional API stub for IntroducerAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual IntroducerAPI implementation at runtime.

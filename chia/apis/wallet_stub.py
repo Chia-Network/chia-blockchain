@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import ClassVar
 
-# Minimal imports to avoid circular dependencies
 from chia_rs import RespondToPhUpdates
 from typing_extensions import Protocol
 
@@ -32,7 +31,7 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class WalletNodeApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for WalletNodeAPI to break circular dependencies.
+    """Non-functional API stub for WalletNodeAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual WalletNodeAPI implementation at runtime.

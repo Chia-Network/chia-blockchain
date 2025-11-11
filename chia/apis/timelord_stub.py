@@ -5,13 +5,12 @@ from typing import ClassVar
 
 from typing_extensions import Protocol
 
-# Minimal imports to avoid circular dependencies
 from chia.protocols.timelord_protocol import NewPeakTimelord, NewUnfinishedBlockTimelord, RequestCompactProofOfTime
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 
 
 class TimelordApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for TimelordAPI to break circular dependencies.
+    """Non-functional API stub for TimelordAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual TimelordAPI implementation at runtime.

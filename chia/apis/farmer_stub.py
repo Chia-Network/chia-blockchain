@@ -5,7 +5,6 @@ from typing import ClassVar, Optional
 
 from typing_extensions import Protocol
 
-# Minimal imports to avoid circular dependencies
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import (
     PlotSyncDone,
@@ -21,7 +20,7 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class FarmerApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for FarmerAPI to break circular dependencies.
+    """Non-functional API stub for FarmerAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual FarmerAPI implementation at runtime.

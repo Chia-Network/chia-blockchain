@@ -3,8 +3,6 @@ from __future__ import annotations
 import logging
 from typing import ClassVar, Optional
 
-# Minimal imports to avoid circular dependencies
-from chia_rs.sized_bytes import bytes32
 from typing_extensions import Protocol
 
 from chia.protocols import (
@@ -21,7 +19,7 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class FullNodeApiStub(ApiProtocol, Protocol):
-    """Non-functional API stub for FullNodeAPI to break circular dependencies.
+    """Non-functional API stub for FullNodeAPI
 
     This is a protocol definition only - methods are not implemented and should
     never be called. Use the actual FullNodeAPI implementation at runtime.
@@ -379,27 +377,4 @@ class FullNodeApiStub(ApiProtocol, Protocol):
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_cost_info])
     async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Optional[Message]:
         """Handle cost info request from wallet."""
-        ...
-
-    # UTILITY METHODS
-    async def mempool_updates_for_puzzle_hashes(
-        self, peer: WSChiaConnection, puzzle_hashes: set[bytes32], include_hints: bool
-    ) -> None:
-        """Send mempool updates for puzzle hashes."""
-        ...
-
-    async def mempool_updates_for_coin_ids(self, peer: WSChiaConnection, coin_ids: set[bytes32]) -> None:
-        """Send mempool updates for coin IDs."""
-        ...
-
-    def max_subscriptions(self, peer: WSChiaConnection) -> int:
-        """Get maximum subscriptions for peer."""
-        ...
-
-    def max_subscribe_response_items(self, peer: WSChiaConnection) -> int:
-        """Get maximum subscribe response items for peer."""
-        ...
-
-    def is_trusted(self, peer: WSChiaConnection) -> bool:
-        """Check if peer is trusted."""
         ...
