@@ -10,10 +10,6 @@ for setuptools_scm/PEP 440 reasons.
 
 ## What's Changed
 
-<!-- Release notes generated using configuration in .github/release.yml at release/2.5.7 -->
-
-## What's Changed
-
 ### Added
 
 - New Datalayer delta file format for improved performance
