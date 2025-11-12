@@ -97,7 +97,7 @@ from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -2539,20 +2539,32 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     assert len((await client.get_public_keys()).pk_fingerprints) == 0
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 0]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_select_coins_rpc(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    client_2: WalletRpcClient = env.wallet_2.rpc_client
+    env.wallet_aliases = {"xch": 1}
+    env_2.wallet_aliases = {"xch": 1}
 
-    funds = await generate_funds(full_node_api, env.wallet_1)
+    wallet_2: Wallet = env_2.xch_wallet
+    client: WalletRpcClient = env.rpc_client
+    client_2: WalletRpcClient = env_2.rpc_client
 
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
+    funds: int = await env.xch_wallet.get_confirmed_balance()
+
+    # since this wallet farms no blocks, this first request will always make a new puzzle hash
+    with wallet_environments.new_puzzle_hashes_allowed():
+        async with wallet_2.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=True
+        ) as action_scope:
+            addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     coin_300: list[Coin]
     tx_amounts: list[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
     for tx_amount in tx_amounts:
@@ -2560,7 +2572,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         # create coins for tests
         tx = (
             await client.send_transaction(
-                SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True), DEFAULT_TX_CONFIG
+                SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True),
+                wallet_environments.tx_config,
             )
         ).transaction
         spend_bundle = tx.spend_bundle
@@ -2569,16 +2582,27 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             if coin.amount == uint64(300):
                 coin_300 = [coin]
 
-        await time_out_assert(20, tx_in_mempool, True, client, tx.name)
-        await farm_transaction(full_node_api, wallet_node, spend_bundle)
-        await time_out_assert(20, get_confirmed_balance, funds, client, 1)
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={"xch": {"set_remainder": True}},
+                    post_block_balance_updates={"xch": {"set_remainder": True}},
+                ),
+                WalletStateTransition(
+                    pre_block_balance_updates={},
+                    post_block_balance_updates={"xch": {"set_remainder": True}},
+                ),
+            ]
+        )
 
     # test min coin amount
     min_coins_response = await client_2.select_coins(
         SelectCoins.from_coin_selection_config(
             amount=uint64(1000),
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
+                min_coin_amount=uint64(1001)
+            ),
         )
     )
     assert len(min_coins_response.coins) == 1
@@ -2589,7 +2613,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         SelectCoins.from_coin_selection_config(
             amount=uint64(2000),
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
                 min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
             ),
         )
@@ -2603,7 +2627,9 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         SelectCoins.from_coin_selection_config(
             amount=uint64(non_1000_amt),
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
+                excluded_coin_amounts=[uint64(1000)]
+            ),
         )
     )
     assert len(excluded_amt_coins_response.coins) == len([a for a in tx_amounts if a != 1000])
@@ -2615,7 +2641,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
             SelectCoins.from_coin_selection_config(
                 amount=uint64(5000),
                 wallet_id=uint32(1),
-                coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+                coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
                     excluded_coin_ids=[c.name() for c in min_coins_response.coins]
                 ),
             )
@@ -2624,7 +2650,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         SelectCoins.from_coin_selection_config(
             amount=uint64(1300),
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
                 excluded_coin_ids=[c.name() for c in coin_300]
             ),
         )
@@ -2652,7 +2678,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     spendable_coins_response = await client_2.get_spendable_coins(
         GetSpendableCoins.from_coin_selection_config(
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
                 excluded_coin_ids=[c.name() for c in excluded_amt_coins_response.coins]
             ),
         ),
@@ -2666,14 +2692,18 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     spendable_coins_response = await client_2.get_spendable_coins(
         GetSpendableCoins.from_coin_selection_config(
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
+                excluded_coin_amounts=[uint64(1000)]
+            ),
         )
     )
     assert len([rec for rec in spendable_coins_response.confirmed_records if rec.coin.amount == 1000]) == 0
     spendable_coins_response = await client_2.get_spendable_coins(
         GetSpendableCoins.from_coin_selection_config(
             wallet_id=uint32(1),
-            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),
+            coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
+                max_coin_amount=uint64(999)
+            ),
         )
     )
     assert spendable_coins_response.confirmed_records[0].coin == coin_300[0]
@@ -2681,7 +2711,9 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         await client_2.get_spendable_coins(
             GetSpendableCoins.from_coin_selection_config(
                 wallet_id=uint32(1),
-                coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[b"a"]),
+                coin_selection_config=wallet_environments.tx_config.coin_selection_config.override(
+                    excluded_coin_ids=[b"a"]
+                ),
             )
         )
 
