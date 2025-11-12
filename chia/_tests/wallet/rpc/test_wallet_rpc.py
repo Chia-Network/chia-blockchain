@@ -2718,11 +2718,17 @@ async def test_select_coins_rpc(wallet_environments: WalletTestFramework) -> Non
         )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [0], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_coin_records_rpc(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    wallet_node: WalletNode = env.wallet_1.node
-    client: WalletRpcClient = env.wallet_1.rpc_client
+async def test_get_coin_records_rpc(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_node: WalletNode = env.node
+    client: WalletRpcClient = env.rpc_client
     store = wallet_node.wallet_state_manager.coin_store
 
     for record in [record_1, record_2, record_3, record_4, record_5, record_6, record_7, record_8, record_9]:
