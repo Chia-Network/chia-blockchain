@@ -1850,7 +1850,6 @@ def load_block_list(
     sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
     height_to_hash: dict[uint32, bytes32] = {}
     blocks: dict[bytes32, BlockRecord] = {}
-    prev_transaction_b_height = uint32(0)
     for full_block in block_list:
         if full_block.height != 0:
             if len(full_block.finished_sub_slots) > 0:
