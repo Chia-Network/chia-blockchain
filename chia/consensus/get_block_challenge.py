@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import Optional, Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -102,19 +102,19 @@ def get_block_challenge(
     return challenge
 
 
-# Returns the height of the previous transaction block up to the blocks signage point
+# Returns the previous transaction block up to the blocks signage point
 # we use this for block validation since when the block is farmed we do not know the latest transaction block
 # since a new one might be infused by the time the block is infused
-def prev_tx_block(
+def pre_sp_tx_block(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     *,
     prev_b_hash: bytes32,
     sp_index: uint8,
     first_in_sub_slot: bool,
-) -> uint32:
+) -> Optional[BlockRecord]:
     if prev_b_hash == constants.GENESIS_CHALLENGE:
-        return uint32(0)
+        return None
     curr = blocks.block_record(prev_b_hash)
     before_slot = first_in_sub_slot
     while curr.height > 0:
@@ -123,4 +123,24 @@ def prev_tx_block(
         if curr.first_in_sub_slot:
             before_slot = True
         curr = blocks.block_record(curr.prev_hash)
-    return curr.height
+    return curr
+
+
+def pre_sp_tx_block_height(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    *,
+    prev_b_hash: bytes32,
+    sp_index: uint8,
+    first_in_sub_slot: bool,
+) -> uint32:
+    latest_tx_block = pre_sp_tx_block(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=prev_b_hash,
+        sp_index=sp_index,
+        first_in_sub_slot=first_in_sub_slot,
+    )
+    if latest_tx_block is None:
+        return uint32(0)
+    return latest_tx_block.height

@@ -28,7 +28,7 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_block
+from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
     is_overflow_block,
@@ -220,7 +220,7 @@ async def pre_validate_block(
         cc_sp_hash,
         block.height,
         vs.difficulty,
-        prev_tx_block(
+        pre_sp_tx_block_height(
             constants=constants,
             blocks=blockchain,
             prev_b_hash=block.prev_header_hash,

@@ -30,7 +30,7 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.consensus.get_block_challenge import prev_tx_block
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
@@ -1329,7 +1329,7 @@ def _validate_pospace_recent_chain(
         cc_sp_hash,
         block.height,
         diff,
-        prev_tx_block(
+        pre_sp_tx_block_height(
             constants=constants,
             blocks=blocks,
             prev_b_hash=block.prev_header_hash,

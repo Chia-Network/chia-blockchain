@@ -155,9 +155,9 @@ class TestGenesisBlock:
     async def test_genesis_validate_1(
         self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Monkey patch prev_tx_block so we dont throw there
+        # Monkey patch pre_sp_tx_block so we dont throw there
         monkeypatch.setattr(
-            "chia.consensus.multiprocess_validation.prev_tx_block",
+            "chia.consensus.multiprocess_validation.pre_sp_tx_block_height",
             lambda *args, **kwargs: uint32(0),
         )
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]

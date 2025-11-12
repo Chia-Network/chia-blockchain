@@ -5,21 +5,21 @@ from typing import Optional
 from chia_rs import FullBlock
 from chia_rs.sized_ints import uint8, uint32
 
-from chia.consensus.get_block_challenge import prev_tx_block
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
 from chia.util.block_cache import BlockCache
 
 
 def test_prev_tx_block_none() -> None:
     # If prev_b is None, should return 0
-    assert prev_tx_block(
+    assert pre_sp_tx_block_height(
         constants=test_constants,
         blocks=BlockCache({}),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(0),
         first_in_sub_slot=False,
     ) == uint32(0)
-    assert prev_tx_block(
+    assert pre_sp_tx_block_height(
         constants=test_constants,
         blocks=BlockCache({}),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
@@ -40,7 +40,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     latest_tx_before_sp = find_tx_before_sp(block_list)
     assert latest_tx_before_sp is not None
     assert (
-        prev_tx_block(
+        pre_sp_tx_block_height(
             constants=test_constants,
             blocks=BlockCache(blocks),
             prev_b_hash=block.prev_header_hash,
@@ -53,7 +53,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     latest_tx_before_sp = find_tx_before_sp(block_list[:-1])
     assert latest_tx_before_sp is not None
     assert (
-        prev_tx_block(
+        pre_sp_tx_block_height(
             constants=test_constants,
             blocks=BlockCache(blocks),
             prev_b_hash=block.prev_header_hash,
@@ -66,7 +66,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     latest_tx_before_sp = find_tx_before_sp(block_list[:-2])
     assert latest_tx_before_sp is not None
     assert (
-        prev_tx_block(
+        pre_sp_tx_block_height(
             constants=test_constants,
             blocks=BlockCache(blocks),
             prev_b_hash=block.prev_header_hash,
@@ -92,7 +92,7 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
     block = block_list[-1]
     latest_tx_before_sp = find_tx_before_sp(block_list)
     assert latest_tx_before_sp is not None
-    assert prev_tx_block(
+    assert pre_sp_tx_block_height(
         constants=test_constants,
         blocks=BlockCache(blocks),
         prev_b_hash=block.prev_header_hash,

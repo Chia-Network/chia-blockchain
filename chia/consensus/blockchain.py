@@ -33,7 +33,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.get_block_challenge import prev_tx_block
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
@@ -703,7 +703,7 @@ class Blockchain:
         if prev_b is None and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
-        prev_tx_height = prev_tx_block(
+        prev_tx_height = pre_sp_tx_block_height(
             constants=self.constants,
             blocks=self,
             prev_b_hash=block.prev_header_hash,
