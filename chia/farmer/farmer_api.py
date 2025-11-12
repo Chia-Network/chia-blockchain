@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace
@@ -51,9 +51,11 @@ from chia.types.blockchain_format.proof_of_space import (
 
 class FarmerAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.farmer_stub import FarmerApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("FarmerAPI", None)
+        # Verify this class implements the FarmerApiStub protocol
+        def _protocol_check(self: FarmerAPI) -> FarmerApiStub:
+            return self
 
     log: logging.Logger
     farmer: Farmer

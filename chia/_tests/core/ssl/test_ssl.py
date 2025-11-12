@@ -9,7 +9,7 @@ import aiohttp
 import pytest
 from chia_rs.sized_bytes import bytes32
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import default_capabilities
 from chia.server.server import ChiaServer, ssl_context_for_client
@@ -38,7 +38,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             100,
             30,
             local_capabilities_for_handshake=default_capabilities[NodeType.FULL_NODE],
-            class_for_type=ApiProtocolRegistry,
+            stub_metadata_for_type=StubMetadataRegistry,
         )
         await wsc.perform_handshake(server._network_id, dummy_port, NodeType.FULL_NODE)
         await wsc.close()

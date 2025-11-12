@@ -10,7 +10,7 @@ from typing import Any, Optional
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.full_node.full_node import FullNode
 from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
@@ -65,7 +65,7 @@ async def create_full_node_simulator_service(
         rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 

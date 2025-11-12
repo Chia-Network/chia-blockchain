@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Awaitable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
@@ -38,9 +38,11 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 class HarvesterAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.harvester_stub import HarvesterApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("HarvesterAPI", None)
+        # Verify this class implements the HarvesterApiStub protocol
+        def _protocol_check(self: HarvesterAPI) -> HarvesterApiStub:
+            return self
 
     log: logging.Logger
     harvester: Harvester

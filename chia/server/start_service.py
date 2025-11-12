@@ -16,7 +16,7 @@ from chia.daemon.server import service_launch_lock_path
 from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
-from chia.server.api_protocol import ApiProtocol
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.server import ChiaServer
 from chia.server.signal_handlers import SignalHandlers
@@ -61,7 +61,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         network_id: str,
         *,
         config: dict[str, Any],
-        class_for_type: dict[NodeType, type[ApiProtocol]],
+        stub_metadata_for_type: dict[NodeType, ApiMetadata],
         upnp_ports: Optional[list[int]] = None,
         connect_peers: Optional[set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
@@ -123,7 +123,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             self.service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
-            class_for_type=class_for_type,
+            stub_metadata_for_type=stub_metadata_for_type,
             name=f"{service_name}_server",
         )
         f = getattr(node, "set_server", None)

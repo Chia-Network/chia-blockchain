@@ -131,9 +131,11 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
 
 class FullNodeAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.full_node_stub import FullNodeApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("FullNodeAPI", None)
+        # Verify this class implements the FullNodeApiStub protocol
+        def _protocol_check(self: FullNodeAPI) -> FullNodeApiStub:
+            return self
 
     log: logging.Logger
     full_node: FullNode

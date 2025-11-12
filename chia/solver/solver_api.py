@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -12,9 +12,11 @@ from chia.solver.solver import Solver
 
 class SolverAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.solver_stub import SolverApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("SolverAPI", None)
+        # Verify this class implements the SolverApiStub protocol
+        def _protocol_check(self: SolverAPI) -> SolverApiStub:
+            return self
 
     log: logging.Logger
     solver: Solver

@@ -31,7 +31,7 @@ from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
-from chia.server.api_protocol import ApiProtocol
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
@@ -120,7 +120,7 @@ class ChiaServer:
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
     exempt_peer_networks: list[Union[IPv4Network, IPv6Network]]
-    class_for_type: dict[NodeType, type[ApiProtocol]]
+    stub_metadata_for_type: dict[NodeType, ApiMetadata]
     all_connections: dict[bytes32, WSChiaConnection] = field(default_factory=dict)
     on_connect: Optional[ConnectionCallback] = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -148,7 +148,7 @@ class ChiaServer:
         config: dict[str, Any],
         private_ca_crt_key: tuple[Path, Path],
         chia_ca_crt_key: tuple[Path, Path],
-        class_for_type: dict[NodeType, type[ApiProtocol]],
+        stub_metadata_for_type: dict[NodeType, ApiMetadata],
         name: str = __name__,
     ) -> ChiaServer:
         log = logging.getLogger(name)
@@ -229,7 +229,7 @@ class ChiaServer:
             node_id=calculate_node_id(node_id_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
-            class_for_type=class_for_type,
+            stub_metadata_for_type=stub_metadata_for_type,
         )
 
     def set_received_message_callback(self, callback: ConnectionCallback) -> None:
@@ -329,7 +329,7 @@ class ChiaServer:
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
-                class_for_type=self.class_for_type,
+                stub_metadata_for_type=self.stub_metadata_for_type,
             )
             await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -480,7 +480,7 @@ class ChiaServer:
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
-                class_for_type=self.class_for_type,
+                stub_metadata_for_type=self.stub_metadata_for_type,
                 session=session,
             )
             await connection.perform_handshake(self._network_id, server_port, self._local_type)

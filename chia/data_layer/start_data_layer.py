@@ -8,7 +8,7 @@ from typing import Any, Optional, cast
 
 from chia_rs.sized_ints import uint16
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_rpc_api import DataLayerRpcApi
@@ -89,7 +89,7 @@ def create_data_layer_service(
         max_request_body_size=service_config.get("rpc_server_max_request_body_size", 26214400),
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 
