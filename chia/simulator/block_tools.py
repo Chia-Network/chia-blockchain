@@ -915,9 +915,9 @@ class BlockTools:
                     prev_tx_height = pre_sp_tx_block_height(
                         constants=constants,
                         blocks=BlockCache(blocks),
-                        prev_b_hash=latest_block.prev_hash,
-                        sp_index=latest_block.signage_point_index,
-                        first_in_sub_slot=latest_block.first_in_sub_slot,
+                        prev_b_hash=latest_block.header_hash,
+                        sp_index=uint8(signage_point_index),
+                        first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
                     )
 
                     qualified_proofs: list[tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
@@ -1225,9 +1225,9 @@ class BlockTools:
                     prev_tx_height = pre_sp_tx_block_height(
                         constants=constants,
                         blocks=BlockCache(blocks),
-                        prev_b_hash=latest_block.prev_hash,
-                        sp_index=latest_block.signage_point_index,
-                        first_in_sub_slot=latest_block.first_in_sub_slot,
+                        prev_b_hash=latest_block.header_hash,
+                        sp_index=uint8(signage_point_index),
+                        first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
                     )
 
                     qualified_proofs = self.get_pospaces_for_challenge(
@@ -1869,7 +1869,7 @@ def load_block_list(
         cache = BlockCache(blocks)
         prev_transaction_b_height = pre_sp_tx_block_height(
             constants=constants,
-            blocks=BlockCache(blocks),
+            blocks=cache,
             prev_b_hash=full_block.prev_header_hash,
             sp_index=full_block.reward_chain_block.signage_point_index,
             first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
