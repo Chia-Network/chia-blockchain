@@ -51,7 +51,7 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.get_block_challenge import pre_sp_block_height
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -912,7 +912,7 @@ class BlockTools:
                         assert signage_point.cc_vdf is not None
                         cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
 
-                    prev_tx_height = pre_sp_block_height(
+                    prev_tx_height = pre_sp_tx_block_height(
                         constants=constants,
                         blocks=BlockCache(blocks),
                         prev_b_hash=latest_block.prev_hash,
@@ -1222,7 +1222,7 @@ class BlockTools:
                         cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
 
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
-                    prev_tx_height = pre_sp_block_height(
+                    prev_tx_height = pre_sp_tx_block_height(
                         constants=constants,
                         blocks=BlockCache(blocks),
                         prev_b_hash=latest_block.prev_hash,
@@ -1867,7 +1867,7 @@ def load_block_list(
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
         cache = BlockCache(blocks)
-        prev_transaction_b_height = pre_sp_block_height(
+        prev_transaction_b_height = pre_sp_tx_block_height(
             constants=constants,
             blocks=BlockCache(blocks),
             prev_b_hash=full_block.prev_header_hash,

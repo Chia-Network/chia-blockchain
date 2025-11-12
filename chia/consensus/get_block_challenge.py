@@ -126,7 +126,7 @@ def pre_sp_tx_block(
     return curr
 
 
-def pre_sp_block_height(
+def pre_sp_tx_block_height(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     *,
