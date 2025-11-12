@@ -18,6 +18,7 @@ from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import get_unresolved_peer_infos
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import resolve_root_path
@@ -37,6 +38,7 @@ def create_farmer_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
+    solver_peer: Optional[UnresolvedPeerInfo] = None,
 ) -> FarmerService:
     service_config = config[SERVICE_NAME]
 
@@ -54,6 +56,10 @@ def create_farmer_service(
     if service_config.get("start_rpc_server", True):
         rpc_info = (FarmerRpcApi, service_config["rpc_port"])
 
+    connect_peers = get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)
+    if solver_peer is not None:
+        connect_peers.add(solver_peer)
+
     return Service(
         root_path=root_path,
         config=config,
@@ -62,8 +68,7 @@ def create_farmer_service(
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)
-        | get_unresolved_peer_infos(service_config, NodeType.SOLVER),
+        connect_peers=connect_peers,
         on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
