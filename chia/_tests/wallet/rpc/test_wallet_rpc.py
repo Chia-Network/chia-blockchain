@@ -2427,13 +2427,19 @@ async def _check_delete_key(
     assert resp.used_for_pool_rewards is False
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_key_and_address_endpoints(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
 
-    wallet: Wallet = env.wallet_1.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    client: WalletRpcClient = env.wallet_1.rpc_client
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    client: WalletRpcClient = env.rpc_client
 
     address = (await client.get_next_address(GetNextAddress(uint32(1), True))).address
     assert len(address) > 10
@@ -2441,18 +2447,16 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
-    await generate_funds(env.full_node.api, env.wallet_1)
-
     assert (await client.get_height_info()).height > 0
 
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
     addr = encode_puzzle_hash(ph, "txch")
     tx_amount = uint64(15600000)
-    await env.full_node.api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     created_tx = (
         await client.send_transaction(
-            SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True), DEFAULT_TX_CONFIG
+            SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True),
+            wallet_environments.tx_config,
         )
     ).transaction
 
