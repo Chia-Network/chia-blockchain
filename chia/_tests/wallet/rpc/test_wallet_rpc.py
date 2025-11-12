@@ -2205,21 +2205,34 @@ async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
     assert isinstance(pubkey_res.pubkey, G1Element)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    wallet_1_node: WalletNode = env.wallet_1.node
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_2_node: WalletNode = env.wallet_2.node
-    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
+async def test_nft_endpoints(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+    wallet_1_node: WalletNode = env.node
+    wallet_1_rpc: WalletRpcClient = env.rpc_client
+    wallet_2: Wallet = env_2.xch_wallet
+    wallet_2_node: WalletNode = env_2.node
+    wallet_2_rpc: WalletRpcClient = env_2.rpc_client
 
-    await generate_funds(env.full_node.api, env.wallet_1, 5)
+    env.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
+    env_2.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
 
     res = await wallet_1_rpc.create_new_nft_wallet(None)
     nft_wallet_id = res["wallet_id"]
-    mint_res = await wallet_1_rpc.mint_nft(
+    await wallet_1_rpc.mint_nft(
         request=NFTMintNFTRequest(
             wallet_id=nft_wallet_id,
             royalty_address=None,
@@ -2228,14 +2241,24 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
             uris=["https://www.chia.net/img/branding/chia-logo.svg"],
             push=True,
         ),
-        tx_config=DEFAULT_TX_CONFIG,
+        tx_config=wallet_environments.tx_config,
     )
 
-    spend_bundle = mint_res.spend_bundle
-
-    await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
-
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=15)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     nft_wallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
     assert isinstance(nft_wallet, NFTWallet)
@@ -2258,17 +2281,34 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(hmr_nft_id))).nft_info
     assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
 
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     await wallet_1_rpc.transfer_nft(
-        NFTTransferNFT(wallet_id=nft_wallet_id, nft_coin_id=nft_id, target_address=addr, push=True), DEFAULT_TX_CONFIG
+        NFTTransferNFT(wallet_id=nft_wallet_id, nft_coin_id=nft_id, target_address=addr, push=True),
+        wallet_environments.tx_config,
     )
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_1_node)
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=5)
 
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=5)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"init": True, "set_remainder": True},
+                },
+            ),
+        ]
+    )
 
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
