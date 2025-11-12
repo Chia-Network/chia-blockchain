@@ -1926,26 +1926,30 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [5]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    wallet_node: WalletNode = env.wallet_1.node
-    client: WalletRpcClient = env.wallet_1.rpc_client
+async def test_get_coin_records_by_names(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_node: WalletNode = env.node
+    client: WalletRpcClient = env.rpc_client
     store = wallet_node.wallet_state_manager.coin_store
-    full_node_api = env.full_node.api
-    # Generate some funds
-    generated_funds = await generate_funds(full_node_api, env.wallet_1, 5)
-    async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        address = encode_puzzle_hash(
-            await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager), "txch"
-        )
+    full_node_api = wallet_environments.full_node
+
+    INITIAL_BALANCE = await env.xch_wallet.get_confirmed_balance()
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        address = encode_puzzle_hash(await action_scope.get_puzzle_hash(env.wallet_state_manager), "txch")
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     # Spend half of it back to the same wallet get some spent coins in the wallet
     tx = (
         await client.send_transaction(
-            SendTransaction(wallet_id=uint32(1), amount=uint64(generated_funds / 2), address=address, push=True),
-            DEFAULT_TX_CONFIG,
+            SendTransaction(wallet_id=uint32(1), amount=uint64(INITIAL_BALANCE / 2), address=address, push=True),
+            wallet_environments.tx_config,
         )
     ).transaction
     assert tx.spend_bundle is not None
