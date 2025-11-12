@@ -338,15 +338,15 @@ class CATWallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
-        spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
-        )
-        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
-        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
-
     async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
+        return uint128(
+            sum(
+                cr.coin.amount
+                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.id(), records, in_one_block=True
+                )
+            )
+        )
 
     def get_name(self) -> str:
         return self.wallet_info.name
@@ -442,7 +442,7 @@ class CATWallet:
             return derivation_record.puzzle_hash
 
     async def get_spendable_balance(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        coins = await self.get_cat_spendable_coins(records)
+        coins = await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         amount = 0
         for record in coins:
             amount += record.coin.amount
@@ -475,19 +475,9 @@ class CATWallet:
 
         return uint64(addition_amount)
 
-    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
-        result: list[WalletCoinRecord] = []
-
-        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.id(), records
-        )
-
-        for record in record_list:
-            lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None and not lineage.is_none():
-                result.append(record)
-
-        return list(await self.get_max_spendable_coins(set(result)))
+    async def is_coin_spendable(self, record: WalletCoinRecord) -> bool:
+        lineage = await self.get_lineage_proof_for_coin(record.coin)
+        return lineage is not None and not lineage.is_none()
 
     async def select_coins(
         self,
@@ -499,7 +489,9 @@ class CATWallet:
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: list[WalletCoinRecord] = await self.get_cat_spendable_coins()
+        spendable_coins: list[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), in_one_block=True)
+        )
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet

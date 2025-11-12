@@ -1802,16 +1802,9 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
         state_mgr = self.service.wallet_state_manager
-        wallet = state_mgr.wallets[request.wallet_id]
         async with state_mgr.lock:
             all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(request.wallet_id)
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
-                assert isinstance(wallet, CATWallet)
-                spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
-            else:
-                spendable_coins = list(
-                    await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records)
-                )
+            spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records))
 
             # Now we get the unconfirmed transactions and manually derive the additions and removals.
             unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(

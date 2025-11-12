@@ -322,19 +322,11 @@ class CRCATWallet(CATWallet):
             "inner_puzzle_for_cat_puzhash is a legacy method and is not available on CR-CAT wallets"
         )
 
-    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
-        result: list[WalletCoinRecord] = []
-
-        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.id(), records
-        )
-
-        for record in record_list:
-            crcat: CRCAT = self.coin_record_to_crcat(record)
-            if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
-                result.append(record)
-
-        return result
+    async def is_coin_spendable(self, record: WalletCoinRecord) -> bool:
+        crcat: CRCAT = self.coin_record_to_crcat(record)
+        if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+            return True
+        return False
 
     async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
