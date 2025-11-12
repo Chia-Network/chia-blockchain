@@ -1007,12 +1007,18 @@ class BlockTools:
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
                             continue
-                        # print(f"{full_block.height:4}: difficulty {difficulty} "
-                        #     f"time: {new_timestamp - last_timestamp:0.2f} "
-                        #     f"additions: {len(new_gen.additions) if block_record.is_transaction_block else 0:2} "
-                        #     f"removals: {len(new_gen.removals) if block_record.is_transaction_block else 0:2} "
-                        #     f"refs: {len(full_block.transactions_generator_ref_list):3} "
-                        #     f"tx: {block_record.is_transaction_block}")
+                        self.log.info(
+                            f"Created Block {full_block.height:4} "
+                            f"prev-tx: {prev_tx_height:4} "
+                            f"diff: {difficulty} "
+                            f"time: {new_timestamp - last_timestamp:0.2f} "
+                            f"additions: {len(new_gen.additions) if new_gen else 0:2} "
+                            f"removals: {len(new_gen.removals) if new_gen else 0:2} "
+                            f"refs: {len(full_block.transactions_generator_ref_list):3} "
+                            f"iters: {block_record.total_iters} "
+                            f"[{'TransactionBlock ' if block_record.is_transaction_block else ''}"
+                            f"{'V1' if proof_of_space.param().size_v1 else 'V2'}]"
+                        )
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
 
@@ -1033,7 +1039,6 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
-                        self.log.info(f"Created block {block_record.height} ov=False, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
@@ -1183,7 +1188,7 @@ class BlockTools:
             sub_slots_finished += 1
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
-                f"{(len(block_list) - initial_block_list_len) / sub_slots_finished}"
+                f"{(len(block_list) - initial_block_list_len) / sub_slots_finished} "
                 f"Sub Epoch Summary Included: {sub_epoch_summary is not None} "
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
@@ -1308,12 +1313,19 @@ class BlockTools:
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
                             continue
-                        # print(f"{full_block.height:4}: difficulty {difficulty} "
-                        #     f"time: {new_timestamp - last_timestamp:0.2f} "
-                        #     f"additions: {len(new_gen.additions) if block_record.is_transaction_block else 0:2} "
-                        #     f"removals: {len(new_gen.removals) if block_record.is_transaction_block else 0:2} "
-                        #     f"refs: {len(full_block.transactions_generator_ref_list):3} "
-                        #     f"tx: {block_record.is_transaction_block}")
+                        self.log.info(
+                            f"Created Block {full_block.height:4} "
+                            f"prev-tx: {prev_tx_height:4} "
+                            f"diff: {difficulty} "
+                            f"time: {new_timestamp - last_timestamp:0.2f} "
+                            f"additions: {len(new_gen.additions) if new_gen else 0:2} "
+                            f"removals: {len(new_gen.removals) if new_gen else 0:2} "
+                            f"refs: {len(full_block.transactions_generator_ref_list):3} "
+                            f"iters: {block_record.total_iters} "
+                            f"[{'TransactionBlock ' if block_record.is_transaction_block else ''}"
+                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}]"
+                            "Overflow]"
+                        )
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
 
@@ -1334,7 +1346,6 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
-                        self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
