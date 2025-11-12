@@ -1149,14 +1149,16 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
     assert len(all_transactions) == 1
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-
-    await generate_funds(full_node_api, env.wallet_1)
+async def test_get_transaction_count(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
 
     all_transactions = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
     assert len(all_transactions) > 0
