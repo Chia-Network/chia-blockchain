@@ -1995,26 +1995,42 @@ async def test_get_coin_records_by_names(wallet_environments: WalletTestFramewor
         await client.get_coin_records_by_names(GetCoinRecordsByNames(coin_ids, include_spent_coins=False))
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_did_endpoints(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_1: Wallet = env.wallet_1.wallet
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_1_node: WalletNode = env.wallet_1.node
-    wallet_2_node: WalletNode = env.wallet_2.node
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
+    env.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft": 3,
+    }
+    env_2.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+    }
+
+    wallet_1: Wallet = env.xch_wallet
+    wallet_2: Wallet = env_2.xch_wallet
+    wallet_1_node: WalletNode = env.node
+    wallet_2_node: WalletNode = env_2.node
+    wallet_1_rpc: WalletRpcClient = env.rpc_client
+    wallet_2_rpc: WalletRpcClient = env_2.rpc_client
     wallet_1_id = wallet_1.id()
 
-    await generate_funds(env.full_node.api, env.wallet_1, 5)
-
     # Create a DID wallet
-    res = await wallet_1_rpc.create_new_did_wallet(amount=1, tx_config=DEFAULT_TX_CONFIG, name="Profile 1")
+    res = await wallet_1_rpc.create_new_did_wallet(amount=1, tx_config=wallet_environments.tx_config, name="Profile 1")
     assert res["success"]
     did_wallet_id_0 = res["wallet_id"]
     did_id_0 = res["my_did"]
+    await env.change_balances({"did": {"init": True, "set_remainder": True}})
+    await env.change_balances({"nft": {"init": True, "set_remainder": True}})
 
     # Get wallet name
     get_name_res = await wallet_1_rpc.did_get_wallet_name(DIDGetWalletName(did_wallet_id_0))
@@ -2037,40 +2053,80 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     # Create backup file
     await wallet_1_rpc.create_did_backup_file(DIDCreateBackupFile(did_wallet_id_0))
 
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_1_node)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     # Update metadata
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
         await wallet_1_rpc.update_did_metadata(
-            DIDUpdateMetadata(wallet_id=wallet_1_id, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
+            DIDUpdateMetadata(wallet_id=wallet_1_id, metadata={"Twitter": "Https://test"}, push=True),
+            wallet_environments.tx_config,
         )
     await wallet_1_rpc.update_did_metadata(
-        DIDUpdateMetadata(wallet_id=did_wallet_id_0, metadata={"Twitter": "Https://test"}, push=True), DEFAULT_TX_CONFIG
+        DIDUpdateMetadata(wallet_id=did_wallet_id_0, metadata={"Twitter": "Https://test"}, push=True),
+        wallet_environments.tx_config,
     )
 
     get_metadata_res = await wallet_1_rpc.get_did_metadata(DIDGetMetadata(did_wallet_id_0))
     assert get_metadata_res.metadata["Twitter"] == "Https://test"
 
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_1_node)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     # Transfer DID
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         addr = encode_puzzle_hash(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager), "txch")
     await wallet_1_rpc.did_transfer_did(
         DIDTransferDID(
             wallet_id=did_wallet_id_0, inner_address=addr, fee=uint64(0), with_recovery_info=True, push=True
         ),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
     )
 
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_1_node)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(
+                post_block_balance_updates={
+                    "did": {"init": True, "set_remainder": True},
+                }
+            ),
+        ]
+    )
 
     async def num_wallets() -> int:
         return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
@@ -2093,27 +2149,52 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment) -
     assert metadata["Twitter"] == "Https://test"
 
     last_did_coin = await did_wallet_2.get_coin()
-    await wallet_2_rpc.did_message_spend(DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG)
+    await wallet_2_rpc.did_message_spend(
+        DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), wallet_environments.tx_config
+    )
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_2_node)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+            ),
+        ]
+    )
 
     next_did_coin = await did_wallet_2.get_coin()
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     last_did_coin = next_did_coin
 
     await wallet_2_rpc.did_message_spend(
-        DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True), DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+        DIDMessageSpend(wallet_id=did_wallet_2.id(), push=True),
+        wallet_environments.tx_config.override(reuse_puzhash=True),
     )
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, wallet_2_node)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                },
+            ),
+        ]
+    )
 
     next_did_coin = await did_wallet_2.get_coin()
     assert next_did_coin.parent_coin_info == last_did_coin.name()
