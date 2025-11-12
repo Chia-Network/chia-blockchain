@@ -3463,3 +3463,32 @@ async def test_ban_for_mismatched_tx_cost_fee(
         await time_out_assert(5, lambda: full_node_2_ip in server_1.banned_peers)
     else:
         await time_out_assert(5, lambda: full_node_2_ip not in server_1.banned_peers)
+
+
+@pytest.mark.anyio
+async def test_new_tx_zero_cost(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Tests that a peer gets banned if it sends a `NewTransaction` message with
+    zero cost.
+    """
+    [full_node_1, full_node_2], _, bt = setup_two_nodes_fixture
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+    await full_node_1.full_node.add_block(bt.get_consecutive_blocks(1)[0])
+    # Send a NewTransaction with zero cost
+    msg = make_msg(
+        ProtocolMessageTypes.new_transaction, NewTransaction(bytes32.random(), cost=uint64(0), fees=uint64(42))
+    )
+    # We won't ban localhost, so let's set a different ip address for the
+    # second node.
+    full_node_2_ip = "1.3.3.7"
+    ws_con_1.peer_info = PeerInfo(full_node_2_ip, ws_con_1.peer_info.port)
+    await ws_con_2.send_message(msg)
+    # Make sure the first full node has banned the second.
+    await time_out_assert(3, lambda: full_node_2_ip in server_1.banned_peers)
