@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import io
 import json
@@ -19,7 +18,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
-from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
@@ -3134,21 +3133,49 @@ async def test_verify_signature(
     assert res == rpc_response
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 0]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    await generate_funds(full_node_api, env.wallet_1)
-    wc = env.wallet_1.rpc_client
-    await wc.create_new_did_wallet(1, DEFAULT_TX_CONFIG, 0)
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, env.wallet_1.node)
-    await time_out_assert(20, check_client_synced, True, wc)
+async def test_set_wallet_resync_on_startup(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+    client: WalletRpcClient = env.rpc_client
+    wc = env.rpc_client
+
+    env.wallet_aliases = {
+        "xch": 1,
+        "did": 2,
+        "nft1": 3,
+        "nft0": 4,
+    }
+
+    await wc.create_new_did_wallet(1, wallet_environments.tx_config, 0)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"init": True, "set_remainder": True},
+                    "nft1": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     nft_wallet = await wc.create_new_nft_wallet(None)
     nft_wallet_id = nft_wallet["wallet_id"]
-    address = (await wc.get_next_address(GetNextAddress(env.wallet_1.wallet.id(), True))).address
+    address = (await wc.get_next_address(GetNextAddress(env.xch_wallet.id(), True))).address
     await wc.mint_nft(
         request=NFTMintNFTRequest(
             wallet_id=nft_wallet_id,
@@ -3158,14 +3185,31 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
             uris=["http://test.nft"],
             push=True,
         ),
-        tx_config=DEFAULT_TX_CONFIG,
+        tx_config=wallet_environments.tx_config,
     )
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, env.wallet_1.node)
-    await time_out_assert(20, check_client_synced, True, wc)
 
-    wallet_node: WalletNode = env.wallet_1.node
-    wallet_node_2: WalletNode = env.wallet_2.node
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                    "nft0": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                    "nft0": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
+    wallet_node: WalletNode = env.node
+    wallet_node_2: WalletNode = env_2.node
     # Test Clawback resync
     tx = (
         await wc.send_transaction(
@@ -3176,21 +3220,57 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
                 puzzle_decorator=[ClawbackPuzzleDecoratorOverride(decorator="CLAWBACK", clawback_timelock=uint64(5))],
                 push=True,
             ),
-            tx_config=DEFAULT_TX_CONFIG,
+            tx_config=wallet_environments.tx_config,
         )
     ).transaction
     clawback_coin_id = tx.additions[0].name()
-    assert tx.spend_bundle is not None
-    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
-    await time_out_assert(20, check_client_synced, True, wc)
-    await asyncio.sleep(10)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                    "nft0": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                    "nft0": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
     resp = await wc.spend_clawback_coins(
-        SpendClawbackCoins(coin_ids=[clawback_coin_id], fee=uint64(0), push=True), tx_config=DEFAULT_TX_CONFIG
+        SpendClawbackCoins(coin_ids=[clawback_coin_id], fee=uint64(0), push=True),
+        tx_config=wallet_environments.tx_config,
     )
     assert len(resp.transaction_ids) == 1
-    await time_out_assert_not_none(10, full_node_api.full_node.mempool_manager.get_spendbundle, resp.transaction_ids[0])
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, check_client_synced, True, wc)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                    "nft0": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "did": {"set_remainder": True},
+                    "nft1": {"set_remainder": True},
+                    "nft0": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
