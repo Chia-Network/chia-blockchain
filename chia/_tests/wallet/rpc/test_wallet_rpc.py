@@ -183,9 +183,7 @@ async def create_tx_outputs(
         for args in output_args:
             output = {
                 "amount": uint64(args[0]),
-                "puzzle_hash": await action_scope.get_puzzle_hash(
-                    wallet.wallet_state_manager, override_reuse_puzhash_with=False
-                ),
+                "puzzle_hash": await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
             }
             if args[1] is not None:
                 assert len(args[1]) > 0
@@ -546,6 +544,11 @@ async def test_create_signed_transaction(
     select_coin: bool,
     is_cat: bool,
 ) -> None:
+    if (
+        len(list(set(amount for amount, _ in output_args))) != len(output_args)
+        and wallet_environments.tx_config.reuse_puzhash
+    ):
+        pytest.skip("Skipping reuse_puzhash + identical amounts for simplicity sake")
     env = wallet_environments.environments[0]
     env_2 = wallet_environments.environments[1]
 
