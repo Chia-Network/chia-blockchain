@@ -3359,13 +3359,16 @@ async def test_set_wallet_resync_on_startup_disable(wallet_environments: WalletT
     await wallet_node_2._await_closed()
 
 
-@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [0]}],
+    indirect=True,
+)
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
-async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    await generate_funds(full_node_api, env.wallet_1)
-    wallet_node: WalletNode = env.wallet_1.node
+@pytest.mark.anyio
+async def test_set_wallet_resync_schema(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_node: WalletNode = env.node
     fingerprint = wallet_node.logged_in_fingerprint
     assert fingerprint is not None
     db_path = wallet_node.wallet_state_manager.db_path
