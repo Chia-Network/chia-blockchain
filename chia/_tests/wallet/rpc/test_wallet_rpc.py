@@ -3315,14 +3315,19 @@ async def test_set_wallet_resync_on_startup(wallet_environments: WalletTestFrame
     await wallet_node_2._await_closed()
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 0]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    await generate_funds(full_node_api, env.wallet_1)
-    wallet_node: WalletNode = env.wallet_1.node
-    wallet_node_2: WalletNode = env.wallet_2.node
+async def test_set_wallet_resync_on_startup_disable(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+    client: WalletRpcClient = env.rpc_client
+    wallet_node: WalletNode = env.node
+    wallet_node_2: WalletNode = env_2.node
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
