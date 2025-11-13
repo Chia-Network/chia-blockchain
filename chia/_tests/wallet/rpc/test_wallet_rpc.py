@@ -5,7 +5,6 @@ import io
 import json
 import logging
 import re
-from collections.abc import AsyncIterator
 from operator import attrgetter
 from typing import Any, Optional
 from unittest.mock import patch
@@ -17,7 +16,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia._tests.wallet.cat_wallet.test_cat_wallet import mint_cat
 from chia._tests.wallet.test_wallet_coin_store import (
@@ -48,17 +46,13 @@ from chia._tests.wallet.test_wallet_coin_store import (
 )
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
-from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -162,45 +156,14 @@ from chia.wallet.wallet_request_types import (
 )
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 from chia.wallet.wallet_rpc_client import WalletRpcClient
-from chia.wallet.wallet_service import WalletService
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass
-class WalletBundle:
-    service: WalletService
-    node: WalletNode
-    rpc_client: WalletRpcClient
-    wallet: Wallet
-
-
-@dataclasses.dataclass
-class FullNodeBundle:
-    server: ChiaServer
-    api: FullNodeSimulator
-    rpc_client: FullNodeRpcClient
-
-
-@dataclasses.dataclass
-class WalletRpcTestEnvironment:
-    wallet_1: WalletBundle
-    wallet_2: WalletBundle
-    full_node: FullNodeBundle
-
-
-async def check_client_synced(wallet_client: WalletRpcClient) -> bool:
-    return (await wallet_client.get_sync_status()).synced
-
-
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode) -> None:
     await full_node_api.farm_blocks_to_puzzlehash(count=1)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-
-
-def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
-    return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
 async def farm_transaction(
@@ -210,81 +173,6 @@ async def farm_transaction(
     await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle_name)
     await farm_transaction_block(full_node_api, wallet_node)
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle_name) is None
-
-
-async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1) -> int:
-    wallet_id = uint32(1)
-    initial_balances = (await wallet_bundle.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))).wallet_balance
-    ph: bytes32 = decode_puzzle_hash(
-        (await wallet_bundle.rpc_client.get_next_address(GetNextAddress(wallet_id, True))).address
-    )
-    generated_funds = 0
-    for _ in range(num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        peak_height = full_node_api.full_node.blockchain.get_peak_height()
-        assert peak_height is not None
-        generated_funds += calculate_pool_reward(peak_height) + calculate_base_farmer_reward(peak_height)
-
-    # Farm a dummy block to confirm the created funds
-    await farm_transaction_block(full_node_api, wallet_bundle.node)
-
-    expected_confirmed = initial_balances.confirmed_wallet_balance + generated_funds
-    expected_unconfirmed = initial_balances.unconfirmed_wallet_balance + generated_funds
-    await time_out_assert(20, get_confirmed_balance, expected_confirmed, wallet_bundle.rpc_client, wallet_id)
-    await time_out_assert(20, get_unconfirmed_balance, expected_unconfirmed, wallet_bundle.rpc_client, wallet_id)
-    await time_out_assert(20, check_client_synced, True, wallet_bundle.rpc_client)
-
-    return generated_funds
-
-
-@pytest.fixture(scope="function", params=[True, False])
-async def wallet_rpc_environment(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, request: pytest.FixtureRequest, self_hostname: str
-) -> AsyncIterator[WalletRpcTestEnvironment]:
-    full_node, wallets, bt = two_wallet_nodes_services
-    full_node_service = full_node[0]
-    full_node_api = full_node_service._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service = wallets[0]
-    wallet_service_2 = wallets[1]
-    wallet_node = wallet_service._node
-    wallet_node_2 = wallet_service_2._node
-    wallet = wallet_node.wallet_state_manager.main_wallet
-    wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
-
-    config = bt.config
-    hostname = config["self_hostname"]
-
-    if request.param:
-        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-    else:
-        wallet_node.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
-
-    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await wallet_node_2.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    assert wallet_service.rpc_server is not None
-    async with WalletRpcClient.create_as_context(
-        hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
-    ) as client:
-        assert wallet_service_2.rpc_server is not None
-        async with WalletRpcClient.create_as_context(
-            hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
-        ) as client_2:
-            assert full_node_service.rpc_server is not None
-            async with FullNodeRpcClient.create_as_context(
-                hostname,
-                full_node_service.rpc_server.listen_port,
-                full_node_service.root_path,
-                full_node_service.config,
-            ) as client_node:
-                wallet_bundle_1 = WalletBundle(wallet_service, wallet_node, client, wallet)
-                wallet_bundle_2 = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
-                node_bundle = FullNodeBundle(full_node_server, full_node_api, client_node)
-
-                yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optional[list[str]]]]) -> list[dict[str, Any]]:
@@ -302,16 +190,6 @@ async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optiona
                 output["memos"] = args[1]
             outputs.append(output)
     return outputs
-
-
-async def assert_wallet_types(client: WalletRpcClient, expected: dict[WalletType, int]) -> None:
-    for wallet_type in WalletType:
-        wallets = (await client.get_wallets(GetWallets(uint16(wallet_type.value)))).wallets
-        wallet_count = len(wallets)
-        if wallet_type in expected:
-            assert wallet_count == expected.get(wallet_type, 0)
-            for wallet in wallets:
-                assert wallet.type == wallet_type.value
 
 
 def assert_tx_amounts(
