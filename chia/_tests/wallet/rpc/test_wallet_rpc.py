@@ -3518,27 +3518,45 @@ async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> N
     )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_get_balances(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
 
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_node: WalletNode = env.wallet_1.node
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+        "cat2": 3,
+    }
 
-    full_node_api: FullNodeSimulator = env.full_node.api
-
-    await generate_funds(full_node_api, env.wallet_1, 1)
-
-    await time_out_assert(20, check_client_synced, True, client)
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
     await client.create_new_cat_and_wallet(uint64(100), test=True)
+    await client.create_new_cat_and_wallet(uint64(20), test=True)
 
-    await time_out_assert(20, check_client_synced, True, client)
-    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
-    assert res["success"]
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, check_client_synced, True, client)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                    "cat2": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                    "cat2": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
+
     bals_response = await client.get_wallet_balances(GetWalletBalances())
     assert len(bals_response.wallet_balances) == 3
     assert bals_response.wallet_balances[uint32(1)].confirmed_wallet_balance == 1999999999880
