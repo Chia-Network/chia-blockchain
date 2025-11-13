@@ -3385,20 +3385,29 @@ async def test_set_wallet_resync_schema(wallet_environments: WalletTestFramework
     )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1]}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_cat_spend_run_tail(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
 
-    wallet_node: WalletNode = env.wallet_1.node
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
-    full_node_rpc: FullNodeRpcClient = env.full_node.rpc_client
+    wallet_node: WalletNode = env.node
+    client: WalletRpcClient = env.rpc_client
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    full_node_rpc: FullNodeRpcClient = wallet_environments.full_node_rpc_client
 
-    await generate_funds(full_node_api, env.wallet_1, 1)
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
 
     # Send to a CAT with an anyone can spend TAIL
-    async with env.wallet_1.wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        our_ph = await action_scope.get_puzzle_hash(env.wallet_1.wallet.wallet_state_manager)
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        our_ph = await action_scope.get_puzzle_hash(env.wallet_state_manager)
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, Program.NIL.get_tree_hash(), Program.to(1))
     addr = encode_puzzle_hash(
         cat_puzzle.get_tree_hash(),
@@ -3408,15 +3417,25 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
 
     tx = (
         await client.send_transaction(
-            SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True), DEFAULT_TX_CONFIG
+            SendTransaction(wallet_id=uint32(1), amount=tx_amount, address=addr, push=True),
+            wallet_environments.tx_config,
         )
     ).transaction
-    transaction_id = tx.name
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
-    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
-    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+            )
+        ]
+    )
 
     # Do the eve spend back to our wallet
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == tx_amount)
@@ -3447,7 +3466,17 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     res = await client.create_wallet_for_existing_cat(Program.NIL.get_tree_hash())
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
-    await time_out_assert(20, get_confirmed_balance, tx_amount, client, cat_wallet_id)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={},
+            )
+        ]
+    )
 
     # Attempt to melt it fully
     tx = (
@@ -3461,17 +3490,32 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
                 tail_solution=b"\x80",
                 push=True,
             ),
-            tx_config=DEFAULT_TX_CONFIG,
+            tx_config=wallet_environments.tx_config,
         )
     ).transaction
-    transaction_id = tx.name
-    spend_bundle = tx.spend_bundle
-    assert spend_bundle is not None
 
-    await time_out_assert(20, tx_in_mempool, True, client, transaction_id)
-    await farm_transaction(full_node_api, wallet_node, spend_bundle)
-
-    await time_out_assert(20, get_confirmed_balance, 0, client, cat_wallet_id)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "cat": {
+                        "unconfirmed_wallet_balance": -tx_amount,
+                        "spendable_balance": -tx_amount,
+                        "max_send_amount": -tx_amount,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {
+                        "confirmed_wallet_balance": -tx_amount,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            )
+        ]
+    )
 
 
 @pytest.mark.anyio
