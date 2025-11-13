@@ -88,7 +88,7 @@ from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -175,9 +175,11 @@ async def farm_transaction(
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle_name) is None
 
 
-async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optional[list[str]]]]) -> list[dict[str, Any]]:
+async def create_tx_outputs(
+    wallet: Wallet, tx_config: TXConfig, output_args: list[tuple[int, Optional[list[str]]]]
+) -> list[dict[str, Any]]:
     outputs = []
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
         for args in output_args:
             output = {
                 "amount": uint64(args[0]),
@@ -287,7 +289,7 @@ async def test_send_transaction(wallet_environments: WalletTestFramework) -> Non
     with pytest.raises(ValueError):
         await client.send_transaction(
             SendTransaction(wallet_id=uint32(1), amount=uint64(100000000000000001), address=addr, push=True),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
     # Tests sending a basic transaction
@@ -372,7 +374,7 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
     full_node_api: FullNodeSimulator = wallet_environments.full_node
     client: WalletRpcClient = env.rpc_client
 
-    outputs = await create_tx_outputs(wallet, [(1234321, None)])
+    outputs = await create_tx_outputs(wallet, wallet_environments.tx_config, [(1234321, None)])
 
     tx = (
         await client.create_signed_transactions(
@@ -554,7 +556,7 @@ async def test_create_signed_transaction(
     env.wallet_aliases = {"xch": 1, "cat": 2}
     env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
-    outputs = await create_tx_outputs(wallet_2, output_args)
+    outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, output_args)
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(fee)
 
@@ -747,7 +749,7 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_environme
             std_hash(b"coin_id_2"),
         ),
     ]
-    outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
+    outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, [(signed_tx_amount, None)])
     tx_res: TransactionRecord = (
         await client.create_signed_transactions(
             outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_coin_announcements,)
@@ -783,7 +785,7 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_environ
             std_hash(b"puzzle_hash_2"),
         ),
     ]
-    outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
+    outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, [(signed_tx_amount, None)])
     tx_res = (
         await client.create_signed_transactions(
             outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_puzzle_announcements,)
@@ -815,7 +817,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
             )
         )
         assert len(select_coins_response.coins) == 1
-        outputs = await create_tx_outputs(wallet_1, [(uint64(250000000000), None)])
+        outputs = await create_tx_outputs(wallet_1, wallet_environments.tx_config, [(uint64(250000000000), None)])
 
         tx = (
             await wallet_1_rpc.create_signed_transactions(
@@ -840,7 +842,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
             )
         )
         assert len(select_coins_response.coins) == 1
-        outputs = await create_tx_outputs(wallet_1, [(uint64(1750000000000), None)])
+        outputs = await create_tx_outputs(wallet_1, wallet_environments.tx_config, [(uint64(1750000000000), None)])
 
         with pytest.raises(ValueError):
             await wallet_1_rpc.create_signed_transactions(
@@ -879,7 +881,9 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
             coin_selection_config=wallet_environments.tx_config.coin_selection_config,
         )
     )  # we want a coin that won't be selected by default
-    outputs = await create_tx_outputs(wallet_2, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])])
+    outputs = await create_tx_outputs(
+        wallet_2, wallet_environments.tx_config, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])]
+    )
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(amount_outputs + 1)
 
@@ -2400,7 +2404,7 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
     with pytest.raises(ValueError):
         await client.send_transaction(
             SendTransaction(wallet_id=uint32(wallets[0].id), amount=uint64(100), address=addr, push=True),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
     # Delete all keys
