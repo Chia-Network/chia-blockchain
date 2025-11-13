@@ -3105,20 +3105,30 @@ async def test_notification_rpcs(wallet_environments: WalletTestFramework) -> No
     ],
 )
 @pytest.mark.parametrize("prefix_hex_strings", [True, False], ids=["with 0x", "no 0x"])
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,
+            "trusted": True,
+        }
+    ],
+    indirect=True,
+)
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_verify_signature(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
+    wallet_environments: WalletTestFramework,
     rpc_request: dict[str, Any],
     rpc_response: VerifySignatureResponse,
     prefix_hex_strings: bool,
 ) -> None:
-    rpc_server = wallet_rpc_environment.wallet_1.service.rpc_server
-    assert rpc_server is not None
     updated_request = rpc_request.copy()
     updated_request["pubkey"] = ("0x" if prefix_hex_strings else "") + updated_request["pubkey"]
     updated_request["signature"] = ("0x" if prefix_hex_strings else "") + updated_request["signature"]
-    res = await wallet_rpc_environment.wallet_1.rpc_client.verify_signature(
+    res = await wallet_environments.environments[0].rpc_client.verify_signature(
         VerifySignature.from_json_dict(updated_request)
     )
     assert res == rpc_response
