@@ -2866,22 +2866,32 @@ async def test_get_coin_records_rpc_failures(wallet_environments: WalletTestFram
             await client.get_coin_records(request)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+            "config_overrides": {"enable_notifications": True, "required_notification_amount": 100000000000},
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_notification_rpcs(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
 
-    wallet_2: Wallet = env.wallet_2.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    client_2: WalletRpcClient = env.wallet_2.rpc_client
+    env.wallet_aliases = {"xch": 1}
+    env_2.wallet_aliases = {"xch": 1}
 
-    await generate_funds(full_node_api, env.wallet_1)
+    wallet_2: Wallet = env_2.xch_wallet
+    client: WalletRpcClient = env.rpc_client
+    client_2: WalletRpcClient = env_2.rpc_client
 
-    env.wallet_2.node.config["enable_notifications"] = True
-    env.wallet_2.node.config["required_notification_amount"] = 100000000000
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        response = await client.send_notification(
+    async with wallet_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await client.send_notification(
             SendNotification(
                 target=(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)),
                 message=b"hello",
@@ -2889,18 +2899,29 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 fee=uint64(100000000000),
                 push=True,
             ),
-            tx_config=DEFAULT_TX_CONFIG,
+            tx_config=wallet_environments.tx_config,
         )
 
-    assert response.tx.spend_bundle is not None
-    await time_out_assert(
-        5,
-        full_node_api.full_node.mempool_manager.get_spendbundle,
-        response.tx.spend_bundle,
-        response.tx.spend_bundle.name(),
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+            ),
+        ]
     )
-    await farm_transaction(full_node_api, wallet_node, response.tx.spend_bundle)
-    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
     assert [notification] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
@@ -2911,8 +2932,8 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
     await client_2.delete_notifications(DeleteNotifications())
     assert [] == (await client_2.get_notifications(GetNotifications([notification.id]))).notifications
 
-    async with wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        response = await client.send_notification(
+    async with wallet_2.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await client.send_notification(
             SendNotification(
                 target=(await action_scope.get_puzzle_hash(wallet_2.wallet_state_manager)),
                 message=b"hello",
@@ -2920,18 +2941,29 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 fee=uint64(100000000000),
                 push=True,
             ),
-            tx_config=DEFAULT_TX_CONFIG,
+            tx_config=wallet_environments.tx_config,
         )
 
-    assert response.tx.spend_bundle is not None
-    await time_out_assert(
-        5,
-        full_node_api.full_node.mempool_manager.get_spendbundle,
-        response.tx.spend_bundle,
-        response.tx.spend_bundle.name(),
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                },
+            ),
+        ]
     )
-    await farm_transaction(full_node_api, wallet_node, response.tx.spend_bundle)
-    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
 
     notification = (await client_2.get_notifications(GetNotifications())).notifications[0]
     await client_2.delete_notifications(DeleteNotifications([notification.id]))
