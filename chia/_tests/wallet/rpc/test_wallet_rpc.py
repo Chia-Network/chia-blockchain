@@ -545,7 +545,7 @@ async def test_create_signed_transaction(
     is_cat: bool,
 ) -> None:
     if (
-        len(list(set(amount for amount, _ in output_args))) != len(output_args)
+        len(set(amount for amount, _ in output_args)) != len(output_args)
         and wallet_environments.tx_config.reuse_puzhash
     ):
         pytest.skip("Skipping reuse_puzhash + identical amounts for simplicity sake")
@@ -925,7 +925,7 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [5]}],
+    [{"num_environments": 1, "blocks_needed": [3]}],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
@@ -939,7 +939,11 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
     client: WalletRpcClient = env.rpc_client
 
     all_transactions = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
-    assert len(all_transactions) >= 10
+    initially_farmed_blocks = 3
+    # We expect 2 transactions per farmed block
+    expected_initial_txs_count = initially_farmed_blocks * 2
+    unconfirmed_txs_count = 0
+    assert len(all_transactions) == expected_initial_txs_count
     # Test transaction pagination
     some_transactions = (await client.get_transactions(GetTransactions(uint32(1), uint16(0), uint16(5)))).transactions
     some_transactions_2 = (
@@ -962,6 +966,7 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
         SendTransaction(wallet_id=uint32(1), amount=uint64(1), address=encode_puzzle_hash(puzhash, "txch"), push=True),
         wallet_environments.tx_config,
     )  # Create a pending tx
+    unconfirmed_txs_count += 1
 
     with pytest.raises(ValueError, match="There is no known sort foo"):
         await client.get_transactions(GetTransactions(uint32(1), sort_key="foo"))
@@ -992,11 +997,16 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
         ),
         wallet_environments.tx_config,
     )
+    unconfirmed_txs_count += 1
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     tx_for_address = (
         await client.get_transactions(GetTransactions(uint32(1), to_address=encode_puzzle_hash(ph_by_addr, "txch")))
     ).transactions
-    assert len(tx_for_address) == 12 if wallet_environments.tx_config.reuse_puzhash else 1
+    assert (
+        len(tx_for_address) == expected_initial_txs_count + unconfirmed_txs_count
+        if wallet_environments.tx_config.reuse_puzhash
+        else 1
+    )
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
 
     # Test type filter
@@ -1005,14 +1015,15 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
             GetTransactions(uint32(1), type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD]))
         )
     ).transactions
-    assert len(all_transactions) == 5
+    # Each farmed block creates one COINBASE_REWARD transaction
+    assert len(all_transactions) == initially_farmed_blocks
     assert all(transaction.type == TransactionType.COINBASE_REWARD.value for transaction in all_transactions)
     # Test confirmed filter
     all_transactions = (await client.get_transactions(GetTransactions(uint32(1), confirmed=True))).transactions
-    assert len(all_transactions) == 10
+    assert len(all_transactions) == expected_initial_txs_count
     assert all(transaction.confirmed for transaction in all_transactions)
     all_transactions = (await client.get_transactions(GetTransactions(uint32(1), confirmed=False))).transactions
-    assert len(all_transactions) == 2
+    assert len(all_transactions) == unconfirmed_txs_count
     assert all(not transaction.confirmed for transaction in all_transactions)
 
     # Test bypass broken txs
