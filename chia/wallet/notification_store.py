@@ -104,19 +104,15 @@ class NotificationStore:
             coin_id_filter = ""
             coin_id_params = list()
 
-        if pagination is not None:
-            if pagination[1] is not None and pagination[0] is not None:
-                pagination_str = " LIMIT ?, ?"
-                pagination_params: tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
-            elif pagination[1] is None and pagination[0] is not None:
-                pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
-                pagination_params = (pagination[0],)
-            elif pagination[1] is not None and pagination[0] is None:
-                pagination_str = " LIMIT ?"
-                pagination_params = (pagination[1],)
-            else:
-                pagination_str = ""
-                pagination_params = tuple()
+        if pagination[1] is not None and pagination[0] is not None:
+            pagination_str = " LIMIT ?, ?"
+            pagination_params: tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
+        elif pagination[1] is None and pagination[0] is not None:
+            pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
+            pagination_params = (pagination[0],)
+        elif pagination[1] is not None and pagination[0] is None:
+            pagination_str = " LIMIT ?"
+            pagination_params = (pagination[1],)
         else:
             pagination_str = ""
             pagination_params = tuple()
