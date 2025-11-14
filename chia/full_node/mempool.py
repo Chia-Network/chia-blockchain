@@ -505,15 +505,15 @@ class Mempool:
     def create_block_generator(
         self,
         constants: ConsensusConstants,
-        height: uint32,
+        prev_tx_height: uint32,
         timeout: float,
     ) -> Optional[NewBlockGenerator]:
         """
-        height is needed in case we fast-forward a transaction and we need to
-        re-run its puzzle.
+        prev_tx_height is needed in case we fast-forward a transaction and we
+        need to re-run its puzzle.
         """
 
-        mempool_bundle = self.create_bundle_from_mempool_items(constants, height, timeout)
+        mempool_bundle = self.create_bundle_from_mempool_items(constants, prev_tx_height, timeout)
         if mempool_bundle is None:
             return None
 
@@ -535,7 +535,7 @@ class Mempool:
             f"spends: {len(removals)} additions: {len(additions)}",
         )
 
-        flags = get_flags_for_height_and_constants(height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
 
         err, conds = run_block_generator2(
             block_program,
@@ -551,7 +551,7 @@ class Mempool:
         if err is not None:  # pragma: no cover
             log.error(
                 f"Failed to compute block cost during farming: {err} "
-                f"height: {height} "
+                f"prev-tx-height: {prev_tx_height} "
                 f"generator: {bytes(block_program).hex()}"
             )
             return None
@@ -570,7 +570,7 @@ class Mempool:
         )
 
     def create_bundle_from_mempool_items(
-        self, constants: ConsensusConstants, height: uint32, timeout: float = 1.0
+        self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float = 1.0
     ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
@@ -624,7 +624,7 @@ class Mempool:
                     cost_saving = 0
                 else:
                     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-                        mempool_item=item, height=height, constants=constants
+                        mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
                     )
                     unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
                         bundle_coin_spends=bundle_coin_spends
@@ -687,7 +687,7 @@ class Mempool:
         return agg, additions
 
     def create_block_generator2(
-        self, constants: ConsensusConstants, height: uint32, timeout: float
+        self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
     ) -> Optional[NewBlockGenerator]:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
@@ -723,7 +723,7 @@ class Mempool:
                 assert item.conds is not None
                 cost = item.conds.condition_cost + item.conds.execution_cost
                 bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-                    mempool_item=item, height=height, constants=constants
+                    mempool_item=item, prev_tx_height=prev_tx_height, constants=constants
                 )
                 unique_coin_spends, cost_saving, unique_additions = dedup_coin_spends.get_deduplication_info(
                     bundle_coin_spends=bundle_coin_spends
