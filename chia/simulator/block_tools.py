@@ -1559,6 +1559,9 @@ class BlockTools:
         rng = random.Random()
         rng.seed(seed)
 
+        sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
+        phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
+
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1566,8 +1569,6 @@ class BlockTools:
             prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
-
-            phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
 
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
@@ -1603,7 +1604,7 @@ class BlockTools:
                     difficulty,
                     signage_point,
                 )
-                if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
+                if required_iters >= sp_interval_iters:
                     continue
 
                 proof = b""
