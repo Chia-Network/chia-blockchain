@@ -85,38 +85,25 @@ class NotificationStore:
             )
             await cursor.close()
 
-    async def get_notifications(self, coin_ids: list[bytes32]) -> list[Notification]:
-        """
-        Checks DB for Notification with id: id and returns it.
-        """
-        coin_ids_str_list = "("
-        for _ in coin_ids:
-            coin_ids_str_list += "?"
-            coin_ids_str_list += ","
-        coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
-        coin_ids_str_list += ")"
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list} ORDER BY amount DESC", coin_ids
-            )
-
-        return [
-            Notification(
-                bytes32(row[0]),
-                bytes(row[1]),
-                uint64.from_bytes(row[2]),
-                uint32(row[3]),
-            )
-            for row in rows
-        ]
-
-    async def get_all_notifications(
-        self, pagination: Optional[tuple[Optional[int], Optional[int]]] = None
+    async def get_notifications(
+        self,
+        *,
+        coin_ids: Optional[list[bytes32]] = None,
+        pagination: tuple[Optional[int], Optional[int]] = (None, None),
     ) -> list[Notification]:
-        """
-        Checks DB for Notification with id: id and returns it.
-        """
+        if coin_ids is not None:
+            coin_ids_str_list = "("
+            for _ in coin_ids:
+                coin_ids_str_list += "?"
+                coin_ids_str_list += ","
+            coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
+            coin_ids_str_list += ")"
+            coin_id_filter = f"WHERE coin_id IN {coin_ids_str_list} "
+            coin_id_params = coin_ids
+        else:
+            coin_id_filter = ""
+            coin_id_params = list()
+
         if pagination is not None:
             if pagination[1] is not None and pagination[0] is not None:
                 pagination_str = " LIMIT ?, ?"
@@ -136,7 +123,8 @@ class NotificationStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * from notifications ORDER BY amount DESC{pagination_str}", pagination_params
+                f"SELECT * from notifications {coin_id_filter}ORDER BY amount DESC{pagination_str}",
+                (*coin_id_params, *pagination_params),
             )
 
         return [
