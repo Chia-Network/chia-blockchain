@@ -187,12 +187,12 @@ async def test_notifications(
     sent_notifications = await notification_manager_1.notification_store.get_notifications()
     assert len(sent_notifications) == 0
 
-    await notification_manager_2.notification_store.delete_all_notifications()
+    await notification_manager_2.notification_store.delete_notifications()
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications([n.id for n in notifications])
+    await notification_manager_2.notification_store.delete_notifications(coin_ids=[n.id for n in notifications])
     assert len(await notification_manager_2.notification_store.get_notifications()) == 0
 
     assert not await func(*notification_manager_2.most_recent_args)
-    await notification_manager_2.notification_store.delete_all_notifications()
+    await notification_manager_2.notification_store.delete_notifications()
     assert not await func(*notification_manager_2.most_recent_args)

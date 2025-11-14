@@ -1935,12 +1935,9 @@ class WalletRpcApi:
 
     @marshal
     async def delete_notifications(self, request: DeleteNotifications) -> Empty:
-        if request.ids is None:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
-        else:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
-                request.ids
-            )
+        await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+            coin_ids=request.ids
+        )
 
         return Empty()
 

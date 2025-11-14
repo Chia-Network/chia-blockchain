@@ -137,23 +137,23 @@ class NotificationStore:
             for row in rows
         ]
 
-    async def delete_notifications(self, coin_ids: list[bytes32]) -> None:
-        coin_ids_str_list = "("
-        for _ in coin_ids:
-            coin_ids_str_list += "?"
-            coin_ids_str_list += ","
-        coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
-        coin_ids_str_list += ")"
+    async def delete_notifications(self, *, coin_ids: list[bytes32] | None = None) -> None:
+        if coin_ids is not None:
+            coin_ids_str_list = "("
+            for _ in coin_ids:
+                coin_ids_str_list += "?"
+                coin_ids_str_list += ","
+            coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
+            coin_ids_str_list += ")"
+            coin_id_filter = f"WHERE coin_id IN {coin_ids_str_list} "
+            coin_id_params = coin_ids
+        else:
+            coin_id_filter = ""
+            coin_id_params = list()
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
-            cursor = await conn.execute(f"DELETE FROM notifications WHERE coin_id IN {coin_ids_str_list}", coin_ids)
-            await cursor.close()
-
-    async def delete_all_notifications(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # Delete from storage
-            cursor = await conn.execute("DELETE FROM notifications")
+            cursor = await conn.execute(f"DELETE FROM notifications {coin_id_filter}", coin_id_params)
             await cursor.close()
 
     async def notification_exists(self, id: bytes32) -> bool:
