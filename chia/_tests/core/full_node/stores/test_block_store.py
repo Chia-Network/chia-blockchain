@@ -91,7 +91,10 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert block == await store.get_full_block(block.header_hash)
             assert bytes(block) == await store.get_full_block_bytes(block.header_hash)
             assert GeneratorBlockInfo(
-                block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
+                block.foliage.prev_block_hash,
+                block.height,
+                block.transactions_generator,
+                block.transactions_generator_ref_list,
             ) == await store.get_block_info(block.header_hash)
             assert maybe_serialize(block.transactions_generator) == await store.get_generator(block.header_hash)
             assert block_record == (await store.get_block_record(block_record_hh))
