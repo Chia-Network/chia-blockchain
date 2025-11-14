@@ -1982,7 +1982,7 @@ async def test_complex_nft_offer(
         1: XCH_REQUESTED,
         nft_to_offer_asset_id_taker_1: 1,
         nft_to_offer_asset_id_taker_2: 1,
-        bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): CAT_REQUESTED,
+        cat_wallet_taker.get_asset_id(): CAT_REQUESTED,
     }
 
     nft_taker_1_info = match_puzzle(uncurry_puzzle(taker_nfts[0].full_puzzle))
@@ -1992,10 +1992,10 @@ async def test_complex_nft_offer(
     driver_dict = {
         nft_to_offer_asset_id_taker_1: nft_taker_1_info,
         nft_to_offer_asset_id_taker_2: nft_taker_2_info,
-        bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
+        cat_wallet_taker.get_asset_id(): PuzzleInfo(
             {
                 "type": "CAT",
-                "tail": "0x" + cat_wallet_taker.get_asset_id(),
+                "tail": "0x" + cat_wallet_taker.get_asset_id().hex(),
                 **(
                     {}
                     if wallet_type is CATWallet
@@ -2047,7 +2047,7 @@ async def test_complex_nft_offer(
         },
         {
             None: uint64(XCH_REQUESTED),
-            bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): uint64(CAT_REQUESTED),
+            cat_wallet_taker.get_asset_id(): uint64(CAT_REQUESTED),
         },
     )
     taker_royalty_summary = NFTWallet.royalty_calculation(
@@ -2056,7 +2056,7 @@ async def test_complex_nft_offer(
             nft_to_offer_asset_id_taker_2: (royalty_puzhash_taker, royalty_basis_pts_taker_2),
         },
         {
-            bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): uint64(CAT_REQUESTED),
+            cat_wallet_maker.get_asset_id(): uint64(CAT_REQUESTED),
         },
     )
     maker_xch_royalties_expected = maker_royalty_summary[nft_to_offer_asset_id_maker][0]["amount"]
@@ -2198,7 +2198,7 @@ async def test_complex_nft_offer(
     complex_nft_offer = {
         cat_wallet_maker.id(): CAT_REQUESTED * -1,
         1: HALF_XCH_REQUESTED,
-        bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): CAT_REQUESTED,
+        cat_wallet_taker.get_asset_id(): CAT_REQUESTED,
         nft_to_offer_asset_id_maker: 1,
     }
 
@@ -2206,10 +2206,10 @@ async def test_complex_nft_offer(
     assert maker_nft_info is not None
     driver_dict = {
         nft_to_offer_asset_id_maker: maker_nft_info,
-        bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
+        cat_wallet_taker.get_asset_id(): PuzzleInfo(
             {
                 "type": "CAT",
-                "tail": "0x" + cat_wallet_taker.get_asset_id(),
+                "tail": "0x" + cat_wallet_taker.get_asset_id().hex(),
             }
         ),
     }
