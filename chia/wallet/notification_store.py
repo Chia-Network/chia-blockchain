@@ -85,58 +85,42 @@ class NotificationStore:
             )
             await cursor.close()
 
-    async def get_notifications(self, coin_ids: list[bytes32]) -> list[Notification]:
-        """
-        Checks DB for Notification with id: id and returns it.
-        """
-        coin_ids_str_list = "("
-        for _ in coin_ids:
-            coin_ids_str_list += "?"
-            coin_ids_str_list += ","
-        coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
-        coin_ids_str_list += ")"
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list} ORDER BY amount DESC", coin_ids
-            )
-
-        return [
-            Notification(
-                bytes32(row[0]),
-                bytes(row[1]),
-                uint64.from_bytes(row[2]),
-                uint32(row[3]),
-            )
-            for row in rows
-        ]
-
-    async def get_all_notifications(
-        self, pagination: Optional[tuple[Optional[int], Optional[int]]] = None
+    async def get_notifications(
+        self,
+        *,
+        coin_ids: Optional[list[bytes32]] = None,
+        pagination: tuple[Optional[int], Optional[int]] = (None, None),
     ) -> list[Notification]:
-        """
-        Checks DB for Notification with id: id and returns it.
-        """
-        if pagination is not None:
-            if pagination[1] is not None and pagination[0] is not None:
-                pagination_str = " LIMIT ?, ?"
-                pagination_params: tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
-            elif pagination[1] is None and pagination[0] is not None:
-                pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
-                pagination_params = (pagination[0],)
-            elif pagination[1] is not None and pagination[0] is None:
-                pagination_str = " LIMIT ?"
-                pagination_params = (pagination[1],)
-            else:
-                pagination_str = ""
-                pagination_params = tuple()
+        if coin_ids is not None:
+            coin_ids_str_list = "("
+            for _ in coin_ids:
+                coin_ids_str_list += "?"
+                coin_ids_str_list += ","
+            coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
+            coin_ids_str_list += ")"
+            coin_id_filter = f"WHERE coin_id IN {coin_ids_str_list} "
+            coin_id_params = coin_ids
+        else:
+            coin_id_filter = ""
+            coin_id_params = list()
+
+        if pagination[1] is not None and pagination[0] is not None:
+            pagination_str = " LIMIT ?, ?"
+            pagination_params: tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
+        elif pagination[1] is None and pagination[0] is not None:
+            pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
+            pagination_params = (pagination[0],)
+        elif pagination[1] is not None and pagination[0] is None:
+            pagination_str = " LIMIT ?"
+            pagination_params = (pagination[1],)
         else:
             pagination_str = ""
             pagination_params = tuple()
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * from notifications ORDER BY amount DESC{pagination_str}", pagination_params
+                f"SELECT * from notifications {coin_id_filter}ORDER BY amount DESC{pagination_str}",
+                (*coin_id_params, *pagination_params),
             )
 
         return [
@@ -149,23 +133,23 @@ class NotificationStore:
             for row in rows
         ]
 
-    async def delete_notifications(self, coin_ids: list[bytes32]) -> None:
-        coin_ids_str_list = "("
-        for _ in coin_ids:
-            coin_ids_str_list += "?"
-            coin_ids_str_list += ","
-        coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
-        coin_ids_str_list += ")"
+    async def delete_notifications(self, *, coin_ids: list[bytes32] | None = None) -> None:
+        if coin_ids is not None:
+            coin_ids_str_list = "("
+            for _ in coin_ids:
+                coin_ids_str_list += "?"
+                coin_ids_str_list += ","
+            coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
+            coin_ids_str_list += ")"
+            coin_id_filter = f"WHERE coin_id IN {coin_ids_str_list} "
+            coin_id_params = coin_ids
+        else:
+            coin_id_filter = ""
+            coin_id_params = list()
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
-            cursor = await conn.execute(f"DELETE FROM notifications WHERE coin_id IN {coin_ids_str_list}", coin_ids)
-            await cursor.close()
-
-    async def delete_all_notifications(self) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # Delete from storage
-            cursor = await conn.execute("DELETE FROM notifications")
+            cursor = await conn.execute(f"DELETE FROM notifications {coin_id_filter}", coin_id_params)
             await cursor.close()
 
     async def notification_exists(self, id: bytes32) -> bool:

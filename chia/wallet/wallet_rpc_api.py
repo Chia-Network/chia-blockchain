@@ -68,7 +68,6 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles import p2_delegated_conditions
@@ -1928,29 +1927,17 @@ class WalletRpcApi:
 
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
-        if request.ids is None:
-            notifications: list[
-                Notification
-            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(request.start, request.end)
+        return GetNotificationsResponse(
+            await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
+                coin_ids=request.ids, pagination=(request.start, request.end)
             )
-        else:
-            notifications = (
-                await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
-                    request.ids
-                )
-            )
-
-        return GetNotificationsResponse(notifications)
+        )
 
     @marshal
     async def delete_notifications(self, request: DeleteNotifications) -> Empty:
-        if request.ids is None:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
-        else:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
-                request.ids
-            )
+        await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+            coin_ids=request.ids
+        )
 
         return Empty()
 
