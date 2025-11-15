@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import copy
 import logging
 import time
 import traceback
@@ -90,23 +89,20 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
     Request a transaction from peers that advertised it, until we either
     receive it or timeout.
     """
-    counter = 0
-    # Make a copy as we'll pop from it here. We keep the original intact as we
-    # need it in `respond_transaction` when constructing `TransactionQueueEntry`
-    # to put into `transaction_queue`.
-    peers_with_tx = copy.copy(full_node.full_node_store.peers_with_tx.get(transaction_id, {}))
+    tried_peers: set[bytes32] = set()
     try:
-        while True:
-            # Limit to asking a few peers, it's possible that this tx got included on chain already
-            # Highly unlikely that the peers that advertised a tx don't respond to a request. Also, if we
-            # drop some transactions, we don't want to re-fetch too many times
-            if counter == 5:
+        # Limit to asking a few peers, it's possible that this tx got included on chain already
+        # Highly unlikely that the peers that advertised a tx don't respond to a request. Also, if we
+        # drop some transactions, we don't want to re-fetch too many times
+        for _ in range(5):
+            peers_with_tx = full_node.full_node_store.peers_with_tx.get(transaction_id)
+            if peers_with_tx is None:
                 break
-            if transaction_id not in full_node.full_node_store.peers_with_tx:
+            peers_to_try = set(peers_with_tx) - tried_peers
+            if len(peers_to_try) == 0:
                 break
-            if len(peers_with_tx) == 0:
-                break
-            peer_id, _ = peers_with_tx.popitem()
+            peer_id = peers_to_try.pop()
+            tried_peers.add(peer_id)
             assert full_node.server is not None
             if peer_id not in full_node.server.all_connections:
                 continue
@@ -115,7 +111,6 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
             msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
             await random_peer.send_message(msg)
             await asyncio.sleep(5)
-            counter += 1
             if full_node.mempool_manager.seen(transaction_id):
                 break
     except asyncio.CancelledError:
