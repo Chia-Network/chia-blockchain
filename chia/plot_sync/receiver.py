@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
-from chia_rs import ConsensusConstants, PlotParam
+from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
@@ -354,10 +354,8 @@ class Receiver:
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
 
         self._total_effective_plot_size = int(
-            # TODO: todo_v2_plots support v2 plots
             sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR
-                * int(_expected_plot_size(PlotParam.make_v1(plot.size), self._constants))
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), self._constants)
                 for plot in self._plots.values()
             )
         )

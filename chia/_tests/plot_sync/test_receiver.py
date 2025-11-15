@@ -7,7 +7,7 @@ import time
 from typing import Any, Callable, Union
 
 import pytest
-from chia_rs import G1Element, PlotParam
+from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -189,7 +189,7 @@ def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncSt
     # TODO: todo_v2_plots support v2 plots
     receiver._total_effective_plot_size = int(
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotParam.make_v1(plot.size), DEFAULT_CONSTANTS))
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
             for plot in receiver.plots().values()
         )
     )
@@ -272,9 +272,8 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_1["total_effective_plot_size"] == int(
-        # TODO: todo_v2_plots support v2 plots
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotParam.make_v1(plot.size), DEFAULT_CONSTANTS))
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
             for plot in receiver.plots().values()
         )
     )
@@ -322,10 +321,9 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
-    # TODO: todo_v2_plots support v2 plots
     assert plot_sync_dict_3["total_effective_plot_size"] == int(
         sum(
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotParam.make_v1(plot.size), DEFAULT_CONSTANTS))
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.param(), DEFAULT_CONSTANTS))
             for plot in receiver.plots().values()
         )
     )

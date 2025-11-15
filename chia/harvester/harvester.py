@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import ConsensusConstants
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 from typing_extensions import Literal
 
 from chia.plot_sync.sender import Sender
@@ -195,9 +195,10 @@ class Harvester:
                 prover = plot_info.prover
                 param = prover.get_param()
                 if param.size_v1 is not None:
-                    k = param.size_v1
+                    k = uint8(param.size_v1)
                 else:
-                    k = self.constants.PLOT_SIZE_V2
+                    assert param.strength_v2 is not None
+                    k = uint8(0x80 | param.strength_v2)
                 response_plots.append(
                     {
                         "filename": str(path),

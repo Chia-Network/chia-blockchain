@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
 
-from chia_rs import G1Element, G2Element, PartialProof, ProofOfSpace, RewardChainBlockUnfinished
+from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint8, uint32, uint64
 
@@ -142,6 +142,11 @@ class RespondSignatures(Streamable):
 @dataclass(frozen=True)
 class Plot(Streamable):
     filename: str
+    # for backwards compatibility with previous harvester (e.g. DrPlotter)
+    # this field is either k-size (for v1 plots) or strength (for v2 plots).
+    # the most significant bit is set for v2 plots
+    # TODO: after the phase-out, v1 harvester won't be relevant anymore and we
+    # can clean this up with a new protocol version
     size: uint8
     plot_id: bytes32
     pool_public_key: Optional[G1Element]
@@ -150,6 +155,12 @@ class Plot(Streamable):
     file_size: uint64
     time_modified: uint64
     compression_level: Optional[uint8]
+
+    def param(self) -> PlotParam:
+        if (self.size & 0x80) != 0:
+            return PlotParam.make_v2(self.size & 0x7F)
+        else:
+            return PlotParam.make_v1(self.size)
 
 
 @streamable
