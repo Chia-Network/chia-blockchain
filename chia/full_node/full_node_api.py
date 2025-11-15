@@ -219,6 +219,14 @@ class FullNodeAPI:
         if not (await self.full_node.synced()):
             return None
 
+        # It's not reasonable to advertise a transaction with zero cost
+        if transaction.cost == 0:
+            self.log.warning(
+                f"Banning peer {peer.peer_node_id}. Sent us a tx {transaction.transaction_id} with zero cost."
+            )
+            await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
+            return None
+
         # If already seen, the cost and fee must match, otherwise ban the peer
         mempool_item = self.full_node.mempool_manager.get_mempool_item(transaction.transaction_id, include_pending=True)
         if mempool_item is not None:
