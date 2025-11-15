@@ -408,10 +408,10 @@ class HarvesterAPI:
                 else:
                     constants = self.harvester.constants
                     # after the phase-out, ignore v1 plots
+                    phase_out_epochs = (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
                     if (
                         new_challenge.last_tx_height
-                        >= constants.HARD_FORK2_HEIGHT
-                        + (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) * constants.EPOCH_BLOCKS
+                        >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS
                     ):
                         continue
 

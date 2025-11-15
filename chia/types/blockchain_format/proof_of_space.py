@@ -84,22 +84,25 @@ def is_v1_phased_out(
     # The probability of having been phased out is proportional on the
     # number of epochs since hard fork activation
     phase_out_epoch_bits = constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
+    if phase_out_epoch_bits == 0:
+        return True
+
     phase_out_epoch_mask = (1 << phase_out_epoch_bits) - 1
 
     # we just look at one byte so the mask can't be bigger than that
     assert phase_out_epoch_mask < 256
 
     # this counter is counting down to zero
-    epoch_counter = (1 << phase_out_epoch_bits) - (
-        prev_transaction_block_height - constants.HARD_FORK2_HEIGHT
-    ) // constants.EPOCH_BLOCKS
+    epoch_counter = (
+        phase_out_epoch_mask - (prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) // constants.EPOCH_BLOCKS
+    )
 
     # if we're past the phase-out, v1 plots are unconditionally invalid
     if epoch_counter <= 0:
         return True
 
     proof_value = std_hash(proof + b"chia proof-of-space v1 phase-out")[0] & phase_out_epoch_mask
-    return proof_value > epoch_counter
+    return proof_value >= epoch_counter
 
 
 def verify_and_get_quality_string(

@@ -286,7 +286,7 @@ def test_v1_phase_out() -> None:
     constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500000))
     rng = random.Random()
 
-    phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
+    phase_out_epochs = (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
     print(f"phase-out epochs: {phase_out_epochs}")
 
     for epoch in range(-5, phase_out_epochs + 5):
