@@ -173,7 +173,7 @@ async def test_cat_trades(
         cat_wallet_maker: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
-            tail_maker.get_tree_hash().hex(),
+            tail_maker.get_tree_hash(),
             None,
             authorized_providers,
             proofs_checker_maker,
@@ -181,7 +181,7 @@ async def test_cat_trades(
         new_cat_wallet_taker: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
             wallet_node_taker.wallet_state_manager,
             wallet_taker,
-            tail_taker.get_tree_hash().hex(),
+            tail_taker.get_tree_hash(),
             None,
             authorized_providers,
             proofs_checker_taker,
@@ -417,14 +417,14 @@ async def test_cat_trades(
     # Create the trade parameters
     chia_for_cat: OfferSpecification = {
         wallet_maker.id(): -1,
-        bytes32.from_hexstr(new_cat_wallet_maker.get_asset_id()): 2,  # This is the CAT that the taker made
+        new_cat_wallet_maker.get_asset_id(): 2,  # This is the CAT that the taker made
     }
     cat_for_chia: OfferSpecification = {
         wallet_maker.id(): 3,
         cat_wallet_maker.id(): -4,  # The taker has no knowledge of this CAT yet
     }
     cat_for_cat: OfferSpecification = {
-        bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): -5,
+        cat_wallet_maker.get_asset_id(): -5,
         new_cat_wallet_maker.id(): 6,
     }
     chia_for_multiple_cat: OfferSpecification = {
@@ -445,10 +445,10 @@ async def test_cat_trades(
 
     driver_dict: dict[bytes32, PuzzleInfo] = {}
     for wallet in (cat_wallet_maker, new_cat_wallet_maker):
-        asset_id: str = wallet.get_asset_id()
+        asset_id = wallet.get_asset_id()
         driver_item: dict[str, Any] = {
             "type": AssetType.CAT.value,
-            "tail": "0x" + asset_id,
+            "tail": "0x" + asset_id.hex(),
         }
         if credential_restricted:
             driver_item["also"] = {
@@ -460,7 +460,7 @@ async def test_cat_trades(
                     else proofs_checker_taker.as_program()
                 ),
             }
-        driver_dict[bytes32.from_hexstr(asset_id)] = PuzzleInfo(driver_item)
+        driver_dict[asset_id] = PuzzleInfo(driver_item)
 
     trade_manager_maker = env_maker.wallet_state_manager.trade_manager
     trade_manager_taker = env_taker.wallet_state_manager.trade_manager
@@ -1805,7 +1805,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework, wall
     # This take should fail since we have no CATs to fulfill it with
     with pytest.raises(
         ValueError,
-        match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
+        match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id().hex()} to fulfill offer",
     ):
         async with env_taker.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
