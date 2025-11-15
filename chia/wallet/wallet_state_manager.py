@@ -367,9 +367,13 @@ class WalletStateManager:
         return self.private_key
 
     def get_wallet(self, id: uint32, required_type: type[TWalletType]) -> TWalletType:
+        if id not in self.wallets:
+            raise ValueError(f"Wallet with id {id} does not exist")
+
         wallet = self.wallets[id]
+
         if not isinstance(wallet, required_type):
-            raise Exception(
+            raise ValueError(
                 f"wallet id {id} is of type {type(wallet).__name__} but type {required_type.__name__} is required",
             )
 
