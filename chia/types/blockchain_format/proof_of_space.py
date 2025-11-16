@@ -104,7 +104,7 @@ def is_v1_phased_out(
     )
 
     # if we're past the phase-out, v1 plots are unconditionally invalid
-    if epoch_counter <= 0:
+    if epoch_counter < 0:
         return True
 
     proof_value = std_hash(proof + b"chia proof-of-space v1 phase-out")[0] & phase_out_epoch_mask
