@@ -117,6 +117,10 @@ def verify_and_get_quality_string(
         log.info("v1 proof has been phased-out and is no longer valid")
         return None
 
+    if plot_param.strength_v2 is not None and prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
+        log.info("v2 proof support has not yet activated")
+        return None
+
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")

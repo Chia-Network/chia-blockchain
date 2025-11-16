@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import random
 from dataclasses import dataclass
 from typing import Optional
@@ -29,7 +30,7 @@ class ProofOfSpaceCase:
     plot_public_key: G1Element
     pool_public_key: Optional[G1Element] = None
     pool_contract_puzzle_hash: Optional[bytes32] = None
-    height: uint32 = uint32(0)
+    height: uint32 = DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
     expected_error: Optional[str] = None
     marks: Marks = ()
 
@@ -135,8 +136,18 @@ def b32(key: str) -> bytes32:
         ),
         expected_error="Did not pass the plot filter",
     ),
+    ProofOfSpaceCase(
+        id="v2 not activated",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=PlotParam.make_v2(2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=G1Element(),
+        height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
+        expected_error="v2 proof support has not yet activated",
+    ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
+    caplog.set_level(logging.INFO)
     pos = make_pos(
         challenge=case.pos_challenge,
         pool_public_key=case.pool_public_key,
