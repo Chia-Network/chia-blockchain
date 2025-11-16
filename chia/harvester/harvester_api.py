@@ -31,6 +31,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
@@ -408,7 +409,7 @@ class HarvesterAPI:
                 else:
                     constants = self.harvester.constants
                     # after the phase-out, ignore v1 plots
-                    phase_out_epochs = (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
+                    phase_out_epochs = num_phase_out_epochs(constants)
                     if (
                         new_challenge.last_tx_height
                         >= constants.HARD_FORK2_HEIGHT + phase_out_epochs * constants.EPOCH_BLOCKS

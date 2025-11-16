@@ -72,6 +72,16 @@ def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
     return True
 
 
+def num_phase_out_epochs(constants: ConsensusConstants) -> int:
+    """
+    The number of phase-out epochs is always a power-of-two minus 1. i.e. it
+    will also be a mask for the hash of the proof we're checking for phase-out.
+    Since the hash of the proof are random bits, the simplest check is just to
+    mask and compare the resulting value against the phase-out count down.
+    """
+    return (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
+
+
 def is_v1_phased_out(
     proof: bytes,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
@@ -83,11 +93,7 @@ def is_v1_phased_out(
     # This is a v1 plot and the phase-out period has started
     # The probability of having been phased out is proportional on the
     # number of epochs since hard fork activation
-    phase_out_epoch_bits = constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
-    if phase_out_epoch_bits == 0:
-        return True
-
-    phase_out_epoch_mask = (1 << phase_out_epoch_bits) - 1
+    phase_out_epoch_mask = num_phase_out_epochs(constants)
 
     # we just look at one byte so the mask can't be bigger than that
     assert phase_out_epoch_mask < 256

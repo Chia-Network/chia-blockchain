@@ -16,6 +16,7 @@ from chia.types.blockchain_format.proof_of_space import (
     check_plot_param,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -286,7 +287,7 @@ def test_v1_phase_out() -> None:
     constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500000))
     rng = random.Random()
 
-    phase_out_epochs = (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
+    phase_out_epochs = num_phase_out_epochs(constants)
     print(f"phase-out epochs: {phase_out_epochs}")
 
     for epoch in range(-5, phase_out_epochs + 5):

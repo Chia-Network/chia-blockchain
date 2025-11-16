@@ -99,6 +99,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_taproot_sk,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -1560,7 +1561,7 @@ class BlockTools:
         rng.seed(seed)
 
         sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
-        phase_out_epochs = (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
+        phase_out_epochs = num_phase_out_epochs(constants)
 
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
