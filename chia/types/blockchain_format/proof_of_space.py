@@ -82,6 +82,15 @@ def num_phase_out_epochs(constants: ConsensusConstants) -> int:
     return (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
 
 
+def v1_cut_off_height(constants: ConsensusConstants) -> int:
+    """
+    returns the height where v1 proofs-of-space are no longer valid. Blocks
+    whose previous transaction block is equal to or higher than this may not have a
+    v1 proof.
+    """
+    return constants.HARD_FORK2_HEIGHT + num_phase_out_epochs(constants) * constants.EPOCH_BLOCKS
+
+
 def is_v1_phased_out(
     proof: bytes,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
@@ -99,9 +108,7 @@ def is_v1_phased_out(
     assert phase_out_epoch_mask < 256
 
     # this counter is counting down to zero
-    epoch_counter = (
-        phase_out_epoch_mask - (prev_transaction_block_height - constants.HARD_FORK2_HEIGHT) // constants.EPOCH_BLOCKS
-    )
+    epoch_counter = (v1_cut_off_height(constants) - prev_transaction_block_height) // constants.EPOCH_BLOCKS
 
     # if we're past the phase-out, v1 plots are unconditionally invalid
     if epoch_counter < 0:
