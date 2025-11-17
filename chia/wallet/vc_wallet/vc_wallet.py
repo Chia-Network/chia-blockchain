@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import time
 import traceback
 from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
@@ -17,7 +16,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
@@ -25,16 +23,12 @@ from chia.wallet.conditions import (
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
-    parse_timelock_info,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import Offer
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
@@ -100,9 +94,7 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[object]) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
@@ -200,31 +192,21 @@ class VCWallet:
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
-        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
         vc_record: VCRecord = VCRecord(vc, uint32(0))
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=now,
-                    to_puzzle_hash=inner_puzzle_hash,
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(inner_puzzle_hash),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=uint32(1),
+                    puzzle_hash=inner_puzzle_hash,
                     amount=uint64(1),
-                    fee_amount=uint64(fee),
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=spend_bundle,
                     additions=add_list,
                     removals=rem_list,
-                    wallet_id=uint32(1),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=compute_memos(spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 
@@ -340,29 +322,19 @@ class VCWallet:
                 )  # pragma: no cover
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
-        now = uint64(time.time())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=now,
-                    to_puzzle_hash=puzzle_hashes[0],
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=puzzle_hashes[0],
                     amount=uint64(1),
-                    fee_amount=uint64(fee),
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=spend_bundle,
                     additions=add_list,
                     removals=rem_list,
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=compute_memos(spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 

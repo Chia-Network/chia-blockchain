@@ -8,7 +8,7 @@ have to worry about blowing out the python stack.
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 from chia_rs.sized_bytes import bytes32
 from clvm.CLVMObject import CLVMStorage
@@ -16,7 +16,7 @@ from clvm.SExp import SExp
 
 from chia.util.hash import std_hash
 
-ValueType = Union[bytes, CLVMStorage]
+ValueType = bytes | CLVMStorage
 ValueStackType = list[ValueType]
 Op = Callable[[ValueStackType, "OpStackType", set[bytes32]], None]
 OpStackType = list[Op]

@@ -6,7 +6,7 @@ helper it's required to install the `legacy_keyring` extra dependency which can 
 from __future__ import annotations
 
 import sys
-from typing import Callable, Union, cast
+from typing import Callable, TypeAlias, cast
 
 import click
 from chia_rs import G1Element
@@ -21,11 +21,10 @@ except ImportError:
         sys.exit("Use `install.sh -l` to install the legacy_keyring dependency.")
     CryptFileKeyring = None
 
-
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
 
-LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
+LegacyKeyring: TypeAlias = MacKeyring | WinKeyring | CryptFileKeyring
 
 
 CURRENT_KEY_VERSION = "1.8"

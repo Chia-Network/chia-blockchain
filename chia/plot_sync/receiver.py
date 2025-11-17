@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
-from chia_rs import PlotSize
+from chia_rs import ConsensusConstants, PlotParam
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
@@ -92,11 +92,13 @@ class Receiver:
     _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
     _harvesting_mode: Optional[HarvestingMode]
+    _constants: ConsensusConstants
 
     def __init__(
         self,
         connection: WSChiaConnection,
         update_callback: ReceiverUpdateCallback,
+        constants: ConsensusConstants,
     ) -> None:
         self._connection = connection
         self._current_sync = Sync()
@@ -109,12 +111,13 @@ class Receiver:
         self._total_effective_plot_size = 0
         self._update_callback = update_callback
         self._harvesting_mode = None
+        self._constants = constants
 
     async def trigger_callback(self, update: Optional[Delta] = None) -> None:
         try:
             await self._update_callback(self._connection.peer_node_id, update)
-        except Exception as e:
-            log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
+        except Exception:
+            log.exception(f"_update_callback: node_id {self.connection().peer_node_id}")
 
     def reset(self) -> None:
         log.info(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
@@ -181,13 +184,13 @@ class Receiver:
             await method(message)
             await send_response()
         except InvalidIdentifierError as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, InvalidIdentifierError {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier))
         except PlotSyncException as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, Error {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", None))
         except Exception as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, Exception {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:
@@ -349,10 +352,12 @@ class Receiver:
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
+
         self._total_effective_plot_size = int(
             # TODO: todo_v2_plots support v2 plots
             sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                * int(_expected_plot_size(PlotParam.make_v1(plot.size), self._constants))
                 for plot in self._plots.values()
             )
         )

@@ -9,6 +9,7 @@ from typing import ClassVar, Generic, Optional, TypeVar, Union
 
 from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -45,6 +46,13 @@ class ValuedEvent(Generic[T]):
         return self._value
 
 
+@dataclasses.dataclass(frozen=True)
+class PeerWithTx:
+    peer_host: str
+    advertised_fee: uint64
+    advertised_cost: uint64
+
+
 @dataclass(frozen=True)
 class TransactionQueueEntry:
     """
@@ -56,6 +64,9 @@ class TransactionQueueEntry:
     spend_name: bytes32
     peer: Optional[WSChiaConnection] = field(compare=False)
     test: bool = field(compare=False)
+    # IDs of peers that advertised this transaction via new_transaction, along
+    # with their hostname, fee and cost.
+    peers_with_tx: dict[bytes32, PeerWithTx] = field(default_factory=dict, compare=False)
     done: ValuedEvent[tuple[MempoolInclusionStatus, Optional[Err]]] = field(
         default_factory=ValuedEvent,
         compare=False,

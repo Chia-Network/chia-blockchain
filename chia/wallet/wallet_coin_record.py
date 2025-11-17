@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -13,7 +13,7 @@ from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVers
 from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, CRCATVersion
 
-MetadataTypes = Union[ClawbackMetadata, CRCATMetadata]
+MetadataTypes = ClawbackMetadata | CRCATMetadata
 
 
 @dataclass(frozen=True)

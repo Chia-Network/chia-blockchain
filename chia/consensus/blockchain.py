@@ -35,6 +35,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
@@ -282,7 +283,14 @@ class Blockchain:
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
-            flags = get_flags_for_height_and_constants(block.height, self.constants)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.constants,
+                blocks=self,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            )
+            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
             additions, removals = additions_and_removals(
                 bytes(block.transactions_generator),
                 block_generator.generator_refs,
@@ -707,11 +715,21 @@ class Blockchain:
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
-        if (
-            self.try_block_record(block.prev_header_hash) is None
-            and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
-        ):
+        prev_b = self.try_block_record(block.prev_header_hash)
+        if prev_b is None and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
             return None, Err.INVALID_PREV_BLOCK_HASH
+
+        prev_tx_height = pre_sp_tx_block_height(
+            constants=self.constants,
+            blocks=self,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+        )
+
+        # With hard fork 2 we ban transactions_generator_ref_list.
+        if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT and block.transactions_generator_ref_list != []:
+            return None, Err.TOO_MANY_GENERATOR_REFS
 
         if block.transactions_info is not None:
             if block.transactions_generator is not None:
@@ -1082,12 +1100,11 @@ class Blockchain:
 
         return generators
 
-    def get_mmr_root_at_height(self, height: uint32) -> Optional[bytes32]: 
+    def get_mmr_root_at_height(self, height: uint32) -> Optional[bytes32]:
         return self.mmr_manager.get_mmr_root_at_height(height)
-    
-    def get_current_mmr_root(self) -> bytes32: 
-        return self.mmr_manager.get_current_mmr_root()
-    
-    def add_block_to_mmr(self, block_record: BlockRecord) -> None: 
-        self.mmr_manager.add_block_to_mmr(block_record)
 
+    def get_current_mmr_root(self) -> bytes32:
+        return self.mmr_manager.get_current_mmr_root()
+
+    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
+        self.mmr_manager.add_block_to_mmr(block_record)

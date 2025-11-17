@@ -408,7 +408,7 @@ class WalletStateManager:
                     if _commit_previous_result:
                         await previous_result.commit(self)
                 targets = list(self.wallets.keys())
-                self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
+                self.log.debug("Target wallets to generate puzzle hashes for: %r", targets)
                 unused: Optional[uint32] = (
                     up_to_index if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
                 )
@@ -2168,7 +2168,7 @@ class WalletStateManager:
         wallet_type: WalletType,
         peer: WSChiaConnection,
         coin_name: bytes32,
-        coin_data: Optional[Streamable],
+        coin_data: Optional[object],
     ) -> None:
         """
         Adding coin to DB
@@ -2496,9 +2496,10 @@ class WalletStateManager:
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(
-        self, wallet_id: int, records: Optional[set[WalletCoinRecord]] = None
+        self, wallet_id: int, records: Optional[set[WalletCoinRecord]] = None, in_one_block: bool = False
     ) -> set[WalletCoinRecord]:
-        wallet_type = self.wallets[uint32(wallet_id)].type()
+        wallet = self.wallets[uint32(wallet_id)]
+        wallet_type = wallet.type()
         if records is None:
             if wallet_type == WalletType.CRCAT:
                 records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, CoinType.CRCAT)
@@ -2523,7 +2524,14 @@ class WalletStateManager:
                 continue
             if record.coin.name() in removal_dict:
                 continue
+            if hasattr(wallet, "is_coin_spendable") and not await wallet.is_coin_spendable(record):
+                continue
             filtered.add(record)
+
+        if hasattr(wallet, "max_send_quantity") and in_one_block:
+            filtered_as_list = list(filtered)
+            filtered_as_list.sort(reverse=True, key=lambda rec: rec.coin.amount)
+            return set(filtered_as_list[0 : min(len(filtered_as_list), wallet.max_send_quantity)])
 
         return filtered
 
@@ -2780,3 +2788,38 @@ class WalletStateManager:
 
     def encode_puzzle_hash(self, puzzle_hash: bytes32) -> str:
         return encode_puzzle_hash(puzzle_hash, AddressType.XCH.hrp(self.config))
+
+    def new_outgoing_transaction(
+        self,
+        *,
+        wallet_id: uint32,
+        puzzle_hash: bytes32,
+        amount: uint64,
+        fee: uint64,
+        spend_bundle: WalletSpendBundle,
+        additions: list[Coin],
+        removals: list[Coin],
+        name: bytes32,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        trade_id: bytes32 | None = None,
+    ) -> TransactionRecord:
+        return TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(time.time()),
+            to_puzzle_hash=puzzle_hash,
+            to_address=self.encode_puzzle_hash(puzzle_hash),
+            amount=amount,
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=additions,
+            removals=removals,
+            wallet_id=wallet_id,
+            sent_to=[],
+            trade_id=trade_id,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=name,
+            memos=compute_memos(spend_bundle),
+            valid_times=parse_timelock_info(extra_conditions),
+        )

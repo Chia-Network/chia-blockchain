@@ -11,7 +11,7 @@ from chia_rs import (
     BlockRecord,
     CoinSpend,
     FullBlock,
-    PlotSize,
+    PlotParam,
     SpendBundle,
     SpendBundleConditions,
     get_flags_for_height_and_constants,
@@ -24,6 +24,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -489,7 +490,14 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": []}
 
-        flags = get_flags_for_height_and_constants(full_block.height, self.service.constants)
+        prev_tx_height = pre_sp_tx_block_height(
+            constants=self.service.constants,
+            blocks=self.service.blockchain,
+            prev_b_hash=full_block.prev_header_hash,
+            sp_index=full_block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
+        )
+        flags = get_flags_for_height_and_constants(prev_tx_height, self.service.constants)
         spends = await asyncio.get_running_loop().run_in_executor(
             self.executor,
             get_spends_for_trusted_block,
@@ -513,7 +521,14 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
-        flags = get_flags_for_height_and_constants(full_block.height, self.service.constants)
+        prev_tx_height = pre_sp_tx_block_height(
+            constants=self.service.constants,
+            blocks=self.service.blockchain,
+            prev_b_hash=full_block.prev_header_hash,
+            sp_index=full_block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
+        )
+        flags = get_flags_for_height_and_constants(prev_tx_height, self.service.constants)
         spends_with_conditions = await asyncio.get_running_loop().run_in_executor(
             self.executor,
             get_spends_for_trusted_block_with_conditions,
@@ -606,7 +621,7 @@ class FullNodeRpcApi:
 
         # TODO: todo_v2_plots Update this calculation to take v2 plots into
         # account
-        plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotSize.make_v1(32))
+        plot_filter_size = calculate_prefix_bits(self.service.constants, newer_block.height, PlotParam.make_v1(32))
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
@@ -792,12 +807,19 @@ class FullNodeRpcApi:
         assert block_generator is not None
 
         try:
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=self.service.constants,
+                blocks=self.service.blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            )
             puzzle, solution = get_puzzle_and_solution_for_coin(
                 block_generator.program,
                 block_generator.generator_refs,
                 self.service.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                get_flags_for_height_and_constants(block.height, self.service.constants),
+                get_flags_for_height_and_constants(prev_tx_height, self.service.constants),
             )
             return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
         except Exception as e:
@@ -998,7 +1020,7 @@ class FullNodeRpcApi:
 
         if peak is None:
             peak_height = uint32(0)
-            last_peak_timestamp = uint64(0)
+            last_peak_timestamp: Optional[uint64] = uint64(0)
             last_block_cost = 0
             fee_rate_last_block = 0.0
             last_tx_block_fees = uint64(0)
@@ -1011,7 +1033,6 @@ class FullNodeRpcApi:
             while last_tx_block is None or last_peak_timestamp is None:
                 peak_with_timestamp -= 1
                 last_tx_block = self.service.blockchain.height_to_block_record(peak_with_timestamp)
-                assert last_tx_block.timestamp is not None  # mypy
                 last_peak_timestamp = last_tx_block.timestamp
 
             assert last_tx_block is not None  # mypy

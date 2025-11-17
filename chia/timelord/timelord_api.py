@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from chia_rs.sized_ints import uint64
 
@@ -19,9 +19,11 @@ log = logging.getLogger(__name__)
 
 class TimelordAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.timelord_stub import TimelordApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("TimelordAPI", None)
+        # Verify this class implements the TimelordApiStub protocol
+        def _protocol_check(self: TimelordAPI) -> TimelordApiStub:
+            return self
 
     log: logging.Logger
     timelord: Timelord

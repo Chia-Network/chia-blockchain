@@ -68,9 +68,8 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
@@ -81,7 +80,7 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
@@ -197,6 +196,8 @@ from chia.wallet.wallet_request_types import (
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
+    GetOfferSummary,
+    GetOfferSummaryResponse,
     GetPrivateKey,
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
@@ -281,6 +282,8 @@ from chia.wallet.wallet_request_types import (
     StrayCAT,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    TakeOffer,
+    TakeOfferResponse,
     TransactionRecordWithMetadata,
     VCAddProofs,
     VCGet,
@@ -320,6 +323,9 @@ def tx_endpoint(
         async def rpc_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
+            if await self.service.wallet_state_manager.synced() is False:
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
+
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
@@ -1111,9 +1117,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_state_manager = self.service.wallet_state_manager
-
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         main_wallet = wallet_state_manager.main_wallet
         fee = uint64(request.get("fee", 0))
 
@@ -1629,9 +1632,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
-
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Wallet)
 
         # TODO: Add support for multiple puzhash/amount/memo sets
@@ -1801,16 +1801,9 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
         state_mgr = self.service.wallet_state_manager
-        wallet = state_mgr.wallets[request.wallet_id]
         async with state_mgr.lock:
             all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(request.wallet_id)
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
-                assert isinstance(wallet, CATWallet)
-                spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
-            else:
-                spendable_coins = list(
-                    await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records)
-                )
+            spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records))
 
             # Now we get the unconfirmed transactions and manually derive the additions and removals.
             unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
@@ -1934,29 +1927,17 @@ class WalletRpcApi:
 
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
-        if request.ids is None:
-            notifications: list[
-                Notification
-            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(request.start, request.end)
+        return GetNotificationsResponse(
+            await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
+                coin_ids=request.ids, pagination=(request.start, request.end)
             )
-        else:
-            notifications = (
-                await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
-                    request.ids
-                )
-            )
-
-        return GetNotificationsResponse(notifications)
+        )
 
     @marshal
     async def delete_notifications(self, request: DeleteNotifications) -> Empty:
-        if request.ids is None:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
-        else:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
-                request.ids
-            )
+        await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+            coin_ids=request.ids
+        )
 
         return Empty()
 
@@ -2152,8 +2133,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
     ) -> CATSpendResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
 
         amounts: list[uint64] = []
@@ -2259,65 +2238,61 @@ class WalletRpcApi:
             trade_record=result[1],
         )
 
-    async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos, valid_times = offer.summary()
-
-        if request.get("advanced", False):
-            response = {
-                "summary": {
-                    "offered": offered,
-                    "requested": requested,
-                    "fees": offer.fees(),
-                    "infos": infos,
-                    "additions": [c.name().hex() for c in offer.additions()],
-                    "removals": [c.name().hex() for c in offer.removals()],
-                    "valid_times": {
-                        k: v
-                        for k, v in valid_times.to_json_dict().items()
-                        if k
-                        not in {
-                            "max_secs_after_created",
-                            "min_secs_since_created",
-                            "max_blocks_after_created",
-                            "min_blocks_since_created",
-                        }
-                    },
-                },
-                "id": offer.name(),
-            }
+    @marshal
+    async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
+        dl_summary = None
+        if not request.advanced:
+            dl_summary = await self.service.wallet_state_manager.trade_manager.get_dl_offer_summary(
+                request.parsed_offer
+            )
+        if dl_summary is not None:
+            response = GetOfferSummaryResponse(
+                data_layer_summary=dl_summary,
+                id=request.parsed_offer.name(),
+            )
         else:
-            response = {
-                "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
-                "id": offer.name(),
-            }
+            offered, requested, infos, valid_times = request.parsed_offer.summary()
+            response = GetOfferSummaryResponse(
+                summary=OfferSummary(
+                    offered=offered,
+                    requested=requested,
+                    fees=uint64(request.parsed_offer.fees()),
+                    infos=infos,
+                    additions=[c.name() for c in request.parsed_offer.additions()],
+                    removals=[c.name() for c in request.parsed_offer.removals()],
+                    valid_times=valid_times.only_absolutes(),
+                ),
+                id=request.parsed_offer.name(),
+            )
 
         # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
         # A more general solution surely exists, but I'm not sure what it is right now
-        return {
-            **response,
-            "summary": {
-                **response["summary"],  # type: ignore[dict-item]
-                "infos": {
+        return dataclasses.replace(
+            response,
+            summary=dataclasses.replace(
+                response.summary,
+                infos={
                     key: (
-                        {
-                            **info,
-                            "also": {
-                                **info["also"],
-                                "flags": ProofsChecker.from_program(
-                                    uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
-                                ).flags,
-                            },
-                        }
-                        if "also" in info and "proofs_checker" in info["also"]
+                        PuzzleInfo(
+                            {
+                                **info.info,
+                                "also": {
+                                    **info.info["also"],
+                                    "flags": ProofsChecker.from_program(
+                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
+                                    ).flags,
+                                },
+                            }
+                        )
+                        if "also" in info.info and "proofs_checker" in info.info["also"]
                         else info
                     )
-                    for key, info in response["summary"]["infos"].items()  # type: ignore[index]
+                    for key, info in response.summary.infos.items()
                 },
-            },
-        }
+            )
+            if response.summary is not None
+            else None,
+        )
 
     @marshal
     async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
@@ -2329,44 +2304,34 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def take_offer(
         self,
-        request: dict[str, Any],
+        request: TakeOffer,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
-        fee: uint64 = uint64(request.get("fee", 0))
-        maybe_marshalled_solver: Optional[dict[str, Any]] = request.get("solver")
-        solver: Optional[Solver]
-        if maybe_marshalled_solver is None:
-            solver = None
-        else:
-            solver = Solver(info=maybe_marshalled_solver)
-
+    ) -> TakeOfferResponse:
         peer = self.service.get_full_node_peer()
         trade_record = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-            offer,
+            request.parsed_offer,
             peer,
             action_scope,
-            fee=fee,
-            solver=solver,
+            fee=request.fee,
+            solver=request.solver,
             extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
             interface.side_effects.signing_responses.append(
-                SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)
+                SigningResponse(bytes(request.parsed_offer._bundle.aggregated_signature), trade_record.trade_id)
             )
 
-        return {
-            "trade_record": trade_record.to_json_dict_convenience(),
-            "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "signing_responses": None,  # tx_endpoint wrapper will take care of this
-        }
+        return TakeOfferResponse(
+            [],  # tx_endpoint will fill in this default value
+            [],  # tx_endpoint will fill in this default value
+            Offer.from_bytes(trade_record.offer),
+            trade_record,
+        )
 
     async def get_offer(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
@@ -2862,8 +2827,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> DIDTransferDIDResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         puzzle_hash: bytes32 = decode_puzzle_hash(request.inner_address)
         async with self.service.wallet_state_manager.lock:
@@ -3333,8 +3296,6 @@ class WalletRpcApi:
     ) -> NFTMintBulkResponse:
         if action_scope.config.push:
             raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_address in {None, ""}:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
@@ -3364,7 +3325,7 @@ class WalletRpcApi:
             metadata_list.append(metadata_dict)
         target_list = [decode_puzzle_hash(target) for target in request.target_list]
         if request.xch_change_target is not None:
-            if request.xch_change_target.startswith("xch"):
+            if request.xch_change_target.startswith(AddressType.XCH.hrp(self.service.config)):
                 xch_change_ph = decode_puzzle_hash(request.xch_change_target)
             else:
                 xch_change_ph = bytes32.from_hexstr(request.xch_change_target)
@@ -3612,9 +3573,6 @@ class WalletRpcApi:
     ) -> PWJoinPoolResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         if (
             pool_wallet_info.current.state == FARMING_TO_POOL.value
@@ -3654,9 +3612,6 @@ class WalletRpcApi:
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
         total_fee = await wallet.self_pool(request.fee, action_scope)
         # tx_endpoint will take care of filling in these default values
         return PWSelfPoolResponse(
@@ -3676,8 +3631,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> PWAbsorbRewardsResponse:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before collecting rewards")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)

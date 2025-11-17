@@ -1089,7 +1089,9 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
         for i in range(1, 50):
             amounts.append(uint64(i))
             puzzle_hashes.append(cat_2_hash)
-        spent_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
+        spent_coin = next(
+            iter(await cat_wallet.wallet_state_manager.get_spendable_coins_for_wallet(cat_wallet.id()))
+        ).coin
         await cat_wallet.generate_signed_transaction(amounts, puzzle_hashes, action_scope, coins={spent_coin})
 
     await wallet_environments.process_pending_states(
@@ -1120,7 +1122,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework, wal
     )
 
     async def check_all_there() -> bool:
-        spendable = await cat_wallet.get_cat_spendable_coins()
+        spendable = await cat_wallet.wallet_state_manager.get_spendable_coins_for_wallet(cat_wallet.id())
         spendable_name_set = set()
         for record in spendable:
             spendable_name_set.add(record.coin.name())
@@ -1649,7 +1651,9 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
     # Let's test that continuing to melt this CAT results in the correct balance changes
     for _ in range(5):
         tx_amount -= 1
-        new_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
+        new_coin = next(
+            iter(await cat_wallet.wallet_state_manager.get_spendable_coins_for_wallet(cat_wallet.id()))
+        ).coin
         new_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
             [

@@ -322,19 +322,11 @@ class CRCATWallet(CATWallet):
             "inner_puzzle_for_cat_puzhash is a legacy method and is not available on CR-CAT wallets"
         )
 
-    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
-        result: list[WalletCoinRecord] = []
-
-        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.id(), records
-        )
-
-        for record in record_list:
-            crcat: CRCAT = self.coin_record_to_crcat(record)
-            if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
-                result.append(record)
-
-        return result
+    async def is_coin_spendable(self, record: WalletCoinRecord) -> bool:
+        crcat: CRCAT = self.coin_record_to_crcat(record)
+        if crcat.lineage_proof is not None and not crcat.lineage_proof.is_none():
+            return True
+        return False
 
     async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
@@ -659,25 +651,17 @@ class CRCATWallet(CATWallet):
                 addition for tx in interface.side_effects.transactions for addition in tx.additions
             }
             tx_list = [
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(time.time()),
-                    to_puzzle_hash=payment.puzzle_hash,
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(payment.puzzle_hash),
-                    amount=payment.amount,
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=spend_bundle if i == 0 else None,
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=payment.puzzle_hash,
+                    amount=uint64(payment.amount),
+                    fee=fee,
+                    # semantics guarantee not None here
+                    spend_bundle=spend_bundle if i == 0 else None,  # type: ignore[arg-type]
                     additions=list(set(spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
                     removals=list(set(spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name() if i == 0 else payment.to_program().get_tree_hash(),
-                    memos=compute_memos(spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
                 for i, payment in enumerate(payments)
             ]

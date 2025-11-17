@@ -59,7 +59,7 @@ def test_process_fast_forward_spends_nothing_to_do() -> None:
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-        mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
+        mempool_item=internal_mempool_item, prev_tx_height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
     )
     assert singleton_ff == SingletonFastForward()
     assert bundle_coin_spends == original_version.bundle_coin_spends
@@ -91,7 +91,7 @@ def test_process_fast_forward_spends_latest_unspent() -> None:
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-        mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
+        mempool_item=internal_mempool_item, prev_tx_height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
     )
     child_coin = item.bundle_coin_spends[test_coin.name()].additions[0]
     expected_fast_forward_spends = {

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, cast
 
 from chia_rs import AugSchemeMPL, CoinSpend, CoinState, G1Element, G2Element
@@ -26,7 +25,6 @@ from chia.wallet.conditions import (
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
-    parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
@@ -49,8 +47,6 @@ from chia.wallet.trading.offer import OFFER_MOD, OFFER_MOD_HASH, NotarizedPaymen
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions
-from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -613,25 +609,16 @@ class NFTWallet:
             other_tx_additions: set[Coin] = {
                 addition for tx in interface.side_effects.transactions for addition in tx.additions
             }
-            tx = TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(time.time()),
-                to_puzzle_hash=puzzle_hashes[0],
-                to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
+            tx = self.wallet_state_manager.new_outgoing_transaction(
+                wallet_id=self.id(),
+                puzzle_hash=puzzle_hashes[0],
                 amount=uint64(payment_sum),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(0),
+                fee=fee,
                 spend_bundle=spend_bundle,
                 additions=list(set(spend_bundle.additions()) - other_tx_additions),
                 removals=list(set(spend_bundle.removals()) - other_tx_removals),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
-                memos=compute_memos(spend_bundle),
-                valid_times=parse_timelock_info(extra_conditions),
+                extra_conditions=extra_conditions,
             )
 
             interface.side_effects.transactions.append(tx)
@@ -1403,25 +1390,16 @@ class NFTWallet:
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(time.time()),
-                    to_puzzle_hash=innerpuz.get_tree_hash(),
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(innerpuz.get_tree_hash()),
-                    amount=uint64(1),
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=unsigned_spend_bundle,
-                    additions=list(unsigned_spend_bundle.additions()),
-                    removals=list(unsigned_spend_bundle.removals()),
+                self.wallet_state_manager.new_outgoing_transaction(
                     wallet_id=did_wallet.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    puzzle_hash=innerpuz.get_tree_hash(),
+                    amount=uint64(1),
+                    fee=fee,
+                    spend_bundle=unsigned_spend_bundle,
+                    additions=unsigned_spend_bundle.additions(),
+                    removals=unsigned_spend_bundle.removals(),
                     name=unsigned_spend_bundle.name(),
-                    memos=compute_memos(unsigned_spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 

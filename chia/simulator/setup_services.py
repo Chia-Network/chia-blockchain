@@ -404,6 +404,7 @@ async def setup_farmer(
         consensus_constants,
         b_tools.local_keychain,
         connect_to_daemon=False,
+        solver_peer=solver_peer,
     )
 
     async with service.manage(start=start_service):

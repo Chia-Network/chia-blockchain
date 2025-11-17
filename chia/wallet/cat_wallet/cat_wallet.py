@@ -39,7 +39,6 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     UnknownCondition,
-    parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -49,7 +48,6 @@ from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_additions import compute_additions_with_cost
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -340,15 +338,15 @@ class CATWallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
-        spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
-        )
-        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
-        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
-
     async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
+        return uint128(
+            sum(
+                cr.coin.amount
+                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.id(), records, in_one_block=True
+                )
+            )
+        )
 
     def get_name(self) -> str:
         return self.wallet_info.name
@@ -444,7 +442,7 @@ class CATWallet:
             return derivation_record.puzzle_hash
 
     async def get_spendable_balance(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        coins = await self.get_cat_spendable_coins(records)
+        coins = await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         amount = 0
         for record in coins:
             amount += record.coin.amount
@@ -477,19 +475,9 @@ class CATWallet:
 
         return uint64(addition_amount)
 
-    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
-        result: list[WalletCoinRecord] = []
-
-        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.id(), records
-        )
-
-        for record in record_list:
-            lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None and not lineage.is_none():
-                result.append(record)
-
-        return list(await self.get_max_spendable_coins(set(result)))
+    async def is_coin_spendable(self, record: WalletCoinRecord) -> bool:
+        lineage = await self.get_lineage_proof_for_coin(record.coin)
+        return lineage is not None and not lineage.is_none()
 
     async def select_coins(
         self,
@@ -501,7 +489,9 @@ class CATWallet:
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: list[WalletCoinRecord] = await self.get_cat_spendable_coins()
+        spendable_coins: list[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), in_one_block=True)
+        )
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
@@ -794,25 +784,16 @@ class CATWallet:
                 removal for tx in interface.side_effects.transactions for removal in tx.additions
             }
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=uint64(time.time()),
-                    to_puzzle_hash=puzzle_hashes[0],
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(puzzle_hashes[0]),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=puzzle_hashes[0],
                     amount=uint64(payment_sum),
-                    fee_amount=fee,
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=spend_bundle,
                     additions=list(set(spend_bundle.additions()) - other_tx_additions),
                     removals=list(set(spend_bundle.removals()) - other_tx_removals),
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=compute_memos(spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 

@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Awaitable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
@@ -29,6 +29,7 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
     calculate_prefix_bits,
     generate_plot_public_key,
+    is_v1_phased_out,
     make_pos,
     passes_plot_filter,
 )
@@ -37,9 +38,11 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 class HarvesterAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.harvester_stub import HarvesterApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("HarvesterAPI", None)
+        # Verify this class implements the HarvesterApiStub protocol
+        def _protocol_check(self: HarvesterAPI) -> HarvesterApiStub:
+            return self
 
     log: logging.Logger
     harvester: Harvester
@@ -56,7 +59,7 @@ class HarvesterAPI:
         filter_prefix_bits = calculate_prefix_bits(
             self.harvester.constants,
             challenge.peak_height,
-            plot_info.prover.get_size(),
+            plot_info.prover.get_param(),
         )
         return passes_plot_filter(
             filter_prefix_bits,
@@ -189,11 +192,9 @@ class HarvesterAPI:
                     required_iters: uint64 = calculate_iterations_quality(
                         self.harvester.constants,
                         quality.get_string(),
-                        plot_info.prover.get_size(),
+                        plot_info.prover.get_param(),
                         difficulty,
                         new_challenge.sp_hash,
-                        sub_slot_iters,
-                        new_challenge.last_tx_height,
                     )
 
                     if required_iters >= sp_interval_iters:
@@ -208,15 +209,13 @@ class HarvesterAPI:
                 if len(good_partial_proofs) == 0:
                     return None
 
-                size = plot_info.prover.get_size().size_v2
-                assert size is not None
                 return PartialProofsData(
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                     str(filename.resolve()),
                     good_partial_proofs,
                     new_challenge.signage_point_index,
-                    size,
+                    self.harvester.constants.PLOT_SIZE_V2,
                     plot_info.prover.get_strength(),
                     plot_id,
                     plot_info.pool_public_key,
@@ -284,11 +283,9 @@ class HarvesterAPI:
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants,
                             quality.get_string(),
-                            plot_info.prover.get_size(),
+                            plot_info.prover.get_param(),
                             difficulty,
                             new_challenge.sp_hash,
-                            sub_slot_iters,
-                            new_challenge.last_tx_height,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
@@ -299,6 +296,17 @@ class HarvesterAPI:
                                 proof_xs = plot_info.prover.get_full_proof(
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
+
+                                if is_v1_phased_out(proof_xs, new_challenge.last_tx_height, constants):
+                                    self.harvester.log.info(
+                                        f"Proof dropped due to hard fork phase-out of v1 plots: {filename}"
+                                    )
+                                    self.harvester.log.info(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                    continue
+
                             except RuntimeError as e:
                                 if str(e) == "GRResult_NoProof received":
                                     self.harvester.log.info(
@@ -340,7 +348,7 @@ class HarvesterAPI:
                                         plot_info.pool_public_key,
                                         plot_info.pool_contract_puzzle_hash,
                                         plot_info.plot_public_key,
-                                        plot_info.prover.get_size(),
+                                        plot_info.prover.get_param(),
                                         proof_xs,
                                     ),
                                 )
@@ -398,6 +406,15 @@ class HarvesterAPI:
                     )
                     passed += 1
                 else:
+                    constants = self.harvester.constants
+                    # after the phase-out, ignore v1 plots
+                    if (
+                        new_challenge.last_tx_height
+                        >= constants.HARD_FORK2_HEIGHT
+                        + (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) * constants.EPOCH_BLOCKS
+                    ):
+                        continue
+
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")

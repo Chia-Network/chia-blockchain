@@ -28,6 +28,8 @@ def get_name_puzzle_conditions(
     height: uint32,
     constants: ConsensusConstants,
 ) -> NPCResult:
+    # TODO: technically, this is supposed to be the previous transaction block
+    # height. But this is just for testing and it seems to be OK for now
     flags = get_flags_for_height_and_constants(height, constants) | DONT_VALIDATE_SIGNATURE
 
     if mempool_mode:

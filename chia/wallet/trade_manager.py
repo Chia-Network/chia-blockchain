@@ -11,7 +11,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerSummary, DataLayerWallet
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program, run
@@ -966,7 +966,7 @@ class TradeManager:
                 return True
         return False
 
-    async def get_offer_summary(self, offer: Offer) -> dict[str, Any]:
+    async def get_dl_offer_summary(self, offer: Offer) -> Optional[DataLayerSummary]:
         for puzzle_info in offer.driver_dict.values():
             if (
                 puzzle_info.check_type(
@@ -978,27 +978,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.get_offer_summary(offer)
-        # Otherwise just return the same thing as the RPC normally does
-        offered, requested, infos, valid_times = offer.summary()
-        return {
-            "offered": offered,
-            "requested": requested,
-            "fees": offer.fees(),
-            "additions": [c.name().hex() for c in offer.additions()],
-            "removals": [c.name().hex() for c in offer.removals()],
-            "infos": infos,
-            "valid_times": {
-                k: v
-                for k, v in valid_times.to_json_dict().items()
-                if k
-                not in {
-                    "max_secs_after_created",
-                    "min_secs_since_created",
-                    "max_blocks_after_created",
-                    "min_blocks_since_created",
-                }
-            },
-        }
+        return None
 
     async def check_for_final_modifications(
         self, offer: Offer, solver: Solver, action_scope: WalletActionScope

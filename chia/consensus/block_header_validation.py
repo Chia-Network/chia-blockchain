@@ -20,9 +20,13 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.blockchain_mmr import compute_mmr_root_for_reorg_block
 from chia.consensus.deficit import calculate_deficit
-from chia.consensus.fork_hash_utils import get_reward_chain_block_hash_with_fork_validation
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge, prev_tx_block
+from chia.consensus.fork_hash_utils import get_reward_chain_block_hash_with_fork_validation
+from chia.consensus.get_block_challenge import (
+    final_eos_is_already_included,
+    get_block_challenge,
+    pre_sp_tx_block_height,
+)
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -534,8 +538,13 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        expected_vs.ssi,
-        prev_tx_block(blocks, prev_b),
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=header_block.prev_header_hash,
+            sp_index=header_block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+        ),
     )
     if required_iters is None:
         return None, ValidationError(Err.INVALID_POSPACE)

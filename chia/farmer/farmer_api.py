@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 import aiohttp
-from chia_rs import AugSchemeMPL, G2Element, PlotSize, PoolTarget, PrivateKey, ProofOfSpace
+from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from packaging.version import Version
@@ -49,18 +49,13 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 
 
-def serialize(partial_proof: list[uint64]) -> bytes:
-    key = bytearray()
-    for val in partial_proof:
-        key += val.stream_to_bytes()
-    return bytes(key)
-
-
 class FarmerAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.farmer_stub import FarmerApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("FarmerAPI", None)
+        # Verify this class implements the FarmerApiStub protocol
+        def _protocol_check(self: FarmerAPI) -> FarmerApiStub:
+            return self
 
     log: logging.Logger
     farmer: Farmer
@@ -111,6 +106,7 @@ class FarmerAPI:
                 new_proof_of_space.challenge_hash,
                 new_proof_of_space.sp_hash,
                 height=sp.peak_height,
+                prev_transaction_block_height=sp.last_tx_height,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
@@ -122,11 +118,9 @@ class FarmerAPI:
             required_iters: uint64 = calculate_iterations_quality(
                 self.farmer.constants,
                 computed_quality_string,
-                new_proof_of_space.proof.size(),
+                new_proof_of_space.proof.param(),
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
-                sp.sub_slot_iters,
-                sp.last_tx_height,
             )
 
             # If the iters are good enough to make a block, proceed with the block making flow
@@ -231,11 +225,9 @@ class FarmerAPI:
                 required_iters = calculate_iterations_quality(
                     self.farmer.constants,
                     computed_quality_string,
-                    new_proof_of_space.proof.size(),
+                    new_proof_of_space.proof.param(),
                     pool_state_dict["current_difficulty"],
                     new_proof_of_space.sp_hash,
-                    sp.sub_slot_iters,
-                    sp.last_tx_height,
                 )
                 if required_iters >= calculate_sp_interval_iters(
                     self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS
@@ -521,7 +513,7 @@ class FarmerAPI:
                 size=partial_proof_data.plot_size,
             )
 
-            key = serialize(partial_proof)
+            key = bytes(partial_proof)
             try:
                 # store pending request data for matching with response
                 self.farmer.pending_solver_requests[key] = {
@@ -532,10 +524,12 @@ class FarmerAPI:
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof[:5]}...")
+                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.proof_fragments[:5]}...")
 
             except Exception as e:
-                self.farmer.log.error(f"Failed to call solver service for partial proof {partial_proof[:5]}...: {e}")
+                self.farmer.log.error(
+                    f"Failed to call solver service for partial proof {partial_proof.proof_fragments[:5]}...: {e}"
+                )
                 # clean up pending request
                 if key in self.farmer.pending_solver_requests:
                     del self.farmer.pending_solver_requests[key]
@@ -550,9 +544,11 @@ class FarmerAPI:
 
         # find the matching pending request using partial_proof
 
-        key = serialize(response.partial_proof)
+        key = bytes(response.partial_proof)
         if key not in self.farmer.pending_solver_requests:
-            self.farmer.log.warning(f"Received solver response for unknown partial proof {response.partial_proof[:5]}")
+            self.farmer.log.warning(
+                f"Received solver response for unknown partial proof {response.partial_proof.proof_fragments[:5]}"
+            )
             return
 
         # get the original request data
@@ -564,7 +560,9 @@ class FarmerAPI:
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof[:5]}...")
+            self.farmer.log.warning(
+                f"Received empty proof from solver for proof {partial_proof.proof_fragments[:5]}..."
+            )
             return
 
         sp_challenge_hash = proof_data.challenge_hash
@@ -661,7 +659,7 @@ class FarmerAPI:
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
                 uint8(
-                    calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height, PlotSize.make_v1(32))
+                    calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height, PlotParam.make_v1(32))
                 ),
             )
 
@@ -813,6 +811,7 @@ class FarmerAPI:
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
         peak_height = sps[0].peak_height
+        last_tx_height = sps[0].last_tx_height
         signage_point_index = sps[0].signage_point_index
         found_sp_hash_debug = False
         for sp_candidate in sps:
@@ -831,7 +830,12 @@ class FarmerAPI:
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = verify_and_get_quality_string(
-            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, height=peak_height
+            pospace,
+            self.farmer.constants,
+            response.challenge_hash,
+            response.sp_hash,
+            height=peak_height,
+            prev_transaction_block_height=last_tx_height,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")

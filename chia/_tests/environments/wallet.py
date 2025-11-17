@@ -228,7 +228,7 @@ class WalletEnvironment:
                 )
             else:
                 for key, change in kwargs.items():
-                    if key in "set_remainder":
+                    if key in {"set_remainder", "init"}:
                         continue
                     if "#" in key:
                         opp: str = key[0 : key.index("#")]

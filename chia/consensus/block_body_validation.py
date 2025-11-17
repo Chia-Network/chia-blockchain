@@ -341,10 +341,14 @@ async def validate_block_body(
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
     # 8b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
     # 8c. The generator ref list must not point to a height >= this block's height
-    if block.transactions_generator_ref_list in (None, []):
+    if block.transactions_generator_ref_list == []:
         if block.transactions_info.generator_refs_root != bytes([1] * 32):
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
     else:
+        # With hard fork 2 we ban transactions_generator_ref_list.
+        if prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT:
+            return Err.TOO_MANY_GENERATOR_REFS
+
         # If we have a generator reference list, we must have a generator
         if block.transactions_generator is None:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT

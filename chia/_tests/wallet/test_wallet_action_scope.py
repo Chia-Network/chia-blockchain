@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 from chia_rs import G2Element, Program
@@ -36,7 +35,7 @@ def test_back_and_forth_serialization() -> None:
 
 @dataclass
 class MockWalletStateManager:
-    most_recent_call: Optional[
+    most_recent_call: (
         tuple[
             list[TransactionRecord],
             bool,
@@ -45,8 +44,9 @@ class MockWalletStateManager:
             list[SigningResponse],
             list[WalletSpendBundle],
             list[SingletonRecord],
-        ],
-    ] = None
+        ]
+        | None
+    ) = None
 
     async def add_pending_transactions(
         self,

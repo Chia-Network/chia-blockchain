@@ -28,7 +28,7 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.get_block_challenge import get_block_challenge, prev_tx_block
+from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import (
     is_overflow_block,
@@ -60,11 +60,11 @@ class PreValidationResult(Streamable):
 
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
-    block: FullBlock, prev_generators: list[bytes], constants: ConsensusConstants
+    block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
 ) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
     assert block.transactions_generator is not None
     assert block.transactions_info is not None
-    flags = get_flags_for_height_and_constants(block.height, constants)
+    flags = get_flags_for_height_and_constants(prev_tx_height, constants)
     if block.height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2
     else:
@@ -119,7 +119,14 @@ def _pre_validate_block(
                     uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, uint32(validation_time * 1000)
                 )
 
-            err, conds = _run_block(block, prev_generators, constants)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=constants,
+                blocks=blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            )
+            err, conds = _run_block(block, prev_generators, prev_tx_height, constants)
 
             assert (err is None) != (conds is None)
             if err is not None:
@@ -225,8 +232,13 @@ async def pre_validate_block(
         cc_sp_hash,
         block.height,
         vs.difficulty,
-        vs.ssi,
-        prev_tx_block(blockchain, prev_b),
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+        ),
     )
     if required_iters is None:
         return return_error(Err.INVALID_POSPACE)

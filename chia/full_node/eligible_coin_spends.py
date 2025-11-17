@@ -172,7 +172,7 @@ class SingletonFastForward:
     fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
 
     def process_fast_forward_spends(
-        self, *, mempool_item: InternalMempoolItem, height: uint32, constants: ConsensusConstants
+        self, *, mempool_item: InternalMempoolItem, prev_tx_height: uint32, constants: ConsensusConstants
     ) -> dict[bytes32, BundleCoinSpend]:
         """
         Provides the caller with a `bundle_coin_spends` map that has a proper
@@ -182,7 +182,7 @@ class SingletonFastForward:
         Args:
             mempool_item: The internal mempool item to process
             constants: needed in order to refresh the mempool item if needed
-            height: needed in order to refresh the mempool item if needed
+            prev_tx_height: needed in order to refresh the mempool item if needed
 
         Returns:
             The resulting `bundle_coin_spends` map of coin IDs to coin spends
@@ -273,7 +273,7 @@ class SingletonFastForward:
         try:
             # Run the new spend bundle to make sure it remains valid. What we
             # care about here is whether this call throws or not.
-            get_conditions_from_spendbundle(new_sb, mempool_item.conds.cost, constants, height)
+            get_conditions_from_spendbundle(new_sb, mempool_item.conds.cost, constants, prev_tx_height)
         # get_conditions_from_spendbundle raises a ValueError with an error code
         except ValueError as e:
             # Convert that to a ValidationError

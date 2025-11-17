@@ -10,6 +10,7 @@ import pprint
 import traceback
 from collections.abc import Collection
 from enum import Enum, EnumMeta
+from types import UnionType
 from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, TypeVar, Union, get_type_hints
 
 from chia_rs.sized_bytes import bytes32
@@ -120,7 +121,7 @@ def is_type_SpecificOptional(f_type: object) -> bool:
     """
     Returns true for types such as Optional[T], but not Optional, or T.
     """
-    return get_origin(f_type) == Union and get_args(f_type)[1]() is None
+    return get_origin(f_type) in {Union, UnionType} and get_args(f_type)[1]() is None
 
 
 def is_type_Tuple(f_type: object) -> bool:

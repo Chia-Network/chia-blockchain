@@ -88,6 +88,7 @@ from chia.wallet.wallet_request_types import (
     SignMessageByID,
     SignMessageByIDResponse,
     SpendClawbackCoins,
+    TakeOffer,
     VCAddProofs,
     VCGet,
     VCGetList,
@@ -670,7 +671,7 @@ def timestamp_to_time(timestamp: int) -> str:
 
 
 async def print_offer_summary(
-    cat_name_resolver: CATNameResolver, sum_dict: dict[str, int], has_fee: bool = False, network_xch: str = "XCH"
+    cat_name_resolver: CATNameResolver, sum_dict: dict[str, str], has_fee: bool = False, network_xch: str = "XCH"
 ) -> None:
     for asset_id, amount in sum_dict.items():
         description: str = ""
@@ -721,7 +722,7 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested, _, _ = offer.summary()
-        outbound_balances: dict[str, int] = offer.get_pending_amounts()
+        outbound_balances: dict[str, str] = {k: str(v) for k, v in offer.get_pending_amounts().items()}
         fees: Decimal = Decimal(offer.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
@@ -892,11 +893,9 @@ async def take_offer(
             print()
             cli_confirm("Would you like to take this offer? (y/n): ")
             res = await wallet_client.take_offer(
-                offer,
-                fee=fee,
-                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-                push=push,
+                TakeOffer(offer=offer.to_bech32(), fee=fee, push=push),
                 timelock_info=condition_valid_times,
+                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             )
             if push:
                 print(f"Accepted offer with ID {res.trade_record.trade_id}")

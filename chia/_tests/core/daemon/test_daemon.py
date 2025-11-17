@@ -1015,7 +1015,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     # Expect: Failure due to missing mnemonic
     assert_response(await ws.receive(), missing_mnemonic_response_data)
 
-    # When: using a mmnemonic with an incorrect word (typo)
+    # When: using a mnemonic with an incorrect word (typo)
     await ws.send_str(create_payload("add_private_key", {"mnemonic": mnemonic_with_typo}, "test", "daemon"))
     # Expect: Failure due to misspelled mnemonic
     assert_response(await ws.receive(), mnemonic_with_typo_response_data)
@@ -1025,7 +1025,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     # Expect: Failure due to invalid mnemonic
     assert_response(await ws.receive(), invalid_mnemonic_length_response_data)
 
-    # When: using an incorrect mnemnonic
+    # When: using an incorrect mnemonic
     await ws.send_str(create_payload("add_private_key", {"mnemonic": " ".join(["abandon"] * 24)}, "test", "daemon"))
     # Expect: Failure due to checksum error
     assert_response(await ws.receive(), invalid_mnemonic_response_data)
@@ -1340,7 +1340,7 @@ async def test_bad_json(daemon_connection_and_temp_keychain: tuple[aiohttp.Clien
     ),
     RouteCase(
         route="unknown_command",
-        description="non-existant route",
+        description="non-existent route",
         request={},
         response={"success": False, "error": "unknown_command unknown_command"},
     ),

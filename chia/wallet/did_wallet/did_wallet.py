@@ -23,7 +23,6 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoin,
     CreateCoinAnnouncement,
-    parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
@@ -44,7 +43,6 @@ from chia.wallet.singleton import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -647,25 +645,16 @@ class DIDWallet:
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=to_ph,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
+        did_record = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=to_ph,
             amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
+            fee=uint64(0),
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32.secret(),
-            memos=compute_memos(spend_bundle),
-            valid_times=parse_timelock_info(extra_conditions),
+            name=spend_bundle.name(),
+            extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
@@ -733,25 +722,16 @@ class DIDWallet:
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=to_ph,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
+        did_record = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=to_ph,
             amount=uint64(coin.amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(0),
+            fee=fee,
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=compute_memos(spend_bundle),
-            valid_times=parse_timelock_info(extra_conditions),
+            extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
@@ -813,25 +793,16 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-        tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=p2_ph,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(p2_ph),
+        tx = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=p2_ph,
             amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
+            fee=uint64(0),
             spend_bundle=unsigned_spend_bundle,
             additions=unsigned_spend_bundle.additions(),
             removals=[coin],
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
             name=unsigned_spend_bundle.name(),
-            memos=compute_memos(unsigned_spend_bundle),
-            valid_times=parse_timelock_info(extra_conditions),
+            extra_conditions=extra_conditions,
         )
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(tx)

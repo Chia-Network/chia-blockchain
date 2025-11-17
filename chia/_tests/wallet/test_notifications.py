@@ -165,34 +165,34 @@ async def test_notifications(
     assert allow_larger_height is not None
     assert allow_height is not None
 
-    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 2))
+    notifications = await notification_manager_2.notification_store.get_notifications(pagination=(0, 2))
     assert len(notifications) == 2
     assert notifications[0].message == b"allow_larger"
     assert notifications[0].height == allow_larger_height
-    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(1, None))
+    notifications = await notification_manager_2.notification_store.get_notifications(pagination=(1, None))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow"
     assert notifications[0].height == allow_height
-    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 1))
+    notifications = await notification_manager_2.notification_store.get_notifications(pagination=(0, 1))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
-    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(None, 1))
+    notifications = await notification_manager_2.notification_store.get_notifications(pagination=(None, 1))
     assert len(notifications) == 1
     assert notifications[0].message == b"allow_larger"
     assert (
-        await notification_manager_2.notification_store.get_notifications([n.id for n in notifications])
+        await notification_manager_2.notification_store.get_notifications(coin_ids=[n.id for n in notifications])
         == notifications
     )
 
-    sent_notifications = await notification_manager_1.notification_store.get_all_notifications()
+    sent_notifications = await notification_manager_1.notification_store.get_notifications()
     assert len(sent_notifications) == 0
 
-    await notification_manager_2.notification_store.delete_all_notifications()
-    assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
+    await notification_manager_2.notification_store.delete_notifications()
+    assert len(await notification_manager_2.notification_store.get_notifications()) == 0
     await notification_manager_2.notification_store.add_notification(notifications[0])
-    await notification_manager_2.notification_store.delete_notifications([n.id for n in notifications])
-    assert len(await notification_manager_2.notification_store.get_all_notifications()) == 0
+    await notification_manager_2.notification_store.delete_notifications(coin_ids=[n.id for n in notifications])
+    assert len(await notification_manager_2.notification_store.get_notifications()) == 0
 
     assert not await func(*notification_manager_2.most_recent_args)
-    await notification_manager_2.notification_store.delete_all_notifications()
+    await notification_manager_2.notification_store.delete_notifications()
     assert not await func(*notification_manager_2.most_recent_args)

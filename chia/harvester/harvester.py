@@ -91,7 +91,10 @@ class Harvester:
         self.log.info(f"Using plots_refresh_parameter: {refresh_parameter}")
 
         self.plot_manager = PlotManager(
-            root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
+            root_path,
+            refresh_parameter=refresh_parameter,
+            refresh_callback=self._plot_refresh_callback,
+            constants=constants,
         )
         self._shut_down = False
         self.executor = concurrent.futures.ThreadPoolExecutor(
@@ -190,13 +193,11 @@ class Harvester:
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
-                size = prover.get_size()
-                if size.size_v1 is not None:
-                    k = size.size_v1
+                param = prover.get_param()
+                if param.size_v1 is not None:
+                    k = param.size_v1
                 else:
-                    assert size.size_v2 is not None
-                    k = size.size_v2
-                    # TODO: todo_v2_plots support v2 plots in RPC response
+                    k = self.constants.PLOT_SIZE_V2
                 response_plots.append(
                     {
                         "filename": str(path),

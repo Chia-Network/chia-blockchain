@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -12,9 +12,11 @@ from chia.solver.solver import Solver
 
 class SolverAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.solver_stub import SolverApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("SolverAPI", None)
+        # Verify this class implements the SolverApiStub protocol
+        def _protocol_check(self: SolverAPI) -> SolverApiStub:
+            return self
 
     log: logging.Logger
     solver: Solver
@@ -40,12 +42,12 @@ class SolverAPI:
             self.log.error("Solver is not started")
             return None
 
-        self.log.debug(f"Solving partial {request.partial_proof[:5]}")
+        self.log.debug(f"Solving partial {request.partial_proof.proof_fragments[:5]}")
 
         try:
             proof = self.solver.solve(request.partial_proof, request.plot_id, request.strength, request.size)
             if proof is None:
-                self.log.warning(f"Solver returned no proof for parital {request.partial_proof[:5]}")
+                self.log.warning(f"Solver returned no proof for parital {request.partial_proof.proof_fragments[:5]}")
                 return None
 
             self.log.debug(f"Successfully solved partial proof, returning {len(proof)} byte proof")
@@ -55,5 +57,5 @@ class SolverAPI:
             )
 
         except Exception as e:
-            self.log.error(f"Error solving parital {request.partial_proof[:5]}: {e}")
+            self.log.error(f"Error solving parital {request.partial_proof.proof_fragments[:5]}: {e}")
             return None

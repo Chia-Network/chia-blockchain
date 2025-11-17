@@ -288,7 +288,7 @@ class Package:
     is_file: Literal[False] = False
 
 
-FileOrPackage = Union[File, Package]
+FileOrPackage = File | Package
 
 
 def parse_file_or_package(identifier: str) -> FileOrPackage:

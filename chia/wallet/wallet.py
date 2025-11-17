@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import time
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey
@@ -15,14 +14,12 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
     CreateCoin,
     CreateCoinAnnouncement,
-    parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -53,9 +50,8 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
 )
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -99,15 +95,15 @@ class Wallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
-        spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
-        )
-        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
-        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
-
     async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
+        return uint128(
+            sum(
+                cr.coin.amount
+                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.id(), records, in_one_block=True
+                )
+            )
+        )
 
     @classmethod
     def type(cls) -> WalletType:
@@ -208,7 +204,9 @@ class Wallet:
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: list[WalletCoinRecord] = list(await self.get_max_spendable_coins())
+        spendable_coins: list[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), in_one_block=True)
+        )
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
@@ -402,7 +400,7 @@ class Wallet:
         """
         non_change_amount = uint64(sum(amounts))
 
-        self.log.debug("Generating transaction for: %s %s %s", puzzle_hashes, amounts, repr(coins))
+        self.log.debug("Generating transaction for: %s %s %r", puzzle_hashes, amounts, coins)
         transaction = await self._generate_unsigned_transaction(
             amounts,
             puzzle_hashes,
@@ -420,7 +418,6 @@ class Wallet:
         assert len(transaction) > 0
         spend_bundle = WalletSpendBundle(transaction, G2Element())
 
-        now = uint64(time.time())
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
 
@@ -434,25 +431,16 @@ class Wallet:
         to_ph = add_list[0].puzzle_hash if len(add_list) > 0 else bytes32.zeros
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=now,
-                    to_puzzle_hash=to_ph,
-                    to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=to_ph,
                     amount=uint64(non_change_amount),
-                    fee_amount=uint64(fee),
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=spend_bundle,
                     additions=add_list,
                     removals=rem_list,
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=compute_memos(spend_bundle),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 
@@ -494,9 +482,7 @@ class Wallet:
             return await self.select_coins(amount, sandbox)
 
     # WSChiaConnection is only imported for type checking
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[object]) -> None:
         pass
 
     def get_name(self) -> str:

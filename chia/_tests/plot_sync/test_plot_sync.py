@@ -196,7 +196,7 @@ class Environment:
             assert plot is not None
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
             # TODO: todo_v2_plots support v2 plots
-            assert plot.prover.get_size().size_v1 == delta.valid.additions[path].size
+            assert plot.prover.get_param().size_v1 == delta.valid.additions[path].size
             assert plot.prover.get_id() == delta.valid.additions[path].plot_id
             assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
@@ -258,7 +258,7 @@ class Environment:
                 assert str(path) in receiver.plots()
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 # TODO: todo_v2_plots support v2 plots
-                assert plot_info.prover.get_size().size_v1 == receiver.plots()[str(path)].size
+                assert plot_info.prover.get_param().size_v1 == receiver.plots()[str(path)].size
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
                 assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
@@ -431,7 +431,7 @@ async def test_sync_keys_missing(environment: Environment) -> None:
     # Run again two times to make sure we still get the same results in repeated refresh intervals
     await env.run_sync_test()
     await env.run_sync_test()
-    # Drop all but 2 plots with missing keys and test sync inbetween
+    # Drop all but 2 plots with missing keys and test sync in between
     assert len(env.dir_keys_missing) > 2
     for _ in range(len(env.dir_keys_missing) - 2):
         drop_plot = env.dir_keys_missing.path_list()[0]

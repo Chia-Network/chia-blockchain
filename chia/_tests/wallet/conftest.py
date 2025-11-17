@@ -83,11 +83,11 @@ async def ignore_block_validation(
         return new_create
 
     def run_block(
-        block: FullBlock, prev_generators: list[bytes], constants: ConsensusConstants
+        block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
     ) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
-        flags = get_flags_for_height_and_constants(block.height, constants) | DONT_VALIDATE_SIGNATURE
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
         if block.height >= constants.HARD_FORK_HEIGHT:
             run_block = run_block_generator2
         else:
