@@ -2772,6 +2772,9 @@ class FullNode:
         # for this transaction.
         peers_with_tx: dict[bytes32, PeerWithTx] = {},
     ) -> tuple[MempoolInclusionStatus, Optional[Err]]:
+        self.log.warning(
+            f"add_transaction called, tx ID {spend_name.hex()[:8]} and peer is {peer.peer_node_id.hex()[:8] if peer is not None else None}"
+        )
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
         if not test and not (await self.synced()):
@@ -2790,7 +2793,9 @@ class FullNode:
 
         cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, spend_name, self._bls_cache)
 
+        self.log.warning(f"add_transaction - about to add tx {spend_name.hex()[:8]} to seen cache")
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+        self.log.warning(f"add_transaction - added tx {spend_name.hex()[:8]} to seen cache")
 
         if self.config.get("log_mempool", False):  # pragma: no cover
             try:
@@ -2803,9 +2808,18 @@ class FullNode:
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
             if self.mempool_manager.get_spendbundle(spend_name) is not None:
+                self.log.warning(
+                    f"add_transaction - tx {spend_name.hex()[:8]} already in mempool, we'll remove it from seen cache"
+                )
                 self.mempool_manager.remove_seen(spend_name)
+                self.log.warning(
+                    f"add_transaction - removed tx {spend_name.hex()[:8]} from seen cache and returning success"
+                )
                 return MempoolInclusionStatus.SUCCESS, None
             if self.mempool_manager.peak is None:
+                self.log.warning(
+                    f"add_transaction - failing because self.mempool_manager.peak is None, tx is {spend_name.hex()[:8]}"
+                )
                 return MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
             info = await self.mempool_manager.add_spend_bundle(
                 transaction, cost_result, spend_name, self.mempool_manager.peak.height
@@ -2813,8 +2827,8 @@ class FullNode:
             status = info.status
             error = info.error
         if status == MempoolInclusionStatus.SUCCESS:
-            self.log.debug(
-                f"Added transaction to mempool: {spend_name} mempool size: "
+            self.log.warning(
+                f"add_transaction - added transaction to mempool: {spend_name} mempool size: "
                 f"{self.mempool_manager.mempool.total_mempool_cost()} normalized "
                 f"{self.mempool_manager.mempool.total_mempool_cost() / 5000000}"
             )
