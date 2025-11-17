@@ -1,0 +1,13 @@
+(mod (input)
+
+    (defun shatree (TREE)
+        (if 
+            (l TREE)
+            (sha256 2 (shatree (f TREE)) (shatree (r TREE)))
+            (sha256 1 TREE)
+        )   
+    )
+
+    ; main
+    (shatree input)
+)
