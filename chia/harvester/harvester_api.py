@@ -456,9 +456,9 @@ class HarvesterAPI:
         await peer.send_message(pass_msg)
 
         self.harvester.log.info(
-            f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]} ..."
-            f"{len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge"
-            f"Found {total_proofs_found} V1 proofs and {total_v2_partial_proofs_found} V2 qualities."
+            f"challenge_hash: {new_challenge.challenge_hash.hex()[:10]}..."
+            f" {len(awaitables) + len(v2_awaitables)} plots were eligible for farming challenge."
+            f" Found {total_proofs_found} V1 proofs and {total_v2_partial_proofs_found} V2 qualities."
             f" Time: {time_taken:.5f} s. Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
