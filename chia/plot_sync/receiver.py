@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Awaitable, Collection, Sequence
+from collections.abc import Awaitable, Callable, Collection, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -40,7 +40,7 @@ from chia.server.ws_connection import WSChiaConnection
 log = logging.getLogger(__name__)
 
 
-def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
+def get_list_or_len(list_in: Sequence[object], length: bool) -> int | Sequence[object]:
     return len(list_in) if length else list_in
 
 
@@ -52,7 +52,7 @@ class Sync:
     plots_processed: uint32 = uint32(0)
     plots_total: uint32 = uint32(0)
     delta: Delta = field(default_factory=Delta)
-    time_done: Optional[float] = None
+    time_done: float | None = None
 
     def in_progress(self) -> bool:
         return self.sync_id != 0
@@ -76,7 +76,7 @@ class Sync:
 
 
 class ReceiverUpdateCallback(Protocol):
-    def __call__(self, peer_id: bytes32, delta: Optional[Delta]) -> Awaitable[None]:
+    def __call__(self, peer_id: bytes32, delta: Delta | None) -> Awaitable[None]:
         pass
 
 
@@ -91,7 +91,7 @@ class Receiver:
     _total_plot_size: int
     _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
-    _harvesting_mode: Optional[HarvestingMode]
+    _harvesting_mode: HarvestingMode | None
     _constants: ConsensusConstants
 
     def __init__(
@@ -113,7 +113,7 @@ class Receiver:
         self._harvesting_mode = None
         self._constants = constants
 
-    async def trigger_callback(self, update: Optional[Delta] = None) -> None:
+    async def trigger_callback(self, update: Delta | None = None) -> None:
         try:
             await self._update_callback(self._connection.peer_node_id, update)
         except Exception:
@@ -161,7 +161,7 @@ class Receiver:
     def total_effective_plot_size(self) -> int:
         return self._total_effective_plot_size
 
-    def harvesting_mode(self) -> Optional[HarvestingMode]:
+    def harvesting_mode(self) -> HarvestingMode | None:
         return self._harvesting_mode
 
     async def _process(
@@ -171,7 +171,7 @@ class Receiver:
             f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}"
         )
 
-        async def send_response(plot_sync_error: Optional[PlotSyncError] = None) -> None:
+        async def send_response(plot_sync_error: PlotSyncError | None = None) -> None:
             if self._connection is not None:
                 await self._connection.send_message(
                     make_msg(

@@ -10,7 +10,6 @@ import sys
 import threading
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Optional
 
 import anyio
 import pytest
@@ -45,8 +44,8 @@ async def serve_in_thread(
 
 @dataclass
 class Client:
-    reader: Optional[asyncio.StreamReader]
-    writer: Optional[asyncio.StreamWriter]
+    reader: asyncio.StreamReader | None
+    writer: asyncio.StreamWriter | None
 
     @classmethod
     async def open(cls, ip: str, port: int) -> Client:
@@ -95,10 +94,10 @@ class ServeInThread:
     requested_port: int
     out_path: pathlib.Path
     connection_limit: int = 25
-    original_connection_limit: Optional[int] = None
-    loop: Optional[asyncio.AbstractEventLoop] = None
-    server_task: Optional[asyncio.Task[None]] = None
-    thread: Optional[threading.Thread] = None
+    original_connection_limit: int | None = None
+    loop: asyncio.AbstractEventLoop | None = None
+    server_task: asyncio.Task[None] | None = None
+    thread: threading.Thread | None = None
     thread_end_event: threading.Event = field(default_factory=threading.Event)
     port_holder: list[int] = field(default_factory=list)
 
@@ -189,7 +188,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         await asyncio.sleep(adjusted_timeout(5))
 
         writer = None
-        post_connection_error: Optional[str] = None
+        post_connection_error: str | None = None
         try:
             logger.info(" ==== attempting a single new connection")
             with anyio.fail_after(delay=adjusted_timeout(1)):

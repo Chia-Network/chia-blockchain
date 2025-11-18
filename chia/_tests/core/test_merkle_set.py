@@ -5,7 +5,6 @@ import random
 from hashlib import sha256
 from itertools import permutations
 from random import Random
-from typing import Optional
 
 import pytest
 from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
@@ -311,7 +310,7 @@ def test_validate_removals_full_list(num_coins: int, seeded_random: Random) -> N
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    coin_map: list[tuple[bytes32, Optional[Coin]]] = []
+    coin_map: list[tuple[bytes32, Coin | None]] = []
     removals_merkle_set = MerkleSet([coin.name() for coin in coins])
     for coin in coins:
         coin_map.append((coin.name(), coin))

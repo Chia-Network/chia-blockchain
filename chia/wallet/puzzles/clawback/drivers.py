@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional, Union
+from typing import Any
 
 from chia_puzzles_py.programs import (
     AUGMENTED_CONDITION as AUGMENTED_CONDITION_BYTES,
@@ -43,7 +43,7 @@ AUGMENTED_CONDITION_HASH = bytes32(AUGMENTED_CONDITION_HASH_BYTES)
 log = logging.getLogger(__name__)
 
 
-def create_augmented_cond_puzzle(condition: list[Union[int, uint64]], puzzle: Program) -> Program:
+def create_augmented_cond_puzzle(condition: list[int | uint64], puzzle: Program) -> Program:
     return AUGMENTED_CONDITION.curry(condition, puzzle)
 
 
@@ -137,9 +137,9 @@ def create_merkle_solution(
 
 def match_clawback_puzzle(
     uncurried: UncurriedPuzzle,
-    inner_puzzle: Union[Program, SerializedProgram],
-    inner_solution: Union[Program, SerializedProgram],
-) -> Optional[ClawbackMetadata]:
+    inner_puzzle: Program | SerializedProgram,
+    inner_solution: Program | SerializedProgram,
+) -> ClawbackMetadata | None:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
         return None
@@ -153,7 +153,7 @@ def match_clawback_puzzle(
         inner_solution,
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
     )
-    metadata: Optional[ClawbackMetadata] = None
+    metadata: ClawbackMetadata | None = None
     new_puzhash: set[bytes32] = set()
     if conditions is not None:
         for condition in conditions:

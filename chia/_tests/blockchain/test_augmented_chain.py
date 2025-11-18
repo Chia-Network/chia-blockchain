@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import pytest
 from chia_rs import BlockRecord, FullBlock
@@ -30,14 +30,14 @@ class NullBlockchain:
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)  # pragma: no cover
 
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
         return None  # pragma: no cover
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         self.added_blocks.add(block_record.header_hash)
 
     # BlockRecordsProtocol
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return None  # pragma: no cover
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
@@ -46,7 +46,7 @@ class NullBlockchain:
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         raise ValueError("Height is not in blockchain")
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
         return self.heights.get(height)
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:

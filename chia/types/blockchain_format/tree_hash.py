@@ -8,7 +8,7 @@ have to worry about blowing out the python stack.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from chia_rs.sized_bytes import bytes32
 from clvm.CLVMObject import CLVMStorage
@@ -22,7 +22,7 @@ Op = Callable[[ValueStackType, "OpStackType", set[bytes32]], None]
 OpStackType = list[Op]
 
 
-def sha256_treehash(sexp: CLVMStorage, precalculated: Optional[set[bytes32]] = None) -> bytes32:
+def sha256_treehash(sexp: CLVMStorage, precalculated: set[bytes32] | None = None) -> bytes32:
     """
     Hash values in `precalculated` are presumed to have been hashed already.
     """

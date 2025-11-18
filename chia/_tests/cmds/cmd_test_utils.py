@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from chia_rs import BlockRecord, Coin, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -59,15 +59,15 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
 
-logType = dict[str, Optional[list[tuple[Any, ...]]]]
+logType = dict[str, list[tuple[Any, ...]] | None]
 
 
 @dataclass
 class TestRpcClient:
     client_type: type[RpcClient]
-    rpc_port: Optional[uint16] = None
-    root_path: Optional[Path] = None
-    config: Optional[dict[str, Any]] = None
+    rpc_port: uint16 | None = None
+    root_path: Path | None = None
+    config: dict[str, Any] | None = None
     create_called: bool = field(init=False, default=False)
     rpc_log: dict[str, list[tuple[Any, ...]]] = field(init=False, default_factory=dict)
 
@@ -240,7 +240,7 @@ class TestWalletRpcClient(TestRpcClient):
         wallet_id: int,
         additions: list[dict[str, object]],
         tx_config: TXConfig,
-        coins: Optional[list[Coin]] = None,
+        coins: list[Coin] | None = None,
         fee: uint64 = uint64(0),
         push: bool = True,
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -280,8 +280,8 @@ class TestFullNodeRpcClient(TestRpcClient):
 
     async def get_fee_estimate(
         self,
-        target_times: Optional[list[int]],
-        cost: Optional[int],
+        target_times: list[int] | None,
+        cost: int | None,
     ) -> dict[str, Any]:
         return {}
 
@@ -313,11 +313,11 @@ class TestFullNodeRpcClient(TestRpcClient):
         self.add_to_log("get_blockchain_state", ())
         return response
 
-    async def get_block_record_by_height(self, height: int) -> Optional[BlockRecord]:
+    async def get_block_record_by_height(self, height: int) -> BlockRecord | None:
         self.add_to_log("get_block_record_by_height", (height,))
         return cast(BlockRecord, create_test_block_record(height=uint32(height)))
 
-    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         self.add_to_log("get_block_record", (header_hash,))
         return cast(BlockRecord, create_test_block_record(header_hash=header_hash))
 
@@ -374,7 +374,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     async def test_get_any_service_client(
         client_type: type[_T_RpcClient],
         root_path: Path,
-        rpc_port: Optional[int] = None,
+        rpc_port: int | None = None,
         consume_errors: bool = True,
         use_ssl: bool = True,
     ) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
@@ -402,8 +402,8 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     @asynccontextmanager
     async def test_get_wallet_client(
         root_path: Path = default_root,
-        wallet_rpc_port: Optional[int] = None,
-        fingerprint: Optional[int] = None,
+        wallet_rpc_port: int | None = None,
+        fingerprint: int | None = None,
     ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
         async with test_get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore

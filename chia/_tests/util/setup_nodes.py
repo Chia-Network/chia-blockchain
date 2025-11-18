@@ -7,7 +7,6 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
 
 import anyio
 from chia_rs import ConsensusConstants
@@ -59,8 +58,8 @@ SimulatorsAndWalletsServices = tuple[list[SimulatorFullNodeService], list[Wallet
 
 @dataclass(frozen=True)
 class FullSystem:
-    node_1: Union[FullNodeService, SimulatorFullNodeService]
-    node_2: Union[FullNodeService, SimulatorFullNodeService]
+    node_1: FullNodeService | SimulatorFullNodeService
+    node_2: FullNodeService | SimulatorFullNodeService
     harvester: Harvester
     farmer: Farmer
     introducer: IntroducerAPI
@@ -159,11 +158,11 @@ async def setup_simulators_and_wallets(
     spam_filter_after_n_txs: int = 200,
     xch_spam_amount: int = 1000000,
     *,
-    key_seed: Optional[bytes32] = None,
+    key_seed: bytes32 | None = None,
     initial_num_public_keys: int = 5,
     db_version: int = 2,
-    config_overrides: Optional[dict[str, int]] = None,
-    disable_capabilities: Optional[list[Capability]] = None,
+    config_overrides: dict[str, int] | None = None,
+    disable_capabilities: list[Capability] | None = None,
 ) -> AsyncIterator[SimulatorsAndWallets]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if config_overrides is None:
@@ -212,11 +211,11 @@ async def setup_simulators_and_wallets_service(
     spam_filter_after_n_txs: int = 200,
     xch_spam_amount: int = 1000000,
     *,
-    key_seed: Optional[bytes32] = None,
+    key_seed: bytes32 | None = None,
     initial_num_public_keys: int = 5,
     db_version: int = 2,
-    config_overrides: Optional[dict[str, int]] = None,
-    disable_capabilities: Optional[list[Capability]] = None,
+    config_overrides: dict[str, int] | None = None,
+    disable_capabilities: list[Capability] | None = None,
 ) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_simulators_and_wallets_inner(
@@ -241,15 +240,15 @@ async def setup_simulators_and_wallets_inner(
     db_version: int,
     consensus_constants: ConsensusConstants,
     initial_num_public_keys: int,
-    key_seed: Optional[bytes32],
+    key_seed: bytes32 | None,
     keychain1: Keychain,
     keychain2: Keychain,
     simulator_count: int,
     spam_filter_after_n_txs: int,
     wallet_count: int,
     xch_spam_amount: int,
-    config_overrides: Optional[dict[str, int]],
-    disable_capabilities: Optional[list[Capability]],
+    config_overrides: dict[str, int] | None,
+    disable_capabilities: list[Capability] | None,
 ) -> AsyncIterator[tuple[list[BlockTools], list[SimulatorFullNodeService], list[WalletService]]]:
     if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
         config_overrides["full_node.max_sync_wait"] = 0
@@ -310,7 +309,7 @@ async def setup_farmer_solver_multi_harvester(
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
-    solver_peer: Optional[UnresolvedPeerInfo] = None,
+    solver_peer: UnresolvedPeerInfo | None = None,
 ) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
@@ -348,8 +347,8 @@ async def setup_farmer_solver_multi_harvester(
 async def setup_full_system(
     consensus_constants: ConsensusConstants,
     shared_b_tools: BlockTools,
-    b_tools: Optional[BlockTools] = None,
-    b_tools_1: Optional[BlockTools] = None,
+    b_tools: BlockTools | None = None,
+    b_tools_1: BlockTools | None = None,
     db_version: int = 2,
 ) -> AsyncIterator[FullSystem]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
@@ -361,8 +360,8 @@ async def setup_full_system(
 
 @asynccontextmanager
 async def setup_full_system_inner(
-    b_tools: Optional[BlockTools],
-    b_tools_1: Optional[BlockTools],
+    b_tools: BlockTools | None,
+    b_tools_1: BlockTools | None,
     connect_to_daemon: bool,
     consensus_constants: ConsensusConstants,
     db_version: int,

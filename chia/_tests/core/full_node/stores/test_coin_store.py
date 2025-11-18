@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import aiosqlite
 import pytest
@@ -236,7 +235,7 @@ async def test_rollback(db_version: int, bt: BlockTools) -> None:
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
 
-        selected_coin: Optional[CoinRecord] = None
+        selected_coin: CoinRecord | None = None
         all_coins: list[Coin] = []
 
         for block in blocks:
@@ -320,7 +319,7 @@ async def test_basic_reorg(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
         height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
         b: Blockchain = await Blockchain.create(coin_store, store, height_map, bt.constants, 2)
         try:
-            records: list[Optional[CoinRecord]] = []
+            records: list[CoinRecord | None] = []
 
             for block in blocks:
                 await _validate_and_add_block(b, block)
@@ -570,7 +569,7 @@ async def test_coin_state_batches(
                 continue
             expected_crs.append(cr)
 
-        height: Optional[uint32] = uint32(0)
+        height: uint32 | None = uint32(0)
         all_coin_states: list[CoinState] = []
         remaining_phs = random_coin_records.puzzle_hashes.copy()
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -23,13 +24,13 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 @dataclass(frozen=True)
 class CATOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
-    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
         args = match_cat_puzzle(puzzle)
         if args is None:
             return None
@@ -44,31 +45,31 @@ class CATOuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-    ) -> Optional[Program]:
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    ) -> Program | None:
         args = match_cat_puzzle(puzzle_reveal)
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(
+            deep_inner_puzzle: Program | None = self._get_inner_puzzle(
                 also, uncurry_puzzle(inner_puzzle), solution.first() if solution is not None else None
             )
             return deep_inner_puzzle
         else:
             return inner_puzzle
 
-    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         my_inner_solution: Program = solution.first()
         also = constructor.also()
         if also:
-            deep_inner_solution: Optional[Program] = self._get_inner_solution(also, my_inner_solution)
+            deep_inner_solution: Program | None = self._get_inner_solution(also, my_inner_solution)
             return deep_inner_solution
         else:
             return my_inner_solution
 
-    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+    def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return bytes32(constructor["tail"])
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import io
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field, fields
 from enum import Enum
-from typing import Any, Callable, ClassVar, Optional, get_type_hints
+from typing import Any, ClassVar, Literal, get_args, get_type_hints
 
 import pytest
 from chia_rs import FullBlock, G1Element, SubEpochChallengeSegment
 from chia_rs.sized_bytes import bytes4, bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from clvm_tools import binutils
-from typing_extensions import Literal, get_args
 
 from chia.protocols.wallet_protocol import RespondRemovals
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -418,10 +418,10 @@ class PostInitTestClassBad(Streamable):
 @streamable
 @dataclass(frozen=True)
 class PostInitTestClassOptional(Streamable):
-    a: Optional[uint8]
-    b: Optional[uint8]
-    c: Optional[uint8]
-    d: Optional[uint8]
+    a: uint8 | None
+    b: uint8 | None
+    c: uint8 | None
+    d: uint8 | None
 
 
 @streamable
@@ -537,8 +537,8 @@ def test_basic() -> None:
         b: uint32
         c: list[uint32]
         d: list[list[uint32]]
-        e: Optional[uint32]
-        f: Optional[uint32]
+        e: uint32 | None
+        f: uint32 | None
         g: tuple[uint32, str, bytes]
         h: dict[uint32, str]
         i: IntegerEnum
@@ -590,9 +590,9 @@ def test_json(bt: BlockTools) -> None:
 @streamable
 @dataclass(frozen=True)
 class OptionalTestClass(Streamable):
-    a: Optional[str]
-    b: Optional[bool]
-    c: Optional[list[Optional[str]]]
+    a: str | None
+    b: bool | None
+    c: list[str | None] | None
 
 
 @pytest.mark.parametrize(
@@ -606,7 +606,7 @@ class OptionalTestClass(Streamable):
         (None, None, None),
     ],
 )
-def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[list[Optional[str]]]) -> None:
+def test_optional_json(a: str | None, b: bool | None, c: list[str | None] | None) -> None:
     obj: OptionalTestClass = OptionalTestClass.from_json_dict({"a": a, "b": b, "c": c})
     assert obj.a == a
     assert obj.b == b
@@ -623,7 +623,7 @@ class TestClassRecursive1(Streamable):
 @dataclass(frozen=True)
 class TestClassRecursive2(Streamable):
     a: uint32
-    b: list[Optional[list[TestClassRecursive1]]]
+    b: list[list[TestClassRecursive1] | None]
     c: bytes32
 
 
@@ -637,7 +637,7 @@ def test_recursive_json() -> None:
 
 
 def test_recursive_types() -> None:
-    coin: Optional[Coin] = None
+    coin: Coin | None = None
     l1 = [(bytes32([2] * 32), coin)]
     rr = RespondRemovals(uint32(1), bytes32([1] * 32), l1, None)
     RespondRemovals(rr.height, rr.header_hash, rr.coins, rr.proofs)
@@ -650,7 +650,7 @@ def test_ambiguous_deserialization_optionals() -> None:
     @streamable
     @dataclass(frozen=True)
     class TestClassOptional(Streamable):
-        a: Optional[uint8]
+        a: uint8 | None
 
     # Does not have the required elements
     with pytest.raises(AssertionError):

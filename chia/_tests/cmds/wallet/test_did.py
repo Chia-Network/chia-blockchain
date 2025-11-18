@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 import pytest
 from chia_rs import G2Element
@@ -62,12 +61,12 @@ def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             amount: int,
             tx_config: TXConfig,
             fee: int = 0,
-            name: Optional[str] = "DID Wallet",
-            backup_ids: Optional[list[str]] = None,
+            name: str | None = "DID Wallet",
+            backup_ids: list[str] | None = None,
             required_num: int = 0,
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> dict[str, Union[str, int]]:
+        ) -> dict[str, str | int]:
             if backup_ids is None:
                 backup_ids = []
             self.add_to_log(

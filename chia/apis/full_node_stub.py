@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from typing_extensions import Protocol
 
@@ -34,23 +34,19 @@ class FullNodeApiStub(ApiProtocol, Protocol):
 
     # PEER PROTOCOL
     @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
-    async def request_peers(
-        self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection) -> Message | None:
         """Handle peer request."""
         ...
 
     @metadata.request(peer_required=True)
-    async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection) -> Message | None:
         """Handle peers response."""
         ...
 
     @metadata.request(peer_required=True)
     async def respond_peers_introducer(
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle peers response from introducer."""
         ...
 
@@ -63,12 +59,12 @@ class FullNodeApiStub(ApiProtocol, Protocol):
     @metadata.request(peer_required=True)
     async def new_transaction(
         self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle new transaction from peer."""
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
-    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
+    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Message | None:
         """Handle transaction request."""
         ...
 
@@ -79,27 +75,27 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         peer: WSChiaConnection,
         tx_bytes: bytes = b"",
         test: bool = False,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle transaction response from peer."""
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
-    async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
+    async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Message | None:
         """Handle proof of weight request."""
         ...
 
     @metadata.request()
-    async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
+    async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Message | None:
         """Handle proof of weight response."""
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
-    async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
+    async def request_block(self, request: full_node_protocol.RequestBlock) -> Message | None:
         """Handle block request."""
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
-    async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
+    async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Message | None:
         """Handle blocks request."""
         ...
 
@@ -135,35 +131,33 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         self,
         respond_block: full_node_protocol.RespondBlock,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle block response."""
         ...
 
     @metadata.request()
-    async def new_unfinished_block(
-        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock
-    ) -> Optional[Message]:
+    async def new_unfinished_block(self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock) -> Message | None:
         """Handle new unfinished block."""
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle unfinished block request."""
         ...
 
     @metadata.request()
     async def new_unfinished_block2(
         self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle new unfinished block v2."""
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block2(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock2
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle unfinished block v2 request."""
         ...
 
@@ -172,14 +166,14 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         self,
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle unfinished block response."""
         ...
 
     @metadata.request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
         self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle new signage point or end of sub slot."""
         ...
 
@@ -188,21 +182,21 @@ class FullNodeApiStub(ApiProtocol, Protocol):
     )
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle signage point or end of sub slot request."""
         ...
 
     @metadata.request(peer_required=True)
     async def respond_signage_point(
         self, request: full_node_protocol.RespondSignagePoint, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle signage point response."""
         ...
 
     @metadata.request(peer_required=True)
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle end of sub slot response."""
         ...
 
@@ -211,7 +205,7 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         self,
         request: full_node_protocol.RequestMempoolTransactions,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle mempool transactions request."""
         ...
 
@@ -219,14 +213,14 @@ class FullNodeApiStub(ApiProtocol, Protocol):
     @metadata.request(peer_required=True)
     async def declare_proof_of_space(
         self, request: farmer_protocol.DeclareProofOfSpace, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle proof of space declaration from farmer."""
         ...
 
     @metadata.request(peer_required=True)
     async def signed_values(
         self, farmer_request: farmer_protocol.SignedValues, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle signed values from farmer."""
         ...
 
@@ -234,7 +228,7 @@ class FullNodeApiStub(ApiProtocol, Protocol):
     @metadata.request(peer_required=True)
     async def new_infusion_point_vdf(
         self, request: timelord_protocol.NewInfusionPointVDF, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle new infusion point VDF from timelord."""
         ...
 
@@ -248,7 +242,7 @@ class FullNodeApiStub(ApiProtocol, Protocol):
     @metadata.request(peer_required=True)
     async def new_end_of_sub_slot_vdf(
         self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle new end of sub slot VDF from timelord."""
         ...
 
@@ -277,39 +271,37 @@ class FullNodeApiStub(ApiProtocol, Protocol):
 
     # WALLET PROTOCOL
     @metadata.request()
-    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Optional[Message]:
+    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Message | None:
         """Handle block header request from wallet."""
         ...
 
     @metadata.request()
-    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
+    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Message | None:
         """Handle additions request from wallet."""
         ...
 
     @metadata.request()
-    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
+    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Message | None:
         """Handle removals request from wallet."""
         ...
 
     @metadata.request()
-    async def send_transaction(
-        self, request: wallet_protocol.SendTransaction, *, test: bool = False
-    ) -> Optional[Message]:
+    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test: bool = False) -> Message | None:
         """Handle transaction send from wallet."""
         ...
 
     @metadata.request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
         """Handle puzzle solution request from wallet."""
         ...
 
     @metadata.request()
-    async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
+    async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Message | None:
         """Handle block headers request from wallet."""
         ...
 
     @metadata.request()
-    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Message | None:
         """Handle header blocks request from wallet (deprecated)."""
         ...
 
@@ -328,7 +320,7 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request()
-    async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
+    async def request_children(self, request: wallet_protocol.RequestChildren) -> Message | None:
         """Handle children request from wallet."""
         ...
 
@@ -375,6 +367,6 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_cost_info])
-    async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Optional[Message]:
+    async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Message | None:
         """Handle cost info request from wallet."""
         ...

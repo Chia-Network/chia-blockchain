@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 
 import chia_rs
 from chia_rs import HeaderBlock, SpendBundle
@@ -65,7 +64,7 @@ class SendTransaction(Streamable):
 class TransactionAck(Streamable):
     txid: bytes32
     status: uint8  # MempoolInclusionStatus
-    error: Optional[str]
+    error: str | None
 
 
 @streamable
@@ -100,7 +99,7 @@ class RejectHeaderRequest(Streamable):
 class RequestRemovals(Streamable):
     height: uint32
     header_hash: bytes32
-    coin_names: Optional[list[bytes32]]
+    coin_names: list[bytes32] | None
 
 
 @streamable
@@ -108,8 +107,8 @@ class RequestRemovals(Streamable):
 class RespondRemovals(Streamable):
     height: uint32
     header_hash: bytes32
-    coins: list[tuple[bytes32, Optional[Coin]]]
-    proofs: Optional[list[tuple[bytes32, bytes]]]
+    coins: list[tuple[bytes32, Coin | None]]
+    proofs: list[tuple[bytes32, bytes]] | None
 
 
 @streamable
@@ -123,8 +122,8 @@ class RejectRemovalsRequest(Streamable):
 @dataclass(frozen=True)
 class RequestAdditions(Streamable):
     height: uint32
-    header_hash: Optional[bytes32]
-    puzzle_hashes: Optional[list[bytes32]]
+    header_hash: bytes32 | None
+    puzzle_hashes: list[bytes32] | None
 
 
 @streamable
@@ -133,7 +132,7 @@ class RespondAdditions(Streamable):
     height: uint32
     header_hash: bytes32
     coins: list[tuple[bytes32, list[Coin]]]
-    proofs: Optional[list[tuple[bytes32, bytes, Optional[bytes]]]]
+    proofs: list[tuple[bytes32, bytes, bytes | None]] | None
 
 
 @streamable
@@ -282,7 +281,7 @@ class RespondFeeEstimates(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RequestRemovePuzzleSubscriptions(Streamable):
-    puzzle_hashes: Optional[list[bytes32]]
+    puzzle_hashes: list[bytes32] | None
 
 
 @streamable
@@ -294,7 +293,7 @@ class RespondRemovePuzzleSubscriptions(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RequestRemoveCoinSubscriptions(Streamable):
-    coin_ids: Optional[list[bytes32]]
+    coin_ids: list[bytes32] | None
 
 
 @streamable
@@ -316,7 +315,7 @@ class CoinStateFilters(Streamable):
 @dataclass(frozen=True)
 class RequestPuzzleState(Streamable):
     puzzle_hashes: list[bytes32]
-    previous_height: Optional[uint32]
+    previous_height: uint32 | None
     header_hash: bytes32
     filters: CoinStateFilters
     subscribe_when_finished: bool
@@ -342,7 +341,7 @@ class RejectPuzzleState(Streamable):
 @dataclass(frozen=True)
 class RequestCoinState(Streamable):
     coin_ids: list[bytes32]
-    previous_height: Optional[uint32]
+    previous_height: uint32 | None
     header_hash: bytes32
     subscribe: bool
 

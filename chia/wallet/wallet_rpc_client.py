@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -338,7 +338,7 @@ class WalletRpcClient(RpcClient):
         wallet_id: int,
         additions: list[dict[str, Any]],
         tx_config: TXConfig,
-        coins: Optional[list[Coin]] = None,
+        coins: list[Coin] | None = None,
         fee: uint64 = uint64(0),
         push: bool = True,
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -394,9 +394,9 @@ class WalletRpcClient(RpcClient):
         self,
         additions: list[dict[str, Any]],
         tx_config: TXConfig,
-        coins: Optional[list[Coin]] = None,
+        coins: list[Coin] | None = None,
         fee: uint64 = uint64(0),
-        wallet_id: Optional[int] = None,
+        wallet_id: int | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = False,
@@ -447,7 +447,7 @@ class WalletRpcClient(RpcClient):
         amount: int,
         tx_config: TXConfig,
         fee: int = 0,
-        name: Optional[str] = "DID Wallet",
+        name: str | None = "DID Wallet",
         backup_ids: list[str] = [],
         required_num: int = 0,
         type: str = "new",
@@ -554,15 +554,15 @@ class WalletRpcClient(RpcClient):
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
     async def create_new_pool_wallet(
         self,
-        target_puzzlehash: Optional[bytes32],
-        pool_url: Optional[str],
+        target_puzzlehash: bytes32 | None,
+        pool_url: str | None,
         relative_lock_height: uint32,
         backup_host: str,
         mode: str,
         state: str,
         fee: uint64,
-        p2_singleton_delay_time: Optional[uint64] = None,
-        p2_singleton_delayed_ph: Optional[bytes32] = None,
+        p2_singleton_delay_time: uint64 | None = None,
+        p2_singleton_delayed_ph: bytes32 | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
@@ -711,7 +711,7 @@ class WalletRpcClient(RpcClient):
         self,
         start: int = 0,
         end: int = 50,
-        sort_key: Optional[str] = None,
+        sort_key: str | None = None,
         reverse: bool = False,
         file_contents: bool = False,
         exclude_my_offers: bool = False,
@@ -777,7 +777,7 @@ class WalletRpcClient(RpcClient):
         secure: bool = True,
         batch_size: int = 5,
         cancel_all: bool = False,
-        asset_id: Optional[bytes32] = None,
+        asset_id: bytes32 | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
@@ -803,7 +803,7 @@ class WalletRpcClient(RpcClient):
         return GetCATListResponse.from_json_dict(await self.fetch("get_cat_list", {}))
 
     # NFT wallet
-    async def create_new_nft_wallet(self, did_id: Optional[str], name: Optional[str] = None) -> dict[str, Any]:
+    async def create_new_nft_wallet(self, did_id: str | None, name: str | None = None) -> dict[str, Any]:
         request = {"wallet_type": "nft_wallet", "did_id": did_id, "name": name}
         response = await self.fetch("create_new_wallet", request)
         return response

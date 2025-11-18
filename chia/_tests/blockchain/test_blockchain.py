@@ -9,7 +9,6 @@ import time
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
-from typing import Optional
 
 import pytest
 from chia_rs import (
@@ -3266,7 +3265,7 @@ class TestBodyValidation:
         assert preval_result.error == Err.BAD_AGGREGATE_SIGNATURE.value
 
 
-def maybe_header_hash(block: Optional[BlockRecord]) -> Optional[bytes32]:
+def maybe_header_hash(block: BlockRecord | None) -> bytes32 | None:
     if block is None:
         return None
     return block.header_hash
@@ -3313,7 +3312,7 @@ class TestReorgs:
             reorg_point = 12
         blocks = bt.get_consecutive_blocks(reorg_point)
 
-        last_tx_block: Optional[bytes32] = None
+        last_tx_block: bytes32 | None = None
         for block in blocks:
             assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
             await _validate_and_add_block(b, block)
@@ -3324,7 +3323,7 @@ class TestReorgs:
         assert peak.height == reorg_point - 1
         assert maybe_header_hash(b.get_tx_peak()) == last_tx_block
 
-        reorg_last_tx_block: Optional[bytes32] = None
+        reorg_last_tx_block: bytes32 | None = None
         fork_block = blocks[9]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
@@ -4085,7 +4084,7 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
     assert bc.get_tx_peak() == last_tx_block_record
 
 
-def to_bytes(gen: Optional[SerializedProgram]) -> bytes:
+def to_bytes(gen: SerializedProgram | None) -> bytes:
     assert gen is not None
     return bytes(gen)
 
@@ -4218,7 +4217,7 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     counter = 0
     start = time.monotonic()
     for height in range(fork_info.fork_height + 1, block.height):
-        fork_block: Optional[FullBlock] = await blockchain.block_store.get_full_block(fork_chain[uint32(height)])
+        fork_block: FullBlock | None = await blockchain.block_store.get_full_block(fork_chain[uint32(height)])
         assert fork_block is not None
         assert fork_block.height - 1 == fork_info.peak_height
         assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash

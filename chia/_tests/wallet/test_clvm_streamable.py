@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -77,14 +76,14 @@ def test_nested_serialization() -> None:
 @streamable
 @dataclasses.dataclass(frozen=True)
 class Compound(Streamable):
-    optional: Optional[BasicCLVMStreamable]
+    optional: BasicCLVMStreamable | None
     list: list[BasicCLVMStreamable]
 
 
 @clvm_streamable
 @dataclasses.dataclass(frozen=True)
 class CompoundCLVM(Streamable):
-    optional: Optional[BasicCLVMStreamable]
+    optional: BasicCLVMStreamable | None
     list: list[BasicCLVMStreamable]
 
 

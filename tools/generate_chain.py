@@ -8,7 +8,6 @@ import time
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
-from typing import Optional
 
 import click
 import zstd
@@ -55,7 +54,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 @click.option(
     "--output", type=str, required=False, default=None, help="the filename to write the resulting sqlite database to"
 )
-def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: Optional[str]) -> None:
+def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: str | None) -> None:
     if fill_rate < 0 or fill_rate > 100:
         print("fill-rate must be within [0, 100]")
         sys.exit(1)

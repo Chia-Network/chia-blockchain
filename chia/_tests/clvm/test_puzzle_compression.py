@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, SupportsBytes
+from typing import SupportsBytes
 
 import pytest
 from chia_rs import CoinSpend, G1Element, G2Element, SpendBundle

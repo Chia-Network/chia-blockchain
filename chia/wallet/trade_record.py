@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -22,16 +22,16 @@ class TradeRecordOld(Streamable):
     """
 
     confirmed_at_index: uint32
-    accepted_at_time: Optional[uint64]
+    accepted_at_time: uint64 | None
     created_at_time: uint64
     is_my_offer: bool
     sent: uint32
     offer: bytes
-    taken_offer: Optional[bytes]
+    taken_offer: bytes | None
     coins_of_interest: list[Coin]
     trade_id: bytes32
     status: uint32  # TradeStatus, enum not streamable
-    sent_to: list[tuple[str, uint8, Optional[str]]]  # MempoolSubmissionStatus.status enum not streamable
+    sent_to: list[tuple[str, uint8, str | None]]  # MempoolSubmissionStatus.status enum not streamable
 
     def to_json_dict_convenience(self) -> dict[str, Any]:
         formatted = self.to_json_dict()

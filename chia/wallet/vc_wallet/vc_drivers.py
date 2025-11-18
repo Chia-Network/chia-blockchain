@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Any, Optional
+from typing import Any
 
 from chia_puzzles_py.programs import ACS_TRANSFER_PROGRAM as ACS_TRANSFER_PROGRAM_BYTES
 from chia_puzzles_py.programs import COVENANT_LAYER as COVENANT_LAYER_BYTES
@@ -89,7 +89,7 @@ def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program,
     )
 
 
-def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, Program, Program]]:
+def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> tuple[bytes32, Program, Program] | None:
     if uncurried_puzzle.mod == COVENANT_LAYER:
         return (
             bytes32(uncurried_puzzle.args.at("f").as_atom()),
@@ -129,7 +129,7 @@ def create_tp_covenant_adapter(covenant_layer: Program) -> Program:
     return EML_TP_COVENANT_ADAPTER.curry(covenant_layer)
 
 
-def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Optional[Program]:  # pragma: no cover
+def match_tp_covenant_adapter(uncurried_puzzle: UncurriedPuzzle) -> Program | None:  # pragma: no cover
     if uncurried_puzzle.mod == EML_TP_COVENANT_ADAPTER:
         return uncurried_puzzle.args.at("f")
     else:
@@ -152,7 +152,7 @@ def create_did_tp(
 EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
 
 
-def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[()]]:
+def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> tuple[()] | None:
     if uncurried_puzzle.mod == EML_DID_TP:
         return ()
     else:
@@ -184,7 +184,7 @@ def create_revocation_layer(hidden_puzzle_hash: bytes32, inner_puzzle_hash: byte
     )
 
 
-def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, bytes32]]:
+def match_revocation_layer(uncurried_puzzle: UncurriedPuzzle) -> tuple[bytes32, bytes32] | None:
     if uncurried_puzzle.mod == REVOCATION_LAYER:
         return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
     else:
@@ -223,7 +223,7 @@ def create_eml_covenant_morpher(
 
 
 def construct_exigent_metadata_layer(
-    metadata: Optional[Program], transfer_program: Program, inner_puzzle: Program
+    metadata: Program | None, transfer_program: Program, inner_puzzle: Program
 ) -> Program:
     return EXTIGENT_METADATA_LAYER.curry(
         EXTIGENT_METADATA_LAYER_HASH, metadata, transfer_program, transfer_program.get_tree_hash(), inner_puzzle
@@ -237,7 +237,7 @@ class VCLineageProof(LineageProof, Streamable):
     The covenant layer for exigent metadata layers requires to be passed the previous parent's metadata too
     """
 
-    parent_proof_hash: Optional[bytes32] = None
+    parent_proof_hash: bytes32 | None = None
 
 
 def solve_std_vc_backdoor(
@@ -249,7 +249,7 @@ def solve_std_vc_backdoor(
     eml_lineage_proof: VCLineageProof,
     provider_innerpuzhash: bytes32,
     coin_id: bytes32,
-    announcement_nonce: Optional[bytes32] = None,
+    announcement_nonce: bytes32 | None = None,
 ) -> Program:
     """
     Solution to the STANDARD_BRICK_PUZZLE above. Requires proof info about pretty much the whole puzzle stack.
@@ -309,7 +309,7 @@ class VerifiedCredential(Streamable):
     launcher_id: bytes32
     inner_puzzle_hash: bytes32
     proof_provider: bytes32
-    proof_hash: Optional[bytes32]
+    proof_hash: bytes32 | None
 
     @classmethod
     def launch(
@@ -562,7 +562,7 @@ class VerifiedCredential(Streamable):
             amount=uint64(parent_coin.amount),
         )
         if layer_below_singleton == OWNERSHIP_LAYER_LAUNCHER:
-            proof_hash: Optional[bytes32] = None
+            proof_hash: bytes32 | None = None
             eml_lineage_proof: VCLineageProof = VCLineageProof(
                 parent_name=parent_coin.parent_coin_info, amount=uint64(parent_coin.amount)
             )
@@ -627,9 +627,9 @@ class VerifiedCredential(Streamable):
     # The methods in this section are useful for spending an existing VC
     def magic_condition_for_new_proofs(
         self,
-        new_proof_hash: Optional[bytes32],
+        new_proof_hash: bytes32 | None,
         provider_innerpuzhash: bytes32,
-        new_proof_provider: Optional[bytes32] = None,
+        new_proof_provider: bytes32 | None = None,
     ) -> Program:
         """
         Returns the 'magic' condition that can update the metadata with a new proof hash. Returning this condition from
@@ -690,9 +690,9 @@ class VerifiedCredential(Streamable):
         self,
         inner_puzzle: Program,
         inner_solution: Program,
-        new_proof_hash: Optional[bytes32] = None,
-        new_proof_provider: Optional[bytes32] = None,
-    ) -> tuple[Optional[CreatePuzzleAnnouncement], CoinSpend, VerifiedCredential]:
+        new_proof_hash: bytes32 | None = None,
+        new_proof_provider: bytes32 | None = None,
+    ) -> tuple[CreatePuzzleAnnouncement | None, CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
         Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
@@ -714,7 +714,7 @@ class VerifiedCredential(Streamable):
         )
 
         if new_proof_hash is not None:
-            expected_announcement: Optional[CreatePuzzleAnnouncement] = CreatePuzzleAnnouncement(
+            expected_announcement: CreatePuzzleAnnouncement | None = CreatePuzzleAnnouncement(
                 std_hash(
                     self.coin.name()
                     + Program.to(new_proof_hash).get_tree_hash()
@@ -744,7 +744,7 @@ class VerifiedCredential(Streamable):
         )
 
     def activate_backdoor(
-        self, provider_innerpuzhash: bytes32, announcement_nonce: Optional[bytes32] = None
+        self, provider_innerpuzhash: bytes32, announcement_nonce: bytes32 | None = None
     ) -> tuple[CreatePuzzleAnnouncement, CoinSpend]:
         """
         Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
@@ -789,7 +789,7 @@ class VerifiedCredential(Streamable):
     ####################################################################################################################
 
     def _next_vc(
-        self, next_inner_puzzle_hash: bytes32, new_proof_hash: Optional[bytes32], next_amount: uint64
+        self, next_inner_puzzle_hash: bytes32, new_proof_hash: bytes32 | None, next_amount: uint64
     ) -> VerifiedCredential:
         """
         Private method that creates the next VC class instance.
@@ -830,7 +830,7 @@ class VerifiedCredential(Streamable):
 # inside of a CAT.
 @dataclass(frozen=True)
 class RevocationOuterPuzzle:
-    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
         args = match_revocation_layer(puzzle)
         if args is None:
             return None
@@ -842,17 +842,17 @@ class RevocationOuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-    ) -> Optional[Program]:
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    ) -> Program | None:
         if solution is None:
             raise ValueError("Cannot get_inner_puzzle of revocation layer without solution")
 
         return solution.at("rf")
 
-    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         return solution.at("rrf")
 
-    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+    def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return bytes32(constructor["hidden_puzzle_hash"])
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any
 
 from chia_rs import CoinSpend
 
@@ -14,8 +14,8 @@ from chia.types.condition_with_args import ConditionWithArgs
 
 def make_spend(
     coin: Coin,
-    puzzle_reveal: Union[Program, SerializedProgram],
-    solution: Union[Program, SerializedProgram],
+    puzzle_reveal: Program | SerializedProgram,
+    solution: Program | SerializedProgram,
 ) -> CoinSpend:
     pr: SerializedProgram
     sol: SerializedProgram

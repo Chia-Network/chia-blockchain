@@ -5,7 +5,7 @@ import dataclasses
 import logging
 from dataclasses import dataclass, field
 from queue import SimpleQueue
-from typing import ClassVar, Generic, Optional, TypeVar, Union
+from typing import ClassVar, Generic, TypeVar
 
 from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -31,7 +31,7 @@ class ValuedEvent(Generic[T]):
     _value_sentinel: ClassVar[ValuedEventSentinel] = ValuedEventSentinel()
 
     _event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
-    _value: Union[ValuedEventSentinel, T] = _value_sentinel
+    _value: ValuedEventSentinel | T = _value_sentinel
 
     def set(self, value: T) -> None:
         if not isinstance(self._value, ValuedEventSentinel):
@@ -60,14 +60,14 @@ class TransactionQueueEntry:
     """
 
     transaction: SpendBundle = field(compare=False)
-    transaction_bytes: Optional[bytes] = field(compare=False)
+    transaction_bytes: bytes | None = field(compare=False)
     spend_name: bytes32
-    peer: Optional[WSChiaConnection] = field(compare=False)
+    peer: WSChiaConnection | None = field(compare=False)
     test: bool = field(compare=False)
     # IDs of peers that advertised this transaction via new_transaction, along
     # with their hostname, fee and cost.
     peers_with_tx: dict[bytes32, PeerWithTx] = field(default_factory=dict, compare=False)
-    done: ValuedEvent[tuple[MempoolInclusionStatus, Optional[Err]]] = field(
+    done: ValuedEvent[tuple[MempoolInclusionStatus, Err | None]] = field(
         default_factory=ValuedEvent,
         compare=False,
     )
@@ -99,7 +99,7 @@ class TransactionQueue:
         self.peer_size_limit = peer_size_limit
         self.log = log
 
-    async def put(self, tx: TransactionQueueEntry, peer_id: Optional[bytes32], high_priority: bool = False) -> None:
+    async def put(self, tx: TransactionQueueEntry, peer_id: bytes32 | None, high_priority: bool = False) -> None:
         if peer_id is None or high_priority:  # when it's local there is no peer_id.
             self._high_priority_queue.put(tx)
         else:
@@ -117,7 +117,7 @@ class TransactionQueue:
         await self._queue_length.acquire()
         if not self._high_priority_queue.empty():
             return self._high_priority_queue.get()
-        result: Optional[TransactionQueueEntry] = None
+        result: TransactionQueueEntry | None = None
         while True:
             peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
             if not peer_queue.empty():

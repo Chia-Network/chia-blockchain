@@ -36,7 +36,7 @@ class _TaskReferencer:
         self,
         coroutine: typing.Coroutine[object, object, T],
         *,
-        name: typing.Optional[str] = None,
+        name: str | None = None,
         known_unreferenced: bool = False,
     ) -> asyncio.Task[T]:
         task = asyncio.create_task(coro=coroutine, name=name)  # noqa: TID251

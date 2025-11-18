@@ -7,7 +7,7 @@ from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass, field
 from math import ceil
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from chia.plotting.prover import ProverProtocol
@@ -32,8 +32,8 @@ CURRENT_VERSION: int = 2
 class DiskCacheEntry(Streamable):
     prover_data: bytes
     farmer_public_key: G1Element
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
     last_use: uint64
 
@@ -48,8 +48,8 @@ class CacheDataV1(Streamable):
 class CacheEntry:
     prover: ProverProtocol
     farmer_public_key: G1Element
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
     last_use: float
 
@@ -61,8 +61,8 @@ class CacheEntry:
             local_master_sk,
         ) = parse_plot_info(prover.get_memo())
 
-        pool_public_key: Optional[G1Element] = None
-        pool_contract_puzzle_hash: Optional[bytes32] = None
+        pool_public_key: G1Element | None = None
+        pool_contract_puzzle_hash: bytes32 | None = None
         if isinstance(pool_public_key_or_puzzle_hash, G1Element):
             pool_public_key = pool_public_key_or_puzzle_hash
         else:
@@ -212,7 +212,7 @@ class Cache:
     def items(self) -> ItemsView[Path, CacheEntry]:
         return self._data.items()
 
-    def get(self, path: Path) -> Optional[CacheEntry]:
+    def get(self, path: Path) -> CacheEntry | None:
         return self._data.get(path)
 
     def changed(self) -> bool:

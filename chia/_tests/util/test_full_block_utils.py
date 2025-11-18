@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 from collections.abc import Generator, Iterator
-from typing import Optional
 
 import pytest
 from chia_rs import (
@@ -135,7 +134,7 @@ def get_foliage() -> Generator[Foliage, None, None]:
                 )
 
 
-def get_foliage_transaction_block() -> Generator[Optional[FoliageTransactionBlock], None, None]:
+def get_foliage_transaction_block() -> Generator[FoliageTransactionBlock | None, None, None]:
     yield None
     timestamp = uint64(1631794488)
     yield FoliageTransactionBlock(
@@ -148,7 +147,7 @@ def get_foliage_transaction_block() -> Generator[Optional[FoliageTransactionBloc
     )
 
 
-def get_transactions_info(height: uint32, foliage_transaction_block: Optional[FoliageTransactionBlock]):
+def get_transactions_info(height: uint32, foliage_transaction_block: FoliageTransactionBlock | None):
     if not foliage_transaction_block:
         yield None
     else:

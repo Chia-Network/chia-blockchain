@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
-from typing import Optional
 
 import click
 import packaging.version
@@ -22,8 +21,8 @@ def check_plotter(plotter: list[str], expected_output: bytes, specify_tmp: bool 
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
-        out: Optional[bytes]
-        err: Optional[bytes]
+        out: bytes | None
+        err: bytes | None
         try:
             out, err = process.communicate(timeout=2)
         except subprocess.TimeoutExpired as e:

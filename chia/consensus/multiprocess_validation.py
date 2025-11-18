@@ -8,7 +8,6 @@ import traceback
 from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import (
     BlockRecord,
@@ -46,9 +45,9 @@ log = logging.getLogger(__name__)
 @streamable
 @dataclass(frozen=True)
 class PreValidationResult(Streamable):
-    error: Optional[uint16]
-    required_iters: Optional[uint64]  # Iff error is None
-    conds: Optional[SpendBundleConditions]  # Iff error is None and block is a transaction block
+    error: uint16 | None
+    required_iters: uint64 | None  # Iff error is None
+    conds: SpendBundleConditions | None  # Iff error is None and block is a transaction block
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
 
     @property
@@ -61,7 +60,7 @@ class PreValidationResult(Streamable):
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
     block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
+) -> tuple[int | None, SpendBundleConditions | None]:
     assert block.transactions_generator is not None
     assert block.transactions_info is not None
     flags = get_flags_for_height_and_constants(prev_tx_height, constants)
@@ -84,8 +83,8 @@ def _pre_validate_block(
     constants: ConsensusConstants,
     blockchain: BlockRecordsProtocol,
     block: FullBlock,
-    prev_generators: Optional[list[bytes]],
-    conds: Optional[SpendBundleConditions],
+    prev_generators: list[bytes] | None,
+    conds: SpendBundleConditions | None,
     expected_vs: ValidationState,
 ) -> PreValidationResult:
     """
@@ -101,7 +100,7 @@ def _pre_validate_block(
 
     try:
         validation_start = time.monotonic()
-        removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
+        removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
         if conds is not None:
             assert conds.validated_signature is True
             assert block.transactions_generator is not None
@@ -144,7 +143,7 @@ def _pre_validate_block(
             True,  # check_filter
             expected_vs,
         )
-        error_int: Optional[uint16] = None
+        error_int: uint16 | None = None
         if error is not None:
             error_int = uint16(error.code.value)
 
@@ -167,10 +166,10 @@ async def pre_validate_block(
     blockchain: AugmentedBlockchain,
     block: FullBlock,
     pool: Executor,
-    conds: Optional[SpendBundleConditions],
+    conds: SpendBundleConditions | None,
     vs: ValidationState,
     *,
-    wp_summaries: Optional[list[SubEpochSummary]] = None,
+    wp_summaries: list[SubEpochSummary] | None = None,
 ) -> Awaitable[PreValidationResult]:
     """
     This method must be called under the blockchain lock
@@ -196,7 +195,7 @@ async def pre_validate_block(
         wp_summaries:
         validate_signatures:
     """
-    prev_b: Optional[BlockRecord] = None
+    prev_b: BlockRecord | None = None
 
     async def return_error(error_code: Err) -> PreValidationResult:
         return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
@@ -260,10 +259,10 @@ async def pre_validate_block(
     blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
     prev_b = block_rec
 
-    previous_generators: Optional[list[bytes]] = None
+    previous_generators: list[bytes] | None = None
 
     try:
-        block_generator: Optional[BlockGenerator] = await get_block_generator(blockchain.lookup_block_generators, block)
+        block_generator: BlockGenerator | None = await get_block_generator(blockchain.lookup_block_generators, block)
         if block_generator is not None:
             previous_generators = block_generator.generator_refs
     except ValueError:

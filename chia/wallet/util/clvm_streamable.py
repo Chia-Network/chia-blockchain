@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 import functools
+from collections.abc import Callable
 from types import MappingProxyType
-from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_type_hints
+from typing import Any, Generic, TypeGuard, TypeVar, get_type_hints
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
-from typing_extensions import TypeGuard
 
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
@@ -36,7 +36,7 @@ def clvm_streamable(cls: type[Streamable]) -> type[Streamable]:
 
 
 def program_serialize_clvm_streamable(
-    clvm_streamable: Streamable, translation_layer: Optional[TranslationLayer] = None
+    clvm_streamable: Streamable, translation_layer: TranslationLayer | None = None
 ) -> Program:
     if translation_layer is not None:
         mapping = translation_layer.get_mapping(clvm_streamable.__class__)
@@ -47,17 +47,17 @@ def program_serialize_clvm_streamable(
 
 
 def byte_serialize_clvm_streamable(
-    clvm_streamable: Streamable, translation_layer: Optional[TranslationLayer] = None
+    clvm_streamable: Streamable, translation_layer: TranslationLayer | None = None
 ) -> bytes:
     return bytes(program_serialize_clvm_streamable(clvm_streamable, translation_layer=translation_layer))
 
 
 def json_serialize_with_clvm_streamable(
     streamable: object,
-    next_recursion_step: Optional[Callable[..., dict[str, Any]]] = None,
-    translation_layer: Optional[TranslationLayer] = None,
+    next_recursion_step: Callable[..., dict[str, Any]] | None = None,
+    translation_layer: TranslationLayer | None = None,
     **next_recursion_env: Any,
-) -> Union[str, dict[str, Any]]:
+) -> str | dict[str, Any]:
     if next_recursion_step is None:
         next_recursion_step = recurse_jsonify
     if is_clvm_streamable(streamable):
@@ -70,7 +70,7 @@ def json_serialize_with_clvm_streamable(
 
 
 def program_deserialize_clvm_streamable(
-    program: Program, clvm_streamable_type: type[_T_Streamable], translation_layer: Optional[TranslationLayer] = None
+    program: Program, clvm_streamable_type: type[_T_Streamable], translation_layer: TranslationLayer | None = None
 ) -> _T_Streamable:
     type_to_deserialize_from: type[Streamable] = clvm_streamable_type
     if translation_layer is not None:
@@ -86,7 +86,7 @@ def program_deserialize_clvm_streamable(
 
 
 def byte_deserialize_clvm_streamable(
-    blob: bytes, clvm_streamable_type: type[_T_Streamable], translation_layer: Optional[TranslationLayer] = None
+    blob: bytes, clvm_streamable_type: type[_T_Streamable], translation_layer: TranslationLayer | None = None
 ) -> _T_Streamable:
     return program_deserialize_clvm_streamable(
         Program.from_bytes(blob), clvm_streamable_type, translation_layer=translation_layer
@@ -106,9 +106,9 @@ def is_clvm_streamable(v: object) -> TypeGuard[Streamable]:
 
 
 def json_deserialize_with_clvm_streamable(
-    json_dict: Union[str, dict[str, Any]],
+    json_dict: str | dict[str, Any],
     streamable_type: type[_T_Streamable],
-    translation_layer: Optional[TranslationLayer] = None,
+    translation_layer: TranslationLayer | None = None,
 ) -> _T_Streamable:
     # This function is flawed for compound types because it's highjacking the function_to_convert_one_item func
     # which does not call back to it. More examination is needed.
@@ -164,7 +164,7 @@ class TranslationLayer:
 
     def get_mapping(
         self, _type: type[_T_ClvmStreamable]
-    ) -> Optional[TranslationLayerMapping[_T_ClvmStreamable, Streamable]]:
+    ) -> TranslationLayerMapping[_T_ClvmStreamable, Streamable] | None:
         mappings = [m for m in self.type_mappings if m.from_type == _type]
         if len(mappings) == 1:
             return mappings[0]

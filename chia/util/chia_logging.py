@@ -4,7 +4,7 @@ import logging
 import os
 from logging.handlers import SysLogHandler
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
@@ -46,7 +46,7 @@ def initialize_logging(
     service_name: str,
     logging_config: dict[str, Any],
     root_path: Path,
-    beta_root_path: Optional[Path] = None,
+    beta_root_path: Path | None = None,
 ) -> None:
     log_backcompat = logging_config.get("log_backcompat", False)
     log_level = logging_config.get("log_level", default_log_level)

@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, Callable, Optional
+from typing import Any
 
 import pytest
 from chia_rs import G1Element, PlotParam
@@ -131,7 +131,7 @@ class Environment:
     split_farmer_service_manager: SplitAsyncManager[FarmerService]
     split_harvester_managers: list[SplitAsyncManager[Harvester]]
 
-    def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
+    def get_harvester(self, peer_id: bytes32) -> Harvester | None:
         for harvester in self.harvesters:
             assert harvester.server is not None
             if harvester.server.node_id == peer_id:
@@ -187,10 +187,10 @@ class Environment:
         self.remove_directory(harvester_index, self.dir_invalid, State.invalid)
         self.remove_directory(harvester_index, self.dir_duplicates, State.duplicates)
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta | None) -> None:
         if delta is None:
             return
-        harvester: Optional[Harvester] = self.get_harvester(peer_id)
+        harvester: Harvester | None = self.get_harvester(peer_id)
         assert harvester is not None
         expected = self.expected[self.harvesters.index(harvester)]
         assert len(expected.valid_delta.additions) == len(delta.valid.additions)

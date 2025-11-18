@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from chia.apis import StubMetadataRegistry
 from chia.introducer.introducer import Introducer
@@ -26,7 +26,7 @@ SERVICE_NAME = "introducer"
 def create_introducer_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
-    advertised_port: Optional[int] = None,
+    advertised_port: int | None = None,
     connect_to_daemon: bool = True,
 ) -> IntroducerService:
     service_config = config[SERVICE_NAME]

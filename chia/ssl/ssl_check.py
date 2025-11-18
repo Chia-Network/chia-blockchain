@@ -5,7 +5,6 @@ import stat
 import sys
 from logging import Logger
 from pathlib import Path
-from typing import Optional
 
 from chia.util.config import load_config, traverse_dict
 from chia.util.permissions import octal_mode_string, verify_file_permissions
@@ -99,7 +98,7 @@ def get_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int) -> st
 
 
 def verify_ssl_certs_and_keys(
-    cert_paths: list[Path], key_paths: list[Path], log: Optional[Logger] = None
+    cert_paths: list[Path], key_paths: list[Path], log: Logger | None = None
 ) -> list[tuple[Path, int, int]]:
     """Check that file permissions are properly set for the provided SSL cert and key files"""
     if sys.platform == "win32" or sys.platform == "cygwin":

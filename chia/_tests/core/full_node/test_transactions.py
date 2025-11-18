@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import random
-from typing import Optional
 
 import pytest
 from chia_rs import BlockRecord
@@ -77,7 +76,7 @@ async def test_tx_propagation(three_nodes_two_wallets, self_hostname, seeded_ran
     await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
     async def peak_height(fna: FullNodeAPI):
-        peak: Optional[BlockRecord] = fna.full_node.blockchain.get_peak()
+        peak: BlockRecord | None = fna.full_node.blockchain.get_peak()
         if peak is None:
             return -1
         peak_height = peak.height

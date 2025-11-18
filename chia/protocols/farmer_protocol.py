@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import (
     ChallengeChainSubSlot,
@@ -42,8 +41,8 @@ class SPVDFSourceData(Streamable):
 @streamable
 @dataclass(frozen=True)
 class SignagePointSourceData(Streamable):
-    sub_slot_data: Optional[SPSubSlotSourceData] = None
-    vdf_data: Optional[SPVDFSourceData] = None
+    sub_slot_data: SPSubSlotSourceData | None = None
+    vdf_data: SPVDFSourceData | None = None
 
 
 @streamable
@@ -57,7 +56,7 @@ class NewSignagePoint(Streamable):
     signage_point_index: uint8
     peak_height: uint32
     last_tx_height: uint32
-    sp_source_data: Optional[SignagePointSourceData] = None
+    sp_source_data: SignagePointSourceData | None = None
 
 
 @streamable
@@ -71,8 +70,8 @@ class DeclareProofOfSpace(Streamable):
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_signature: G2Element
     farmer_puzzle_hash: bytes32
-    pool_target: Optional[PoolTarget]
-    pool_signature: Optional[G2Element]
+    pool_target: PoolTarget | None
+    pool_signature: G2Element | None
     include_signature_source_data: bool = False
 
 
@@ -82,9 +81,9 @@ class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_hash: bytes32
     foliage_transaction_block_hash: bytes32
-    foliage_block_data: Optional[FoliageBlockData] = None
-    foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
-    rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
+    foliage_block_data: FoliageBlockData | None = None
+    foliage_transaction_block_data: FoliageTransactionBlock | None = None
+    rc_block_unfinished: RewardChainBlockUnfinished | None = None
 
 
 @streamable

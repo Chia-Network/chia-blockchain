@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -214,11 +214,9 @@ def test_unknown_condition() -> None:
     ],
 )
 def test_announcement_inversions(
-    drivers: Union[
-        tuple[type[CreateCoinAnnouncement], type[AssertCoinAnnouncement]],
-        tuple[type[CreatePuzzleAnnouncement], type[AssertPuzzleAnnouncement]],
-        tuple[type[CreateAnnouncement], type[AssertAnnouncement]],
-    ],
+    drivers: tuple[type[CreateCoinAnnouncement], type[AssertCoinAnnouncement]]
+    | tuple[type[CreatePuzzleAnnouncement], type[AssertPuzzleAnnouncement]]
+    | tuple[type[CreateAnnouncement], type[AssertAnnouncement]],
 ) -> None:
     create_driver, assert_driver = drivers
     # mypy is not smart enough to understand that this `if` narrows down the potential types it could be
@@ -250,7 +248,7 @@ def test_announcement_inversions(
 class TimelockInfo:
     drivers: list[Condition]
     parsed_info: ConditionValidTimes
-    conditions_after: Optional[list[Condition]] = None
+    conditions_after: list[Condition] | None = None
 
 
 @pytest.mark.parametrize(
@@ -347,47 +345,45 @@ def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
 )
 def test_invalid_condition(
     cond: type[
-        Union[
-            AggSigParent,
-            AggSigPuzzle,
-            AggSigAmount,
-            AggSigPuzzleAmount,
-            AggSigParentAmount,
-            AggSigParentPuzzle,
-            AggSigUnsafe,
-            AggSigMe,
-            CreateCoin,
-            ReserveFee,
-            AssertCoinAnnouncement,
-            CreateCoinAnnouncement,
-            AssertPuzzleAnnouncement,
-            CreatePuzzleAnnouncement,
-            AssertConcurrentSpend,
-            AssertConcurrentPuzzle,
-            AssertMyCoinID,
-            AssertMyParentID,
-            AssertMyPuzzleHash,
-            AssertMyAmount,
-            AssertMyBirthSeconds,
-            AssertMyBirthHeight,
-            AssertSecondsRelative,
-            AssertSecondsAbsolute,
-            AssertHeightRelative,
-            AssertHeightAbsolute,
-            AssertBeforeSecondsRelative,
-            AssertBeforeSecondsAbsolute,
-            AssertBeforeHeightRelative,
-            AssertBeforeHeightAbsolute,
-            Softfork,
-            Remark,
-            UnknownCondition,
-            AggSig,
-            CreateAnnouncement,
-            AssertAnnouncement,
-            Timelock,
-            SendMessage,
-            ReceiveMessage,
-        ]
+        AggSigParent
+        | AggSigPuzzle
+        | AggSigAmount
+        | AggSigPuzzleAmount
+        | AggSigParentAmount
+        | AggSigParentPuzzle
+        | AggSigUnsafe
+        | AggSigMe
+        | CreateCoin
+        | ReserveFee
+        | AssertCoinAnnouncement
+        | CreateCoinAnnouncement
+        | AssertPuzzleAnnouncement
+        | CreatePuzzleAnnouncement
+        | AssertConcurrentSpend
+        | AssertConcurrentPuzzle
+        | AssertMyCoinID
+        | AssertMyParentID
+        | AssertMyPuzzleHash
+        | AssertMyAmount
+        | AssertMyBirthSeconds
+        | AssertMyBirthHeight
+        | AssertSecondsRelative
+        | AssertSecondsAbsolute
+        | AssertHeightRelative
+        | AssertHeightAbsolute
+        | AssertBeforeSecondsRelative
+        | AssertBeforeSecondsAbsolute
+        | AssertBeforeHeightRelative
+        | AssertBeforeHeightAbsolute
+        | Softfork
+        | Remark
+        | UnknownCondition
+        | AggSig
+        | CreateAnnouncement
+        | AssertAnnouncement
+        | Timelock
+        | SendMessage
+        | ReceiveMessage
     ],
     prg: bytes,
 ) -> None:

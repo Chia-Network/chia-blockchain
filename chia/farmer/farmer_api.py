@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PlotParam, PoolTarget, PrivateKey, ProofOfSpace
@@ -128,7 +128,7 @@ class FarmerAPI:
                 if new_proof_of_space.farmer_reward_address_override is not None:
                     self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
 
-                sp_src_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
+                sp_src_data: list[SignatureRequestSourceData | None] | None = None
                 if (
                     new_proof_of_space.include_source_signature_data
                     or new_proof_of_space.farmer_reward_address_override is not None
@@ -279,7 +279,7 @@ class FarmerAPI:
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
                 m_to_sign = payload.get_hash()
-                m_src_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
+                m_src_data: list[SignatureRequestSourceData | None] | None = None
 
                 if (  # pragma: no cover
                     new_proof_of_space.include_source_signature_data
@@ -312,7 +312,7 @@ class FarmerAPI:
 
                 assert len(response.message_signatures) == 1
 
-                plot_signature: Optional[G2Element] = None
+                plot_signature: G2Element | None = None
                 for sk in self.farmer.get_private_keys():
                     pk = sk.get_g1()
                     if pk == response.farmer_pk:
@@ -327,9 +327,7 @@ class FarmerAPI:
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
 
-                authentication_sk: Optional[PrivateKey] = self.farmer.get_authentication_sk(
-                    pool_state_dict["pool_config"]
-                )
+                authentication_sk: PrivateKey | None = self.farmer.get_authentication_sk(pool_state_dict["pool_config"])
                 if authentication_sk is None:
                     self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
                     increment_pool_stats(
@@ -700,7 +698,7 @@ class FarmerAPI:
         )
 
     @metadata.request()
-    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Optional[Message]:
+    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Message | None:
         if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return None
@@ -709,7 +707,7 @@ class FarmerAPI:
             full_node_request.quality_string
         ]
 
-        message_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
+        message_data: list[SignatureRequestSourceData | None] | None = None
 
         if full_node_request.foliage_block_data is not None:
             message_data = [
@@ -800,7 +798,7 @@ class FarmerAPI:
 
     def _process_respond_signatures(
         self, response: harvester_protocol.RespondSignatures
-    ) -> Optional[Union[DeclareProofOfSpace, SignedValues]]:
+    ) -> DeclareProofOfSpace | SignedValues | None:
         """
         Processing the responded signatures happens when receiving an unsolicited request for an SP or when receiving
         the signature response for a block from a harvester.
@@ -881,9 +879,9 @@ class FarmerAPI:
                             )
                             return None
 
-                        pool_target: Optional[PoolTarget] = PoolTarget(self.farmer.pool_target, uint32(0))
+                        pool_target: PoolTarget | None = PoolTarget(self.farmer.pool_target, uint32(0))
                         assert pool_target is not None
-                        pool_target_signature: Optional[G2Element] = AugSchemeMPL.sign(
+                        pool_target_signature: G2Element | None = AugSchemeMPL.sign(
                             self.farmer.pool_sks_map[pool_pk], bytes(pool_target)
                         )
                     else:

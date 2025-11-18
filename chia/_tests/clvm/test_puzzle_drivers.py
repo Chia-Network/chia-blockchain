@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any
 
 import pytest
 
@@ -35,7 +35,7 @@ def test_puzzle_info() -> None:
     assert solver == Solver(capitalize_bytes)
     assert puzzle_info == PuzzleInfo(capitalize_bytes)
 
-    obj: Union[PuzzleInfo, Solver]
+    obj: PuzzleInfo | Solver
     for obj in (puzzle_info, solver):
         assert obj["string"] == "hello"
         assert obj["bytes"] == bytes.fromhex("cafef00d")

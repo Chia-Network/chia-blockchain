@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from chia.plotting.prover import ProverProtocol
@@ -42,8 +42,8 @@ class PlotsRefreshParameter(Streamable):
 @dataclass
 class PlotInfo:
     prover: ProverProtocol
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
     file_size: int
     time_modified: float
@@ -88,10 +88,10 @@ class Params:
     num_threads: int
     buckets: int
     tmp_dir: Path
-    tmp2_dir: Optional[Path]
+    tmp2_dir: Path | None
     final_dir: Path
-    plotid: Optional[str]
-    memo: Optional[str]
+    plotid: str | None
+    memo: str | None
     nobitfield: bool
     stripe_size: int = 65536
 
@@ -101,7 +101,7 @@ class HarvestingMode(IntEnum):
     GPU = 2
 
 
-def get_plot_directories(root_path: Path, config: Optional[dict] = None) -> list[str]:
+def get_plot_directories(root_path: Path, config: dict | None = None) -> list[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
     return config["harvester"]["plot_directories"] or []
@@ -192,14 +192,14 @@ def get_harvester_config(root_path: Path) -> dict[str, Any]:
 def update_harvester_config(
     root_path: Path,
     *,
-    use_gpu_harvesting: Optional[bool] = None,
-    gpu_index: Optional[int] = None,
-    enforce_gpu_index: Optional[bool] = None,
-    disable_cpu_affinity: Optional[bool] = None,
-    parallel_decompressor_count: Optional[int] = None,
-    decompressor_thread_count: Optional[int] = None,
-    recursive_plot_scan: Optional[bool] = None,
-    refresh_parameter: Optional[PlotsRefreshParameter] = None,
+    use_gpu_harvesting: bool | None = None,
+    gpu_index: int | None = None,
+    enforce_gpu_index: bool | None = None,
+    disable_cpu_affinity: bool | None = None,
+    parallel_decompressor_count: int | None = None,
+    decompressor_thread_count: int | None = None,
+    recursive_plot_scan: bool | None = None,
+    refresh_parameter: PlotsRefreshParameter | None = None,
 ):
     with lock_and_load_config(root_path, "config.yaml") as config:
         if use_gpu_harvesting is not None:
@@ -257,7 +257,7 @@ def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[
     return all_files
 
 
-def parse_plot_info(memo: bytes) -> tuple[Union[G1Element, bytes32], G1Element, PrivateKey]:
+def parse_plot_info(memo: bytes) -> tuple[G1Element | bytes32, G1Element, PrivateKey]:
     # Parses the plot info bytes into keys
     if len(memo) == (48 + 48 + 32):
         # This is a public key memo

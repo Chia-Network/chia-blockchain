@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import click
 
 from chia.cmds.cmd_classes import ChiaCliContext
@@ -39,7 +37,7 @@ from chia.cmds.cmd_classes import ChiaCliContext
     default="",
 )
 @click.pass_context
-def netspace_cmd(ctx: click.Context, rpc_port: Optional[int], delta_block_height: str, start: str) -> None:
+def netspace_cmd(ctx: click.Context, rpc_port: int | None, delta_block_height: str, start: str) -> None:
     """
     Calculates the estimated space on the network given two block header hashes.
     """

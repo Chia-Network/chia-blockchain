@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 # A simple class for separating a line into code and comment
 class Line:
-    def __init__(self, code: list[bytes], comment: Optional[list[bytes]]):
+    def __init__(self, code: list[bytes], comment: list[bytes] | None):
         self.code = code
         self.comment = comment
 
@@ -52,7 +52,7 @@ class Formatter:
         self.out_col: int = 0  # The column we are at while outputting a line
         self.cur_line: int = 0
         self.line: list[bytes] = []
-        self.comment: Optional[list[bytes]] = None
+        self.comment: list[bytes] | None = None
         self.lines: list[list[bytes]] = []
         self.work_lines: list[Line] = []
         self.getting_form_name: int = 0

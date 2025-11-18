@@ -5,12 +5,11 @@ import collections
 import dataclasses
 import inspect
 import pathlib
+from collections.abc import Callable
 from dataclasses import MISSING, dataclass, field, fields
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Optional,
     Protocol,
     final,
     get_args,
@@ -61,11 +60,11 @@ class ChiaCliContext:
 
     root_path: pathlib.Path = DEFAULT_ROOT_PATH
     keys_root_path: pathlib.Path = DEFAULT_KEYS_ROOT_PATH
-    expected_prefix: Optional[str] = None
-    rpc_port: Optional[int] = None
-    keys_fingerprint: Optional[int] = None
-    keys_filename: Optional[str] = None
-    expected_address_prefix: Optional[str] = None
+    expected_prefix: str | None = None
+    rpc_port: int | None = None
+    keys_fingerprint: int | None = None
+    keys_filename: str | None = None
+    expected_address_prefix: str | None = None
 
     @classmethod
     def set_default(cls, ctx: click.Context) -> ChiaCliContext:
@@ -81,7 +80,7 @@ class ChiaCliContext:
 class HexString(click.ParamType):
     name = "hexstring"
 
-    def convert(self, value: str, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes:
+    def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> bytes:
         if isinstance(value, bytes):  # This if is due to some poor handling on click's part
             return value
         try:
@@ -93,7 +92,7 @@ class HexString(click.ParamType):
 class HexString32(click.ParamType):
     name = "hexstring32"
 
-    def convert(self, value: str, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
+    def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> bytes32:
         if isinstance(value, bytes32):  # This if is due to some poor handling on click's part
             return value
         try:
@@ -254,7 +253,7 @@ def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
 @dataclass_transform(frozen_default=True)
 def chia_command(
     *,
-    group: Optional[click.Group] = None,
+    group: click.Group | None = None,
     name: str,
     short_help: str,
     help: str,
@@ -293,7 +292,7 @@ class Metadata:
 
 
 def get_chia_command_metadata(cls: type[ChiaCommand]) -> Metadata:
-    metadata: Optional[Metadata] = getattr(cls, _chia_command_metadata_attribute, None)
+    metadata: Metadata | None = getattr(cls, _chia_command_metadata_attribute, None)
     if metadata is None:
         raise Exception(f"Class is not a chia command: {cls}")
 

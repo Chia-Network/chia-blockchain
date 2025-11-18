@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from packaging.version import Version
 
@@ -46,5 +44,5 @@ def test_chia_short_version() -> None:
         ("something", "something"),
     ],
 )
-def test_chia_short_version_from_str(version: str, result: Optional[str]) -> None:
+def test_chia_short_version_from_str(version: str, result: str | None) -> None:
     assert chia_short_version(version) == result

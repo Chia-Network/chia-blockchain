@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 from collections.abc import AsyncIterator
-from typing import Optional
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, UnfinishedBlock
@@ -128,15 +127,15 @@ async def test_unfinished_block_rank(
 )
 async def test_find_best_block(
     seeded_random: random.Random,
-    blocks: list[tuple[Optional[int], bool]],
-    expected: Optional[int],
+    blocks: list[tuple[int | None, bool]],
+    expected: int | None,
     default_400_blocks: list[FullBlock],
     bt: BlockTools,
 ) -> None:
-    result: dict[Optional[bytes32], UnfinishedBlockEntry] = {}
+    result: dict[bytes32 | None, UnfinishedBlockEntry] = {}
     i = 0
     for b, with_unf in blocks:
-        unf: Optional[UnfinishedBlock]
+        unf: UnfinishedBlock | None
         if with_unf:
             unf = make_unfinished_block(default_400_blocks[i], bt.constants)
             i += 1
@@ -1022,10 +1021,10 @@ async def test_basic_store(
             and i1 > (i2 + 3)
         ):
             # We hit all the conditions that we want
-            all_sps: list[Optional[SignagePoint]] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
+            all_sps: list[SignagePoint | None] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
 
             def assert_sp_none(sp_index: int, is_none: bool) -> None:
-                sp_to_check: Optional[SignagePoint] = all_sps[sp_index]
+                sp_to_check: SignagePoint | None = all_sps[sp_index]
                 assert sp_to_check is not None
                 assert sp_to_check.cc_vdf is not None
                 fetched = store.get_signage_point(sp_to_check.cc_vdf.output.get_hash())

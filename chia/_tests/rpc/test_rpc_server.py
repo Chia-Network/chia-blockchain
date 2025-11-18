@@ -7,7 +7,7 @@ import ssl
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import aiohttp
 import pytest
@@ -42,7 +42,7 @@ class TestRpcApi:
     service: RpcServiceProtocol
     service_name: str = service_name
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> list[WsRpcMessage]:
         # just here to satisfy the complete protocol
         return []  # pragma: no cover
 
@@ -73,7 +73,7 @@ class Client:
         async with aiohttp.ClientSession() as session:
             yield cls(session=session, ssl_context=ssl_context, url=url)
 
-    async def request(self, endpoint: str, json: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    async def request(self, endpoint: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
         if json is None:
             json = {}
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import click
 from chia_rs import PrivateKey
 
@@ -28,7 +26,7 @@ def keys_cmd(ctx: click.Context) -> None:
     required=False,
 )
 @click.pass_context
-def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
+def generate_cmd(ctx: click.Context, label: str | None) -> None:
     from chia.cmds.init_funcs import check_keys
     from chia.cmds.keys_funcs import generate_and_add
 
@@ -71,8 +69,8 @@ def show_cmd(
     show_mnemonic_seed: bool,
     non_observer_derivation: bool,
     json: bool,
-    fingerprint: Optional[int],
-    bech32m_prefix: Optional[str],
+    fingerprint: int | None,
+    bech32m_prefix: str | None,
 ) -> None:
     from chia.cmds.keys_funcs import show_keys
 
@@ -104,7 +102,7 @@ def show_cmd(
     required=False,
 )
 @click.pass_context
-def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
+def add_cmd(ctx: click.Context, filename: str, label: str | None) -> None:
     from chia.cmds.init_funcs import check_keys
     from chia.cmds.keys_funcs import query_and_add_key_info
 
@@ -207,7 +205,7 @@ def generate_and_print_cmd() -> None:
     is_flag=True,
 )
 def sign_cmd(
-    message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
+    message: str, fingerprint: int | None, filename: str | None, hd_path: str, as_bytes: bool, json: bool
 ) -> None:
     from chia.cmds.keys_funcs import resolve_derivation_master_key, sign
 
@@ -280,7 +278,7 @@ def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, js
     required=False,
 )
 @click.pass_context
-def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optional[str]) -> None:
+def derive_cmd(ctx: click.Context, fingerprint: int | None, filename: str | None) -> None:
     context = ChiaCliContext.set_default(ctx)
     context.keys_fingerprint = fingerprint
     context.keys_filename = filename
@@ -332,16 +330,16 @@ def search_cmd(
     non_observer_derivation: bool,
     show_progress: bool,
     search_type: tuple[str, ...],
-    derive_from_hd_path: Optional[str],
-    prefix: Optional[str],
+    derive_from_hd_path: str | None,
+    prefix: str | None,
 ) -> None:
     import sys
 
     from chia.cmds.keys_funcs import resolve_derivation_master_key, search_derive
 
     context = ChiaCliContext.set_default(ctx)
-    fingerprint: Optional[int] = context.keys_fingerprint
-    filename: Optional[str] = context.keys_filename
+    fingerprint: int | None = context.keys_fingerprint
+    filename: str | None = context.keys_filename
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
     resolved_sk = None
@@ -371,8 +369,8 @@ class ResolutionError(Exception):
 
 
 def _resolve_fingerprint_and_sk(
-    filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
-) -> tuple[Optional[int], Optional[PrivateKey]]:
+    filename: str | None, fingerprint: int | None, non_observer_derivation: bool
+) -> tuple[int | None, PrivateKey | None]:
     from chia.cmds.keys_funcs import resolve_derivation_master_key
 
     reolved_fp, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
@@ -412,7 +410,7 @@ def _resolve_fingerprint_and_sk(
 )
 @click.pass_context
 def wallet_address_cmd(
-    ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
+    ctx: click.Context, index: int, count: int, prefix: str | None, non_observer_derivation: bool, show_hd_path: bool
 ) -> None:
     from chia.cmds.keys_funcs import derive_wallet_address
 
@@ -488,14 +486,14 @@ def wallet_address_cmd(
 @click.pass_context
 def child_key_cmd(
     ctx: click.Context,
-    key_type: Optional[str],
-    derive_from_hd_path: Optional[str],
+    key_type: str | None,
+    derive_from_hd_path: str | None,
     index: int,
     count: int,
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
-    bech32m_prefix: Optional[str],
+    bech32m_prefix: str | None,
 ) -> None:
     from chia.cmds.keys_funcs import derive_child_key
 

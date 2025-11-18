@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import FullBlock
 from chia_rs.sized_ints import uint8, uint32
 
@@ -102,7 +100,7 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
 
 
 # get the latest infused transaction block before the signage point of the last block in the list
-def find_tx_before_sp(block_list: list[FullBlock]) -> Optional[FullBlock]:
+def find_tx_before_sp(block_list: list[FullBlock]) -> FullBlock | None:
     before_slot = False
     before_sp = False
     if len(block_list[-1].finished_sub_slots) > 0:

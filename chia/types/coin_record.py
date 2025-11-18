@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
@@ -38,7 +37,7 @@ class CoinRecord(Streamable):
         spent_h = None
         if self.spent:
             spent_h = self.spent_block_index
-        confirmed_height: Optional[uint32] = self.confirmed_block_index
+        confirmed_height: uint32 | None = self.confirmed_block_index
         if self.confirmed_block_index == 0 and self.timestamp == 0:
             confirmed_height = None
         return CoinState(self.coin, spent_h, confirmed_height)

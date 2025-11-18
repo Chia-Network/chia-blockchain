@@ -4,12 +4,11 @@ import dataclasses
 import logging
 import time
 from collections import deque
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal
 
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
-from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerSummary, DataLayerWallet
 from chia.server.ws_connection import WSChiaConnection
@@ -94,13 +93,13 @@ class TradeManager:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     trade_store: TradeStore
-    most_recently_deserialized_trade: Optional[tuple[bytes32, Offer]]
+    most_recently_deserialized_trade: tuple[bytes32, Offer] | None
 
     @staticmethod
     async def create(
         wallet_state_manager: Any,
         db_wrapper: DBWrapper2,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> TradeManager:
         self = TradeManager()
         if name:
@@ -140,7 +139,7 @@ class TradeManager:
         return trades_by_coin
 
     async def coins_of_interest_farmed(
-        self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
+        self, coin_state: CoinState, fork_height: uint32 | None, peer: WSChiaConnection
     ) -> None:
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
@@ -233,7 +232,7 @@ class TradeManager:
         all: list[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
-    async def get_trade_by_id(self, trade_id: bytes32) -> Optional[TradeRecord]:
+    async def get_trade_by_id(self, trade_id: bytes32) -> TradeRecord | None:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
@@ -421,10 +420,10 @@ class TradeManager:
 
     async def create_offer_for_ids(
         self,
-        offer: dict[Union[int, bytes32], int],
+        offer: dict[int | bytes32, int],
         action_scope: WalletActionScope,
-        driver_dict: Optional[dict[bytes32, PuzzleInfo]] = None,
-        solver: Optional[Solver] = None,
+        driver_dict: dict[bytes32, PuzzleInfo] | None = None,
+        solver: Solver | None = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
         extra_conditions: tuple[Condition, ...] = tuple(),
@@ -471,14 +470,14 @@ class TradeManager:
 
     async def _create_offer_for_ids(
         self,
-        offer_dict: dict[Union[int, bytes32], int],
+        offer_dict: dict[int | bytes32, int],
         action_scope: WalletActionScope,
-        driver_dict: Optional[dict[bytes32, PuzzleInfo]] = None,
-        solver: Optional[Solver] = None,
+        driver_dict: dict[bytes32, PuzzleInfo] | None = None,
+        solver: Solver | None = None,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         taking: bool = False,
-    ) -> Union[tuple[Literal[True], Offer, None], tuple[Literal[False], None, str]]:
+    ) -> tuple[Literal[True], Offer, None] | tuple[Literal[False], None, str]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -487,11 +486,11 @@ class TradeManager:
         if solver is None:
             solver = Solver({})
         try:
-            coins_to_offer: dict[Union[int, bytes32], set[Coin]] = {}
-            requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {}
-            offer_dict_no_ints: dict[Optional[bytes32], int] = {}
+            coins_to_offer: dict[int | bytes32, set[Coin]] = {}
+            requested_payments: dict[bytes32 | None, list[CreateCoin]] = {}
+            offer_dict_no_ints: dict[bytes32 | None, int] = {}
             for id, amount in offer_dict.items():
-                asset_id: Optional[bytes32] = None
+                asset_id: bytes32 | None = None
                 # asset_id can either be none if asset is XCH or
                 # bytes32 if another asset (e.g. NFT, CAT)
                 if amount > 0:
@@ -579,7 +578,7 @@ class TradeManager:
                 requested_payments, driver_dict, taking
             )
 
-            potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
+            potential_special_offer: Offer | None = await self.check_for_special_offer_making(
                 offer_dict_no_ints,
                 driver_dict,
                 action_scope,
@@ -592,7 +591,7 @@ class TradeManager:
                 return True, potential_special_offer, None
 
             all_coins: list[Coin] = [c for coins in coins_to_offer.values() for c in coins]
-            notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]] = Offer.notarize_payments(
+            notarized_payments: dict[bytes32 | None, list[NotarizedPayment]] = Offer.notarize_payments(
                 requested_payments, all_coins
             )
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
@@ -815,20 +814,20 @@ class TradeManager:
         offer: Offer,
         peer: WSChiaConnection,
         action_scope: WalletActionScope,
-        solver: Optional[Solver] = None,
+        solver: Solver | None = None,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> TradeRecord:
         if solver is None:
             solver = Solver({})
-        take_offer_dict: dict[Union[bytes32, int], int] = {}
-        arbitrage: dict[Optional[bytes32], int] = offer.arbitrage()
+        take_offer_dict: dict[bytes32 | int, int] = {}
+        arbitrage: dict[bytes32 | None, int] = offer.arbitrage()
 
         for asset_id, amount in arbitrage.items():
             if asset_id is None:
-                wallet: Optional[WalletProtocol[Any]] = self.wallet_state_manager.main_wallet
+                wallet: WalletProtocol[Any] | None = self.wallet_state_manager.main_wallet
                 assert wallet is not None
-                key: Union[bytes32, int] = int(wallet.id())
+                key: bytes32 | int = int(wallet.id())
             else:
                 # ATTENTION: new wallets
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
@@ -909,13 +908,13 @@ class TradeManager:
 
     async def check_for_special_offer_making(
         self,
-        offer_dict: dict[Optional[bytes32], int],
+        offer_dict: dict[bytes32 | None, int],
         driver_dict: dict[bytes32, PuzzleInfo],
         action_scope: WalletActionScope,
         solver: Solver,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> Optional[Offer]:
+    ) -> Offer | None:
         for puzzle_info in driver_dict.values():
             if (
                 puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value])
@@ -966,7 +965,7 @@ class TradeManager:
                 return True
         return False
 
-    async def get_dl_offer_summary(self, offer: Offer) -> Optional[DataLayerSummary]:
+    async def get_dl_offer_summary(self, offer: Offer) -> DataLayerSummary | None:
         for puzzle_info in offer.driver_dict.values():
             if (
                 puzzle_info.check_type(
@@ -1011,10 +1010,10 @@ class TradeManager:
 
     async def check_for_requested_payment_modifications(
         self,
-        requested_payments: dict[Optional[bytes32], list[CreateCoin]],
+        requested_payments: dict[bytes32 | None, list[CreateCoin]],
         driver_dict: dict[bytes32, PuzzleInfo],
         taking: bool,
-    ) -> dict[Optional[bytes32], list[CreateCoin]]:
+    ) -> dict[bytes32 | None, list[CreateCoin]]:
         # This function exclusively deals with CR-CATs for now
         if not taking:
             for asset_id, puzzle_info in driver_dict.items():

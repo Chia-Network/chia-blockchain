@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import Optional, Union
 
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -234,7 +233,7 @@ class WalletSingletonStore:
             )
             await cursor.close()
 
-    async def count(self, wallet_id: Optional[uint32] = None) -> int:
+    async def count(self, wallet_id: uint32 | None = None) -> int:
         sql = "SELECT COUNT(singleton_id) FROM singletons WHERE removed_height=0"
         params: list[uint32] = []
         if wallet_id is not None:
@@ -246,9 +245,9 @@ class WalletSingletonStore:
                 return int(count_row[0])
         return -1  # pragma: no cover
 
-    async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
+    async def is_empty(self, wallet_id: uint32 | None = None) -> bool:
         sql = "SELECT 1 FROM singletons WHERE removed_height=0"
-        params: list[Union[uint32, bytes32]] = []
+        params: list[uint32 | bytes32] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)

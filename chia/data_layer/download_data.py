@@ -5,12 +5,11 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Literal
 
 import aiohttp
 from chia_rs.datalayer import DeltaReader
 from chia_rs.sized_bytes import bytes32
-from typing_extensions import Literal
 
 from chia.data_layer.data_layer_util import (
     PluginRemote,
@@ -62,7 +61,7 @@ def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
 @dataclass
 class WriteFilesResult:
     result: bool
-    full_tree: Optional[Path]
+    full_tree: Path | None
     diff_tree: Path
 
 
@@ -114,8 +113,8 @@ async def download_file(
     root_hash: bytes32,
     generation: int,
     server_info: ServerInfo,
-    proxy_url: Optional[str],
-    downloader: Optional[PluginRemote],
+    proxy_url: str | None,
+    downloader: PluginRemote | None,
     timeout: aiohttp.ClientTimeout,
     client_foldername: Path,
     timestamp: int,
@@ -169,15 +168,15 @@ async def insert_from_delta_file(
     client_foldername: Path,
     timeout: aiohttp.ClientTimeout,
     log: logging.Logger,
-    proxy_url: Optional[str],
-    downloader: Optional[PluginRemote],
+    proxy_url: str | None,
+    downloader: PluginRemote | None,
     group_files_by_store: bool = False,
     maximum_full_file_count: int = 1,
 ) -> bool:
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
-    delta_reader: Optional[DeltaReader] = None
+    delta_reader: DeltaReader | None = None
 
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -286,7 +285,7 @@ def delete_full_file_if_exists(foldername: Path, store_id: bytes32, root: Root) 
 async def http_download(
     target_filename_path: Path,
     filename: str,
-    proxy_url: Optional[str],
+    proxy_url: str | None,
     server_info: ServerInfo,
     timeout: aiohttp.ClientTimeout,
     log: logging.Logger,

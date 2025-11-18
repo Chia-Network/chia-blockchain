@@ -4,7 +4,7 @@ import asyncio
 import unittest.mock
 from math import floor
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -56,12 +56,12 @@ def farmer_is_started(farmer: Farmer) -> bool:
     return farmer.started
 
 
-async def get_harvester_config(harvester_rpc_port: Optional[int], root_path: Path) -> dict[str, Any]:
+async def get_harvester_config(harvester_rpc_port: int | None, root_path: Path) -> dict[str, Any]:
     async with get_any_service_client(HarvesterRpcClient, root_path, harvester_rpc_port) as (harvester_client, _):
         return await harvester_client.get_harvester_config()
 
 
-async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: Path, config: dict[str, Any]) -> bool:
+async def update_harvester_config(harvester_rpc_port: int | None, root_path: Path, config: dict[str, Any]) -> bool:
     async with get_any_service_client(HarvesterRpcClient, root_path, harvester_rpc_port) as (harvester_client, _):
         return await harvester_client.update_harvester_config(config)
 

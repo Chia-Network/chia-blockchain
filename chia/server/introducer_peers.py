@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_ints import uint16, uint64
 
@@ -43,7 +42,7 @@ class IntroducerPeers:
     def __init__(self) -> None:
         self._peers: set[VettedPeer] = set()
 
-    def add(self, peer: Optional[PeerInfo]) -> bool:
+    def add(self, peer: PeerInfo | None) -> bool:
         if peer is None or not peer.port:
             return False
 
@@ -56,7 +55,7 @@ class IntroducerPeers:
         self._peers.add(p)
         return True
 
-    def remove(self, peer: Optional[VettedPeer]) -> bool:
+    def remove(self, peer: VettedPeer | None) -> bool:
         if peer is None or not peer.port:
             return False
         try:

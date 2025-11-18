@@ -5,7 +5,7 @@ import logging
 import random
 import sqlite3
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
 import pytest
 
@@ -41,7 +41,7 @@ def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
-def maybe_serialize(gen: Optional[SerializedProgram]) -> Optional[bytes]:
+def maybe_serialize(gen: SerializedProgram | None) -> bytes | None:
     if gen is None:
         return None
     else:

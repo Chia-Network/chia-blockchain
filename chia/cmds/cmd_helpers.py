@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Coroutine, Sequence
+from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, TypeVar
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -29,8 +29,8 @@ class WalletClientInfo:
 @command_helper
 class NeedsWalletRPC:
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
-    client_info: Optional[WalletClientInfo] = None
-    wallet_rpc_port: Optional[int] = option(
+    client_info: WalletClientInfo | None = None
+    wallet_rpc_port: int | None = option(
         "-wp",
         "--wallet-rpc_port",
         help=(
@@ -39,7 +39,7 @@ class NeedsWalletRPC:
         type=int,
         default=None,
     )
-    fingerprint: Optional[int] = option(
+    fingerprint: int | None = option(
         "-f",
         "--fingerprint",
         help="Fingerprint of the wallet to use",
@@ -78,7 +78,7 @@ class TransactionsIn:
 
 @command_helper
 class TransactionsOut:
-    transaction_file_out: Optional[str] = option(
+    transaction_file_out: str | None = option(
         "--transaction-file-out",
         type=str,
         default=None,
@@ -138,7 +138,7 @@ class NeedsCoinSelectionConfig:
 
 @command_helper
 class NeedsTXConfig(NeedsCoinSelectionConfig):
-    reuse: Optional[bool] = option(
+    reuse: bool | None = option(
         "--reuse/--new-address",
         "--reuse-puzhash/--generate-new-puzhash",
         help="Reuse existing address for the change.",
@@ -189,7 +189,7 @@ class TransactionEndpoint:
     push: bool = option(
         "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
     )
-    valid_at: Optional[int] = option(
+    valid_at: int | None = option(
         "--valid-at",
         help="UNIX timestamp at which the associated transactions become valid",
         type=int,
@@ -197,7 +197,7 @@ class TransactionEndpoint:
         default=None,
         hidden=True,
     )
-    expires_at: Optional[int] = option(
+    expires_at: int | None = option(
         "--expires-at",
         help="UNIX timestamp at which the associated transactions expire",
         type=int,
@@ -223,14 +223,14 @@ class TransactionEndpoint:
 
 @dataclass(frozen=True)
 class TransactionEndpointWithTimelocks(TransactionEndpoint):
-    valid_at: Optional[int] = option(
+    valid_at: int | None = option(
         "--valid-at",
         help="UNIX timestamp at which the associated transactions become valid",
         type=int,
         required=False,
         default=None,
     )
-    expires_at: Optional[int] = option(
+    expires_at: int | None = option(
         "--expires-at",
         help="UNIX timestamp at which the associated transactions expire",
         type=int,

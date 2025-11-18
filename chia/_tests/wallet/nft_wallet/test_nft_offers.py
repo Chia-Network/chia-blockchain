@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional, Union
-
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -116,7 +114,7 @@ async def test_nft_offer_with_fee(wallet_environments: WalletTestFramework) -> N
     # MAKE FIRST TRADE: 1 NFT for 100 xch
 
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    nft_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     assert nft_info is not None
     nft_asset_id = create_asset_id(nft_info)
     assert nft_asset_id is not None
@@ -124,7 +122,7 @@ async def test_nft_offer_with_fee(wallet_environments: WalletTestFramework) -> N
 
     xch_request = 100
     maker_fee = uint64(10)
-    offer_nft_for_xch: dict[Union[int, bytes32], int] = {wallet_maker.id(): xch_request, nft_asset_id: -1}
+    offer_nft_for_xch: dict[int | bytes32, int] = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -215,7 +213,7 @@ async def test_nft_offer_with_fee(wallet_environments: WalletTestFramework) -> N
     # MAKE SECOND TRADE: 100 xch for 1 NFT
 
     nft_to_buy = coins_taker[0]
-    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
+    nft_to_buy_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     assert nft_to_buy_info is not None
     nft_to_buy_asset_id = create_asset_id(nft_to_buy_info)
     assert nft_to_buy_asset_id is not None
@@ -223,7 +221,7 @@ async def test_nft_offer_with_fee(wallet_environments: WalletTestFramework) -> N
 
     xch_offered = 1000
     maker_fee = uint64(10)
-    offer_xch_for_nft: dict[Union[int, bytes32], int] = {wallet_maker.id(): -xch_offered, nft_to_buy_asset_id: 1}
+    offer_xch_for_nft: dict[int | bytes32, int] = {wallet_maker.id(): -xch_offered, nft_to_buy_asset_id: 1}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -385,7 +383,7 @@ async def test_nft_offer_cancellations(wallet_environments: WalletTestFramework)
 
     # maker creates offer and cancels
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    nft_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     assert nft_info is not None
     nft_asset_id = create_asset_id(nft_info)
     assert nft_asset_id is not None
@@ -393,7 +391,7 @@ async def test_nft_offer_cancellations(wallet_environments: WalletTestFramework)
 
     xch_request = 100
     maker_fee = uint64(10)
-    offer_nft_for_xch: dict[Union[bytes32, int], int] = {wallet_maker.id(): xch_request, nft_asset_id: -1}
+    offer_nft_for_xch: dict[bytes32 | int, int] = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -602,7 +600,7 @@ async def test_nft_offer_with_metadata_update(wallet_environments: WalletTestFra
 
     # MAKE FIRST TRADE: 1 NFT for 100 xch
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    nft_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     assert nft_info is not None
     nft_asset_id = create_asset_id(nft_info)
     assert nft_asset_id is not None
@@ -610,7 +608,7 @@ async def test_nft_offer_with_metadata_update(wallet_environments: WalletTestFra
 
     xch_request = 100
     maker_fee = uint64(10)
-    offer_nft_for_xch: dict[Union[bytes32, int], int] = {wallet_maker.id(): xch_request, nft_asset_id: -1}
+    offer_nft_for_xch: dict[bytes32 | int, int] = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -827,7 +825,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
 
     # MAKE FIRST TRADE: 1 NFT for 10 taker cats
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    nft_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     assert nft_info is not None
     nft_asset_id = create_asset_id(nft_info)
     assert nft_asset_id is not None
@@ -835,7 +833,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
 
     maker_fee = uint64(10)
     taker_cat_offered = 2500
-    offer_nft_for_cat: dict[Union[bytes32, int], int] = {
+    offer_nft_for_cat: dict[bytes32 | int, int] = {
         nft_asset_id: -1,
         wallet_maker_for_taker_cat.id(): taker_cat_offered,
     }
@@ -955,7 +953,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
     taker_cat_amount = 500
 
     nft_to_buy = coins_taker[0]
-    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
+    nft_to_buy_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     assert nft_to_buy_info is not None
     nft_to_buy_asset_id = create_asset_id(nft_to_buy_info)
     assert nft_to_buy_asset_id is not None
@@ -964,7 +962,7 @@ async def test_nft_offer_nft_for_cat(wallet_environments: WalletTestFramework, w
     }
 
     maker_fee = uint64(10)
-    offer_multi_cats_for_nft: dict[Union[bytes32, int], int] = {
+    offer_multi_cats_for_nft: dict[bytes32 | int, int] = {
         nft_to_buy_asset_id: 1,
         wallet_maker_for_taker_cat.id(): -taker_cat_amount,
         cat_wallet_maker.id(): -maker_cat_amount,
@@ -1230,13 +1228,13 @@ async def test_nft_offer_nft_for_nft(wallet_environments: WalletTestFramework) -
     assert len(coins_taker) == 1
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    nft_to_offer_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     assert nft_to_offer_info is not None
     nft_to_offer_asset_id = create_asset_id(nft_to_offer_info)
     assert nft_to_offer_asset_id is not None
 
     nft_to_take = coins_taker[0]
-    nft_to_take_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_take.full_puzzle))
+    nft_to_take_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_take.full_puzzle))
     assert nft_to_take_info is not None
     nft_to_take_asset_id = create_asset_id(nft_to_take_info)
     assert nft_to_take_asset_id is not None
@@ -1247,7 +1245,7 @@ async def test_nft_offer_nft_for_nft(wallet_environments: WalletTestFramework) -
     }
 
     maker_fee = uint64(10)
-    offer_nft_for_nft: dict[Union[bytes32, int], int] = {nft_to_take_asset_id: 1, nft_to_offer_asset_id: -1}
+    offer_nft_for_nft: dict[bytes32 | int, int] = {nft_to_take_asset_id: 1, nft_to_offer_asset_id: -1}
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
@@ -1466,7 +1464,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
 
     # MAKE FIRST TRADE: 1 NFT for 10 taker cats
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
+    nft_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     assert nft_info is not None
     nft_asset_id = create_asset_id(nft_info)
     assert nft_asset_id is not None
@@ -1476,7 +1474,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     maker_xch_offered = 1000
     taker_cat_offered = 2500
     wallet_maker_id = wallet_maker.id()
-    offer_nft_for_cat: dict[Union[bytes32, int], int] = {
+    offer_nft_for_cat: dict[bytes32 | int, int] = {
         wallet_maker_id: -maker_xch_offered,
         nft_asset_id: -1,
         wallet_maker_for_taker_cat.id(): taker_cat_offered,
@@ -1595,7 +1593,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     taker_cat_amount = 500
 
     nft_to_buy = coins_taker[0]
-    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
+    nft_to_buy_info: PuzzleInfo | None = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     assert nft_to_buy_info is not None
     nft_to_buy_asset_id = create_asset_id(nft_to_buy_info)
     assert nft_to_buy_asset_id is not None
@@ -1605,7 +1603,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     }
 
     maker_fee = uint64(10)
-    offer_multi_cats_for_nft: dict[Union[bytes32, int], int] = {
+    offer_multi_cats_for_nft: dict[bytes32 | int, int] = {
         nft_to_buy_asset_id: 1,
         wallet_maker_for_taker_cat.id(): -taker_cat_amount,
         cat_wallet_maker.id(): -maker_cat_amount,

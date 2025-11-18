@@ -7,7 +7,7 @@ import traceback
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from chia_rs.sized_ints import int16, uint8, uint32, uint64
 from typing_extensions import Protocol
@@ -89,7 +89,7 @@ class MessageGenerator(Generic[T]):
 class ExpectedResponse:
     message_type: ProtocolMessageTypes
     identifier: PlotSyncIdentifier
-    message: Optional[PlotSyncResponse] = None
+    message: PlotSyncResponse | None = None
 
     def __str__(self) -> str:
         return (
@@ -100,14 +100,14 @@ class ExpectedResponse:
 
 class Sender:
     _plot_manager: PlotManager
-    _connection: Optional[WSChiaConnection]
+    _connection: WSChiaConnection | None
     _sync_id: uint64
     _next_message_id: uint64
     _messages: list[MessageGenerator[PayloadType]]
     _last_sync_id: uint64
     _stop_requested = False
-    _task: Optional[asyncio.Task[None]]
-    _response: Optional[ExpectedResponse]
+    _task: asyncio.Task[None] | None
+    _response: ExpectedResponse | None
     _harvesting_mode: HarvestingMode
 
     def __init__(self, plot_manager: PlotManager, harvesting_mode: HarvestingMode) -> None:

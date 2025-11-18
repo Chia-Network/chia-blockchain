@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import Coin, ConsensusConstants, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_ints import uint64
@@ -102,8 +100,8 @@ def validate_chain(
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
-    block_list_input: Optional[list[FullBlock]] = None,
-    time_per_block: Optional[float] = None,
+    block_list_input: list[FullBlock] | None = None,
+    time_per_block: float | None = None,
     dummy_block_references: bool = False,
     include_transactions: bool = False,
 ) -> None:

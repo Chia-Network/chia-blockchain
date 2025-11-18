@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs.sized_ints import uint32
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -50,7 +48,7 @@ class WalletUserStore:
         name: str,
         wallet_type: int,
         data: str,
-        id: Optional[int] = None,
+        id: int | None = None,
     ) -> WalletInfo:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
@@ -81,13 +79,13 @@ class WalletUserStore:
             )
             await cursor.close()
 
-    async def get_last_wallet(self) -> Optional[WalletInfo]:
+    async def get_last_wallet(self) -> WalletInfo | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(conn, "SELECT MAX(id) FROM users_wallets")
 
         return None if row is None else await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> list[WalletInfo]:
+    async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         """
         Return a set containing all wallets, optionally with a specific WalletType
         """
@@ -100,7 +98,7 @@ class WalletUserStore:
                 )
             return [WalletInfo(row[0], row[1], row[2], row[3]) for row in rows]
 
-    async def get_wallet_by_id(self, id: int) -> Optional[WalletInfo]:
+    async def get_wallet_by_id(self, id: int) -> WalletInfo | None:
         """
         Return a wallet by id
         """

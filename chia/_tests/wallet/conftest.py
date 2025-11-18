@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import unittest
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, Callable, Optional
+from typing import Any
 
 import pytest
 from chia_rs import (
@@ -34,7 +34,7 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 @pytest.fixture(scope="function", autouse=True)
 def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
     def make_new_synced(func: Callable[..., Awaitable[bool]]) -> Any:
-        async def mocked_synced(self: Any, block_is_current_at: Optional[uint64] = uint64(0)) -> bool:
+        async def mocked_synced(self: Any, block_is_current_at: uint64 | None = uint64(0)) -> bool:
             return await func(self, block_is_current_at)
 
         return mocked_synced
@@ -84,7 +84,7 @@ async def ignore_block_validation(
 
     def run_block(
         block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
-    ) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
+    ) -> tuple[int | None, SpendBundleConditions | None]:
         assert block.transactions_generator is not None
         assert block.transactions_info is not None
         flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE

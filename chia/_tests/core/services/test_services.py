@@ -7,7 +7,7 @@ import sys
 import time
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import aiohttp.client_exceptions
 import pytest
@@ -114,7 +114,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 async def test_services_terminate(
     signal_number: signal.Signals,
     chia_root: ChiaRoot,
-    create_service: Optional[CreateServiceProtocol],
+    create_service: CreateServiceProtocol | None,
     module_path: str,
     service_config_name: str,
 ) -> None:

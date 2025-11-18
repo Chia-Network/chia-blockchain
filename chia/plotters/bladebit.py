@@ -7,7 +7,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
@@ -23,9 +23,9 @@ def is_bladebit_supported() -> bool:
     return sys.platform.startswith("linux") or sys.platform in {"win32", "cygwin", "darwin"}
 
 
-def meets_memory_requirement(plotters_root_path: Path) -> tuple[bool, Optional[str]]:
+def meets_memory_requirement(plotters_root_path: Path) -> tuple[bool, str | None]:
     have_enough_memory: bool = False
-    warning_string: Optional[str] = None
+    warning_string: str | None = None
 
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if bladebit_executable_path.exists():
@@ -87,7 +87,7 @@ def get_bladebit_exec_path(with_cuda: bool = False) -> str:
     return "bladebit.exe" if sys.platform in {"win32", "cygwin"} else "bladebit"
 
 
-def get_bladebit_exec_venv_path(with_cuda: bool = False) -> Optional[Path]:
+def get_bladebit_exec_venv_path(with_cuda: bool = False) -> Path | None:
     venv_bin_path = get_venv_bin()
     if not venv_bin_path:
         return None
@@ -131,7 +131,7 @@ def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
 
 def get_bladebit_version(
     plotters_root_path: Path,
-) -> Union[tuple[Literal[False], str], tuple[None, str], tuple[Literal[True], list[str]]]:
+) -> tuple[Literal[False], str] | tuple[None, str] | tuple[Literal[True], list[str]]:
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if not bladebit_executable_path.exists():
         # (found=False, "")
@@ -157,7 +157,7 @@ def get_bladebit_version(
         return None, str(e)
 
 
-def get_bladebit_install_info(plotters_root_path: Path) -> Optional[dict[str, Any]]:
+def get_bladebit_install_info(plotters_root_path: Path) -> dict[str, Any] | None:
     info: dict[str, Any] = {"display_name": "BladeBit Plotter"}
     installed: bool = False
     supported: bool = is_bladebit_supported()
@@ -165,7 +165,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[dict[str, An
 
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if bladebit_executable_path.exists():
-        version: Optional[str] = None
+        version: str | None = None
         found, response = get_bladebit_version(plotters_root_path)
         if found:
             version = ".".join(response)

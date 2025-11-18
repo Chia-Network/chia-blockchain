@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import EndOfSubSlotBundle, Foliage, FoliageTransactionBlock, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
@@ -17,10 +16,10 @@ class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
     finished_sub_slots: list[EndOfSubSlotBundle]  # If first sb
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
-    challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
-    reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
+    challenge_chain_sp_proof: VDFProof | None  # If not first sp in sub-slot
+    reward_chain_sp_proof: VDFProof | None  # If not first sp in sub-slot
     foliage: Foliage  # Reward chain foliage data
-    foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
+    foliage_transaction_block: FoliageTransactionBlock | None  # Reward chain foliage data (tx block)
     transactions_filter: bytes  # Filter for block transactions
 
     @property

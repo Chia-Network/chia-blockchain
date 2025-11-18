@@ -10,12 +10,12 @@ import re
 import shutil
 import statistics
 import time
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from random import Random
-from typing import Any, BinaryIO, Callable, Optional
+from typing import Any, BinaryIO
 
 import aiohttp
 import chia_rs.datalayer
@@ -290,7 +290,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32)
     node_count = 0
     node_hashes: list[bytes32] = []
     hash_to_key: dict[bytes32, bytes] = {}
-    node_hash: Optional[bytes32]
+    node_hash: bytes32 | None
 
     for i in range(1000):
         is_insert = False
@@ -1223,7 +1223,7 @@ async def test_server_http_ban(
     async def mock_http_download(
         target_filename_path: Path,
         filename: str,
-        proxy_url: Optional[str],
+        proxy_url: str | None,
         server_info: ServerInfo,
         timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
@@ -1278,7 +1278,7 @@ async def test_server_http_ban(
     assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
 
 
-async def get_first_generation(data_store: DataStore, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
+async def get_first_generation(data_store: DataStore, node_hash: bytes32, store_id: bytes32) -> int | None:
     async with data_store.db_wrapper.reader() as reader:
         cursor = await reader.execute(
             "SELECT generation FROM nodes WHERE hash = ? AND store_id = ?",
@@ -1301,8 +1301,8 @@ async def write_tree_to_file_old_format(
     node_hash: bytes32,
     store_id: bytes32,
     writer: BinaryIO,
-    merkle_blob: Optional[MerkleBlob] = None,
-    hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
+    merkle_blob: MerkleBlob | None = None,
+    hash_to_index: dict[bytes32, TreeIndex] | None = None,
 ) -> None:
     if node_hash == bytes32.zeros:
         return
@@ -1760,7 +1760,7 @@ async def test_insert_from_delta_file(
     async def mock_http_download(
         target_filename_path: Path,
         filename: str,
-        proxy_url: Optional[str],
+        proxy_url: str | None,
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
@@ -1770,7 +1770,7 @@ async def test_insert_from_delta_file(
     async def mock_http_download_2(
         target_filename_path: Path,
         filename: str,
-        proxy_url: Optional[str],
+        proxy_url: str | None,
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
@@ -2180,7 +2180,7 @@ async def test_basic_key_value_db_vs_disk_cutoff(
         ) as cursor:
             row = await cursor.fetchone()
             assert row is not None
-            db_blob: Optional[bytes] = row["blob"]
+            db_blob: bytes | None = row["blob"]
 
     if size_offset <= 0:
         assert not file_exists

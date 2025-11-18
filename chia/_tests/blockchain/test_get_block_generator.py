@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -16,14 +15,14 @@ from chia.util.casts import int_to_bytes
 @dataclass(frozen=True)
 class BR:
     prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
+    transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
 
 
 @dataclass(frozen=True)
 class FB:
     prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
+    transactions_generator: SerializedProgram | None
     height: uint32
 
 

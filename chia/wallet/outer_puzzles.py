@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 
@@ -47,9 +46,9 @@ class AssetType(Enum):
     REVOCATION_LAYER = "revocation layer"
 
 
-def match_puzzle(puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+def match_puzzle(puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
     for driver in driver_lookup.values():
-        potential_info: Optional[PuzzleInfo] = driver.match(puzzle)
+        potential_info: PuzzleInfo | None = driver.match(puzzle)
         if potential_info is not None:
             return potential_info
     return None
@@ -64,16 +63,16 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
 
 
 def get_inner_puzzle(
-    constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-) -> Optional[Program]:
+    constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+) -> Program | None:
     return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal, solution)
 
 
-def get_inner_solution(constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+def get_inner_solution(constructor: PuzzleInfo, solution: Program) -> Program | None:
     return driver_lookup[AssetType(constructor.type())].get_inner_solution(constructor, solution)
 
 
-def create_asset_id(constructor: PuzzleInfo) -> Optional[bytes32]:
+def create_asset_id(constructor: PuzzleInfo) -> bytes32 | None:
     return driver_lookup[AssetType(constructor.type())].asset_id(constructor)
 
 

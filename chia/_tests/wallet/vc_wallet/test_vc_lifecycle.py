@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-from typing import Optional
 
 import pytest
 from chia_rs import CoinSpend, G2Element
@@ -105,7 +104,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         ].coin
 
         # With the honest coin, attempt to spend the non-eve case too soon
-        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Err | None] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -213,7 +212,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         bad_data: bytes32 = bytes32.zeros
 
         # Try to update metadata and tp without any announcement
-        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Err | None] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -327,7 +326,7 @@ async def test_revocation_layer(cost_logger: CostLogger) -> None:
         )[0].coin
 
         # Reveal the wrong puzzle
-        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Err | None] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -415,7 +414,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
 
         block_height: uint32 = sim.block_height
         for i, proof_list in enumerate(itertools.permutations(flags, num_proofs)):
-            result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            result: tuple[MempoolInclusionStatus, Err | None] = await client.push_tx(
                 cost_logger.add_cost(
                     f"Proofs Checker only - num_proofs: {num_proofs} - permutation: {i}",
                     WalletSpendBundle(
@@ -506,7 +505,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             ACS_PH,
             [bytes32.zeros],
         )
-        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Err | None] = await client.push_tx(
             cost_logger.add_cost(
                 "Launch VC",
                 WalletSpendBundle(

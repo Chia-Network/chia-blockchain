@@ -4,7 +4,7 @@ import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 
@@ -36,7 +36,7 @@ def create_wallet_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
     consensus_constants: ConsensusConstants,
-    keychain: Optional[Keychain] = None,
+    keychain: Keychain | None = None,
     connect_to_daemon: bool = True,
 ) -> WalletService:
     service_config = config[SERVICE_NAME]
@@ -55,7 +55,7 @@ def create_wallet_service(
     )
     peer_api = WalletNodeAPI(node)
 
-    rpc_info: Optional[RpcInfo[WalletRpcApi]] = None
+    rpc_info: RpcInfo[WalletRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 

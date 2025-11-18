@@ -10,7 +10,7 @@ from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 import yaml
@@ -41,7 +41,7 @@ def write_config(
     atomic_write: bool,
     do_sleep: bool,
     iterations: int,
-    error_queue: Optional[Queue] = None,
+    error_queue: Queue | None = None,
 ):
     """
     Wait for a random amount of time and write out the config data. With a large
@@ -74,7 +74,7 @@ def write_config(
 
 
 def read_and_compare_config(
-    root_path: Path, default_config: dict, do_sleep: bool, iterations: int, error_queue: Optional[Queue] = None
+    root_path: Path, default_config: dict, do_sleep: bool, iterations: int, error_queue: Queue | None = None
 ):
     """
     Wait for a random amount of time, read the config and compare with the

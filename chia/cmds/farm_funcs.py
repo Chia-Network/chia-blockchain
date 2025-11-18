@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import BlockRecord
 
@@ -19,21 +19,21 @@ from chia.wallet.wallet_rpc_client import WalletRpcClient
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
-async def get_harvesters_summary(farmer_rpc_port: Optional[int], root_path: Path) -> Optional[dict[str, Any]]:
+async def get_harvesters_summary(farmer_rpc_port: int | None, root_path: Path) -> dict[str, Any] | None:
     async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_harvesters_summary()
 
 
-async def get_blockchain_state(rpc_port: Optional[int], root_path: Path) -> Optional[dict[str, Any]]:
+async def get_blockchain_state(rpc_port: int | None, root_path: Path) -> dict[str, Any] | None:
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         return await client.get_blockchain_state()
 
 
-async def get_average_block_time(rpc_port: Optional[int], root_path: Path) -> float:
+async def get_average_block_time(rpc_port: int | None, root_path: Path) -> float:
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         blocks_to_compare = 500
         blockchain_state = await client.get_blockchain_state()
-        curr: Optional[BlockRecord] = blockchain_state["peak"]
+        curr: BlockRecord | None = blockchain_state["peak"]
         if curr is None or curr.height < (blocks_to_compare + 100):
             return SECONDS_PER_BLOCK
         while curr is not None and curr.height > 0 and not curr.is_transaction_block:
@@ -51,20 +51,20 @@ async def get_average_block_time(rpc_port: Optional[int], root_path: Path) -> fl
 
 
 async def get_wallets_stats(
-    wallet_rpc_port: Optional[int],
+    wallet_rpc_port: int | None,
     root_path: Path,
     include_pool_rewards: bool,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, _):
         return await wallet_client.get_farmed_amount(include_pool_rewards)
 
 
-async def get_challenges(root_path: Path, farmer_rpc_port: Optional[int]) -> Optional[list[dict[str, Any]]]:
+async def get_challenges(root_path: Path, farmer_rpc_port: int | None) -> list[dict[str, Any]] | None:
     async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_signage_points()
 
 
-async def challenges(root_path: Path, farmer_rpc_port: Optional[int], limit: int) -> None:
+async def challenges(root_path: Path, farmer_rpc_port: int | None, limit: int) -> None:
     signage_points = await get_challenges(root_path, farmer_rpc_port)
     if signage_points is None:
         return None
@@ -81,10 +81,10 @@ async def challenges(root_path: Path, farmer_rpc_port: Optional[int], limit: int
 
 
 async def summary(
-    rpc_port: Optional[int],
-    wallet_rpc_port: Optional[int],
-    harvester_rpc_port: Optional[int],
-    farmer_rpc_port: Optional[int],
+    rpc_port: int | None,
+    wallet_rpc_port: int | None,
+    harvester_rpc_port: int | None,
+    farmer_rpc_port: int | None,
     include_pool_rewards: bool,
     root_path: Path,
 ) -> None:
@@ -220,7 +220,7 @@ async def summary(
         print("Note: log into your key using 'chia wallet show' to see rewards for each key")
 
 
-async def solver_connect(root_path: Path, farmer_rpc_port: Optional[int], solver_address: str) -> None:
+async def solver_connect(root_path: Path, farmer_rpc_port: int | None, solver_address: str) -> None:
     from chia.util.network import parse_host_port
 
     try:

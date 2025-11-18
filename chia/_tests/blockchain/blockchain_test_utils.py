@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import FullBlock, SpendBundleConditions
 from chia_rs.sized_ints import uint32, uint64
 
@@ -46,10 +44,10 @@ async def _validate_and_add_block(
     blockchain: Blockchain,
     block: FullBlock,
     *,
-    expected_result: Optional[AddBlockResult] = None,
-    expected_error: Optional[Err] = None,
+    expected_result: AddBlockResult | None = None,
+    expected_error: Err | None = None,
     skip_prevalidation: bool = False,
-    fork_info: Optional[ForkInfo] = None,
+    fork_info: ForkInfo | None = None,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -137,7 +135,7 @@ async def _validate_and_add_block_multi_error(
     block: FullBlock,
     expected_errors: list[Err],
     skip_prevalidation: bool = False,
-    fork_info: Optional[ForkInfo] = None,
+    fork_info: ForkInfo | None = None,
 ) -> None:
     # Checks that the blockchain returns one of the expected errors
     try:
@@ -155,7 +153,7 @@ async def _validate_and_add_block_multi_result(
     block: FullBlock,
     expected_result: list[AddBlockResult],
     skip_prevalidation: bool = False,
-    fork_info: Optional[ForkInfo] = None,
+    fork_info: ForkInfo | None = None,
 ) -> None:
     try:
         await _validate_and_add_block(
@@ -176,7 +174,7 @@ async def _validate_and_add_block_no_error(
     blockchain: Blockchain,
     block: FullBlock,
     skip_prevalidation: bool = False,
-    fork_info: Optional[ForkInfo] = None,
+    fork_info: ForkInfo | None = None,
 ) -> None:
     # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
     # the blockchain

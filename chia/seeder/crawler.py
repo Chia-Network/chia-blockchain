@@ -7,10 +7,10 @@ import logging
 import time
 import traceback
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import aiosqlite
 from chia_rs import ConsensusConstants
@@ -45,10 +45,10 @@ class Crawler:
     root_path: Path
     constants: ConsensusConstants
     print_status: bool = True
-    state_changed_callback: Optional[StateChangedProtocol] = None
-    _server: Optional[ChiaServer] = None
-    crawl_task: Optional[asyncio.Task[None]] = None
-    crawl_store: Optional[CrawlStore] = None
+    state_changed_callback: StateChangedProtocol | None = None
+    _server: ChiaServer | None = None
+    crawl_task: asyncio.Task[None] | None = None
+    crawl_store: CrawlStore | None = None
     log: logging.Logger = log
     _shut_down: bool = False
     peer_count: int = 0
@@ -118,7 +118,7 @@ class Crawler:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def create_client(
@@ -322,7 +322,7 @@ class Crawler:
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
 
-    def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
+    def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 

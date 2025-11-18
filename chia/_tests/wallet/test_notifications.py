@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -109,8 +109,8 @@ async def test_notifications(
 
     notification_manager_2.potentially_add_new_notification = track_coin_state
 
-    allow_larger_height: Optional[int] = None
-    allow_height: Optional[int] = None
+    allow_larger_height: int | None = None
+    allow_height: int | None = None
 
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
         msg: bytes = bytes(case, "utf8")

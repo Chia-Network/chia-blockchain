@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import aiofiles
 from chia_rs import SubEpochSummary
@@ -57,9 +56,7 @@ class BlockHeightMap(BlockHeightMapProtocol):
     __ses_filename: Path
 
     @classmethod
-    async def create(
-        cls, blockchain_dir: Path, db: DBWrapper2, selected_network: Optional[str] = None
-    ) -> BlockHeightMap:
+    async def create(cls, blockchain_dir: Path, db: DBWrapper2, selected_network: str | None = None) -> BlockHeightMap:
         if db.db_version != 2:
             raise RuntimeError(f"BlockHeightMap does not support database schema v{db.db_version}")
         self = BlockHeightMap()
@@ -138,7 +135,7 @@ class BlockHeightMap(BlockHeightMapProtocol):
 
         return self
 
-    def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]) -> None:
+    def update_height(self, height: uint32, header_hash: bytes32, ses: SubEpochSummary | None) -> None:
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
         assert height * 32 <= len(self.__height_to_hash)
@@ -196,7 +193,7 @@ class BlockHeightMap(BlockHeightMapProtocol):
             async with self.db.reader_no_transaction() as conn:
                 async with conn.execute(query, (window_end, height)) as cursor:
                     # maps block-hash -> (height, prev-hash, sub-epoch-summary)
-                    ordered: dict[bytes32, tuple[uint32, bytes32, Optional[bytes]]] = {}
+                    ordered: dict[bytes32, tuple[uint32, bytes32, bytes | None]] = {}
 
                     for r in await cursor.fetchall():
                         ordered[r[0]] = (r[2], r[1], r[3])

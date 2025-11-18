@@ -6,20 +6,19 @@ import subprocess
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Optional, Union
 
 from chia.util.db_wrapper import DBWrapper2
 
 
 @contextlib.asynccontextmanager
-async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> AsyncIterator[DBWrapper2]:
+async def setup_db(name: str | os.PathLike[str], db_version: int) -> AsyncIterator[DBWrapper2]:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
     except FileNotFoundError:
         pass
 
-    log_path: Optional[Path]
+    log_path: Path | None
     if "--sql-logging" in sys.argv:
         log_path = Path("sql.log")
     else:

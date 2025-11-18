@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Awaitable
-from typing import Any, Callable, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal
 
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
-from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
@@ -235,7 +234,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-    new_vc_record: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert new_vc_record is not None
 
     # Spend VC
@@ -291,7 +290,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-    vc_record_updated: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    vc_record_updated: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert vc_record_updated is not None
     assert vc_record_updated.vc.proof_hash == proof_root
 
@@ -748,7 +747,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             )
         ]
     )
-    new_vc_record: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert new_vc_record is not None
 
     # Test a negative case real quick (mostly unrelated)
@@ -804,7 +803,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             )
         ]
     )
-    vc_record_revoked: Optional[VCRecord] = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    vc_record_revoked: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
     assert vc_record_revoked is None
     assert (
         len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
@@ -857,7 +856,7 @@ async def test_cat_wallet_conversion(
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
-    async def check_length(length: int, func: Callable[..., Awaitable[Any]], *args: Any) -> Optional[Literal[True]]:
+    async def check_length(length: int, func: Callable[..., Awaitable[Any]], *args: Any) -> Literal[True] | None:
         if len(await func(*args)) == length:
             return True
         return None  # pragma: no cover

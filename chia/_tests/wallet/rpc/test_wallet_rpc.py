@@ -6,7 +6,7 @@ import json
 import logging
 import re
 from operator import attrgetter
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import patch
 
 import aiosqlite
@@ -176,7 +176,7 @@ async def farm_transaction(
 
 
 async def create_tx_outputs(
-    wallet: Wallet, tx_config: TXConfig, output_args: list[tuple[int, Optional[list[str]]]]
+    wallet: Wallet, tx_config: TXConfig, output_args: list[tuple[int, list[str] | None]]
 ) -> list[dict[str, Any]]:
     outputs = []
     async with wallet.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
@@ -539,7 +539,7 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 @pytest.mark.anyio
 async def test_create_signed_transaction(
     wallet_environments: WalletTestFramework,
-    output_args: list[tuple[int, Optional[list[str]]]],
+    output_args: list[tuple[int, list[str] | None]],
     fee: int,
     select_coin: bool,
     is_cat: bool,
@@ -698,9 +698,9 @@ async def test_create_signed_transaction(
 
     # Assert you can get the spend for each addition
     for addition in additions:
-        cr: Optional[CoinRecord] = await full_node_rpc.get_coin_record_by_name(addition.name())
+        cr: CoinRecord | None = await full_node_rpc.get_coin_record_by_name(addition.name())
         assert cr is not None
-        spend: Optional[CoinSpend] = await full_node_rpc.get_puzzle_and_solution(
+        spend: CoinSpend | None = await full_node_rpc.get_puzzle_and_solution(
             addition.parent_coin_info, cr.confirmed_block_index
         )
         assert spend is not None
@@ -2630,7 +2630,7 @@ async def test_get_coin_records_rpc(wallet_environments: WalletTestFramework) ->
     async def run_test_case(
         test_case: str,
         test_request: GetCoinRecords,
-        test_total_count: Optional[int],
+        test_total_count: int | None,
         test_records: list[WalletCoinRecord],
     ) -> None:
         response = await client.get_coin_records(test_request)
