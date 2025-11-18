@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import CoinSpend, CoinState, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -29,7 +29,7 @@ class NotificationManager:
     async def create(
         wallet_state_manager: Any,
         db_wrapper: DBWrapper2,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> NotificationManager:
         self = NotificationManager()
         if name:
@@ -96,7 +96,7 @@ class NotificationManager:
         notification_spend = make_spend(
             notification_coin,
             notification_puzzle,
-            Program.to(None),
+            Program.NIL,
         )
         extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
         await self.wallet_state_manager.main_wallet.generate_signed_transaction(

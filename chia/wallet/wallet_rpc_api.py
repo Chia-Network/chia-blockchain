@@ -3,8 +3,9 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -68,9 +69,8 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.nft_puzzle_utils import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
@@ -81,7 +81,7 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
@@ -197,6 +197,8 @@ from chia.wallet.wallet_request_types import (
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
+    GetOfferSummary,
+    GetOfferSummaryResponse,
     GetPrivateKey,
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
@@ -281,6 +283,8 @@ from chia.wallet.wallet_request_types import (
     StrayCAT,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    TakeOffer,
+    TakeOfferResponse,
     TransactionRecordWithMetadata,
     VCAddProofs,
     VCGet,
@@ -320,6 +324,9 @@ def tx_endpoint(
         async def rpc_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
+            if await self.service.wallet_state_manager.synced() is False:
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
+
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
@@ -333,7 +340,7 @@ def tx_endpoint(
                     excluded_coin_amounts=request.get("exclude_coin_amounts"),
                 )
             if tx_config_loader.excluded_coin_ids is None:
-                excluded_coins: Optional[list[dict[str, Any]]] = request.get(
+                excluded_coins: list[dict[str, Any]] | None = request.get(
                     "exclude_coins", request.get("excluded_coins")
                 )
                 if excluded_coins is not None:
@@ -668,10 +675,10 @@ class WalletRpcApi:
             "/execute_signing_instructions": self.execute_signing_instructions,
         }
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.service.server, request_node_type=request_node_type)
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None) -> list[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
@@ -774,7 +781,7 @@ class WalletRpcApi:
         else:
             return GetPublicKeysResponse(keyring_is_locked=False, public_key_fingerprints=fingerprints)
 
-    async def _get_private_key(self, fingerprint: int) -> tuple[Optional[PrivateKey], Optional[bytes]]:
+    async def _get_private_key(self, fingerprint: int) -> tuple[PrivateKey | None, bytes | None]:
         try:
             all_keys = await self.service.keychain_proxy.get_all_private_keys()
             for sk, seed in all_keys:
@@ -1070,7 +1077,7 @@ class WalletRpcApi:
 
     @marshal
     async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
-        wallet_type: Optional[WalletType] = None
+        wallet_type: WalletType | None = None
         if request.type is not None:
             wallet_type = WalletType(request.type)
 
@@ -1111,9 +1118,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_state_manager = self.service.wallet_state_manager
-
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         main_wallet = wallet_state_manager.main_wallet
         fee = uint64(request.get("fee", 0))
 
@@ -1168,7 +1172,7 @@ class WalletRpcApi:
                         metadata = request["metadata"]
 
                 async with self.service.wallet_state_manager.lock:
-                    did_wallet_name: Optional[str] = request.get("wallet_name", None)
+                    did_wallet_name: str | None = request.get("wallet_name", None)
                     if did_wallet_name is not None:
                         did_wallet_name = did_wallet_name.strip()
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -1231,7 +1235,7 @@ class WalletRpcApi:
                 pass
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
-                did_id: Optional[bytes32] = None
+                did_id: bytes32 | None = None
                 if "did_id" in request and request["did_id"] is not None:
                     did_id = decode_puzzle_hash(request["did_id"])
                 if wallet.type() == WalletType.NFT:
@@ -1357,9 +1361,7 @@ class WalletRpcApi:
 
     @marshal
     async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
-        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(
-            request.transaction_id
-        )
+        tr: TransactionRecord | None = await self.service.wallet_state_manager.get_transaction(request.transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{request.transaction_id.hex()} not found")
 
@@ -1371,7 +1373,7 @@ class WalletRpcApi:
     @marshal
     async def get_transaction_memo(self, request: GetTransactionMemo) -> GetTransactionMemoResponse:
         transaction_id: bytes32 = request.transaction_id
-        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        tr: TransactionRecord | None = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
         if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
@@ -1547,7 +1549,7 @@ class WalletRpcApi:
 
     @marshal
     async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
-        to_puzzle_hash: Optional[bytes32] = None
+        to_puzzle_hash: bytes32 | None = None
         if request.to_address is not None:
             to_puzzle_hash = decode_puzzle_hash(request.to_address)
 
@@ -1569,7 +1571,7 @@ class WalletRpcApi:
             if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
                 continue
             coin: Coin = tr.additions[0]
-            record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+            record: WalletCoinRecord | None = await self.service.wallet_state_manager.coin_store.get_coin_record(
                 coin.name()
             )
             if record is None:
@@ -1629,9 +1631,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before sending transactions")
-
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Wallet)
 
         # TODO: Add support for multiple puzhash/amount/memo sets
@@ -1801,16 +1800,9 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
         state_mgr = self.service.wallet_state_manager
-        wallet = state_mgr.wallets[request.wallet_id]
         async with state_mgr.lock:
             all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(request.wallet_id)
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
-                assert isinstance(wallet, CATWallet)
-                spendable_coins: list[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
-            else:
-                spendable_coins = list(
-                    await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records)
-                )
+            spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records))
 
             # Now we get the unconfirmed transactions and manually derive the additions and removals.
             unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
@@ -1891,7 +1883,7 @@ class WalletRpcApi:
     async def get_current_derivation_index(self, request: Empty) -> GetCurrentDerivationIndexResponse:
         assert self.service.wallet_state_manager is not None
 
-        index: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
+        index: uint32 | None = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
         return GetCurrentDerivationIndexResponse(index)
 
@@ -1904,7 +1896,7 @@ class WalletRpcApi:
         if synced is False:
             raise ValueError("Wallet needs to be fully synced before extending derivation index")
 
-        current: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
+        current: uint32 | None = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
         # Additional sanity check that the wallet is synced
         if current is None:
@@ -1934,29 +1926,17 @@ class WalletRpcApi:
 
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
-        if request.ids is None:
-            notifications: list[
-                Notification
-            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                pagination=(request.start, request.end)
+        return GetNotificationsResponse(
+            await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
+                coin_ids=request.ids, pagination=(request.start, request.end)
             )
-        else:
-            notifications = (
-                await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
-                    request.ids
-                )
-            )
-
-        return GetNotificationsResponse(notifications)
+        )
 
     @marshal
     async def delete_notifications(self, request: DeleteNotifications) -> Empty:
-        if request.ids is None:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
-        else:
-            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
-                request.ids
-            )
+        await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+            coin_ids=request.ids
+        )
 
         return Empty()
 
@@ -2021,7 +2001,7 @@ class WalletRpcApi:
             # endpoints, the "address" field should contain the p2_address of the NFT/DID
             # that was used to sign the message.
             puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
-            expected_puzzle_hash: Optional[bytes32] = None
+            expected_puzzle_hash: bytes32 | None = None
             if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
                 puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(request.pubkey))
                 expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
@@ -2066,7 +2046,7 @@ class WalletRpcApi:
         :return:
         """
         entity_id: bytes32 = decode_puzzle_hash(request.id)
-        selected_wallet: Optional[WalletProtocol[Any]] = None
+        selected_wallet: WalletProtocol[Any] | None = None
         mode: SigningMode = SigningMode.CHIP_0002
         if request.is_hex and request.safe_mode:
             mode = SigningMode.CHIP_0002_HEX_INPUT
@@ -2088,11 +2068,11 @@ class WalletRpcApi:
             pubkey, signature = await selected_wallet.sign_message(request.message, mode)
             latest_coin_id = (await selected_wallet.get_coin()).name()
         elif is_valid_address(request.id, {AddressType.NFT}, self.service.config):
-            target_nft: Optional[NFTCoinInfo] = None
+            target_nft: NFTCoinInfo | None = None
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.NFT.value:
                     assert isinstance(wallet, NFTWallet)
-                    nft: Optional[NFTCoinInfo] = await wallet.get_nft(entity_id)
+                    nft: NFTCoinInfo | None = await wallet.get_nft(entity_id)
                     if nft is not None:
                         selected_wallet = wallet
                         target_nft = nft
@@ -2152,8 +2132,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
     ) -> CATSpendResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
 
         amounts: list[uint64] = []
@@ -2173,7 +2151,7 @@ class WalletRpcApi:
             puzzle_hashes.append(decode_puzzle_hash(request.inner_address))  # type: ignore[arg-type]
             if request.memos is not None:
                 memos.append([mem.encode("utf-8") for mem in request.memos])
-        coins: Optional[set[Coin]] = None
+        coins: set[Coin] | None = None
         if request.coins is not None and len(request.coins) > 0:
             coins = set(request.coins)
 
@@ -2259,65 +2237,61 @@ class WalletRpcApi:
             trade_record=result[1],
         )
 
-    async def get_offer_summary(self, request: dict[str, Any]) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos, valid_times = offer.summary()
-
-        if request.get("advanced", False):
-            response = {
-                "summary": {
-                    "offered": offered,
-                    "requested": requested,
-                    "fees": offer.fees(),
-                    "infos": infos,
-                    "additions": [c.name().hex() for c in offer.additions()],
-                    "removals": [c.name().hex() for c in offer.removals()],
-                    "valid_times": {
-                        k: v
-                        for k, v in valid_times.to_json_dict().items()
-                        if k
-                        not in {
-                            "max_secs_after_created",
-                            "min_secs_since_created",
-                            "max_blocks_after_created",
-                            "min_blocks_since_created",
-                        }
-                    },
-                },
-                "id": offer.name(),
-            }
+    @marshal
+    async def get_offer_summary(self, request: GetOfferSummary) -> GetOfferSummaryResponse:
+        dl_summary = None
+        if not request.advanced:
+            dl_summary = await self.service.wallet_state_manager.trade_manager.get_dl_offer_summary(
+                request.parsed_offer
+            )
+        if dl_summary is not None:
+            response = GetOfferSummaryResponse(
+                data_layer_summary=dl_summary,
+                id=request.parsed_offer.name(),
+            )
         else:
-            response = {
-                "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
-                "id": offer.name(),
-            }
+            offered, requested, infos, valid_times = request.parsed_offer.summary()
+            response = GetOfferSummaryResponse(
+                summary=OfferSummary(
+                    offered=offered,
+                    requested=requested,
+                    fees=uint64(request.parsed_offer.fees()),
+                    infos=infos,
+                    additions=[c.name() for c in request.parsed_offer.additions()],
+                    removals=[c.name() for c in request.parsed_offer.removals()],
+                    valid_times=valid_times.only_absolutes(),
+                ),
+                id=request.parsed_offer.name(),
+            )
 
         # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
         # A more general solution surely exists, but I'm not sure what it is right now
-        return {
-            **response,
-            "summary": {
-                **response["summary"],  # type: ignore[dict-item]
-                "infos": {
+        return dataclasses.replace(
+            response,
+            summary=dataclasses.replace(
+                response.summary,
+                infos={
                     key: (
-                        {
-                            **info,
-                            "also": {
-                                **info["also"],
-                                "flags": ProofsChecker.from_program(
-                                    uncurry_puzzle(Program(assemble(info["also"]["proofs_checker"])))
-                                ).flags,
-                            },
-                        }
-                        if "also" in info and "proofs_checker" in info["also"]
+                        PuzzleInfo(
+                            {
+                                **info.info,
+                                "also": {
+                                    **info.info["also"],
+                                    "flags": ProofsChecker.from_program(
+                                        uncurry_puzzle(Program(assemble(info.info["also"]["proofs_checker"])))
+                                    ).flags,
+                                },
+                            }
+                        )
+                        if "also" in info.info and "proofs_checker" in info.info["also"]
                         else info
                     )
-                    for key, info in response["summary"]["infos"].items()  # type: ignore[index]
+                    for key, info in response.summary.infos.items()
                 },
-            },
-        }
+            )
+            if response.summary is not None
+            else None,
+        )
 
     @marshal
     async def check_offer_validity(self, request: CheckOfferValidity) -> CheckOfferValidityResponse:
@@ -2329,56 +2303,46 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def take_offer(
         self,
-        request: dict[str, Any],
+        request: TakeOffer,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        offer_hex: str = request["offer"]
-
-        offer = Offer.from_bech32(offer_hex)
-        fee: uint64 = uint64(request.get("fee", 0))
-        maybe_marshalled_solver: Optional[dict[str, Any]] = request.get("solver")
-        solver: Optional[Solver]
-        if maybe_marshalled_solver is None:
-            solver = None
-        else:
-            solver = Solver(info=maybe_marshalled_solver)
-
+    ) -> TakeOfferResponse:
         peer = self.service.get_full_node_peer()
         trade_record = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-            offer,
+            request.parsed_offer,
             peer,
             action_scope,
-            fee=fee,
-            solver=solver,
+            fee=request.fee,
+            solver=request.solver,
             extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
             interface.side_effects.signing_responses.append(
-                SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)
+                SigningResponse(bytes(request.parsed_offer._bundle.aggregated_signature), trade_record.trade_id)
             )
 
-        return {
-            "trade_record": trade_record.to_json_dict_convenience(),
-            "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "signing_responses": None,  # tx_endpoint wrapper will take care of this
-        }
+        return TakeOfferResponse(
+            [],  # tx_endpoint will fill in this default value
+            [],  # tx_endpoint will fill in this default value
+            Offer.from_bytes(trade_record.offer),
+            trade_record,
+        )
 
     async def get_offer(self, request: dict[str, Any]) -> EndpointResult:
         trade_mgr = self.service.wallet_state_manager.trade_manager
 
         trade_id = bytes32.from_hexstr(request["trade_id"])
         file_contents: bool = request.get("file_contents", False)
-        trade_record: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(bytes32(trade_id))
+        trade_record: TradeRecord | None = await trade_mgr.get_trade_by_id(bytes32(trade_id))
         if trade_record is None:
             raise ValueError(f"No trade with trade id: {trade_id.hex()}")
 
         offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
-        offer_value: Optional[str] = Offer.from_bytes(offer_to_return).to_bech32() if file_contents else None
+        offer_value: str | None = Offer.from_bytes(offer_to_return).to_bech32() if file_contents else None
         return {"trade_record": trade_record.to_json_dict_convenience(), "offer": offer_value}
 
     async def get_all_offers(self, request: dict[str, Any]) -> EndpointResult:
@@ -2389,7 +2353,7 @@ class WalletRpcApi:
         exclude_my_offers: bool = request.get("exclude_my_offers", False)
         exclude_taken_offers: bool = request.get("exclude_taken_offers", False)
         include_completed: bool = request.get("include_completed", False)
-        sort_key: Optional[str] = request.get("sort_key", None)
+        sort_key: str | None = request.get("sort_key", None)
         reverse: bool = request.get("reverse", False)
         file_contents: bool = request.get("file_contents", False)
 
@@ -2403,7 +2367,7 @@ class WalletRpcApi:
             include_completed=include_completed,
         )
         result = []
-        offer_values: Optional[list[str]] = [] if file_contents else None
+        offer_values: list[str] | None = [] if file_contents else None
         for trade in all_trades:
             result.append(trade.to_json_dict_convenience())
             if file_contents and offer_values is not None:
@@ -2602,11 +2566,11 @@ class WalletRpcApi:
         if curried_args is None:
             raise ValueError("The coin is not a DID.")
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-        num_verification_int: Optional[uint16] = uint16(num_verification.as_int())
+        num_verification_int: uint16 | None = uint16(num_verification.as_int())
         assert num_verification_int is not None
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.to(None) else None,
+            bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
             num_verification_int,
             singleton_struct,
             metadata,
@@ -2615,7 +2579,7 @@ class WalletRpcApi:
         )
         hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
-        hint: Optional[bytes32] = None
+        hint: bytes32 | None = None
         for hinted_coin in hinted_coins.values():
             if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
                 hint = hinted_coin.hint
@@ -2648,7 +2612,7 @@ class WalletRpcApi:
                 our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, metadata
             )
             # Check if we have the DID wallet
-            did_wallet: Optional[DIDWallet] = None
+            did_wallet: DIDWallet | None = None
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if isinstance(wallet, DIDWallet):
                     assert wallet.did_info.origin_coin is not None
@@ -2862,8 +2826,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> DIDTransferDIDResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         puzzle_hash: bytes32 = decode_puzzle_hash(request.inner_address)
         async with self.service.wallet_state_manager.lock:
@@ -2916,7 +2878,7 @@ class WalletRpcApi:
         metadata = Program.to(metadata_list)
         if request.did_id is not None:
             if request.did_id == "":
-                did_id: Optional[bytes] = b""
+                did_id: bytes | None = b""
             else:
                 did_id = decode_puzzle_hash(request.did_id)
         else:
@@ -3143,7 +3105,7 @@ class WalletRpcApi:
 
     @marshal
     async def nft_get_by_did(self, request: NFTGetByDID) -> NFTGetByDIDResponse:
-        did_id: Optional[bytes32] = None
+        did_id: bytes32 | None = None
         if request.did_id is not None:
             did_id = decode_puzzle_hash(request.did_id)
         for wallet in self.service.wallet_state_manager.wallets.values():
@@ -3154,7 +3116,7 @@ class WalletRpcApi:
     @marshal
     async def nft_get_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
-        did_bytes: Optional[bytes32] = nft_wallet.get_did()
+        did_bytes: bytes32 | None = nft_wallet.get_did()
         did_id = ""
         if did_bytes is not None:
             did_id = encode_puzzle_hash(did_bytes, AddressType.DID.hrp(self.service.config))
@@ -3174,7 +3136,7 @@ class WalletRpcApi:
         did_nft_wallets: list[NFTWalletWithDID] = []
         for wallet in all_wallets:
             if isinstance(wallet, NFTWallet):
-                nft_wallet_did: Optional[bytes32] = wallet.get_did()
+                nft_wallet_did: bytes32 | None = wallet.get_did()
                 if nft_wallet_did is not None:
                     did_wallet_id: uint32 = did_wallets_by_did_id.get(nft_wallet_did, uint32(0))
                     if did_wallet_id == 0:
@@ -3243,7 +3205,7 @@ class WalletRpcApi:
         # Check if the metadata is updated
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
-        uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
+        uncurried_nft: UncurriedNFT | None = UncurriedNFT.uncurry(*full_puzzle.uncurry())
         if uncurried_nft is None:
             raise ValueError("The coin is not a NFT.")
         metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
@@ -3333,8 +3295,6 @@ class WalletRpcApi:
     ) -> NFTMintBulkResponse:
         if action_scope.config.push:
             raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_address in {None, ""}:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
@@ -3364,7 +3324,7 @@ class WalletRpcApi:
             metadata_list.append(metadata_dict)
         target_list = [decode_puzzle_hash(target) for target in request.target_list]
         if request.xch_change_target is not None:
-            if request.xch_change_target.startswith("xch"):
+            if request.xch_change_target.startswith(AddressType.XCH.hrp(self.service.config)):
                 xch_change_ph = decode_puzzle_hash(request.xch_change_target)
             else:
                 xch_change_ph = bytes32.from_hexstr(request.xch_change_target)
@@ -3612,9 +3572,6 @@ class WalletRpcApi:
     ) -> PWJoinPoolResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         if (
             pool_wallet_info.current.state == FARMING_TO_POOL.value
@@ -3654,9 +3611,6 @@ class WalletRpcApi:
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
         total_fee = await wallet.self_pool(request.fee, action_scope)
         # tx_endpoint will take care of filling in these default values
         return PWSelfPoolResponse(
@@ -3676,8 +3630,6 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> PWAbsorbRewardsResponse:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced before collecting rewards")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
 
         assert isinstance(wallet, PoolWallet)
@@ -3984,7 +3936,7 @@ class WalletRpcApi:
         'transactions'
         """
         did_id = decode_puzzle_hash(request.did_id)
-        puzhash: Optional[bytes32] = None
+        puzhash: bytes32 | None = None
         if request.target_address is not None:
             puzhash = decode_puzzle_hash(request.target_address)
 
@@ -4086,7 +4038,7 @@ class WalletRpcApi:
 
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
-        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(request.root)
+        vc_proofs: VCProofs | None = await vc_wallet.store.get_proofs_for_root(request.root)
         if vc_proofs is None:
             raise ValueError("no proofs found for specified root")  # pragma: no cover
         return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)

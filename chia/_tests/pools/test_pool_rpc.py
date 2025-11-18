@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
-from typing import Any, Union
+from typing import Any
 
 import pytest
 
@@ -211,7 +211,7 @@ async def process_plotnft_create(
 ) -> int:
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
-    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
+    pre_block_balance_updates: dict[int | str, dict[str, int]] = {
         1: {
             "confirmed_wallet_balance": 0,
             "unconfirmed_wallet_balance": -1,
@@ -222,7 +222,7 @@ async def process_plotnft_create(
         }
     }
 
-    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
+    post_block_balance_updates: dict[int | str, dict[str, int]] = {
         1: {
             "confirmed_wallet_balance": -1,
             "unconfirmed_wallet_balance": 0,
@@ -839,6 +839,7 @@ class TestPoolWalletRpc:
             our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
         await full_node_api.wait_transaction_records_entered_mempool(records=[creation_tx])
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", uint32(0), f"{self_hostname}:5001", "new", "SELF_POOLING", fee
         )

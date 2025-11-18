@@ -5,7 +5,7 @@ import sys
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import click
 import colorama
@@ -24,9 +24,7 @@ SAVE_MASTER_PASSPHRASE_WARNING = (
 )
 
 
-def verify_passphrase_meets_requirements(
-    new_passphrase: str, confirmation_passphrase: str
-) -> tuple[bool, Optional[str]]:
+def verify_passphrase_meets_requirements(new_passphrase: str, confirmation_passphrase: str) -> tuple[bool, str | None]:
     match = new_passphrase == confirmation_passphrase
     min_length = Keychain.minimum_passphrase_length()
     meets_len_requirement = len(new_passphrase) >= min_length
@@ -46,8 +44,8 @@ def prompt_to_save_passphrase() -> bool:
 
     try:
         if supports_os_passphrase_storage():
-            location: Optional[str] = None
-            warning: Optional[str] = None
+            location: str | None = None
+            warning: str | None = None
 
             if sys.platform == "darwin":
                 location = "macOS Keychain"
@@ -113,7 +111,7 @@ def initialize_passphrase() -> None:
     # We'll rely on Keyring initialization to leverage the cached passphrase for
     # bootstrapping the keyring encryption process
     print("Setting keyring passphrase")
-    passphrase: Optional[str] = None
+    passphrase: str | None = None
     # save_passphrase indicates whether the passphrase should be saved in the
     # macOS Keychain or Windows Credential Manager
     save_passphrase: bool = False
@@ -127,7 +125,7 @@ def initialize_passphrase() -> None:
     Keychain.set_master_passphrase(current_passphrase=None, new_passphrase=passphrase, save_passphrase=save_passphrase)
 
 
-def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Optional[str], hint: Optional[str]) -> bool:
+def set_or_update_passphrase(passphrase: str | None, current_passphrase: str | None, hint: str | None) -> bool:
     # Prompt for the current passphrase, if necessary
     if Keychain.has_master_passphrase():
         # Try the default passphrase first
@@ -142,7 +140,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
                 sys.exit(1)
 
     success: bool = False
-    new_passphrase: Optional[str] = passphrase
+    new_passphrase: str | None = passphrase
     save_passphrase: bool = False
 
     try:
@@ -167,7 +165,7 @@ def set_or_update_passphrase(passphrase: Optional[str], current_passphrase: Opti
     return success
 
 
-def remove_passphrase(current_passphrase: Optional[str]) -> bool:
+def remove_passphrase(current_passphrase: str | None) -> bool:
     """
     Removes the user's keyring passphrase. The keyring will be re-encrypted to the default passphrase.
     """
@@ -204,7 +202,7 @@ def cache_passphrase(passphrase: str) -> None:
     Keychain.set_cached_master_passphrase(passphrase)
 
 
-def get_current_passphrase() -> Optional[str]:
+def get_current_passphrase() -> str | None:
     if not Keychain.has_master_passphrase():
         return None
 
@@ -240,12 +238,12 @@ def display_passphrase_hint() -> None:
         print("Passphrase hint is not set")
 
 
-def update_passphrase_hint(hint: Optional[str] = None) -> bool:
+def update_passphrase_hint(hint: str | None = None) -> bool:
     updated: bool = False
     if Keychain.has_master_passphrase() is False or using_default_passphrase():
         print("Updating the passphrase hint requires that a passphrase has been set")
     else:
-        current_passphrase: Optional[str] = get_current_passphrase()
+        current_passphrase: str | None = get_current_passphrase()
         if current_passphrase is None:
             print("Keyring is not passphrase-protected")
         else:

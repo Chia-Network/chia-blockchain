@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
@@ -32,13 +31,13 @@ class NFTInfo(Streamable):
     nft_coin_confirmation_height: uint32
     """Current NFT coin confirmation height"""
 
-    owner_did: Optional[bytes32]
+    owner_did: bytes32 | None
     """Owner DID"""
 
-    royalty_percentage: Optional[uint16]
+    royalty_percentage: uint16 | None
     """Percentage of the transaction fee paid to the author, e.g. 1000 = 1%"""
 
-    royalty_puzzle_hash: Optional[bytes32]
+    royalty_puzzle_hash: bytes32 | None
     """Puzzle hash where royalty will be sent to"""
     data_uris: list[str]
     """ A list of content URIs"""
@@ -82,13 +81,13 @@ class NFTInfo(Streamable):
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 
-    minter_did: Optional[bytes32] = None
+    minter_did: bytes32 | None = None
     """DID of the NFT minter"""
 
     launcher_puzhash: bytes32 = SINGLETON_LAUNCHER_PUZZLE_HASH
     """Puzzle hash of the singleton launcher in hex"""
 
-    off_chain_metadata: Optional[str] = None
+    off_chain_metadata: str | None = None
     """Serialized off-chain metadata"""
 
 
@@ -101,13 +100,13 @@ class NFTCoinInfo(Streamable):
     """The latest coin of the NFT"""
     coin: Coin
     """NFT lineage proof"""
-    lineage_proof: Optional[LineageProof]
+    lineage_proof: LineageProof | None
     """NFT full puzzle"""
     full_puzzle: Program
     """NFT minting block height"""
     mint_height: uint32
     """The DID of the NFT minter"""
-    minter_did: Optional[bytes32] = None
+    minter_did: bytes32 | None = None
     """The block height of the latest coin"""
     latest_height: uint32 = uint32(0)
     """If the NFT is in the transaction"""
@@ -117,4 +116,4 @@ class NFTCoinInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
-    did_id: Optional[bytes32] = None
+    did_id: bytes32 | None = None

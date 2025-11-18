@@ -31,7 +31,7 @@ ACS = Program.fromhex(
 )
 ACS_PH = ACS.get_tree_hash()
 
-NIL_PH = Program.to(None).get_tree_hash()
+NIL_PH = Program.NIL.get_tree_hash()
 
 
 @pytest.mark.anyio

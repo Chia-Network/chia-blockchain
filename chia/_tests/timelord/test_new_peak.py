@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import BlockRecord, FullBlock, SubEpochSummary, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -579,7 +577,7 @@ def get_recent_reward_challenges(blockchain: Blockchain) -> list[tuple[bytes32, 
     if peak is None:
         return []
     recent_rc: list[tuple[bytes32, uint128]] = []
-    curr: Optional[BlockRecord] = peak
+    curr: BlockRecord | None = peak
     while curr is not None and len(recent_rc) < 2 * blockchain.constants.MAX_SUB_SLOT_BLOCKS:
         if curr != peak:
             recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
@@ -602,7 +600,7 @@ def timelord_peak_from_block(
 ) -> timelord_protocol.NewPeakTimelord:
     peak = blockchain.block_record(block.header_hash)
     _, difficulty = get_next_sub_slot_iters_and_difficulty(blockchain.constants, False, peak, blockchain)
-    ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+    ses: SubEpochSummary | None = next_sub_epoch_summary(
         blockchain.constants, blockchain, peak.required_iters, block, True
     )
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 import click
 import pytest
@@ -135,7 +134,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         [coin] = await wallet.select_coins(uint64(0), action_scope)
     puzzle: Program = await wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
-    delegated_puzzle: Program = Program.to(None)
+    delegated_puzzle: Program = Program.NIL
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
     solution: Program = Program.to([None, None, None])
 
@@ -145,9 +144,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         solution,
     )
 
-    derivation_record: Optional[
-        DerivationRecord
-    ] = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+    derivation_record: (
+        DerivationRecord | None
+    ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
     assert derivation_record is not None
     pubkey: G1Element = derivation_record.pubkey
     atom = puzzle.uncurry()[1].at("f").atom

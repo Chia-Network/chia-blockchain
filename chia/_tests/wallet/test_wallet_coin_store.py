@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field, replace
-from typing import Optional
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -632,7 +631,7 @@ get_coin_records_mixed_tests: list[tuple[GetCoinRecords, int, list[WalletCoinRec
 
 
 async def run_get_coin_records_test(
-    request: GetCoinRecords, total_count: Optional[int], coin_records: list[WalletCoinRecord]
+    request: GetCoinRecords, total_count: int | None, coin_records: list[WalletCoinRecord]
 ) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)

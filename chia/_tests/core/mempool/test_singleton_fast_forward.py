@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey, SpendBundle
@@ -59,7 +59,7 @@ def test_process_fast_forward_spends_nothing_to_do() -> None:
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-        mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
+        mempool_item=internal_mempool_item, prev_tx_height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
     )
     assert singleton_ff == SingletonFastForward()
     assert bundle_coin_spends == original_version.bundle_coin_spends
@@ -91,7 +91,7 @@ def test_process_fast_forward_spends_latest_unspent() -> None:
     original_version = dataclasses.replace(internal_mempool_item)
     singleton_ff = SingletonFastForward()
     bundle_coin_spends = singleton_ff.process_fast_forward_spends(
-        mempool_item=internal_mempool_item, height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
+        mempool_item=internal_mempool_item, prev_tx_height=TEST_HEIGHT, constants=DEFAULT_CONSTANTS
     )
     child_coin = item.bundle_coin_spends[test_coin.name()].additions[0]
     expected_fast_forward_spends = {
@@ -199,10 +199,10 @@ async def make_and_send_spend_bundle(
     is_eligible_for_ff: bool = True,
     *,
     is_launcher_coin: bool = False,
-    signing_puzzle: Optional[Program] = None,
-    signing_coin: Optional[Coin] = None,
+    signing_puzzle: Program | None = None,
+    signing_coin: Coin | None = None,
     aggsig: G2Element = G2Element(),
-) -> tuple[MempoolInclusionStatus, Optional[Err]]:
+) -> tuple[MempoolInclusionStatus, Err | None]:
     if is_launcher_coin or not is_eligible_for_ff:
         assert signing_puzzle is not None
         assert signing_coin is not None

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import collections
 import logging
-from collections.abc import Awaitable, Collection
+from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass, field
-from typing import Callable, Optional, Union
 
 from chia_rs import (
     BlockRecord,
@@ -47,7 +46,7 @@ class ForkAdd:
     coin: Coin
     confirmed_height: uint32
     timestamp: uint64
-    hint: Optional[bytes]
+    hint: bytes | None
     is_coinbase: bool
     # This means matching parent puzzle hash and amount
     same_as_parent: bool
@@ -109,7 +108,7 @@ class ForkInfo:
                 coin, block.height, timestamp, hint=None, is_coinbase=True, same_as_parent=False
             )
 
-    def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
+    def include_spends(self, conds: SpendBundleConditions | None, block: FullBlock, header_hash: bytes32) -> None:
         self.update_fork_peak(block, header_hash)
         if conds is not None:
             assert block.foliage_transaction_block is not None
@@ -127,7 +126,7 @@ class ForkInfo:
 
     def include_block(
         self,
-        additions: list[tuple[Coin, Optional[bytes]]],
+        additions: list[tuple[Coin, bytes | None]],
         removals: list[tuple[bytes32, Coin]],
         block: FullBlock,
         header_hash: bytes32,
@@ -161,7 +160,7 @@ def validate_block_merkle_roots(
     block_removals_root: bytes32,
     tx_additions: list[tuple[Coin, bytes32]],
     tx_removals: list[bytes32],
-) -> Optional[Err]:
+) -> Err | None:
     # Create addition Merkle set
     puzzlehash_coins_map: dict[bytes32, list[bytes32]] = {}
 
@@ -192,13 +191,13 @@ async def validate_block_body(
     constants: ConsensusConstants,
     records: BlockRecordsProtocol,
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
-    block: Union[FullBlock, UnfinishedBlock],
+    block: FullBlock | UnfinishedBlock,
     height: uint32,
-    conds: Optional[SpendBundleConditions],
+    conds: SpendBundleConditions | None,
     fork_info: ForkInfo,
     *,
     log_coins: bool = False,
-) -> Optional[Err]:
+) -> Err | None:
     """
     This assumes the header block has been completely validated.
     Validates the transactions and body of the block.
@@ -227,7 +226,7 @@ async def validate_block_body(
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA
 
-        prev_tb: Optional[BlockRecord] = records.block_record(block.prev_header_hash)
+        prev_tb: BlockRecord | None = records.block_record(block.prev_header_hash)
         assert prev_tb is not None
         while not prev_tb.is_transaction_block:
             prev_tb = records.block_record(prev_tb.prev_hash)
@@ -341,10 +340,14 @@ async def validate_block_body(
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
     # 8b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
     # 8c. The generator ref list must not point to a height >= this block's height
-    if block.transactions_generator_ref_list in (None, []):
+    if block.transactions_generator_ref_list == []:
         if block.transactions_info.generator_refs_root != bytes([1] * 32):
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
     else:
+        # With hard fork 2 we ban transactions_generator_ref_list.
+        if prev_transaction_block_height >= constants.HARD_FORK2_HEIGHT:
+            return Err.TOO_MANY_GENERATOR_REFS
+
         # If we have a generator reference list, we must have a generator
         if block.transactions_generator is None:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT

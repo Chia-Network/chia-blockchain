@@ -5,7 +5,7 @@ import sys
 import time
 import types
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
@@ -72,7 +72,7 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_private_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
 ) -> None:
     root_path = root_path_populated_with_config
     keychain = get_temp_keyring  # empty keyring
@@ -163,7 +163,7 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_public_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring  # empty keyring
@@ -357,7 +357,7 @@ def test_get_last_used_fingerprint_file_cant_read_win32(
         m.setattr(WindowsPath, "read_text", patched_pathlib_path_read_text)
 
         # Calling get_last_used_fingerprint() should not throw an exception
-        last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
+        last_used_fingerprint: int | None = node.get_last_used_fingerprint()
 
         # Verify that the file is unreadable
         assert called_read_text is True
@@ -432,7 +432,7 @@ async def test_get_timestamp_for_height_from_peer(
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
-    async def get_timestamp(height: int) -> Optional[uint64]:
+    async def get_timestamp(height: int) -> uint64 | None:
         return await wallet_node.get_timestamp_for_height_from_peer(uint32(height), full_node_peer)
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -500,7 +500,7 @@ async def test_get_balance(
     def wallet_synced() -> bool:
         return full_node_server.node_id in wallet_node.synced_peers
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    async def restart_with_fingerprint(fingerprint: int | None) -> None:
         wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
@@ -625,7 +625,7 @@ async def test_transaction_send_cache(
 
     async def send_transaction(
         self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
-    ) -> Optional[Message]:
+    ) -> Message | None:
         logged_spends.append(request.transaction.name())
         return None
 
@@ -688,7 +688,7 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     async def register_for_coin_updates(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
-    ) -> Optional[Message]:
+    ) -> Message | None:
         return make_msg(
             ProtocolMessageTypes.respond_to_coin_updates,
             wallet_protocol.RespondToCoinUpdates(
@@ -721,7 +721,7 @@ async def test_start_with_multiple_key_types(
 ) -> None:
     [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    async def restart_with_fingerprint(fingerprint: int | None) -> None:
         wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
@@ -752,7 +752,7 @@ async def test_start_with_multiple_keys(
 ) -> None:
     [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    async def restart_with_fingerprint(fingerprint: int | None) -> None:
         wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
 
 import click
 from chia_rs.sized_bytes import bytes32
@@ -102,7 +101,7 @@ def test_tx_config_args() -> None:
             max_coin_amount: CliAmount,
             coins_to_exclude: Sequence[bytes32],
             amounts_to_exclude: Sequence[CliAmount],
-            reuse: Optional[bool],
+            reuse: bool | None,
         ) -> None:
             print(
                 CMDTXConfigLoader(

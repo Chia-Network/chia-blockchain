@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import pytest
 from chia_rs import (
@@ -100,7 +100,7 @@ def wallet_a(bt: BlockTools) -> WalletTool:
 def generate_test_spend_bundle(
     wallet: WalletTool,
     coin: Coin,
-    condition_dic: Optional[dict[ConditionOpcode, list[ConditionWithArgs]]] = None,
+    condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] | None = None,
     fee: uint64 = uint64(0),
     amount: uint64 = uint64(1000),
     new_puzzle_hash: bytes32 = BURN_PUZZLE_HASH,
@@ -350,7 +350,7 @@ async def respond_transaction(
     peer: WSChiaConnection,
     tx_bytes: bytes = b"",
     test: bool = False,
-) -> tuple[MempoolInclusionStatus, Optional[Err]]:
+) -> tuple[MempoolInclusionStatus, Err | None]:
     """
     Receives a full transaction from peer.
     If tx is added to mempool, send tx_id to others. (new_transaction)
@@ -395,7 +395,7 @@ co = ConditionOpcode
 mis = MempoolInclusionStatus
 
 
-async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
+async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Message | None:
     tx = wallet_protocol.SendTransaction(sb)
     return await node.send_transaction(tx, test=True)
 
@@ -716,7 +716,7 @@ class TestMempoolManager:
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = sb.replace(aggregated_signature=G2Element.generator())
-        res: Optional[Message] = await send_sb(full_node_1, sb)
+        res: Message | None = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
         assert ack.status == MempoolInclusionStatus.FAILED.value
@@ -730,8 +730,8 @@ class TestMempoolManager:
         dic: dict[ConditionOpcode, list[ConditionWithArgs]],
         fee: int = 0,
         num_blocks: int = 3,
-        coin: Optional[Coin] = None,
-    ) -> tuple[list[FullBlock], SpendBundle, WSChiaConnection, MempoolInclusionStatus, Optional[Err]]:
+        coin: Coin | None = None,
+    ) -> tuple[list[FullBlock], SpendBundle, WSChiaConnection, MempoolInclusionStatus, Err | None]:
         reward_ph = wallet_a.get_new_puzzlehash()
         full_node_1, server_1, bt = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
@@ -772,7 +772,7 @@ class TestMempoolManager:
         node_server_bt: tuple[FullNodeSimulator, ChiaServer, BlockTools],
         wallet_a: WalletTool,
         test_fun: Callable[[Coin, Coin], SpendBundle],
-    ) -> tuple[list[FullBlock], SpendBundle, MempoolInclusionStatus, Optional[Err]]:
+    ) -> tuple[list[FullBlock], SpendBundle, MempoolInclusionStatus, Err | None]:
         reward_ph = wallet_a.get_new_puzzlehash()
         full_node_1, server_1, bt = node_server_bt
         blocks = await full_node_1.get_all_full_blocks()
@@ -1256,7 +1256,7 @@ class TestMempoolManager:
         self,
         assert_garbage: bool,
         announce_garbage: bool,
-        expected: Optional[Err],
+        expected: Err | None,
         expected_included: MempoolInclusionStatus,
         one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
         wallet_a: WalletTool,
@@ -1469,7 +1469,7 @@ class TestMempoolManager:
         self,
         assert_garbage: bool,
         announce_garbage: bool,
-        expected: Optional[Err],
+        expected: Err | None,
         expected_included: MempoolInclusionStatus,
         one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
         wallet_a: WalletTool,
@@ -2530,7 +2530,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_softfork_condition(
-        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+        self, mempool: bool, condition: str, expect_error: int | None, softfork_height: uint32
     ) -> None:
         npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
         print(npc_result)
@@ -2550,7 +2550,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_message_condition(
-        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+        self, mempool: bool, condition: str, expect_error: int | None, softfork_height: uint32
     ) -> None:
         npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
         print(npc_result)
@@ -2920,7 +2920,7 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
     assert len(ordered_items) == len(expected)
 
-    last_fpc: Optional[float] = None
+    last_fpc: float | None = None
     for mi, expected_coin in zip(ordered_items, expected):
         assert len(mi.bundle_coin_spends) == 1
         assert next(iter(mi.bundle_coin_spends.values())).coin_spend.coin == expected_coin
@@ -3413,7 +3413,7 @@ async def test_lineage_cache(seeded_random: random.Random) -> None:
         bytes32.random(seeded_random), bytes32.random(seeded_random), bytes32.random(seeded_random)
     )
 
-    async def callback1(ph: bytes32) -> Optional[UnspentLineageInfo]:
+    async def callback1(ph: bytes32) -> UnspentLineageInfo | None:
         nonlocal called
         called += 1
         return info1
@@ -3432,7 +3432,7 @@ async def test_lineage_cache(seeded_random: random.Random) -> None:
 
     called = 0
 
-    async def callback_none(ph: bytes32) -> Optional[UnspentLineageInfo]:
+    async def callback_none(ph: bytes32) -> UnspentLineageInfo | None:
         nonlocal called
         called += 1
         return None

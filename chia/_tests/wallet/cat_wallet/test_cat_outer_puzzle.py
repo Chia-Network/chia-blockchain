@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -22,12 +20,12 @@ def test_cat_outer_puzzle() -> None:
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, ACS)
     double_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, cat_puzzle)
     uncurried_cat_puzzle = uncurry_puzzle(double_cat_puzzle)
-    cat_driver: Optional[PuzzleInfo] = match_puzzle(uncurried_cat_puzzle)
+    cat_driver: PuzzleInfo | None = match_puzzle(uncurried_cat_puzzle)
 
     assert cat_driver is not None
     assert cat_driver.type() == "CAT"
     assert cat_driver["tail"] == tail
-    inside_cat_driver: Optional[PuzzleInfo] = cat_driver.also()
+    inside_cat_driver: PuzzleInfo | None = cat_driver.also()
     assert inside_cat_driver is not None
     assert inside_cat_driver.type() == "CAT"
     assert inside_cat_driver["tail"] == tail

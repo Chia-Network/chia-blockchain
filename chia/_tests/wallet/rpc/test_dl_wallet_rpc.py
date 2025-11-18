@@ -13,13 +13,15 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_util import DLProof, HashOnlyProof, ProofLayer, StoreProofsHashes
-from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror, SingletonDependencies, SingletonSummary
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_request_types import (
     CreateNewDL,
+    CreateOfferForIDs,
     DLDeleteMirror,
     DLGetMirrors,
     DLGetMirrorsResponse,
@@ -32,6 +34,7 @@ from chia.wallet.wallet_request_types import (
     DLUpdateMultiple,
     DLUpdateMultipleUpdates,
     DLUpdateRoot,
+    GetOfferSummary,
     LauncherRootPair,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
@@ -74,6 +77,7 @@ class TestWalletRpc:
             calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
         )
 
+        await full_node_api.wait_for_wallet_synced(wallet_node)
         await time_out_assert(15, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(15, wallet.get_unconfirmed_balance, initial_funds)
 
@@ -108,6 +112,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
                 rec = (await rpc_client.dl_latest_singleton(DLLatestSingleton(lid))).singleton
@@ -128,6 +133,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             new_singleton_record = (await client.dl_latest_singleton(DLLatestSingleton(launcher_id))).singleton
             assert new_singleton_record is not None
@@ -216,6 +222,7 @@ class TestWalletRpc:
             launcher_id_2 = (
                 await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
             ).launcher_id
+            await full_node_api.wait_for_wallet_synced(wallet_node)
             launcher_id_3 = (
                 await client.create_new_dl(CreateNewDL(root=merkle_root, fee=uint64(50), push=True), DEFAULT_TX_CONFIG)
             ).launcher_id
@@ -223,6 +230,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_3)
@@ -245,6 +253,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
@@ -280,6 +289,7 @@ class TestWalletRpc:
             for i in range(5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
             additions = []
             for tx in txs:
                 if tx.spend_bundle is not None:
@@ -301,6 +311,39 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             await time_out_assert(15, client.dl_get_mirrors, DLGetMirrorsResponse([]), DLGetMirrors(launcher_id))
+
+            offer_creation_response = await client.create_offer_for_ids(
+                CreateOfferForIDs(
+                    {launcher_id.hex(): "-1", launcher_id_2.hex(): "1"},
+                    driver_dict={},
+                    solver=Solver(
+                        {
+                            "0x" + launcher_id.hex(): {
+                                "new_root": "0x" + bytes32.zeros.hex(),
+                                "dependencies": [
+                                    {
+                                        "launcher_id": "0x" + launcher_id_2.hex(),
+                                        "values_to_prove": ["0x" + bytes32.zeros.hex()],
+                                    }
+                                ],
+                            }
+                        }
+                    ),
+                ),
+                tx_config=DEFAULT_TX_CONFIG,
+            )
+
+            assert (
+                await client.get_offer_summary(GetOfferSummary(offer=offer_creation_response.offer.to_bech32()))
+            ).data_layer_summary == DataLayerSummary(
+                [
+                    SingletonSummary(
+                        launcher_id=launcher_id,
+                        new_root=bytes32.zeros,
+                        dependencies=[SingletonDependencies(launcher_id_2, [bytes(32)])],
+                    )
+                ]
+            )
 
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -20,9 +20,9 @@ class BlockchainMock:
     def __init__(
         self,
         blocks: dict[bytes32, BlockRecord],
-        headers: Optional[dict[bytes32, HeaderBlock]] = None,
-        height_to_hash: Optional[dict[uint32, bytes32]] = None,
-        sub_epoch_summaries: Optional[dict[uint32, SubEpochSummary]] = None,
+        headers: dict[bytes32, HeaderBlock] | None = None,
+        height_to_hash: dict[uint32, bytes32] | None = None,
+        sub_epoch_summaries: dict[uint32, SubEpochSummary] | None = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
@@ -37,10 +37,10 @@ class BlockchainMock:
         self._sub_epoch_segments: dict[bytes32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
 
-    def get_peak(self) -> Optional[BlockRecord]:
+    def get_peak(self) -> BlockRecord | None:
         return None
 
-    def get_peak_height(self) -> Optional[uint32]:
+    def get_peak_height(self) -> uint32 | None:
         return None
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
@@ -49,7 +49,7 @@ class BlockchainMock:
     def height_to_block_record(self, height: uint32, check_db: bool = False) -> BlockRecord:
         # Precondition: height is < peak height
 
-        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        header_hash: bytes32 | None = self.height_to_hash(height)
         assert header_hash is not None
 
         return self.block_record(header_hash)
@@ -60,7 +60,7 @@ class BlockchainMock:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self._sub_epoch_summaries[height]
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
         assert height in self._height_to_hash
         return self._height_to_hash[height]
 
@@ -88,10 +88,10 @@ class BlockchainMock:
             block_records.append(self.height_to_block_record(height))
         return block_records
 
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return self._block_records.get(header_hash)
 
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
         return self._block_records[header_hash]
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
@@ -119,7 +119,7 @@ class BlockchainMock:
     async def get_sub_epoch_challenge_segments(
         self,
         sub_epoch_summary_hash: bytes32,
-    ) -> Optional[list[SubEpochChallengeSegment]]:
+    ) -> list[SubEpochChallengeSegment] | None:
         segments = self._sub_epoch_segments.get(sub_epoch_summary_hash)
         if segments is None:
             return None

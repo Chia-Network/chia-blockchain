@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar
 
 from chia_rs import RespondToPhUpdates
 
@@ -16,9 +16,11 @@ from chia.wallet.wallet_node import WalletNode
 
 class WalletNodeAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.wallet_stub import WalletNodeApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("WalletNodeAPI", None)
+        # Verify this class implements the WalletNodeApiStub protocol
+        def _protocol_check(self: WalletNodeAPI) -> WalletNodeApiStub:
+            return self
 
     log: logging.Logger
     wallet_node: WalletNode

@@ -12,9 +12,9 @@ import os
 import random
 import sysconfig
 import tempfile
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import AsyncExitStack
-from typing import Any, Callable, Union
+from typing import Any
 
 import aiohttp
 import pytest
@@ -200,7 +200,8 @@ class ConsensusMode(ComparableEnum):
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    # TODO: todo_v2_plots add HARD_FORK_3_0 mode as well as after phase-out
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
 )
 def consensus_mode(request):
     return request.param
@@ -230,9 +231,11 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
 
 
 @pytest.fixture(scope="session", name="bt")
-async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend) -> BlockTools:
+async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend, testrun_uid: str) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    shared_block_tools = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
+    shared_block_tools = await create_block_tools_async(
+        constants=blockchain_constants, keychain=get_keychain, testrun_uid=testrun_uid
+    )
     return shared_block_tools
 
 
@@ -797,7 +800,7 @@ async def one_node(
 @pytest.fixture(scope="function")
 async def one_node_one_block(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
+) -> AsyncIterator[tuple[FullNodeAPI | FullNodeSimulator, ChiaServer, BlockTools]]:
     async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
         (nodes, _, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -950,13 +953,17 @@ def get_temp_keyring():
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools_1(get_temp_keyring):
-    return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+async def get_b_tools_1(get_temp_keyring, testrun_uid: str):
+    return await create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    )
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools(get_temp_keyring):
-    local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+async def get_b_tools(get_temp_keyring, testrun_uid):
+    local_b_tools = await create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
     return local_b_tools
@@ -1258,13 +1265,15 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 
 @pytest.fixture(scope="function")
 async def farmer_harvester_2_simulators_zero_bits_plot_filter(
-    tmp_path: Path, get_temp_keyring: Keychain
+    tmp_path: Path,
+    get_temp_keyring: Keychain,
+    testrun_uid,
 ) -> AsyncIterator[
     tuple[
         FarmerService,
         HarvesterService,
-        Union[FullNodeService, SimulatorFullNodeService],
-        Union[FullNodeService, SimulatorFullNodeService],
+        FullNodeService | SimulatorFullNodeService,
+        FullNodeService | SimulatorFullNodeService,
         BlockTools,
     ]
 ]:
@@ -1277,6 +1286,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         bt = await create_block_tools_async(
             zero_bit_plot_filter_consts,
             keychain=get_temp_keyring,
+            testrun_uid=testrun_uid,
         )
 
         config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
@@ -1289,6 +1299,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                 num_pool_plots=0,
                 num_non_keychain_plots=0,
                 config_overrides=config_overrides,
+                testrun_uid=testrun_uid,
             )
             for _ in range(2)
         ]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 import pytest
 from chia_rs import G2Element
@@ -10,7 +9,7 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.types.blockchain_format.program import NIL, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.wallet.conditions import Condition, ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
@@ -42,7 +41,7 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
     argnames=["program", "result"],
     argvalues=[
         (Program.to(NIL_TREEHASH), True),
-        (NIL, True),
+        (Program.NIL, True),
         (Program.to(bytes32([1] * 32)), False),
     ],
 )
@@ -62,12 +61,12 @@ def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             amount: int,
             tx_config: TXConfig,
             fee: int = 0,
-            name: Optional[str] = "DID Wallet",
-            backup_ids: Optional[list[str]] = None,
+            name: str | None = "DID Wallet",
+            backup_ids: list[str] | None = None,
             required_num: int = 0,
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> dict[str, Union[str, int]]:
+        ) -> dict[str, str | int]:
             if backup_ids is None:
                 backup_ids = []
             self.add_to_log(

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import click
 
 from chia.cmds.cmd_classes import ChiaCliContext
@@ -59,10 +57,10 @@ def farm_cmd() -> None:
 @click.pass_context
 def summary_cmd(
     ctx: click.Context,
-    rpc_port: Optional[int],
-    wallet_rpc_port: Optional[int],
-    harvester_rpc_port: Optional[int],
-    farmer_rpc_port: Optional[int],
+    rpc_port: int | None,
+    wallet_rpc_port: int | None,
+    harvester_rpc_port: int | None,
+    farmer_rpc_port: int | None,
     include_pool_rewards: bool,
 ) -> None:
     import asyncio
@@ -99,7 +97,7 @@ def summary_cmd(
     show_default=True,
 )
 @click.pass_context
-def challenges_cmd(ctx: click.Context, farmer_rpc_port: Optional[int], limit: int) -> None:
+def challenges_cmd(ctx: click.Context, farmer_rpc_port: int | None, limit: int) -> None:
     import asyncio
 
     from chia.cmds.farm_funcs import challenges
@@ -120,7 +118,7 @@ def challenges_cmd(ctx: click.Context, farmer_rpc_port: Optional[int], limit: in
 @click.pass_context
 def connect_solver_cmd(
     ctx: click.Context,
-    farmer_rpc_port: Optional[int],
+    farmer_rpc_port: int | None,
     solver_address: str,
 ) -> None:
     import asyncio

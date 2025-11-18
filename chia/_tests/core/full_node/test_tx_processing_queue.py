@@ -4,7 +4,7 @@ import asyncio
 import logging
 import random
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -18,10 +18,10 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class FakeTransactionQueueEntry:
     index: int
-    peer_id: Optional[bytes32]
+    peer_id: bytes32 | None
 
 
-def get_transaction_queue_entry(peer_id: Optional[bytes32], tx_index: int) -> TransactionQueueEntry:  # easy shortcut
+def get_transaction_queue_entry(peer_id: bytes32 | None, tx_index: int) -> TransactionQueueEntry:  # easy shortcut
     return cast(TransactionQueueEntry, FakeTransactionQueueEntry(index=tx_index, peer_id=peer_id))
 
 

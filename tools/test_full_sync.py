@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import Optional
 
 import aiosqlite
 import click
@@ -73,7 +72,7 @@ def run(
     keep_up: bool,
     db_sync: str,
     node_profiler: bool,
-    start_at_checkpoint: Optional[str],
+    start_at_checkpoint: str | None,
 ) -> None:
     """
     The FILE parameter should point to an existing blockchain database file (in v2 format)

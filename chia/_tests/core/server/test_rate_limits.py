@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Union
 
 import pytest
 from chia_rs.sized_ints import uint32
@@ -24,7 +23,6 @@ from chia.types.peer_info import PeerInfo
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]
 node_with_params_b = node_with_params
-test_different_versions_results: list[int] = []
 
 
 @dataclass
@@ -66,7 +64,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
     message_data = b"\0" * 1024
     msg_type = ProtocolMessageTypes.new_transaction
 
-    limits: dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]
+    limits: dict[ProtocolMessageTypes, RLSettings | Unlimited]
 
     if limit_size:
         agg_limit = RLSettings(False, count * 2, len(message_data), count * len(message_data))
@@ -80,7 +78,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
 
     def mock_get_limits(
         our_capabilities: list[Capability], peer_capabilities: list[Capability]
-    ) -> tuple[dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]], RLSettings]:
+    ) -> tuple[dict[ProtocolMessageTypes, RLSettings | Unlimited], RLSettings]:
         return limits, agg_limit
 
     import chia.server.rate_limits
@@ -418,11 +416,14 @@ async def test_different_versions(
     # The following code checks whether all of the runs resulted in the same number of items in "rate_limits_tx",
     # which would mean the same rate limits are always used. This should not happen, since two nodes with V2
     # will use V2.
-    total_tx_msg_count = len(get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities))
+    rate_limits = get_rate_limits_to_use(a_con.local_capabilities, a_con.peer_capabilities)[0]
+    limit = rate_limits[ProtocolMessageTypes.request_header_blocks]
+    assert isinstance(limit, RLSettings)
 
-    test_different_versions_results.append(total_tx_msg_count)
-    if len(test_different_versions_results) >= 4:
-        assert len(set(test_different_versions_results)) >= 2
+    if Capability.RATE_LIMITS_V2 in a_con.local_capabilities and Capability.RATE_LIMITS_V2 in a_con.peer_capabilities:
+        assert limit.frequency == 5000
+    else:
+        assert limit.frequency == 500
 
 
 @pytest.mark.anyio

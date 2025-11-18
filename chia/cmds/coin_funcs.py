@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import sys
 from collections.abc import Sequence
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
@@ -30,7 +29,7 @@ async def async_list(
     excluded_amounts: Sequence[CliAmount],
     excluded_coin_ids: Sequence[bytes32],
     show_unconfirmed: bool,
-    paginate: Optional[bool],
+    paginate: bool | None,
 ) -> None:
     addr_prefix = selected_network_address_prefix(client_info.config)
     if paginate is None:
@@ -126,9 +125,9 @@ async def async_combine(
     min_coin_amount: CliAmount,
     excluded_amounts: Sequence[CliAmount],
     coins_to_exclude: Sequence[bytes32],
-    reuse_puzhash: Optional[bool],
+    reuse_puzhash: bool | None,
     number_of_coins: int,
-    target_coin_amount: Optional[CliAmount],
+    target_coin_amount: CliAmount | None,
     target_coin_ids: Sequence[bytes32],
     largest_first: bool,
     push: bool,
@@ -196,14 +195,14 @@ async def async_split(
     client_info: WalletClientInfo,
     wallet_id: int,
     fee: uint64,
-    number_of_coins: Optional[int],
-    amount_per_coin: Optional[CliAmount],
+    number_of_coins: int | None,
+    amount_per_coin: CliAmount | None,
     target_coin_id: bytes32,
     max_coin_amount: CliAmount,
     min_coin_amount: CliAmount,
     excluded_amounts: Sequence[CliAmount],
     coins_to_exclude: Sequence[bytes32],
-    reuse_puzhash: Optional[bool],
+    reuse_puzhash: bool | None,
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:

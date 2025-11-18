@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import BlockRecord, ConsensusConstants
 from chia_rs.sized_ints import uint8, uint32
 
@@ -9,7 +7,7 @@ from chia_rs.sized_ints import uint8, uint32
 def calculate_deficit(
     constants: ConsensusConstants,
     height: uint32,
-    prev_b: Optional[BlockRecord],
+    prev_b: BlockRecord | None,
     overflow: bool,
     num_finished_sub_slots: int,
 ) -> uint8:

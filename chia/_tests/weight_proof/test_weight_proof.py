@@ -47,7 +47,6 @@ async def load_blocks_dont_validate(
             cc_sp,
             block.height,
             difficulty,
-            sub_slot_iters,
             uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
         )
         assert required_iters is not None

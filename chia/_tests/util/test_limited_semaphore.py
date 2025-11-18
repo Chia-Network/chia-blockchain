@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 import pytest
 
@@ -18,7 +17,7 @@ async def test_stuff() -> None:
     semaphore = LimitedSemaphore.create(active_limit=active_limit, waiting_limit=waiting_limit)
     finish_event = asyncio.Event()
 
-    async def acquire(entered_event: Optional[asyncio.Event] = None) -> None:
+    async def acquire(entered_event: asyncio.Event | None = None) -> None:
         async with semaphore.acquire():
             assert entered_event is not None
             entered_event.set()

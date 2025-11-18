@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import FoliageTransactionBlock, FullBlock
 from chia_rs.sized_bytes import bytes32
@@ -16,7 +16,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 @dataclass
 class ShowFullNodeRpcClient(TestFullNodeRpcClient):
-    async def get_fee_estimate(self, target_times: Optional[list[int]], cost: Optional[int]) -> dict[str, Any]:
+    async def get_fee_estimate(self, target_times: list[int] | None, cost: int | None) -> dict[str, Any]:
         self.add_to_log("get_fee_estimate", (target_times, cost))
         response: dict[str, Any] = {
             "current_fee_rate": 0,
@@ -38,7 +38,7 @@ class ShowFullNodeRpcClient(TestFullNodeRpcClient):
         }
         return response
 
-    async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+    async def get_block(self, header_hash: bytes32) -> FullBlock | None:
         # we return a block with the height matching the header hash
         self.add_to_log("get_block", (header_hash,))
         height = hash_to_height(header_hash)
@@ -106,7 +106,7 @@ def test_chia_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
         "Is a Transaction Block?True",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: dict[str, Optional[list[tuple[Any, ...]]]] = {  # name of rpc: (args)
+    expected_calls: dict[str, list[tuple[Any, ...]] | None] = {  # name of rpc: (args)
         "get_blockchain_state": None,
         "get_block_record": [(height_hash(height),) for height in [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 10]],
         "get_block_record_by_height": [(10,)],

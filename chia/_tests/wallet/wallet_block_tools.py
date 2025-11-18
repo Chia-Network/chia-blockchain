@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import (
     BlockRecord,
@@ -58,12 +58,12 @@ class WalletBlockTools(BlockTools):
     def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: Optional[list[FullBlock]] = None,
+        block_list_input: list[FullBlock] | None = None,
         *,
-        farmer_reward_puzzle_hash: Optional[bytes32] = None,
-        pool_reward_puzzle_hash: Optional[bytes32] = None,
-        transaction_data: Optional[SpendBundle] = None,
-        genesis_timestamp: Optional[uint64] = None,
+        farmer_reward_puzzle_hash: bytes32 | None = None,
+        pool_reward_puzzle_hash: bytes32 | None = None,
+        transaction_data: SpendBundle | None = None,
+        genesis_timestamp: uint64 | None = None,
         **kwargs: Any,  # We're overriding so there's many arguments no longer used.
     ) -> list[FullBlock]:
         assert num_blocks > 0
@@ -86,7 +86,7 @@ class WalletBlockTools(BlockTools):
             height_to_hash, _, blocks = load_block_list(block_list_input, constants)
 
         if len(block_list_input) > 0:
-            latest_block: Optional[BlockRecord] = blocks[block_list_input[-1].header_hash]
+            latest_block: BlockRecord | None = blocks[block_list_input[-1].header_hash]
             assert latest_block is not None
             assert latest_block.timestamp is not None
             last_timestamp = latest_block.timestamp
@@ -97,7 +97,7 @@ class WalletBlockTools(BlockTools):
         for _ in range(num_blocks):
             additions = []
             removals = []
-            block_generator: Optional[BlockGenerator] = None
+            block_generator: BlockGenerator | None = None
             if transaction_data is not None and len(block_list_input) > 0:
                 additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
@@ -161,7 +161,7 @@ def load_block_list(
 def finish_block(
     constants: ConsensusConstants,
     unfinished_block: UnfinishedBlock,
-    prev_block: Optional[BlockRecord],
+    prev_block: BlockRecord | None,
     blocks: dict[bytes32, BlockRecord],
 ) -> tuple[FullBlock, BlockRecord]:
     if prev_block is None:
@@ -211,8 +211,8 @@ def get_full_block_and_block_record(
     last_timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
-    prev_block: Optional[BlockRecord],
-    block_generator: Optional[BlockGenerator],
+    prev_block: BlockRecord | None,
+    block_generator: BlockGenerator | None,
     additions: list[Coin],
     removals: list[Coin],
 ) -> tuple[FullBlock, BlockRecord, float]:

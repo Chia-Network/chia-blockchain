@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
@@ -34,11 +34,11 @@ class BlockCache:
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         # Precondition: height is < peak height
-        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        header_hash: bytes32 | None = self.height_to_hash(height)
         assert header_hash is not None
         return self.block_record(header_hash)
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
         if height not in self._height_to_hash:
             return None
         return self._height_to_hash[height]
@@ -52,7 +52,7 @@ class BlockCache:
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return self._block_records.get(header_hash)
 
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:

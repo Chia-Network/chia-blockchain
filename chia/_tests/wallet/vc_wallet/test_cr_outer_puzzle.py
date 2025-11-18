@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
@@ -22,18 +20,18 @@ from chia.wallet.vc_wallet.cr_cat_drivers import construct_cr_layer
 
 def test_cat_outer_puzzle() -> None:
     authorized_providers: list[bytes32] = [bytes32.zeros, bytes32.zeros]
-    proofs_checker: Program = Program.to(None)
+    proofs_checker: Program = Program.NIL
     ACS: Program = Program.to(1)
     cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, ACS)
     double_cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, cr_puzzle)
     uncurried_cr_puzzle = uncurry_puzzle(double_cr_puzzle)
-    cr_driver: Optional[PuzzleInfo] = match_puzzle(uncurried_cr_puzzle)
+    cr_driver: PuzzleInfo | None = match_puzzle(uncurried_cr_puzzle)
 
     assert cr_driver is not None
     assert cr_driver.type() == "credential restricted"
     assert cr_driver["authorized_providers"] == authorized_providers
     assert cr_driver["proofs_checker"] == proofs_checker
-    inside_cr_driver: Optional[PuzzleInfo] = cr_driver.also()
+    inside_cr_driver: PuzzleInfo | None = cr_driver.also()
     assert inside_cr_driver is not None
     assert inside_cr_driver.type() == "credential restricted"
     assert inside_cr_driver["authorized_providers"] == authorized_providers

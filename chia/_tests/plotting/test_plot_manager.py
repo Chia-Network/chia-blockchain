@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, Optional, cast
+from typing import cast
 
 import pytest
 from chia_rs import G1Element
@@ -18,6 +18,7 @@ from chiapos import DiskProver
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
 from chia.plotting.prover import V1Prover
@@ -90,7 +91,7 @@ class PlotRefreshTester:
     expected_result_matched: bool
 
     def __init__(self, root_path: Path):
-        self.plot_manager = PlotManager(root_path, self.refresh_callback)
+        self.plot_manager = PlotManager(root_path, self.refresh_callback, DEFAULT_CONSTANTS)
         # Set a very high refresh interval here to avoid unintentional refresh cycles
         self.plot_manager.refresh_parameter = replace(
             self.plot_manager.refresh_parameter, interval_seconds=uint32(10000)
@@ -508,8 +509,8 @@ async def test_plot_info_caching(environment, bt):
         assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
         assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
-        assert plot_manager.plots[path].prover.get_size().size_v1 == plot_info.prover.get_size().size_v1
-        assert plot_manager.plots[path].prover.get_size().size_v2 == plot_info.prover.get_size().size_v2
+        assert plot_manager.plots[path].prover.get_param().size_v1 == plot_info.prover.get_param().size_v1
+        assert plot_manager.plots[path].prover.get_param().strength_v2 == plot_info.prover.get_param().strength_v2
         assert plot_manager.plots[path].prover.get_compression_level() == plot_info.prover.get_compression_level()
         assert plot_manager.plots[path].pool_public_key == plot_info.pool_public_key
         assert plot_manager.plots[path].pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash
@@ -663,7 +664,7 @@ async def test_cache_lifetime(environment: Environment) -> None:
 )
 @pytest.mark.anyio
 async def test_callback_event_raises(environment, event_to_raise: PlotRefreshEvents):
-    last_event_fired: Optional[PlotRefreshEvents] = None
+    last_event_fired: PlotRefreshEvents | None = None
 
     def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
         nonlocal last_event_fired

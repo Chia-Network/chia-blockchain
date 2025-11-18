@@ -7,7 +7,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
@@ -45,7 +45,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
 
 async def create_start_daemon_connection(
     root_path: Path, config: dict[str, Any], *, skip_keyring: bool
-) -> Optional[DaemonProxy]:
+) -> DaemonProxy | None:
     connection = await connect_to_daemon_and_validate(root_path, config)
     if connection is None:
         print("Starting daemon", flush=True)

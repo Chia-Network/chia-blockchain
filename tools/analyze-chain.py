@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, Optional, Union, cast
+from typing import cast
 
 import click
 import zstd
@@ -35,7 +36,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 # run
 def run_gen(
     generator_program: SerializedProgram, block_program_args: list[bytes], flags: int
-) -> tuple[Optional[int], Optional[SpendBundleConditions], float]:
+) -> tuple[int | None, SpendBundleConditions | None, float]:
     try:
         start_time = time()
         err, result = run_block_generator(
@@ -57,12 +58,12 @@ def run_gen(
 
 def callable_for_module_function_path(
     call: str,
-) -> Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]:
+) -> Callable[[BlockInfo | FullBlock, bytes32, int, list[bytes], float, int], None]:
     module_name, function_name = call.split(":", 1)
     module = __import__(module_name, fromlist=[function_name])
     # TODO: casting due to getattr type signature
     return cast(
-        Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None],
+        Callable[[BlockInfo | FullBlock, bytes32, int, list[bytes], float, int], None],
         getattr(module, function_name),
     )
 
@@ -77,9 +78,9 @@ def callable_for_module_function_path(
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
 def main(
-    file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool
+    file: Path, mempool_mode: bool, start: int, end: int | None, call: str | None, verify_signatures: bool
 ) -> None:
-    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]
+    call_f: Callable[[BlockInfo | FullBlock, bytes32, int, list[bytes], float, int], None]
     if call is None:
         call_f = partial(default_call, verify_signatures)
     else:
@@ -97,7 +98,7 @@ def main(
     for r in rows:
         hh: bytes32 = r[0]
         height: int = r[1]
-        block: Union[BlockInfo, FullBlock]
+        block: BlockInfo | FullBlock
         if verify_signatures:
             block = FullBlock.from_bytes_unchecked(zstd.decompress(r[2]))
         else:
@@ -128,7 +129,7 @@ def main(
 
 def default_call(
     verify_signatures: bool,
-    block: Union[BlockInfo, FullBlock],
+    block: BlockInfo | FullBlock,
     hh: bytes32,
     height: int,
     generator_blobs: list[bytes],

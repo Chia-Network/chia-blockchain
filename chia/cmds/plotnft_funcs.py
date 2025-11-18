@@ -4,11 +4,11 @@ import asyncio
 import functools
 import json
 import time
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Callable, Optional
+from typing import Any
 
 import aiohttp
 import click
@@ -81,13 +81,13 @@ async def create_pool_args(pool_url: str) -> dict[str, Any]:
 
 async def create(
     wallet_info: WalletClientInfo,
-    pool_url: Optional[str],
+    pool_url: str | None,
     state: str,
     fee: uint64,
     *,
     prompt: bool,
 ) -> None:
-    target_puzzle_hash: Optional[bytes32]
+    target_puzzle_hash: bytes32 | None
     # Could use initial_pool_state_from_dict to simplify
     if state == "SELF_POOLING":
         pool_url = None
@@ -138,7 +138,7 @@ async def pprint_pool_wallet_state(
     wallet_id: int,
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
-    pool_state_dict: Optional[dict[str, Any]],
+    pool_state_dict: dict[str, Any] | None,
 ) -> None:
     print(f"Wallet ID: {wallet_id}")
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value and pool_wallet_info.target is None:
@@ -222,7 +222,7 @@ async def pprint_all_pool_wallet_state(
 async def show(
     wallet_info: WalletClientInfo,
     root_path: Path,
-    wallet_id_passed_in: Optional[int],
+    wallet_id_passed_in: int | None,
 ) -> None:
     summaries_response = await wallet_info.client.get_wallets(GetWallets())
     config = wallet_info.config
@@ -261,7 +261,7 @@ async def show(
 
 async def get_login_link(launcher_id: bytes32, root_path: Path) -> None:
     async with get_any_service_client(FarmerRpcClient, root_path=root_path) as (farmer_client, _):
-        login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
+        login_link: str | None = await farmer_client.get_pool_login_link(launcher_id)
         if login_link is None:
             raise CliRpcConnectionError("Was not able to get login link.")
         else:
@@ -298,7 +298,7 @@ async def submit_tx_with_confirmation(
         print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
 
 
-async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: Optional[int]) -> int:
+async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: int | None) -> int:
     selected_wallet_id: int
 
     # absent network errors, this should not fail with an error
@@ -326,7 +326,7 @@ async def join_pool(
     wallet_info: WalletClientInfo,
     pool_url: str,
     fee: uint64,
-    wallet_id: Optional[int],
+    wallet_id: int | None,
     prompt: bool,
 ) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
@@ -389,7 +389,7 @@ async def join_pool(
     )
 
 
-async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Optional[int], prompt: bool) -> None:
+async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: int | None, prompt: bool) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
     msg = (
         "Will start self-farming with Plot NFT on wallet id "
@@ -405,7 +405,7 @@ async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Op
     )
 
 
-async def inspect_cmd(wallet_info: WalletClientInfo, wallet_id: Optional[int]) -> None:
+async def inspect_cmd(wallet_info: WalletClientInfo, wallet_id: int | None) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
     res = await wallet_info.client.pw_status(PWStatus(uint32(selected_wallet_id)))
     print(
@@ -420,7 +420,7 @@ async def inspect_cmd(wallet_info: WalletClientInfo, wallet_id: Optional[int]) -
     )
 
 
-async def claim_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Optional[int]) -> None:
+async def claim_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: int | None) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
     msg = f"\nWill claim rewards for wallet ID: {selected_wallet_id}."
     func = functools.partial(
@@ -435,7 +435,7 @@ async def claim_cmd(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: Op
     await submit_tx_with_confirmation(msg, False, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id)
 
 
-async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, root_path: Optional[Path]) -> None:
+async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, root_path: Path | None) -> None:
     new_pool_configs: list[PoolWalletConfig] = []
     id_found = False
     puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)

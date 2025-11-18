@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_ints import uint16
 
@@ -158,8 +158,8 @@ class SetPeerInfoCase(DataCase):
     service_config: dict[str, Any]
     requested_node_type: NodeType
     expected_service_config: dict[str, Any]
-    peer_host: Optional[str] = None
-    peer_port: Optional[int] = None
+    peer_host: str | None = None
+    peer_port: int | None = None
     marks: Marks = ()
 
     @property

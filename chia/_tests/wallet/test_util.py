@@ -106,7 +106,7 @@ def test_list_to_binary_tree() -> None:
 @pytest.mark.parametrize(
     "serializations",
     [
-        (tuple(), Program.to(None), []),
+        (tuple(), Program.NIL, []),
         ((bytes32.zeros,), Program.to([bytes32.zeros]), [LineageProofField.PARENT_NAME]),
         (
             (bytes32.zeros, bytes32.zeros),
@@ -129,7 +129,7 @@ def test_lineage_proof_varargs(serializations: tuple[tuple[Any, ...], Program, l
 @pytest.mark.parametrize(
     "serializations",
     [
-        ({}, Program.to(None), []),
+        ({}, Program.NIL, []),
         ({"parent_name": bytes32.zeros}, Program.to([bytes32.zeros]), [LineageProofField.PARENT_NAME]),
         (
             {"parent_name": bytes32.zeros, "inner_puzzle_hash": bytes32.zeros},

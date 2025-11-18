@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.cmds_util import get_any_service_client
@@ -10,7 +9,7 @@ from chia.solver.solver_rpc_client import SolverRpcClient
 
 async def get_state(
     ctx: ChiaCliContext,
-    solver_rpc_port: Optional[int] = None,
+    solver_rpc_port: int | None = None,
 ) -> None:
     """Get solver state via RPC."""
     try:

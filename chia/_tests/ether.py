@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from chia._tests.util.misc import TestId
@@ -15,5 +16,5 @@ if TYPE_CHECKING:
 #       result in you likely getting the default `None` values since they are not
 #       populated until tests are running.
 
-record_property: Optional[Callable[[str, object], None]] = None
-test_id: Optional[TestId] = None
+record_property: Callable[[str, object], None] | None = None
+test_id: TestId | None = None

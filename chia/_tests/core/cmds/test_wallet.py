@@ -26,7 +26,7 @@ async def cat_name_resolver(request: CATAssetIDToName) -> CATAssetIDToNameRespon
 
 @pytest.mark.anyio
 async def test_print_offer_summary_xch(capsys: Any) -> None:
-    summary_dict = {"xch": 1_000_000_000_000}
+    summary_dict = {"xch": str(1_000_000_000_000)}
 
     await print_offer_summary(cat_name_resolver, summary_dict)
 
@@ -38,7 +38,7 @@ async def test_print_offer_summary_xch(capsys: Any) -> None:
 @pytest.mark.anyio
 async def test_print_offer_summary_cat(capsys: Any) -> None:
     summary_dict = {
-        TEST_DUCKSAUCE_ASSET_ID: 1_000,
+        TEST_DUCKSAUCE_ASSET_ID: str(1_000),
     }
 
     await print_offer_summary(cat_name_resolver, summary_dict)
@@ -51,8 +51,8 @@ async def test_print_offer_summary_cat(capsys: Any) -> None:
 @pytest.mark.anyio
 async def test_print_offer_summary_multiple_cats(capsys: Any) -> None:
     summary_dict = {
-        TEST_DUCKSAUCE_ASSET_ID: 1_000,
-        TEST_CRUNCHBERRIES_ASSET_ID: 2_000,
+        TEST_DUCKSAUCE_ASSET_ID: str(1_000),
+        TEST_CRUNCHBERRIES_ASSET_ID: str(2_000),
     }
 
     await print_offer_summary(cat_name_resolver, summary_dict)
@@ -66,10 +66,10 @@ async def test_print_offer_summary_multiple_cats(capsys: Any) -> None:
 @pytest.mark.anyio
 async def test_print_offer_summary_xch_and_cats(capsys: Any) -> None:
     summary_dict = {
-        "xch": 2_500_000_000_000,
-        TEST_DUCKSAUCE_ASSET_ID: 1_111,
-        TEST_CRUNCHBERRIES_ASSET_ID: 2_222,
-        TEST_UNICORNTEARS_ASSET_ID: 3_333,
+        "xch": str(2_500_000_000_000),
+        TEST_DUCKSAUCE_ASSET_ID: str(1_111),
+        TEST_CRUNCHBERRIES_ASSET_ID: str(2_222),
+        TEST_UNICORNTEARS_ASSET_ID: str(3_333),
     }
 
     await print_offer_summary(cat_name_resolver, summary_dict)
@@ -85,10 +85,10 @@ async def test_print_offer_summary_xch_and_cats(capsys: Any) -> None:
 @pytest.mark.anyio
 async def test_print_offer_summary_xch_and_cats_with_zero_values(capsys: Any) -> None:
     summary_dict = {
-        "xch": 0,
-        TEST_DUCKSAUCE_ASSET_ID: 0,
-        TEST_CRUNCHBERRIES_ASSET_ID: 0,
-        TEST_UNICORNTEARS_ASSET_ID: 0,
+        "xch": str(0),
+        TEST_DUCKSAUCE_ASSET_ID: str(0),
+        TEST_CRUNCHBERRIES_ASSET_ID: str(0),
+        TEST_UNICORNTEARS_ASSET_ID: str(0),
     }
 
     await print_offer_summary(cat_name_resolver, summary_dict)
@@ -104,8 +104,8 @@ async def test_print_offer_summary_xch_and_cats_with_zero_values(capsys: Any) ->
 @pytest.mark.anyio
 async def test_print_offer_summary_cat_with_fee_and_change(capsys: Any) -> None:
     summary_dict = {
-        TEST_DUCKSAUCE_ASSET_ID: 1_000,
-        "unknown": 3_456,
+        TEST_DUCKSAUCE_ASSET_ID: str(1_000),
+        "unknown": str(3_456),
     }
 
     await print_offer_summary(cat_name_resolver, summary_dict, has_fee=True)
@@ -118,7 +118,7 @@ async def test_print_offer_summary_cat_with_fee_and_change(capsys: Any) -> None:
 
 @pytest.mark.anyio
 async def test_print_offer_summary_xch_with_one_mojo(capsys: Any) -> None:
-    summary_dict = {"xch": 1}
+    summary_dict = {"xch": str(1)}
 
     await print_offer_summary(cat_name_resolver, summary_dict)
 

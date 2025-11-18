@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from chia_rs.sized_bytes import bytes32
 
@@ -16,7 +16,7 @@ def get_hints_and_subscription_coin_ids(
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
 
     # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
-    hint: Optional[bytes]
+    hint: bytes | None
     hints_to_add: list[tuple[bytes32, bytes]] = []
 
     # Goes through additions and removals for each block and flattens to a map and a set

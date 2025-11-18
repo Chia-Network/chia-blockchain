@@ -5,7 +5,7 @@ import json
 import logging
 import re
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import AugSchemeMPL, CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -23,7 +23,6 @@ from chia.wallet.conditions import (
     ConditionValidTimes,
     CreateCoin,
     CreateCoinAnnouncement,
-    parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
@@ -44,7 +43,6 @@ from chia.wallet.singleton import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -68,8 +66,8 @@ class DIDWallet:
     wallet_info: WalletInfo
     did_info: DIDInfo
     standard_wallet: Wallet
-    base_puzzle_program: Optional[bytes]
-    base_inner_puzzle_hash: Optional[bytes32]
+    base_puzzle_program: bytes | None
+    base_inner_puzzle_hash: bytes32 | None
     wallet_id: int
 
     @staticmethod
@@ -79,7 +77,7 @@ class DIDWallet:
         amount: uint64,
         action_scope: WalletActionScope,
         metadata: dict[str, str] = {},
-        name: Optional[str] = None,
+        name: str | None = None,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ):
@@ -149,7 +147,7 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         backup_data: str,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Create a DID wallet from a backup file
@@ -191,7 +189,7 @@ class DIDWallet:
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Create a DID wallet from a transfer
@@ -264,7 +262,7 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Create a DID wallet based on the local database
@@ -362,7 +360,7 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: Optional[DIDCoinData]):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: DIDCoinData | None):
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
         if parent_coin_data is not None:
@@ -381,9 +379,7 @@ class DIDWallet:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
-                recovery_list_hash=bytes32(recovery_list_hash.as_atom())
-                if recovery_list_hash != Program.to(None)
-                else None,
+                recovery_list_hash=bytes32(recovery_list_hash.as_atom()) if recovery_list_hash != Program.NIL else None,
                 num_verification=uint16(num_verification.as_int()),
                 singleton_struct=singleton_struct,
                 metadata=metadata,
@@ -649,25 +645,16 @@ class DIDWallet:
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=to_ph,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
+        did_record = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=to_ph,
             amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
+            fee=uint64(0),
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32.secret(),
-            memos=compute_memos(spend_bundle),
-            valid_times=parse_timelock_info(extra_conditions),
+            name=spend_bundle.name(),
+            extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
@@ -735,25 +722,16 @@ class DIDWallet:
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
         to_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager, override_reuse_puzhash_with=True)
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=to_ph,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(to_ph),
+        did_record = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=to_ph,
             amount=uint64(coin.amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(0),
+            fee=fee,
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=compute_memos(spend_bundle),
-            valid_times=parse_timelock_info(extra_conditions),
+            extra_conditions=extra_conditions,
         )
 
         async with action_scope.use() as interface:
@@ -815,25 +793,16 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
-        tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(time.time()),
-            to_puzzle_hash=p2_ph,
-            to_address=self.wallet_state_manager.encode_puzzle_hash(p2_ph),
+        tx = self.wallet_state_manager.new_outgoing_transaction(
+            wallet_id=self.id(),
+            puzzle_hash=p2_ph,
             amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
+            fee=uint64(0),
             spend_bundle=unsigned_spend_bundle,
             additions=unsigned_spend_bundle.additions(),
             removals=[coin],
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
             name=unsigned_spend_bundle.name(),
-            memos=compute_memos(unsigned_spend_bundle),
-            valid_times=parse_timelock_info(extra_conditions),
+            extra_conditions=extra_conditions,
         )
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(tx)
@@ -841,8 +810,8 @@ class DIDWallet:
     async def get_did_innerpuz(
         self,
         action_scope: WalletActionScope,
-        origin_id: Optional[bytes32] = None,
-        override_reuse_puzhash_with: Optional[bool] = None,
+        origin_id: bytes32 | None = None,
+        override_reuse_puzhash_with: bool | None = None,
     ) -> Program:
         if self.did_info.origin_coin is not None:
             launcher_id = self.did_info.origin_coin.name()
@@ -904,7 +873,7 @@ class DIDWallet:
         )
         return inner_puzzle
 
-    def reset_recovery_list(self) -> Optional[Program]:
+    def reset_recovery_list(self) -> Program | None:
         if self.did_info.current_inner is None:
             return None
 
@@ -921,7 +890,7 @@ class DIDWallet:
 
         return og_recovery_list_hash
 
-    def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
+    def get_parent_for_coin(self, coin) -> LineageProof | None:
         parent_info = None
         for name, ccparent in self.did_info.parent_info:
             if name == coin.parent_coin_info:
@@ -1084,14 +1053,14 @@ class DIDWallet:
         )
         return spendable_am
 
-    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None):
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None):
         spendable: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         max_send_amount = sum(cr.coin.amount for cr in spendable)
         return max_send_amount
 
-    async def add_parent(self, name: bytes32, parent: Optional[LineageProof]):
+    async def add_parent(self, name: bytes32, parent: LineageProof | None):
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
@@ -1234,8 +1203,8 @@ class DIDWallet:
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[set[Coin]] = None,
-        memos: Optional[list[list[bytes]]] = None,
+        coins: set[Coin] | None = None,
+        memos: list[list[bytes]] | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:

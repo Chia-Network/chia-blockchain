@@ -40,9 +40,10 @@ repos:
     hooks:
       - id: poetry
         name: poetry
-        entry: ./activated.py --poetry poetry check --strict
+        entry: ./activated.py --poetry python poetry-check.py
         language: system
         pass_filenames: false
+        files: "^(poetry.lock|poetry.toml|pyproject.toml)$"
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.1.0
     hooks:

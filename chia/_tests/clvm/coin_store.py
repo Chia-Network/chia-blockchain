@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from typing import Optional
 
 from chia_rs import ConsensusConstants, SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -145,5 +144,5 @@ class CoinStore:
         )
         self._ph_index[coin.puzzle_hash].append(name)
 
-    def coin_record(self, coin_id: bytes32) -> Optional[CoinRecord]:
+    def coin_record(self, coin_id: bytes32) -> CoinRecord | None:
         return self._db.get(coin_id)

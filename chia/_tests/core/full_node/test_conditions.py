@@ -6,7 +6,6 @@ or that they're failing for the right reason when they're invalid.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, FullBlock, G2Element, SpendBundle
@@ -59,7 +58,7 @@ async def check_spend_bundle_validity(
     bt: BlockTools,
     blocks: list[FullBlock],
     spend_bundle: SpendBundle,
-    expected_err: Optional[Err] = None,
+    expected_err: Err | None = None,
 ) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
@@ -96,7 +95,7 @@ async def check_spend_bundle_validity(
 async def check_conditions(
     bt: BlockTools,
     condition_solution: Program,
-    expected_err: Optional[Err] = None,
+    expected_err: Err | None = None,
     spend_reward_index: int = -2,
     *,
     aggsig: G2Element = G2Element(),
@@ -366,7 +365,7 @@ class TestConditions:
         condition1: str,
         condition2: str,
         num: int,
-        expect_err: Optional[Err],
+        expect_err: Err | None,
         bt: BlockTools,
     ) -> None:
         """
@@ -446,7 +445,7 @@ class TestConditions:
         ],
     )
     async def test_message_conditions(
-        self, bt: BlockTools, consensus_mode: ConsensusMode, conds: str, expected: Optional[Err]
+        self, bt: BlockTools, consensus_mode: ConsensusMode, conds: str, expected: Err | None
     ) -> None:
         blocks = await initial_blocks(bt)
         coin = blocks[-2].get_included_reward_coins()[0]

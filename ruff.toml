@@ -66,11 +66,6 @@ ignore = [
     "S404", # suspicious-subprocess-import
     "S607", # start-process-with-partial-path
 
-    # TODO: Remove these - it's a lot of errors
-    "UP045",
-    "UP007",
-    "UP035",
-
     # Should fix
     "FBT",  # boolean positional usage: ~2100 errors
     "ANN",  # function annotations: ~1100 errors  # Gets fixed with mypy-exclusion removal
@@ -87,7 +82,7 @@ ignore = [
     "BLE001",  # blind exceptions: ~300 errors
     "D",  # docstrings: ~9000 errors,
     "TRY",  # proper exception behavior: ~1300 errors
-    "EM",  # excetion messages: ~1000 errors
+    "EM",  # exception messages: ~1000 errors
     "C",  # comprehensions: ~600 errors
     "SLF",  # private member access: ~600 errors
     "FURB",  # "refurbishing" and "modernizing": ~200 errors

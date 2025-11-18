@@ -8,11 +8,12 @@ from __future__ import annotations
 import os
 import signal
 import sys
+from collections.abc import Callable
 from types import FrameType
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 # https://github.com/python/typeshed/blob/fbddd2c4e2b746f1880399ed0cb31a44d6ede6ff/stdlib/signal.pyi
-_HANDLER = Union[Callable[[int, Optional[FrameType]], Any], int, signal.Handlers, None]
+_HANDLER = Callable[[int, FrameType | None], Any] | int | signal.Handlers | None
 
 if sys.platform != "win32" and sys.platform != "cygwin":
     kill = os.kill
@@ -39,7 +40,7 @@ else:
             event = threading.Event()
             callable_handler = handler
 
-            def handler_set_event(signum: int, frame: Optional[FrameType]) -> Any:
+            def handler_set_event(signum: int, frame: FrameType | None) -> Any:
                 event.set()
                 return callable_handler(signum, frame)
 

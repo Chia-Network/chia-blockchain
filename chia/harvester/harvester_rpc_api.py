@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs.sized_ints import uint32
 
@@ -31,7 +31,7 @@ class HarvesterRpcApi:
             "/update_harvester_config": self.update_harvester_config,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> list[WsRpcMessage]:
         if change_data is None:
             change_data = {}
 
@@ -102,14 +102,14 @@ class HarvesterRpcApi:
         }
 
     async def update_harvester_config(self, request: dict[str, Any]) -> EndpointResult:
-        use_gpu_harvesting: Optional[bool] = None
-        gpu_index: Optional[int] = None
-        enforce_gpu_index: Optional[bool] = None
-        disable_cpu_affinity: Optional[bool] = None
-        parallel_decompressor_count: Optional[int] = None
-        decompressor_thread_count: Optional[int] = None
-        recursive_plot_scan: Optional[bool] = None
-        refresh_parameter_interval_seconds: Optional[uint32] = None
+        use_gpu_harvesting: bool | None = None
+        gpu_index: int | None = None
+        enforce_gpu_index: bool | None = None
+        disable_cpu_affinity: bool | None = None
+        parallel_decompressor_count: int | None = None
+        decompressor_thread_count: int | None = None
+        recursive_plot_scan: bool | None = None
+        refresh_parameter_interval_seconds: uint32 | None = None
         if "use_gpu_harvesting" in request:
             use_gpu_harvesting = bool(request["use_gpu_harvesting"])
         if "gpu_index" in request:

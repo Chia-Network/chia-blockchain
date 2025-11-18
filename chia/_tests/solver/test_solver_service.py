@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants, PartialProof
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
 
@@ -24,7 +24,7 @@ async def test_solver_api_methods(blockchain_constants: ConsensusConstants, tmp_
             solver_api = solver_service._api
             assert solver_api.ready() is True
             test_info = SolverInfo(
-                partial_proof=[uint64(1000), uint64(2000), uint64(3000), uint64(4000)],
+                PartialProof([uint64(256)] * 64),
                 plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
                 strength=uint8(5),
                 size=uint8(28),

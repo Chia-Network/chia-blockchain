@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.introducer.introducer_service import IntroducerService
@@ -26,7 +26,7 @@ SERVICE_NAME = "introducer"
 def create_introducer_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
-    advertised_port: Optional[int] = None,
+    advertised_port: int | None = None,
     connect_to_daemon: bool = True,
 ) -> IntroducerService:
     service_config = config[SERVICE_NAME]
@@ -60,7 +60,7 @@ def create_introducer_service(
         service_name=SERVICE_NAME,
         network_id=network_id,
         connect_to_daemon=connect_to_daemon,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 

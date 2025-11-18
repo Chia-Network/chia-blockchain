@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Awaitable, Collection, Sequence
+from collections.abc import Awaitable, Callable, Collection, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
-from chia_rs import PlotSize
+from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import int16, uint32, uint64
 from typing_extensions import Protocol
@@ -40,7 +40,7 @@ from chia.server.ws_connection import WSChiaConnection
 log = logging.getLogger(__name__)
 
 
-def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
+def get_list_or_len(list_in: Sequence[object], length: bool) -> int | Sequence[object]:
     return len(list_in) if length else list_in
 
 
@@ -52,7 +52,7 @@ class Sync:
     plots_processed: uint32 = uint32(0)
     plots_total: uint32 = uint32(0)
     delta: Delta = field(default_factory=Delta)
-    time_done: Optional[float] = None
+    time_done: float | None = None
 
     def in_progress(self) -> bool:
         return self.sync_id != 0
@@ -76,7 +76,7 @@ class Sync:
 
 
 class ReceiverUpdateCallback(Protocol):
-    def __call__(self, peer_id: bytes32, delta: Optional[Delta]) -> Awaitable[None]:
+    def __call__(self, peer_id: bytes32, delta: Delta | None) -> Awaitable[None]:
         pass
 
 
@@ -91,12 +91,14 @@ class Receiver:
     _total_plot_size: int
     _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
-    _harvesting_mode: Optional[HarvestingMode]
+    _harvesting_mode: HarvestingMode | None
+    _constants: ConsensusConstants
 
     def __init__(
         self,
         connection: WSChiaConnection,
         update_callback: ReceiverUpdateCallback,
+        constants: ConsensusConstants,
     ) -> None:
         self._connection = connection
         self._current_sync = Sync()
@@ -109,12 +111,13 @@ class Receiver:
         self._total_effective_plot_size = 0
         self._update_callback = update_callback
         self._harvesting_mode = None
+        self._constants = constants
 
-    async def trigger_callback(self, update: Optional[Delta] = None) -> None:
+    async def trigger_callback(self, update: Delta | None = None) -> None:
         try:
             await self._update_callback(self._connection.peer_node_id, update)
-        except Exception as e:
-            log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
+        except Exception:
+            log.exception(f"_update_callback: node_id {self.connection().peer_node_id}")
 
     def reset(self) -> None:
         log.info(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
@@ -158,7 +161,7 @@ class Receiver:
     def total_effective_plot_size(self) -> int:
         return self._total_effective_plot_size
 
-    def harvesting_mode(self) -> Optional[HarvestingMode]:
+    def harvesting_mode(self) -> HarvestingMode | None:
         return self._harvesting_mode
 
     async def _process(
@@ -168,7 +171,7 @@ class Receiver:
             f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}"
         )
 
-        async def send_response(plot_sync_error: Optional[PlotSyncError] = None) -> None:
+        async def send_response(plot_sync_error: PlotSyncError | None = None) -> None:
             if self._connection is not None:
                 await self._connection.send_message(
                     make_msg(
@@ -181,13 +184,13 @@ class Receiver:
             await method(message)
             await send_response()
         except InvalidIdentifierError as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, InvalidIdentifierError {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier))
         except PlotSyncException as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, Error {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", None))
         except Exception as e:
-            log.warning(f"_process: node_id {self.connection().peer_node_id}, Exception {e}")
+            log.exception(f"_process: node_id {self.connection().peer_node_id}")
             await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:
@@ -349,10 +352,10 @@ class Receiver:
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
+
         self._total_effective_plot_size = int(
-            # TODO: todo_v2_plots support v2 plots
             sum(
-                UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(PlotSize.make_v1(plot.size)))
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.param(), self._constants)
                 for plot in self._plots.values()
             )
         )

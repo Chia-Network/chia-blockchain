@@ -4,12 +4,12 @@ import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint16
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
@@ -36,7 +36,7 @@ async def create_full_node_service(
     config: dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
+    override_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> FullNodeService:
     service_config = config[SERVICE_NAME]
 
@@ -52,7 +52,7 @@ async def create_full_node_service(
     )
     peer_api = FullNodeAPI(node)
 
-    rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None
+    rpc_info: RpcInfo[FullNodeRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
 
@@ -71,7 +71,7 @@ async def create_full_node_service(
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 

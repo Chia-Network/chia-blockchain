@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from time import perf_counter
-from typing import Optional
 
 import aiosqlite
 from chia_rs.sized_bytes import bytes32
@@ -84,7 +83,7 @@ class TradeStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
+        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: str | None = None
     ) -> TradeStore:
         self = cls()
 
@@ -227,7 +226,7 @@ class TradeStore:
         """
         Updates the status of the trade
         """
-        current: Optional[TradeRecord] = await self.get_trade_record(trade_id)
+        current: TradeRecord | None = await self.get_trade_record(trade_id)
         if current is None:
             return
         confirmed_at_index = current.confirmed_at_index
@@ -255,13 +254,13 @@ class TradeStore:
         await self.add_trade_record(tx, offer_name, replace=True)
 
     async def increment_sent(
-        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
+        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Err | None
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).
         """
 
-        current: Optional[TradeRecord] = await self.get_trade_record(id)
+        current: TradeRecord | None = await self.get_trade_record(id)
         if current is None:
             return False
 
@@ -322,7 +321,7 @@ class TradeStore:
 
         return total, my_offers_count, taken_offers_count
 
-    async def get_trade_record(self, trade_id: bytes32) -> Optional[TradeRecord]:
+    async def get_trade_record(self, trade_id: bytes32) -> TradeRecord | None:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
@@ -377,7 +376,7 @@ class TradeStore:
         start: int,
         end: int,
         *,
-        sort_key: Optional[str] = None,
+        sort_key: str | None = None,
         reverse: bool = False,
         exclude_my_offers: bool = False,
         exclude_taken_offers: bool = False,
@@ -398,8 +397,8 @@ class TradeStore:
 
         offset = start
         limit = end - start
-        where_status_clause: Optional[str] = None
-        order_by_clause: Optional[str] = None
+        where_status_clause: str | None = None
+        order_by_clause: str | None = None
 
         if not include_completed:
             # Construct a WHERE clause that only looks at active/pending statuses

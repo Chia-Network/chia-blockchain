@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Coroutine, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, TypeVar
 
 import click
 from chia_rs.sized_bytes import bytes32
@@ -13,13 +13,13 @@ from chia_rs.sized_ints import uint64
 from chia.cmds import options
 from chia.cmds.param_types import Bytes32ParamType
 
-FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
+FC = TypeVar("FC", bound=Callable[..., Any] | click.Command)
 
 logger = logging.getLogger(__name__)
 
 
 # TODO: this is more general and should be part of refactoring the overall CLI code duplication
-def run(coro: Coroutine[Any, Any, Optional[dict[str, Any]]]) -> None:
+def run(coro: Coroutine[Any, Any, dict[str, Any] | None]) -> None:
     import asyncio
 
     response = asyncio.run(coro)
@@ -145,9 +145,9 @@ def create_max_page_size_option() -> Callable[[FC], FC]:
 @options.create_fingerprint()
 def create_data_store(
     data_rpc_port: int,
-    fee: Optional[uint64],
+    fee: uint64 | None,
     verbose: bool,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
@@ -163,9 +163,9 @@ def create_data_store(
 def get_value(
     id: bytes32,
     key_string: str,
-    root_hash: Optional[bytes32],
+    root_hash: bytes32 | None,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
 
@@ -184,8 +184,8 @@ def update_data_store(
     id: bytes32,
     changelist_string: str,
     data_rpc_port: int,
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
+    fee: uint64 | None,
+    fingerprint: int | None,
     submit: bool,
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
@@ -212,7 +212,7 @@ def update_multiple_stores(
     store_updates_string: str,
     data_rpc_port: int,
     fee: uint64,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     submit: bool,
 ) -> None:
     from chia.cmds.data_funcs import update_multiple_stores_cmd
@@ -237,7 +237,7 @@ def submit_pending_root(
     id: bytes32,
     data_rpc_port: int,
     fee: uint64,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import submit_pending_root_cmd
 
@@ -258,7 +258,7 @@ def submit_pending_root(
 def submit_all_pending_roots(
     data_rpc_port: int,
     fee: uint64,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import submit_all_pending_roots_cmd
 
@@ -280,11 +280,11 @@ def submit_all_pending_roots(
 @create_max_page_size_option()
 def get_keys(
     id: bytes32,
-    root_hash: Optional[bytes32],
+    root_hash: bytes32 | None,
     data_rpc_port: int,
-    fingerprint: Optional[int],
-    page: Optional[int],
-    max_page_size: Optional[int],
+    fingerprint: int | None,
+    page: int | None,
+    max_page_size: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_cmd
 
@@ -300,11 +300,11 @@ def get_keys(
 @create_max_page_size_option()
 def get_keys_values(
     id: bytes32,
-    root_hash: Optional[bytes32],
+    root_hash: bytes32 | None,
     data_rpc_port: int,
-    fingerprint: Optional[int],
-    page: Optional[int],
-    max_page_size: Optional[int],
+    fingerprint: int | None,
+    page: int | None,
+    max_page_size: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
 
@@ -322,7 +322,7 @@ def get_keys_values(
 def get_root(
     id: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_root_cmd
 
@@ -345,7 +345,7 @@ def subscribe(
     id: bytes32,
     urls: list[str],
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import subscribe_cmd
 
@@ -361,7 +361,7 @@ def remove_subscription(
     id: bytes32,
     urls: list[str],
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import remove_subscriptions_cmd
 
@@ -376,7 +376,7 @@ def remove_subscription(
 def unsubscribe(
     id: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     retain: bool,
 ) -> None:
     from chia.cmds.data_funcs import unsubscribe_cmd
@@ -399,9 +399,9 @@ def get_kv_diff(
     hash_1: bytes32,
     hash_2: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
-    page: Optional[int],
-    max_page_size: Optional[int],
+    fingerprint: int | None,
+    page: int | None,
+    max_page_size: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_kv_diff_cmd
 
@@ -425,7 +425,7 @@ def get_kv_diff(
 def get_root_history(
     id: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_root_history_cmd
 
@@ -454,9 +454,9 @@ def get_root_history(
 def add_missing_files(
     ids: Sequence[bytes32],
     overwrite: bool,
-    directory: Optional[str],
+    directory: str | None,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import add_missing_files_cmd
 
@@ -492,9 +492,9 @@ def add_mirror(
     id: bytes32,
     amount: int,
     urls: list[str],
-    fee: Optional[uint64],
+    fee: uint64 | None,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import add_mirror_cmd
 
@@ -518,9 +518,9 @@ def add_mirror(
 @options.create_fingerprint()
 def delete_mirror(
     coin_id: bytes32,
-    fee: Optional[uint64],
+    fee: uint64 | None,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import delete_mirror_cmd
 
@@ -541,7 +541,7 @@ def delete_mirror(
 def get_mirrors(
     id: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_mirrors_cmd
 
@@ -559,7 +559,7 @@ def get_mirrors(
 @options.create_fingerprint()
 def get_subscriptions(
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_subscriptions_cmd
 
@@ -576,7 +576,7 @@ def get_subscriptions(
 @options.create_fingerprint()
 def get_owned_stores(
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_owned_stores_cmd
 
@@ -595,7 +595,7 @@ def get_owned_stores(
 def get_sync_status(
     id: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_sync_status_cmd
 
@@ -630,7 +630,7 @@ def check_plugins(
 def clear_pending_roots(
     id: bytes32,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import clear_pending_roots
 
@@ -675,7 +675,7 @@ def get_proof(
     id: bytes32,
     key_strings: list[str],
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import get_proof_cmd
 
@@ -698,7 +698,7 @@ def get_proof(
 def verify_proof(
     proof_string: str,
     data_rpc_port: int,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     from chia.cmds.data_funcs import verify_proof_cmd
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
@@ -40,7 +40,7 @@ def test_nft_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     # set RPC Client
     class NFTCreateRpcClient(TestWalletRpcClient):
-        async def create_new_nft_wallet(self, did_id: str, name: Optional[str] = None) -> dict[str, Any]:
+        async def create_new_nft_wallet(self, did_id: str, name: str | None = None) -> dict[str, Any]:
             self.add_to_log("create_new_nft_wallet", (did_id, name))
             return {"wallet_id": 4}
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -28,7 +27,7 @@ class WalletPuzzleStore:
     wallet_identifier_cache: LRUCache
     # maps wallet_id -> last_derivation_index
     last_wallet_derivation_index: dict[uint32, uint32]
-    last_derivation_index: Optional[uint32]
+    last_derivation_index: uint32 | None
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
@@ -110,9 +109,7 @@ class WalletPuzzleStore:
                 )
             ).close()
 
-    async def get_derivation_record(
-        self, index: uint32, wallet_id: uint32, hardened: bool
-    ) -> Optional[DerivationRecord]:
+    async def get_derivation_record(self, index: uint32, wallet_id: uint32, hardened: bool) -> DerivationRecord | None:
         """
         Returns the derivation record by index and wallet id.
         """
@@ -133,7 +130,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[DerivationRecord]:
+    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: bytes32) -> DerivationRecord | None:
         """
         Returns the derivation record by index and wallet id.
         """
@@ -183,7 +180,7 @@ class WalletPuzzleStore:
             bool(row[5]),
         )
 
-    async def index_for_pubkey(self, pubkey: G1Element) -> Optional[uint32]:
+    async def index_for_pubkey(self, pubkey: G1Element) -> uint32 | None:
         """
         Returns derivation paths for the given pubkey.
         Returns None if not present.
@@ -199,7 +196,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def record_for_pubkey(self, pubkey: G1Element) -> Optional[DerivationRecord]:
+    async def record_for_pubkey(self, pubkey: G1Element) -> DerivationRecord | None:
         """
         Returns derivation record for the given pubkey.
         Returns None if not present.
@@ -216,7 +213,7 @@ class WalletPuzzleStore:
 
         return None if row is None else self.row_to_record(row)
 
-    async def index_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[uint32]:
+    async def index_for_puzzle_hash(self, puzzle_hash: bytes32) -> uint32 | None:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
@@ -227,7 +224,7 @@ class WalletPuzzleStore:
             )
         return None if row is None else uint32(row[0])
 
-    async def record_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[DerivationRecord]:
+    async def record_for_puzzle_hash(self, puzzle_hash: bytes32) -> DerivationRecord | None:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
@@ -246,7 +243,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_wallet_identifier_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
+    async def get_wallet_identifier_for_puzzle_hash(self, puzzle_hash: bytes32) -> WalletIdentifier | None:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
@@ -267,7 +264,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_all_puzzle_hashes(self, wallet_id: Optional[int] = None) -> set[bytes32]:
+    async def get_all_puzzle_hashes(self, wallet_id: int | None = None) -> set[bytes32]:
         """
         Return a set containing all puzzle_hashes we generated.
         """
@@ -281,7 +278,7 @@ class WalletPuzzleStore:
                 )
             return {bytes32.fromhex(row[0]) for row in rows}
 
-    async def get_last_derivation_path(self) -> Optional[uint32]:
+    async def get_last_derivation_path(self) -> uint32 | None:
         """
         Returns the last derivation path by derivation_index.
         """
@@ -294,11 +291,11 @@ class WalletPuzzleStore:
             self.last_derivation_index = last_derivation_index
             return self.last_derivation_index
 
-    async def get_last_derivation_path_for_wallet(self, wallet_id: int) -> Optional[uint32]:
+    async def get_last_derivation_path_for_wallet(self, wallet_id: int) -> uint32 | None:
         """
         Returns the last derivation path by derivation_index.
         """
-        cached_derivation_index: Optional[uint32] = self.last_wallet_derivation_index.get(uint32(wallet_id))
+        cached_derivation_index: uint32 | None = self.last_wallet_derivation_index.get(uint32(wallet_id))
         if cached_derivation_index is not None:
             return cached_derivation_index
 
@@ -311,7 +308,7 @@ class WalletPuzzleStore:
                 self.last_wallet_derivation_index[uint32(wallet_id)] = derivation_index
             return derivation_index
 
-    async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
+    async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> DerivationRecord | None:
         """
         Returns the current derivation record by derivation_index.
         """
@@ -329,7 +326,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_unused_derivation_path(self) -> Optional[uint32]:
+    async def get_unused_derivation_path(self) -> uint32 | None:
         """
         Returns the first unused derivation path by derivation_index.
         """
@@ -343,7 +340,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_unused_derivation_path_for_wallet(self, wallet_id: uint32) -> Optional[uint32]:
+    async def get_unused_derivation_path_for_wallet(self, wallet_id: uint32) -> uint32 | None:
         """
         Returns the first unused derivation path by derivation_index.
         """

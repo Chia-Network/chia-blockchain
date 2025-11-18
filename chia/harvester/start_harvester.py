@@ -3,11 +3,11 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.harvester.harvester import Harvester
@@ -48,7 +48,7 @@ def create_harvester_service(
     peer_api = HarvesterAPI(node)
     network_id = service_config["selected_network"]
 
-    rpc_info: Optional[RpcInfo[HarvesterRpcApi]] = None
+    rpc_info: RpcInfo[HarvesterRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (HarvesterRpcApi, service_config["rpc_port"])
 
@@ -64,7 +64,7 @@ def create_harvester_service(
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 

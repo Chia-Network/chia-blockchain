@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Any, Optional
+from typing import Any
 
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_logging
@@ -158,7 +158,7 @@ async def async_main(config: dict[str, Any], net_config: dict[str, Any]) -> None
 
     async def stop(
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         await process_mgr.kill_processes()

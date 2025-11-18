@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 from sqlite3 import Row
-from typing import Any, Optional
+from typing import Any
 
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
@@ -208,7 +208,7 @@ class WalletDBReader:
     db_wrapper: DBWrapper2  # TODO: Remove db_wrapper member
     # TODO: make this a dataclass and make this an instance attribute instead of a mutable classvar
     config = {"db_readers": 1}  # noqa: RUF012
-    sql_log_path: Optional[Path] = None
+    sql_log_path: Path | None = None
     verbose = False
 
     async def get_all_wallets(self) -> list[Wallet]:
@@ -258,7 +258,7 @@ class WalletDBReader:
             except Exception as e:
                 errors.append(f"Exception while trying to access wallet {main_wallet_id} from users_wallets: {e}")
 
-            max_id: Optional[int] = None
+            max_id: int | None = None
             max_id_row = await execute_fetchone(reader, "SELECT MAX(id) FROM users_wallets")
             if max_id_row is None:
                 errors.append("Error fetching max wallet ID from table users_wallets. No wallets ?!?")
@@ -397,7 +397,7 @@ class WalletDBReader:
         return len(errors)
 
 
-async def scan(root_path: Path, db_path: Optional[str] = None, *, verbose: bool = False) -> None:
+async def scan(root_path: Path, db_path: str | None = None, *, verbose: bool = False) -> None:
     if db_path is None:
         wallet_db_path = root_path / "wallet" / "db"
         wallet_db_paths = list(wallet_db_path.glob("blockchain_wallet_*.sqlite"))

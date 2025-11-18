@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import click
 
@@ -33,7 +33,7 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
     default="main",
 )
 @click.pass_context
-def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulator_name: str) -> None:
+def sim_cmd(ctx: click.Context, rpc_port: int | None, root_path: str, simulator_name: str) -> None:
     context = ChiaCliContext.set_default(ctx)
     context.root_path = Path(root_path) / simulator_name
     context.rpc_port = rpc_port
@@ -64,11 +64,11 @@ def sim_cmd(ctx: click.Context, rpc_port: Optional[int], root_path: str, simulat
 @click.pass_context
 def create_simulator_config(
     ctx: click.Context,
-    fingerprint: Optional[int],
-    reward_address: Optional[str],
-    plot_directory: Optional[str],
-    mnemonic: Optional[str],
-    auto_farm: Optional[bool],
+    fingerprint: int | None,
+    reward_address: str | None,
+    plot_directory: str | None,
+    mnemonic: str | None,
+    auto_farm: bool | None,
     docker_mode: bool,
     no_bitfield: bool,
 ) -> None:
@@ -126,7 +126,7 @@ def sim_stop_cmd(ctx: click.Context, daemon: bool, wallet: bool) -> None:
 @click.pass_context
 def status_cmd(
     ctx: click.Context,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     show_key: bool,
     show_coins: bool,
     include_rewards: bool,

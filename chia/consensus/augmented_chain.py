@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
@@ -34,7 +34,7 @@ class AugmentedBlockchain:
         self._extra_blocks = {}
         self._height_to_hash = {}
 
-    def _get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         eb = self._extra_blocks.get(header_hash)
         if eb is None:
             return None
@@ -64,7 +64,7 @@ class AugmentedBlockchain:
         # traverse the additional blocks (if any) and resolve heights into
         # generators
         to_remove = []
-        curr: Optional[tuple[FullBlock, BlockRecord]] = self._extra_blocks.get(header_hash)
+        curr: tuple[FullBlock, BlockRecord] | None = self._extra_blocks.get(header_hash)
         while curr is not None:
             b = curr[0]
             if b.height in generator_refs:
@@ -81,7 +81,7 @@ class AugmentedBlockchain:
             generators.update(await self._underlying.lookup_block_generators(header_hash, generator_refs))
         return generators
 
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
         ret = self._get_block_record(header_hash)
         if ret is not None:
             return ret
@@ -97,7 +97,7 @@ class AugmentedBlockchain:
             del self._extra_blocks[hh]
 
     # BlockRecordsProtocol
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         ret = self._get_block_record(header_hash)
         if ret is not None:
             return ret
@@ -118,7 +118,7 @@ class AugmentedBlockchain:
             return self._underlying.block_record(header_hash)
         return self._underlying.height_to_block_record(height)
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32 | None:
         ret = self._height_to_hash.get(height)
         if ret is not None:
             return ret

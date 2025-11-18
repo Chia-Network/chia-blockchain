@@ -11,7 +11,7 @@ import tempfile
 import time
 from dataclasses import field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiohttp
 import anyio
@@ -40,8 +40,8 @@ class NonZeroReturnCodeError(Exception):
 @dataclasses.dataclass
 class RunResult:
     process: asyncio.subprocess.Process
-    stdout: Optional[str]
-    stderr: Optional[str]
+    stdout: str | None
+    stderr: str | None
 
 
 @click.group("data", help="For working with DataLayer")
@@ -77,7 +77,7 @@ class SyncTimeCommand:
     store_id: bytes32 = option("--store-id", required=True)
     profile_tasks: bool = option("--profile-tasks/--no-profile-tasks")
     restart_all: bool = option("--restart-all/--no-restart-all")
-    working_path: Optional[Path] = option("--working-path", default=None)
+    working_path: Path | None = option("--working-path", default=None)
     prefer_db_kv_blob_length: int = option(
         "--prefer-db-kv-blob-length",
         default=default_prefer_file_kv_blob_length,
