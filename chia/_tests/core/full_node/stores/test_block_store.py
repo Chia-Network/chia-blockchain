@@ -18,12 +18,11 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
+from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.full_node.full_block_utils import GeneratorBlockInfo
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.wallet_tools import WalletTool
@@ -71,10 +70,8 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
-        coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper_2, tmp_dir, use_cache=use_cache)
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         await BlockStore.create(db_wrapper_2)
@@ -147,10 +144,9 @@ async def test_get_full_blocks_at(
 
     async with DBConnection(2) as db_wrapper:
         # Use a different file for the blockchain
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         count = 0
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
@@ -175,10 +171,9 @@ async def test_get_block_records_in_range(
 
     async with DBConnection(2) as db_wrapper:
         # Use a different file for the blockchain
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         count = 0
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
@@ -205,10 +200,9 @@ async def test_get_block_bytes_in_range_in_main_chain(
 
     async with DBConnection(2) as db_wrapper:
         # Use a different file for the blockchain
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
         count = 0
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         for b1, b2 in zip(blocks, alt_blocks):
@@ -234,10 +228,8 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
 
     async with PathDBConnection(db_version) as wrapper, PathDBConnection(db_version) as wrapper_2:
         store = await BlockStore.create(wrapper, use_cache=use_cache)
-        coin_store_2 = await CoinStore.create(wrapper_2)
-        store_2 = await BlockStore.create(wrapper_2)
-        height_map = await BlockHeightMap.create(tmp_dir, wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(wrapper_2, tmp_dir, use_cache=use_cache)
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
         block_records = []
         for block in blocks:
             await _validate_and_add_block(bc, block)
@@ -265,10 +257,9 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool, default_
 
     async with DBConnection(2) as db_wrapper:
         # Use a different file for the blockchain
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         # insert all blocks
         count = 0
@@ -328,10 +319,9 @@ async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_versi
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper:
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         count = await block_store.count_compactified_blocks()
         assert count == 0
@@ -349,10 +339,9 @@ async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_ver
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper:
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         count = await block_store.count_uncompactified_blocks()
         assert count == 0
@@ -377,10 +366,9 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
         )
 
     async with DBConnection(db_version) as db_wrapper:
-        coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper, tmp_dir, use_cache=use_cache)
+        block_store = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
         for block in blocks:
             await _validate_and_add_block(bc, block)
 
@@ -400,7 +388,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
 
             # make sure we get the same result when we hit the database
             # itself (and not just the block cache)
-            block_store.rollback_cache_block(block.header_hash)
+            consensus_store.rollback_cache_block(block.header_hash)
             b = await block_store.get_full_block(block.header_hash)
             assert b is not None
             assert b.challenge_chain_ip_proof == proof
@@ -458,10 +446,8 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
-        coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper_2, tmp_dir, use_cache=use_cache)
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         await BlockStore.create(db_wrapper_2)
@@ -498,10 +484,9 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 
     async with DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
-        coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper_2, tmp_dir, use_cache=use_cache)
+        store_2 = consensus_store.block_store
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         await BlockStore.create(db_wrapper_2)
 
@@ -571,10 +556,8 @@ async def test_get_prev_hash(tmp_dir: Path, bt: BlockTools, db_version: int, use
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
-        coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, height_map, bt.constants, 2)
+        consensus_store = await ConsensusStoreSQLite3.create(db_wrapper_2, tmp_dir, use_cache=use_cache)
+        bc = await Blockchain.create(consensus_store, bt.constants, 2)
 
         store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         await BlockStore.create(db_wrapper_2)
