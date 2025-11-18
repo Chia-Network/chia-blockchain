@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 import pytest
 from click.testing import CliRunner, Result
@@ -26,7 +26,7 @@ def configure(root_path: Path, *args: str) -> Result:
     )
 
 
-def configure_interactive(root_path: Path, user_input: Optional[str] = None) -> Result:
+def configure_interactive(root_path: Path, user_input: str | None = None) -> Result:
     return CliRunner().invoke(
         cli,
         [
@@ -53,7 +53,7 @@ def enable(root_path: Path, *args: str) -> Result:
     )
 
 
-def enable_interactive(root_path: Path, user_input: Optional[str] = None) -> Result:
+def enable_interactive(root_path: Path, user_input: str | None = None) -> Result:
     return CliRunner().invoke(
         cli,
         [
@@ -66,7 +66,7 @@ def enable_interactive(root_path: Path, user_input: Optional[str] = None) -> Res
     )
 
 
-def prepare_submission(root_path: Path, user_input: Optional[str] = None) -> Result:
+def prepare_submission(root_path: Path, user_input: str | None = None) -> Result:
     return CliRunner().invoke(
         cli,
         [

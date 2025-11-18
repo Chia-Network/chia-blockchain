@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.seeder.crawler import Crawler
@@ -24,7 +24,7 @@ class CrawlerRpcApi:
             "/get_ips_after_timestamp": self.get_ips_after_timestamp,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> list[WsRpcMessage]:
         payloads = []
 
         if change_data is None:

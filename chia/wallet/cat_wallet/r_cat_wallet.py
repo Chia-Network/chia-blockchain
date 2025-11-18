@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -83,7 +83,7 @@ class RCATWallet(CATWallet):
         wallet: Wallet,
         limitations_program_hash_hex: str,
         hidden_puzzle_hash: bytes32,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> Self:
         self = cls()
         self.standard_wallet = wallet
@@ -137,14 +137,14 @@ class RCATWallet(CATWallet):
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         puzzle_driver: PuzzleInfo,
-        name: Optional[str] = None,
+        name: str | None = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: Optional[dict[AssetType, Any]] = None,
+        potential_subclasses: dict[AssetType, Any] | None = None,
     ) -> Any:
         if potential_subclasses is None:
             potential_subclasses = {}
 
-        rev_layer: Optional[PuzzleInfo] = puzzle_driver.also()
+        rev_layer: PuzzleInfo | None = puzzle_driver.also()
         if rev_layer is None:
             raise ValueError("create_from_puzzle_info called on RCATWallet with a non R-CAT puzzle driver")
         return await cls.get_or_create_wallet_for_cat(
@@ -219,9 +219,9 @@ class RCATWallet(CATWallet):
         primaries: list[CreateCoin],
         conditions: tuple[Condition, ...] = tuple(),
     ) -> Program:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+        record: (
+            DerivationRecord | None
+        ) = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {coin.puzzle_hash}")
         return solve_revocation_layer(
@@ -234,7 +234,7 @@ class RCATWallet(CATWallet):
             AssetType(puzzle_driver.type()) == AssetType.CAT
             and puzzle_driver["tail"] == self.cat_info.limitations_program_hash
         ):
-            inner_puzzle_driver: Optional[PuzzleInfo] = puzzle_driver.also()
+            inner_puzzle_driver: PuzzleInfo | None = puzzle_driver.also()
             if inner_puzzle_driver is None:
                 raise ValueError("Malformed puzzle driver passed to RCATWallet.match_puzzle_info")
             return (

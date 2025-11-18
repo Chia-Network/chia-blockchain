@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import Optional
 
 import click
 from chia_rs.sized_bytes import bytes32
@@ -33,7 +32,7 @@ def plotnft_cmd(ctx: click.Context) -> None:
 class ShowPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     context: ChiaCliContext = field(default_factory=ChiaCliContext)
-    id: Optional[int] = option(
+    id: int | None = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
 
@@ -77,7 +76,7 @@ class GetLoginLinkCMD:
 )
 class CreatePlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
-    pool_url: Optional[str] = option("-u", "--pool-url", help="HTTPS host:port of the pool to join", required=False)
+    pool_url: str | None = option("-u", "--pool-url", help="HTTPS host:port of the pool to join", required=False)
     state: str = option(
         "-s",
         "--state",
@@ -135,7 +134,7 @@ class JoinPlotNFTCMD:
         required=True,
     )
     dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
-    id: Optional[int] = option(
+    id: int | None = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
 
@@ -171,7 +170,7 @@ class LeavePlotNFTCMD:
         show_default=True,
         required=True,
     )
-    id: Optional[int] = option(
+    id: int | None = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
 
@@ -195,7 +194,7 @@ class LeavePlotNFTCMD:
 )
 class InspectPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
-    id: Optional[int] = option(
+    id: int | None = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
 
@@ -215,7 +214,7 @@ class InspectPlotNFTCMD:
 )
 class ClaimPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
-    id: Optional[int] = option(
+    id: int | None = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
     fee: uint64 = option(

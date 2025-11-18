@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from typing_extensions import Protocol
 
@@ -42,7 +42,7 @@ class HarvesterApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
-    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
+    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Message | None:
         """Handle signature request from farmer."""
         ...
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import importlib_resources
 import pytest
@@ -302,8 +302,8 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
 
         async def get_connections(
-            self, node_type: Optional[NodeType] = None
-        ) -> list[dict[str, Union[str, int, float, bytes32]]]:
+            self, node_type: NodeType | None = None
+        ) -> list[dict[str, str | int | float | bytes32]]:
             self.add_to_log("get_connections", (node_type,))
             return [
                 {
@@ -950,7 +950,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             self,
             start: int = 0,
             end: int = 50,
-            sort_key: Optional[str] = None,
+            sort_key: str | None = None,
             reverse: bool = False,
             file_contents: bool = False,
             exclude_my_offers: bool = False,

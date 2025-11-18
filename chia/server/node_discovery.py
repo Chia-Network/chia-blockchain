@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
 from random import Random
-from typing import Any, Optional
+from typing import Any
 
 import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
@@ -51,24 +51,24 @@ class FullNodeDiscovery:
     peer_connect_interval: int
     selected_network: str
     log: Logger
-    introducer_info: Optional[dict[str, Any]] = None
-    default_port: Optional[int] = None
-    resolver: Optional[dns.asyncresolver.Resolver] = field(default=None)
+    introducer_info: dict[str, Any] | None = None
+    default_port: int | None = None
+    resolver: dns.asyncresolver.Resolver | None = field(default=None)
     enable_private_networks: bool = field(default=False)
     is_closed: bool = field(default=False)
     legacy_peer_db_migrated: bool = field(default=False)
-    relay_queue: Optional[asyncio.Queue[tuple[TimestampedPeerInfo, int]]] = field(default=None)
-    address_manager: Optional[AddressManager] = field(default=None)
+    relay_queue: asyncio.Queue[tuple[TimestampedPeerInfo, int]] | None = field(default=None)
+    address_manager: AddressManager | None = field(default=None)
     connection_time_pretest: dict[str, Any] = field(default_factory=dict)
     received_count_from_peers: dict[str, Any] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    connect_peers_task: Optional[asyncio.Task[None]] = field(default=None)
-    serialize_task: Optional[asyncio.Task[None]] = field(default=None)
-    cleanup_task: Optional[asyncio.Task[None]] = field(default=None)
+    connect_peers_task: asyncio.Task[None] | None = field(default=None)
+    serialize_task: asyncio.Task[None] | None = field(default=None)
+    cleanup_task: asyncio.Task[None] | None = field(default=None)
     initial_wait: int = field(default=0)
     pending_outbound_connections: set[str] = field(default_factory=set)
     pending_tasks: set[asyncio.Task[None]] = field(default_factory=set)
-    introducer_info_obj: Optional[UnresolvedPeerInfo] = field(default=None)
+    introducer_info_obj: UnresolvedPeerInfo | None = field(default=None)
 
     def __post_init__(self) -> None:
         random.shuffle(self.dns_servers)  # Don't always start with the same DNS server
@@ -245,7 +245,7 @@ class FullNodeDiscovery:
         retry_introducers = False
         dns_server_index: int = 0
         tried_all_dns_servers: bool = False
-        local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
+        local_peerinfo: PeerInfo | None = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(time.time())
         last_collision_timestamp = 0
 
@@ -327,7 +327,7 @@ class FullNodeDiscovery:
                 tries = 0
                 now = time.time()
                 got_peer = False
-                addr: Optional[PeerInfo] = None
+                addr: PeerInfo | None = None
                 max_tries = 50
                 if len(groups) < 3:
                     max_tries = 10
@@ -345,7 +345,7 @@ class FullNodeDiscovery:
                         addr = None
                         retry_introducers = True
                         break
-                    info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
+                    info: ExtendedPeerInfo | None = await self.address_manager.select_tried_collision()
                     if info is None or time.time() - last_collision_timestamp <= 60:
                         info = await self.address_manager.select_peer(is_feeler)
                     else:
@@ -440,7 +440,7 @@ class FullNodeDiscovery:
         return port in NETWORK_ID_DEFAULT_PORTS.values() and port != self.default_port
 
     async def _add_peers_common(
-        self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
+        self, peer_list: list[TimestampedPeerInfo], peer_src: PeerInfo | None, is_full_node: bool
     ) -> None:
         # Check if we got the peers from a full node or from the introducer.
         peers_adjusted_timestamp = []
@@ -488,8 +488,8 @@ class FullNodeDiscovery:
 
 @dataclass
 class FullNodePeers(FullNodeDiscovery):
-    self_advertise_task: Optional[asyncio.Task[None]] = field(default=None)
-    address_relay_task: Optional[asyncio.Task[None]] = field(default=None)
+    self_advertise_task: asyncio.Task[None] | None = field(default=None)
+    address_relay_task: asyncio.Task[None] | None = field(default=None)
     relay_queue: asyncio.Queue[tuple[TimestampedPeerInfo, int]] = field(default_factory=asyncio.Queue)
     neighbour_known_peers: dict[PeerInfo, set[str]] = field(default_factory=dict)
     key: int = field(default_factory=lambda: random.getrandbits(256))
@@ -557,7 +557,7 @@ class FullNodePeers(FullNodeDiscovery):
                 if peer.host not in self.neighbour_known_peers[neighbour_info]:
                     self.neighbour_known_peers[neighbour_info].add(peer.host)
 
-    async def request_peers(self, peer_info: PeerInfo) -> Optional[Message]:
+    async def request_peers(self, peer_info: PeerInfo) -> Message | None:
         try:
             # Prevent a fingerprint attack: do not send peers to inbound connections.
             # This asymmetric behavior for inbound and outbound connections was introduced
@@ -582,7 +582,7 @@ class FullNodePeers(FullNodeDiscovery):
             return None
 
     async def add_peers(
-        self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
+        self, peer_list: list[TimestampedPeerInfo], peer_src: PeerInfo | None, is_full_node: bool
     ) -> None:
         try:
             await self._add_peers_common(peer_list, peer_src, is_full_node)
@@ -671,6 +671,6 @@ class WalletPeers(FullNodeDiscovery):
         await self._close_common()
 
     async def add_peers(
-        self, peer_list: list[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
+        self, peer_list: list[TimestampedPeerInfo], peer_src: PeerInfo | None, is_full_node: bool
     ) -> None:
         await self._add_peers_common(peer_list, peer_src, is_full_node)

@@ -10,20 +10,19 @@ import sys
 import tempfile
 import time
 import traceback
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Literal, cast
 
 import importlib_resources
 import yaml
-from typing_extensions import Literal
 
 from chia.util.lock import Lockfile
 
 log = logging.getLogger(__name__)
 
 
-def initial_config_file(filename: Union[str, Path]) -> str:
+def initial_config_file(filename: str | Path) -> str:
     initial_config_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath(f"initial-{filename}")
     contents: str = initial_config_path.read_text(encoding="utf-8")
     return contents
@@ -43,7 +42,7 @@ def create_default_chia_config(root_path: Path, filenames: list[str] = ["config.
             shutil.move(str(tmp_path), str(path))
 
 
-def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
+def config_path_for_filename(root_path: Path, filename: str | Path) -> Path:
     path_filename = Path(filename)
     if path_filename.is_absolute():
         return path_filename
@@ -51,7 +50,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 
 @contextlib.contextmanager
-def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
+def lock_config(root_path: Path, filename: str | Path) -> Iterator[None]:
     # TODO: This is presently used in some tests to lock the saving of the
     #       configuration file without having loaded it right there.  This usage
     #       should probably be removed and this function made private.
@@ -63,7 +62,7 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
 @contextlib.contextmanager
 def lock_and_load_config(
     root_path: Path,
-    filename: Union[str, Path],
+    filename: str | Path,
     fill_missing_services: bool = False,
 ) -> Iterator[dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
@@ -76,7 +75,7 @@ def lock_and_load_config(
         yield config
 
 
-def save_config(root_path: Path, filename: Union[str, Path], config_data: Any) -> None:
+def save_config(root_path: Path, filename: str | Path, config_data: Any) -> None:
     # This must be called under an acquired config lock
     path: Path = config_path_for_filename(root_path, filename)
     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
@@ -91,8 +90,8 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any) -
 
 def load_config(
     root_path: Path,
-    filename: Union[str, Path],
-    sub_config: Optional[str] = None,
+    filename: str | Path,
+    sub_config: str | None = None,
     exit_on_error: bool = True,
     fill_missing_services: bool = False,
 ) -> dict[str, Any]:
@@ -108,8 +107,8 @@ def load_config(
 
 def _load_config_maybe_locked(
     root_path: Path,
-    filename: Union[str, Path],
-    sub_config: Optional[str] = None,
+    filename: str | Path,
+    sub_config: str | None = None,
     exit_on_error: bool = True,
     acquire_lock: bool = True,
     fill_missing_services: bool = False,
@@ -154,7 +153,7 @@ def _load_config_maybe_locked(
 def load_config_cli(
     root_path: Path,
     filename: str,
-    sub_config: Optional[str] = None,
+    sub_config: str | None = None,
     fill_missing_services: bool = False,
 ) -> dict[str, Any]:
     """
@@ -215,7 +214,7 @@ def add_property(d: dict[str, Any], partial_key: str, value: Any) -> None:
             d[key_1][key_2] = value
 
 
-def str2bool(v: Union[str, bool]) -> bool:
+def str2bool(v: str | bool) -> bool:
     # Source from https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     if isinstance(v, bool):
         return v
@@ -289,7 +288,7 @@ def process_config_start_method(
     return processed_method
 
 
-def override_config(config: dict[str, Any], config_overrides: Optional[dict[str, Any]]) -> dict[str, Any]:
+def override_config(config: dict[str, Any], config_overrides: dict[str, Any] | None) -> dict[str, Any]:
     new_config = copy.deepcopy(config)
     if config_overrides is None:
         return new_config

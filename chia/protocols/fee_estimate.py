@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_ints import uint64
 
@@ -23,14 +22,14 @@ class FeeEstimate(Streamable):
     estimated_fee_rate: expressed in mojo per 1 clvm_cost. `estimated_fee` can be zero.
     """
 
-    error: Optional[str]
+    error: str | None
     time_target: uint64  # unix time stamp in seconds
     estimated_fee_rate: FeeRate  # Mojos per clvm cost
 
 
 @dataclass(frozen=True)
 class FeeEstimateV2:
-    error: Optional[str]
+    error: str | None
     time_target: uint64  # unix time stamp in seconds
     estimated_fee_rate: FeeRateV2  # Mojos per clvm cost
 
@@ -51,5 +50,5 @@ class FeeEstimateGroup(Streamable):
     Estimates are expressed in mojos / 1 clvm_cost.
     """
 
-    error: Optional[str]
+    error: str | None
     estimates: list[FeeEstimate]

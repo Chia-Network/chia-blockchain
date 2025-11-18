@@ -8,14 +8,25 @@ import io
 import os
 import pprint
 import traceback
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from enum import Enum, EnumMeta
 from types import UnionType
-from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, TypeVar, Union, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    ClassVar,
+    Literal,
+    TypeVar,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import Literal, Self, get_args, get_origin
+from typing_extensions import Self
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
@@ -212,7 +223,7 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Optional[Callable[[object, type[object]], Streamable]] = None
+    f_type: type[Any], json_parser: Callable[[object, type[object]], Streamable] | None = None
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
@@ -288,7 +299,7 @@ def function_to_post_init_process_one_item(f_type: type[object]) -> ConvertFunct
 
 
 def recurse_jsonify(
-    d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None, **next_recursion_env: Any
+    d: Any, next_recursion_step: Callable[[Any, Any], Any] | None = None, **next_recursion_env: Any
 ) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
@@ -327,7 +338,7 @@ def recurse_jsonify(
     elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
-        ret: Union[list[Any], dict[str, Any], str, int, None] = d.to_json_dict()
+        ret: list[Any] | dict[str, Any] | str | int | None = d.to_json_dict()
         return ret
     raise UnsupportedType(f"failed to jsonify {d} (type: {type(d)})")
 
@@ -353,7 +364,7 @@ def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"]
     f.write(value.to_bytes(4, byteorder))
 
 
-def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Optional[object]:
+def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> object | None:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):

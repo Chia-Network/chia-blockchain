@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
@@ -14,7 +14,7 @@ from chia.util.path import path_from_root
 
 def db_validate_func(
     root_path: Path,
-    in_db_path: Optional[Path] = None,
+    in_db_path: Path | None = None,
     *,
     validate_blocks: bool,
 ) -> None:

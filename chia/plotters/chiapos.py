@@ -10,7 +10,7 @@ import importlib.metadata
 import logging
 from argparse import Namespace
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from chia.plotting.util import Params, add_plot_directory, validate_plot_size
@@ -18,7 +18,7 @@ from chia.plotting.util import Params, add_plot_directory, validate_plot_size
 log = logging.getLogger(__name__)
 
 
-def get_chiapos_install_info() -> Optional[dict[str, Any]]:
+def get_chiapos_install_info() -> dict[str, Any] | None:
     chiapos_version = importlib.metadata.version("chiapos")
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 

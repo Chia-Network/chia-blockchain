@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Union
 
 from chia_puzzles_py.programs import GRAFTROOT_DL_OFFERS as GRAFTROOT_DL_OFFERS_BYTES
 from chia_puzzles_py.programs import P2_PARENT as P2_PARENT_BYTES
@@ -24,14 +23,14 @@ GRAFTROOT_DL_OFFERS = Program.from_bytes(GRAFTROOT_DL_OFFERS_BYTES)
 P2_PARENT = Program.from_bytes(P2_PARENT_BYTES)
 
 
-def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:
+def create_host_fullpuz(innerpuz: Program | bytes32, current_root: bytes32, genesis_id: bytes32) -> Program:
     db_layer = create_host_layer_puzzle(innerpuz, current_root)
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     singleton_struct = Program.to((mod_hash, (genesis_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer)
 
 
-def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: bytes32) -> Program:
+def create_host_layer_puzzle(innerpuz: Program | bytes32, current_root: bytes32) -> Program:
     # some hard coded metadata formatting and metadata updater for now
     return create_nft_layer_puzzle_with_curry_params(
         Program.to((current_root, None)),
@@ -41,7 +40,7 @@ def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: by
     )
 
 
-def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> tuple[bool, Iterator[Program]]:
+def match_dl_singleton(puzzle: Program | SerializedProgram) -> tuple[bool, Iterator[Program]]:
     """
     Given a puzzle test if it's a CAT and, if it is, return the curried arguments
     """
@@ -96,7 +95,7 @@ MIRROR_PUZZLE_HASH = create_mirror_puzzle().get_tree_hash()
 
 
 def get_mirror_info(
-    parent_puzzle: Union[Program, SerializedProgram], parent_solution: Union[Program, SerializedProgram]
+    parent_puzzle: Program | SerializedProgram, parent_solution: Program | SerializedProgram
 ) -> tuple[bytes32, list[bytes]]:
     assert type(parent_puzzle) is type(parent_solution)
     _, conditions = run_with_cost(parent_puzzle, INFINITE_COST, parent_solution)

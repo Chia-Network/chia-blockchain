@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from typing_extensions import Protocol
 
@@ -52,7 +52,7 @@ class FarmerApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request()
-    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Optional[Message]:
+    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Message | None:
         """Handle request for signed values from full node."""
         ...
 

@@ -6,7 +6,6 @@ import logging
 from collections import OrderedDict
 from collections import OrderedDict as orderedDict
 from dataclasses import dataclass, field
-from typing import Optional
 
 import typing_extensions
 from chia_rs.sized_bytes import bytes32
@@ -33,7 +32,7 @@ class SyncStore:
     # peer node id : Peak
     peer_to_peak: dict[bytes32, Peak] = field(default_factory=dict)
     # Peak we are syncing towards
-    target_peak: Optional[Peak] = None
+    target_peak: Peak | None = None
     peers_changed: asyncio.Event = field(default_factory=asyncio.Event)
     # Set of nodes which we are batch syncing from
     batch_syncing: set[bytes32] = field(default_factory=set)
@@ -103,7 +102,7 @@ class SyncStore:
             ret[peer_id] = peak
         return ret
 
-    def get_heaviest_peak(self) -> Optional[Peak]:
+    def get_heaviest_peak(self) -> Peak | None:
         """
         Returns: the header_hash, height, and weight of the heaviest block that one of our peers has notified
         us of.
@@ -111,7 +110,7 @@ class SyncStore:
 
         if len(self.peer_to_peak) == 0:
             return None
-        heaviest_peak: Optional[Peak] = None
+        heaviest_peak: Peak | None = None
         for peak in self.peer_to_peak.values():
             if peak.header_hash not in self.peak_to_peer:
                 continue

@@ -4,9 +4,10 @@ import logging
 import threading
 import time
 import traceback
+from collections.abc import Callable
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants, G1Element
 from chiapos import decompressor_context_queue
@@ -36,13 +37,13 @@ class PlotManager:
     farmer_public_keys: list[G1Element]
     pool_public_keys: list[G1Element]
     cache: Cache
-    match_str: Optional[str]
+    match_str: str | None
     open_no_key_filenames: bool
     last_refresh_time: float
     refresh_parameter: PlotsRefreshParameter
     log: Any
     _lock: threading.Lock
-    _refresh_thread: Optional[threading.Thread]
+    _refresh_thread: threading.Thread | None
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
@@ -55,7 +56,7 @@ class PlotManager:
         root_path: Path,
         refresh_callback: Callable,
         constants: ConsensusConstants,
-        match_str: Optional[str] = None,
+        match_str: str | None = None,
         open_no_key_filenames: bool = False,
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
     ):
@@ -295,7 +296,7 @@ class PlotManager:
         if self.match_str is not None:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
-        def process_file(file_path: Path) -> Optional[PlotInfo]:
+        def process_file(file_path: Path) -> PlotInfo | None:
             if not self._refreshing_enabled:
                 return None
             filename_str = str(file_path)
@@ -312,7 +313,7 @@ class PlotManager:
             if file_path in self.plots:
                 return self.plots[file_path]
 
-            entry: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
+            entry: tuple[str, set[str]] | None = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
                 _loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
@@ -394,7 +395,7 @@ class PlotManager:
                     self.no_key_filenames.remove(file_path)
 
                 with self.plot_filename_paths_lock:
-                    paths: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
+                    paths: tuple[str, set[str]] | None = self.plot_filename_paths.get(file_path.name)
                     if paths is None:
                         paths = (str(Path(cache_entry.prover.get_filename()).parent), set())
                         self.plot_filename_paths[file_path.name] = paths

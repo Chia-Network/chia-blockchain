@@ -4,7 +4,7 @@ import json
 import re
 from dataclasses import dataclass
 from io import StringIO
-from typing import Optional, cast
+from typing import cast
 
 import click
 import pytest
@@ -59,8 +59,8 @@ pytestmark = [pytest.mark.limit_consensus_modes(reason="irrelevant")]
 class StateUrlCase:
     id: str
     state: str
-    pool_url: Optional[str]
-    expected_error: Optional[str] = None
+    pool_url: str | None
+    expected_error: str | None = None
     marks: Marks = ()
 
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import FullBlock
 from chia_rs.sized_ints import uint32
 
@@ -47,7 +45,7 @@ async def add_blocks_in_batches(
         )
         assert success is True
         if state_change_summary is not None:
-            peak_fb: Optional[FullBlock] = await full_node.blockchain.get_full_peak()
+            peak_fb: FullBlock | None = await full_node.blockchain.get_full_peak()
             assert peak_fb is not None
             ppp_result: PeakPostProcessingResult = await full_node.peak_post_processing(
                 peak_fb, state_change_summary, None

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import CoinSpend, G2Element, SpendBundle, SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
@@ -31,7 +31,7 @@ class BundleCoinSpend:
     # current unspent lineage belonging to this singleton, that we would rebase
     # this spend on top of if we were to make a block now
     # When finding MempoolItems by coin ID, we use Coin ID from it if it's set
-    latest_singleton_lineage: Optional[UnspentLineageInfo]
+    latest_singleton_lineage: UnspentLineageInfo | None
 
     @property
     def supports_fast_forward(self) -> bool:
@@ -47,12 +47,12 @@ class MempoolItem:
     height_added_to_mempool: uint32
 
     # If present, this SpendBundle is not valid at or before this height
-    assert_height: Optional[uint32] = None
+    assert_height: uint32 | None = None
 
     # If present, this SpendBundle is not valid once the block height reaches
     # the specified height
-    assert_before_height: Optional[uint32] = None
-    assert_before_seconds: Optional[uint64] = None
+    assert_before_height: uint32 | None = None
+    assert_before_seconds: uint64 | None = None
 
     # Map of coin ID to coin spend data between the bundle and its
     # SpendBundleConditions

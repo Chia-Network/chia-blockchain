@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 
 from chia_rs.sized_ints import int16, uint8, uint16
 
@@ -86,4 +85,4 @@ class Handshake(Streamable):
 class Error(Streamable):
     code: int16  # Err
     message: str
-    data: Optional[bytes] = None
+    data: bytes | None = None

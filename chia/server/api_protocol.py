@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import functools
 import logging
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from logging import Logger
-from typing import Callable, ClassVar, Optional, TypeVar, Union, final, get_type_hints
+from typing import ClassVar, Concatenate, TypeVar, final, get_type_hints
 
-from typing_extensions import Concatenate, ParamSpec, Protocol
+from typing_extensions import ParamSpec, Protocol
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -23,7 +23,7 @@ class ApiProtocol(Protocol):
 
 log = logging.getLogger(__name__)
 P = ParamSpec("P")
-R = TypeVar("R", bound=Awaitable[Optional[Message]])
+R = TypeVar("R", bound=Awaitable[Message | None])
 S = TypeVar("S", bound=Streamable)
 Self = TypeVar("Self")
 api_attribute_name = "_chia_api"
@@ -33,7 +33,7 @@ api_attribute_name = "_chia_api"
 class ApiRequest:
     request_type: ProtocolMessageTypes
     message_class: type[Streamable]
-    method: Callable[..., Awaitable[Optional[Message]]]
+    method: Callable[..., Awaitable[Message | None]]
     peer_required: bool = False
     bytes_required: bool = False
     execute_task: bool = False
@@ -50,7 +50,7 @@ class ApiMetadata:
         return cls(message_type_to_request=dict(original.message_type_to_request))
 
     @classmethod
-    def from_bound_method(cls, method: Callable[..., Awaitable[Optional[Message]]]) -> ApiRequest:
+    def from_bound_method(cls, method: Callable[..., Awaitable[Message | None]]) -> ApiRequest:
         self: ApiMetadata = getattr(method, api_attribute_name)
         message_type = ProtocolMessageTypes[method.__name__]
         return self.message_type_to_request[message_type]
@@ -62,18 +62,18 @@ class ApiMetadata:
         peer_required: bool = False,
         bytes_required: bool = False,
         execute_task: bool = False,
-        reply_types: Optional[list[ProtocolMessageTypes]] = None,
-        request_type: Optional[ProtocolMessageTypes] = None,
-    ) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, Union[bytes, S], P], R]]:
+        reply_types: list[ProtocolMessageTypes] | None = None,
+        request_type: ProtocolMessageTypes | None = None,
+    ) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, bytes | S, P], R]]:
         non_optional_reply_types: list[ProtocolMessageTypes]
         if reply_types is None:
             non_optional_reply_types = []
         else:
             non_optional_reply_types = reply_types
 
-        def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
+        def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, bytes | S, P], R]:
             @functools.wraps(f)
-            def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
+            def wrapper(self: Self, original: bytes | S, *args: P.args, **kwargs: P.kwargs) -> R:
                 arg: S
                 if isinstance(original, bytes):
                     if request.bytes_required:

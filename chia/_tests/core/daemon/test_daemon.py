@@ -5,7 +5,7 @@ import json
 import logging
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import aiohttp
 import pytest
@@ -94,7 +94,7 @@ class ChiaPlottersBladebitArgsCase:
     pool_contract: str = "txch1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     compress: int = 1
     device: int = 0
-    hybrid_disk_mode: Optional[int] = None
+    hybrid_disk_mode: int | None = None
     farmer_pk: str = ""
     final_dir: str = ""
     marks: Marks = ()
@@ -147,7 +147,7 @@ class ChiaPlottersBladebitArgsCase:
 class Service:
     running: bool
 
-    def poll(self) -> Optional[int]:
+    def poll(self) -> int | None:
         return None if self.running else 1
 
 
@@ -155,8 +155,8 @@ class Service:
 @dataclass
 class Daemon:
     # Instance variables used by WebSocketServer.is_running()
-    services: dict[str, Union[list[Service], Service]]
-    connections: dict[str, Optional[list[Any]]]
+    services: dict[str, list[Service] | Service]
+    connections: dict[str, list[Any] | None]
 
     # Instance variables used by WebSocketServer.get_wallet_addresses()
     net_config: dict[str, Any] = field(default_factory=dict)
@@ -314,9 +314,9 @@ label_newline_or_tab_response_data = {
 def assert_response(
     response: aiohttp.http_websocket.WSMessage,
     expected_response_data: dict[str, Any],
-    request_id: Optional[str] = None,
+    request_id: str | None = None,
     ack: bool = True,
-    command: Optional[str] = None,
+    command: str | None = None,
 ) -> None:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
@@ -332,7 +332,7 @@ def assert_response(
 
 
 def assert_response_success_only(
-    response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None
+    response: aiohttp.http_websocket.WSMessage, request_id: str | None = None
 ) -> dict[str, Any]:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT

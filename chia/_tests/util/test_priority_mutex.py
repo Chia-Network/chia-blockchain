@@ -7,8 +7,8 @@ import itertools
 import logging
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 import anyio
 import pytest
@@ -119,8 +119,8 @@ class Request:
     # TODO: is the ID unneeded?
     id: str
     priority: MutexPriority
-    acquisition_order: Optional[int] = None
-    release_order: Optional[int] = None
+    acquisition_order: int | None = None
+    release_order: int | None = None
     order_counter: Callable[[], int] = counter.__next__
     # TODO: done may not be needed
     done: bool = False

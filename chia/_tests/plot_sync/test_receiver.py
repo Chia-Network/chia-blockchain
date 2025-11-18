@@ -4,7 +4,8 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Any, Callable, Union
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from chia_rs import G1Element
@@ -90,7 +91,7 @@ def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
     assert response.error.code == error_code.value
 
 
-def pre_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]], expected_state: State) -> None:
+def pre_function_validate(receiver: Receiver, data: list[Plot] | list[str], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) is Plot
@@ -109,7 +110,7 @@ def pre_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]]
             assert path not in receiver.duplicates()
 
 
-def post_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]], expected_state: State) -> None:
+def post_function_validate(receiver: Receiver, data: list[Plot] | list[str], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) is Plot

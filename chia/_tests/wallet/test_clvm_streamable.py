@@ -74,17 +74,18 @@ def test_nested_serialization() -> None:
     assert json_deserialize_with_clvm_streamable("ffff86696e73696465ffff613180ffff613180", OutsideCLVM) == instance_clvm
 
 
+# TODO: Fix underlying hsms to handle UnionType
 @streamable
 @dataclasses.dataclass(frozen=True)
 class Compound(Streamable):
-    optional: Optional[BasicCLVMStreamable]
+    optional: Optional[BasicCLVMStreamable]  # noqa: UP045
     list: list[BasicCLVMStreamable]
 
 
 @clvm_streamable
 @dataclasses.dataclass(frozen=True)
 class CompoundCLVM(Streamable):
-    optional: Optional[BasicCLVMStreamable]
+    optional: Optional[BasicCLVMStreamable]  # noqa: UP045
     list: list[BasicCLVMStreamable]
 
 

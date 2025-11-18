@@ -4,7 +4,6 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from click.testing import CliRunner, Result
@@ -54,7 +53,7 @@ def setup_keyringwrapper(tmp_path):
     KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
 
 
-def assert_label(keychain: Keychain, label: Optional[str], index: int) -> None:
+def assert_label(keychain: Keychain, label: str | None, index: int) -> None:
     all_keys = keychain.get_keys()
     assert len(all_keys) > index
     assert all_keys[index].label == label
@@ -200,7 +199,7 @@ class TestKeysCommands:
         ],
     )
     def test_generate_and_add_label_parameter(
-        self, cmd_params: list[str], label: Optional[str], input_str: Optional[str], tmp_path, empty_keyring
+        self, cmd_params: list[str], label: str | None, input_str: str | None, tmp_path, empty_keyring
     ):
         keychain = empty_keyring
         keys_root_path = keychain.keyring_wrapper.keys_root_path

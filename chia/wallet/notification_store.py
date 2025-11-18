@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -32,7 +31,7 @@ class NotificationStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
+        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: str | None = None
     ) -> NotificationStore:
         self = cls()
 
@@ -88,8 +87,8 @@ class NotificationStore:
     async def get_notifications(
         self,
         *,
-        coin_ids: Optional[list[bytes32]] = None,
-        pagination: tuple[Optional[int], Optional[int]] = (None, None),
+        coin_ids: list[bytes32] | None = None,
+        pagination: tuple[int | None, int | None] = (None, None),
     ) -> list[Notification]:
         if coin_ids is not None:
             coin_ids_str_list = "("

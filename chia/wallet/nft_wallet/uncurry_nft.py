@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import CoinSpend, CoinState
 from chia_rs.sized_bytes import bytes32
@@ -66,28 +65,28 @@ class UncurriedNFT(Streamable):
     """p2 puzzle of the owner, either for ownership layer or standard"""
 
     # ownership layer fields
-    owner_did: Optional[bytes32]
+    owner_did: bytes32 | None
     """Owner's DID"""
 
     supports_did: bool
     """If the inner puzzle support the DID"""
 
-    nft_inner_puzzle_hash: Optional[bytes32]
+    nft_inner_puzzle_hash: bytes32 | None
     """Puzzle hash of the ownership layer inner puzzle """
 
-    transfer_program: Optional[Program]
+    transfer_program: Program | None
     """Puzzle hash of the transfer program"""
 
-    transfer_program_curry_params: Optional[Program]
+    transfer_program_curry_params: Program | None
     """
     Curried parameters of the transfer program
     [royalty_address, trade_price_percentage, settlement_mod_hash, cat_mod_hash]
     """
-    royalty_address: Optional[bytes32]
-    trade_price_percentage: Optional[uint16]
+    royalty_address: bytes32 | None
+    trade_price_percentage: uint16 | None
 
     @classmethod
-    def uncurry(cls, mod: Program, curried_args: Program) -> Optional[Self]:
+    def uncurry(cls, mod: Program, curried_args: Program) -> Self | None:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
@@ -140,11 +139,11 @@ class UncurriedNFT(Streamable):
                     edition_number = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"st":
                     edition_total = kv_pair.rest()
-            current_did: Optional[bytes32] = None
+            current_did: bytes32 | None = None
             transfer_program = None
             transfer_program_args = None
-            royalty_address: Optional[bytes32] = None
-            royalty_percentage: Optional[uint16] = None
+            royalty_address: bytes32 | None = None
+            royalty_percentage: uint16 | None = None
             nft_inner_puzzle_mod = None
             mod, ol_args = inner_puzzle.uncurry()
             supports_did = False

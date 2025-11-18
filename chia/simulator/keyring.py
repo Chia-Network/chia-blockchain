@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Optional
 from unittest.mock import patch
 
 from chia.util.file_keyring import FileKeyring, keyring_path_from_root
@@ -44,7 +43,7 @@ class TempKeyring:
         user: str = "testing-1.8.0",
         service: str = "testing-chia-1.8.0",
         populate: bool = False,
-        existing_keyring_path: Optional[str] = None,
+        existing_keyring_path: str | None = None,
         delete_on_cleanup: bool = True,
         use_os_credential_store: bool = False,
     ):
@@ -65,7 +64,7 @@ class TempKeyring:
         user: str,
         service: str,
         populate: bool,
-        existing_keyring_path: Optional[str],
+        existing_keyring_path: str | None,
         use_os_credential_store: bool,
     ):
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None

@@ -5,7 +5,6 @@ from collections import OrderedDict
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from random import Random
-from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program, SpendBundle
@@ -621,14 +620,14 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
 class PuzzleStateData:
     coin_states: list[CoinState]
     end_of_batch: bool
-    previous_height: Optional[uint32]
+    previous_height: uint32 | None
     header_hash: bytes32
 
 
 async def sync_puzzle_hashes(
     puzzle_hashes: list[bytes32],
     *,
-    initial_previous_height: Optional[uint32],
+    initial_previous_height: uint32 | None,
     initial_header_hash: bytes32,
     filters: wallet_protocol.CoinStateFilters,
     subscribe_when_finished: bool = False,
@@ -893,7 +892,7 @@ async def subscribe_puzzle(
     assert len(response.coin_states) == existing_coin_states
 
 
-async def spend_coin(simulator: FullNodeSimulator, coin: Coin, solution: Optional[Program] = None) -> bytes32:
+async def spend_coin(simulator: FullNodeSimulator, coin: Coin, solution: Program | None = None) -> bytes32:
     bundle = SpendBundle(
         [CoinSpend(coin, IDENTITY_PUZZLE, Program.to([]) if solution is None else solution)], AugSchemeMPL.aggregate([])
     )

@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from chia_rs import G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
@@ -109,7 +108,7 @@ class PostFarmerPayload(Streamable):
     authentication_token: uint64
     authentication_public_key: G1Element
     payout_instructions: str
-    suggested_difficulty: Optional[uint64]
+    suggested_difficulty: uint64 | None
 
 
 @streamable
@@ -134,9 +133,9 @@ class PostFarmerResponse(Streamable):
 class PutFarmerPayload(Streamable):
     launcher_id: bytes32
     authentication_token: uint64
-    authentication_public_key: Optional[G1Element]
-    payout_instructions: Optional[str]
-    suggested_difficulty: Optional[uint64]
+    authentication_public_key: G1Element | None
+    payout_instructions: str | None
+    suggested_difficulty: uint64 | None
 
 
 @streamable
@@ -150,9 +149,9 @@ class PutFarmerRequest(Streamable):
 @streamable
 @dataclass(frozen=True)
 class PutFarmerResponse(Streamable):
-    authentication_public_key: Optional[bool]
-    payout_instructions: Optional[bool]
-    suggested_difficulty: Optional[bool]
+    authentication_public_key: bool | None
+    payout_instructions: bool | None
+    suggested_difficulty: bool | None
 
 
 # Misc
@@ -163,7 +162,7 @@ class PutFarmerResponse(Streamable):
 @dataclass(frozen=True)
 class ErrorResponse(Streamable):
     error_code: uint16
-    error_message: Optional[str]
+    error_message: str | None
 
 
 # Get the current authentication token according to "Farmer authentication" in SPECIFICATION.md

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import importlib_resources
 from cryptography import x509
@@ -138,8 +138,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
 def create_all_ssl(
     root_path: Path,
     *,
-    private_ca_crt_and_key: Optional[tuple[bytes, bytes]] = None,
-    node_certs_and_keys: Optional[dict[str, dict]] = None,
+    private_ca_crt_and_key: tuple[bytes, bytes] | None = None,
+    node_certs_and_keys: dict[str, dict] | None = None,
     private_node_names: list[str] = _all_private_node_names,
     public_node_names: list[str] = _all_public_node_names,
     overwrite: bool = True,
@@ -222,7 +222,7 @@ def generate_ssl_for_nodes(
     prefix: str,
     nodes: list[str],
     overwrite: bool = True,
-    node_certs_and_keys: Optional[dict[str, dict]] = None,
+    node_certs_and_keys: dict[str, dict] | None = None,
 ):
     for node_name in nodes:
         node_dir = ssl_dir / node_name

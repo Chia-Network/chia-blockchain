@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 
@@ -48,7 +48,7 @@ def create_harvester_service(
     peer_api = HarvesterAPI(node)
     network_id = service_config["selected_network"]
 
-    rpc_info: Optional[RpcInfo[HarvesterRpcApi]] = None
+    rpc_info: RpcInfo[HarvesterRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (HarvesterRpcApi, service_config["rpc_port"])
 

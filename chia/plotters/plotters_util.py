@@ -10,7 +10,7 @@ import sys
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import TextIO
 
 from chia.util.chia_version import chia_short_version
 from chia.util.config import lock_and_load_config
@@ -18,8 +18,8 @@ from chia.util.task_referencer import create_referenced_task
 
 
 @contextlib.contextmanager
-def get_optional_beta_plot_log_file(root_path: Path, plotter: str) -> Iterator[Optional[TextIO]]:
-    beta_log_path: Optional[Path] = None
+def get_optional_beta_plot_log_file(root_path: Path, plotter: str) -> Iterator[TextIO | None]:
+    beta_log_path: Path | None = None
     with lock_and_load_config(root_path, "config.yaml") as config:
         if config.get("beta", {}).get("enabled", False):
             file_name = f"{plotter}_{datetime.now().strftime('%m_%d_%Y__%H_%M_%S')}.log"

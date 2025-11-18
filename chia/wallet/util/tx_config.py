@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -69,10 +69,10 @@ class AutofillArgs(TypedDict):
 @streamable
 @dataclasses.dataclass(frozen=True)
 class CoinSelectionConfigLoader(Streamable):
-    min_coin_amount: Optional[uint64] = None
-    max_coin_amount: Optional[uint64] = None
-    excluded_coin_amounts: Optional[list[uint64]] = None
-    excluded_coin_ids: Optional[list[bytes32]] = None
+    min_coin_amount: uint64 | None = None
+    max_coin_amount: uint64 | None = None
+    excluded_coin_amounts: list[uint64] | None = None
+    excluded_coin_ids: list[bytes32] | None = None
 
     def autofill(
         self,
@@ -106,7 +106,7 @@ class CoinSelectionConfigLoader(Streamable):
 @streamable
 @dataclasses.dataclass(frozen=True)
 class TXConfigLoader(CoinSelectionConfigLoader):
-    reuse_puzhash: Optional[bool] = None
+    reuse_puzhash: bool | None = None
 
     def autofill(
         self,

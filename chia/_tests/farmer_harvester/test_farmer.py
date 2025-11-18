@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from time import time
 from types import TracebackType
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 from unittest.mock import ANY
 
 import pytest
@@ -57,7 +57,7 @@ class IncrementPoolStatsCase:
     name: str
     current_time: float
     count: int
-    value: Optional[Union[int, dict[str, Any]]]
+    value: int | dict[str, Any] | None
     expected_result: Any
 
     def __init__(
@@ -66,7 +66,7 @@ class IncrementPoolStatsCase:
         name: str,
         current_time: float,
         count: int,
-        value: Optional[Union[int, dict[str, Any]]],
+        value: int | dict[str, Any] | None,
         expected_result: Any,
     ):
         prepared_p2_singleton_puzzle_hash = std_hash(b"11223344")
@@ -137,13 +137,13 @@ class NewProofOfSpaceCase:
     plot_size: PlotParam
     plot_challenge: bytes32
     plot_public_key: G1Element
-    pool_public_key: Optional[G1Element]
+    pool_public_key: G1Element | None
     pool_contract_puzzle_hash: bytes32
     height: uint32
     proof: bytes
     pool_config: PoolWalletConfig
-    pool_difficulty: Optional[uint64]
-    authentication_token_timeout: Optional[uint8]
+    pool_difficulty: uint64 | None
+    authentication_token_timeout: uint8 | None
     farmer_private_keys: list[PrivateKey]
     authentication_keys: dict[bytes32, PrivateKey]
     use_invalid_peer_response: bool
@@ -157,8 +157,8 @@ class NewProofOfSpaceCase:
         difficulty: uint64,
         sub_slot_iters: uint64,
         pool_url: str,
-        pool_difficulty: Optional[uint64],
-        authentication_token_timeout: Optional[uint8],
+        pool_difficulty: uint64 | None,
+        authentication_token_timeout: uint8 | None,
         use_invalid_peer_response: bool,
         has_valid_authentication_keys: bool,
         expected_pool_stats: dict[str, Any],
@@ -676,9 +676,9 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
 class DummyPoolResponse:
     ok: bool
     status: int
-    error_code: Optional[int] = None
-    error_message: Optional[str] = None
-    new_difficulty: Optional[int] = None
+    error_code: int | None = None
+    error_message: str | None = None
+    new_difficulty: int | None = None
 
     async def text(self) -> str:
         json_dict: dict[str, Any] = dict()
@@ -695,9 +695,9 @@ class DummyPoolResponse:
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         pass
 
@@ -1010,7 +1010,7 @@ class DummyPoolInfoResponse:
     ok: bool
     status: int
     url: URL
-    pool_info: Optional[dict[str, Any]] = None
+    pool_info: dict[str, Any] | None = None
     history: tuple[DummyClientResponse, ...] = ()
 
     async def text(self) -> str:
@@ -1024,9 +1024,9 @@ class DummyPoolInfoResponse:
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         pass
 

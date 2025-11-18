@@ -4,7 +4,6 @@ import functools
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Optional
 
 from chia_puzzles_py.programs import (
     CONDITIONS_W_FEE_ANNOUNCE,
@@ -127,7 +126,7 @@ def construct_cr_layer_hash(
 
 def match_cr_layer(
     uncurried_puzzle: UncurriedPuzzle,
-) -> Optional[tuple[list[bytes32], Program, Program]]:
+) -> tuple[list[bytes32], Program, Program] | None:
     extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
     if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         return (
@@ -188,7 +187,7 @@ class CRCAT:
         authorized_providers: list[bytes32],
         proofs_checker: Program,
         # Probably never need this but some tail might
-        optional_lineage_proof: Optional[LineageProof] = None,
+        optional_lineage_proof: LineageProof | None = None,
     ) -> tuple[Program, CoinSpend, CRCAT]:
         """
         Launch a new CR-CAT from XCH.
@@ -327,7 +326,7 @@ class CRCAT:
     def get_next_from_coin_spend(
         cls,
         parent_spend: CoinSpend,
-        conditions: Optional[Program] = None,  # For optimization purposes, the conditions may already have been run
+        conditions: Program | None = None,  # For optimization purposes, the conditions may already have been run
     ) -> list[CRCAT]:
         """
         Given a coin spend, this will return the next CR-CATs that were created as an output of that spend.
@@ -342,7 +341,7 @@ class CRCAT:
 
         # Get info by uncurrying
         _, tail_hash_as_prog, potential_cr_layer = puzzle.uncurry()[1].as_iter()
-        new_inner_puzzle_hash: Optional[bytes32] = None
+        new_inner_puzzle_hash: bytes32 | None = None
         if potential_cr_layer.uncurry()[0].uncurry()[0] != CREDENTIAL_RESTRICTION:
             # If the previous spend is not a CR-CAT:
             # we look for a remark condition that tells us the authorized_providers and proofs_checker
@@ -428,12 +427,12 @@ class CRCAT:
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
-        vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
+        vc_inner_puzhash: bytes32 | None,  # Optional for incomplete spends
         # Inner puzzle and solution
         inner_puzzle: Program,
         inner_solution: Program,
         # For optimization purposes the conditions may already have been run
-        conditions: Optional[Iterable[Program]] = None,
+        conditions: Iterable[Program] | None = None,
     ) -> tuple[list[AssertCoinAnnouncement], CoinSpend, list[CRCAT]]:
         """
         Spend a CR-CAT.
@@ -521,7 +520,7 @@ class CRCAT:
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
-        vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
+        vc_inner_puzhash: bytes32 | None,  # Optional for incomplete spends
     ) -> tuple[list[AssertCoinAnnouncement], list[CoinSpend], list[CRCAT]]:
         """
         Spend a multiple CR-CATs.

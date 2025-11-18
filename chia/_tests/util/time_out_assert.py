@@ -6,10 +6,10 @@ import json
 import logging
 import pathlib
 import time
-from collections.abc import Awaitable, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from inspect import getframeinfo, stack
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast, final
 
 from typing_extensions import Self
 

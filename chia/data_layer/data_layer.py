@@ -12,7 +12,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator, Awaitable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 import aiohttp
 from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
@@ -132,14 +132,14 @@ class DataLayer:
     maximum_full_file_count: int
     server_files_location: Path
     unsubscribe_data_queue: list[UnsubscribeData]
-    _server: Optional[ChiaServer] = None
+    _server: ChiaServer | None = None
     none_bytes: bytes32 = bytes32.zeros
     initialized: bool = False
-    _data_store: Optional[DataStore] = None
-    state_changed_callback: Optional[StateChangedProtocol] = None
+    _data_store: DataStore | None = None
+    state_changed_callback: StateChangedProtocol | None = None
     _shut_down: bool = False
-    periodically_manage_data_task: Optional[asyncio.Task[None]] = None
-    _wallet_rpc: Optional[WalletRpcClient] = None
+    periodically_manage_data_task: asyncio.Task[None] | None = None
+    _wallet_rpc: WalletRpcClient | None = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
     client_timeout: aiohttp.ClientTimeout = dataclasses.field(
@@ -182,7 +182,7 @@ class DataLayer:
         wallet_rpc_init: Awaitable[WalletRpcClient],
         downloaders: list[PluginRemote],
         uploaders: list[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> DataLayer:
         if name == "":
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
@@ -228,7 +228,7 @@ class DataLayer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        sql_log_path: Optional[Path] = None
+        sql_log_path: Path | None = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
@@ -267,7 +267,7 @@ class DataLayer:
     async def on_connect(self, connection: WSChiaConnection) -> None:
         pass
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def set_server(self, server: ChiaServer) -> None:
@@ -295,7 +295,7 @@ class DataLayer:
         changelist: list[dict[str, Any]],
         fee: uint64,
         submit_on_chain: bool = True,
-    ) -> Optional[TransactionRecord]:
+    ) -> TransactionRecord | None:
         status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
 
@@ -305,7 +305,7 @@ class DataLayer:
             return None
 
     async def _get_publishable_root_hash(self, store_id: bytes32) -> bytes32:
-        pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
+        pending_root: Root | None = await self.data_store.get_pending_root(store_id=store_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING_BATCH:
@@ -351,7 +351,7 @@ class DataLayer:
     ) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
 
-        pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
+        pending_root: Root | None = await self.data_store.get_pending_root(store_id=store_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING:
@@ -379,12 +379,12 @@ class DataLayer:
         store_id: bytes32,
         changelist: list[dict[str, Any]],
         status: Status = Status.PENDING,
-        enable_batch_autoinsert: Optional[bool] = None,
+        enable_batch_autoinsert: bool | None = None,
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
-            pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
+            pending_root: Root | None = await self.data_store.get_pending_root(store_id=store_id)
             if pending_root is not None and pending_root.status == Status.PENDING:
                 raise Exception("Already have a pending root waiting for confirmation.")
 
@@ -431,7 +431,7 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -439,9 +439,7 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
-    async def get_value(
-        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, Unspecified] = unspecified
-    ) -> bytes:
+    async def get_value(self, store_id: bytes32, key: bytes, root_hash: bytes32 | Unspecified = unspecified) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
@@ -452,7 +450,7 @@ class DataLayer:
     async def get_keys_values(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
+        root_hash: bytes32 | Unspecified,
     ) -> list[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -464,9 +462,9 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
+        root_hash: bytes32 | Unspecified,
         page: int,
-        max_page_size: Optional[int] = None,
+        max_page_size: int | None = None,
     ) -> KeysValuesPaginationData:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -475,7 +473,7 @@ class DataLayer:
         res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
         return res
 
-    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> list[bytes]:
+    async def get_keys(self, store_id: bytes32, root_hash: bytes32 | Unspecified) -> list[bytes]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
@@ -484,9 +482,9 @@ class DataLayer:
     async def get_keys_paginated(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
+        root_hash: bytes32 | Unspecified,
         page: int,
-        max_page_size: Optional[int] = None,
+        max_page_size: int | None = None,
     ) -> KeysPaginationData:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -503,13 +501,13 @@ class DataLayer:
             self.log.error("Failed to get ancestors")
         return res
 
-    async def get_root(self, store_id: bytes32) -> Optional[SingletonRecord]:
+    async def get_root(self, store_id: bytes32) -> SingletonRecord | None:
         latest = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
         if latest is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return latest
 
-    async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
+    async def get_local_root(self, store_id: bytes32) -> bytes32 | None:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_tree_root(store_id=store_id)
@@ -523,7 +521,7 @@ class DataLayer:
         if records is None:
             self.log.error(f"Failed to get root history for {store_id.hex()}")
         root_history = []
-        prev: Optional[SingletonRecord] = None
+        prev: SingletonRecord | None = None
         for record in records:
             if prev is None or record.root != prev.root:
                 root_history.append(record)
@@ -691,7 +689,7 @@ class DataLayer:
                     )
                     self.log.info(f"Successfully written full tree filename {filename_full_tree}.")
 
-    async def get_downloader(self, store_id: bytes32, url: str) -> Optional[PluginRemote]:
+    async def get_downloader(self, store_id: bytes32, url: str) -> PluginRemote | None:
         request_json = {"store_id": store_id.hex(), "url": url}
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
@@ -790,7 +788,7 @@ class DataLayer:
             publish_generation -= 1
             root = await self.data_store.get_tree_root(store_id=store_id, generation=publish_generation)
 
-    async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
+    async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Path | None) -> None:
         root = await self.data_store.get_tree_root(store_id=store_id)
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
@@ -940,7 +938,7 @@ class DataLayer:
         hash_1: bytes32,
         hash_2: bytes32,
         page: int,
-        max_page_size: Optional[int] = None,
+        max_page_size: int | None = None,
     ) -> KVDiffPaginationData:
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024

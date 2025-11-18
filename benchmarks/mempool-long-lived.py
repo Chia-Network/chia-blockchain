@@ -4,7 +4,6 @@ import asyncio
 from collections.abc import Collection
 from dataclasses import dataclass
 from time import monotonic
-from typing import Optional
 
 from chia_rs import CoinSpend, G2Element, SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -35,9 +34,9 @@ class BenchBlockRecord:
 
     header_hash: bytes32
     height: uint32
-    timestamp: Optional[uint64]
+    timestamp: uint64 | None
     prev_transaction_block_height: uint32
-    prev_transaction_block_hash: Optional[bytes32]
+    prev_transaction_block_hash: bytes32 | None
 
     @property
     def is_transaction_block(self) -> bool:
@@ -90,7 +89,7 @@ async def run_mempool_benchmark() -> None:
         return ret
 
     # We currently don't need to keep track of these for our purpose
-    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
+    async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> UnspentLineageInfo | None:
         assert False
 
     timestamp = uint64(1631794488)

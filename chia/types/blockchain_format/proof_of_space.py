@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, cast
+from typing import cast
 
 from bitstring import BitArray
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotParam, PrivateKey, ProofOfSpace, validate_proof_v2
@@ -16,8 +16,8 @@ log = logging.getLogger(__name__)
 
 def make_pos(
     challenge: bytes32,
-    pool_public_key: Optional[G1Element],
-    pool_contract_puzzle_hash: Optional[bytes32],
+    pool_public_key: G1Element | None,
+    pool_contract_puzzle_hash: bytes32 | None,
     plot_public_key: G1Element,
     version_and_size: PlotParam,
     proof: bytes,
@@ -110,7 +110,7 @@ def verify_and_get_quality_string(
     *,
     height: uint32,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
-) -> Optional[bytes32]:
+) -> bytes32 | None:
     plot_param = pos.param()
 
     if plot_param.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):

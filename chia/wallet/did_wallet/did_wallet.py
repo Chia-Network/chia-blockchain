@@ -5,7 +5,7 @@ import json
 import logging
 import re
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import AugSchemeMPL, CoinSpend, CoinState, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -66,8 +66,8 @@ class DIDWallet:
     wallet_info: WalletInfo
     did_info: DIDInfo
     standard_wallet: Wallet
-    base_puzzle_program: Optional[bytes]
-    base_inner_puzzle_hash: Optional[bytes32]
+    base_puzzle_program: bytes | None
+    base_inner_puzzle_hash: bytes32 | None
     wallet_id: int
 
     @staticmethod
@@ -77,7 +77,7 @@ class DIDWallet:
         amount: uint64,
         action_scope: WalletActionScope,
         metadata: dict[str, str] = {},
-        name: Optional[str] = None,
+        name: str | None = None,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ):
@@ -147,7 +147,7 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         backup_data: str,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Create a DID wallet from a backup file
@@ -189,7 +189,7 @@ class DIDWallet:
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Create a DID wallet from a transfer
@@ -262,7 +262,7 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Create a DID wallet based on the local database
@@ -360,7 +360,7 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: Optional[DIDCoinData]):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: DIDCoinData | None):
         """Notification from wallet state manager that wallet has been received."""
         parent = self.get_parent_for_coin(coin)
         if parent_coin_data is not None:
@@ -810,8 +810,8 @@ class DIDWallet:
     async def get_did_innerpuz(
         self,
         action_scope: WalletActionScope,
-        origin_id: Optional[bytes32] = None,
-        override_reuse_puzhash_with: Optional[bool] = None,
+        origin_id: bytes32 | None = None,
+        override_reuse_puzhash_with: bool | None = None,
     ) -> Program:
         if self.did_info.origin_coin is not None:
             launcher_id = self.did_info.origin_coin.name()
@@ -873,7 +873,7 @@ class DIDWallet:
         )
         return inner_puzzle
 
-    def reset_recovery_list(self) -> Optional[Program]:
+    def reset_recovery_list(self) -> Program | None:
         if self.did_info.current_inner is None:
             return None
 
@@ -890,7 +890,7 @@ class DIDWallet:
 
         return og_recovery_list_hash
 
-    def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
+    def get_parent_for_coin(self, coin) -> LineageProof | None:
         parent_info = None
         for name, ccparent in self.did_info.parent_info:
             if name == coin.parent_coin_info:
@@ -1053,14 +1053,14 @@ class DIDWallet:
         )
         return spendable_am
 
-    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None):
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None):
         spendable: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         max_send_amount = sum(cr.coin.amount for cr in spendable)
         return max_send_amount
 
-    async def add_parent(self, name: bytes32, parent: Optional[LineageProof]):
+    async def add_parent(self, name: bytes32, parent: LineageProof | None):
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
@@ -1203,8 +1203,8 @@ class DIDWallet:
         puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[set[Coin]] = None,
-        memos: Optional[list[list[bytes]]] = None,
+        coins: set[Coin] | None = None,
+        memos: list[list[bytes]] | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:

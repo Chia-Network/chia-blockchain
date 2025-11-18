@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Optional
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
@@ -36,7 +35,7 @@ def not_localhost(host: str) -> bool:
 class FakeRateLimiter:
     def process_msg_and_check(
         self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
-    ) -> Optional[str]:
+    ) -> str | None:
         return None
 
 

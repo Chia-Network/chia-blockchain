@@ -12,10 +12,10 @@ if sys.platform == "win32":
     import _overlapped  # type: ignore[import-not-found]
     import _winapi
 
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, TypeAlias
 
-from typing_extensions import Protocol, TypeAlias
+from typing_extensions import Protocol
 
 # https://github.com/python/asyncio/pull/448
 global_max_concurrent_connections: int = 250
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
         # https://github.com/python/typeshed/pull/5718/files
         def __call__(self) -> asyncio.protocols.BaseProtocol: ...
 
-    _SSLContext: TypeAlias = Union[bool, ssl.SSLContext, None]
+    _SSLContext: TypeAlias = bool | ssl.SSLContext | None
 
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L389
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L64
@@ -43,11 +43,11 @@ if TYPE_CHECKING:
             self,
             protocol_factory: _ProtocolFactory,
             sock: socket.socket,
-            sslcontext: Optional[_SSLContext] = ...,
-            server: Optional[asyncio.base_events.Server] = ...,
+            sslcontext: _SSLContext | None = ...,
+            server: asyncio.base_events.Server | None = ...,
             backlog: int = ...,
             # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/constants.py#L16
-            ssl_handshake_timeout: Optional[float] = ...,
+            ssl_handshake_timeout: float | None = ...,
         ) -> None: ...
 
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L278
@@ -66,7 +66,7 @@ if TYPE_CHECKING:
         _protocol_factory: _ProtocolFactory
         _backlog: int
         _ssl_context: _SSLContext
-        _ssl_handshake_timeout: Optional[float]
+        _ssl_handshake_timeout: float | None
 
         if sys.version_info >= (3, 13):
             # https://github.com/python/cpython/blob/bcee1c322115c581da27600f2ae55e5439c027eb/Lib/asyncio/base_events.py#L296
@@ -88,7 +88,7 @@ if TYPE_CHECKING:
         # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/windows_events.py#L410
         # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/windows_events.pyi#L44
         class IocpProactor(asyncio.windows_events.IocpProactor):
-            _loop: Optional[asyncio.events.AbstractEventLoop]
+            _loop: asyncio.events.AbstractEventLoop | None
 
             def _register_with_iocp(self, obj: object) -> None: ...
 
@@ -128,8 +128,8 @@ class PausableServer(BaseEventsServer):
         protocol_factory: _ProtocolFactory,
         ssl_context: _SSLContext,
         backlog: int,
-        ssl_handshake_timeout: Optional[float],
-        max_concurrent_connections: Optional[int] = None,
+        ssl_handshake_timeout: float | None,
+        max_concurrent_connections: int | None = None,
     ) -> None:
         super().__init__(
             loop=loop,
@@ -212,9 +212,9 @@ async def _chia_create_server(
     sock: Any = None,
     backlog: int = 100,
     ssl: _SSLContext = None,
-    reuse_address: Optional[bool] = None,
-    reuse_port: Optional[bool] = None,
-    ssl_handshake_timeout: Optional[float] = 30,
+    reuse_address: bool | None = None,
+    reuse_port: bool | None = None,
+    ssl_handshake_timeout: float | None = 30,
     start_serving: bool = True,
 ) -> PausableServer:
     server: BaseEventsServer = await cls.create_server(

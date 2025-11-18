@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, G1Element, G2Element
@@ -1859,7 +1859,7 @@ class TestWalletSimulator:
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
 
-        stolen_cs: Optional[CoinSpend] = None
+        stolen_cs: CoinSpend | None = None
         # extract coin_spend from generated spend_bundle
         for cs in tx.spend_bundle.coin_spends:
             if compute_additions(cs) == []:

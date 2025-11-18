@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import SpendBundle
 
@@ -11,7 +11,7 @@ from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def import_mempool_async(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     content: dict[str, Any],
 ) -> None:
@@ -32,7 +32,7 @@ async def import_mempool_async(
 
 
 async def export_mempool_async(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     path: str,
 ) -> None:
@@ -49,7 +49,7 @@ async def export_mempool_async(
 
 
 async def create_block_async(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client

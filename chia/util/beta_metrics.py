@@ -6,7 +6,7 @@ import platform
 import socket
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import psutil
 
@@ -76,7 +76,7 @@ def log_network_metrics() -> None:
 @dataclass
 class BetaMetricsLogger:
     root_path: Path
-    task: Optional[asyncio.Task[None]] = None
+    task: asyncio.Task[None] | None = None
     stop_task: bool = False
 
     def start_logging(self) -> None:

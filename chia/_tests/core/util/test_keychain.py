@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Callable, Optional
 
 import importlib_resources
 import pytest
@@ -271,7 +271,7 @@ def test_key_data_secrets_creation(
 
 
 @pytest.mark.parametrize("label", [None, "key"])
-def test_key_data_generate(label: Optional[str]) -> None:
+def test_key_data_generate(label: str | None) -> None:
     key_data = KeyData.generate(label)
     assert key_data.private_key == AugSchemeMPL.key_gen(mnemonic_to_seed(key_data.mnemonic_str()))
     assert key_data.entropy == bytes_from_mnemonic(key_data.mnemonic_str())
@@ -343,7 +343,7 @@ def test_key_data_secrets_post_init(input_data: tuple[list[str], bytes, PrivateK
     ],
 )
 def test_key_data_post_init(
-    input_data: tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: tuple[uint32, G1Element, str | None, KeyDataSecrets | None], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)

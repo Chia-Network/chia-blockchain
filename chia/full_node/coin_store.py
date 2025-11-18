@@ -5,7 +5,7 @@ import logging
 import sqlite3
 import time
 from collections.abc import Collection
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -179,7 +179,7 @@ class CoinStore:
         log.log(level, message)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
-    async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
+    async def get_coin_record(self, coin_name: bytes32) -> CoinRecord | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -454,7 +454,7 @@ class CoinStore:
         include_hinted: bool = True,
         min_amount: uint64 = uint64(0),
         max_items: int = 50000,
-    ) -> tuple[list[CoinState], Optional[uint32]]:
+    ) -> tuple[list[CoinState], uint32 | None]:
         """
         Returns the coin states, as well as the next block height (or `None` if finished).
         You cannot exceed `CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE` puzzle hashes in the query.
@@ -649,7 +649,7 @@ class CoinStore:
                 )
 
     # Lookup the most recent unspent lineage that matches a puzzle hash
-    async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
+    async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> UnspentLineageInfo | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT unspent.coin_name, "

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import pathlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 
@@ -36,9 +36,9 @@ def create_farmer_service(
     config: dict[str, Any],
     config_pool: dict[str, Any],
     consensus_constants: ConsensusConstants,
-    keychain: Optional[Keychain] = None,
+    keychain: Keychain | None = None,
     connect_to_daemon: bool = True,
-    solver_peer: Optional[UnresolvedPeerInfo] = None,
+    solver_peer: UnresolvedPeerInfo | None = None,
 ) -> FarmerService:
     service_config = config[SERVICE_NAME]
 
@@ -52,7 +52,7 @@ def create_farmer_service(
     )
     peer_api = FarmerAPI(node)
 
-    rpc_info: Optional[RpcInfo[FarmerRpcApi]] = None
+    rpc_info: RpcInfo[FarmerRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (FarmerRpcApi, service_config["rpc_port"])
 

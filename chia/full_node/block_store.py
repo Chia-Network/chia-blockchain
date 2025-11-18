@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import sqlite3
 from contextlib import AbstractAsyncContextManager
-from typing import Optional
 
 import aiosqlite
 import typing_extensions
@@ -134,7 +133,7 @@ class BlockStore:
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
 
-        ses: Optional[bytes] = (
+        ses: bytes | None = (
             None if block_record.sub_epoch_summary_included is None else bytes(block_record.sub_epoch_summary_included)
         )
 
@@ -174,8 +173,8 @@ class BlockStore:
     async def get_sub_epoch_challenge_segments(
         self,
         ses_block_hash: bytes32,
-    ) -> Optional[list[SubEpochChallengeSegment]]:
-        cached: Optional[list[SubEpochChallengeSegment]] = self.ses_challenge_cache.get(ses_block_hash)
+    ) -> list[SubEpochChallengeSegment] | None:
+        cached: list[SubEpochChallengeSegment] | None = self.ses_challenge_cache.get(ses_block_hash)
         if cached is not None:
             return cached
 
@@ -195,7 +194,7 @@ class BlockStore:
     def transaction(self) -> AbstractAsyncContextManager[aiosqlite.Connection]:
         return self.db_wrapper.writer()
 
-    def get_block_from_cache(self, header_hash: bytes32) -> Optional[FullBlock]:
+    def get_block_from_cache(self, header_hash: bytes32) -> FullBlock | None:
         return self.block_cache.get(header_hash)
 
     def rollback_cache_block(self, header_hash: bytes32) -> None:
@@ -206,8 +205,8 @@ class BlockStore:
             # block to the cache yet
             pass
 
-    async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        cached: Optional[FullBlock] = self.block_cache.get(header_hash)
+    async def get_full_block(self, header_hash: bytes32) -> FullBlock | None:
+        cached: FullBlock | None = self.block_cache.get(header_hash)
         if cached is not None:
             return cached
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -219,7 +218,7 @@ class BlockStore:
             return block
         return None
 
-    async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
+    async def get_full_block_bytes(self, header_hash: bytes32) -> bytes | None:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return bytes(cached)
@@ -247,7 +246,7 @@ class BlockStore:
                     ret.append(decompress(row[0]))
                 return ret
 
-    async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
+    async def get_block_info(self, header_hash: bytes32) -> GeneratorBlockInfo | None:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return GeneratorBlockInfo(
@@ -273,7 +272,7 @@ class BlockStore:
                     b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
                 )
 
-    async def get_generator(self, header_hash: bytes32) -> Optional[bytes]:
+    async def get_generator(self, header_hash: bytes32) -> bytes | None:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return None if cached.transactions_generator is None else bytes(cached.transactions_generator)
@@ -429,7 +428,7 @@ class BlockStore:
             ret.append(all_blocks[hh])
         return ret
 
-    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block_record FROM full_blocks WHERE header_hash=?",
@@ -489,7 +488,7 @@ class BlockStore:
                     raise ValueError(f"Some blocks in range {start}-{stop} were not found.")
                 return [decompress_blob(row[0]) for row in rows]
 
-    async def get_peak(self) -> Optional[tuple[bytes32, uint32]]:
+    async def get_peak(self) -> tuple[bytes32, uint32] | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                 peak_row = await cursor.fetchone()
@@ -502,9 +501,7 @@ class BlockStore:
             return None
         return bytes32(peak_row[0]), uint32(peak_height[0])
 
-    async def get_block_records_close_to_peak(
-        self, blocks_n: int
-    ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
+    async def get_block_records_close_to_peak(self, blocks_n: int) -> tuple[dict[bytes32, BlockRecord], bytes32 | None]:
         """
         Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
         peak header hash. Only blocks that are part of the main chain/current peak are included.
@@ -534,7 +531,7 @@ class BlockStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, header_hash))
 
-    async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
+    async def is_fully_compactified(self, header_hash: bytes32) -> bool | None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
                 "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (header_hash,)

@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import Counter
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -53,7 +53,7 @@ class RateLimiter:
 
     def process_msg_and_check(
         self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Returns a string indicating which limit was hit if a rate limit is
         exceeded, and the message should be blocked. Returns None if the limit was not
@@ -80,11 +80,11 @@ class RateLimiter:
         proportion_of_limit: float = self.percentage_of_limit / 100
 
         ret: bool = False
-        rate_limits: dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]
+        rate_limits: dict[ProtocolMessageTypes, RLSettings | Unlimited]
         rate_limits, agg_limit = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
-            limits: Union[RLSettings, Unlimited] = rate_limits[message_type]
+            limits: RLSettings | Unlimited = rate_limits[message_type]
             if isinstance(limits, RLSettings) and limits.aggregate_limit:
                 non_tx_freq = agg_limit.frequency
                 assert agg_limit.max_total_size is not None

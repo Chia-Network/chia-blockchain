@@ -4,7 +4,7 @@ import logging
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 
@@ -46,7 +46,7 @@ def create_full_node_crawler_service(
 
     network_id = service_config["selected_network"]
 
-    rpc_info: Optional[RpcInfo[CrawlerRpcApi]] = None
+    rpc_info: RpcInfo[CrawlerRpcApi] | None = None
     if crawler_config.get("start_rpc_server", True):
         rpc_info = (CrawlerRpcApi, crawler_config.get("rpc_port", 8561))
 

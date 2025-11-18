@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Union
 
 from chia_rs import ChallengeBlockInfo, ConsensusConstants, EndOfSubSlotBundle, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -28,17 +27,17 @@ class LastState:
 
     def __init__(self, constants: ConsensusConstants):
         self.state_type: StateType = StateType.FIRST_SUB_SLOT
-        self.peak: Optional[timelord_protocol.NewPeakTimelord] = None
-        self.subslot_end: Optional[EndOfSubSlotBundle] = None
+        self.peak: timelord_protocol.NewPeakTimelord | None = None
+        self.subslot_end: EndOfSubSlotBundle | None = None
         self.last_ip: uint64 = uint64(0)
         self.deficit: uint8 = constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
-        self.sub_epoch_summary: Optional[SubEpochSummary] = None
+        self.sub_epoch_summary: SubEpochSummary | None = None
         self.constants: ConsensusConstants = constants
         self.last_weight: uint128 = uint128(0)
         self.last_height: uint32 = uint32(0)
         self.total_iters: uint128 = uint128(0)
         self.last_challenge_sb_or_eos_total_iters = uint128(0)
-        self.last_tx_block_total_iters: Optional[uint128] = None
+        self.last_tx_block_total_iters: uint128 | None = None
         self.last_tx_block_block_height: uint32 = uint32(0)
         self.last_tx_block_sp_index: uint8 = uint8(0)
         self.last_peak_challenge: bytes32 = constants.GENESIS_CHALLENGE
@@ -49,7 +48,7 @@ class LastState:
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False
 
-    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]) -> None:
+    def set_state(self, state: timelord_protocol.NewPeakTimelord | EndOfSubSlotBundle) -> None:
         if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state
@@ -111,7 +110,7 @@ class LastState:
         else:
             assert False
 
-        reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
+        reward_challenge: bytes32 | None = self.get_challenge(Chain.REWARD_CHAIN)
         assert reward_challenge is not None  # Reward chain always has VDFs
         self.reward_challenge_cache.append((reward_challenge, self.total_iters))
         log.info(f"Updated timelord peak to {reward_challenge.hex()}, total iters: {self.total_iters}")
@@ -145,7 +144,7 @@ class LastState:
     def get_total_iters(self) -> uint128:
         return self.total_iters
 
-    def get_last_peak_challenge(self) -> Optional[bytes32]:
+    def get_last_peak_challenge(self) -> bytes32 | None:
         return self.last_peak_challenge
 
     def get_difficulty(self) -> uint64:
@@ -163,7 +162,7 @@ class LastState:
         """
         return self.state_type == StateType.END_OF_SUB_SLOT and self.infused_ses
 
-    def get_next_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
+    def get_next_sub_epoch_summary(self) -> SubEpochSummary | None:
         if self.state_type in {StateType.FIRST_SUB_SLOT, StateType.END_OF_SUB_SLOT}:
             # Can only infuse SES after a peak (in an end of sub slot)
             return None
@@ -173,7 +172,7 @@ class LastState:
             return self.sub_epoch_summary
         return None
 
-    def get_last_block_total_iters(self) -> Optional[uint128]:
+    def get_last_block_total_iters(self) -> uint128 | None:
         return self.last_tx_block_total_iters
 
     def get_last_tx_height(self) -> uint32:
@@ -182,7 +181,7 @@ class LastState:
     def get_passed_ses_height_but_not_yet_included(self) -> bool:
         return self.passed_ses_height_but_not_yet_included
 
-    def get_challenge(self, chain: Chain) -> Optional[bytes32]:
+    def get_challenge(self, chain: Chain) -> bytes32 | None:
         if self.state_type == StateType.FIRST_SUB_SLOT:
             assert self.peak is None and self.subslot_end is None
             if chain == Chain.CHALLENGE_CHAIN:
@@ -222,7 +221,7 @@ class LastState:
                 return None
         return None
 
-    def get_initial_form(self, chain: Chain) -> Optional[ClassgroupElement]:
+    def get_initial_form(self, chain: Chain) -> ClassgroupElement | None:
         if self.state_type == StateType.FIRST_SUB_SLOT:
             return ClassgroupElement.get_default_element()
         elif self.state_type == StateType.PEAK:

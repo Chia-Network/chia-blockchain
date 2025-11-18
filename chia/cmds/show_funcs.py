@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 
@@ -21,7 +21,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
     if blockchain_state is None:
         print("There is no blockchain found yet. Try again shortly")
         return True
-    peak: Optional[BlockRecord] = blockchain_state["peak"]
+    peak: BlockRecord | None = blockchain_state["peak"]
     node_id = blockchain_state["node_id"]
     difficulty = blockchain_state["difficulty"]
     sub_slot_iters = blockchain_state["sub_slot_iters"]
@@ -104,8 +104,8 @@ async def print_block_from_hash(
 
     from chia.util.bech32m import encode_puzzle_hash
 
-    block: Optional[BlockRecord] = await node_client.get_block_record(bytes32.from_hexstr(block_by_header_hash))
-    full_block: Optional[FullBlock] = await node_client.get_block(bytes32.from_hexstr(block_by_header_hash))
+    block: BlockRecord | None = await node_client.get_block_record(bytes32.from_hexstr(block_by_header_hash))
+    full_block: FullBlock | None = await node_client.get_block(bytes32.from_hexstr(block_by_header_hash))
     # Would like to have a verbose flag for this
     if block is not None:
         assert full_block is not None
@@ -123,7 +123,7 @@ async def print_block_from_hash(
             )
             block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
             cost = str(full_block.transactions_info.cost)
-            tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
+            tx_filter_hash: str | bytes32 = "Not a transaction block"
             if full_block.foliage_transaction_block:
                 tx_filter_hash = full_block.foliage_transaction_block.filter_hash
             fees: Any = block.fees
@@ -191,11 +191,11 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
 
 
 async def show_async(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     print_fee_info_flag: bool,
     print_state: bool,
-    block_header_hash_by_height: Optional[int],
+    block_header_hash_by_height: int | None,
     block_by_header_hash: str,
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client

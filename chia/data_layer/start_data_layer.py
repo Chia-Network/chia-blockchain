@@ -4,7 +4,7 @@ import logging
 import os
 import pathlib
 import sys
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from chia_rs.sized_ints import uint16
 
@@ -40,7 +40,7 @@ def create_data_layer_service(
     config: dict[str, Any],
     downloaders: list[PluginRemote],
     uploaders: list[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
-    wallet_service: Optional[WalletService] = None,
+    wallet_service: WalletService | None = None,
     connect_to_daemon: bool = True,
 ) -> DataLayerService:
     if uploaders is None:
@@ -72,7 +72,7 @@ def create_data_layer_service(
     )
     peer_api = DataLayerAPI(node)
 
-    rpc_info: Optional[RpcInfo[DataLayerRpcApi]] = None
+    rpc_info: RpcInfo[DataLayerRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (DataLayerRpcApi, cast(int, service_config["rpc_port"]))
 

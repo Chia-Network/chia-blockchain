@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
@@ -39,7 +39,7 @@ async def create_full_node_simulator_service(
     config: dict[str, Any],
     bt: BlockTools,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
+    override_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> SimulatorFullNodeService:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
@@ -78,7 +78,7 @@ class StartedSimulator:
 async def async_main(
     test_mode: bool = False,
     automated_testing: bool = False,
-    root_path: Optional[Path] = None,
+    root_path: Path | None = None,
 ) -> StartedSimulator:
     root_path = resolve_root_path(override=root_path)
     # helping mypy out for now
@@ -89,8 +89,8 @@ async def async_main(
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     # THIS IS Simulator specific.
-    fingerprint: Optional[int] = None
-    farming_puzzle_hash: Optional[bytes32] = None
+    fingerprint: int | None = None
+    farming_puzzle_hash: bytes32 | None = None
     plot_dir: str = "simulator/plots"
     if "simulator" in config:
         overrides = {}

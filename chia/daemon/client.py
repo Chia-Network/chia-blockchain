@@ -6,7 +6,7 @@ import ssl
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiohttp
 from chia_rs.sized_ints import uint32
@@ -20,7 +20,7 @@ class DaemonProxy:
     def __init__(
         self,
         uri: str,
-        ssl_context: Optional[ssl.SSLContext],
+        ssl_context: ssl.SSLContext | None,
         heartbeat: int,
         max_message_size: int = 50 * 1000 * 1000,
     ):
@@ -29,8 +29,8 @@ class DaemonProxy:
         self.response_dict: dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
         self.heartbeat = heartbeat
-        self.client_session: Optional[aiohttp.ClientSession] = None
-        self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
+        self.client_session: aiohttp.ClientSession | None = None
+        self.websocket: aiohttp.ClientWebSocketResponse | None = None
         self.max_message_size = max_message_size
 
     def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
@@ -164,7 +164,7 @@ class DaemonProxy:
         request = self.format_request("exit", {})
         return await self._get(request)
 
-    async def get_keys_for_plotting(self, fingerprints: Optional[list[uint32]] = None) -> WsRpcMessage:
+    async def get_keys_for_plotting(self, fingerprints: list[uint32] | None = None) -> WsRpcMessage:
         data = {"fingerprints": fingerprints} if fingerprints else {}
         request = self.format_request("get_keys_for_plotting", data)
         response = await self._get(request)
@@ -196,7 +196,7 @@ async def connect_to_daemon(
 
 async def connect_to_daemon_and_validate(
     root_path: Path, config: dict[str, Any], quiet: bool = False, wait_for_start: bool = False
-) -> Optional[DaemonProxy]:
+) -> DaemonProxy | None:
     """
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
@@ -233,7 +233,7 @@ async def connect_to_daemon_and_validate(
 @asynccontextmanager
 async def acquire_connection_to_daemon(
     root_path: Path, config: dict[str, Any], quiet: bool = False
-) -> AsyncIterator[Optional[DaemonProxy]]:
+) -> AsyncIterator[DaemonProxy | None]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.
     The connection object (DaemonProxy) is yielded to the caller. After the caller's
@@ -241,7 +241,7 @@ async def acquire_connection_to_daemon(
     closed.
     """
 
-    daemon: Optional[DaemonProxy] = None
+    daemon: DaemonProxy | None = None
     try:
         daemon = await connect_to_daemon_and_validate(root_path, config, quiet=quiet)
         yield daemon  # <----

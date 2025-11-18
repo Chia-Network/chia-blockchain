@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
-from collections.abc import Sequence
-from typing import Callable, Optional
+from collections.abc import Callable, Sequence
 
 import chia_rs
 from chia_rs import (
@@ -54,18 +53,18 @@ def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> ui
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
-    new_block_gen: Optional[NewBlockGenerator],
-    prev_block: Optional[BlockRecord],
+    new_block_gen: NewBlockGenerator | None,
+    prev_block: BlockRecord | None,
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
+    get_pool_signature: Callable[[PoolTarget, G1Element | None], G2Element | None],
     seed: bytes,
     compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64],
-) -> tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
+) -> tuple[Foliage, FoliageTransactionBlock | None, TransactionsInfo | None]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -90,7 +89,7 @@ def create_foliage(
     if prev_block is not None:
         res = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
         is_transaction_block: bool = res[0]
-        prev_transaction_block: Optional[BlockRecord] = res[1]
+        prev_transaction_block: BlockRecord | None = res[1]
     else:
         # Genesis is a transaction block
         prev_transaction_block = None
@@ -110,7 +109,7 @@ def create_foliage(
     tx_additions: list[Coin] = []
     tx_removals: list[bytes32] = []
 
-    pool_target_signature: Optional[G2Element] = get_pool_signature(
+    pool_target_signature: G2Element | None = get_pool_signature(
         pool_target, reward_block_unfinished.proof_of_space.pool_public_key
     )
 
@@ -134,7 +133,7 @@ def create_foliage(
 
     generator_block_heights_list: list[uint32] = []
 
-    foliage_transaction_block_hash: Optional[bytes32]
+    foliage_transaction_block_hash: bytes32 | None
 
     if is_transaction_block:
         cost: uint64
@@ -236,7 +235,7 @@ def create_foliage(
 
         filter_hash: bytes32 = std_hash(encoded)
 
-        transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
+        transactions_info: TransactionsInfo | None = TransactionsInfo(
             generator_hash,
             generator_refs_hash,
             new_block_gen.signature if new_block_gen else G2Element(),
@@ -250,7 +249,7 @@ def create_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
-        foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
+        foliage_transaction_block: FoliageTransactionBlock | None = FoliageTransactionBlock(
             prev_transaction_block_hash,
             timestamp,
             filter_hash,
@@ -261,7 +260,7 @@ def create_foliage(
         assert foliage_transaction_block is not None
 
         foliage_transaction_block_hash = foliage_transaction_block.get_hash()
-        foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
+        foliage_transaction_block_signature: G2Element | None = get_plot_signature(
             foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
         assert foliage_transaction_block_signature is not None
@@ -296,14 +295,14 @@ def create_unfinished_block(
     farmer_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
+    get_pool_signature: Callable[[PoolTarget, G1Element | None], G2Element | None],
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockRecordsProtocol,
     seed: bytes = b"",
-    new_block_gen: Optional[NewBlockGenerator] = None,
-    prev_block: Optional[BlockRecord] = None,
-    finished_sub_slots_input: Optional[list[EndOfSubSlotBundle]] = None,
+    new_block_gen: NewBlockGenerator | None = None,
+    prev_block: BlockRecord | None = None,
+    finished_sub_slots_input: list[EndOfSubSlotBundle] | None = None,
     compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64] = compute_block_fee,
 ) -> UnfinishedBlock:
     """
@@ -366,8 +365,8 @@ def create_unfinished_block(
             rc_sp_hash = curr.finished_reward_slot_hashes[-1]
         signage_point = SignagePoint(None, None, None, None)
 
-    cc_sp_signature: Optional[G2Element] = get_plot_signature(cc_sp_hash, proof_of_space.plot_public_key)
-    rc_sp_signature: Optional[G2Element] = get_plot_signature(rc_sp_hash, proof_of_space.plot_public_key)
+    cc_sp_signature: G2Element | None = get_plot_signature(cc_sp_hash, proof_of_space.plot_public_key)
+    rc_sp_signature: G2Element | None = get_plot_signature(rc_sp_hash, proof_of_space.plot_public_key)
     assert cc_sp_signature is not None
     assert rc_sp_signature is not None
     assert chia_rs.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
@@ -418,10 +417,10 @@ def unfinished_block_to_full_block(
     cc_ip_proof: VDFProof,
     rc_ip_vdf: VDFInfo,
     rc_ip_proof: VDFProof,
-    icc_ip_vdf: Optional[VDFInfo],
-    icc_ip_proof: Optional[VDFProof],
+    icc_ip_vdf: VDFInfo | None,
+    icc_ip_proof: VDFProof | None,
     finished_sub_slots: list[EndOfSubSlotBundle],
-    prev_block: Optional[BlockRecord],
+    prev_block: BlockRecord | None,
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,

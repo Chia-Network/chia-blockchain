@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import click
 from chia_rs.sized_bytes import bytes32
@@ -20,9 +21,9 @@ one_decimal_mojo = Decimal("1e-12")
 
 def validate_uint64(
     value: str,
-    fail_func: Callable[[str, Optional[click.Parameter], Optional[click.Context]], None],
-    param: Optional[click.Parameter],
-    ctx: Optional[click.Context],
+    fail_func: Callable[[str, click.Parameter | None, click.Context | None], None],
+    param: click.Parameter | None,
+    ctx: click.Context | None,
 ) -> uint64:
     try:
         d_value = Decimal(value)
@@ -41,9 +42,9 @@ def validate_uint64(
 
 def validate_decimal_xch(
     value: str,
-    fail_func: Callable[[str, Optional[click.Parameter], Optional[click.Context]], None],
-    param: Optional[click.Parameter],
-    ctx: Optional[click.Context],
+    fail_func: Callable[[str, click.Parameter | None, click.Context | None], None],
+    param: click.Parameter | None,
+    ctx: click.Context | None,
 ) -> Decimal:
     try:
         d_value = Decimal(value)
@@ -64,7 +65,7 @@ class TransactionFeeParamType(click.ParamType):
     name: str = "XCH"  # type name for cli, TODO: Change once the mojo flag is implemented
     value_limit: Decimal = Decimal("0.5")
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> uint64:
         # suggested by click, but we are not using it to avoid possible misinterpretation of units.
         # if isinstance(value, uint64):
         #     return value
@@ -89,11 +90,11 @@ class CliAmount:
     """
 
     mojos: bool
-    amount: Union[uint64, Decimal, None]  # uint64 if mojos, Decimal if not, None if default value is none
+    amount: uint64 | Decimal | None  # uint64 if mojos, Decimal if not, None if default value is none
 
     def convert_amount_with_default(
-        self, mojo_per_unit: int, default_value: Optional[uint64] = uint64(0)
-    ) -> Optional[uint64]:
+        self, mojo_per_unit: int, default_value: uint64 | None = uint64(0)
+    ) -> uint64 | None:
         if self.amount is None:  # if the value is set to none, return the default value
             return default_value
         return self.convert_amount(mojo_per_unit)
@@ -122,7 +123,7 @@ class AmountParamType(click.ParamType):
 
     name: str = "XCH"  # type name for cli, TODO: Change once the mojo flag is implemented
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAmount:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> CliAmount:
         # suggested by click, but being left in as mojos flag makes default misrepresentation less likely.
         if isinstance(value, CliAmount):
             return value
@@ -164,7 +165,7 @@ class AddressParamType(click.ParamType):
 
     name: str = "Address"  # type name for cli
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> CliAddress:
         # suggested by click, but not really used so removed to make unexpected types more obvious.
         # if isinstance(value, CliAddress):
         #    return value
@@ -176,7 +177,7 @@ class AddressParamType(click.ParamType):
                 addr_type: AddressType = AddressType.XCH
 
                 # attempt to get cached prefix
-                expected_prefix: Optional[str] = None
+                expected_prefix: str | None = None
                 root_path = DEFAULT_ROOT_PATH
 
                 if ctx is not None:
@@ -208,7 +209,7 @@ class Bytes32ParamType(click.ParamType):
 
     name: str = "HexString"  # type name for cli
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> bytes32:
         # suggested by click but deemed not necessary due to unnecessary complexity.
         # if isinstance(value, bytes32):
         #     return value
@@ -227,7 +228,7 @@ class Uint64ParamType(click.ParamType):
 
     name: str = uint64.__name__  # type name for cli
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> uint64:
         if isinstance(value, uint64):  # required by click
             return value
         if not isinstance(value, str):

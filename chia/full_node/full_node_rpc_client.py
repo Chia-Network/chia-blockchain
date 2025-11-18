@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from chia_rs import BlockRecord, CoinSpend, EndOfSubSlotBundle, FullBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -46,7 +46,7 @@ class FullNodeRpcClient(RpcClient):
         )
         return [FullBlock.from_json_dict(block) for block in response["blocks"]]
 
-    async def get_block_record_by_height(self, height: int) -> Optional[BlockRecord]:
+    async def get_block_record_by_height(self, height: int) -> BlockRecord | None:
         try:
             response = await self.fetch("get_block_record_by_height", {"height": height})
         except ResponseFailureError as e:  # Block Height not found
@@ -55,7 +55,7 @@ class FullNodeRpcClient(RpcClient):
             raise e
         return BlockRecord.from_json_dict(response["block_record"])
 
-    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         response = await self.fetch("get_block_record", {"header_hash": header_hash.hex()})
         if response["block_record"] is None:
             return None
@@ -88,8 +88,8 @@ class FullNodeRpcClient(RpcClient):
         self,
         names: list[bytes32],
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         names_hex = [name.hex() for name in names]
         d = {"names": names_hex, "include_spent_coins": include_spent_coins}
@@ -105,8 +105,8 @@ class FullNodeRpcClient(RpcClient):
         self,
         puzzle_hash: bytes32,
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         d = {"puzzle_hash": puzzle_hash.hex(), "include_spent_coins": include_spent_coins}
         if start_height is not None:
@@ -121,8 +121,8 @@ class FullNodeRpcClient(RpcClient):
         self,
         puzzle_hashes: list[bytes32],
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         puzzle_hashes_hex = [ph.hex() for ph in puzzle_hashes]
         d = {"puzzle_hashes": puzzle_hashes_hex, "include_spent_coins": include_spent_coins}
@@ -138,8 +138,8 @@ class FullNodeRpcClient(RpcClient):
         self,
         parent_ids: list[bytes32],
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         parent_ids_hex = [pid.hex() for pid in parent_ids]
         d = {"parent_ids": parent_ids_hex, "include_spent_coins": include_spent_coins}
@@ -159,8 +159,8 @@ class FullNodeRpcClient(RpcClient):
         self,
         hint: bytes32,
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         d = {"hint": hint.hex(), "include_spent_coins": include_spent_coins}
         if start_height is not None:
@@ -247,12 +247,12 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_mempool_items_by_coin_name", {"coin_name": coin_name.hex()})
         return response
 
-    async def create_block_generator(self) -> Optional[dict[str, Any]]:
+    async def create_block_generator(self) -> dict[str, Any] | None:
         response = await self.fetch("create_block_generator", {})
         return response
 
     async def get_recent_signage_point_or_eos(
-        self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
+        self, sp_hash: bytes32 | None, challenge_hash: bytes32 | None
     ) -> dict[str, Any]:
         if sp_hash is not None and challenge_hash is not None:
             raise ValueError("Either sp_hash or challenge_hash must be provided, not both.")
@@ -275,8 +275,8 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_fee_estimate(
         self,
-        target_times: Optional[list[int]],
-        cost: Optional[int],
+        target_times: list[int] | None,
+        cost: int | None,
     ) -> dict[str, Any]:
         response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
         return response

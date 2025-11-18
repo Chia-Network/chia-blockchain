@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import (
     SpendBundleConditions,
 )
@@ -17,7 +15,7 @@ def check_time_locks(
     bundle_conds: SpendBundleConditions,
     prev_transaction_block_height: uint32,
     timestamp: uint64,
-) -> Optional[Err]:
+) -> Err | None:
     """
     Check all time and height conditions against current state.
     """

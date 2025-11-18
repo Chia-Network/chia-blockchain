@@ -7,7 +7,7 @@ import dataclasses
 import json
 import logging
 from os.path import dirname
-from typing import Optional, Union, cast
+from typing import cast
 
 import pytest
 from chia_rs import (
@@ -61,8 +61,8 @@ async def test_harvester_receive_source_signing_data(
     farmer_harvester_2_simulators_zero_bits_plot_filter: tuple[
         FarmerService,
         HarvesterService,
-        Union[FullNodeService, SimulatorFullNodeService],
-        Union[FullNodeService, SimulatorFullNodeService],
+        FullNodeService | SimulatorFullNodeService,
+        FullNodeService | SimulatorFullNodeService,
         BlockTools,
     ],
 ) -> None:
@@ -121,12 +121,12 @@ async def test_harvester_receive_source_signing_data(
 
     async def intercept_harvester_request_signatures(
         self: HarvesterAPI, request: harvester_protocol.RequestSignatures
-    ) -> Optional[Message]:
+    ) -> Message | None:
         nonlocal harvester
         nonlocal farmer_reward_address
 
         validate_harvester_request_signatures(request)
-        result_msg: Optional[Message] = await HarvesterAPI.request_signatures(
+        result_msg: Message | None = await HarvesterAPI.request_signatures(
             cast(HarvesterAPI, harvester.server.api), request
         )
         assert result_msg is not None
@@ -158,15 +158,14 @@ async def test_harvester_receive_source_signing_data(
             assert hash
             assert src
 
-            data: Optional[
-                Union[
-                    FoliageBlockData,
-                    FoliageTransactionBlock,
-                    ClassgroupElement,
-                    ChallengeChainSubSlot,
-                    RewardChainSubSlot,
-                ]
-            ] = None
+            data: (
+                FoliageBlockData
+                | FoliageTransactionBlock
+                | ClassgroupElement
+                | ChallengeChainSubSlot
+                | RewardChainSubSlot
+                | None
+            ) = None
             if src.kind == uint8(SigningDataKind.FOLIAGE_BLOCK_DATA):
                 data = FoliageBlockData.from_bytes(src.data)
                 assert (
@@ -227,7 +226,7 @@ async def test_harvester_receive_source_signing_data(
 
     async def intercept_farmer_request_signed_values(
         self: FarmerAPI, request: farmer_protocol.RequestSignedValues
-    ) -> Optional[Message]:
+    ) -> Message | None:
         nonlocal farmer
         nonlocal farmer_reward_address
         nonlocal full_node_2
@@ -284,8 +283,8 @@ async def test_harvester_fee_convention(
     farmer_harvester_2_simulators_zero_bits_plot_filter: tuple[
         FarmerService,
         HarvesterService,
-        Union[FullNodeService, SimulatorFullNodeService],
-        Union[FullNodeService, SimulatorFullNodeService],
+        FullNodeService | SimulatorFullNodeService,
+        FullNodeService | SimulatorFullNodeService,
         BlockTools,
     ],
     caplog: pytest.LogCaptureFixture,
@@ -314,8 +313,8 @@ async def test_harvester_fee_invalid_convention(
     farmer_harvester_2_simulators_zero_bits_plot_filter: tuple[
         FarmerService,
         HarvesterService,
-        Union[FullNodeService, SimulatorFullNodeService],
-        Union[FullNodeService, SimulatorFullNodeService],
+        FullNodeService | SimulatorFullNodeService,
+        FullNodeService | SimulatorFullNodeService,
         BlockTools,
     ],
     caplog: pytest.LogCaptureFixture,
@@ -437,7 +436,7 @@ def node_type_connected(server: ChiaServer, node_type: NodeType) -> bool:
 
 def decode_sp(
     is_sub_slot: bool, sp64: str
-) -> Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]:
+) -> timelord_protocol.NewEndOfSubSlotVDF | timelord_protocol.NewSignagePointVDF:
     sp_bytes = base64.b64decode(sp64)
     if is_sub_slot:
         return timelord_protocol.NewEndOfSubSlotVDF.from_bytes(sp_bytes)
@@ -496,7 +495,7 @@ async def inject_signage_points(signage_points: SPList, full_node_1: FullNode, f
     api2 = cast(FullNodeAPI, full_node_2.server.api)
 
     for i, sp in enumerate(signage_points):
-        req: Union[full_node_protocol.RespondEndOfSubSlot, full_node_protocol.RespondSignagePoint]
+        req: full_node_protocol.RespondEndOfSubSlot | full_node_protocol.RespondSignagePoint
 
         if isinstance(sp, timelord_protocol.NewEndOfSubSlotVDF):
             full_node_1.log.info(f"Injecting SP for end of sub-slot @ {i}")

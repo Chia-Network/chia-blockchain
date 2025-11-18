@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import StatisticsError, mean, stdev
-from typing import Any, Optional, TextIO, final
+from typing import Any, TextIO, final
 
 import click
 import lxml.etree
@@ -126,7 +126,7 @@ def main(
     percent_margin: int,
     randomoji: bool,
     tag: str,
-    result_count_limit: Optional[int],
+    result_count_limit: int | None,
 ) -> None:
     data_type = supported_data_types_by_tag[tag]
 

@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Union
 
 
 @dataclass(frozen=True)
 class IPAddress:
-    _inner: Union[IPv4Address, IPv6Address]
+    _inner: IPv4Address | IPv6Address
 
     @classmethod
     def create(cls, ip: str) -> IPAddress:

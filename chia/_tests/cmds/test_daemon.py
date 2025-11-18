@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -33,10 +33,10 @@ async def test_daemon(
 
     class DummyKeychain:
         @staticmethod
-        def get_cached_master_passphrase() -> Optional[str]:
+        def get_cached_master_passphrase() -> str | None:
             return None
 
-    def get_current_passphrase() -> Optional[str]:
+    def get_current_passphrase() -> str | None:
         return "a-passphrase"
 
     mocker.patch("chia.cmds.start_funcs.connect_to_daemon_and_validate", side_effect=connect_to_daemon_and_validate)

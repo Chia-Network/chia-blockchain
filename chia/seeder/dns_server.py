@@ -5,14 +5,14 @@ import logging
 import signal
 import sys
 import traceback
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
 from types import FrameType
-from typing import Any, Callable, Optional
+from typing import Any
 
 import aiosqlite
 import dns.asyncresolver
@@ -58,9 +58,9 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
     """
 
     callback: DnsCallback
-    transport: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
+    transport: asyncio.DatagramTransport | None = field(init=False, default=None)
     data_queue: asyncio.Queue[tuple[DNSRecord, tuple[str, int]]] = field(default_factory=asyncio.Queue)
-    queue_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
+    queue_task: asyncio.Task[None] | None = field(init=False, default=None)
 
     def start(self) -> None:
         self.queue_task = create_referenced_task(self.respond())  # This starts the dns respond loop.
@@ -81,7 +81,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         log.debug(f"Received UDP DNS request from {addr}.")
-        dns_request: Optional[DNSRecord] = parse_dns_request(data)
+        dns_request: DNSRecord | None = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
         create_referenced_task(self.handler(dns_request, addr), known_unreferenced=True)
@@ -123,7 +123,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
     """
 
     callback: DnsCallback
-    transport: Optional[asyncio.Transport] = field(init=False, default=None)
+    transport: asyncio.Transport | None = field(init=False, default=None)
     peer_info: str = field(init=False, default="")
     expected_length: int = 0
     buffer: bytearray = field(init=False, default_factory=lambda: bytearray(2))
@@ -139,7 +139,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
         self.peer_info = f"{peer_info[0]}:{peer_info[1]}"
         log.debug(f"TCP connection established with {self.peer_info}.")
 
-    def connection_lost(self, exc: Optional[Exception]) -> None:
+    def connection_lost(self, exc: Exception | None) -> None:
         """
         This is called whenever a connection is lost, or closed.
         """
@@ -178,7 +178,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                 self.buffer = self.buffer[self.expected_length :]  # Remove the message from the buffer
                 self.expected_length = 0  # Reset the expected length
 
-                dns_request: Optional[DNSRecord] = parse_dns_request(message)
+                dns_request: DNSRecord | None = parse_dns_request(message)
                 if dns_request is None:  # Invalid Request, so we disconnect and don't send anything back.
                     self.transport.close()
                     return
@@ -186,7 +186,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
 
         self.buffer = bytearray(2 if self.expected_length == 0 else self.expected_length)  # Reset the buffer if empty.
 
-    def eof_received(self) -> Optional[bool]:
+    def eof_received(self) -> bool | None:
         """
         This is called when the client closes the connection, False or None means we close the connection.
         True means we keep the connection open.
@@ -241,11 +241,11 @@ def create_dns_reply(dns_request: DNSRecord) -> DNSRecord:
     return DNSRecord(DNSHeader(id=dns_request.header.id, qr=1, aa=1, ra=0), q=dns_request.q)
 
 
-def parse_dns_request(data: bytes) -> Optional[DNSRecord]:
+def parse_dns_request(data: bytes) -> DNSRecord | None:
     """
     Parses the DNS request, and returns a DNSRecord object, or None if the request is invalid.
     """
-    dns_request: Optional[DNSRecord] = None
+    dns_request: DNSRecord | None = None
     try:
         dns_request = DNSRecord.parse(data)
     except DNSError as e:
@@ -273,15 +273,15 @@ class DNSServer:
     root_path: Path
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
-    crawl_store: Optional[CrawlStore] = field(init=False, default=None)
-    reliable_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
+    crawl_store: CrawlStore | None = field(init=False, default=None)
+    reliable_task: asyncio.Task[None] | None = field(init=False, default=None)
     shutting_down: bool = field(init=False, default=False)
-    udp_transport_ipv4: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
-    udp_protocol_ipv4: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
-    udp_transport_ipv6: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
-    udp_protocol_ipv6: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
+    udp_transport_ipv4: asyncio.DatagramTransport | None = field(init=False, default=None)
+    udp_protocol_ipv4: UDPDNSServerProtocol | None = field(init=False, default=None)
+    udp_transport_ipv6: asyncio.DatagramTransport | None = field(init=False, default=None)
+    udp_protocol_ipv6: UDPDNSServerProtocol | None = field(init=False, default=None)
     # TODO: After 3.10 is dropped change to asyncio.Server
-    tcp_server: Optional[asyncio.base_events.Server] = field(init=False, default=None)
+    tcp_server: asyncio.base_events.Server | None = field(init=False, default=None)
     # these are all set in __post_init__
     tcp_dns_port: int = field(init=False)
     udp_dns_port: int = field(init=False)
@@ -295,7 +295,7 @@ class DNSServer:
     reliable_peers_v6: list[IPv6Address] = field(default_factory=list)
     static_peers_v4: list[IPv4Address] = field(default_factory=list)
     static_peers_v6: list[IPv6Address] = field(default_factory=list)
-    resolver: Optional[dns.asyncresolver.Resolver] = field(init=False)
+    resolver: dns.asyncresolver.Resolver | None = field(init=False)
     pointer_v4: int = 0
     pointer_v6: int = 0
 
@@ -330,7 +330,7 @@ class DNSServer:
             ),
         )
         try:
-            self.resolver: Optional[dns.asyncresolver.Resolver] = dns.asyncresolver.Resolver()
+            self.resolver: dns.asyncresolver.Resolver | None = dns.asyncresolver.Resolver()
         except Exception:
             self.resolver = None
             log.exception("Error initializing asyncresolver for dns_server")
@@ -379,7 +379,7 @@ class DNSServer:
     async def _accept_signal(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:  # pragma: no cover
         log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)

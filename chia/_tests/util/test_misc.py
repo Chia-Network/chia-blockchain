@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import AsyncIterator, Iterator
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import aiohttp
 import anyio
@@ -340,7 +340,7 @@ async def test_valued_event_wait_already_set() -> None:
 async def test_valued_event_wait_not_yet_set() -> None:
     valued_event = ValuedEvent[int]()
     value = 37
-    result: Optional[int] = None
+    result: int | None = None
 
     async def wait(valued_event: ValuedEvent[int]) -> None:
         nonlocal result

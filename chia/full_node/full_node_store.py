@@ -4,7 +4,6 @@ import asyncio
 import dataclasses
 import logging
 import time
-from typing import Optional
 
 from chia_rs import BlockRecord, ConsensusConstants, EndOfSubSlotBundle, FullBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -30,7 +29,7 @@ log = logging.getLogger(__name__)
 @streamable
 @dataclasses.dataclass(frozen=True)
 class FullNodeStorePeakResult(Streamable):
-    added_eos: Optional[EndOfSubSlotBundle]
+    added_eos: EndOfSubSlotBundle | None
     new_signage_points: list[tuple[uint8, SignagePoint]]
     new_infusion_points: list[timelord_protocol.NewInfusionPointVDF]
 
@@ -39,16 +38,16 @@ class FullNodeStorePeakResult(Streamable):
 class UnfinishedBlockEntry:
     # if this is None, it means we've requested this block but not yet received
     # it
-    unfinished_block: Optional[UnfinishedBlock]
+    unfinished_block: UnfinishedBlock | None
     # If this is None, it means we've initiated validation of this block, but it
     # hasn't completed yet
-    result: Optional[PreValidationResult]
+    result: PreValidationResult | None
     height: uint32
 
 
 def find_best_block(
-    result: dict[Optional[bytes32], UnfinishedBlockEntry],
-) -> tuple[Optional[bytes32], Optional[UnfinishedBlock]]:
+    result: dict[bytes32 | None, UnfinishedBlockEntry],
+) -> tuple[bytes32 | None, UnfinishedBlock | None]:
     """
     Given a collection of UnfinishedBlocks (all with the same reward block
     hash), return the "best" one. i.e. the one with the smallest foliage hash.
@@ -65,7 +64,7 @@ def find_best_block(
         else:
             return foliage_hash, entry.unfinished_block
 
-    def include_block(item: tuple[Optional[bytes32], UnfinishedBlockEntry]) -> bool:
+    def include_block(item: tuple[bytes32 | None, UnfinishedBlockEntry]) -> bool:
         foliage_hash, entry = item
         return foliage_hash is not None and entry.unfinished_block is not None
 
@@ -105,13 +104,13 @@ class FullNodeStore:
     # The inner key (the foliage hash) is Optional, where None either means
     # it's not a transaction block, or it's a block we learned about via the old
     # protocol, where all we get is the reward block hash.
-    _unfinished_blocks: dict[bytes32, dict[Optional[bytes32], UnfinishedBlockEntry]]
+    _unfinished_blocks: dict[bytes32, dict[bytes32 | None, UnfinishedBlockEntry]]
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
     # Also stores the total iters at the end of slot
     # For the first sub-slot, EndOfSlotBundle is None
-    finished_sub_slots: list[tuple[Optional[EndOfSubSlotBundle], list[Optional[SignagePoint]], uint128]]
+    finished_sub_slots: list[tuple[EndOfSubSlotBundle | None, list[SignagePoint | None], uint128]]
 
     # These caches maintain objects which depend on infused blocks in the reward chain, that we
     # might receive before the blocks themselves. The dict keys are the reward chain challenge hashes.
@@ -137,8 +136,8 @@ class FullNodeStore:
     # it advertised for that transaction.
     peers_with_tx: dict[bytes32, dict[bytes32, PeerWithTx]]
     tx_fetch_tasks: dict[bytes32, asyncio.Task[None]]  # Task id: task
-    serialized_wp_message: Optional[Message]
-    serialized_wp_message_tip: Optional[bytes32]
+    serialized_wp_message: Message | None
+    serialized_wp_message_tip: bytes32 | None
 
     max_seen_unfinished_blocks: int
 
@@ -165,7 +164,7 @@ class FullNodeStore:
         self.max_seen_unfinished_blocks = 1000
 
     def is_requesting_unfinished_block(
-        self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]
+        self, reward_block_hash: bytes32, foliage_hash: bytes32 | None
     ) -> tuple[bool, int]:
         """
         Asks if we are already requesting this specific unfinished block (given
@@ -183,11 +182,11 @@ class FullNodeStore:
         else:
             return (foliage_hash in ents, len(ents))
 
-    def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
+    def mark_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: bytes32 | None) -> None:
         ents = self._unfinished_blocks.setdefault(reward_block_hash, {})
         ents.setdefault(foliage_hash, UnfinishedBlockEntry(None, None, uint32(0)))
 
-    def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: Optional[bytes32]) -> None:
+    def remove_requesting_unfinished_block(self, reward_block_hash: bytes32, foliage_hash: bytes32 | None) -> None:
         reward_ents = self._unfinished_blocks.get(reward_block_hash)
         if reward_ents is None:
             return
@@ -212,7 +211,7 @@ class FullNodeStore:
 
     def get_candidate_block(
         self, quality_string: bytes32, backup: bool = False
-    ) -> Optional[tuple[uint32, UnfinishedBlock]]:
+    ) -> tuple[uint32, UnfinishedBlock] | None:
         if backup:
             return self.candidate_backup_blocks.get(quality_string, None)
         else:
@@ -257,7 +256,7 @@ class FullNodeStore:
             unfinished_block, result, height
         )
 
-    def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
+    def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> UnfinishedBlock | None:
         result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
@@ -272,8 +271,8 @@ class FullNodeStore:
         return block
 
     def get_unfinished_block2(
-        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: Optional[bytes32]
-    ) -> tuple[Optional[UnfinishedBlock], int, bool]:
+        self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: bytes32 | None
+    ) -> tuple[UnfinishedBlock | None, int, bool]:
         """
         Looks up an UnfinishedBlock by its reward block hash and foliage hash.
         If the foliage hash is None (e.g. it's not a transaction block), we fall
@@ -307,7 +306,7 @@ class FullNodeStore:
     # have a foliage hash. That's why unfinished_foliage_hash is not Optional.
     def get_unfinished_block_result(
         self, unfinished_reward_hash: bytes32, unfinished_foliage_hash: bytes32
-    ) -> Optional[UnfinishedBlockEntry]:
+    ) -> UnfinishedBlockEntry | None:
         result = self._unfinished_blocks.get(unfinished_reward_hash, None)
         if result is None:
             return None
@@ -326,7 +325,7 @@ class FullNodeStore:
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
         del_partial: list[bytes32] = []
         for partial_hash, entry in self._unfinished_blocks.items():
-            del_foliage: list[Optional[bytes32]] = []
+            del_foliage: list[bytes32 | None] = []
             for foliage_hash, ube in entry.items():
                 if ube.height < height:
                     del_foliage.append(foliage_hash)
@@ -395,7 +394,7 @@ class FullNodeStore:
     def clear_slots(self) -> None:
         self.finished_sub_slots.clear()
 
-    def get_sub_slot(self, challenge_hash: bytes32) -> Optional[tuple[EndOfSubSlotBundle, int, uint128]]:
+    def get_sub_slot(self, challenge_hash: bytes32) -> tuple[EndOfSubSlotBundle, int, uint128] | None:
         assert len(self.finished_sub_slots) >= 1
         for index, (sub_slot, _, total_iters) in enumerate(self.finished_sub_slots):
             if sub_slot is not None and sub_slot.challenge_chain.get_hash() == challenge_hash:
@@ -410,11 +409,11 @@ class FullNodeStore:
         self,
         eos: EndOfSubSlotBundle,
         blocks: BlockRecordsProtocol,
-        peak: Optional[BlockRecord],
+        peak: BlockRecord | None,
         next_sub_slot_iters: uint64,
         next_difficulty: uint64,
-        peak_full_block: Optional[FullBlock],
-    ) -> Optional[list[timelord_protocol.NewInfusionPointVDF]]:
+        peak_full_block: FullBlock | None,
+    ) -> list[timelord_protocol.NewInfusionPointVDF] | None:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
         on this sub slot
@@ -430,8 +429,8 @@ class FullNodeStore:
         rc_challenge: bytes32 = (
             last_slot.reward_chain.get_hash() if last_slot is not None else self.constants.GENESIS_CHALLENGE
         )
-        icc_challenge: Optional[bytes32] = None
-        icc_iters: Optional[uint64] = None
+        icc_challenge: bytes32 | None = None
+        icc_iters: uint64 | None = None
 
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
@@ -681,7 +680,7 @@ class FullNodeStore:
         self,
         index: uint8,
         blocks: BlockRecordsProtocol,
-        peak: Optional[BlockRecord],
+        peak: BlockRecord | None,
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
         skip_vdf_validation: bool = False,
@@ -817,7 +816,7 @@ class FullNodeStore:
         self.add_to_future_sp(signage_point, index)
         return False
 
-    def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
+    def get_signage_point(self, cc_signage_point: bytes32) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
         if cc_signage_point == self.constants.GENESIS_CHALLENGE:
             return SignagePoint(None, None, None, None)
@@ -834,7 +833,7 @@ class FullNodeStore:
 
     def get_signage_point_by_index_and_cc_output(
         self, cc_signage_point: bytes32, challenge: bytes32, index: uint8
-    ) -> Optional[SignagePoint]:
+    ) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
         for sub_slot, sps, _ in self.finished_sub_slots:
             if sub_slot is not None:
@@ -845,7 +844,7 @@ class FullNodeStore:
                 if index == 0:
                     # first SP in the sub slot
                     return SignagePoint(None, None, None, None)
-                sp: Optional[SignagePoint] = sps[index]
+                sp: SignagePoint | None = sps[index]
                 if sp is None:
                     return None
                 assert sp.cc_vdf is not None
@@ -855,7 +854,7 @@ class FullNodeStore:
 
     def get_signage_point_by_index(
         self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
-    ) -> Optional[SignagePoint]:
+    ) -> SignagePoint | None:
         assert len(self.finished_sub_slots) >= 1
         for sub_slot, sps, _ in self.finished_sub_slots:
             if sub_slot is not None:
@@ -866,7 +865,7 @@ class FullNodeStore:
             if cc_hash == challenge_hash:
                 if index == 0:
                     return SignagePoint(None, None, None, None)
-                sp: Optional[SignagePoint] = sps[index]
+                sp: SignagePoint | None = sps[index]
                 if sp is not None:
                     assert sp.rc_vdf is not None
                     if sp.rc_vdf.challenge == last_rc_infusion:
@@ -888,7 +887,7 @@ class FullNodeStore:
             if cc_hash == challenge_hash:
                 found_rc_hash = False
                 for i in range(index):
-                    sp: Optional[SignagePoint] = sps[i]
+                    sp: SignagePoint | None = sps[i]
                     if sp is not None and sp.rc_vdf is not None and sp.rc_vdf.challenge == last_rc_infusion:
                         found_rc_hash = True
                 sp = sps[index]
@@ -905,9 +904,9 @@ class FullNodeStore:
         self,
         peak: BlockRecord,
         peak_full_block: FullBlock,
-        sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
-        ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
-        fork_block: Optional[BlockRecord],
+        sp_sub_slot: EndOfSubSlotBundle | None,  # None if not overflow, or in first/second slot
+        ip_sub_slot: EndOfSubSlotBundle | None,  # None if in first slot
+        fork_block: BlockRecord | None,
         blocks: BlockRecordsProtocol,
         next_sub_slot_iters: uint64,
         next_difficulty: uint64,
@@ -925,8 +924,8 @@ class FullNodeStore:
             self.initialize_genesis_sub_slot()
         else:
             # This is not the first sub-slot in the chain
-            sp_sub_slot_sps: list[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
-            ip_sub_slot_sps: list[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
+            sp_sub_slot_sps: list[SignagePoint | None] = [None] * self.constants.NUM_SPS_SUB_SLOT
+            ip_sub_slot_sps: list[SignagePoint | None] = [None] * self.constants.NUM_SPS_SUB_SLOT
 
             if fork_block is not None and fork_block.sub_slot_iters != peak.sub_slot_iters:
                 # If there was a reorg and a difficulty adjustment, just clear all the slots
@@ -942,7 +941,7 @@ class FullNodeStore:
                     if fork_block is None:
                         # If this is not a reorg, we still want to remove signage points after the new peak
                         fork_block = peak
-                    replaced_sps: list[Optional[SignagePoint]] = []  # index 0 is the end of sub slot
+                    replaced_sps: list[SignagePoint | None] = []  # index 0 is the end of sub slot
                     for i, sp in enumerate(sps):
                         if (total_iters + i * interval_iters) < fork_block.total_iters:
                             # Sps before the fork point as still valid
@@ -971,7 +970,7 @@ class FullNodeStore:
             ip_sub_slot_total_iters = peak.ip_sub_slot_total_iters(self.constants)
             self.finished_sub_slots.append((ip_sub_slot, ip_sub_slot_sps, ip_sub_slot_total_iters))
 
-        new_eos: Optional[EndOfSubSlotBundle] = None
+        new_eos: EndOfSubSlotBundle | None = None
         new_sps: list[tuple[uint8, SignagePoint]] = []
         new_ips: list[timelord_protocol.NewInfusionPointVDF] = []
 
@@ -1009,9 +1008,9 @@ class FullNodeStore:
     def get_finished_sub_slots(
         self,
         block_records: BlockRecordsProtocol,
-        prev_b: Optional[BlockRecord],
+        prev_b: BlockRecord | None,
         last_challenge_to_add: bytes32,
-    ) -> Optional[list[EndOfSubSlotBundle]]:
+    ) -> list[EndOfSubSlotBundle] | None:
         """
         Retrieves the EndOfSubSlotBundles that are in the store either:
         1. From the starting challenge if prev_b is None

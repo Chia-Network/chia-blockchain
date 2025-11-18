@@ -5,10 +5,10 @@ import contextlib
 import logging
 import os
 import signal
-from collections.abc import AsyncIterator, Awaitable, Coroutine
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
 from pathlib import Path
 from types import FrameType
-from typing import Any, Callable, Generic, Optional, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from chia_rs.sized_ints import uint16
 
@@ -33,7 +33,7 @@ from chia.util.task_referencer import create_referenced_task
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
-main_pid: Optional[int] = None
+main_pid: int | None = None
 
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
@@ -56,19 +56,19 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         node: _T_RpcServiceProtocol,
         peer_api: _T_ApiProtocol,
         node_type: NodeType,
-        advertised_port: Optional[int],
+        advertised_port: int | None,
         service_name: str,
         network_id: str,
         *,
         config: dict[str, Any],
         stub_metadata_for_type: dict[NodeType, ApiMetadata],
-        upnp_ports: Optional[list[int]] = None,
-        connect_peers: Optional[set[UnresolvedPeerInfo]] = None,
-        on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
-        rpc_info: Optional[RpcInfo[_T_RpcApiProtocol]] = None,
+        upnp_ports: list[int] | None = None,
+        connect_peers: set[UnresolvedPeerInfo] | None = None,
+        on_connect_callback: Callable[[WSChiaConnection], Awaitable[None]] | None = None,
+        rpc_info: RpcInfo[_T_RpcApiProtocol] | None = None,
         connect_to_daemon: bool = True,
-        max_request_body_size: Optional[int] = None,
-        override_capabilities: Optional[list[tuple[uint16, str]]] = None,
+        max_request_body_size: int | None = None,
+        override_capabilities: list[tuple[uint16, str]] | None = None,
     ) -> None:
         if upnp_ports is None:
             upnp_ports = []
@@ -85,7 +85,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self.rpc_server: Optional[RpcServer[_T_RpcApiProtocol]] = None
+        self.rpc_server: RpcServer[_T_RpcApiProtocol] | None = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
         self.reconnect_retry_seconds: int = 3
@@ -141,7 +141,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
         self._connect_peers = connect_peers
-        self._connect_peers_task: Optional[asyncio.Task[None]] = None
+        self._connect_peers_task: asyncio.Task[None] | None = None
         self.upnp: UPnP = UPnP()
         self.stop_requested = asyncio.Event()
 
@@ -287,7 +287,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
     def _accept_signal(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         # we only handle signals in the main process. In the ProcessPoolExecutor
@@ -309,7 +309,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self.stop_requested.set()
 
 
-def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
+def async_run(coro: Coroutine[object, object, T], connection_limit: int | None = None) -> T:
     with log_exceptions(log=log, message="fatal uncaught exception"):
         if connection_limit is not None:
             set_chia_policy(connection_limit)

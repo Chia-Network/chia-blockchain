@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 from chia_rs import G1Element, PlotParam
@@ -28,10 +27,10 @@ class ProofOfSpaceCase:
     pos_challenge: bytes32
     plot_size: PlotParam
     plot_public_key: G1Element
-    pool_public_key: Optional[G1Element] = None
-    pool_contract_puzzle_hash: Optional[bytes32] = None
+    pool_public_key: G1Element | None = None
+    pool_contract_puzzle_hash: bytes32 | None = None
     height: uint32 = DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
-    expected_error: Optional[str] = None
+    expected_error: str | None = None
     marks: Marks = ()
 
 

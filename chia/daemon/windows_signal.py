@@ -8,8 +8,9 @@ from __future__ import annotations
 import os
 import signal
 import sys
+from collections.abc import Callable
 from types import FrameType
-from typing import Any, Callable, Optional
+from typing import Any
 
 # https://github.com/python/typeshed/blob/fbddd2c4e2b746f1880399ed0cb31a44d6ede6ff/stdlib/signal.pyi
 _HANDLER = Callable[[int, FrameType | None], Any] | int | signal.Handlers | None
@@ -39,7 +40,7 @@ else:
             event = threading.Event()
             callable_handler = handler
 
-            def handler_set_event(signum: int, frame: Optional[FrameType]) -> Any:
+            def handler_set_event(signum: int, frame: FrameType | None) -> Any:
                 event.set()
                 return callable_handler(signum, frame)
 

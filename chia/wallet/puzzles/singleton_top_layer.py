@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Optional
 
 from chia_puzzles_py.programs import (
     P2_SINGLETON,
@@ -287,8 +286,8 @@ def claim_p2_singleton(
     p2_singleton_coin: Coin,
     singleton_inner_puzhash: bytes32,
     launcher_id: bytes32,
-    delay_time: Optional[uint64] = None,
-    delay_ph: Optional[bytes32] = None,
+    delay_time: uint64 | None = None,
+    delay_ph: bytes32 | None = None,
 ) -> tuple[Program, Program, CoinSpend]:
     assertion = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(p2_singleton_coin.name() + b"$")])
     announcement = Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin.name()])

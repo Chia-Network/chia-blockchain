@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from asyncio import Task, gather, sleep
 from collections.abc import Coroutine
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import pytest
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -80,9 +80,7 @@ async def test_farmer_responds_with_signed_values(farmer_one_harvester: FarmerOn
     )
     setattr(farmer_api, "_process_respond_signatures", lambda res: signed_values)
 
-    signed_values_task: Task[Optional[Message]] = await begin_task(
-        farmer_api.request_signed_values(request_signed_values)
-    )
+    signed_values_task: Task[Message | None] = await begin_task(farmer_api.request_signed_values(request_signed_values))
 
     # Wait a bit for the dummy harvester to receive the signature request and respond with a dummy signature
     await sleep(1)

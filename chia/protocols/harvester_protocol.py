@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 
 from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
@@ -73,8 +72,8 @@ class NewProofOfSpace(Streamable):
     proof: ProofOfSpace
     signage_point_index: uint8
     include_source_signature_data: bool
-    farmer_reward_address_override: Optional[bytes32]
-    fee_info: Optional[ProofOfSpaceFeeInfo]
+    farmer_reward_address_override: bytes32 | None
+    fee_info: ProofOfSpaceFeeInfo | None
 
 
 @streamable
@@ -88,8 +87,8 @@ class PartialProofsData(Streamable):
     plot_size: uint8
     strength: uint8
     plot_id: bytes32
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
 
 
@@ -121,8 +120,8 @@ class RequestSignatures(Streamable):
     sp_hash: bytes32
     messages: list[bytes32]
     # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
-    message_data: Optional[list[Optional[SignatureRequestSourceData]]]
-    rc_block_unfinished: Optional[RewardChainBlockUnfinished]
+    message_data: list[SignatureRequestSourceData | None] | None
+    rc_block_unfinished: RewardChainBlockUnfinished | None
 
 
 @streamable
@@ -135,7 +134,7 @@ class RespondSignatures(Streamable):
     farmer_pk: G1Element
     message_signatures: list[tuple[bytes32, G2Element]]
     include_source_signature_data: bool
-    farmer_reward_address_override: Optional[bytes32]
+    farmer_reward_address_override: bytes32 | None
 
 
 @streamable
@@ -149,12 +148,12 @@ class Plot(Streamable):
     # can clean this up with a new protocol version
     size: uint8
     plot_id: bytes32
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
     file_size: uint64
     time_modified: uint64
-    compression_level: Optional[uint8]
+    compression_level: uint8 | None
 
     def param(self) -> PlotParam:
         if (self.size & 0x80) != 0:
@@ -239,7 +238,7 @@ class PlotSyncDone(Streamable):
 class PlotSyncError(Streamable):
     code: int16
     message: str
-    expected_identifier: Optional[PlotSyncIdentifier]
+    expected_identifier: PlotSyncIdentifier | None
 
     def __str__(self) -> str:
         return f"PlotSyncError: code {self.code}, count {self.message}, expected_identifier {self.expected_identifier}"
@@ -250,7 +249,7 @@ class PlotSyncError(Streamable):
 class PlotSyncResponse(Streamable):
     identifier: PlotSyncIdentifier
     message_type: int16
-    error: Optional[PlotSyncError]
+    error: PlotSyncError | None
 
     def __str__(self) -> str:
         return f"PlotSyncResponse: identifier {self.identifier}, message_type {self.message_type}, error {self.error}"
