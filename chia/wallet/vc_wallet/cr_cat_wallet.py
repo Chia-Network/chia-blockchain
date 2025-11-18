@@ -145,7 +145,7 @@ class CRCATWallet(CATWallet):
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
-            puzzle_driver["tail"].hex(),
+            puzzle_driver["tail"],
             name,
             [bytes32(provider) for provider in cr_layer["authorized_providers"]],
             ProofsChecker.from_program(uncurry_puzzle(cr_layer["proofs_checker"])),

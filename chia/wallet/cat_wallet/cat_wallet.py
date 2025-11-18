@@ -271,7 +271,7 @@ class CATWallet:
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
-            puzzle_driver["tail"].hex(),
+            puzzle_driver["tail"],
             name,
         )
 
