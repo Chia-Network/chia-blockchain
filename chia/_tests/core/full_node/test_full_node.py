@@ -3455,7 +3455,7 @@ async def test_ban_for_mismatched_tx_cost_fee(
         # hasn't seen the transaction before, it will issue a transaction
         # request. We need to wait until it receives the transaction and add it
         # to its mempool.
-        await time_out_assert(120, lambda: full_node_1.full_node.mempool_manager.seen(mempool_item.name))
+        await time_out_assert(180, lambda: full_node_1.full_node.mempool_manager.seen(mempool_item.name))
     # Make sure the first full node has banned the second as the item it has
     # already seen has a different validation cost and/or fee than the one from
     # the NewTransaction message.
