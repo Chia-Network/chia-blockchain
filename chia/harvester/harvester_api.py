@@ -396,6 +396,11 @@ class HarvesterAPI:
                 if not self._plot_passes_filter(try_plot_info, new_challenge):
                     continue
                 if try_plot_info.prover.get_version() == PlotVersion.V2:
+                    # before hard fork activation, we can't farm v2 plots
+                    constants = self.harvester.constants
+                    if new_challenge.last_tx_height < constants.HARD_FORK2_HEIGHT:
+                        continue
+
                     v2_awaitables.append(
                         loop.run_in_executor(
                             self.harvester.executor,
