@@ -6,13 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Next Release
+## 2.5.7 Chia blockchain 2025-11-12
 
 ## What's Changed
 
+### Added
+
+- New Datalayer delta file format for improved performance
+- New Datalayer delta file migration and increased logging
+- New Datalayer config option `merkle_blobs_cache_size`
+- Work in Progress - preliminary support for V2 plot format (eg: `chia plots check`)
+- Add Enum support to `streamable` framework
+- New option `-i/--include-pool-rewards` for `chia farm summary` (thanks @wallentx)
+
 ### Changed
 
-- Updated ChiaLisp dependency from 'clvm_tools_rs' to new repo 'chialisp'
+- Improved Datalayer performance significantly with migration to Rust (via `chia_rs`)
+- Improved Mempool performance and fast forward support
+- Modified wallet RPC `add_key` to support providing a key label
+- Integrated `PLOT_V1_PHASE_OUT` constant
+- Optimixed code related to node handling of new peaks
+- Simplified `install-gui.sh` script to remove code that attempts to find and install NodeJS
+- Bump `chia_rs` to `0.30`
+- Bump `chiavdf` to `1.1.13`
+- Bump `cryptography` to `45.0.5`
+- Bump `cffi` to `1.17.1`
+- Bump `markupsafe` to `3.0.2`
+
+### Fixed
+
+- Changed logging of `NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH` from `error` to `info` as this is expected in certain situations
+- Fixed signage point lookup edge case at genesis in the first slot
+- Change default limit for `get_transactions` to 65536 (uint16)
+
+### Removed
+
+- Removed the following unsupported Wallet RPC APIs: `did_update_recovery_ids`, `did_recovery_spend`, `did_get_recovery_list`, `did_create_attest`, `did_get_information_needed_for_recovery`
+- Python 3.9 is no longer supported
 
 ## 2.5.6 Chia blockchain 2025-9-24
 
