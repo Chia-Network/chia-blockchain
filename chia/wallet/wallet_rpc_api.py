@@ -999,32 +999,21 @@ class WalletRpcApi:
     ) -> PushTransactionsResponse:
         if not action_scope.config.push:
             raise ValueError("Cannot push transactions if push is False")
+        tx_removals = [c for tx in request.transactions for c in tx.removals]
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(request.transactions)
-            if request.fee != 0:
-                removal_ids = tuple(c.name() for tx in interface.side_effects.transactions for c in tx.removals)
-                async with self.service.wallet_state_manager.new_action_scope(
-                    dataclasses.replace(
-                        action_scope.config.tx_config,
-                        excluded_coin_ids=[
-                            *action_scope.config.tx_config.excluded_coin_ids,
-                            *removal_ids,
-                        ],
-                    ),
-                    push=False,
-                ) as inner_action_scope:
-                    await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                        request.fee,
-                        inner_action_scope,
-                        extra_conditions=(
-                            *extra_conditions,
-                            AssertConcurrentSpend(removal_ids[0]),
-                        ),
-                    )
-
-                interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
-            elif extra_conditions != tuple():
-                raise ValueError("Cannot add conditions to a transaction if no new fee spend is being added")
+            interface.side_effects.selected_coins.extend(tx_removals)
+        if request.fee != 0:
+            await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                request.fee,
+                action_scope,
+                extra_conditions=(
+                    *extra_conditions,
+                    AssertConcurrentSpend(tx_removals[0].name()),
+                ),
+            )
+        elif extra_conditions != tuple():
+            raise ValueError("Cannot add conditions to a transaction if no new fee spend is being added")
 
         return PushTransactionsResponse([], [])  # tx_endpoint takes care of this
 

@@ -393,10 +393,13 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
         PushTransactions(transactions=[tx], fee=uint64(10)),
         wallet_environments.tx_config,
     )
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     resp = await client.fetch("push_transactions", {"transactions": [bytes(tx).hex()], "fee": 10})
     assert resp["success"]
+    await full_node_api.wait_for_wallet_synced(wallet_node)
 
     spend_bundle = WalletSpendBundle.aggregate(
         [tx.spend_bundle for tx in resp_client.transactions if tx.spend_bundle is not None]
