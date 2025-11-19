@@ -93,7 +93,7 @@ def get_transaction_cmd(
     "--limit",
     help="Max number of transactions to return",
     type=int,
-    default=(2**16 - 1),
+    default=(2**32 - 1),
     show_default=True,
     required=False,
 )

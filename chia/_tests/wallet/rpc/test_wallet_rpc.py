@@ -945,9 +945,9 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
     unconfirmed_txs_count = 0
     assert len(all_transactions) == expected_initial_txs_count
     # Test transaction pagination
-    some_transactions = (await client.get_transactions(GetTransactions(uint32(1), uint16(0), uint16(5)))).transactions
+    some_transactions = (await client.get_transactions(GetTransactions(uint32(1), uint32(0), uint32(5)))).transactions
     some_transactions_2 = (
-        await client.get_transactions(GetTransactions(uint32(1), uint16(5), uint16(10)))
+        await client.get_transactions(GetTransactions(uint32(1), uint32(5), uint32(10)))
     ).transactions
     assert some_transactions == all_transactions[0:5]
     assert some_transactions_2 == all_transactions[5:10]
