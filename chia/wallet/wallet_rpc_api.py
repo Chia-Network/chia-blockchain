@@ -23,7 +23,7 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connection
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import coin_as_list
-from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost
+from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -39,6 +39,7 @@ from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
+    AssertConcurrentSpend,
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
@@ -46,7 +47,6 @@ from chia.wallet.conditions import (
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     conditions_from_json_dicts,
-    parse_conditions_non_consensus,
     parse_timelock_info,
 )
 from chia.wallet.derive_keys import (
@@ -1002,31 +1002,13 @@ class WalletRpcApi:
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(request.transactions)
             if request.fee != 0:
-                all_conditions_and_origins = [
-                    (condition, cs.coin.name())
-                    for tx in interface.side_effects.transactions
-                    if tx.spend_bundle is not None
-                    for cs in tx.spend_bundle.coin_spends
-                    for condition in run_with_cost(cs.puzzle_reveal, INFINITE_COST, cs.solution)[1].as_iter()
-                ]
-                create_coin_announcement = next(
-                    condition
-                    for condition in parse_conditions_non_consensus(
-                        [con for con, coin in all_conditions_and_origins], abstractions=False
-                    )
-                    if isinstance(condition, CreateCoinAnnouncement)
-                )
-                announcement_origin = next(
-                    coin
-                    for condition, coin in all_conditions_and_origins
-                    if condition == create_coin_announcement.to_program()
-                )
+                removal_ids = tuple(c.name() for tx in interface.side_effects.transactions for c in tx.removals)
                 async with self.service.wallet_state_manager.new_action_scope(
                     dataclasses.replace(
                         action_scope.config.tx_config,
                         excluded_coin_ids=[
                             *action_scope.config.tx_config.excluded_coin_ids,
-                            *(c.name() for tx in interface.side_effects.transactions for c in tx.removals),
+                            *removal_ids,
                         ],
                     ),
                     push=False,
@@ -1036,13 +1018,13 @@ class WalletRpcApi:
                         inner_action_scope,
                         extra_conditions=(
                             *extra_conditions,
-                            CreateCoinAnnouncement(
-                                create_coin_announcement.msg, announcement_origin
-                            ).corresponding_assertion(),
+                            AssertConcurrentSpend(removal_ids[0]),
                         ),
                     )
 
                 interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            elif extra_conditions != tuple():
+                raise ValueError("Cannot add conditions to a transaction if no new fee spend is being added")
 
         return PushTransactionsResponse([], [])  # tx_endpoint takes care of this
 

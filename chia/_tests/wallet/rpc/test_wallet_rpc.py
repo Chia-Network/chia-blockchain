@@ -382,6 +382,13 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
         )
     ).signed_tx
 
+    with pytest.raises(ValueError, match="Cannot add conditions to a transaction if no new fee spend is being added"):
+        await client.push_transactions(
+            PushTransactions(transactions=[tx]),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(Remark(rest=Program.to("foo")),),
+        )
+
     resp_client = await client.push_transactions(
         PushTransactions(transactions=[tx], fee=uint64(10)),
         wallet_environments.tx_config,
