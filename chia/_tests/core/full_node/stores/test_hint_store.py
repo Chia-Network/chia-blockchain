@@ -6,6 +6,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.util.db_connection import DBConnection
 from chia.full_node.hint_store import HintStore
 from chia.server.server import ChiaServer
@@ -151,7 +152,6 @@ async def test_hints_in_blockchain(
         block_list_input=[],
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=bt.pool_ph,
-        pool_reward_puzzle_hash=bt.pool_ph,
     )
     for block in blocks:
         await full_node_1.full_node.add_block(block, None)
@@ -160,7 +160,7 @@ async def test_hints_in_blockchain(
     puzzle_hash = bytes32(32 * b"\0")
     amount = int_to_bytes(1)
     hint = bytes32(32 * b"\5")
-    coin_spent = blocks[-1].get_included_reward_coins()[0]
+    coin_spent = find_reward_coin(blocks[-1], bt.pool_ph)
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
     }

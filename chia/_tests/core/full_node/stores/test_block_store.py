@@ -16,6 +16,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_height_map import BlockHeightMap
@@ -57,11 +58,11 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
         3,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=bt.pool_ph,
-        pool_reward_puzzle_hash=bt.pool_ph,
         time_per_block=10,
     )
     wt: WalletTool = bt.get_pool_wallet_tool()
-    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0])
+    coin = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
     blocks = bt.get_consecutive_blocks(
         10,
         block_list_input=blocks,

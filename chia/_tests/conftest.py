@@ -812,7 +812,6 @@ async def one_node_one_block(
             1,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             genesis_timestamp=uint64(10000),
             time_per_block=10,
         )
@@ -841,7 +840,6 @@ async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
             1,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             genesis_timestamp=uint64(10000),
             time_per_block=10,
         )

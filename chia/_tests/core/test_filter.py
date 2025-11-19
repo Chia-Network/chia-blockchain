@@ -19,7 +19,6 @@ async def test_basic_filter_test(simulator_and_wallet):
         10,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=ph,
-        pool_reward_puzzle_hash=ph,
     )
     for i in range(1, num_blocks):
         byte_array_tx: list[bytes] = []
