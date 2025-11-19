@@ -7,7 +7,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
-from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.util.errors import Err
 
 
@@ -38,7 +37,7 @@ class AugmentedBlockchain:
         # Copy MMR manager and optionally rollback to fork point for reorg scenarios
         self.mmr_manager = underlying.mmr_manager.copy()
 
-        if fork_height is not None and hasattr(self.mmr_manager, 'rollback_to_height'):
+        if fork_height is not None and hasattr(self.mmr_manager, "rollback_to_height"):
             # For reorg scenarios, rollback MMR to the fork point
             self.mmr_manager.rollback_to_height(fork_height, underlying)
 
@@ -53,13 +52,14 @@ class AugmentedBlockchain:
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
         # Update MMR with the new block
-        self.mmr_manager.add_block_to_mmr(block_record)
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
 
     def remove_extra_block(self, hh: bytes32) -> None:
         if hh not in self._extra_blocks:
             return
 
         block_record = self._extra_blocks.pop(hh)[1]
+        self.mmr_manager.rollback_to_height(block_record.height, self)
         if self._underlying.contains_block(block_record.header_hash, block_record.height):
             height_to_remove = block_record.height
             for h in range(height_to_remove, -1, -1):
@@ -100,6 +100,9 @@ class AugmentedBlockchain:
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._underlying.mmr_manager.add_block_to_mmr(
+            block_record.header_hash, block_record.prev_hash, block_record.height
+        )
         # now that we're adding the block to the underlying blockchain, we don't
         # need to keep the extra block around anymore
         hh = block_record.header_hash
@@ -153,10 +156,16 @@ class AugmentedBlockchain:
                 ret.extend(await self._underlying.prev_block_hash([hh]))
         return ret
 
-    def get_mmr_root_at_height(self, height: uint32) -> Optional[bytes32]:
-        return self.mmr_manager.get_mmr_root_at_height(height)
-    def get_current_mmr_root(self) -> bytes32: 
-        return self.mmr_manager.get_current_mmr_root()
-    def add_block_to_mmr(self, block_record: BlockRecord) -> None: 
-        self.mmr_manager.add_block_to_mmr(block_record)
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: Optional[bytes32],
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
 
+    def get_current_mmr_root(self) -> bytes32:
+        return self.mmr_manager.get_current_mmr_root()
+
+    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)

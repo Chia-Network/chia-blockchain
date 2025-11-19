@@ -7,6 +7,7 @@ from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.util.blockchain_mock import StubMMRManager
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.blockchain_interface import MMRManagerProtocol
@@ -19,28 +20,6 @@ from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 log = logging.getLogger(__name__)
-
-
-class StubMMRManager:
-    """
-    Stub MMR manager for wallet blockchain that maintains limited block history.
-    Used in wallet contexts where full MMR validation may not be necessary.
-    """
-
-    def get_mmr_root_at_height(self, height: uint32) -> bytes32:
-        # Return empty bytes for wallet contexts
-        return bytes32([0] * 32)
-
-    def get_current_mmr_root(self) -> bytes32:
-        return bytes32([0] * 32)
-
-    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
-        # No-op for stub manager
-        pass
-
-    def copy(self) -> "StubMMRManager":
-        # Return a new instance (stateless)
-        return StubMMRManager()
 
 
 # implements BlockchainInterface
@@ -115,7 +94,7 @@ class WalletBlockchain:
             self._difficulty = uint64(records[-1].weight - records[-2].weight)
             await self._basic_store.set_object("SUB_SLOT_ITERS", self._sub_slot_iters)
             await self._basic_store.set_object("DIFFICULTY", self._difficulty)
-            await self.set_peak_block(weight_proof.recent_chain_data[-1].to_new(), latest_timestamp)
+            await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
             await self.clean_block_records()
 
     async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Optional[Err]]:
@@ -256,7 +235,7 @@ class WalletBlockchain:
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._block_records[block_record.header_hash] = block_record
         # Update MMR with the new block (even though WalletBlockchain uses StubMMRManager)
-        self.mmr_manager.add_block_to_mmr(block_record)
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
 
     async def clean_block_records(self) -> None:
         """

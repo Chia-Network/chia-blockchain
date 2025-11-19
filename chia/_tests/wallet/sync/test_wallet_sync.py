@@ -1612,7 +1612,7 @@ async def test_bad_peak_mismatch(
         # create the node respond with the lighter header block
         header_block_msg = make_msg(
             ProtocolMessageTypes.respond_block_header,
-            wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1].to_new()),
+            wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
         )
         f2: asyncio.Future[Optional[Message]] = asyncio.Future()
         f2.set_result(header_block_msg)

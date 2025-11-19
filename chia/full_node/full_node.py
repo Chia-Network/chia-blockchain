@@ -27,7 +27,6 @@ from chia_rs import (
     PoolTarget,
     SpendBundle,
     SubEpochSummary,
-    SubEpochSummaryOld,
     UnfinishedBlock,
     get_flags_for_height_and_constants,
     run_block_generator,
@@ -1076,7 +1075,7 @@ class FullNode:
 
     async def request_validate_wp(
         self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
-    ) -> tuple[uint32, list[SubEpochSummaryOld]]:
+    ) -> tuple[uint32, list[SubEpochSummary]]:
         if self.weight_proof_handler is None:
             raise RuntimeError("Weight proof handler is None")
         peers_with_peak = self.get_peers_with_peak(peak_header_hash)
@@ -2517,6 +2516,9 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
+        # TODO v2_WP: compute actual MMR root at signage point
+        header_mmr_root = bytes32.zeros
+
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,
             difficulty,
@@ -2524,6 +2526,7 @@ class FullNode:
             block.foliage,
             ses,
             rc_prev,
+            header_mmr_root,
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)

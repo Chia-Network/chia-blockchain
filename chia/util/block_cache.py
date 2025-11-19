@@ -40,7 +40,7 @@ class BlockCache:
         hh = block.header_hash
         self._block_records[hh] = block
         self._height_to_hash[block.height] = hh
-        self.mmr_manager.add_block_to_mmr(block)
+        self.mmr_manager.add_block_to_mmr(block.header_hash, block.prev_hash, block.height)
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]

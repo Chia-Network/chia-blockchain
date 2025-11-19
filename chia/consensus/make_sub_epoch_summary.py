@@ -4,7 +4,6 @@ import logging
 from typing import Optional, Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, SubEpochSummary, UnfinishedBlock
-from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
@@ -50,11 +49,11 @@ def make_sub_epoch_summary(
     # But assuming less than 128 overflow blocks get infused in the first 2 slots, it's not an issue
     if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1:
         # Only compute challenge merkle root after hard fork activation
-        # Before fork, use zeros; after fork, compute actual root
+        # Before fork, use None; after fork, compute actual root
         challenge_root = (
             compute_challenge_merkle_root(constants, blocks, blocks_included_height)
             if blocks_included_height >= constants.HARD_FORK2_HEIGHT
-            else bytes32.zeros
+            else None
         )
         return SubEpochSummary(
             constants.GENESIS_CHALLENGE,
@@ -76,7 +75,7 @@ def make_sub_epoch_summary(
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
 
     # Only compute challenge merkle root after hard fork activation
-    # Before fork, use zeros; after fork, compute actual root
+    # Before fork, use None; after fork, compute actual root
     if blocks_included_height >= constants.HARD_FORK2_HEIGHT:
         challenge_root = compute_challenge_merkle_root(constants, blocks, blocks_included_height)
         log.debug(
@@ -84,10 +83,10 @@ def make_sub_epoch_summary(
             f"computed challenge_root={challenge_root.hex()}"
         )
     else:
-        challenge_root = bytes32.zeros
+        challenge_root = None
         log.debug(
             f"make_sub_epoch_summary: height={blocks_included_height} < fork_height={constants.HARD_FORK2_HEIGHT}, "
-            f"using zeros for challenge_root"
+            f"using None for challenge_root"
         )
 
     result = SubEpochSummary(

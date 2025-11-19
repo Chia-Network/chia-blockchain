@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia_rs import EndOfSubSlotBundle, HeaderBlockOld, RewardChainBlock, SubEpochChallengeSegment, SubEpochData
+from chia_rs import EndOfSubSlotBundle, HeaderBlock, RewardChainBlock, SubEpochChallengeSegment, SubEpochData
 
 from chia.util.streamable import Streamable, streamable
 
@@ -21,7 +21,7 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 # this is used only for serialization to database
 class RecentChainData(Streamable):
-    recent_chain_data: list[HeaderBlockOld]
+    recent_chain_data: list[HeaderBlock]
 
 
 @streamable
@@ -36,4 +36,4 @@ class ProofBlockHeader(Streamable):
 class WeightProof(Streamable):
     sub_epochs: list[SubEpochData]
     sub_epoch_segments: list[SubEpochChallengeSegment]  # sampled sub epoch
-    recent_chain_data: list[HeaderBlockOld]
+    recent_chain_data: list[HeaderBlock]

@@ -320,8 +320,8 @@ reward_chain_block = RewardChainBlock(
     g2_element,
     vdf_info,
     vdf_info,
+    None,  # header_mmr_root - None for test
     False,
-    bytes32([0] * 32),  # header_mmr_root - dummy for test
 )
 
 foliage_block_data = FoliageBlockData(
@@ -387,13 +387,13 @@ header_block = HeaderBlock(
 )
 
 recent_chain_data = RecentChainData(
-    [header_block.to_old()],
+    [header_block],
 )
 
 weight_proof = WeightProof(
     [sub_epochs],
     [sub_epoch_challenge_segments],
-    [header_block.to_old()],
+    [header_block],
 )
 
 respond_proof_of_weight = full_node_protocol.RespondProofOfWeight(
@@ -1058,7 +1058,7 @@ sub_epoch_summary = SubEpochSummary(
     uint8(4),
     uint64(14666749803532899046),
     uint64(10901191956946573440),
-    bytes32.zeros,  # challenge_merkle_root placeholder
+    None,  # challenge_merkle_root (pre-fork)
 )
 
 new_peak_timelord = timelord_protocol.NewPeakTimelord(
@@ -1084,6 +1084,7 @@ new_unfinished_block_timelord = timelord_protocol.NewUnfinishedBlockTimelord(
     foliage,
     sub_epoch_summary,
     bytes32(bytes.fromhex("0f90296b605904a794e4e98852e3b22e0d9bee2fa07abb12df6cecbdb778e1e5")),
+    bytes32.zeros,
 )
 
 new_infusion_point_vdf = timelord_protocol.NewInfusionPointVDF(

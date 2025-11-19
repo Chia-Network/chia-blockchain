@@ -124,6 +124,7 @@ class TestNewPeak:
                 block_1.foliage,
                 next_sub_epoch_summary(bt.constants, b1, block_record.required_iters, block_1, True),
                 await get_rc_prev(b1, block_1),
+                None,
             )
             await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
@@ -191,6 +192,7 @@ class TestNewPeak:
                     block_1.foliage,
                     next_sub_epoch_summary(bt.constants, b1, block_record_1.required_iters, block_1, True),
                     await get_rc_prev(b1, block_1),
+                    bytes32.zeros,
                 )
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
                 assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
@@ -299,6 +301,7 @@ class TestNewPeak:
                     block_1.foliage,
                     next_sub_epoch_summary(bt.constants, b1, block_record.required_iters, block_1, True),
                     await get_rc_prev(b1, block_1),
+                    bytes32.zeros,
                 )
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
@@ -366,6 +369,7 @@ class TestNewPeak:
                     block_2.foliage,
                     next_sub_epoch_summary(bt.constants, b1, block_record.required_iters, block_2, True),
                     await get_rc_prev(b2, block_2),
+                    bytes32.zeros,
                 )
                 timelord_api.timelord.last_state.set_state(block_2.finished_sub_slots[-1])
 

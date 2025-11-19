@@ -9,7 +9,7 @@ from typing import Optional
 import aiosqlite
 import typing_extensions
 import zstd
-from chia_rs import BlockRecord, ConsensusConstants, FullBlock, FullBlockOld, SubEpochChallengeSegment, SubEpochSegments
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, SubEpochChallengeSegment, SubEpochSegments
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -35,13 +35,7 @@ def decompress(block_bytes: bytes, height: uint32, constants: ConsensusConstants
         FullBlock in new format (with header_mmr_root field)
     """
     uncompressed = zstd.decompress(block_bytes)
-
-    if height < constants.HARD_FORK2_HEIGHT:
-        # pre-fork: stored as Old format
-        return FullBlockOld.from_bytes(uncompressed).to_new()
-    else:
-        # post-fork: stored as new format
-        return FullBlock.from_bytes(uncompressed)
+    return FullBlock.from_bytes(uncompressed)
 
 
 def compress(block: FullBlock, constants: ConsensusConstants) -> bytes:
@@ -55,14 +49,7 @@ def compress(block: FullBlock, constants: ConsensusConstants) -> bytes:
     Returns:
         compressed block bytes for DB storage
     """
-    height = block.reward_chain_block.height
-
-    if height < constants.HARD_FORK2_HEIGHT:
-        # pre-fork: save as Old format (saves space, matches existing blocks)
-        ret: bytes = zstd.compress(bytes(block.to_old()))
-    else:
-        # post-fork: save as new format
-        ret = zstd.compress(bytes(block))
+    ret: bytes = zstd.compress(bytes(block))
 
     return ret
 

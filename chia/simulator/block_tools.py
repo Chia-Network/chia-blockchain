@@ -835,7 +835,7 @@ class BlockTools:
                 skip_slots=skip_slots,
                 timestamp=(uint64(time.time()) if genesis_timestamp is None else genesis_timestamp),
             )
-            self.mmr_manager.add_block_to_mmr(genesis)
+            self.mmr_manager.add_block_to_mmr(genesis.header_hash, genesis.prev_header_hash, genesis.height)
             self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
@@ -846,7 +846,7 @@ class BlockTools:
             # Reset MMR manager and rebuild from existing blocks
             self.mmr_manager = BlockchainMMRManager()
             for b in block_list:
-                self.mmr_manager.add_block_to_mmr(b)
+                self.mmr_manager.add_block_to_mmr(b.header_hash, b.prev_header_hash, b.height)
 
         if num_blocks == 0:
             return block_list
@@ -1063,7 +1063,9 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
                         # Add block to MMR manager for proper MMR computation
-                        self.mmr_manager.add_block_to_mmr(block_record)
+                        self.mmr_manager.add_block_to_mmr(
+                            block_record.header_hash, block_record.prev_hash, block_record.height
+                        )
                         self.log.info(f"Created block {block_record.height} ov=False, iters {block_record.total_iters}")
                         num_blocks -= 1
 
@@ -1374,7 +1376,9 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
                         # Add block to MMR manager for proper MMR computation
-                        self.mmr_manager.add_block_to_mmr(block_record)
+                        self.mmr_manager.add_block_to_mmr(
+                            block_record.header_hash, block_record.prev_hash, block_record.height
+                        )
                         self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 

@@ -8,7 +8,6 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
-from chia.consensus.fork_hash_utils import get_reward_chain_block_hash_with_fork_validation
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import is_overflow_block
@@ -144,7 +143,7 @@ def header_block_to_sub_block_record(
         block.reward_chain_block.signage_point_index,
         block.reward_chain_block.challenge_chain_ip_vdf.output,
         icc_output,
-        get_reward_chain_block_hash_with_fork_validation(block.reward_chain_block, constants.HARD_FORK2_HEIGHT),
+        block.reward_chain_block.get_hash(),
         cbi.get_hash(),
         sub_slot_iters,
         block.foliage.foliage_block_data.pool_target.puzzle_hash,

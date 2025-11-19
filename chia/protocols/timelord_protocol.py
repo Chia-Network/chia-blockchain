@@ -42,6 +42,7 @@ class NewUnfinishedBlockTimelord(Streamable):
     # This is the last thing infused in the reward chain before this signage point.
     # The challenge that the SP reward chain VDF is based off of, or in the case of sp index 0, the previous infusion
     rc_prev: bytes32
+    header_mmr_root: Optional[bytes32]  # MMR root for the reward chain at the signage point
 
 
 @streamable

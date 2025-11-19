@@ -31,7 +31,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.fork_hash_utils import get_reward_chain_block_hash_with_fork_validation
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -426,7 +426,7 @@ def unfinished_block_to_full_block(
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
-    header_mmr_root: bytes32,
+    header_mmr_root: Optional[bytes32],
     constants: ConsensusConstants,
 ) -> FullBlock:
     """
@@ -485,17 +485,12 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_block.reward_chain_sp_signature,
         rc_ip_vdf,
         icc_ip_vdf,
-        is_transaction_block,
         header_mmr_root,
-    )
-
-    # Compute reward chain block hash with fork validation
-    reward_block_hash = get_reward_chain_block_hash_with_fork_validation(
-        reward_chain_block, constants.HARD_FORK2_HEIGHT
+        is_transaction_block,
     )
 
     if prev_block is None:
-        new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_block_hash)
+        new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_chain_block.get_hash())
     else:
         if is_transaction_block:
             new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
@@ -505,7 +500,7 @@ def unfinished_block_to_full_block(
             new_fbs = None
         assert (new_fbh is None) == (new_fbs is None)
         new_foliage = unfinished_block.foliage.replace(
-            reward_block_hash=reward_block_hash,
+            reward_block_hash=reward_chain_block.get_hash(),
             prev_block_hash=prev_block.header_hash,
             foliage_transaction_block_hash=new_fbh,
             foliage_transaction_block_signature=new_fbs,
@@ -546,16 +541,27 @@ def unfinished_block_to_full_block_with_mmr(
     Wrapper around unfinished_block_to_full_block that automatically computes the MMR root.
     This maintains backward compatibility while adding MMR support.
     """
-    # Compute the header MMR root for this block
-    if prev_block is None:
-        height = 0
-    else:
-        height = prev_block.height + 1
+    prev_header_hash = None
+    if prev_block is not None:
+        prev_header_hash = prev_block.header_hash
 
-    # Get MMR root from blockchain's MMR manager
-    header_mmr_root = blocks.mmr_manager.get_mmr_root_at_height(uint32(height))
-    assert header_mmr_root is not None
-    
+    pre_sp_tx_height = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=unfinished_block.prev_header_hash,
+        sp_index=unfinished_block.reward_chain_block.signage_point_index,
+        first_in_sub_slot=len(finished_sub_slots) > 0,
+    )
+    # Before fork, use zeros for MMR root
+    header_mmr_root = None
+    if pre_sp_tx_height > constants.HARD_FORK2_HEIGHT:
+        header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
+            prev_header_hash,
+            unfinished_block.reward_chain_block.signage_point_index,
+            len(finished_sub_slots) > 0,
+            blocks,
+        )
+
     # Call the original function with the computed MMR root
     return unfinished_block_to_full_block(
         unfinished_block,

@@ -997,10 +997,12 @@ class Blockchain:
 
         return (await self.block_store.get_block_record(header_hash)) is not None
 
+    # can only called on the heighest block
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
         self.__heights_in_cache[sbr.height].remove(header_hash)
+        self.mmr_manager.rollback_to_height(sbr.height - 1, self)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         """
@@ -1013,7 +1015,7 @@ class Blockchain:
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
         # Add block to MMR manager for incremental MMR computation
-        self.mmr_manager.add_block_to_mmr(block_record)
+        self.add_block_to_mmr(block_record)
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
@@ -1100,11 +1102,16 @@ class Blockchain:
 
         return generators
 
-    def get_mmr_root_at_height(self, height: uint32) -> Optional[bytes32]:
-        return self.mmr_manager.get_mmr_root_at_height(height)
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
 
     def get_current_mmr_root(self) -> bytes32:
         return self.mmr_manager.get_current_mmr_root()
 
     def add_block_to_mmr(self, block_record: BlockRecord) -> None:
-        self.mmr_manager.add_block_to_mmr(block_record)
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)

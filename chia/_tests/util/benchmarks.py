@@ -94,8 +94,8 @@ def rand_full_block() -> FullBlock:
         rand_g2(),
         rand_vdf(),
         rand_vdf(),
+        None,  # header_mmr_root - None for test
         True,
-        bytes32([0] * 32),  # header_mmr_root - dummy for test
     )
 
     pool_target = PoolTarget(

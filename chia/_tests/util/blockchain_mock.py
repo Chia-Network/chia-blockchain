@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -16,21 +16,31 @@ class StubMMRManager:
     Stub MMR manager for test mocks that cannot compute full MMR roots.
     Used in tests where MMR validation may be skipped or not relevant.
     """
+
     _protocol_check: ClassVar[MMRManagerProtocol] = cast("StubMMRManager", None)
 
-
-    def get_mmr_root_at_height(self, height: uint32) -> bytes32:
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: Optional[bytes32],
+        new_sp_index: int,
+        starts_new_slot: bool,
+        blocks: Any,
+    ) -> bytes32:
         # Return empty bytes for test contexts
         return bytes32([0] * 32)
 
     def get_current_mmr_root(self) -> bytes32:
         return bytes32([0] * 32)
 
-    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
+    def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         # No-op for stub manager
         pass
 
-    def copy(self) -> "StubMMRManager":
+    def rollback_to_height(self, target_height: int, blocks: Any) -> None:
+        # No-op for stub manager
+        pass
+
+    def copy(self) -> MMRManagerProtocol:
         # Return a new instance (stateless)
         return StubMMRManager()
 
