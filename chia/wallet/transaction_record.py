@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from chia_rs import SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -29,7 +29,7 @@ class ItemAndTransactionRecords(Generic[T]):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class TransactionRecordOld(Streamable):
     """
     Used for storing transaction data and status in wallets.
@@ -42,15 +42,15 @@ class TransactionRecordOld(Streamable):
     fee_amount: uint64
     confirmed: bool
     sent: uint32
-    spend_bundle: Optional[WalletSpendBundle]
+    spend_bundle: WalletSpendBundle | None
     additions: list[Coin]
     removals: list[Coin]
     wallet_id: uint32
 
     # Represents the list of peers that we sent the transaction to, whether each one
     # included it in the mempool, and what the error message (if any) was
-    sent_to: list[tuple[str, uint8, Optional[str]]]
-    trade_id: Optional[bytes32]
+    sent_to: list[tuple[str, uint8, str | None]]
+    trade_id: bytes32 | None
     type: uint32  # TransactionType
 
     # name is also called bundle_id and tx_id
@@ -64,7 +64,7 @@ class TransactionRecordOld(Streamable):
                 return True
         return False
 
-    def height_farmed(self, genesis_challenge: bytes32) -> Optional[uint32]:
+    def height_farmed(self, genesis_challenge: bytes32) -> uint32 | None:
         if not self.confirmed:
             return None
         if self.type in {TransactionType.FEE_REWARD, TransactionType.COINBASE_REWARD}:
@@ -100,7 +100,7 @@ class TransactionRecordOld(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class TransactionRecord(TransactionRecordOld):
     valid_times: ConditionValidTimes
     to_address: str
@@ -118,4 +118,4 @@ class LightTransactionRecord(Streamable):
     type: uint32
     additions: list[Coin]
     removals: list[Coin]
-    spend_bundle: Optional[SpendBundle]
+    spend_bundle: SpendBundle | None

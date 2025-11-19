@@ -7,12 +7,12 @@ import logging
 import shutil
 import sqlite3
 from collections import defaultdict
-from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Iterator, Sequence
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Optional, Union
+from typing import Any, BinaryIO
 
 import aiosqlite
 import anyio.to_thread
@@ -90,11 +90,11 @@ class DataStore:
     @contextlib.asynccontextmanager
     async def managed(
         cls,
-        database: Union[str, Path],
+        database: str | Path,
         merkle_blobs_path: Path,
         key_value_blobs_path: Path,
         uri: bool = False,
-        sql_log_path: Optional[Path] = None,
+        sql_log_path: Path | None = None,
         cache_capacity: int = 1,
         prefer_db_kv_blob_length: int = default_prefer_file_kv_blob_length,
     ) -> AsyncIterator[DataStore]:
@@ -202,10 +202,10 @@ class DataStore:
     async def insert_into_data_store_from_file(
         self,
         store_id: bytes32,
-        root_hash: Optional[bytes32],
+        root_hash: bytes32 | None,
         filename: Path,
-        delta_reader: Optional[DeltaReader] = None,
-    ) -> Optional[DeltaReader]:
+        delta_reader: DeltaReader | None = None,
+    ) -> DeltaReader | None:
         async with self.db_wrapper.writer():
             with self.manage_kv_files(store_id):
                 if root_hash is None:
@@ -453,7 +453,7 @@ class DataStore:
 
                 expected_synced_generations = synced_generations + len(roots)
                 for root in roots:
-                    recovery_filename: Optional[Path] = None
+                    recovery_filename: Path | None = None
 
                     for group_by_store in (True, False):
                         filename = get_delta_filename_path(
@@ -495,7 +495,7 @@ class DataStore:
     async def get_merkle_blob(
         self,
         store_id: bytes32,
-        root_hash: Optional[bytes32],
+        root_hash: bytes32 | None,
         read_only: bool = False,
         update_cache: bool = True,
     ) -> MerkleBlob:
@@ -532,14 +532,14 @@ class DataStore:
 
         return Path(*segments, raw)
 
-    def get_merkle_path(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Path:
+    def get_merkle_path(self, store_id: bytes32, root_hash: bytes32 | None) -> Path:
         store_root = self.merkle_blobs_path.joinpath(store_id.hex())
         if root_hash is None:
             return store_root
 
         return store_root.joinpath(self.get_bytes_path(bytes_=root_hash))
 
-    def get_key_value_path(self, store_id: bytes32, blob_hash: Optional[bytes32]) -> Path:
+    def get_key_value_path(self, store_id: bytes32, blob_hash: bytes32 | None) -> Path:
         store_root = self.key_value_blobs_path.joinpath(store_id.hex())
         if blob_hash is None:
             return store_root
@@ -551,7 +551,7 @@ class DataStore:
         merkle_blob: MerkleBlob,
         store_id: bytes32,
         status: Status,
-        old_root: Optional[Root] = None,
+        old_root: Root | None = None,
         update_cache: bool = True,
     ) -> Root:
         if not merkle_blob.empty():
@@ -579,7 +579,7 @@ class DataStore:
     def _use_file_for_new_kv_blob(self, blob: bytes) -> bool:
         return len(blob) > self.prefer_db_kv_blob_length
 
-    async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KeyOrValueId]:
+    async def get_kvid(self, blob: bytes, store_id: bytes32) -> KeyOrValueId | None:
         blob_hash = bytes32(sha256(blob).digest())
 
         async with self.db_wrapper.reader() as reader:
@@ -602,7 +602,7 @@ class DataStore:
         # TODO: consider file-system based locking of either the file or the store directory
         return zstd.decompress(self.get_key_value_path(store_id=store_id, blob_hash=blob_hash).read_bytes())  # type: ignore[no-any-return]
 
-    async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> Optional[bytes]:
+    async def get_blob_from_kvid(self, kv_id: KeyOrValueId, store_id: bytes32) -> bytes | None:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT hash, blob FROM ids WHERE kv_id = ? AND store_id = ?",
@@ -706,9 +706,9 @@ class DataStore:
         self,
         node_hash: bytes32,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> TerminalNode:
-        resolved_root_hash: Optional[bytes32]
+        resolved_root_hash: bytes32 | None
         if root_hash is unspecified:
             root = await self.get_tree_root(store_id=store_id)
             resolved_root_hash = root.node_hash
@@ -723,9 +723,9 @@ class DataStore:
         self,
         node_hashes: list[bytes32],
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> list[TerminalNode]:
-        resolved_root_hash: Optional[bytes32]
+        resolved_root_hash: bytes32 | None
         if root_hash is unspecified:
             root = await self.get_tree_root(store_id=store_id)
             resolved_root_hash = root.node_hash
@@ -762,7 +762,7 @@ class DataStore:
 
         return result
 
-    async def add_node_hashes(self, store_id: bytes32, generation: Optional[int] = None) -> None:
+    async def add_node_hashes(self, store_id: bytes32, generation: int | None = None) -> None:
         root = await self.get_tree_root(store_id=store_id, generation=generation)
         if root.node_hash is None:
             return
@@ -789,9 +789,9 @@ class DataStore:
     async def _insert_root(
         self,
         store_id: bytes32,
-        node_hash: Optional[bytes32],
+        node_hash: bytes32 | None,
         status: Status,
-        generation: Optional[int] = None,
+        generation: int | None = None,
     ) -> Root:
         async with self.db_wrapper.writer_maybe_transaction() as writer:
             if generation is None:
@@ -820,7 +820,7 @@ class DataStore:
             )
             return new_root
 
-    async def get_pending_root(self, store_id: bytes32) -> Optional[Root]:
+    async def get_pending_root(self, store_id: bytes32) -> Root | None:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 """
@@ -845,7 +845,7 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def clear_pending_roots(self, store_id: bytes32) -> Optional[Root]:
+    async def clear_pending_roots(self, store_id: bytes32) -> Root | None:
         async with self.db_wrapper.writer() as writer:
             pending_root = await self.get_pending_root(store_id=store_id)
 
@@ -931,14 +931,14 @@ class DataStore:
             row = await cursor.fetchone()
 
         if row is not None:
-            generation: Optional[int] = row["MAX(generation)"]
+            generation: int | None = row["MAX(generation)"]
 
             if generation is not None:
                 return generation
 
         raise Exception(f"No generations found for store ID: {store_id.hex()}")
 
-    async def get_tree_root(self, store_id: bytes32, generation: Optional[int] = None) -> Root:
+    async def get_tree_root(self, store_id: bytes32, generation: int | None = None) -> Root:
         async with self.db_wrapper.reader() as reader:
             if generation is None:
                 generation = await self.get_tree_generation(store_id=store_id)
@@ -999,8 +999,8 @@ class DataStore:
         self,
         node_hash: bytes32,
         store_id: bytes32,
-        root_hash: Optional[bytes32] = None,
-        generation: Optional[int] = None,
+        root_hash: bytes32 | None = None,
+        generation: int | None = None,
     ) -> list[InternalNode]:
         async with self.db_wrapper.reader():
             if root_hash is None:
@@ -1030,7 +1030,7 @@ class DataStore:
         self,
         kid: KeyId,
         vid: ValueId,
-        table_blobs: dict[KeyOrValueId, tuple[bytes32, Optional[bytes]]],
+        table_blobs: dict[KeyOrValueId, tuple[bytes32, bytes | None]],
         store_id: bytes32,
     ) -> TerminalNode:
         key = table_blobs[KeyOrValueId(kid.raw)][1]
@@ -1048,10 +1048,10 @@ class DataStore:
     async def get_keys_values(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> list[TerminalNode]:
         async with self.db_wrapper.reader():
-            resolved_root_hash: Optional[bytes32]
+            resolved_root_hash: bytes32 | None
             if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
                 resolved_root_hash = root.node_hash
@@ -1076,10 +1076,10 @@ class DataStore:
     async def get_keys_values_compressed(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> KeysValuesCompressed:
         async with self.db_wrapper.reader():
-            resolved_root_hash: Optional[bytes32]
+            resolved_root_hash: bytes32 | None
             if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
                 resolved_root_hash = root.node_hash
@@ -1112,7 +1112,7 @@ class DataStore:
         store_id: bytes32,
         page: int,
         max_page_size: int,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
@@ -1137,7 +1137,7 @@ class DataStore:
         store_id: bytes32,
         page: int,
         max_page_size: int,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
@@ -1211,7 +1211,7 @@ class DataStore:
         value: bytes,
         store_id: bytes32,
         status: Status = Status.PENDING,
-        root: Optional[Root] = None,
+        root: Root | None = None,
     ) -> InsertResult:
         return await self.insert(
             key=key,
@@ -1226,7 +1226,7 @@ class DataStore:
     async def get_keys(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> list[bytes]:
         async with self.db_wrapper.reader():
             if root_hash is unspecified:
@@ -1265,7 +1265,7 @@ class DataStore:
         assert isinstance(raw_node, chia_rs.datalayer.LeafNode)
         return await self.get_terminal_node(raw_node.key, raw_node.value, store_id)
 
-    async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> Optional[TerminalNode]:
+    async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> TerminalNode | None:
         root = await self.get_tree_root(store_id=store_id)
         if root is None or root.node_hash is None:
             return None
@@ -1280,10 +1280,10 @@ class DataStore:
         key: bytes,
         value: bytes,
         store_id: bytes32,
-        reference_node_hash: Optional[bytes32] = None,
-        side: Optional[Side] = None,
+        reference_node_hash: bytes32 | None = None,
+        side: Side | None = None,
         status: Status = Status.PENDING,
-        root: Optional[Root] = None,
+        root: Root | None = None,
     ) -> InsertResult:
         async with self.db_wrapper.writer() as writer:
             with self.manage_kv_files(store_id):
@@ -1315,8 +1315,8 @@ class DataStore:
         key: bytes,
         store_id: bytes32,
         status: Status = Status.PENDING,
-        root: Optional[Root] = None,
-    ) -> Optional[Root]:
+        root: Root | None = None,
+    ) -> Root | None:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
@@ -1336,7 +1336,7 @@ class DataStore:
         new_value: bytes,
         store_id: bytes32,
         status: Status = Status.PENDING,
-        root: Optional[Root] = None,
+        root: Root | None = None,
     ) -> InsertResult:
         async with self.db_wrapper.writer() as writer:
             with self.manage_kv_files(store_id):
@@ -1357,7 +1357,7 @@ class DataStore:
         changelist: list[dict[str, Any]],
         status: Status = Status.PENDING,
         enable_batch_autoinsert: bool = True,
-    ) -> Optional[bytes32]:
+    ) -> bytes32 | None:
         async with self.db_wrapper.writer() as writer:
             with self.manage_kv_files(store_id):
                 old_root = await self.get_tree_root(store_id=store_id)
@@ -1396,7 +1396,7 @@ class DataStore:
 
                         reference_node_hash = change.get("reference_node_hash", None)
                         side = change.get("side", None)
-                        reference_kid: Optional[KeyId] = None
+                        reference_kid: KeyId | None = None
                         if reference_node_hash is not None:
                             reference_kid, _ = merkle_blob.get_node_by_hash(reference_node_hash)
 
@@ -1447,10 +1447,10 @@ class DataStore:
         self,
         key: bytes,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: bytes32 | Unspecified = unspecified,
     ) -> TerminalNode:
         async with self.db_wrapper.reader():
-            resolved_root_hash: Optional[bytes32]
+            resolved_root_hash: bytes32 | None
             if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
                 resolved_root_hash = root.node_hash
@@ -1499,7 +1499,7 @@ class DataStore:
         self,
         node_hash: bytes32,
         store_id: bytes32,
-        root_hash: Optional[bytes32] = None,
+        root_hash: bytes32 | None = None,
     ) -> ProofOfInclusion:
         if root_hash is None:
             root = await self.get_tree_root(store_id=store_id)
@@ -1556,8 +1556,8 @@ class DataStore:
 
     async def get_table_blobs(
         self, kv_ids_iter: Iterable[KeyOrValueId], store_id: bytes32
-    ) -> dict[KeyOrValueId, tuple[bytes32, Optional[bytes]]]:
-        result: dict[KeyOrValueId, tuple[bytes32, Optional[bytes]]] = {}
+    ) -> dict[KeyOrValueId, tuple[bytes32, bytes | None]]:
+        result: dict[KeyOrValueId, tuple[bytes32, bytes | None]] = {}
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
         kv_ids = list(dict.fromkeys(kv_ids_iter))
 

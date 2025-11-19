@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 
@@ -85,7 +84,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
 
     conds = nft_puz.run(nft_sol)
 
-    expected_ph: Optional[bytes32] = None
+    expected_ph: bytes32 | None = None
     # get the new NFT puzhash
     for cond in conds.as_iter():
         if cond.first().as_int() == 51:

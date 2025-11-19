@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from chia.protocols.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
@@ -18,7 +18,7 @@ PEER_INFO_MAPPING: dict[NodeType, str] = {
 def get_unresolved_peer_infos(service_config: dict[str, Any], peer_type: NodeType) -> set[UnresolvedPeerInfo]:
     peer_info_key = PEER_INFO_MAPPING[peer_type]
     peer_infos: list[dict[str, Any]] = service_config.get(f"{peer_info_key}s", [])
-    peer_info: Optional[dict[str, Any]] = service_config.get(peer_info_key)
+    peer_info: dict[str, Any] | None = service_config.get(peer_info_key)
     if peer_info is not None:
         peer_infos.append(peer_info)
 
@@ -32,8 +32,8 @@ def get_unresolved_peer_infos(service_config: dict[str, Any], peer_type: NodeTyp
 def set_peer_info(
     service_config: dict[str, Any],
     peer_type: NodeType,
-    peer_host: Optional[str] = None,
-    peer_port: Optional[int] = None,
+    peer_host: str | None = None,
+    peer_port: int | None = None,
 ) -> None:
     peer_info_key = PEER_INFO_MAPPING[peer_type]
     if peer_info_key in service_config:

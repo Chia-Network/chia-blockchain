@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from chia_puzzles_py.programs import (
     P2_SINGLETON_OR_DELAYED_PUZHASH,
@@ -126,8 +125,8 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> tuple[uint64
     extra_data = Program.from_bytes(bytes(coinsol.solution)).rest().rest().first()
     # Extra data is (pool_state delayed_puz_info)
     # Delayed puz info is (seconds delayed_puzzle_hash)
-    seconds: Optional[uint64] = None
-    delayed_puzzle_hash: Optional[bytes32] = None
+    seconds: uint64 | None = None
+    delayed_puzzle_hash: bytes32 | None = None
     for key_value_pairs in extra_data.as_iter():
         key_value_pair = key_value_pairs.as_pair()
         if key_value_pair is None:
@@ -221,14 +220,14 @@ def create_travel_spend(
     else:
         raise ValueError
 
-    current_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
+    current_singleton: Coin | None = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
     assert current_singleton is not None
 
     if current_singleton.parent_coin_info == launcher_coin.name():
         parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_spend.puzzle_reveal))
-        last_coin_spend_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
+        last_coin_spend_inner_puzzle: Program | None = get_inner_puzzle_from_puzzle(p)
         assert last_coin_spend_inner_puzzle is not None
         parent_info_list = Program.to(
             [
@@ -272,14 +271,14 @@ def create_absorb_spend(
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
-    coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
+    coin: Coin | None = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
     assert coin is not None
 
     if coin.parent_coin_info == launcher_coin.name():
         parent_info: Program = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
     else:
         p = Program.from_bytes(bytes(last_coin_spend.puzzle_reveal))
-        last_coin_spend_inner_puzzle: Optional[Program] = get_inner_puzzle_from_puzzle(p)
+        last_coin_spend_inner_puzzle: Program | None = get_inner_puzzle_from_puzzle(p)
         assert last_coin_spend_inner_puzzle is not None
         parent_info = Program.to(
             [
@@ -309,7 +308,7 @@ def create_absorb_spend(
     return coin_spends
 
 
-def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
+def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Coin | None:
     additions: list[Coin] = compute_additions(coin_sol)
     for coin in additions:
         if coin.amount % 2 == 1:
@@ -369,7 +368,7 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> tuple[Progra
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
 
-def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
+def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Program | None:
     p = Program.from_bytes(bytes(full_puzzle))
     r = p.uncurry()
     if r is None:
@@ -382,8 +381,8 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     return inner_puzzle
 
 
-def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
-    state_bytes: Optional[bytes] = None
+def pool_state_from_extra_data(extra_data: Program) -> PoolState | None:
+    state_bytes: bytes | None = None
     try:
         for key, value in extra_data.as_python():
             if key == b"p":
@@ -397,7 +396,7 @@ def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
         return None
 
 
-def solution_to_pool_state(full_spend: CoinSpend) -> Optional[PoolState]:
+def solution_to_pool_state(full_spend: CoinSpend) -> PoolState | None:
     full_solution_ser: SerializedProgram = full_spend.solution
     full_solution: Program = Program.from_bytes(bytes(full_solution_ser))
 

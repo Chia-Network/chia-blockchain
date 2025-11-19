@@ -23,7 +23,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 
@@ -71,7 +70,7 @@ def bech32_encode(hrp: str, data: list[int]) -> str:
     return hrp + "1" + "".join([CHARSET[d] for d in combined])
 
 
-def bech32_decode(bech: str, max_length: int = 90) -> tuple[Optional[str], Optional[list[int]]]:
+def bech32_decode(bech: str, max_length: int = 90) -> tuple[str | None, list[int] | None]:
     """Validate a Bech32 string, and determine HRP and data."""
     bech = bech.strip()
     if (any(ord(x) < 33 or ord(x) > 126 for x in bech)) or (bech.lower() != bech and bech.upper() != bech):

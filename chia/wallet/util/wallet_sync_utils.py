@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Optional, Union
+from typing import Any
 
 from chia_rs import (
     CoinSpend,
@@ -60,7 +60,7 @@ async def subscribe_to_phs(
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
-    all_coins_state: Optional[RespondToPhUpdates] = await peer.call_api(
+    all_coins_state: RespondToPhUpdates | None = await peer.call_api(
         FullNodeAPI.register_for_ph_updates, msg, timeout=300
     )
     if all_coins_state is None:
@@ -77,7 +77,7 @@ async def subscribe_to_coin_updates(
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
-    all_coins_state: Optional[RespondToCoinUpdates] = await peer.call_api(
+    all_coins_state: RespondToCoinUpdates | None = await peer.call_api(
         FullNodeAPI.register_for_coin_updates, msg, timeout=300
     )
 
@@ -88,7 +88,7 @@ async def subscribe_to_coin_updates(
 
 def validate_additions(
     coins: list[tuple[bytes32, list[Coin]]],
-    proofs: Optional[list[tuple[bytes32, bytes, Optional[bytes]]]],
+    proofs: list[tuple[bytes32, bytes, bytes | None]] | None,
     root: bytes32,
 ) -> bool:
     if proofs is None:
@@ -107,8 +107,8 @@ def validate_additions(
         for i in range(len(coins)):
             assert coins[i][0] == proofs[i][0]
             coin_list_1: list[Coin] = coins[i][1]
-            puzzle_hash_proof: Optional[bytes] = proofs[i][1]
-            coin_list_proof: Optional[bytes] = proofs[i][2]
+            puzzle_hash_proof: bytes | None = proofs[i][1]
+            coin_list_proof: bytes | None = proofs[i][2]
             if len(coin_list_1) == 0:
                 # Verify exclusion proof for puzzle hash
                 assert puzzle_hash_proof is not None
@@ -149,7 +149,7 @@ def validate_additions(
 
 
 def validate_removals(
-    coins: list[tuple[bytes32, Optional[Coin]]], proofs: Optional[list[tuple[bytes32, bytes]]], root: bytes32
+    coins: list[tuple[bytes32, Coin | None]], proofs: list[tuple[bytes32, bytes]] | None, root: bytes32
 ) -> bool:
     if proofs is None:
         # If there are no proofs, it means all removals were returned in the response.
@@ -198,7 +198,7 @@ async def request_and_validate_removals(
 ) -> bool:
     removals_request = RequestRemovals(height, header_hash, [coin_name])
 
-    removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.call_api(
+    removals_res: RespondRemovals | RejectRemovalsRequest | None = await peer.call_api(
         FullNodeAPI.request_removals, removals_request
     )
     if removals_res is None or isinstance(removals_res, RejectRemovalsRequest):
@@ -217,7 +217,7 @@ async def request_and_validate_additions(
     if peer_request_cache.in_additions_in_block(header_hash, puzzle_hash):
         return True
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
-    additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.call_api(
+    additions_res: RespondAdditions | RejectAdditionsRequest | None = await peer.call_api(
         FullNodeAPI.request_additions, additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
@@ -254,7 +254,7 @@ def sort_coin_states(coin_states: set[CoinState]) -> list[CoinState]:
 
 async def request_header_blocks(
     peer: WSChiaConnection, start_height: uint32, end_height: uint32
-) -> Optional[list[HeaderBlock]]:
+) -> list[HeaderBlock] | None:
     if Capability.BLOCK_HEADERS in peer.peer_capabilities:
         response = await peer.call_api(
             FullNodeAPI.request_block_headers, RequestBlockHeaders(start_height, end_height, False)
@@ -271,7 +271,7 @@ async def _fetch_header_blocks_inner(
     all_peers: list[tuple[WSChiaConnection, bool]],
     request_start: uint32,
     request_end: uint32,
-) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
+) -> RespondHeaderBlocks | RespondBlockHeaders | None:
     # We will modify this list, don't modify passed parameters.
     bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer[0].peer_capabilities]
     other_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS not in peer[0].peer_capabilities]
@@ -305,19 +305,17 @@ async def fetch_header_blocks_in_range(
     end: uint32,
     peer_request_cache: PeerRequestCache,
     all_peers: list[tuple[WSChiaConnection, bool]],
-) -> Optional[list[HeaderBlock]]:
+) -> list[HeaderBlock] | None:
     blocks: list[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
         request_start = min(uint32(i), end)
         request_end = min(uint32(i + 31), end)
-        res_h_blocks_task: Optional[asyncio.Task[Any]] = peer_request_cache.get_block_request(
-            request_start, request_end
-        )
+        res_h_blocks_task: asyncio.Task[Any] | None = peer_request_cache.get_block_request(request_start, request_end)
 
         if res_h_blocks_task is not None:
             log.debug(f"Using cache for: {start}-{end}")
             if res_h_blocks_task.done():
-                res_h_blocks: Optional[Union[RespondBlockHeaders, RespondHeaderBlocks]] = res_h_blocks_task.result()
+                res_h_blocks: RespondBlockHeaders | RespondHeaderBlocks | None = res_h_blocks_task.result()
             else:
                 res_h_blocks = await res_h_blocks_task
         else:

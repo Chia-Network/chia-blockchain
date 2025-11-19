@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal, Union
+from typing import Literal
 
 # Defaults are conservative.
-parallel: Union[bool, int, Literal["auto"]] = True
+parallel: bool | int | Literal["auto"] = True
 checkout_blocks_and_plots = False
 install_timelord = False
 # NOTE: do not use until the hangs are fixed

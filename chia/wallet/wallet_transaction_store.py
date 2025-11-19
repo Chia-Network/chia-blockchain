@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Optional
 
 import aiosqlite
 from chia_rs.sized_bytes import bytes32
@@ -29,7 +28,7 @@ from chia.wallet.util.transaction_type import TransactionType
 log = logging.getLogger(__name__)
 
 
-def filter_ok_mempool_status(sent_to: list[tuple[str, uint8, Optional[str]]]) -> list[tuple[str, uint8, Optional[str]]]:
+def filter_ok_mempool_status(sent_to: list[tuple[str, uint8, str | None]]) -> list[tuple[str, uint8, str | None]]:
     """Remove SUCCESS and PENDING status records from a TransactionRecord sent_to field"""
     new_sent_to = []
     for peer, status, err in sent_to:
@@ -162,7 +161,7 @@ class WalletTransactionStore:
         """
         Updates transaction to be confirmed.
         """
-        current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
+        current: TransactionRecord | None = await self.get_transaction_record(tx_id)
         if current is None:
             return None
         if current.confirmed_at_height == height:
@@ -176,13 +175,13 @@ class WalletTransactionStore:
         tx_id: bytes32,
         name: str,
         send_status: MempoolInclusionStatus,
-        err: Optional[Err],
+        err: Err | None,
     ) -> bool:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
         """
 
-        current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
+        current: TransactionRecord | None = await self.get_transaction_record(tx_id)
         if current is None:
             return False
 
@@ -219,7 +218,7 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx)
 
-    async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
+    async def get_transaction_record(self, tx_id: bytes32) -> TransactionRecord | None:
         """
         Checks DB and cache for TransactionRecord with id: id and returns it.
         """
@@ -316,9 +315,9 @@ class WalletTransactionStore:
         end,
         sort_key=None,
         reverse=False,
-        confirmed: Optional[bool] = None,
-        to_puzzle_hash: Optional[bytes32] = None,
-        type_filter: Optional[TransactionTypeFilter] = None,
+        confirmed: bool | None = None,
+        to_puzzle_hash: bytes32 | None = None,
+        type_filter: TransactionTypeFilter | None = None,
     ) -> list[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
@@ -365,8 +364,8 @@ class WalletTransactionStore:
     async def get_transaction_count_for_wallet(
         self,
         wallet_id: int,
-        confirmed: Optional[bool] = None,
-        type_filter: Optional[TransactionTypeFilter] = None,
+        confirmed: bool | None = None,
+        type_filter: TransactionTypeFilter | None = None,
     ) -> int:
         confirmed_str = ""
         if confirmed is not None:
@@ -388,9 +387,7 @@ class WalletTransactionStore:
             )
         return 0 if len(rows) == 0 else rows[0][0]
 
-    async def get_all_transactions_for_wallet(
-        self, wallet_id: int, type: Optional[int] = None
-    ) -> list[TransactionRecord]:
+    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int | None = None) -> list[TransactionRecord]:
         """
         Returns all stored transactions.
         """

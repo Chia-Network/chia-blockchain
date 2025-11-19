@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -95,7 +93,7 @@ def master_sk_to_pooling_authentication_sk(master: PrivateKey, pool_wallet_index
     return _derive_path(master, [12381, 8444, 6, pool_wallet_index * 10000 + index])
 
 
-def find_owner_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Optional[tuple[PrivateKey, uint32]]:
+def find_owner_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> tuple[PrivateKey, uint32] | None:
     for pool_wallet_index in range(MAX_POOL_WALLETS):
         for sk in all_sks:
             try_owner_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
@@ -104,7 +102,7 @@ def find_owner_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Optional[tu
     return None
 
 
-def find_authentication_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> Optional[PrivateKey]:
+def find_authentication_sk(all_sks: list[PrivateKey], owner_pk: G1Element) -> PrivateKey | None:
     # NOTE: might need to increase this if using a large number of wallets, or have switched authentication keys
     # many times.
     for pool_wallet_index in range(MAX_POOL_WALLETS):

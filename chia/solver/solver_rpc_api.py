@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.solver.solver import Solver
@@ -22,7 +22,7 @@ class SolverRpcApi:
             "/get_state": self.get_state,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> list[WsRpcMessage]:
         return []
 
     async def get_state(self, _: dict[str, Any]) -> EndpointResult:

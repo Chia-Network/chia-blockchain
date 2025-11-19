@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import anyio
 from chia_rs import (
@@ -58,7 +58,7 @@ and is designed so that you could test with it and then swap in a real rpc clien
 
 @asynccontextmanager
 async def sim_and_client(
-    db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
+    db_path: Path | None = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
 ) -> AsyncIterator[tuple[SpendSim, SimClient]]:
     async with SpendSim.managed(db_path, defaults) as sim:
         client: SimClient = SimClient(sim)
@@ -103,7 +103,7 @@ class CostLogger:
 @streamable
 @dataclass(frozen=True)
 class SimFullBlock(Streamable):
-    transactions_generator: Optional[BlockGenerator]
+    transactions_generator: BlockGenerator | None
     height: uint32  # Note that height is not on a regular FullBlock
 
 
@@ -155,7 +155,7 @@ class SpendSim:
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls, db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
+        cls, db_path: Path | None = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
     ) -> AsyncIterator[Self]:
         self = cls()
         if db_path is None:
@@ -203,7 +203,7 @@ class SpendSim:
                         )
                         await c.close()
 
-    async def new_peak(self, spent_coins_ids: Optional[list[bytes32]]) -> None:
+    async def new_peak(self, spent_coins_ids: list[bytes32] | None) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1], spent_coins_ids)
 
     def new_coin_record(self, coin: Coin, coinbase: bool = False) -> CoinRecord:
@@ -229,7 +229,7 @@ class SpendSim:
             coins.add(coin)
         return list(coins)
 
-    async def generate_transaction_generator(self, bundle: Optional[SpendBundle]) -> Optional[BlockGenerator]:
+    async def generate_transaction_generator(self, bundle: SpendBundle | None) -> BlockGenerator | None:
         if bundle is None:
             return None
         return simple_solution_generator(bundle)
@@ -257,7 +257,7 @@ class SpendSim:
             ),
         ]
         # Coin store gets updated
-        generator_bundle: Optional[SpendBundle] = None
+        generator_bundle: SpendBundle | None = None
         tx_additions = []
         tx_removals = []
         spent_coins_ids = None
@@ -295,7 +295,7 @@ class SpendSim:
             tx_removals=spent_coins_ids if spent_coins_ids is not None else [],
         )
         # SimBlockRecord is created
-        generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
+        generator: BlockGenerator | None = await self.generate_transaction_generator(generator_bundle)
         self.block_records.append(SimBlockRecord.create(included_reward_coins, next_block_height, self.timestamp))
         self.blocks.append(SimFullBlock(generator, next_block_height))
 
@@ -336,7 +336,7 @@ class SimClient:
     def __init__(self, service: SpendSim) -> None:
         self.service = service
 
-    async def push_tx(self, spend_bundle: SpendBundle) -> tuple[MempoolInclusionStatus, Optional[Err]]:
+    async def push_tx(self, spend_bundle: SpendBundle) -> tuple[MempoolInclusionStatus, Err | None]:
         try:
             spend_bundle_id = spend_bundle.name()
             sbc = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, spend_bundle_id)
@@ -348,14 +348,14 @@ class SimClient:
         )
         return info.status, info.error
 
-    async def get_coin_record_by_name(self, name: bytes32) -> Optional[CoinRecord]:
+    async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord | None:
         return await self.service.coin_store.get_coin_record(name)
 
     async def get_coin_records_by_names(
         self,
         names: list[bytes32],
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
         include_spent_coins: bool = False,
     ) -> list[CoinRecord]:
         kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "names": names}
@@ -368,8 +368,8 @@ class SimClient:
     async def get_coin_records_by_parent_ids(
         self,
         parent_ids: list[bytes32],
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
         include_spent_coins: bool = False,
     ) -> list[CoinRecord]:
         kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids}
@@ -383,8 +383,8 @@ class SimClient:
         self,
         puzzle_hash: bytes32,
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hash": puzzle_hash}
         if start_height is not None:
@@ -397,8 +397,8 @@ class SimClient:
         self,
         puzzle_hashes: list[bytes32],
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hashes": puzzle_hashes}
         if start_height is not None:
@@ -460,7 +460,7 @@ class SimClient:
             spends[item.name] = item
         return spends
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[dict[str, Any]]:
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> dict[str, Any] | None:
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
             return None
@@ -471,8 +471,8 @@ class SimClient:
         self,
         hint: bytes32,
         include_spent_coins: bool = True,
-        start_height: Optional[int] = None,
-        end_height: Optional[int] = None,
+        start_height: int | None = None,
+        end_height: int | None = None,
     ) -> list[CoinRecord]:
         """
         Retrieves coins by hint, by default returns unspent coins.

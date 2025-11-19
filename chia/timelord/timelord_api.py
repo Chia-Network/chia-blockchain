@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar
 
 from chia_rs.sized_ints import uint64
 
@@ -19,9 +19,11 @@ log = logging.getLogger(__name__)
 
 class TimelordAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.timelord_stub import TimelordApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("TimelordAPI", None)
+        # Verify this class implements the TimelordApiStub protocol
+        def _protocol_check(self: TimelordAPI) -> TimelordApiStub:
+            return self
 
     log: logging.Logger
     timelord: Timelord
@@ -143,7 +145,7 @@ class TimelordAPI:
                 self.timelord.overflow_blocks.append(new_unfinished_block)
                 log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
             elif ip_iters > last_ip_iters:
-                new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
+                new_block_iters: uint64 | None = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
                 if new_block_iters:
                     self.timelord.unfinished_blocks.append(new_unfinished_block)
                     for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:

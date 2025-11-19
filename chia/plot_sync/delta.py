@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Union
 
 from chia.protocols.harvester_protocol import Plot
 
 
 @dataclass
 class DeltaType:
-    additions: Union[dict[str, Plot], list[str]]
+    additions: dict[str, Plot] | list[str]
     removals: list[str]
 
     def __str__(self) -> str:

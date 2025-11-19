@@ -7,7 +7,7 @@ import logging
 import random
 import time
 from collections.abc import Awaitable, Coroutine
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import (
@@ -246,7 +246,7 @@ async def test_block_compression(
     await time_out_assert(30, check_transaction_confirmed, True, tr)
 
     # Confirm generator is not compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+    program: SerializedProgram | None = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
     assert program is not None
     assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
@@ -993,7 +993,7 @@ async def test_new_transaction_and_mempool(
     included_tx = 0
     not_included_tx = 0
     seen_bigger_transaction_has_high_fee = False
-    successful_bundle: Optional[WalletSpendBundle] = None
+    successful_bundle: WalletSpendBundle | None = None
 
     # Fill mempool
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1473,7 +1473,7 @@ async def test_new_unfinished_block2_forward_limit(
 
     unf_blocks: list[UnfinishedBlock] = []
 
-    last_reward_hash: Optional[bytes32] = None
+    last_reward_hash: bytes32 | None = None
     for idx in range(6):
         # we include a different transaction in each block. This makes the
         # foliage different in each of them, but the reward block (plot) the same
@@ -1769,7 +1769,7 @@ async def test_request_unfinished_block2(
 
     # the "best" unfinished block according to the metric we use to pick one
     # deterministically
-    best_unf: Optional[UnfinishedBlock] = None
+    best_unf: UnfinishedBlock | None = None
 
     for idx in range(6):
         # we include a different transaction in each block. This makes the
@@ -3226,7 +3226,7 @@ async def declare_pos_unfinished_block(
     await full_node_api.declare_proof_of_space(pospace, dummy_peer)
     tx_peak = blockchain.get_tx_peak()
     assert tx_peak is not None
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
+    q_str: bytes32 | None = verify_and_get_quality_string(
         block.reward_chain_block.proof_of_space,
         blockchain.constants,
         challenge,
@@ -3259,7 +3259,7 @@ async def add_tx_to_mempool(
     coinbase_puzzlehash: bytes32,
     receiver_puzzlehash: bytes32,
     amount: uint64,
-) -> Optional[SpendBundle]:
+) -> SpendBundle | None:
     spend_coin = None
     coins = spend_block.get_included_reward_coins()
     for coin in coins:
@@ -3463,3 +3463,32 @@ async def test_ban_for_mismatched_tx_cost_fee(
         await time_out_assert(5, lambda: full_node_2_ip in server_1.banned_peers)
     else:
         await time_out_assert(5, lambda: full_node_2_ip not in server_1.banned_peers)
+
+
+@pytest.mark.anyio
+async def test_new_tx_zero_cost(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Tests that a peer gets banned if it sends a `NewTransaction` message with
+    zero cost.
+    """
+    [full_node_1, full_node_2], _, bt = setup_two_nodes_fixture
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+    await full_node_1.full_node.add_block(bt.get_consecutive_blocks(1)[0])
+    # Send a NewTransaction with zero cost
+    msg = make_msg(
+        ProtocolMessageTypes.new_transaction, NewTransaction(bytes32.random(), cost=uint64(0), fees=uint64(42))
+    )
+    # We won't ban localhost, so let's set a different ip address for the
+    # second node.
+    full_node_2_ip = "1.3.3.7"
+    ws_con_1.peer_info = PeerInfo(full_node_2_ip, ws_con_1.peer_info.port)
+    await ws_con_2.send_message(msg)
+    # Make sure the first full node has banned the second.
+    await time_out_assert(3, lambda: full_node_2_ip in server_1.banned_peers)

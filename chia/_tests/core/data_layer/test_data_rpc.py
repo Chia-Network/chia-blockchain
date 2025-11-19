@@ -16,7 +16,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import anyio
 import chia_rs.datalayer
@@ -96,10 +96,10 @@ class InterfaceLayer(enum.Enum):
 async def init_data_layer_service(
     wallet_rpc_port: uint16,
     bt: BlockTools,
-    db_path: Optional[Path] = None,
-    wallet_service: Optional[WalletService] = None,
+    db_path: Path | None = None,
+    wallet_service: WalletService | None = None,
     manage_data_interval: int = 5,
-    maximum_full_file_count: Optional[int] = None,
+    maximum_full_file_count: int | None = None,
     enable_batch_autoinsert: bool = True,
     group_files_by_store: bool = False,
 ) -> AsyncIterator[DataLayerService]:
@@ -130,9 +130,9 @@ async def init_data_layer(
     wallet_rpc_port: uint16,
     bt: BlockTools,
     db_path: Path,
-    wallet_service: Optional[WalletService] = None,
+    wallet_service: WalletService | None = None,
     manage_data_interval: int = 5,
-    maximum_full_file_count: Optional[int] = None,
+    maximum_full_file_count: int | None = None,
     group_files_by_store: bool = False,
     enable_batch_autoinsert: bool = True,
 ) -> AsyncIterator[DataLayer]:
@@ -779,9 +779,8 @@ async def test_get_owned_stores(
             expected_store_ids.append(launcher_id)
 
         await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
-        for i in range(num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            await asyncio.sleep(0.5)
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.wait_for_wallet_synced(wallet_node)
 
         response = await data_rpc_api.get_owned_stores(request={})
         store_ids = sorted(bytes32.from_hexstr(id) for id in response["store_ids"])
@@ -1034,7 +1033,7 @@ async def process_for_data_layer_keys(
     full_node_api: FullNodeSimulator,
     data_layer: DataLayer,
     store_id: bytes32,
-    expected_value: Optional[bytes] = None,
+    expected_value: bytes | None = None,
 ) -> None:
     for sleep_time in backoff_times():
         try:
@@ -1873,6 +1872,8 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
         await asyncio.sleep(0.5)
     else:  # pragma: no cover
         assert False, "offer was not cancelled"
+
+    await offer_setup.wait_for_wallets_synced()
 
     taker_request = {
         "offer": maker_response["offer"],
@@ -3066,7 +3067,7 @@ async def test_pagination_cmds(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     layer: InterfaceLayer,
-    max_page_size: Optional[int],
+    max_page_size: int | None,
     bt: BlockTools,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(

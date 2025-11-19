@@ -6,7 +6,6 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
-from typing import Optional
 
 import aiosqlite
 import click
@@ -38,7 +37,7 @@ with open(Path(file_path).parent / "transaction_height_delta", "rb") as f:
 @dataclass(frozen=True)
 class BlockInfo:
     prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
+    transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
 
 

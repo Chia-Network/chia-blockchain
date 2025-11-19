@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
@@ -30,7 +30,7 @@ def puzzle_for_transfer_program(launcher_id: bytes32, royalty_puzzle_hash: bytes
 
 def solution_for_transfer_program(
     conditions: Program,
-    current_owner: Optional[bytes32],
+    current_owner: bytes32 | None,
     new_did: bytes32,
     new_did_inner_hash: bytes32,
     trade_prices_list: Program,
@@ -40,13 +40,13 @@ def solution_for_transfer_program(
 
 @dataclass(frozen=True)
 class TransferProgramPuzzle:
-    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
-    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
         matched, curried_args = match_transfer_program_puzzle(puzzle)
         if matched:
             singleton_struct, royalty_puzzle_hash, percentage = curried_args
@@ -60,7 +60,7 @@ class TransferProgramPuzzle:
         else:
             return None
 
-    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+    def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return None
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
@@ -69,11 +69,11 @@ class TransferProgramPuzzle:
         )
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-    ) -> Optional[Program]:
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    ) -> Program | None:
         return None
 
-    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         return None
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:

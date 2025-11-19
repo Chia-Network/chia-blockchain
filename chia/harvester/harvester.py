@@ -8,11 +8,10 @@ import logging
 from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from chia_rs import ConsensusConstants
-from chia_rs.sized_ints import uint32
-from typing_extensions import Literal
+from chia_rs.sized_ints import uint8, uint32
 
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
@@ -56,11 +55,11 @@ class Harvester:
     root_path: Path
     _shut_down: bool
     executor: ThreadPoolExecutor
-    state_changed_callback: Optional[StateChangedProtocol] = None
+    state_changed_callback: StateChangedProtocol | None = None
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
-    _server: Optional[ChiaServer]
+    _server: ChiaServer | None
     _mode: HarvestingMode
 
     @property
@@ -91,7 +90,10 @@ class Harvester:
         self.log.info(f"Using plots_refresh_parameter: {refresh_parameter}")
 
         self.plot_manager = PlotManager(
-            root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
+            root_path,
+            refresh_parameter=refresh_parameter,
+            refresh_callback=self._plot_refresh_callback,
+            constants=constants,
         )
         self._shut_down = False
         self.executor = concurrent.futures.ThreadPoolExecutor(
@@ -99,7 +101,7 @@ class Harvester:
         )
         self._server = None
         self.constants = constants
-        self.state_changed_callback: Optional[StateChangedProtocol] = None
+        self.state_changed_callback: StateChangedProtocol | None = None
         self.parallel_read: bool = config.get("parallel_read", True)
 
         context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
@@ -148,7 +150,7 @@ class Harvester:
 
             await self.plot_sync_sender.await_closed()
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
@@ -157,7 +159,7 @@ class Harvester:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
+    def state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -190,13 +192,12 @@ class Harvester:
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
-                size = prover.get_size()
-                if size.size_v1 is not None:
-                    k = size.size_v1
+                param = prover.get_param()
+                if param.size_v1 is not None:
+                    k = uint8(param.size_v1)
                 else:
-                    assert size.size_v2 is not None
-                    k = size.size_v2
-                    # TODO: todo_v2_plots support v2 plots in RPC response
+                    assert param.strength_v2 is not None
+                    k = uint8(0x80 | param.strength_v2)
                 response_plots.append(
                     {
                         "filename": str(path),
@@ -246,16 +247,16 @@ class Harvester:
     async def update_harvester_config(
         self,
         *,
-        use_gpu_harvesting: Optional[bool] = None,
-        gpu_index: Optional[int] = None,
-        enforce_gpu_index: Optional[bool] = None,
-        disable_cpu_affinity: Optional[bool] = None,
-        parallel_decompressor_count: Optional[int] = None,
-        decompressor_thread_count: Optional[int] = None,
-        recursive_plot_scan: Optional[bool] = None,
-        refresh_parameter_interval_seconds: Optional[uint32] = None,
+        use_gpu_harvesting: bool | None = None,
+        gpu_index: int | None = None,
+        enforce_gpu_index: bool | None = None,
+        disable_cpu_affinity: bool | None = None,
+        parallel_decompressor_count: int | None = None,
+        decompressor_thread_count: int | None = None,
+        recursive_plot_scan: bool | None = None,
+        refresh_parameter_interval_seconds: uint32 | None = None,
     ) -> bool:
-        refresh_parameter: Optional[PlotsRefreshParameter] = None
+        refresh_parameter: PlotsRefreshParameter | None = None
         if refresh_parameter_interval_seconds is not None:
             refresh_parameter = PlotsRefreshParameter(
                 interval_seconds=refresh_parameter_interval_seconds,

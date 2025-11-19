@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -118,9 +118,9 @@ async def start_simulator(chia_root: Path, automated_testing: bool = False) -> A
 
 async def get_full_chia_simulator(
     chia_root: Path,
-    keychain: Optional[Keychain] = None,
+    keychain: Keychain | None = None,
     automated_testing: bool = False,
-    config: Optional[dict[str, Any]] = None,
+    config: dict[str, Any] | None = None,
 ) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
     """
     A chia root Path is required.

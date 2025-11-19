@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -17,10 +16,10 @@ class TestBlockRecord:
 
     header_hash: bytes32
     height: uint32
-    timestamp: Optional[uint64]
+    timestamp: uint64 | None
     prev_transaction_block_height: uint32
-    prev_transaction_block_hash: Optional[bytes32]
-    prev_hash: Optional[bytes32]
+    prev_transaction_block_hash: bytes32 | None
+    prev_hash: bytes32 | None
     weight: uint64 = uint64(10000)
     fees: uint64 = uint64(5000)
     farmer_puzzle_hash: bytes32 = bytes32([1] * 32)
@@ -43,7 +42,7 @@ def hash_to_height(int_bytes: bytes32) -> int:
 
 
 def create_test_block_record(
-    *, height: uint32 = uint32(11), timestamp: uint64 = uint64(10040), header_hash: Optional[bytes32] = None
+    *, height: uint32 = uint32(11), timestamp: uint64 = uint64(10040), header_hash: bytes32 | None = None
 ) -> TestBlockRecord:
     if header_hash is None:
         header_hash = height_hash(height)

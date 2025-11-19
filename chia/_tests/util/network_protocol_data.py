@@ -13,6 +13,7 @@ from chia_rs import (
     G2Element,
     HeaderBlock,
     InfusedChallengeChainSubSlot,
+    PartialProof,
     PoolTarget,
     ProofOfSpace,
     RespondToPhUpdates,
@@ -156,8 +157,8 @@ partial_proof = harvester_protocol.PartialProofsData(
     bytes32.fromhex("8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a"),
     "plot-filename",
     [
-        [uint64(1111), uint64(2222), uint64(3333), uint64(4444)],
-        [uint64(2222), uint64(3333), uint64(4444), uint64(5555)],
+        PartialProof([uint64(256)] * 64),
+        PartialProof([uint64(257)] * 64),
     ],
     uint8(4),
     uint8(32),
@@ -1122,10 +1123,13 @@ respond_compact_proof_of_time = timelord_protocol.RespondCompactProofOfTime(
 
 # SOLVER PROTOCOL
 solver_info = solver_protocol.SolverInfo(
-    partial_proof=[uint64(1), uint64(2), uint64(3), uint64(4)],
+    partial_proof=PartialProof([uint64(256)] * 64),
     plot_id=bytes32.fromhex("071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442"),
     strength=uint8(5),
     size=uint8(28),
 )
 
-solver_response = solver_protocol.SolverResponse([uint64(1), uint64(2), uint64(3), uint64(4)], b"full-proof")
+solver_response = solver_protocol.SolverResponse(
+    PartialProof([uint64(256)] * 64),
+    b"full-proof",
+)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
@@ -25,14 +24,14 @@ def did_recovery_is_nil(recovery_program: Program) -> bool:
 @streamable
 @dataclass(frozen=True)
 class DIDInfo(Streamable):
-    origin_coin: Optional[Coin]  # Coin ID of this coin is our DID
+    origin_coin: Coin | None  # Coin ID of this coin is our DID
     backup_ids: list[bytes32]
     num_of_backup_ids_needed: uint64
-    parent_info: list[tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
-    current_inner: Optional[Program]  # represents a Program as bytes
-    temp_coin: Optional[Coin]  # partially recovered wallet uses these to hold info
-    temp_puzhash: Optional[bytes32]
-    temp_pubkey: Optional[bytes]
+    parent_info: list[tuple[bytes32, LineageProof | None]]  # {coin.name(): LineageProof}
+    current_inner: Program | None  # represents a Program as bytes
+    temp_coin: Coin | None  # partially recovered wallet uses these to hold info
+    temp_puzhash: bytes32 | None
+    temp_pubkey: bytes | None
     sent_recovery_transaction: bool
     metadata: str  # JSON of the user defined metadata
 
@@ -41,9 +40,9 @@ class DIDInfo(Streamable):
 @dataclass(frozen=True)
 class DIDCoinData(Streamable):
     p2_puzzle: Program
-    recovery_list_hash: Optional[bytes32]
+    recovery_list_hash: bytes32 | None
     num_verification: uint16
     singleton_struct: Program
     metadata: Program
-    inner_puzzle: Optional[Program]
+    inner_puzzle: Program | None
     coin_state: CoinState

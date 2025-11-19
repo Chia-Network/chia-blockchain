@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import EndOfSubSlotBundle, FullBlock, SpendBundle, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -120,14 +119,14 @@ class RequestUnfinishedBlock(Streamable):
 @dataclass(frozen=True)
 class NewUnfinishedBlock2(Streamable):
     unfinished_reward_hash: bytes32
-    foliage_hash: Optional[bytes32]
+    foliage_hash: bytes32 | None
 
 
 @streamable
 @dataclass(frozen=True)
 class RequestUnfinishedBlock2(Streamable):
     unfinished_reward_hash: bytes32
-    foliage_hash: Optional[bytes32]
+    foliage_hash: bytes32 | None
 
 
 @streamable
@@ -139,7 +138,7 @@ class RespondUnfinishedBlock(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NewSignagePointOrEndOfSubSlot(Streamable):
-    prev_challenge_hash: Optional[bytes32]
+    prev_challenge_hash: bytes32 | None
     challenge_hash: bytes32
     index_from_challenge: uint8
     last_rc_infusion: bytes32

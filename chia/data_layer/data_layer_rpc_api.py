@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint64
@@ -137,7 +137,7 @@ class DataLayerRpcApi:
             "/verify_proof": self.verify_proof,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None) -> list[WsRpcMessage]:
         return []
 
     async def wallet_log_in(self, request: dict[str, Any]) -> EndpointResult:
@@ -168,8 +168,8 @@ class DataLayerRpcApi:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
         # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
-        root_hash: Optional[str] = request.get("root_hash")
-        resolved_root_hash: Union[bytes32, Unspecified]
+        root_hash: str | None = request.get("root_hash")
+        resolved_root_hash: bytes32 | Unspecified
         if root_hash is not None:
             resolved_root_hash = bytes32.from_hexstr(root_hash)
         else:
@@ -185,10 +185,10 @@ class DataLayerRpcApi:
     async def get_keys(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
-        root_hash: Optional[str] = request.get("root_hash")
+        root_hash: str | None = request.get("root_hash")
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
-        resolved_root_hash: Union[bytes32, Unspecified]
+        resolved_root_hash: bytes32 | Unspecified
         if root_hash is not None:
             resolved_root_hash = bytes32.from_hexstr(root_hash)
         else:
@@ -222,10 +222,10 @@ class DataLayerRpcApi:
     async def get_keys_values(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
-        root_hash: Optional[str] = request.get("root_hash")
+        root_hash: str | None = request.get("root_hash")
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
-        resolved_root_hash: Union[bytes32, Unspecified]
+        resolved_root_hash: bytes32 | Unspecified
         if root_hash is not None:
             resolved_root_hash = bytes32.from_hexstr(root_hash)
         else:
@@ -445,7 +445,7 @@ class DataLayerRpcApi:
             subscriptions: list[Subscription] = await self.service.get_subscriptions()
             ids_bytes = [subscription.store_id for subscription in subscriptions]
         overwrite = request.get("overwrite", False)
-        foldername: Optional[Path] = None
+        foldername: Path | None = None
         if "foldername" in request:
             foldername = Path(request["foldername"])
         for store_id in ids_bytes:

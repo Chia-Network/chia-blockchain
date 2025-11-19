@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType
-from typing import Any, Optional
+from typing import Any
 
 import click
 from aiohttp import web
@@ -38,7 +38,7 @@ class DataLayerServer:
     config: dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
-    webserver: Optional[WebServer] = None
+    webserver: WebServer | None = None
     upnp: UPnP = field(default_factory=UPnP)
 
     async def start(self, signal_handlers: SignalHandlers) -> None:
@@ -120,7 +120,7 @@ class DataLayerServer:
     def _accept_signal(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)

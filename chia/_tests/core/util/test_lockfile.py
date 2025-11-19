@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import Callable
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from sys import platform
 from time import sleep
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 

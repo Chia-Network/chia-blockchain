@@ -4,12 +4,12 @@ import dataclasses
 import logging
 import operator
 import time
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
-from typing import Any, Callable, Union, cast
+from typing import Any, cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -362,7 +362,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[dict[str, Any]]],
-    filtering: Union[list[FilterItem], list[str]],
+    filtering: list[FilterItem] | list[str],
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,

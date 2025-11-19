@@ -34,8 +34,6 @@ constants = DEFAULT_CONSTANTS.replace(
     ),
     MEMPOOL_BLOCK_BUFFER=uint8(10),
     MIN_PLOT_SIZE_V1=uint8(18),
-    # TODO: todo_v2_plots decide on v2 test plot k-size
-    MIN_PLOT_SIZE_V2=uint8(18),
 )
 retire_bytes = (
     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
@@ -57,7 +57,7 @@ class PoolState(Streamable):
     target_puzzle_hash: bytes32  # TODO: rename target_puzzle_hash -> pay_to_address
     # owner_pubkey is set by the wallet, once
     owner_pubkey: G1Element
-    pool_url: Optional[str]
+    pool_url: str | None
     relative_lock_height: uint32
 
 
@@ -89,7 +89,7 @@ def create_pool_state(
     state: PoolSingletonState,
     target_puzzle_hash: bytes32,
     owner_pubkey: G1Element,
-    pool_url: Optional[str],
+    pool_url: str | None,
     relative_lock_height: uint32,
 ) -> PoolState:
     if state not in {s.value for s in PoolSingletonState}:
@@ -110,7 +110,7 @@ class PoolWalletInfo(Streamable):
     """
 
     current: PoolState
-    target: Optional[PoolState]
+    target: PoolState | None
     launcher_coin: Coin
     launcher_id: bytes32
     p2_singleton_puzzle_hash: bytes32

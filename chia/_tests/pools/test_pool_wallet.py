@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,7 +27,7 @@ class MockStandardWallet:
 
 @dataclass
 class MockWalletStateManager:
-    root_path: Optional[Path] = None
+    root_path: Path | None = None
     config: dict[str, Any] = field(default_factory=dict)
 
 
@@ -43,7 +43,7 @@ class MockPoolWalletConfig:
 
 @dataclass
 class MockPoolState:
-    pool_url: Optional[str]
+    pool_url: str | None
     target_puzzle_hash: bytes32
     owner_pubkey: G1Element
 

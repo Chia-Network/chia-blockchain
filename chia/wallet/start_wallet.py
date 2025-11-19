@@ -4,11 +4,11 @@ import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 
-from chia.apis import ApiProtocolRegistry
+from chia.apis import StubMetadataRegistry
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.protocols.outbound_message import NodeType
@@ -36,7 +36,7 @@ def create_wallet_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
     consensus_constants: ConsensusConstants,
-    keychain: Optional[Keychain] = None,
+    keychain: Keychain | None = None,
     connect_to_daemon: bool = True,
 ) -> WalletService:
     service_config = config[SERVICE_NAME]
@@ -55,7 +55,7 @@ def create_wallet_service(
     )
     peer_api = WalletNodeAPI(node)
 
-    rpc_info: Optional[RpcInfo[WalletRpcApi]] = None
+    rpc_info: RpcInfo[WalletRpcApi] | None = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
@@ -72,7 +72,7 @@ def create_wallet_service(
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 

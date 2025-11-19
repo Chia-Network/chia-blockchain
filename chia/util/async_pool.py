@@ -7,7 +7,7 @@ import itertools
 import logging
 import traceback
 from collections.abc import AsyncIterator, Iterator
-from typing import Generic, Optional, Protocol, TypeVar, final
+from typing import Generic, Protocol, TypeVar, final
 
 import anyio
 
@@ -49,8 +49,8 @@ class Job(Generic[T]):
     input: T
     started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     done: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
-    exception: Optional[BaseException] = None
-    task: Optional[asyncio.Task[object]] = None
+    exception: BaseException | None = None
+    task: asyncio.Task[object] | None = None
     cancelled: bool = False
 
 
@@ -59,7 +59,7 @@ class Job(Generic[T]):
 class QueuedAsyncPool(Generic[J, R]):
     name: str
     job_queue: JobQueueProtocol[Job[J]]
-    result_queue: Optional[ResultQueueProtocol[R]]
+    result_queue: ResultQueueProtocol[R] | None
     worker_async_callable: QueuedWorkerCallable[J, R]
 
     @classmethod
@@ -70,7 +70,7 @@ class QueuedAsyncPool(Generic[J, R]):
         job_queue: JobQueueProtocol[Job[J]],
         worker_async_callable: QueuedWorkerCallable[J, R],
         target_worker_count: int,
-        result_queue: Optional[ResultQueueProtocol[R]] = None,
+        result_queue: ResultQueueProtocol[R] | None = None,
         log: logging.Logger = logging.getLogger(__name__),
     ) -> AsyncIterator[QueuedAsyncPool[J, R]]:
         self = cls(

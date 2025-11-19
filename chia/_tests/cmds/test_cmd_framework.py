@@ -5,7 +5,7 @@ import textwrap
 from collections.abc import Sequence
 from dataclasses import asdict
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 import click
 import pytest
@@ -32,7 +32,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
-def check_click_parsing(cmd: ChiaCommand, *args: str, context: Optional[ChiaCliContext] = None) -> None:
+def check_click_parsing(cmd: ChiaCommand, *args: str, context: ChiaCliContext | None = None) -> None:
     @click.group()
     def _cmd() -> None:
         pass
@@ -232,7 +232,7 @@ def test_typing() -> None:
     # Test optional
     @chia_command(group=cmd, name="temp_cmd_optional", short_help="blah", help="n/a")
     class TempCMDOptional:
-        optional: Optional[int] = option("--optional", required=False)
+        optional: int | None = option("--optional", required=False)
 
         def run(self) -> None: ...
 
@@ -244,7 +244,7 @@ def test_typing() -> None:
 
         @chia_command(group=cmd, name="temp_cmd_optional_bad", short_help="blah", help="n/a")
         class TempCMDOptionalBad2:
-            optional: Optional[int] = option("--optional", required=True)
+            optional: int | None = option("--optional", required=True)
 
             def run(self) -> None: ...
 
@@ -252,13 +252,13 @@ def test_typing() -> None:
 
         @chia_command(group=cmd, name="temp_cmd_optional_bad", short_help="blah", help="n/a")
         class TempCMDOptionalBad3:
-            optional: Optional[int] = option("--optional", default="string", required=False)
+            optional: int | None = option("--optional", default="string", required=False)
 
             def run(self) -> None: ...
 
     @chia_command(group=cmd, name="temp_cmd_optional_fine", short_help="blah", help="n/a")
     class TempCMDOptionalBad4:
-        optional: Optional[int] = option("--optional", default=None, required=False)
+        optional: int | None = option("--optional", default=None, required=False)
 
         def run(self) -> None: ...
 

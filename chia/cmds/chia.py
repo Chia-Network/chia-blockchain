@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from io import TextIOWrapper
-from typing import Optional
 
 import click
 
@@ -60,7 +59,7 @@ def cli(
     ctx: click.Context,
     root_path: str,
     keys_root_path: str,
-    passphrase_file: Optional[TextIOWrapper] = None,
+    passphrase_file: TextIOWrapper | None = None,
 ) -> None:
     from pathlib import Path
 

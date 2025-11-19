@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 
-def cancel_task_safe(task: Optional[asyncio.Task[None]], log: Optional[logging.Logger] = None) -> None:
+def cancel_task_safe(task: asyncio.Task[None] | None, log: logging.Logger | None = None) -> None:
     if task is not None:
         try:
             task.cancel()

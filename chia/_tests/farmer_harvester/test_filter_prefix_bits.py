@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import FullBlock
@@ -94,7 +94,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
     state_change = None
     state_change_data = None
 
-    def state_changed_callback(change: str, change_data: Optional[dict[str, Any]]) -> None:
+    def state_changed_callback(change: str, change_data: dict[str, Any] | None) -> None:
         nonlocal state_change, state_change_data
         state_change = change
         state_change_data = change_data

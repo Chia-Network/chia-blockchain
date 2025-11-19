@@ -4,9 +4,8 @@ import asyncio
 import contextlib
 import functools
 import logging
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -626,7 +625,7 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+    last_block: BlockRecord | None = full_node_api.full_node.blockchain.get_peak()
     assert last_block is not None
 
     # Invalid height
@@ -1431,10 +1430,10 @@ async def test_retry_store(
 
     def flaky_get_coin_state(
         flakiness_info: FlakinessInfo,
-        func: Callable[[list[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]],
-    ) -> Callable[[list[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]]:
+        func: Callable[[list[bytes32], WSChiaConnection, uint32 | None], Awaitable[list[CoinState]]],
+    ) -> Callable[[list[bytes32], WSChiaConnection, uint32 | None], Awaitable[list[CoinState]]]:
         async def new_func(
-            coin_names: list[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
+            coin_names: list[bytes32], peer: WSChiaConnection, fork_height: uint32 | None = None
         ) -> list[CoinState]:
             if flakiness_info.coin_state_flaky:
                 flakiness_info.coin_state_flaky = False
@@ -1447,10 +1446,10 @@ async def test_retry_store(
     request_puzzle_solution_failure_tested = False
 
     def flaky_request_puzzle_solution(
-        func: Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]],
-    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]:
+        func: Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Message | None]],
+    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Message | None]]:
         @functools.wraps(func)
-        async def new_func(self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+        async def new_func(self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution) -> Message | None:
             nonlocal request_puzzle_solution_failure_tested
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
@@ -1464,10 +1463,10 @@ async def test_retry_store(
 
     def flaky_fetch_children(
         flakiness_info: FlakinessInfo,
-        func: Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]],
-    ) -> Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]]:
+        func: Callable[[bytes32, WSChiaConnection, uint32 | None], Awaitable[list[CoinState]]],
+    ) -> Callable[[bytes32, WSChiaConnection, uint32 | None], Awaitable[list[CoinState]]]:
         async def new_func(
-            coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
+            coin_name: bytes32, peer: WSChiaConnection, fork_height: uint32 | None = None
         ) -> list[CoinState]:
             if flakiness_info.fetch_children_flaky:
                 flakiness_info.fetch_children_flaky = False
@@ -1490,9 +1489,9 @@ async def test_retry_store(
         return new_func
 
     def flaky_info_for_puzhash(
-        flakiness_info: FlakinessInfo, func: Callable[[bytes32], Awaitable[Optional[WalletIdentifier]]]
-    ) -> Callable[[bytes32], Awaitable[Optional[WalletIdentifier]]]:
-        async def new_func(puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
+        flakiness_info: FlakinessInfo, func: Callable[[bytes32], Awaitable[WalletIdentifier | None]]
+    ) -> Callable[[bytes32], Awaitable[WalletIdentifier | None]]:
+        async def new_func(puzzle_hash: bytes32) -> WalletIdentifier | None:
             if flakiness_info.db_flaky:
                 flakiness_info.db_flaky = False
                 raise AIOSqliteError
@@ -1605,7 +1604,7 @@ async def test_bad_peak_mismatch(
         full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash),
     )
     with monkeypatch.context() as m:
-        f: asyncio.Future[Optional[Message]] = asyncio.Future()
+        f: asyncio.Future[Message | None] = asyncio.Future()
         f.set_result(wp_msg)
         m.setattr(full_node_api, "request_proof_of_weight", MagicMock(return_value=f))
 
@@ -1614,7 +1613,7 @@ async def test_bad_peak_mismatch(
             ProtocolMessageTypes.respond_block_header,
             wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
         )
-        f2: asyncio.Future[Optional[Message]] = asyncio.Future()
+        f2: asyncio.Future[Message | None] = asyncio.Future()
         f2.set_result(header_block_msg)
         m.setattr(full_node_api, "request_block_header", MagicMock(return_value=f2))
 

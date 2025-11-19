@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import TypedDict
@@ -47,7 +47,7 @@ def create_payload(command: str, data: dict[str, Any], origin: str, destination:
     return dict_to_json_str(response)
 
 
-def create_payload_dict(command: str, data: Optional[dict[str, Any]], origin: str, destination: str) -> WsRpcMessage:
+def create_payload_dict(command: str, data: dict[str, Any] | None, origin: str, destination: str) -> WsRpcMessage:
     if data is None:
         data = {}
 

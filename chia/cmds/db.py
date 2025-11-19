@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -35,8 +34,8 @@ def db_cmd() -> None:
 @click.pass_context
 def db_upgrade_cmd(
     ctx: click.Context,
-    in_db_path: Optional[str],
-    out_db_path: Optional[str],
+    in_db_path: str | None,
+    out_db_path: str | None,
     no_update_config: bool,
     force: bool,
 ) -> None:
@@ -61,7 +60,7 @@ def db_upgrade_cmd(
     help="validate consistency of properties of the encoded blocks and block records",
 )
 @click.pass_context
-def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_blocks: bool) -> None:
+def db_validate_cmd(ctx: click.Context, in_db_path: str | None, validate_blocks: bool) -> None:
     try:
         db_validate_func(
             ChiaCliContext.set_default(ctx).root_path,
@@ -76,7 +75,7 @@ def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_bloc
 @click.option("--backup_file", "db_backup_file", default=None, type=click.Path(), help="Specifies the backup file")
 @click.option("--no_indexes", default=False, is_flag=True, help="Create backup without indexes")
 @click.pass_context
-def db_backup_cmd(ctx: click.Context, db_backup_file: Optional[str], no_indexes: bool) -> None:
+def db_backup_cmd(ctx: click.Context, db_backup_file: str | None, no_indexes: bool) -> None:
     try:
         db_backup_func(
             ChiaCliContext.set_default(ctx).root_path,

@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
-from chia_rs import PlotSize, Prover, QualityProof
+from chia_rs import PartialProof, PlotParam, Prover, QualityProof
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint64
+from chia_rs.sized_ints import uint8
 from chiapos import DiskProver
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ class QualityProtocol(Protocol):
 
 class ProverProtocol(Protocol):
     def get_filename(self) -> str: ...
-    def get_size(self) -> PlotSize: ...
+    def get_param(self) -> PlotParam: ...
     def get_strength(self) -> uint8: ...
     def get_memo(self) -> bytes: ...
     def get_compression_level(self) -> uint8: ...
@@ -71,8 +71,8 @@ class V2Prover:
     def get_filename(self) -> str:
         return self._prover.get_filename()
 
-    def get_size(self) -> PlotSize:
-        return PlotSize.make_v2(self._prover.size())
+    def get_param(self) -> PlotParam:
+        return PlotParam.make_v2(self._prover.get_strength())
 
     def get_strength(self) -> uint8:
         return uint8(self._prover.get_strength())
@@ -96,7 +96,7 @@ class V2Prover:
     def get_qualities_for_challenge(self, challenge: bytes32, proof_fragment_filter: uint8) -> list[QualityProtocol]:
         return [V2Quality(q) for q in self._prover.get_qualities_for_challenge(challenge, proof_fragment_filter)]
 
-    def get_partial_proof(self, quality: V2Quality) -> list[uint64]:
+    def get_partial_proof(self, quality: V2Quality) -> PartialProof:
         return self._prover.get_partial_proof(quality._quality_proof)[0]
 
 
@@ -120,8 +120,8 @@ class V1Prover:
     def get_filename(self) -> str:
         return str(self._disk_prover.get_filename())
 
-    def get_size(self) -> PlotSize:
-        return PlotSize.make_v1(uint8(self._disk_prover.get_size()))
+    def get_param(self) -> PlotParam:
+        return PlotParam.make_v1(uint8(self._disk_prover.get_size()))
 
     def get_strength(self) -> uint8:
         raise AssertionError("V1 plot format doesn't use strength")

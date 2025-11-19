@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from click import ClickException
 
@@ -227,11 +227,11 @@ class ProtocolError(Exception):
 
 
 class ApiError(Exception):
-    def __init__(self, code: Err, message: str, data: Optional[bytes] = None):
+    def __init__(self, code: Err, message: str, data: bytes | None = None):
         super().__init__(f"{code.name}: {message}")
         self.code: Err = code
         self.message: str = message
-        self.data: Optional[bytes] = data
+        self.data: bytes | None = data
 
 
 ##

@@ -4,7 +4,6 @@ import logging
 import traceback
 from enum import IntEnum
 from functools import lru_cache
-from typing import Optional
 
 from chia_rs import ConsensusConstants, VDFInfo, VDFProof
 from chia_rs.sized_bytes import bytes32, bytes100
@@ -51,7 +50,7 @@ def validate_vdf(
     constants: ConsensusConstants,
     input_el: ClassgroupElement,
     info: VDFInfo,
-    target_vdf_info: Optional[VDFInfo] = None,
+    target_vdf_info: VDFInfo | None = None,
 ) -> bool:
     """
     If target_vdf_info is passed in, it is compared with info.

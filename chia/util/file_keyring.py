@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
@@ -106,9 +106,9 @@ class FileKeyringContent:
     # Encrypted and base64 encoded keyring data.
     # - The data with CHECKBYTES_VALUE prepended is encrypted using ChaCha20Poly1305.
     # - The symmetric key is derived from the master passphrase using PBKDF2.
-    data: Optional[str] = None
+    data: str | None = None
     # An optional passphrase hint
-    passphrase_hint: Optional[str] = None
+    passphrase_hint: str | None = None
 
     def __post_init__(self) -> None:
         self.salt = convert_byte_type(bytes, self.salt)
@@ -165,16 +165,16 @@ class FileKeyringContent:
 @dataclass(frozen=True)
 class Key:
     secret: bytes
-    metadata: Optional[dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
     @classmethod
-    def parse(cls, data: str, metadata: Optional[dict[str, Any]]) -> Key:
+    def parse(cls, data: str, metadata: dict[str, Any] | None) -> Key:
         return cls(
             bytes.fromhex(data),
             metadata,
         )
 
-    def to_data(self) -> Union[str, dict[str, Any]]:
+    def to_data(self) -> str | dict[str, Any]:
         return self.secret.hex()
 
 
@@ -231,7 +231,7 @@ class FileKeyring(FileSystemEventHandler):
     needs_load_keyring: bool = False
     # Cache of the decrypted YAML contained in keyring.data
     cached_data_dict: DecryptedKeyringData = field(default_factory=default_file_keyring_data)
-    keyring_last_mod_time: Optional[float] = None
+    keyring_last_mod_time: float | None = None
     # Key/value pairs to set on the outer payload on the next write
     file_content_properties_for_next_write: dict[str, Any] = field(default_factory=dict)
 
@@ -284,7 +284,7 @@ class FileKeyring(FileSystemEventHandler):
             self.keyring_observer.stop()
             self.keyring_observer.join()
 
-    def on_modified(self, event: Union[FileSystemEvent, DirModifiedEvent]) -> None:
+    def on_modified(self, event: FileSystemEvent | DirModifiedEvent) -> None:
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self) -> None:
@@ -316,7 +316,7 @@ class FileKeyring(FileSystemEventHandler):
         """
         return self.cached_data_dict.labels
 
-    def get_key(self, service: str, user: str) -> Optional[Key]:
+    def get_key(self, service: str, user: str) -> Key | None:
         """
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
@@ -350,7 +350,7 @@ class FileKeyring(FileSystemEventHandler):
                     keys.pop(service)
                 self.write_keyring()
 
-    def get_label(self, fingerprint: int) -> Optional[str]:
+    def get_label(self, fingerprint: int) -> str | None:
         """
         Returns the label for the given fingerprint or None if there is no label assigned.
         """
@@ -405,7 +405,7 @@ class FileKeyring(FileSystemEventHandler):
         except Exception:
             return False
 
-    def load_keyring(self, passphrase: Optional[str] = None) -> None:
+    def load_keyring(self, passphrase: str | None = None) -> None:
         from chia.util.keyring_wrapper import obtain_current_passphrase
 
         with self.load_keyring_lock:
@@ -450,18 +450,18 @@ class FileKeyring(FileSystemEventHandler):
             # Restore the correct content if we failed to write the updated cache, let it re-raise if loading also fails
             self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
 
-    def get_passphrase_hint(self) -> Optional[str]:
+    def get_passphrase_hint(self) -> str | None:
         """
         Return the passphrase hint (if set). The hint data may not yet be written to the keyring, so we
         return the hint data either from the staging dict (file_content_properties_for_next_write), or
         from cached_file_content (loaded from the keyring)
         """
-        passphrase_hint: Optional[str] = self.file_content_properties_for_next_write.get("passphrase_hint", None)
+        passphrase_hint: str | None = self.file_content_properties_for_next_write.get("passphrase_hint", None)
         if passphrase_hint is None:
             passphrase_hint = self.cached_file_content.passphrase_hint
         return passphrase_hint
 
-    def set_passphrase_hint(self, passphrase_hint: Optional[str]) -> None:
+    def set_passphrase_hint(self, passphrase_hint: str | None) -> None:
         """
         Store the new passphrase hint in the staging dict (file_content_properties_for_next_write) to
         be written-out on the next write to the keyring.

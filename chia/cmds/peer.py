@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import click
 
 from chia.cmds.cmd_classes import ChiaCliContext
@@ -31,7 +29,7 @@ from chia.cmds.peer_funcs import peer_async
 @click.pass_context
 def peer_cmd(
     ctx: click.Context,
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     connections: bool,
     add_connection: str,
     remove_connection: str,

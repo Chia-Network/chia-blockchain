@@ -7,10 +7,9 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Union
+from typing import Literal
 
 from aiofiles import tempfile
-from typing_extensions import Literal
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattemp
 
 
 async def write_file_async(
-    file_path: Path, data: Union[str, bytes], *, file_mode: int = 0o600, dir_mode: int = 0o700
+    file_path: Path, data: str | bytes, *, file_mode: int = 0o600, dir_mode: int = 0o700
 ) -> None:
     """
     Writes the provided data to a temporary file and then moves it to the final destination.

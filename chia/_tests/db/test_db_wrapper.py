@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 
 import aiosqlite
 import pytest
@@ -494,7 +495,7 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 @dataclass
 class RowFactoryCase:
     id: str
-    factory: Optional[type[aiosqlite.Row]]
+    factory: type[aiosqlite.Row] | None
     marks: Marks = ()
 
 

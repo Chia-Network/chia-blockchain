@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -48,8 +46,8 @@ async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
     spend_bundle: WalletSpendBundle,
-    expected_result: tuple[MempoolInclusionStatus, Optional[Err]],
-    cost_logger: Optional[CostLogger] = None,
+    expected_result: tuple[MempoolInclusionStatus, Err | None],
+    cost_logger: CostLogger | None = None,
     cost_log_msg: str = "",
 ) -> int:
     if cost_logger is not None:

@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import G1Element
@@ -102,7 +102,7 @@ class TestData:
         batch_size = self.harvester.plot_manager.refresh_parameter.batch_size
 
         # Used to capture the sync id in `run_internal`
-        sync_id: Optional[uint64] = None
+        sync_id: uint64 | None = None
 
         def run_internal() -> None:
             nonlocal sync_id

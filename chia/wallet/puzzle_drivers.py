@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from clvm.SExp import SExp
 from clvm_tools.binutils import assemble, type_for_atom
@@ -56,7 +56,7 @@ class PuzzleInfo:
     def type(self) -> str:
         return str(self.info["type"])
 
-    def also(self) -> Optional[PuzzleInfo]:
+    def also(self) -> PuzzleInfo | None:
         if "also" in self.info:
             return PuzzleInfo(self.info["also"])
         else:

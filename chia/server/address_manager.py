@@ -12,7 +12,6 @@ from pathlib import Path
 from random import choice, randrange
 from secrets import randbits
 from timeit import default_timer as timer
-from typing import Optional
 
 import aiofiles
 from chia_rs.sized_ints import uint16, uint32, uint64
@@ -45,7 +44,7 @@ class ExtendedPeerInfo:
     def __init__(
         self,
         addr: TimestampedPeerInfo,
-        src_peer: Optional[PeerInfo],
+        src_peer: PeerInfo | None,
     ):
         self.peer_info: PeerInfo = PeerInfo(
             addr.host,
@@ -57,7 +56,7 @@ class ExtendedPeerInfo:
             self.src = src_peer
         else:
             self.src = self.peer_info
-        self.random_pos: Optional[int] = None
+        self.random_pos: int | None = None
         self.is_tried: bool = False
         self.ref_count: int = 0
         self.last_success: int = 0
@@ -145,7 +144,7 @@ class ExtendedPeerInfo:
         )
         return hash2 % TRIED_BUCKET_COUNT
 
-    def get_new_bucket(self, key: int, src_peer: Optional[PeerInfo] = None) -> int:
+    def get_new_bucket(self, key: int, src_peer: PeerInfo | None = None) -> int:
         if src_peer is None:
             src_peer = self.src
         assert src_peer is not None
@@ -175,7 +174,7 @@ class ExtendedPeerInfo:
         )
         return hash1 % BUCKET_SIZE
 
-    def is_terrible(self, now: Optional[int] = None) -> bool:
+    def is_terrible(self, now: int | None = None) -> bool:
         if now is None:
             now = math.floor(time.time())
         # never remove things tried in the last minute
@@ -200,7 +199,7 @@ class ExtendedPeerInfo:
 
         return False
 
-    def get_selection_chance(self, now: Optional[int] = None) -> float:
+    def get_selection_chance(self, now: int | None = None) -> float:
         if now is None:
             now = math.floor(time.time())
         chance = 1.0
@@ -247,7 +246,7 @@ class AddressManager:
         """
         Create an address manager using data deserialized from a peers file.
         """
-        address_manager: Optional[AddressManager] = None
+        address_manager: AddressManager | None = None
         if peers_file_path.exists():
             try:
                 log.info(f"Loading peers from {peers_file_path}")
@@ -400,7 +399,7 @@ class AddressManager:
             if not info.is_tried and info.ref_count == 0:
                 self.delete_new_entry_(id)
 
-    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> tuple[ExtendedPeerInfo, int]:
+    def create_(self, addr: TimestampedPeerInfo, addr_src: PeerInfo | None) -> tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
         self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
@@ -409,7 +408,7 @@ class AddressManager:
         self.random_pos.append(node_id)
         return (self.map_info[node_id], node_id)
 
-    def find_(self, addr: PeerInfo) -> tuple[Optional[ExtendedPeerInfo], Optional[int]]:
+    def find_(self, addr: PeerInfo) -> tuple[ExtendedPeerInfo | None, int | None]:
         if addr.host not in self.map_addr:
             return (None, None)
         node_id = self.map_addr[addr.host]
@@ -529,7 +528,7 @@ class AddressManager:
         del self.map_info[node_id]
         self.new_count -= 1
 
-    def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
+    def add_to_new_table_(self, addr: TimestampedPeerInfo, source: PeerInfo | None, penalty: int) -> bool:
         is_unique = False
         peer_info = PeerInfo(
             addr.host,
@@ -603,7 +602,7 @@ class AddressManager:
             info.last_count_attempt = timestamp
             info.num_attempts += 1
 
-    def select_peer_(self, new_only: bool) -> Optional[ExtendedPeerInfo]:
+    def select_peer_(self, new_only: bool) -> ExtendedPeerInfo | None:
         if len(self.random_pos) == 0:
             return None
 
@@ -697,7 +696,7 @@ class AddressManager:
             if resolved:
                 self.tried_collisions.remove(node_id)
 
-    def select_tried_collision_(self) -> Optional[ExtendedPeerInfo]:
+    def select_tried_collision_(self) -> ExtendedPeerInfo | None:
         if len(self.tried_collisions) == 0:
             return None
         new_id = choice(self.tried_collisions)
@@ -766,7 +765,7 @@ class AddressManager:
     async def add_to_new_table(
         self,
         addresses: list[TimestampedPeerInfo],
-        source: Optional[PeerInfo] = None,
+        source: PeerInfo | None = None,
         penalty: int = 0,
     ) -> bool:
         is_added = False
@@ -806,12 +805,12 @@ class AddressManager:
             self.resolve_tried_collisions_()
 
     # Randomly select an address in tried that another address is attempting to evict.
-    async def select_tried_collision(self) -> Optional[ExtendedPeerInfo]:
+    async def select_tried_collision(self) -> ExtendedPeerInfo | None:
         async with self.lock:
             return self.select_tried_collision_()
 
     # Choose an address to connect to.
-    async def select_peer(self, new_only: bool = False) -> Optional[ExtendedPeerInfo]:
+    async def select_peer(self, new_only: bool = False) -> ExtendedPeerInfo | None:
         async with self.lock:
             return self.select_peer_(new_only)
 
@@ -833,7 +832,7 @@ class AddressManager:
         """
         Create an address manager using data deserialized from a peers file.
         """
-        peer_data: Optional[PeerDataSerialization] = None
+        peer_data: PeerDataSerialization | None = None
         address_manager = AddressManager()
         start_time = timer()
         # if this fails, we pass the exception up to the function that called us and try the other type of deserializing

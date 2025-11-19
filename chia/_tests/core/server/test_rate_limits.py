@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Union
 
 import pytest
 from chia_rs.sized_ints import uint32
@@ -65,7 +64,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
     message_data = b"\0" * 1024
     msg_type = ProtocolMessageTypes.new_transaction
 
-    limits: dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]
+    limits: dict[ProtocolMessageTypes, RLSettings | Unlimited]
 
     if limit_size:
         agg_limit = RLSettings(False, count * 2, len(message_data), count * len(message_data))
@@ -79,7 +78,7 @@ async def test_limits_v2(incoming: bool, tx_msg: bool, limit_size: bool, monkeyp
 
     def mock_get_limits(
         our_capabilities: list[Capability], peer_capabilities: list[Capability]
-    ) -> tuple[dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]], RLSettings]:
+    ) -> tuple[dict[ProtocolMessageTypes, RLSettings | Unlimited], RLSettings]:
         return limits, agg_limit
 
     import chia.server.rate_limits

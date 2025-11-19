@@ -4,7 +4,6 @@ import asyncio
 import random
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 import anyio
 import pytest
@@ -128,12 +127,12 @@ async def test_worker_exception_logged(caplog: pytest.LogCaptureFixture) -> None
         def __init__(self) -> None:
             super().__init__(expected_message)
 
-    work_queue: asyncio.Queue[Optional[Exception]] = asyncio.Queue()
+    work_queue: asyncio.Queue[Exception | None] = asyncio.Queue()
     result_queue: asyncio.Queue[None] = asyncio.Queue()
 
     async def worker(
         worker_id: int,
-        work_queue: asyncio.Queue[Optional[Exception]] = work_queue,
+        work_queue: asyncio.Queue[Exception | None] = work_queue,
         result_queue: asyncio.Queue[None] = result_queue,
     ) -> None:
         work = await work_queue.get()

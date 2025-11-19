@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar
 
 from chia_rs.sized_ints import uint64
 
@@ -17,9 +17,11 @@ from chia.types.peer_info import TimestampedPeerInfo
 
 class IntroducerAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.introducer_stub import IntroducerApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("IntroducerAPI", None)
+        # Verify this class implements the IntroducerApiStub protocol
+        def _protocol_check(self: IntroducerAPI) -> IntroducerApiStub:
+            return self
 
     log: logging.Logger
     introducer: Introducer
@@ -40,7 +42,7 @@ class IntroducerAPI:
         self,
         request: RequestPeersIntroducer,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         max_peers = self.introducer.max_peers_to_send
         if self.introducer.server is None or self.introducer.server.introducer_peers is None:
             return None

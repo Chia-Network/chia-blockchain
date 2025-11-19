@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from subprocess import check_call
 from sys import stdout
-from typing import Optional
 
 import click
 from colorama import Back, Fore, Style, init
@@ -122,7 +121,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
     calls = 0
     snapshot = tracemalloc.Snapshot.load(file)
     for trace in snapshot.traces:
-        prev_fun: Optional[str] = None
+        prev_fun: str | None = None
         total_size += trace.size
         calls += 1
         if ((calls - 1) & 255) == 0:
