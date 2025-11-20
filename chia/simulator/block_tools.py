@@ -796,6 +796,8 @@ class BlockTools:
                 for coin in b.get_included_reward_coins():
                     if coin.puzzle_hash == self.farmer_ph:
                         available_coins.append(coin)
+                    if coin.puzzle_hash == self.pool_ph:
+                        available_coins.append(coin)
             print(
                 f"found {len(available_coins)} reward coins in existing chain."
                 "for simplicity, we assume the rewards are all unspent in the original chain"
@@ -1025,6 +1027,8 @@ class BlockTools:
                         if include_transactions:
                             for coin in full_block.get_included_reward_coins():
                                 if coin.puzzle_hash == self.farmer_ph:
+                                    pending_rewards.append(coin)
+                                if coin.puzzle_hash == self.pool_ph:
                                     pending_rewards.append(coin)
                             if full_block.is_transaction_block():
                                 available_coins.extend(pending_rewards)
@@ -1332,6 +1336,8 @@ class BlockTools:
                         if include_transactions:
                             for coin in full_block.get_included_reward_coins():
                                 if coin.puzzle_hash == self.farmer_ph:
+                                    pending_rewards.append(coin)
+                                if coin.puzzle_hash == self.pool_ph:
                                     pending_rewards.append(coin)
                             if full_block.is_transaction_block():
                                 available_coins.extend(pending_rewards)
