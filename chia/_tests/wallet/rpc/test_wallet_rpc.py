@@ -3697,13 +3697,13 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     )
 
     # Test some error cases first
-    with pytest.raises(ResponseFailureError, match="greater then the maximum limit"):
+    with pytest.raises(ValueError, match="greater then the maximum limit"):
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(501)).run()
 
-    with pytest.raises(ResponseFailureError, match="You need at least two coins to combine"):
+    with pytest.raises(ValueError, match="You need at least two coins to combine"):
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)).run()
 
-    with pytest.raises(ResponseFailureError, match="More coin IDs specified than desired number of coins to combine"):
+    with pytest.raises(ValueError, match="More coin IDs specified than desired number of coins to combine"):
         await dataclasses.replace(xch_combine_request, input_coins=(bytes32.zeros,) * 100).run()
 
     # We catch this one
