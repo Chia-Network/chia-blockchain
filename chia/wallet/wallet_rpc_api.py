@@ -1397,57 +1397,13 @@ class WalletRpcApi:
     async def split_coins(
         self, request: SplitCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> SplitCoinsResponse:
-        if request.number_of_coins > 500:
-            raise ValueError(f"{request.number_of_coins} coins is greater then the maximum limit of 500 coins.")
-
-        optional_coin = await self.service.wallet_state_manager.coin_store.get_coin_record(request.target_coin_id)
-        if optional_coin is None:
-            raise ValueError(f"Could not find coin with ID {request.target_coin_id}")
-        else:
-            coin = optional_coin.coin
-
-        total_amount = request.amount_per_coin * request.number_of_coins
-
-        if coin.amount < total_amount:
-            raise ValueError(
-                f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}, exiting."
-            )
-
-        if request.wallet_id not in self.service.wallet_state_manager.wallets:
-            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
-        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
-        if not isinstance(wallet, (Wallet, CATWallet)):
-            raise ValueError("Cannot split coins from non-fungible wallet types")
-
-        outputs = [
-            CreateCoin(
-                await action_scope.get_puzzle_hash(
-                    self.service.wallet_state_manager, override_reuse_puzhash_with=False
-                ),
-                request.amount_per_coin,
-            )
-            for _ in range(request.number_of_coins)
-        ]
-        if len(outputs) == 0:
-            return SplitCoinsResponse([], [])
-
-        if wallet.type() == WalletType.STANDARD_WALLET and coin.amount < total_amount + request.fee:
-            async with action_scope.use() as interface:
-                interface.side_effects.selected_coins.append(coin)
-            coins = await wallet.select_coins(
-                uint64(total_amount + request.fee - coin.amount),
-                action_scope,
-            )
-            coins.add(coin)
-        else:
-            coins = {coin}
-
-        await wallet.generate_signed_transaction(
-            [output.amount for output in outputs],
-            [output.puzzle_hash for output in outputs],
-            action_scope,
-            request.fee,
-            coins=coins,
+        await self.service.wallet_state_manager.split_coins(
+            action_scope=action_scope,
+            wallet_id=request.wallet_id,
+            target_coin_id=request.target_coin_id,
+            amount_per_coin=request.amount_per_coin,
+            number_of_coins=request.number_of_coins,
+            fee=request.fee,
             extra_conditions=extra_conditions,
         )
 

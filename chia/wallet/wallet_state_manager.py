@@ -2823,3 +2823,59 @@ class WalletStateManager:
             memos=compute_memos(spend_bundle),
             valid_times=parse_timelock_info(extra_conditions),
         )
+
+    async def split_coins(
+        self,
+        *,
+        action_scope: WalletActionScope,
+        wallet_id: uint32,
+        target_coin_id: bytes32,
+        amount_per_coin: uint64,
+        number_of_coins: uint16,
+        fee: uint64,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> None:
+        optional_coin = await self.coin_store.get_coin_record(target_coin_id)
+        if optional_coin is None:
+            raise ValueError(f"Could not find coin with ID {target_coin_id}")
+        else:
+            coin = optional_coin.coin
+
+        total_amount = amount_per_coin * number_of_coins
+
+        if coin.amount < total_amount:
+            raise ValueError(f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}.")
+
+        if wallet_id not in self.wallets:
+            raise ValueError(f"Wallet with ID {wallet_id} does not exist")
+        wallet = self.wallets[wallet_id]
+        if not isinstance(wallet, (Wallet, CATWallet)):
+            raise ValueError("Cannot split coins from non-fungible wallet types")
+
+        outputs = [
+            CreateCoin(
+                await action_scope.get_puzzle_hash(self, override_reuse_puzhash_with=False),
+                amount_per_coin,
+            )
+            for _ in range(number_of_coins)
+        ]
+
+        if wallet.type() == WalletType.STANDARD_WALLET and coin.amount < total_amount + fee:
+            async with action_scope.use() as interface:
+                interface.side_effects.selected_coins.append(coin)
+            coins = await wallet.select_coins(
+                uint64(total_amount + fee - coin.amount),
+                action_scope,
+            )
+            coins.add(coin)
+        else:
+            coins = {coin}
+
+        await wallet.generate_signed_transaction(
+            [output.amount for output in outputs],
+            [output.puzzle_hash for output in outputs],
+            action_scope,
+            fee,
+            coins=coins,
+            extra_conditions=extra_conditions,
+        )

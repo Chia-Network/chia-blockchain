@@ -1402,6 +1402,12 @@ class SplitCoins(TransactionEndpointRequest):
     amount_per_coin: uint64 = field(default_factory=default_raise)
     target_coin_id: bytes32 = field(default_factory=default_raise)
 
+    def __post_init__(self) -> None:
+        if self.number_of_coins > 500:
+            raise ValueError(f"{self.number_of_coins} coins is greater then the maximum limit of 500 coins.")
+        if self.number_of_coins == 0:
+            raise ValueError("Cannot split into 0 new coins")
+
 
 @streamable
 @dataclass(frozen=True)
