@@ -53,7 +53,7 @@ jobs:
       matrix:
         python-version: ["3.12"]
         os:
-          - runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
+          - runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
             arch-artifact-name: intel
@@ -296,7 +296,7 @@ jobs:
           - name: 13
             matrix: 13
             runs-on:
-              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
+              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
           - name: 14
             matrix: 14
             runs-on:
