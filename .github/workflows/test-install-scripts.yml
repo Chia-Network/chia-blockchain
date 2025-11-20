@@ -44,7 +44,7 @@ jobs:
             emoji: 🍎
             runs-on:
               arm: macos-15
-              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-13' }}
+              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
             matrix: macos
           - name: Windows
             emoji: 🪟
