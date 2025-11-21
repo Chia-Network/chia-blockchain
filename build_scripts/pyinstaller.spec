@@ -146,10 +146,14 @@ def add_binary(name, path_to_script, collect_args):
 
     binary_pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=block_cipher)
 
+    options = [
+        ('X utf8_mode=1', None, 'OPTION),  # force UTF-8 mode on
+    ]
+
     binary_exe = EXE(
         binary_pyz,
         analysis.scripts,
-        [],
+        options,
         exclude_binaries=True,
         name=name,
         debug=False,
