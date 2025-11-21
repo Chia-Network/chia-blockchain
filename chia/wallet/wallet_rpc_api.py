@@ -2907,12 +2907,9 @@ class WalletRpcApi:
     async def nft_count_nfts(self, request: NFTCountNFTs) -> NFTCountNFTsResponse:
         count = 0
         if request.wallet_id is not None:
-            try:
-                nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
-            except KeyError:
-                # wallet not found
-                raise ValueError(f"Wallet {request.wallet_id} not found.")
-            count = await nft_wallet.get_nft_count()
+            count = await self.service.wallet_state_manager.get_wallet(
+                id=request.wallet_id, required_type=NFTWallet
+            ).get_nft_count()
         else:
             count = await self.service.wallet_state_manager.nft_store.count()
         return NFTCountNFTsResponse(request.wallet_id, uint64(count))
