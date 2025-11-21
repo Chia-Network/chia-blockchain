@@ -849,7 +849,7 @@ async def test_cat_wallet_conversion(
 
     # Key point of test: create a normal CAT wallet first, and see if it gets converted to CR-CAT wallet
     await CATWallet.get_or_create_wallet_for_cat(
-        wallet_node_0.wallet_state_manager, wallet_0, Program.NIL.get_tree_hash().hex()
+        wallet_node_0.wallet_state_manager, wallet_0, Program.NIL.get_tree_hash()
     )
 
     did_id = bytes32.zeros

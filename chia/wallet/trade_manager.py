@@ -504,7 +504,7 @@ class TradeManager:
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 assert isinstance(wallet, CATWallet)
-                                asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                                asset_id = wallet.get_asset_id()
                                 memos = [p2_ph]
                             else:
                                 raise ValueError(
@@ -512,7 +512,7 @@ class TradeManager:
                                 )
                     else:
                         asset_id = id
-                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
                         memos = [p2_ph]
                     requested_payments[asset_id] = [CreateCoin(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
@@ -523,14 +523,14 @@ class TradeManager:
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 assert isinstance(wallet, CATWallet)
-                                asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                                asset_id = wallet.get_asset_id()
                             else:
                                 raise ValueError(
                                     f"Cannot offer assets from wallet id {wallet.id()} without more information"
                                 )
                     else:
                         asset_id = id
-                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
                     assert wallet is not None
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
@@ -605,7 +605,7 @@ class TradeManager:
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets.get(uint32(id))
                 else:
-                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
+                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id)
                 async with self.wallet_state_manager.new_action_scope(
                     action_scope.config.tx_config, push=False
                 ) as inner_action_scope:
@@ -830,7 +830,7 @@ class TradeManager:
                 key: bytes32 | int = int(wallet.id())
             else:
                 # ATTENTION: new wallets
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
                 if wallet is None and amount < 0:
                     raise ValueError(f"Do not have a wallet for asset ID: {asset_id} to fulfill offer")
                 elif wallet is None or wallet.type() in {WalletType.NFT, WalletType.DATA_LAYER}:

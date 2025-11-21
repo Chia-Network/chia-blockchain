@@ -95,8 +95,8 @@ class CATWallet:
     wallet_info_type: ClassVar[type[CATInfo]] = CATInfo
 
     @staticmethod
-    def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
-        return f"CAT {limitations_program_hash_hex[:16]}..."
+    def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
+        return f"CAT {limitations_program_hash.hex()[:16]}..."
 
     @staticmethod
     async def create_new_cat_wallet(
@@ -152,7 +152,7 @@ class CATWallet:
         # since we didn't yet know the TAIL. Now we know the TAIL, we can update the name
         # according to the template name for unknown/new CATs.
         if original_name is None:
-            name = self.default_wallet_name_for_unknown_cat(self.cat_info.limitations_program_hash.hex())
+            name = self.default_wallet_name_for_unknown_cat(self.cat_info.limitations_program_hash)
             await self.set_name(name)
 
         # Change and actual CAT coin
@@ -200,30 +200,27 @@ class CATWallet:
         cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        limitations_program_hash_hex: str,
+        limitations_program_hash: bytes32,
         name: str | None = None,
     ) -> Self:
         self = cls()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
-        limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
-
         for id, w in wallet_state_manager.wallets.items():
             if w.type() == cls.type():
                 assert isinstance(w, cls)
-                if w.get_asset_id() == limitations_program_hash_hex:
+                if w.get_asset_id() == limitations_program_hash:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
                     return w
 
         self.wallet_state_manager = wallet_state_manager
-        if limitations_program_hash_hex in DEFAULT_CATS:
-            cat_info = DEFAULT_CATS[limitations_program_hash_hex]
+        if limitations_program_hash.hex() in DEFAULT_CATS:
+            cat_info = DEFAULT_CATS[limitations_program_hash.hex()]
             name = cat_info["name"]
         elif name is None:
-            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
+            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash)
 
-        limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
         self.cat_info = cls.wallet_info_type(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, self.wallet_type, info_as_string)
@@ -274,7 +271,7 @@ class CATWallet:
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
-            puzzle_driver["tail"].hex(),
+            puzzle_driver["tail"],
             name,
         )
 
@@ -356,8 +353,8 @@ class CATWallet:
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    def get_asset_id(self) -> str:
-        return bytes(self.cat_info.limitations_program_hash).hex()
+    def get_asset_id(self) -> bytes32:
+        return self.cat_info.limitations_program_hash
 
     async def coin_added(
         self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: CATCoinData | None
@@ -821,12 +818,12 @@ class CATWallet:
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
             AssetType(puzzle_driver.type()) == AssetType.CAT
-            and puzzle_driver["tail"] == bytes.fromhex(self.get_asset_id())
+            and puzzle_driver["tail"] == self.get_asset_id()
             and puzzle_driver.also() is None
         )
 
     async def get_puzzle_info(self, asset_id: bytes32) -> PuzzleInfo:
-        return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
+        return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id().hex()})
 
     async def get_coins_to_offer(
         self,

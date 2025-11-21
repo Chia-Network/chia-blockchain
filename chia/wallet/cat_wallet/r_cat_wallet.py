@@ -71,8 +71,8 @@ class RCATWallet(CATWallet):
     create_new_cat_wallet = None  # type: ignore[assignment]
 
     @staticmethod
-    def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
-        return f"Revocable-CAT {limitations_program_hash_hex[:16]}..."
+    def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
+        return f"Revocable-CAT {limitations_program_hash.hex()[:16]}..."
 
     # We need to override this with a different signature.
     # It's not immediately clear what is proper here, likely needs a bit of a refactor.
@@ -81,7 +81,7 @@ class RCATWallet(CATWallet):
         cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        limitations_program_hash_hex: str,
+        limitations_program_hash: bytes32,
         hidden_puzzle_hash: bytes32,
         name: str | None = None,
     ) -> Self:
@@ -89,23 +89,20 @@ class RCATWallet(CATWallet):
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
-        limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
-
         for id, w in wallet_state_manager.wallets.items():
             if w.type() == cls.type():
                 assert isinstance(w, cls)
-                if w.get_asset_id() == limitations_program_hash_hex:
+                if w.get_asset_id() == limitations_program_hash:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
                     return w
 
         self.wallet_state_manager = wallet_state_manager
-        if limitations_program_hash_hex in DEFAULT_CATS:
-            cat_info = DEFAULT_CATS[limitations_program_hash_hex]
+        if limitations_program_hash.hex() in DEFAULT_CATS:
+            cat_info = DEFAULT_CATS[limitations_program_hash.hex()]
             name = cat_info["name"]
         elif name is None:
-            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
+            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash)
 
-        limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
         self.cat_info = cls.wallet_info_type(limitations_program_hash, None, hidden_puzzle_hash)
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, cls.wallet_type, info_as_string)
@@ -150,7 +147,7 @@ class RCATWallet(CATWallet):
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
-            puzzle_driver["tail"].hex(),
+            puzzle_driver["tail"],
             bytes32(rev_layer["hidden_puzzle_hash"]),
             name,
         )
@@ -247,7 +244,7 @@ class RCATWallet(CATWallet):
         return PuzzleInfo(
             {
                 "type": AssetType.CAT.value,
-                "tail": "0x" + self.get_asset_id(),
+                "tail": "0x" + self.get_asset_id().hex(),
                 "also": {
                     "type": AssetType.REVOCATION_LAYER.value,
                     "hidden_puzzle_hash": "0x" + self.cat_info.hidden_puzzle_hash.hex(),

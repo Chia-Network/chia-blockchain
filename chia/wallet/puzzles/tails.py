@@ -98,7 +98,7 @@ class GenesisById(LimitationsProgram):
         tail: Program = cls.construct([Program.to(origin_id)])
 
         wallet.lineage_store = await CATLineageStore.create(
-            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash()
         )
         await wallet.add_lineage(origin_id, LineageProof())
 

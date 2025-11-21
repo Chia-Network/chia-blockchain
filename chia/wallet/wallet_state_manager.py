@@ -1214,7 +1214,7 @@ class WalletStateManager:
                     cat_wallet: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
-                        crcat.tail_hash.hex(),
+                        crcat.tail_hash,
                         authorized_providers=crcat.authorized_providers,
                         proofs_checker=ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
                     )
@@ -1222,20 +1222,20 @@ class WalletStateManager:
                     cat_wallet = await RCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
-                        parent_data.tail_program_hash.hex(),
+                        parent_data.tail_program_hash,
                         # too complicated for mypy but semantics guarantee this not to be None
                         hidden_puzzle_hash=revocation_layer_match[0],  # type: ignore[index]
                     )
                 else:
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
-                        self, self.main_wallet, parent_data.tail_program_hash.hex()
+                        self, self.main_wallet, parent_data.tail_program_hash
                     )
                 return WalletIdentifier.create(cat_wallet)
             else:
                 # Found unacknowledged CAT, save it in the database.
                 await self.interested_store.add_unacknowledged_token(
                     asset_id,
-                    CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
+                    CATWallet.default_wallet_name_for_unknown_cat(asset_id),
                     None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
                     parent_coin_state.coin.puzzle_hash,
                 )
@@ -2455,7 +2455,7 @@ class WalletStateManager:
     async def get_all_wallet_info_entries(self, wallet_type: WalletType | None = None) -> list[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
-    async def get_wallet_for_asset_id(self, asset_id: str) -> WalletProtocol[Any] | None:
+    async def get_wallet_for_asset_id(self, asset_id: bytes32) -> WalletProtocol[Any] | None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
                 assert isinstance(wallet, CATWallet)
@@ -2463,11 +2463,11 @@ class WalletStateManager:
                     return wallet
             elif wallet.type() == WalletType.DATA_LAYER:
                 assert isinstance(wallet, DataLayerWallet)
-                if await wallet.get_latest_singleton(bytes32.from_hexstr(asset_id)) is not None:
+                if await wallet.get_latest_singleton(asset_id) is not None:
                     return wallet
             elif wallet.type() == WalletType.NFT:
                 assert isinstance(wallet, NFTWallet)
-                nft_coin = await self.nft_store.get_nft_by_id(bytes32.from_hexstr(asset_id), wallet_id)
+                nft_coin = await self.nft_store.get_nft_by_id(asset_id, wallet_id)
                 if nft_coin:
                     return wallet
         return None
