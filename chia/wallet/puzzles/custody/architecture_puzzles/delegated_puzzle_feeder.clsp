@@ -1,0 +1,20 @@
+(mod
+  (
+    INNER_PUZZLE
+    delegated_puzzle
+    delegated_solution
+    .
+    inner_solution
+  )
+
+  (include sha256tree.clib)
+
+  (defun merge_list (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge_list (r list_a) list_b))
+        list_b
+    )
+  )
+
+  (merge_list (a INNER_PUZZLE (c (sha256tree delegated_puzzle) inner_solution)) (a delegated_puzzle delegated_solution))
+)
