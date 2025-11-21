@@ -72,6 +72,25 @@ def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
     return True
 
 
+def num_phase_out_epochs(constants: ConsensusConstants) -> int:
+    """
+    The number of phase-out epochs is always a power-of-two minus 1. i.e. it
+    will also be a mask for the hash of the proof we're checking for phase-out.
+    Since the hash of the proof are random bits, the simplest check is just to
+    mask and compare the resulting value against the phase-out count down.
+    """
+    return (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) - 1
+
+
+def v1_cut_off_height(constants: ConsensusConstants) -> int:
+    """
+    returns the height where v1 proofs-of-space are no longer valid. Blocks
+    whose previous transaction block is equal to or higher than this may not have a
+    v1 proof.
+    """
+    return constants.HARD_FORK2_HEIGHT + num_phase_out_epochs(constants) * constants.EPOCH_BLOCKS
+
+
 def is_v1_phased_out(
     proof: bytes,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
@@ -83,23 +102,20 @@ def is_v1_phased_out(
     # This is a v1 plot and the phase-out period has started
     # The probability of having been phased out is proportional on the
     # number of epochs since hard fork activation
-    phase_out_epoch_bits = constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
-    phase_out_epoch_mask = (1 << phase_out_epoch_bits) - 1
+    phase_out_epoch_mask = num_phase_out_epochs(constants)
 
     # we just look at one byte so the mask can't be bigger than that
     assert phase_out_epoch_mask < 256
 
     # this counter is counting down to zero
-    epoch_counter = (1 << phase_out_epoch_bits) - (
-        prev_transaction_block_height - constants.HARD_FORK2_HEIGHT
-    ) // constants.EPOCH_BLOCKS
+    epoch_counter = (v1_cut_off_height(constants) - prev_transaction_block_height) // constants.EPOCH_BLOCKS
 
     # if we're past the phase-out, v1 plots are unconditionally invalid
-    if epoch_counter <= 0:
+    if epoch_counter < 0:
         return True
 
     proof_value = std_hash(proof + b"chia proof-of-space v1 phase-out")[0] & phase_out_epoch_mask
-    return proof_value > epoch_counter
+    return proof_value >= epoch_counter
 
 
 def verify_and_get_quality_string(

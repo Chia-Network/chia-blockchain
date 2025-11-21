@@ -32,6 +32,7 @@ from chia.types.blockchain_format.proof_of_space import (
     is_v1_phased_out,
     make_pos,
     passes_plot_filter,
+    v1_cut_off_height,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -297,7 +298,7 @@ class HarvesterAPI:
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
 
-                                if is_v1_phased_out(proof_xs, new_challenge.last_tx_height, constants):
+                                if is_v1_phased_out(proof_xs, new_challenge.last_tx_height, self.harvester.constants):
                                     self.harvester.log.info(
                                         f"Proof dropped due to hard fork phase-out of v1 plots: {filename}"
                                     )
@@ -411,13 +412,8 @@ class HarvesterAPI:
                     )
                     passed += 1
                 else:
-                    constants = self.harvester.constants
                     # after the phase-out, ignore v1 plots
-                    if (
-                        new_challenge.last_tx_height
-                        >= constants.HARD_FORK2_HEIGHT
-                        + (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) * constants.EPOCH_BLOCKS
-                    ):
+                    if new_challenge.last_tx_height >= v1_cut_off_height(self.harvester.constants):
                         continue
 
                     passed += 1
