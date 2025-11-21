@@ -110,7 +110,9 @@ async def test_request_block_headers(
     assert [x.transactions_filter for x in bh] == [b"\x00"] * 6
 
     num_blocks = 20
-    new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks, pool_reward_puzzle_hash=ph)
+    new_blocks = bt.get_consecutive_blocks(
+        num_blocks, block_list_input=default_400_blocks, farmer_reward_puzzle_hash=ph
+    )
     await add_blocks_in_batches(new_blocks, full_node_api.full_node)
     msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(uint32(110), uint32(115), True))
     assert msg is not None

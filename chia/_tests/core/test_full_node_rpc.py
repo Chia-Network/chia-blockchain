@@ -9,6 +9,7 @@ from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
+from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
@@ -763,7 +764,6 @@ async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=ph,
-            pool_reward_puzzle_hash=ph,
         )
         for block in blocks[-2:]:
             await full_node_api.full_node.add_block(block)
@@ -771,7 +771,7 @@ async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices
         # empty mempool
         assert len(await client.get_all_mempool_items()) == 0
 
-        coin_to_spend = blocks[-1].get_included_reward_coins()[0]
+        coin_to_spend = find_reward_coin(blocks[-1], ph)
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
         await client.push_tx(spend_bundle)
 
