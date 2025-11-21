@@ -258,8 +258,8 @@ async def get_transactions(
             await wallet_client.get_transactions(
                 GetTransactions(
                     uint32(wallet_id),
-                    start=uint16(offset),
-                    end=uint16(offset + limit),
+                    start=uint32(offset),
+                    end=uint32(offset + limit),
                     sort_key=sort_key.name,
                     reverse=reverse,
                     type_filter=type_filter,

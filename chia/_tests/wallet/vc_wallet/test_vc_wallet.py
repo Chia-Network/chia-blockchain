@@ -463,8 +463,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         await client_1.get_transactions(
             GetTransactions(
                 uint32(env_1.dealias_wallet_id("crcat")),
-                uint16(0),
-                uint16(1),
+                uint32(0),
+                uint32(1),
                 reverse=True,
                 type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
             )

@@ -234,8 +234,8 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     expected_calls: logType = {
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "get_transactions": [
-            (GetTransactions(uint32(1), uint16(2), uint16(4), SortKey.RELEVANCE.name, True, None, None, None),),
-            (GetTransactions(uint32(1), uint16(2), uint16(4), SortKey.RELEVANCE.name, True, None, None, None),),
+            (GetTransactions(uint32(1), uint32(2), uint32(4), SortKey.RELEVANCE.name, True, None, None, None),),
+            (GetTransactions(uint32(1), uint32(2), uint32(4), SortKey.RELEVANCE.name, True, None, None, None),),
         ],
         "get_coin_records": [
             (GetCoinRecords(coin_id_filter=HashFilter.include([expected_coin_id])),),

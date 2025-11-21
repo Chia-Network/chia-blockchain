@@ -272,8 +272,8 @@ class GetTransactionResponse(Streamable):
 @dataclass(frozen=True)
 class GetTransactions(Streamable):
     wallet_id: uint32
-    start: uint16 | None = None
-    end: uint16 | None = None
+    start: uint32 | None = None
+    end: uint32 | None = None
     sort_key: str | None = None
     reverse: bool = False
     to_address: str | None = None
