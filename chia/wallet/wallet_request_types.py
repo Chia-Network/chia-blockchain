@@ -2012,8 +2012,25 @@ class GetAllOffersResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CancelOffer(TransactionEndpointRequest):
+    trade_id: bytes32 = field(default_factory=default_raise)
+    secure: bool = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
+
+
+@streamable
+@dataclass(frozen=True)
+class CancelOffers(TransactionEndpointRequest):
+    secure: bool = field(default_factory=default_raise)
+    batch_fee: uint64 = uint64(0)
+    batch_size: uint16 = uint16(5)
+    cancel_all: bool = False
+    asset_id: str = "xch"
 
 
 @streamable

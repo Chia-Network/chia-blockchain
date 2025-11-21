@@ -111,6 +111,10 @@ from chia.wallet.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
     BalanceResponse,
+    CancelOffer,
+    CancelOfferResponse,
+    CancelOffers,
+    CancelOffersResponse,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
     CATGetAssetID,
@@ -2389,41 +2393,40 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def cancel_offer(
         self,
-        request: dict[str, Any],
+        request: CancelOffer,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CancelOfferResponse:
         wsm = self.service.wallet_state_manager
-        secure = request["secure"]
-        trade_id = bytes32.from_hexstr(request["trade_id"])
-        fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
             await wsm.trade_manager.cancel_pending_offers(
-                [trade_id], action_scope, fee=fee, secure=secure, extra_conditions=extra_conditions
+                [request.trade_id],
+                action_scope,
+                fee=request.fee,
+                secure=request.secure,
+                extra_conditions=extra_conditions,
             )
 
-        return {"transactions": None}  # tx_endpoint wrapper will take care of this
+        return CancelOfferResponse([], [])  # tx_endpoint will fill in default values here
 
     @tx_endpoint(push=True, merge_spends=False)
+    @marshal
     async def cancel_offers(
         self,
-        request: dict[str, Any],
+        request: CancelOffers,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
-        secure = request["secure"]
-        batch_fee: uint64 = uint64(request.get("batch_fee", 0))
-        batch_size = request.get("batch_size", 5)
-        cancel_all = request.get("cancel_all", False)
-        if cancel_all:
-            asset_id = None
+    ) -> CancelOffersResponse:
+        if request.cancel_all:
+            asset_id: str | None = None
         else:
-            asset_id = request.get("asset_id", "xch")
+            asset_id = request.asset_id
 
         start: int = 0
-        end: int = start + batch_size
+        end: int = start + request.batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
         log.info(f"Start cancelling offers for  {'asset_id: ' + asset_id if asset_id is not None else 'all'} ...")
         # Traverse offers page by page
@@ -2441,7 +2444,7 @@ class WalletRpcApi:
                 include_completed=False,
             )
             for trade in trades:
-                if cancel_all:
+                if request.cancel_all:
                     records[trade.trade_id] = trade
                     continue
                 if trade.offer and trade.offer != b"":
@@ -2457,20 +2460,20 @@ class WalletRpcApi:
                 await trade_mgr.cancel_pending_offers(
                     list(records.keys()),
                     action_scope,
-                    batch_fee,
-                    secure,
+                    request.batch_fee,
+                    request.secure,
                     records,
                     extra_conditions=extra_conditions,
                 )
 
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
-            if len(trades) < batch_size:
+            if len(trades) < request.batch_size:
                 break
             start = end
-            end += batch_size
+            end += request.batch_size
 
-        return {"transactions": None}  # tx_endpoint wrapper will take care of this
+        return CancelOffersResponse([], [])  # tx_endpoint wrapper will take care of this
 
     ##########################################################################################
     # Distributed Identities
