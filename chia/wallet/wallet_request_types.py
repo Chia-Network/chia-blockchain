@@ -1430,7 +1430,7 @@ class CombineCoins(TransactionEndpointRequest):
             raise ValueError(
                 f"{self.number_of_coins} coins is greater then the maximum limit of {self.coin_num_limit} coins."
             )
-        if self.number_of_coins < 1:
+        if self.number_of_coins < 2:
             raise ValueError("You need at least two coins to combine")
         if len(self.target_coin_ids) > self.number_of_coins:
             raise ValueError("More coin IDs specified than desired number of coins to combine")
