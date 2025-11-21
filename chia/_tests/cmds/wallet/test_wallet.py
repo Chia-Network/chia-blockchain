@@ -56,10 +56,14 @@ from chia.wallet.wallet_request_types import (
     ExtendDerivationIndex,
     ExtendDerivationIndexResponse,
     FungibleAsset,
+    GetAllOffers,
+    GetAllOffersResponse,
     GetCurrentDerivationIndexResponse,
     GetHeightInfoResponse,
     GetNextAddress,
     GetNextAddressResponse,
+    GetOffer,
+    GetOfferResponse,
     GetTransaction,
     GetTransactions,
     GetTransactionsResponse,
@@ -946,32 +950,22 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
     # set RPC Client
     class GetOffersRpcClient(TestWalletRpcClient):
-        async def get_all_offers(
-            self,
-            start: int = 0,
-            end: int = 50,
-            sort_key: str | None = None,
-            reverse: bool = False,
-            file_contents: bool = False,
-            exclude_my_offers: bool = False,
-            exclude_taken_offers: bool = False,
-            include_completed: bool = False,
-        ) -> list[TradeRecord]:
+        async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
             self.add_to_log(
                 "get_all_offers",
                 (
-                    start,
-                    end,
-                    sort_key,
-                    reverse,
-                    file_contents,
-                    exclude_my_offers,
-                    exclude_taken_offers,
-                    include_completed,
+                    request.start,
+                    request.end,
+                    request.sort_key,
+                    request.reverse,
+                    request.file_contents,
+                    request.exclude_my_offers,
+                    request.exclude_taken_offers,
+                    request.include_completed,
                 ),
             )
             records: list[TradeRecord] = []
-            for i in reversed(range(start, end - 1)):  # reversed to match the sort order
+            for i in reversed(range(request.start, request.end - 1)):  # reversed to match the sort order
                 trade_offer = TradeRecord(
                     confirmed_at_index=uint32(0),
                     accepted_at_time=None,
@@ -995,7 +989,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                     ),
                 )
                 records.append(trade_offer)
-            return records
+            return GetAllOffersResponse([], records)
 
     inst_rpc_client = GetOffersRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -1163,22 +1157,25 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
 
     # set RPC Client
     class CancelOfferRpcClient(TestWalletRpcClient):
-        async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
-            self.add_to_log("get_offer", (trade_id, file_contents))
+        async def get_offer(self, request: GetOffer) -> GetOfferResponse:
+            self.add_to_log("get_offer", (request.trade_id, request.file_contents))
             offer = Offer.from_bech32(test_offer_file_bech32)
-            return TradeRecord(
-                confirmed_at_index=uint32(0),
-                accepted_at_time=uint64(0),
-                created_at_time=uint64(12345678),
-                is_my_offer=True,
-                sent=uint32(0),
-                sent_to=[],
-                offer=bytes(offer),
-                taken_offer=None,
-                coins_of_interest=offer.get_involved_coins(),
-                trade_id=offer.name(),
-                status=uint32(TradeStatus.PENDING_ACCEPT.value),
-                valid_times=ConditionValidTimes(),
+            return GetOfferResponse(
+                test_offer_file_bech32,
+                TradeRecord(
+                    confirmed_at_index=uint32(0),
+                    accepted_at_time=uint64(0),
+                    created_at_time=uint64(12345678),
+                    is_my_offer=True,
+                    sent=uint32(0),
+                    sent_to=[],
+                    offer=bytes(offer),
+                    taken_offer=None,
+                    coins_of_interest=offer.get_involved_coins(),
+                    trade_id=offer.name(),
+                    status=uint32(TradeStatus.PENDING_ACCEPT.value),
+                    valid_times=ConditionValidTimes(),
+                ),
             )
 
         async def cancel_offer(

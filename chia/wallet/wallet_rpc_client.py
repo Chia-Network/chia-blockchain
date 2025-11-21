@@ -10,8 +10,6 @@ from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.tx_config import TXConfig
@@ -97,6 +95,8 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetAllOffers,
+    GetAllOffersResponse,
     GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
@@ -107,6 +107,8 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffer,
+    GetOfferResponse,
     GetOffersCountResponse,
     GetOfferSummary,
     GetOfferSummaryResponse,
@@ -702,45 +704,11 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
-        res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        offer_str = bytes(Offer.from_bech32(res["offer"])).hex() if file_contents else ""
-        return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
+    async def get_offer(self, request: GetOffer) -> GetOfferResponse:
+        return GetOfferResponse.from_json_dict(await self.fetch("get_offer", request.to_json_dict()))
 
-    async def get_all_offers(
-        self,
-        start: int = 0,
-        end: int = 50,
-        sort_key: str | None = None,
-        reverse: bool = False,
-        file_contents: bool = False,
-        exclude_my_offers: bool = False,
-        exclude_taken_offers: bool = False,
-        include_completed: bool = False,
-    ) -> list[TradeRecord]:
-        res = await self.fetch(
-            "get_all_offers",
-            {
-                "start": start,
-                "end": end,
-                "sort_key": sort_key,
-                "reverse": reverse,
-                "file_contents": file_contents,
-                "exclude_my_offers": exclude_my_offers,
-                "exclude_taken_offers": exclude_taken_offers,
-                "include_completed": include_completed,
-            },
-        )
-
-        records = []
-        if file_contents:
-            optional_offers = [bytes(Offer.from_bech32(o)).hex() for o in res["offers"]]
-        else:
-            optional_offers = [""] * len(res["trade_records"])
-        for record, offer in zip(res["trade_records"], optional_offers):
-            records.append(TradeRecord.from_json_dict_convenience(record, offer))
-
-        return records
+    async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
+        return GetAllOffersResponse.from_json_dict(await self.fetch("get_all_offers", request.to_json_dict()))
 
     async def get_offers_count(self) -> GetOffersCountResponse:
         return GetOffersCountResponse.from_json_dict(await self.fetch("get_offers_count", {}))

@@ -79,6 +79,7 @@ from chia.wallet.wallet_request_types import (
     DLUpdateMultiple,
     DLUpdateMultipleUpdates,
     DLUpdateRoot,
+    GetOffer,
     LauncherRootPair,
     LogIn,
     TakeOffer,
@@ -1280,7 +1281,9 @@ class DataLayer:
         store_ids: list[bytes32] = []
 
         if not secure:
-            trade_record = await self.wallet_rpc.get_offer(trade_id=trade_id, file_contents=True)
+            trade_record = (
+                await self.wallet_rpc.get_offer(GetOffer(trade_id=trade_id, file_contents=True))
+            ).trade_record
             trading_offer = TradingOffer.from_bytes(trade_record.offer)
             summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
             store_ids = [offered.launcher_id for offered in summary.offered]

@@ -1949,6 +1949,69 @@ class TakeOfferResponse(_OfferEndpointResponse):  # Inheriting for de-dup sake
 
 @streamable
 @dataclass(frozen=True)
+class GetOffer(Streamable):
+    trade_id: bytes32
+    file_contents: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetOfferResponse(Streamable):
+    offer: str | None
+    trade_record: TradeRecord
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {**super().to_json_dict(), "trade_record": self.trade_record.to_json_dict_convenience()}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            offer=json_dict["offer"],
+            trade_record=TradeRecord.from_json_dict_convenience(
+                json_dict["trade_record"],
+                bytes(Offer.from_bech32(json_dict["offer"])).hex() if json_dict["offer"] is not None else "",
+            ),
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAllOffers(Streamable):
+    start: uint16 = uint16(0)
+    end: uint16 = uint16(10)
+    exclude_my_offers: bool = False
+    exclude_taken_offers: bool = False
+    include_completed: bool = False
+    sort_key: str | None = None
+    reverse: bool = False
+    file_contents: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAllOffersResponse(Streamable):
+    offers: list[str] | None
+    trade_records: list[TradeRecord]
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {**super().to_json_dict(), "trade_records": [tr.to_json_dict_convenience() for tr in self.trade_records]}
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            offers=json_dict["offers"],
+            trade_records=[
+                TradeRecord.from_json_dict_convenience(
+                    json_tr,
+                    bytes(Offer.from_bech32(json_dict["offers"][i])).hex() if json_dict["offers"] is not None else "",
+                )
+                for i, json_tr in enumerate(json_dict["trade_records"])
+            ],
+        )
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
 
