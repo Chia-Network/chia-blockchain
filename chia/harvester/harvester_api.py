@@ -421,7 +421,6 @@ class HarvesterAPI:
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
-        time_taken = time.monotonic() - start
         total_proofs_found = 0
         total_v2_partial_proofs_found = 0
 
@@ -442,6 +441,7 @@ class HarvesterAPI:
                 else:
                     total_v2_partial_proofs_found = results[0]
 
+        time_taken = time.monotonic() - start
         now = uint64(time.time())
 
         farming_info = FarmingInfo(
