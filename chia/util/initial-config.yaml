@@ -655,7 +655,7 @@ solver:
   selected_network: *selected_network
 
   # Number of threads for solver operations
-  num_threads: 4
+  num_threads: 1
 
   # RPC server configuration
   rpc_port: 8667
