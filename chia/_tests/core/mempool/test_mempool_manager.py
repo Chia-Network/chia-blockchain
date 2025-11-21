@@ -278,11 +278,13 @@ async def setup_mempool_with_coins(
     max_block_clvm_cost: int | None = None,
     max_tx_clvm_cost: uint64 | None = None,
     mempool_block_buffer: int | None = None,
+    puzzle_hash: bytes32 = IDENTITY_PUZZLE_HASH,
+    height: uint32 = TEST_HEIGHT,
 ) -> tuple[MempoolManager, list[Coin]]:
     coins = []
     test_coin_records = {}
     for amount in coin_amounts:
-        coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, uint64(amount))
+        coin = Coin(bytes32.random(), puzzle_hash, uint64(amount))
         coins.append(coin)
         test_coin_records[coin.name()] = CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))
 
@@ -300,7 +302,7 @@ async def setup_mempool_with_coins(
     if mempool_block_buffer is not None:
         constants = constants.replace(MEMPOOL_BLOCK_BUFFER=uint8(mempool_block_buffer))
     mempool_manager = await instantiate_mempool_manager(
-        get_coin_records, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
+        get_coin_records, block_height=height, constants=constants, max_tx_clvm_cost=max_tx_clvm_cost
     )
     return (mempool_manager, coins)
 
@@ -3159,6 +3161,120 @@ def test_check_removals(case: CheckRemovalsCase) -> None:
     assert err == expected_err
     assert len(conflicts) == len(expected_conflicts)
     assert set(conflicts) == set(expected_conflicts)
+
+
+# this puzzle just creates coins, however many are requested by the solution
+# (mod (A)
+#    (defun loop (n)
+#        (if (= n 1)
+#            (list)
+#            (c (list 51 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff n) (loop (- n 1))))
+#    )
+#    (loop A)
+# )
+create_coins_loop: str = (
+    "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02"
+    "ffff03ffff09ff05ffff010180ff80ffff01ff04ffff04ffff0133ffff04ffff"
+    "01a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    "ffffffff04ff05ff80808080ffff02ff02ffff04ff02ffff04ffff11ff05ffff"
+    "010180ff808080808080ff0180ff018080"
+)
+
+# (mod (A)
+#   (defun loop (n)
+#     (if (= n 0) (list) (c n (loop (- n 1))))
+#   )
+#   (c (c 1 (loop A)) ())
+# )
+deep_recursion: str = (
+    "ff02ffff01ff04ffff04ffff0101ffff02ff02ffff04ff02ffff04ff05ff8080"
+    "808080ff8080ffff04ffff01ff02ffff03ffff09ff05ff8080ff80ffff01ff04"
+    "ff05ffff02ff02ffff04ff02ffff04ffff11ff05ffff010180ff808080808080"
+    "ff0180ff018080"
+)
+
+
+# this test uses artificial puzzles just to exercise the block creation. These
+# spends are expected not to verify any signatures
+# This is to keep the test simple.
+@pytest.mark.parametrize(
+    "puzzle, solution",
+    [
+        pytest.param(create_coins_loop, "ff8207d180", id="2000-coins"),
+        pytest.param(create_coins_loop, "ff8203e980", id="1000-coins"),
+        pytest.param(create_coins_loop, "ff8201f580", id="500 coins"),
+        pytest.param(deep_recursion, "ff830f424080", id="recurse-1000000"),
+        pytest.param(deep_recursion, "ff82271080", id="recurse-10000"),
+        pytest.param(deep_recursion, "ff6480", id="recurse-100"),
+    ],
+)
+@pytest.mark.parametrize("old", [True, False])
+@pytest.mark.anyio
+async def test_create_block_generator_custom_spend(
+    puzzle: str, solution: str, old: bool, softfork_height: uint32
+) -> None:
+    solution_str = SerializedProgram.fromhex(solution)
+    puzzle_reveal = SerializedProgram.fromhex(puzzle)
+    puzzle_hash = puzzle_reveal.get_tree_hash()
+
+    mempool_manager, coins = await setup_mempool_with_coins(
+        coin_amounts=list(range(100000000, 100000022)), puzzle_hash=puzzle_hash, height=softfork_height
+    )
+
+    spend_bundles = [
+        SpendBundle(
+            coin_spends=[CoinSpend(coin, puzzle_reveal=puzzle_reveal, solution=solution_str)],
+            aggregated_signature=G2Element(),
+        )
+        for coin in coins
+    ]
+
+    for sb in spend_bundles:
+        try:
+            conds2 = await mempool_manager.pre_validate_spendbundle(sb)
+            await mempool_manager.add_spend_bundle(sb, conds2, sb.name(), softfork_height)
+            invariant_check_mempool(mempool_manager.mempool)
+        except Exception as e:
+            print(f"not adding bundle: {e}")
+            # we don't expect this coin to be spent by the resulting generator
+            # so remove it from the list
+            for cs in sb.coin_spends:
+                coins.remove(cs.coin)
+
+    create_block = mempool_manager.create_block_generator if old else mempool_manager.create_block_generator2
+    assert mempool_manager.peak is not None
+    generator = create_block(mempool_manager.peak.header_hash, 10.0)
+
+    if len(coins) == 0:
+        assert generator is None
+    else:
+        assert generator is not None
+
+        assert generator.signature == G2Element()
+
+        removals = set(generator.removals)
+
+        err, conds = run_block_generator2(
+            bytes(generator.program),
+            generator.generator_refs,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            0,
+            generator.signature,
+            None,
+            DEFAULT_CONSTANTS,
+        )
+
+        assert err is None
+        assert conds is not None
+
+        assert len(conds.spends) == len(removals)
+
+        for spend in conds.spends:
+            removal = Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount))
+            assert removal in coins
+            assert removal in removals
+
+    invariant_check_mempool(mempool_manager.mempool)
 
 
 @pytest.mark.anyio
