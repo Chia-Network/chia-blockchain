@@ -80,6 +80,9 @@ class Timelord:
 
         _protocol_check: ClassVar[RpcServiceProtocol] = cast("Timelord", None)
 
+    unfinished_blocks: list[timelord_protocol.NewUnfinishedBlockTimelord]
+    overflow_blocks: list[timelord_protocol.NewUnfinishedBlockTimelord]
+
     @property
     def server(self) -> ChiaServer:
         # This is a stop gap until the class usage is refactored such the values of
