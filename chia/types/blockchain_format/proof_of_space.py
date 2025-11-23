@@ -46,7 +46,7 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
     plot_param = pos.param()
     if plot_param.strength_v2 is not None:
         assert pos.pool_contract_puzzle_hash is not None
-        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, plot_param.strength_v2)
+        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, uint8(plot_param.strength_v2))
 
     assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
     if pos.pool_public_key is None:
