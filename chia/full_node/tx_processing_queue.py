@@ -99,7 +99,7 @@ class TransactionQueue:
         self.peer_size_limit = peer_size_limit
         self.log = log
 
-    async def put(self, tx: TransactionQueueEntry, peer_id: bytes32 | None, high_priority: bool = False) -> None:
+    def put(self, tx: TransactionQueueEntry, peer_id: bytes32 | None, high_priority: bool = False) -> None:
         if peer_id is None or high_priority:  # when it's local there is no peer_id.
             self._high_priority_queue.put(tx)
         else:
