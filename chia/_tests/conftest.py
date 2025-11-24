@@ -478,7 +478,7 @@ def default_10000_blocks_compact(bt, consensus_mode):
 
 # Fixture for blocks with fork height = 0 (all blocks have new commitments)
 @pytest.fixture(scope="session")
-async def fork_height_zero_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+async def fork_height2_0_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
     """Creates 1000 blocks with HARD_FORK2_HEIGHT=0 so all blocks contain new commitments"""
     from chia._tests.util.blockchain import persistent_blocks
     from chia.simulator.block_tools import create_block_tools_async
@@ -486,10 +486,6 @@ async def fork_height_zero_1000_blocks(consensus_mode, get_keychain, anyio_backe
     # Create custom constants with HARD_FORK2_HEIGHT=0
     constants = test_constants.replace(
         HARD_FORK2_HEIGHT=uint32(0),
-        HARD_FORK_HEIGHT=uint32(2),
-        PLOT_FILTER_128_HEIGHT=uint32(10),
-        PLOT_FILTER_64_HEIGHT=uint32(15),
-        PLOT_FILTER_32_HEIGHT=uint32(20),
     )
 
     # Create custom block tools with these constants
@@ -504,7 +500,7 @@ async def fork_height_zero_1000_blocks(consensus_mode, get_keychain, anyio_backe
 
 # Fixture for blocks with fork height = 500 (transition from old to new commitments)
 @pytest.fixture(scope="session")
-async def fork_height_500_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
+async def fork_height2_500_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
     """Creates 1000 blocks with HARD_FORK2_HEIGHT=500 so fork activates mid-chain"""
     from chia._tests.util.blockchain import persistent_blocks
     from chia.simulator.block_tools import create_block_tools_async
@@ -512,10 +508,6 @@ async def fork_height_500_1000_blocks(consensus_mode, get_keychain, anyio_backen
     # Create custom constants with HARD_FORK2_HEIGHT=500
     constants = test_constants.replace(
         HARD_FORK2_HEIGHT=uint32(500),
-        HARD_FORK_HEIGHT=uint32(2),
-        PLOT_FILTER_128_HEIGHT=uint32(10),
-        PLOT_FILTER_64_HEIGHT=uint32(15),
-        PLOT_FILTER_32_HEIGHT=uint32(20),
     )
 
     # Create custom block tools with these constants

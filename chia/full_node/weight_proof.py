@@ -716,7 +716,13 @@ def _create_sub_epoch_data(
     #  New work difficulty and iterations per sub-slot
     sub_slot_iters = sub_epoch_summary.new_sub_slot_iters
     new_difficulty = sub_epoch_summary.new_difficulty
-    return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
+    return SubEpochData(
+        reward_chain_hash,
+        previous_sub_epoch_overflows,
+        sub_slot_iters,
+        new_difficulty,
+        sub_epoch_summary.challenge_merkle_root,
+    )
 
 
 async def _challenge_block_vdfs(
@@ -880,7 +886,7 @@ def _map_sub_epoch_summaries(
             data.num_blocks_overflow,
             data.new_difficulty,
             data.new_sub_slot_iters,
-            None,  # challenge_merkle_root not used in weight proof
+            data.challenge_merkle_root,
         )
 
         if idx < len(sub_epoch_data) - 1:
