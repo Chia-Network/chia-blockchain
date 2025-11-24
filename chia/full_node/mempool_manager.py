@@ -471,6 +471,12 @@ class MempoolManager:
         finally:
             self._worker_queue_size -= 1
 
+        if sbc.num_atoms > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
+            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many atoms")
+
+        if sbc.num_pairs > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
+            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many pairs")
+
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
 
