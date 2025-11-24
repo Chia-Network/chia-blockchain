@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from chia_rs import CoinRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
