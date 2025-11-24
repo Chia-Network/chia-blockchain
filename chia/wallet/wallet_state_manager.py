@@ -33,7 +33,7 @@ from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL, Program
+from chia.types.blockchain_format.program import Program
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
