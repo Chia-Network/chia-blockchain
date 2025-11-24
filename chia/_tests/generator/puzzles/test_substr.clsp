@@ -1,9 +1,12 @@
 (mod (args)
 
     (defun substr_loop (amount atom)
-        (substr_loop (substr atom (- amount 1)))
+        (if (= (strlen atom) 1)
+            0
+            (substr_loop (substr atom 1 (strlen atom)))
+        )
     )
 
     ; main
-    (r (c (substr_loop) (list (list 51 0x60bc5062a80c4363cbe881815300d349c5524d98e3502a016466d14d1f3f25d9 200))))
+    (r (c (substr_loop 0x7f7f7f7f7f7f7f7f7f) (list (list 51 0x60bc5062a80c4363cbe881815300d349c5524d98e3502a016466d14d1f3f25d9 200))))
 )
