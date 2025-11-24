@@ -526,6 +526,7 @@ class FullNodeStore:
                     blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash),
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
+                    sp_index=peak.signage_point_index,
                 )
 
                 if eos.challenge_chain.subepoch_summary_hash is None:

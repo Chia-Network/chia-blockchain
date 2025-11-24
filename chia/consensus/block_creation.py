@@ -552,9 +552,9 @@ def unfinished_block_to_full_block_with_mmr(
         sp_index=unfinished_block.reward_chain_block.signage_point_index,
         first_in_sub_slot=len(finished_sub_slots) > 0,
     )
-    # Before fork, use zeros for MMR root
+    # Before fork, use None for MMR root. At or after fork, compute it.
     header_mmr_root = None
-    if pre_sp_tx_height > constants.HARD_FORK2_HEIGHT:
+    if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
         header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
             prev_header_hash,
             unfinished_block.reward_chain_block.signage_point_index,

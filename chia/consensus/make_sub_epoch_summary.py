@@ -16,6 +16,7 @@ from chia.consensus.difficulty_adjustment import (
     get_next_sub_slot_iters_and_difficulty,
     height_can_be_first_in_epoch,
 )
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ def make_sub_epoch_summary(
     prev_prev_block: BlockRecord,
     new_difficulty: Optional[uint64],
     new_sub_slot_iters: Optional[uint64],
+    sp_index: uint8,
     prev_ses_block: Optional[BlockRecord] = None,
 ) -> SubEpochSummary:
     """
@@ -76,7 +78,14 @@ def make_sub_epoch_summary(
 
     # Only compute challenge merkle root after hard fork activation
     # Before fork, use None; after fork, compute actual root
-    if blocks_included_height >= constants.HARD_FORK2_HEIGHT:
+    prev_tx_block = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=prev_prev_block.prev_hash,
+        sp_index=sp_index,
+        first_in_sub_slot=True,
+    )
+    if prev_tx_block >= constants.HARD_FORK2_HEIGHT:
         challenge_root = compute_challenge_merkle_root(constants, blocks, blocks_included_height)
         log.debug(
             f"make_sub_epoch_summary: height={blocks_included_height} >= fork_height={constants.HARD_FORK2_HEIGHT}, "
@@ -232,4 +241,5 @@ def next_sub_epoch_summary(
         prev_b,
         next_difficulty,
         next_sub_slot_iters,
+        sp_index=block.reward_chain_block.signage_point_index,
     )
