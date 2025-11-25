@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import sys
 from io import TextIOWrapper
-from typing import Optional
 
 import click
 
@@ -31,9 +30,9 @@ def passphrase_cmd() -> None:
 @click.pass_context
 def set_cmd(
     ctx: click.Context,
-    passphrase_file: Optional[TextIOWrapper],
-    current_passphrase_file: Optional[TextIOWrapper],
-    hint: Optional[str],
+    passphrase_file: TextIOWrapper | None,
+    current_passphrase_file: TextIOWrapper | None,
+    hint: str | None,
 ) -> None:
     from chia.cmds.passphrase_funcs import (
         async_update_daemon_passphrase_cache_if_running,
@@ -43,7 +42,7 @@ def set_cmd(
     )
 
     success: bool = False
-    current_passphrase: Optional[str] = None
+    current_passphrase: str | None = None
     if current_passphrase_file is not None:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 
@@ -86,14 +85,14 @@ def set_cmd(
     "--current-passphrase-file", type=click.File("r"), help="File or descriptor to read the current passphrase from"
 )
 @click.pass_context
-def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapper]) -> None:
+def remove_cmd(ctx: click.Context, current_passphrase_file: TextIOWrapper | None) -> None:
     from chia.cmds.passphrase_funcs import (
         async_update_daemon_passphrase_cache_if_running,
         read_passphrase_from_file,
         remove_passphrase,
     )
 
-    current_passphrase: Optional[str] = None
+    current_passphrase: str | None = None
     if current_passphrase_file is not None:
         current_passphrase = read_passphrase_from_file(current_passphrase_file)
 

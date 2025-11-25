@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from bisect import bisect_left
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -454,7 +453,7 @@ class FeeTracker:
             self.fee_store,
             "long",
         )
-        fee_backup: Optional[FeeTrackerBackup] = self.fee_store.get_stored_fee_data()
+        fee_backup: FeeTrackerBackup | None = self.fee_store.get_stored_fee_data()
 
         if fee_backup is not None:
             self.first_recorded_height = fee_backup.first_recorded_height

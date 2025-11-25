@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import click
 
 from chia.cmds.cmd_classes import ChiaCliContext
@@ -24,7 +22,7 @@ def solver_cmd() -> None:
 @click.pass_context
 def get_state_cmd(
     ctx: click.Context,
-    solver_rpc_port: Optional[int],
+    solver_rpc_port: int | None,
 ) -> None:
     import asyncio
 

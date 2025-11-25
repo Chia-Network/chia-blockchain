@@ -12,7 +12,7 @@ import pathlib
 import ssl
 import subprocess
 import sys
-from collections.abc import Awaitable, Collection, Iterator
+from collections.abc import Awaitable, Callable, Collection, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
@@ -20,7 +20,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TextIO, TypeVar, Union, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TextIO, TypeVar, cast, final
 
 import aiohttp
 import pytest
@@ -88,7 +88,7 @@ class RuntimeResults:
     duration: float
     entry_file: str
     entry_line: int
-    overhead: Optional[float]
+    overhead: float | None
 
     def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
@@ -112,13 +112,13 @@ class AssertRuntimeResults:
     duration: float
     entry_file: str
     entry_line: int
-    overhead: Optional[float]
+    overhead: float | None
     limit: float
     ratio: float
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: Optional[float]
+        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: float | None
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -161,7 +161,7 @@ class AssertRuntimeResults:
 
 def measure_overhead(
     manager_maker: Callable[
-        [], contextlib.AbstractContextManager[Union[Future[RuntimeResults], Future[AssertRuntimeResults]]]
+        [], contextlib.AbstractContextManager[Future[RuntimeResults] | Future[AssertRuntimeResults]]
     ],
     cycles: int = 10,
 ) -> float:
@@ -183,7 +183,7 @@ def measure_runtime(
     label: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
-    overhead: Optional[float] = None,
+    overhead: float | None = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
     entry_file, entry_line = caller_file_and_line(
@@ -289,12 +289,12 @@ class _AssertRuntime:
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
     print: bool = True
-    overhead: Optional[float] = None
-    entry_file: Optional[str] = None
-    entry_line: Optional[int] = None
-    _results: Optional[AssertRuntimeResults] = None
-    runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
-    runtime_results_callable: Optional[Future[RuntimeResults]] = None
+    overhead: float | None = None
+    entry_file: str | None = None
+    entry_line: int | None = None
+    _results: AssertRuntimeResults | None = None
+    runtime_manager: contextlib.AbstractContextManager[Future[RuntimeResults]] | None = None
+    runtime_results_callable: Future[RuntimeResults] | None = None
     enable_assertion: bool = True
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
@@ -315,9 +315,9 @@ class _AssertRuntime:
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         if (
             self.entry_file is None
@@ -366,8 +366,8 @@ class _AssertRuntime:
 @dataclasses.dataclass
 class BenchmarkRunner:
     enable_assertion: bool = True
-    test_id: Optional[TestId] = None
-    overhead: Optional[float] = None
+    test_id: TestId | None = None
+    overhead: float | None = None
 
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
@@ -445,7 +445,7 @@ class CoinGenerator:
         self._seed += 1
         return uint64(self._seed)
 
-    def get(self, parent_coin_id: Optional[bytes32] = None, include_hint: bool = True) -> HintedCoin:
+    def get(self, parent_coin_id: bytes32 | None = None, include_hint: bool = True) -> HintedCoin:
         if parent_coin_id is None:
             parent_coin_id = self._get_hash()
         hint = None
@@ -516,7 +516,7 @@ class RecordingWebServer:
         hostname: str,
         port: uint16,
         max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
-        ssl_context: Optional[ssl.SSLContext] = None,
+        ssl_context: ssl.SSLContext | None = None,
         prefer_ipv6: bool = False,
     ) -> RecordingWebServer:
         web_server = await WebServer.create(
@@ -657,9 +657,9 @@ def is_attribute_local(o: object, name: str) -> bool:
 
 @contextlib.contextmanager
 def patch_request_handler(
-    api: Union[ApiProtocol, type[ApiProtocol]],
-    handler: Callable[..., Awaitable[Optional[Message]]],
-    request_type: Optional[ProtocolMessageTypes] = None,
+    api: ApiProtocol | type[ApiProtocol],
+    handler: Callable[..., Awaitable[Message | None]],
+    request_type: ProtocolMessageTypes | None = None,
 ) -> Iterator[None]:
     if request_type is None:
         request_type = ProtocolMessageTypes[handler.__name__]

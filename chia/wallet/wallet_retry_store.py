@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -37,7 +35,7 @@ class WalletRetryStore:
 
         return [(CoinState.from_bytes(row[0]), bytes32(row[1]), uint32(row[2])) for row in rows]
 
-    async def add_state(self, state: CoinState, peer_id: bytes32, fork_height: Optional[uint32]) -> None:
+    async def add_state(self, state: CoinState, peer_id: bytes32, fork_height: uint32 | None) -> None:
         """
         Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
         """

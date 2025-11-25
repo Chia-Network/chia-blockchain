@@ -9,7 +9,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from types import FrameType
-from typing import Any, Optional, Union
+from typing import Any
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -100,18 +100,18 @@ async def setup_full_node(
     db_name: str,
     self_hostname: str,
     local_bt: BlockTools,
-    introducer_port: Optional[int] = None,
+    introducer_port: int | None = None,
     simulator: bool = False,
     send_uncompact_interval: int = 0,
     sanitize_weight_proof_only: bool = False,
     connect_to_daemon: bool = False,
     db_version: int = 1,
-    disable_capabilities: Optional[list[Capability]] = None,
+    disable_capabilities: list[Capability] | None = None,
     *,
     reuse_db: bool = False,
-) -> AsyncGenerator[Union[FullNodeService, SimulatorFullNodeService], None]:
+) -> AsyncGenerator[FullNodeService | SimulatorFullNodeService, None]:
     if reuse_db:
-        db_path: Union[str, Path] = local_bt.root_path / f"{db_name}"
+        db_path: str | Path = local_bt.root_path / f"{db_name}"
         uri = False
     else:
         db_path = generate_in_memory_db_uri()
@@ -149,7 +149,7 @@ async def setup_full_node(
     override_capabilities = (
         None if disable_capabilities is None else get_capability_overrides(NodeType.FULL_NODE, disable_capabilities)
     )
-    service: Union[FullNodeService, SimulatorFullNodeService]
+    service: FullNodeService | SimulatorFullNodeService
     if simulator:
         service = await create_full_node_simulator_service(
             local_bt.root_path,
@@ -232,11 +232,11 @@ async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
-    spam_filter_after_n_txs: Optional[int] = 200,
+    spam_filter_after_n_txs: int | None = 200,
     xch_spam_amount: int = 1000000,
-    full_node_port: Optional[uint16] = None,
-    introducer_port: Optional[uint16] = None,
-    key_seed: Optional[bytes] = None,
+    full_node_port: uint16 | None = None,
+    introducer_port: uint16 | None = None,
+    key_seed: bytes | None = None,
     initial_num_public_keys: int = 5,
 ) -> AsyncGenerator[WalletService, None]:
     with TempKeyring(populate=True) as keychain:
@@ -324,7 +324,7 @@ async def setup_wallet_node(
 async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
-    farmer_peer: Optional[UnresolvedPeerInfo],
+    farmer_peer: UnresolvedPeerInfo | None,
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ) -> AsyncGenerator[HarvesterService, None]:
@@ -356,10 +356,10 @@ async def setup_farmer(
     root_path: Path,
     self_hostname: str,
     consensus_constants: ConsensusConstants,
-    full_node_port: Optional[uint16] = None,
+    full_node_port: uint16 | None = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
-    solver_peer: Optional[UnresolvedPeerInfo] = None,
+    solver_peer: UnresolvedPeerInfo | None = None,
 ) -> AsyncGenerator[FarmerService, None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
@@ -435,7 +435,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
 
     async def stop(
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         await process_mgr.kill_processes()
@@ -472,7 +472,7 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
 
     async def stop(
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         await process_mgr.kill_processes()

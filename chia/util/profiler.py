@@ -10,7 +10,6 @@ import tracemalloc
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Optional
 
 from chia.util.path import path_from_root
 
@@ -184,7 +183,7 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
 
 
 @asynccontextmanager
-async def enable_profiler(profile: bool) -> AsyncIterator[Optional[cProfile.Profile]]:
+async def enable_profiler(profile: bool) -> AsyncIterator[cProfile.Profile | None]:
     if not profile:
         yield None
         return

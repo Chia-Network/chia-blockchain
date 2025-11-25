@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -11,7 +11,7 @@ from chia.rpc.rpc_client import RpcClient
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self, fee: Optional[uint64], verbose: bool) -> dict[str, Any]:
+    async def create_data_store(self, fee: uint64 | None, verbose: bool) -> dict[str, Any]:
         response = await self.fetch("create_data_store", {"fee": fee, "verbose": verbose})
         return response
 
@@ -20,7 +20,7 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("wallet_log_in", request)
         return response
 
-    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32]) -> dict[str, Any]:
+    async def get_value(self, store_id: bytes32, key: bytes, root_hash: bytes32 | None) -> dict[str, Any]:
         request: dict[str, Any] = {"id": store_id.hex(), "key": key.hex()}
         if root_hash is not None:
             request["root_hash"] = root_hash.hex()
@@ -28,7 +28,7 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def update_data_store(
-        self, store_id: bytes32, changelist: list[dict[str, str]], fee: Optional[uint64], submit_on_chain: bool = True
+        self, store_id: bytes32, changelist: list[dict[str, str]], fee: uint64 | None, submit_on_chain: bool = True
     ) -> dict[str, Any]:
         response = await self.fetch(
             "batch_update",
@@ -42,7 +42,7 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def update_multiple_stores(
-        self, store_updates: list[dict[str, Any]], fee: Optional[uint64], submit_on_chain: bool = True
+        self, store_updates: list[dict[str, Any]], fee: uint64 | None, submit_on_chain: bool = True
     ) -> dict[str, Any]:
         response = await self.fetch(
             "multistore_batch_update",
@@ -54,16 +54,16 @@ class DataLayerRpcClient(RpcClient):
         )
         return response
 
-    async def submit_pending_root(self, store_id: bytes32, fee: Optional[uint64]) -> dict[str, Any]:
+    async def submit_pending_root(self, store_id: bytes32, fee: uint64 | None) -> dict[str, Any]:
         response = await self.fetch("submit_pending_root", {"id": store_id.hex(), "fee": fee})
         return response
 
-    async def submit_all_pending_roots(self, fee: Optional[uint64]) -> dict[str, Any]:
+    async def submit_all_pending_roots(self, fee: uint64 | None) -> dict[str, Any]:
         response = await self.fetch("submit_all_pending_roots", {"fee": fee})
         return response
 
     async def get_keys_values(
-        self, store_id: bytes32, root_hash: Optional[bytes32], page: Optional[int], max_page_size: Optional[int]
+        self, store_id: bytes32, root_hash: bytes32 | None, page: int | None, max_page_size: int | None
     ) -> dict[str, Any]:
         request: dict[str, Any] = {"id": store_id.hex()}
         if root_hash is not None:
@@ -76,7 +76,7 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def get_keys(
-        self, store_id: bytes32, root_hash: Optional[bytes32], page: Optional[int], max_page_size: Optional[int]
+        self, store_id: bytes32, root_hash: bytes32 | None, page: int | None, max_page_size: int | None
     ) -> dict[str, Any]:
         request: dict[str, Any] = {"id": store_id.hex()}
         if root_hash is not None:
@@ -117,7 +117,7 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def add_missing_files(
-        self, store_ids: Optional[list[bytes32]], overwrite: Optional[bool], foldername: Optional[Path]
+        self, store_ids: list[bytes32] | None, overwrite: bool | None, foldername: Path | None
     ) -> dict[str, Any]:
         request: dict[str, Any] = {}
         if store_ids is not None:
@@ -130,7 +130,7 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def get_kv_diff(
-        self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: Optional[int], max_page_size: Optional[int]
+        self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int | None, max_page_size: int | None
     ) -> dict[str, Any]:
         request: dict[str, Any] = {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
         if page is not None:
@@ -144,13 +144,11 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("get_root_history", {"id": store_id.hex()})
         return response
 
-    async def add_mirror(
-        self, store_id: bytes32, urls: list[str], amount: int, fee: Optional[uint64]
-    ) -> dict[str, Any]:
+    async def add_mirror(self, store_id: bytes32, urls: list[str], amount: int, fee: uint64 | None) -> dict[str, Any]:
         response = await self.fetch("add_mirror", {"id": store_id.hex(), "urls": urls, "amount": amount, "fee": fee})
         return response
 
-    async def delete_mirror(self, coin_id: bytes32, fee: Optional[uint64]) -> dict[str, Any]:
+    async def delete_mirror(self, coin_id: bytes32, fee: uint64 | None) -> dict[str, Any]:
         response = await self.fetch("delete_mirror", {"coin_id": coin_id.hex(), "fee": fee})
         return response
 

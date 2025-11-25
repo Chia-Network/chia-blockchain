@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from re import search
-from typing import Union
 
 from packaging.version import InvalidVersion, Version
 
@@ -26,7 +25,7 @@ def _chia_short_version_from_str(version: str) -> str:
     return version
 
 
-def chia_short_version(version: Union[str, Version] = __version__) -> str:
+def chia_short_version(version: str | Version = __version__) -> str:
     if isinstance(version, Version):
         return _chia_short_version_from_version(version)
 

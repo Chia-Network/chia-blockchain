@@ -7,9 +7,10 @@ import json
 import os
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Literal
 
 import click
 import yaml
@@ -90,7 +91,7 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> dict[Path, list[P
 
 
 def build_virtual_dependency_graph(
-    dir_params: DirectoryParameters, *, existing_graph: Optional[dict[Path, list[Path]]] = None
+    dir_params: DirectoryParameters, *, existing_graph: dict[Path, list[Path]] | None = None
 ) -> dict[str, list[str]]:
     if existing_graph is None:
         graph = build_dependency_graph(dir_params)
@@ -230,7 +231,7 @@ def find_cycles(
     return path_accumulator
 
 
-def print_graph(graph: Union[dict[str, list[str]], dict[Path, list[Path]]]) -> None:
+def print_graph(graph: dict[str, list[str]] | dict[Path, list[Path]]) -> None:
     print(json.dumps({str(k): list(str(v) for v in vs) for k, vs in graph.items()}, indent=4))
 
 
@@ -335,7 +336,7 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
         default=None,
         help="Path to the YAML configuration file.",
     )
-    def inner(config_path: Optional[str], *args: Any, **kwargs: Any) -> None:
+    def inner(config_path: str | None, *args: Any, **kwargs: Any) -> None:
         exclude_paths = []
         ignore_cycles_in: list[str] = []
         ignore_specific_files: list[str] = []

@@ -4,7 +4,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import Any, Optional, TextIO
+from typing import Any, TextIO
 
 import click
 from aiohttp import ClientResponseError
@@ -184,8 +184,8 @@ def create_commands() -> None:
         def rpc_client_cmd(
             ctx: click.Context,
             endpoint: str,
-            request: Optional[str],
-            json_file: Optional[TextIO],
+            request: str | None,
+            json_file: TextIO | None,
             service: str = service,
         ) -> None:
             root_path: Path = ChiaCliContext.set_default(ctx).root_path

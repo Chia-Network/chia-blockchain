@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Union
 
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, UnfinishedBlock
 from chia_rs.sized_bytes import bytes32
@@ -14,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 def final_eos_is_already_included(
-    header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
+    header_block: UnfinishedHeaderBlock | UnfinishedBlock | HeaderBlock | FullBlock,
     blocks: BlockRecordsProtocol,
     sub_slot_iters: uint64,
 ) -> bool:
@@ -52,7 +51,7 @@ def final_eos_is_already_included(
 
 def get_block_challenge(
     constants: ConsensusConstants,
-    header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
+    header_block: UnfinishedHeaderBlock | UnfinishedBlock | HeaderBlock | FullBlock,
     blocks: BlockRecordsProtocol,
     genesis_block: bool,
     overflow: bool,
@@ -112,7 +111,7 @@ def pre_sp_tx_block(
     prev_b_hash: bytes32,
     sp_index: uint8,
     first_in_sub_slot: bool,
-) -> Optional[BlockRecord]:
+) -> BlockRecord | None:
     if prev_b_hash == constants.GENESIS_CHALLENGE:
         return None
     curr = blocks.block_record(prev_b_hash)

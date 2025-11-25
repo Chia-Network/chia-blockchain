@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 import random
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 from chia_rs import G1Element, PlotParam
@@ -16,6 +16,7 @@ from chia.types.blockchain_format.proof_of_space import (
     check_plot_param,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -27,10 +28,10 @@ class ProofOfSpaceCase:
     pos_challenge: bytes32
     plot_size: PlotParam
     plot_public_key: G1Element
-    pool_public_key: Optional[G1Element] = None
-    pool_contract_puzzle_hash: Optional[bytes32] = None
-    height: uint32 = uint32(0)
-    expected_error: Optional[str] = None
+    pool_public_key: G1Element | None = None
+    pool_contract_puzzle_hash: bytes32 | None = None
+    height: uint32 = DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT
+    expected_error: str | None = None
     marks: Marks = ()
 
 
@@ -127,7 +128,7 @@ def b32(key: str) -> bytes32:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("2b76a5fe5d4ae062ba9e80b5bcb0e9c1301f3a2787b8f3141e3fb458d1c1864c"),
+        pos_challenge=b32("5706ae15c4a437399f464c64ef4f33c362d860ccd2945b76b3ebdb0505783817"),
         plot_size=PlotParam.make_v2(32),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -135,8 +136,26 @@ def b32(key: str) -> bytes32:
         ),
         expected_error="Did not pass the plot filter",
     ),
+    ProofOfSpaceCase(
+        id="v2 not activated",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=PlotParam.make_v2(2),
+        pool_contract_puzzle_hash=bytes32(b"1" * 32),
+        plot_public_key=G1Element(),
+        height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
+        expected_error="v2 proof support has not yet activated",
+    ),
+    ProofOfSpaceCase(
+        id="v2 plot with pool pk",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=PlotParam.make_v2(2),
+        plot_public_key=G1Element(),
+        pool_public_key=G1Element(),
+        expected_error="v2 plots require pool_contract_puzzle_hash, pool public key is not supported",
+    ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
+    caplog.set_level(logging.INFO)
     pos = make_pos(
         challenge=case.pos_challenge,
         pool_public_key=case.pool_public_key,
@@ -160,8 +179,8 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 @datacases(
     ProofOfSpaceCase(
         id="not passing the plot filter v2",
-        plot_size=PlotParam.make_v2(28),
-        pos_challenge=b32("be7ac7436520a3fa259a618a2c54de4ca8b8d2319c1ec5b11a2ef4c025c2e0a6"),
+        plot_size=PlotParam.make_v2(2),
+        pos_challenge=b32("fb1d676f0e3ce173f4e6cfb06d7059886cbc3b91cf65be0af0fc2fbe569c6597"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
@@ -187,7 +206,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
             pos=pos,
             constants=DEFAULT_CONSTANTS,
             original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
-            signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
+            signage_point=b32("0xf7c1bd874da5e709d4713d60c8a70639eb1167b367a9c3787c65c1e582e2e662"),
             height=case.height,
             prev_transaction_block_height=case.height,
         )
@@ -286,7 +305,7 @@ def test_v1_phase_out() -> None:
     constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500000))
     rng = random.Random()
 
-    phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
+    phase_out_epochs = num_phase_out_epochs(constants)
     print(f"phase-out epochs: {phase_out_epochs}")
 
     for epoch in range(-5, phase_out_epochs + 5):

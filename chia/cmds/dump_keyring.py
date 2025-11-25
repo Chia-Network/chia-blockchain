@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import click
 import colorama
@@ -48,8 +48,8 @@ def get_passphrase_prompt(keyring_file: str) -> str:
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
 @click.option("--pretty-print", is_flag=True, default=False)
-def dump(keyring_file: str, full_payload: bool, passphrase_file: Optional[TextIOWrapper], pretty_print: bool) -> None:
-    saved_passphrase: Optional[str] = KeyringWrapper.get_shared_instance().get_master_passphrase_from_credential_store()
+def dump(keyring_file: str, full_payload: bool, passphrase_file: TextIOWrapper | None, pretty_print: bool) -> None:
+    saved_passphrase: str | None = KeyringWrapper.get_shared_instance().get_master_passphrase_from_credential_store()
     passphrase: str = saved_passphrase or DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
     prompt: str = get_passphrase_prompt(keyring_file)
 

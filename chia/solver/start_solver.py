@@ -4,7 +4,7 @@ import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import ConsensusConstants
 from chia_rs.sized_ints import uint16
@@ -35,7 +35,7 @@ def create_solver_service(
     config: dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
+    override_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> SolverService:
     service_config = config[SERVICE_NAME]
 

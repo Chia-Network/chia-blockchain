@@ -4,7 +4,7 @@ import contextlib
 import json
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -17,7 +17,7 @@ from chia.util.default_root import resolve_root_path
 
 @contextlib.asynccontextmanager
 async def get_client(
-    rpc_port: Optional[int], fingerprint: Optional[int] = None, root_path: Optional[Path] = None
+    rpc_port: int | None, fingerprint: int | None = None, root_path: Path | None = None
 ) -> AsyncIterator[tuple[DataLayerRpcClient, dict[str, Any]]]:
     root_path = resolve_root_path(override=root_path)
 
@@ -32,19 +32,19 @@ async def get_client(
 
 
 async def wallet_log_in_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     fingerprint: int,
-    root_path: Optional[Path] = None,
+    root_path: Path | None = None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path):
         pass
 
 
 async def create_data_store_cmd(
-    rpc_port: Optional[int],
-    fee: Optional[uint64],
+    rpc_port: int | None,
+    fee: uint64 | None,
     verbose: bool,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.create_data_store(fee=fee, verbose=verbose)
@@ -52,12 +52,12 @@ async def create_data_store_cmd(
 
 
 async def get_value_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     key: str,
     # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
-    root_hash: Optional[bytes32],
-    fingerprint: Optional[int],
+    root_hash: bytes32 | None,
+    fingerprint: int | None,
 ) -> None:
     key_bytes = hexstr_to_bytes(key)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
@@ -66,13 +66,13 @@ async def get_value_cmd(
 
 
 async def update_data_store_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     changelist: list[dict[str, str]],
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
+    fee: uint64 | None,
+    fingerprint: int | None,
     submit_on_chain: bool,
-    root_path: Optional[Path] = None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -88,12 +88,12 @@ async def update_data_store_cmd(
 
 
 async def update_multiple_stores_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_updates: list[dict[str, str]],
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
+    fee: uint64 | None,
+    fingerprint: int | None,
     submit_on_chain: bool,
-    root_path: Optional[Path] = None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
 
@@ -109,11 +109,11 @@ async def update_multiple_stores_cmd(
 
 
 async def submit_pending_root_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
-    root_path: Optional[Path] = None,
+    fee: uint64 | None,
+    fingerprint: int | None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -127,10 +127,10 @@ async def submit_pending_root_cmd(
 
 
 async def submit_all_pending_roots_cmd(
-    rpc_port: Optional[int],
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
-    root_path: Optional[Path] = None,
+    rpc_port: int | None,
+    fee: uint64 | None,
+    fingerprint: int | None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -141,14 +141,14 @@ async def submit_all_pending_roots_cmd(
 
 
 async def get_keys_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
-    root_hash: Optional[bytes32],
-    fingerprint: Optional[int],
-    page: Optional[int],
-    max_page_size: Optional[int],
-    root_path: Optional[Path] = None,
+    root_hash: bytes32 | None,
+    fingerprint: int | None,
+    page: int | None,
+    max_page_size: int | None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -159,14 +159,14 @@ async def get_keys_cmd(
 
 
 async def get_keys_values_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
-    root_hash: Optional[bytes32],
-    fingerprint: Optional[int],
-    page: Optional[int],
-    max_page_size: Optional[int],
-    root_path: Optional[Path] = None,
+    root_hash: bytes32 | None,
+    fingerprint: int | None,
+    page: int | None,
+    max_page_size: int | None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -179,9 +179,9 @@ async def get_keys_values_cmd(
 
 
 async def get_root_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.get_root(store_id=store_id)
@@ -189,10 +189,10 @@ async def get_root_cmd(
 
 
 async def subscribe_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     urls: list[str],
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.subscribe(store_id=store_id, urls=urls)
@@ -200,9 +200,9 @@ async def subscribe_cmd(
 
 
 async def unsubscribe_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     retain: bool,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
@@ -211,10 +211,10 @@ async def unsubscribe_cmd(
 
 
 async def remove_subscriptions_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     urls: list[str],
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.remove_subscriptions(store_id=store_id, urls=urls)
@@ -222,14 +222,14 @@ async def remove_subscriptions_cmd(
 
 
 async def get_kv_diff_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     hash_1: bytes32,
     hash_2: bytes32,
-    fingerprint: Optional[int],
-    page: Optional[int],
-    max_page_size: Optional[int],
-    root_path: Optional[Path] = None,
+    fingerprint: int | None,
+    page: int | None,
+    max_page_size: int | None,
+    root_path: Path | None = None,
 ) -> dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -242,9 +242,9 @@ async def get_kv_diff_cmd(
 
 
 async def get_root_history_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.get_root_history(store_id=store_id)
@@ -252,11 +252,11 @@ async def get_root_history_cmd(
 
 
 async def add_missing_files_cmd(
-    rpc_port: Optional[int],
-    ids: Optional[list[bytes32]],
+    rpc_port: int | None,
+    ids: list[bytes32] | None,
     overwrite: bool,
-    foldername: Optional[Path],
-    fingerprint: Optional[int],
+    foldername: Path | None,
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.add_missing_files(
@@ -268,12 +268,12 @@ async def add_missing_files_cmd(
 
 
 async def add_mirror_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
     urls: list[str],
     amount: int,
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
+    fee: uint64 | None,
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.add_mirror(
@@ -286,10 +286,10 @@ async def add_mirror_cmd(
 
 
 async def delete_mirror_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     coin_id: bytes32,
-    fee: Optional[uint64],
-    fingerprint: Optional[int],
+    fee: uint64 | None,
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.delete_mirror(
@@ -300,9 +300,9 @@ async def delete_mirror_cmd(
 
 
 async def get_mirrors_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.get_mirrors(store_id=store_id)
@@ -310,8 +310,8 @@ async def get_mirrors_cmd(
 
 
 async def get_subscriptions_cmd(
-    rpc_port: Optional[int],
-    fingerprint: Optional[int],
+    rpc_port: int | None,
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.get_subscriptions()
@@ -319,8 +319,8 @@ async def get_subscriptions_cmd(
 
 
 async def get_owned_stores_cmd(
-    rpc_port: Optional[int],
-    fingerprint: Optional[int],
+    rpc_port: int | None,
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.get_owned_stores()
@@ -328,16 +328,16 @@ async def get_owned_stores_cmd(
 
 
 async def get_sync_status_cmd(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     store_id: bytes32,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.get_sync_status(store_id=store_id)
         print(json.dumps(res, indent=2, sort_keys=True))
 
 
-async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
+async def check_plugins_cmd(rpc_port: int | None) -> None:
     async with get_client(rpc_port=rpc_port) as (client, _):
         res = await client.check_plugins()
         print(json.dumps(res, indent=2, sort_keys=True))
@@ -345,9 +345,9 @@ async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
 
 async def clear_pending_roots(
     store_id: bytes32,
-    rpc_port: Optional[int],
-    root_path: Optional[Path] = None,
-    fingerprint: Optional[int] = None,
+    rpc_port: int | None,
+    root_path: Path | None = None,
+    fingerprint: int | None = None,
 ) -> dict[str, Any]:
     result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -360,9 +360,9 @@ async def clear_pending_roots(
 async def get_proof_cmd(
     store_id: bytes32,
     key_strings: list[str],
-    rpc_port: Optional[int],
-    root_path: Optional[Path] = None,
-    fingerprint: Optional[int] = None,
+    rpc_port: int | None,
+    root_path: Path | None = None,
+    fingerprint: int | None = None,
 ) -> dict[str, Any]:
     result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
@@ -374,9 +374,9 @@ async def get_proof_cmd(
 
 async def verify_proof_cmd(
     proof: dict[str, Any],
-    rpc_port: Optional[int],
-    root_path: Optional[Path] = None,
-    fingerprint: Optional[int] = None,
+    rpc_port: int | None,
+    root_path: Path | None = None,
+    fingerprint: int | None = None,
 ) -> dict[str, Any]:
     result = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):

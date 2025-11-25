@@ -4,7 +4,7 @@ import os
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -61,7 +61,7 @@ def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_no
             updated[k] = v
 
 
-def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
+def check_keys(new_root: Path, keychain: Keychain | None = None) -> None:
     if keychain is None:
         keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
@@ -216,12 +216,12 @@ def copy_cert_files(cert_path: Path, new_path: Path) -> None:
 
 
 def init(
-    create_certs: Optional[Path],
+    create_certs: Path | None,
     root_path: Path,
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-) -> Optional[int]:
+) -> int | None:
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):

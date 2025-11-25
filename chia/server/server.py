@@ -5,11 +5,11 @@ import logging
 import ssl
 import time
 import traceback
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -52,7 +52,7 @@ def ssl_context_for_server(
     key_path: Path,
     *,
     check_permissions: bool = True,
-    log: Optional[logging.Logger] = None,
+    log: logging.Logger | None = None,
 ) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
@@ -66,7 +66,7 @@ def ssl_context_for_server(
 
 
 def ssl_context_for_root(
-    ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
+    ca_cert_file: str, *, check_permissions: bool = True, log: logging.Logger | None = None
 ) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
@@ -82,7 +82,7 @@ def ssl_context_for_client(
     key_path: Path,
     *,
     check_permissions: bool = True,
-    log: Optional[logging.Logger] = None,
+    log: logging.Logger | None = None,
 ) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, cert_path], [ca_key, key_path], log)
@@ -104,7 +104,7 @@ def calculate_node_id(cert_path: Path) -> bytes32:
 @final
 @dataclass
 class ChiaServer:
-    _port: Optional[int]
+    _port: int | None
     _local_type: NodeType
     _local_capabilities_for_handshake: list[tuple[uint16, str]]
     _ping_interval: int
@@ -119,23 +119,23 @@ class ChiaServer:
     ssl_context: ssl.SSLContext
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
-    exempt_peer_networks: list[Union[IPv4Network, IPv6Network]]
+    exempt_peer_networks: list[IPv4Network | IPv6Network]
     stub_metadata_for_type: dict[NodeType, ApiMetadata]
     all_connections: dict[bytes32, WSChiaConnection] = field(default_factory=dict)
-    on_connect: Optional[ConnectionCallback] = None
+    on_connect: ConnectionCallback | None = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
-    introducer_peers: Optional[IntroducerPeers] = None
-    gc_task: Optional[asyncio.Task[None]] = None
-    webserver: Optional[WebServer] = None
-    connection_close_task: Optional[asyncio.Task[None]] = None
-    received_message_callback: Optional[ConnectionCallback] = None
+    introducer_peers: IntroducerPeers | None = None
+    gc_task: asyncio.Task[None] | None = None
+    webserver: WebServer | None = None
+    connection_close_task: asyncio.Task[None] | None = None
+    received_message_callback: ConnectionCallback | None = None
     banned_peers: dict[str, float] = field(default_factory=dict)
     invalid_protocol_ban_seconds: int = INVALID_PROTOCOL_BAN_SECONDS
 
     @classmethod
     def create(
         cls,
-        port: Optional[int],
+        port: int | None,
         node: Any,
         api: ApiProtocol,
         local_type: NodeType,
@@ -273,7 +273,7 @@ class ChiaServer:
     async def start(
         self,
         prefer_ipv6: bool,
-        on_connect: Optional[ConnectionCallback] = None,
+        on_connect: ConnectionCallback | None = None,
     ) -> None:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
@@ -314,7 +314,7 @@ class ChiaServer:
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
             return ws
-        connection: Optional[WSChiaConnection] = None
+        connection: WSChiaConnection | None = None
         try:
             connection = WSChiaConnection.create(
                 local_type=self._local_type,
@@ -372,7 +372,7 @@ class ChiaServer:
         return ws
 
     async def connection_added(
-        self, connection: WSChiaConnection, on_connect: Optional[ConnectionCallback] = None
+        self, connection: WSChiaConnection, on_connect: ConnectionCallback | None = None
     ) -> None:
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
@@ -404,7 +404,7 @@ class ChiaServer:
     async def start_client(
         self,
         target_node: PeerInfo,
-        on_connect: Optional[ConnectionCallback] = None,
+        on_connect: ConnectionCallback | None = None,
         is_feeler: bool = False,
     ) -> bool:
         """
@@ -420,7 +420,7 @@ class ChiaServer:
             return False
 
         session = None
-        connection: Optional[WSChiaConnection] = None
+        connection: WSChiaConnection | None = None
         try:
             # Crawler/DNS introducer usually uses a lower timeout than the default
             timeout_value = float(self.config.get("peer_connect_timeout", 30))
@@ -588,7 +588,7 @@ class ChiaServer:
         self,
         messages: list[Message],
         node_type: NodeType,
-        exclude: Optional[bytes32] = None,
+        exclude: bytes32 | None = None,
     ) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
@@ -601,7 +601,7 @@ class ChiaServer:
         messages: list[Message],
         node_type: NodeType,
         predicate: Callable[[WSChiaConnection], bool],
-        exclude: Optional[bytes32] = None,
+        exclude: bytes32 | None = None,
     ) -> None:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
@@ -616,8 +616,8 @@ class ChiaServer:
                 await connection.send_message(message)
 
     async def call_api_of_specific(
-        self, request_method: Callable[..., Awaitable[Optional[Message]]], message_data: Streamable, node_id: bytes32
-    ) -> Optional[Any]:
+        self, request_method: Callable[..., Awaitable[Message | None]], message_data: Streamable, node_id: bytes32
+    ) -> Any | None:
         if node_id in self.all_connections:
             connection = self.all_connections[node_id]
             return await connection.call_api(request_method, message_data)
@@ -625,7 +625,7 @@ class ChiaServer:
         return None
 
     def get_connections(
-        self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = None
+        self, node_type: NodeType | None = None, *, outbound: bool | None = None
     ) -> list[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
@@ -661,7 +661,7 @@ class ChiaServer:
             await self.webserver.await_closed()
             self.webserver = None
 
-    async def get_peer_info(self) -> Optional[PeerInfo]:
+    async def get_peer_info(self) -> PeerInfo | None:
         ip = None
 
         try:

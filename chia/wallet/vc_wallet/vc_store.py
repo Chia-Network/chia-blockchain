@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 from functools import cmp_to_key
-from typing import Optional
 
 from aiosqlite import Row
 from chia_rs.sized_bytes import bytes32
@@ -55,7 +54,7 @@ class VCProofs:
         else:
             raise ValueError("Malformatted VCProofs program")  # pragma: no cover
 
-    def prove_keys(self, keys: list[str], tree: Optional[Program] = None) -> Program:
+    def prove_keys(self, keys: list[str], tree: Program | None = None) -> Program:
         if tree is None:
             tree = self.as_program()
 
@@ -177,7 +176,7 @@ class VCStore:
                 ),
             )
 
-    async def get_vc_record(self, launcher_id: bytes32) -> Optional[VCRecord]:
+    async def get_vc_record(self, launcher_id: bytes32) -> VCRecord | None:
         """
         Checks DB for VC with specified launcher_id and returns it.
         """
@@ -235,7 +234,7 @@ class VCStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM vc_records WHERE launcher_id=?", (launcher_id.hex(),))).close()
 
-    async def get_vc_record_by_coin_id(self, coin_id: bytes32) -> Optional[VCRecord]:
+    async def get_vc_record_by_coin_id(self, coin_id: bytes32) -> VCRecord | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from vc_records WHERE coin_id=? LIMIT 1000", (coin_id.hex(),))
             row = await cursor.fetchone()
@@ -250,7 +249,7 @@ class VCStore:
                 "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
             )
 
-    async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:
+    async def get_proofs_for_root(self, root: bytes32) -> VCProofs | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT proofs FROM vc_proofs WHERE root=?", (root.hex(),))
             row = await cursor.fetchone()

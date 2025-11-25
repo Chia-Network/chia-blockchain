@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from chia_puzzles_py.programs import (
     DELEGATED_TAIL,
@@ -229,7 +229,7 @@ ALL_LIMITATIONS_PROGRAMS: dict[str, Any] = {
 }
 
 
-def match_limitations_program(limitations_program: Program) -> tuple[Optional[LimitationsProgram], list[Program]]:
+def match_limitations_program(limitations_program: Program) -> tuple[LimitationsProgram | None, list[Program]]:
     uncurried_mod, curried_args = limitations_program.uncurry()
     for key, lp in ALL_LIMITATIONS_PROGRAMS.items():
         matched, args = lp.match(uncurried_mod, curried_args)

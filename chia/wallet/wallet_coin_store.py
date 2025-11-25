@@ -3,7 +3,6 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -31,16 +30,16 @@ class CoinRecordOrder(IntEnum):
 class GetCoinRecords(Streamable):
     offset: uint32 = uint32(0)
     limit: uint32 = uint32.MAXIMUM
-    wallet_id: Optional[uint32] = None
-    wallet_type: Optional[uint8] = None  # WalletType
-    coin_type: Optional[uint8] = None  # CoinType
-    coin_id_filter: Optional[HashFilter] = None
-    puzzle_hash_filter: Optional[HashFilter] = None
-    parent_coin_id_filter: Optional[HashFilter] = None
-    amount_filter: Optional[AmountFilter] = None
-    amount_range: Optional[UInt64Range] = None
-    confirmed_range: Optional[UInt32Range] = None
-    spent_range: Optional[UInt32Range] = None
+    wallet_id: uint32 | None = None
+    wallet_type: uint8 | None = None  # WalletType
+    coin_type: uint8 | None = None  # CoinType
+    coin_id_filter: HashFilter | None = None
+    puzzle_hash_filter: HashFilter | None = None
+    parent_coin_id_filter: HashFilter | None = None
+    amount_filter: AmountFilter | None = None
+    amount_range: UInt64Range | None = None
+    confirmed_range: UInt32Range | None = None
+    spent_range: UInt32Range | None = None
     order: uint8 = uint8(CoinRecordOrder.confirmed_height)
     reverse: bool = False
     include_total_count: bool = False  # Include the total number of entries for the query without applying offset/limit
@@ -50,7 +49,7 @@ class GetCoinRecords(Streamable):
 class GetCoinRecordsResult:
     records: list[WalletCoinRecord]
     coin_id_to_record: dict[bytes32, WalletCoinRecord]
-    total_count: Optional[uint32]
+    total_count: uint32 | None
 
 
 class WalletCoinStore:
@@ -115,7 +114,7 @@ class WalletCoinStore:
             return int(0 if row is None else row[0])
 
     # Store CoinRecord in DB and ram cache
-    async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
+    async def add_coin_record(self, record: WalletCoinRecord, name: bytes32 | None = None) -> None:
         if name is None:
             name = record.name()
         assert record.spent == (record.spent_block_height != 0)
@@ -174,7 +173,7 @@ class WalletCoinStore:
             None if row[11] is None else VersionedBlob.from_bytes(row[11]),
         )
 
-    async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
+    async def get_coin_record(self, coin_name: bytes32) -> WalletCoinRecord | None:
         """Returns CoinRecord with specified coin id."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(await conn.execute_fetchall("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),)))
@@ -188,16 +187,16 @@ class WalletCoinStore:
         *,
         offset: uint32 = uint32(0),
         limit: uint32 = uint32.MAXIMUM,
-        wallet_id: Optional[uint32] = None,
-        wallet_type: Optional[WalletType] = None,
-        coin_type: Optional[CoinType] = None,
-        coin_id_filter: Optional[HashFilter] = None,
-        puzzle_hash_filter: Optional[HashFilter] = None,
-        parent_coin_id_filter: Optional[HashFilter] = None,
-        amount_filter: Optional[AmountFilter] = None,
-        amount_range: Optional[UInt64Range] = None,
-        confirmed_range: Optional[UInt32Range] = None,
-        spent_range: Optional[UInt32Range] = None,
+        wallet_id: uint32 | None = None,
+        wallet_type: WalletType | None = None,
+        coin_type: CoinType | None = None,
+        coin_id_filter: HashFilter | None = None,
+        puzzle_hash_filter: HashFilter | None = None,
+        parent_coin_id_filter: HashFilter | None = None,
+        amount_filter: AmountFilter | None = None,
+        amount_range: UInt64Range | None = None,
+        confirmed_range: UInt32Range | None = None,
+        spent_range: UInt32Range | None = None,
         order: CoinRecordOrder = CoinRecordOrder.confirmed_height,
         reverse: bool = False,
         include_total_count: bool = False,
@@ -282,7 +281,7 @@ class WalletCoinStore:
             )
         return [self.coin_record_from_row(row) for row in rows]
 
-    async def get_first_coin_height(self) -> Optional[uint32]:
+    async def get_first_coin_height(self) -> uint32 | None:
         """Returns height of first confirmed coin"""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(await conn.execute_fetchall("SELECT MIN(confirmed_height) FROM coin_record"))

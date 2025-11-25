@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, Union
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 
-compose_rate_limits_cache: dict[int, dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]] = {}
+compose_rate_limits_cache: dict[int, dict[ProtocolMessageTypes, RLSettings | Unlimited]] = {}
 
 
 # this class is used to configure the *rate* limit for a message type. The
@@ -19,7 +18,7 @@ class RLSettings:
     aggregate_limit: bool
     frequency: int  # Max request per time period (ie 1 min)
     max_size: int  # Max size of each request
-    max_total_size: Optional[int] = None  # Max cumulative size of all requests in that period
+    max_total_size: int | None = None  # Max cumulative size of all requests in that period
 
 
 # this class is used to indicate that a message type is not subject to a rate
@@ -43,7 +42,7 @@ aggregate_limit = RLSettings(
 
 def get_rate_limits_to_use(
     our_capabilities: list[Capability], peer_capabilities: list[Capability]
-) -> tuple[dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]], RLSettings]:
+) -> tuple[dict[ProtocolMessageTypes, RLSettings | Unlimited], RLSettings]:
     # This will use the newest possible rate limits that both peers support. At this time there are only two
     # options, v1 and v2.
 
@@ -64,7 +63,7 @@ def get_rate_limits_to_use(
 
 # Each number in this dict corresponds to a specific version of rate limits (1, 2,  etc).
 # Version 1 includes the original limits for chia software from versions 1.0 to 1.4.
-rate_limits: dict[int, dict[ProtocolMessageTypes, Union[RLSettings, Unlimited]]] = {
+rate_limits: dict[int, dict[ProtocolMessageTypes, RLSettings | Unlimited]] = {
     1: {
         ProtocolMessageTypes.new_transaction: RLSettings(False, 5000, 100, 5000 * 100),
         ProtocolMessageTypes.request_transaction: RLSettings(False, 5000, 100, 5000 * 100),

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -33,7 +33,7 @@ class SolverAPI:
     async def solve(
         self,
         request: SolverInfo,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """
         Solve a V2 plot partial proof to get the full proof of space.
         This is called by the farmer when it receives V2 parital proofs from harvester.

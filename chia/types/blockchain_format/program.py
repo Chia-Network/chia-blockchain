@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from chia_rs import MEMPOOL_MODE, run_chia_program, tree_hash
 from chia_rs.sized_bytes import bytes32
@@ -221,7 +222,7 @@ class Program(SExp):
         return int_from_bytes(self.as_atom())
 
     def as_atom(self) -> bytes:
-        ret: Optional[bytes] = self.atom
+        ret: bytes | None = self.atom
         if ret is None:
             raise ValueError("expected atom")
         return ret
@@ -286,7 +287,7 @@ def _sexp_replace(sexp: T_CLVMStorage, to_sexp: Callable[[Any], T_Program], **kw
     return to_sexp((new_f, new_r))
 
 
-def _run(prg: Union[SerializedProgram, Program], max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
+def _run(prg: SerializedProgram | Program, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
     if isinstance(prg, SerializedProgram):
         result = prg.run_rust(max_cost, flags, args)
         return result[0], Program(result[1])  # type: ignore[arg-type]
@@ -294,7 +295,7 @@ def _run(prg: Union[SerializedProgram, Program], max_cost: int, flags: int, args
         return prg._run(max_cost, flags, args)
 
 
-def uncurry(prg: Union[SerializedProgram, Program]) -> tuple[Program, Program]:
+def uncurry(prg: SerializedProgram | Program) -> tuple[Program, Program]:
     if isinstance(prg, SerializedProgram):
         result = prg.uncurry_rust()
         return Program(result[0]), Program(result[1])  # type: ignore[arg-type]
@@ -302,13 +303,13 @@ def uncurry(prg: Union[SerializedProgram, Program]) -> tuple[Program, Program]:
         return prg.uncurry()
 
 
-def run(prg: Union[SerializedProgram, Program], args: Any) -> Program:
+def run(prg: SerializedProgram | Program, args: Any) -> Program:
     return _run(prg, INFINITE_COST, 0, args)[1]
 
 
-def run_with_cost(prg: Union[SerializedProgram, Program], max_cost: int, args: Any) -> tuple[int, Program]:
+def run_with_cost(prg: SerializedProgram | Program, max_cost: int, args: Any) -> tuple[int, Program]:
     return _run(prg, max_cost, 0, args)
 
 
-def run_mempool_with_cost(prg: Union[SerializedProgram, Program], max_cost: int, args: Any) -> tuple[int, Program]:
+def run_mempool_with_cost(prg: SerializedProgram | Program, max_cost: int, args: Any) -> tuple[int, Program]:
     return _run(prg, max_cost, MEMPOOL_MODE, args)

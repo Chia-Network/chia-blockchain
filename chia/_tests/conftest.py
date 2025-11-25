@@ -12,9 +12,9 @@ import os
 import random
 import sysconfig
 import tempfile
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import AsyncExitStack
-from typing import Any, Callable, Union
+from typing import Any
 
 import aiohttp
 import pytest
@@ -844,7 +844,7 @@ async def one_node(
 @pytest.fixture(scope="function")
 async def one_node_one_block(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
+) -> AsyncIterator[tuple[FullNodeAPI | FullNodeSimulator, ChiaServer, BlockTools]]:
     async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
         (nodes, _, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -856,7 +856,6 @@ async def one_node_one_block(
             1,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             genesis_timestamp=uint64(10000),
             time_per_block=10,
         )
@@ -885,7 +884,6 @@ async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
             1,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             genesis_timestamp=uint64(10000),
             time_per_block=10,
         )
@@ -1316,8 +1314,8 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     tuple[
         FarmerService,
         HarvesterService,
-        Union[FullNodeService, SimulatorFullNodeService],
-        Union[FullNodeService, SimulatorFullNodeService],
+        FullNodeService | SimulatorFullNodeService,
+        FullNodeService | SimulatorFullNodeService,
         BlockTools,
     ]
 ]:

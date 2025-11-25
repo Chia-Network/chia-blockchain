@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import G2Element
@@ -43,8 +43,8 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
 
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
 async def generate_coins(
-    sim: SpendSim, sim_client: SimClient, requested_coins: dict[Optional[str], list[int]]
-) -> dict[Optional[str], list[Coin]]:
+    sim: SpendSim, sim_client: SimClient, requested_coins: dict[str | None, list[int]]
+) -> dict[str | None, list[Coin]]:
     await sim.farm_block(acs_ph)
     parent_coin = next(cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph))
 
@@ -85,7 +85,7 @@ async def generate_coins(
     await sim.farm_block()
 
     # Search for all of the coins and put them into a dictionary
-    coin_dict: dict[Optional[str], list[Coin]] = {}
+    coin_dict: dict[str | None, list[Coin]] = {}
     for tail_str, _ in requested_coins.items():
         if tail_str:
             tail_hash = str_to_tail_hash(tail_str)
@@ -113,7 +113,7 @@ def generate_secure_bundle(
     selected_coins: list[Coin],
     announcements: list[AssertPuzzleAnnouncement],
     offered_amount: uint64,
-    tail_str: Optional[str] = None,
+    tail_str: str | None = None,
 ) -> WalletSpendBundle:
     announcement_assertions = [a.to_program() for a in announcements]
     selected_coin_amount = sum(c.amount for c in selected_coins)
@@ -176,7 +176,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         driver_dict_as_summary = {key.hex(): value for key, value in driver_dict.items()}
 
         # Create an XCH Offer for RED
-        chia_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+        chia_requested_payments: dict[bytes32 | None, list[CreateCoin]] = {
             str_to_tail_hash("red"): [
                 CreateCoin(acs_ph, uint64(100), [b"memo"]),
                 CreateCoin(acs_ph, uint64(200), [b"memo"]),
@@ -191,7 +191,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         # Create a RED Offer for XCH
         red_coins_1 = red_coins[0:1]
         red_coins_2 = red_coins[1:]
-        red_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+        red_requested_payments: dict[bytes32 | None, list[CreateCoin]] = {
             None: [CreateCoin(acs_ph, uint64(300), [b"red memo"]), CreateCoin(acs_ph, uint64(350), [b"red memo"])]
         }
         red_notarized_payments = Offer.notarize_payments(red_requested_payments, red_coins_1)
@@ -202,7 +202,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         red_offer = Offer(red_notarized_payments, red_secured_bundle, driver_dict)
         assert not red_offer.is_valid()
 
-        red_requested_payments_2: dict[Optional[bytes32], list[CreateCoin]] = {
+        red_requested_payments_2: dict[bytes32 | None, list[CreateCoin]] = {
             None: [CreateCoin(acs_ph, uint64(50), [b"red memo"])]
         }
         red_notarized_payments_2 = Offer.notarize_payments(red_requested_payments_2, red_coins_2)
@@ -220,7 +220,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         assert new_offer.is_valid()
 
         # Create yet another offer of BLUE for XCH and RED
-        blue_requested_payments: dict[Optional[bytes32], list[CreateCoin]] = {
+        blue_requested_payments: dict[bytes32 | None, list[CreateCoin]] = {
             None: [CreateCoin(acs_ph, uint64(200), [b"blue memo"])],
             str_to_tail_hash("red"): [CreateCoin(acs_ph, uint64(50), [b"blue memo"])],
         }

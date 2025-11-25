@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from chia_rs import AugSchemeMPL
@@ -660,7 +661,7 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
     # test counts
     assert (await env.rpc_client.count_nfts(NFTCountNFTs(uint32(env.wallet_aliases["nft"])))).count == 2
     assert (await env.rpc_client.count_nfts(NFTCountNFTs())).count == 2
-    with pytest.raises(ResponseFailureError, match="Wallet 50 not found"):
+    with pytest.raises(ResponseFailureError, match="Wallet with id 50 does not exist"):
         await env.rpc_client.count_nfts(NFTCountNFTs(uint32(50)))
 
 

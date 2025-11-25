@@ -6,7 +6,7 @@ import logging
 from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import ConsensusConstants, PartialProof, solve_proof
 from chia_rs.sized_bytes import bytes32
@@ -26,11 +26,11 @@ class Solver:
         _protocol_check: ClassVar[RpcServiceProtocol] = cast("Solver", None)
 
     root_path: Path
-    _server: Optional[ChiaServer]
+    _server: ChiaServer | None
     _shut_down: bool
     started: bool = False
     executor: ThreadPoolExecutor
-    state_changed_callback: Optional[StateChangedProtocol] = None
+    state_changed_callback: StateChangedProtocol | None = None
     constants: ConsensusConstants
     event_loop: asyncio.events.AbstractEventLoop
 
@@ -51,7 +51,7 @@ class Solver:
         self.executor = ThreadPoolExecutor(max_workers=num_threads, thread_name_prefix="solver-")
         self._server = None
         self.constants = constants
-        self.state_changed_callback: Optional[StateChangedProtocol] = None
+        self.state_changed_callback: StateChangedProtocol | None = None
         self.log.info("Solver initialization complete")
 
     @contextlib.asynccontextmanager
@@ -67,7 +67,7 @@ class Solver:
             self.executor.shutdown(wait=True)
             self.log.info("Solver service shutdown complete")
 
-    def solve(self, partial_proof: PartialProof, plot_id: bytes32, strength: int, size: int) -> Optional[bytes]:
+    def solve(self, partial_proof: PartialProof, plot_id: bytes32, strength: int, size: int) -> bytes | None:
         self.log.info(f"Solve request: partial={partial_proof.proof_fragments[:5]} plot-id: {plot_id} k: {size}")
         try:
             return solve_proof(partial_proof, plot_id, strength, size)
@@ -75,7 +75,7 @@ class Solver:
             self.log.exception("solve_proof()")
         return None
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:

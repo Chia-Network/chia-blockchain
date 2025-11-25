@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
@@ -82,7 +82,7 @@ async def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, config: dict[str,
     :param ignore_size_limit Ignore the off-chain metadata loading size limit
     :return: NFTInfo
     """
-    uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
+    uncurried_nft: UncurriedNFT | None = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
     assert uncurried_nft is not None
     data_uris: list[str] = []
 
@@ -94,7 +94,7 @@ async def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, config: dict[str,
     license_uris: list[str] = []
     for uri in uncurried_nft.license_uris.as_python():
         license_uris.append(str(uri, "utf-8"))
-    off_chain_metadata: Optional[str] = None
+    off_chain_metadata: str | None = None
     nft_info = NFTInfo(
         encode_puzzle_hash(uncurried_nft.singleton_launcher_id, prefix=AddressType.NFT.hrp(config=config)),
         uncurried_nft.singleton_launcher_id,
@@ -177,7 +177,7 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
 
 
 def construct_ownership_layer(
-    current_owner: Optional[bytes32],
+    current_owner: bytes32 | None,
     transfer_program: Program,
     inner_puzzle: Program,
 ) -> Program:
@@ -189,7 +189,7 @@ def create_ownership_layer_puzzle(
     did_id: bytes,
     p2_puzzle: Program,
     percentage: uint16,
-    royalty_puzzle_hash: Optional[bytes32] = None,
+    royalty_puzzle_hash: bytes32 | None = None,
 ) -> Program:
     log.debug(
         "Creating ownership layer puzzle with NFT_ID: %s DID_ID: %s Royalty_Percentage: %d P2_puzzle: %s",
@@ -230,7 +230,7 @@ def create_ownership_layer_transfer_solution(
 def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> tuple[Program, bytes32]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(Program.from_serialized(solution)))
     metadata = unft.metadata
-    puzhash_for_derivation: Optional[bytes32] = None
+    puzhash_for_derivation: bytes32 | None = None
     for condition in conditions.as_iter():
         if condition.list_len() < 2:
             # invalid condition
@@ -279,9 +279,9 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     return new_ownership_puzzle
 
 
-def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Union[Literal[b""], bytes32, None]:
+def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Literal[b""] | bytes32 | None:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
-    new_did_id: Union[Literal[b""], bytes32, None] = None
+    new_did_id: Literal[b""] | bytes32 | None = None
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition

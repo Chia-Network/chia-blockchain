@@ -235,32 +235,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download Results
-        if: false
-        uses: actions/download-artifact@v6
-        with:
-          merge-multiple: true
-          pattern: junit-data-*
-          path: junit-data
+      # - name: Download Results
+      #   if: false
+      #   uses: actions/download-artifact@v6
+      #   with:
+      #     merge-multiple: true
+      #     pattern: junit-data-*
+      #     path: junit-data
 
-      - name: Format JUnit data and prepare results
-        if: false
-        run: |
-          sudo snap install yq
-          find junit-data -maxdepth 1 -name '*.xml' -print0 | xargs -0 --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
+      # - name: Format JUnit data and prepare results
+      #   if: false
+      #   run: |
+      #     sudo snap install yq
+      #     find junit-data -maxdepth 1 -name '*.xml' -print0 | xargs -0 --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
-          sudo apt-get install junitparser
-          mkdir junit-results
-          junitparser merge junit-data/*.xml junit-results/junit.xml
-          find junit-results -maxdepth 1 -name '*.xml' -print0 | xargs -0 --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
+      #     sudo apt-get install junitparser
+      #     mkdir junit-results
+      #     junitparser merge junit-data/*.xml junit-results/junit.xml
+      #     find junit-results -maxdepth 1 -name '*.xml' -print0 | xargs -0 --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
-      - name: Publish formatted JUnit data
-        if: false
-        uses: actions/upload-artifact@v5
-        with:
-          name: junit-data
-          path: junit-data/*
-          if-no-files-found: error
+      # - name: Publish formatted JUnit data
+      #   if: false
+      #   uses: actions/upload-artifact@v5
+      #   with:
+      #     name: junit-data
+      #     path: junit-data/*
+      #     if-no-files-found: error
 
       - name: Download Coverage
         uses: actions/download-artifact@v6

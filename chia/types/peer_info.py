@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ipaddress
 from dataclasses import dataclass
-from typing import Union
 
 from chia_rs.sized_ints import uint16, uint64
 
@@ -23,7 +22,7 @@ class PeerInfo:
     _port: uint16
 
     # TODO, Drop this as soon as all call PeerInfo calls pass in an IPAddress
-    def __init__(self, host: Union[IPAddress, str], port: int):
+    def __init__(self, host: IPAddress | str, port: int):
         self._ip = host if isinstance(host, IPAddress) else IPAddress.create(host)
         self._port = uint16(port)
 

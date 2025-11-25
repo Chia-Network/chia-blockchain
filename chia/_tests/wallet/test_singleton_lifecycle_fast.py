@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, TypeVar, cast, get_args, get_origin
+from typing import Any, TypeVar, cast, get_args, get_origin
 
 from chia_rs import CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -78,7 +79,7 @@ class PuzzleDB:
     def add_puzzle(self, puzzle: Program) -> None:
         self._db[puzzle.get_tree_hash()] = Program.from_bytes(bytes(puzzle))
 
-    def puzzle_for_hash(self, puzzle_hash: bytes32) -> Optional[Program]:
+    def puzzle_for_hash(self, puzzle_hash: bytes32) -> Program | None:
         return self._db.get(puzzle_hash)
 
 
@@ -237,7 +238,7 @@ class SingletonWallet:
     current_state: Coin
     lineage_proof: Program
 
-    def inner_puzzle(self, puzzle_db: PuzzleDB) -> Optional[Program]:
+    def inner_puzzle(self, puzzle_db: PuzzleDB) -> Program | None:
         puzzle = puzzle_db.puzzle_for_hash(self.current_state.puzzle_hash)
         if puzzle is None:
             return None

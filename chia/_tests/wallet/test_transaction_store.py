@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import random
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -811,7 +811,7 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_transaction_record_is_valid() -> None:
-    invalid_attempts: list[tuple[str, uint8, Optional[str]]] = []
+    invalid_attempts: list[tuple[str, uint8, str | None]] = []
     # The tx should be valid as long as we don't have minimum_send_attempts failed attempts
     while len(invalid_attempts) < minimum_send_attempts:
         assert dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()

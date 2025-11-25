@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -16,14 +17,14 @@ from chia.wallet.vc_wallet.cr_cat_drivers import PROOF_FLAGS_CHECKER, construct_
 
 @dataclass(frozen=True)
 class CROuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
-    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
-        args: Optional[tuple[list[bytes32], Program, Program]] = match_cr_layer(puzzle)
+    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
+        args: tuple[list[bytes32], Program, Program] | None = match_cr_layer(puzzle)
         if args is None:
             return None
         authorized_providers, proofs_checker, inner_puzzle = args
@@ -38,29 +39,29 @@ class CROuterPuzzle:
         return PuzzleInfo(constructor_dict)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-    ) -> Optional[Program]:
-        args: Optional[tuple[list[bytes32], Program, Program]] = match_cr_layer(puzzle_reveal)
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    ) -> Program | None:
+        args: tuple[list[bytes32], Program, Program] | None = match_cr_layer(puzzle_reveal)
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")  # pragma: no cover
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+            deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
             return deep_inner_puzzle
         else:
             return inner_puzzle
 
-    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         my_inner_solution: Program = solution.at("rrrrrrf")
         also = constructor.also()
         if also:
-            deep_inner_solution: Optional[Program] = self._get_inner_solution(also, my_inner_solution)
+            deep_inner_solution: Program | None = self._get_inner_solution(also, my_inner_solution)
             return deep_inner_solution
         else:
             return my_inner_solution
 
-    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+    def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return None
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:

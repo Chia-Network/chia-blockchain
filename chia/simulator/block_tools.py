@@ -10,11 +10,11 @@ import ssl
 import sys
 import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Optional
+from typing import Any
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -100,6 +100,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_taproot_sk,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -249,9 +250,9 @@ class BlockTools:
     def __init__(
         self,
         constants: ConsensusConstants = test_constants,
-        root_path: Optional[Path] = None,
-        keychain: Optional[Keychain] = None,
-        config_overrides: Optional[dict[str, Any]] = None,
+        root_path: Path | None = None,
+        keychain: Keychain | None = None,
+        config_overrides: dict[str, Any] | None = None,
         automated_testing: bool = True,
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
@@ -393,16 +394,16 @@ class BlockTools:
         self,
         generator_block_heights: list[uint32],
         curr: BlockRecordProtocol,
-        wallet: Optional[WalletTool],
-        rng: Optional[random.Random],
+        wallet: WalletTool | None,
+        rng: random.Random | None,
         available_coins: list[Coin],
         *,
         prev_tx_height: uint32,
         dummy_block_references: bool,
         include_transactions: bool,
-        transaction_data: Optional[SpendBundle],
+        transaction_data: SpendBundle | None,
         block_refs: list[uint32],
-    ) -> Optional[NewBlockGenerator]:
+    ) -> NewBlockGenerator | None:
         if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
             assert block_refs == [], "block references are not allowed after hard fork 2"
             dummy_block_references = False
@@ -470,8 +471,8 @@ class BlockTools:
 
         return None
 
-    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None) -> None:
-        keychain_proxy: Optional[KeychainProxy]
+    async def setup_keys(self, fingerprint: int | None = None, reward_ph: bytes32 | None = None) -> None:
+        keychain_proxy: KeychainProxy | None
         try:
             if self.local_keychain:
                 keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
@@ -546,7 +547,7 @@ class BlockTools:
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
-        testrun_uid: Optional[str] = None,
+        testrun_uid: str | None = None,
     ) -> bool:
         if testrun_uid is None:
             lock_file_name = self.plot_dir / ".lockfile"
@@ -584,10 +585,10 @@ class BlockTools:
 
     async def new_plot(
         self,
-        pool_contract_puzzle_hash: Optional[bytes32] = None,
-        path: Optional[Path] = None,
-        tmp_dir: Optional[Path] = None,
-        plot_keys: Optional[PlotKeys] = None,
+        pool_contract_puzzle_hash: bytes32 | None = None,
+        path: Path | None = None,
+        tmp_dir: Path | None = None,
+        plot_keys: PlotKeys | None = None,
         exclude_plots: bool = False,
         plot_size: int = 20,
         bitfield: bool = True,
@@ -616,8 +617,8 @@ class BlockTools:
         )
         try:
             if plot_keys is None:
-                pool_pk: Optional[G1Element] = None
-                pool_address: Optional[str] = None
+                pool_pk: G1Element | None = None
+                pool_address: str | None = None
                 if pool_contract_puzzle_hash is None:
                     pool_pk = self.pool_pk
                 else:
@@ -633,8 +634,8 @@ class BlockTools:
             )
             self.created_plots += 1
 
-            plot_id_new: Optional[bytes32] = None
-            path_new: Optional[Path] = None
+            plot_id_new: bytes32 | None = None
+            path_new: Path | None = None
             new_plot: bool = True
 
             if len(created):
@@ -724,7 +725,7 @@ class BlockTools:
 
         raise ValueError(f"Do not have key {plot_pk}")
 
-    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: Optional[G1Element]) -> Optional[G2Element]:
+    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: G1Element | None) -> G2Element | None:
         # Returns the pool signature for the corresponding pk. If no pk is provided, returns None.
         if pool_pk is None:
             return None
@@ -744,13 +745,13 @@ class BlockTools:
     def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: Optional[list[FullBlock]] = None,
+        block_list_input: list[FullBlock] | None = None,
         *,
-        farmer_reward_puzzle_hash: Optional[bytes32] = None,
-        pool_reward_puzzle_hash: Optional[bytes32] = None,
-        transaction_data: Optional[SpendBundle] = None,
+        farmer_reward_puzzle_hash: bytes32 | None = None,
+        pool_reward_puzzle_hash: bytes32 | None = None,
+        transaction_data: SpendBundle | None = None,
         seed: bytes = b"",
-        time_per_block: Optional[float] = None,
+        time_per_block: float | None = None,
         force_overflow: bool = False,
         skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
         guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
@@ -761,8 +762,8 @@ class BlockTools:
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
         block_refs: list[uint32] = [],
-        genesis_timestamp: Optional[uint64] = None,
-        force_plot_id: Optional[bytes32] = None,
+        genesis_timestamp: uint64 | None = None,
+        force_plot_id: bytes32 | None = None,
         dummy_block_references: bool = False,
         include_transactions: bool = False,
         skip_overflow: bool = False,
@@ -798,8 +799,8 @@ class BlockTools:
         # after the one they were created by, so we "stage" them here to move
         # them into available_coins at the next transaction block
         pending_rewards: list[Coin] = []
-        wallet: Optional[WalletTool] = None
-        rng: Optional[Random] = None
+        wallet: WalletTool | None = None
+        rng: Random | None = None
         if include_transactions:
             # when we generate transactions in the chain, the caller cannot also
             # have ownership of the rewards and control the transactions
@@ -850,6 +851,12 @@ class BlockTools:
 
         if num_blocks == 0:
             return block_list
+
+        if block_list[-1].height >= constants.HARD_FORK2_HEIGHT and pool_reward_puzzle_hash is not None:
+            raise ValueError(
+                "block height is past hard fork 2 activation. v2 plots don't "
+                "support pool puzzle hashes, only contract hashes"
+            )
 
         blocks: dict[bytes32, BlockRecord]
         if block_list[-1].header_hash == self._block_cache_header:
@@ -1130,7 +1137,7 @@ class BlockTools:
                 )
             # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch or epoch
             # include the hash in the next sub-slot
-            sub_epoch_summary: Optional[SubEpochSummary] = None
+            sub_epoch_summary: SubEpochSummary | None = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
@@ -1141,10 +1148,10 @@ class BlockTools:
                 )
             if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
-                ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
+                ses_hash: bytes32 | None = sub_epoch_summary.get_hash()
                 # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
-                new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
-                new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+                new_sub_slot_iters: uint64 | None = sub_epoch_summary.new_sub_slot_iters
+                new_difficulty: uint64 | None = sub_epoch_summary.new_difficulty
 
                 self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height + 1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
@@ -1180,7 +1187,7 @@ class BlockTools:
                         icc_eos_iters,
                         True,
                     )
-                icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_eos_vdf)
+                icc_sub_slot: InfusedChallengeChainSubSlot | None = InfusedChallengeChainSubSlot(icc_eos_vdf)
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_block.deficit == 0 else None
                 cc_sub_slot = ChallengeChainSubSlot(
@@ -1407,7 +1414,7 @@ class BlockTools:
         self,
         constants: ConsensusConstants,
         seed: bytes = b"",
-        timestamp: Optional[uint64] = None,
+        timestamp: uint64 | None = None,
         force_overflow: bool = False,
         skip_slots: int = 0,
     ) -> FullBlock:
@@ -1415,7 +1422,7 @@ class BlockTools:
             timestamp = uint64(time.time())
 
         finished_sub_slots: list[EndOfSubSlotBundle] = []
-        unfinished_block: Optional[UnfinishedBlock] = None
+        unfinished_block: UnfinishedBlock | None = None
         ip_iters: uint64 = uint64(0)
         sub_slot_total_iters: uint128 = uint128(0)
 
@@ -1600,11 +1607,14 @@ class BlockTools:
         sub_slot_iters: uint64,
         height: uint32,
         prev_tx_height: uint32,
-        force_plot_id: Optional[bytes32] = None,
+        force_plot_id: bytes32 | None = None,
     ) -> list[tuple[uint64, ProofOfSpace]]:
         found_proofs: list[tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
         rng.seed(seed)
+
+        sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
+        phase_out_epochs = num_phase_out_epochs(constants)
 
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
@@ -1613,8 +1623,6 @@ class BlockTools:
             prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
-
-            phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
 
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
@@ -1650,7 +1658,7 @@ class BlockTools:
                     difficulty,
                     signage_point,
                 )
-                if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
+                if required_iters >= sp_interval_iters:
                     continue
 
                 proof = b""
@@ -1698,7 +1706,7 @@ class BlockTools:
 def get_signage_point(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
-    latest_block: Optional[BlockRecord],
+    latest_block: BlockRecord | None,
     sub_slot_start_total_iters: uint128,
     signage_point_index: uint8,
     finished_sub_slots: list[EndOfSubSlotBundle],
@@ -1851,7 +1859,7 @@ def get_challenges(
     constants: ConsensusConstants,
     blocks: dict[bytes32, BlockRecord],
     finished_sub_slots: list[EndOfSubSlotBundle],
-    prev_header_hash: Optional[bytes32],
+    prev_header_hash: bytes32 | None,
 ) -> tuple[bytes32, bytes32]:
     if len(finished_sub_slots) == 0:
         if prev_header_hash is None:
@@ -1952,7 +1960,7 @@ def get_icc(
     blocks: dict[bytes32, BlockRecord],
     sub_slot_start_total_iters: uint128,
     deficit: uint8,
-) -> tuple[Optional[VDFInfo], Optional[VDFProof]]:
+) -> tuple[VDFInfo | None, VDFProof | None]:
     if len(finished_sub_slots) == 0:
         prev_deficit = latest_block.deficit
     else:
@@ -1982,7 +1990,7 @@ def get_icc(
         curr = blocks[curr.prev_hash]
     icc_iters = uint64(vdf_end_total_iters - latest_block.total_iters)
     if latest_block.is_challenge_block(constants):
-        icc_input: Optional[ClassgroupElement] = ClassgroupElement.get_default_element()
+        icc_input: ClassgroupElement | None = ClassgroupElement.get_default_element()
     else:
         icc_input = latest_block.infused_challenge_vdf_output
     assert icc_input is not None
@@ -2013,21 +2021,21 @@ def get_full_block_and_block_record(
     pool_target: PoolTarget,
     last_timestamp: float,
     time_per_block: float,
-    new_gen: Optional[NewBlockGenerator],
+    new_gen: NewBlockGenerator | None,
     height_to_hash: dict[uint32, bytes32],
     difficulty: uint64,
     required_iters: uint64,
     sub_slot_iters: uint64,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
+    get_pool_signature: Callable[[PoolTarget, G1Element | None], G2Element | None],
     finished_sub_slots: list[EndOfSubSlotBundle],
     signage_point: SignagePoint,
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
     mmr_manager: BlockchainMMRManager,
-    overflow_cc_challenge: Optional[bytes32] = None,
-    overflow_rc_challenge: Optional[bytes32] = None,
+    overflow_cc_challenge: bytes32 | None = None,
+    overflow_rc_challenge: bytes32 | None = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
 ) -> tuple[FullBlock, BlockRecord, float]:
@@ -2190,13 +2198,13 @@ create_block_tools_count = 0
 
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
-    root_path: Optional[Path] = None,
-    keychain: Optional[Keychain] = None,
-    config_overrides: Optional[dict[str, Any]] = None,
+    root_path: Path | None = None,
+    keychain: Keychain | None = None,
+    config_overrides: dict[str, Any] | None = None,
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
-    testrun_uid: Optional[str] = None,
+    testrun_uid: str | None = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2215,9 +2223,9 @@ async def create_block_tools_async(
 
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
-    root_path: Optional[Path] = None,
-    keychain: Optional[Keychain] = None,
-    config_overrides: Optional[dict[str, Any]] = None,
+    root_path: Path | None = None,
+    keychain: Keychain | None = None,
+    config_overrides: dict[str, Any] | None = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional, Union
 
 from chia_rs.sized_bytes import bytes32
 from clvm_tools.binutils import disassemble
@@ -19,7 +19,7 @@ def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Pr
 
 
 def puzzle_for_ownership_layer(
-    current_owner: Union[Program, bytes], transfer_program: Program, inner_puzzle: Program
+    current_owner: Program | bytes, transfer_program: Program, inner_puzzle: Program
 ) -> Program:
     return NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), current_owner, transfer_program, inner_puzzle)
 
@@ -30,18 +30,18 @@ def solution_for_ownership_layer(inner_solution: Program) -> Program:
 
 @dataclass(frozen=True)
 class OwnershipOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
-    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
         matched, curried_args = match_ownership_layer_puzzle(puzzle)
         if matched:
             _, current_owner, transfer_program, inner_puzzle = curried_args
             owner_bytes: bytes = current_owner.as_python()
-            tp_match: Optional[PuzzleInfo] = self._match(uncurry_puzzle(transfer_program))
+            tp_match: PuzzleInfo | None = self._match(uncurry_puzzle(transfer_program))
             constructor_dict = {
                 "type": "ownership",
                 "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
@@ -54,14 +54,14 @@ class OwnershipOuterPuzzle:
         else:
             return None
 
-    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+    def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return None
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
         also = constructor.also()
         if also is not None:
             inner_puzzle = self._construct(also, inner_puzzle)
-        transfer_program_info: Union[PuzzleInfo, Program] = constructor["transfer_program"]
+        transfer_program_info: PuzzleInfo | Program = constructor["transfer_program"]
         if isinstance(transfer_program_info, Program):
             transfer_program: Program = transfer_program_info
         else:
@@ -69,25 +69,25 @@ class OwnershipOuterPuzzle:
         return puzzle_for_ownership_layer(constructor["owner"], transfer_program, inner_puzzle)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-    ) -> Optional[Program]:
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    ) -> Program | None:
         matched, curried_args = match_ownership_layer_puzzle(puzzle_reveal)
         if matched:
             _, _, _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+                deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
                 return deep_inner_puzzle
             else:
                 return inner_puzzle
         else:
             raise ValueError("This driver is not for the specified puzzle reveal")
 
-    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         my_inner_solution: Program = solution.first()
         also = constructor.also()
         if also:
-            deep_inner_solution: Optional[Program] = self._get_inner_solution(also, my_inner_solution)
+            deep_inner_solution: Program | None = self._get_inner_solution(also, my_inner_solution)
             return deep_inner_solution
         else:
             return my_inner_solution

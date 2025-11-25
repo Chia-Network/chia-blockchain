@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -21,11 +21,11 @@ class SingletonRecord:
     singleton_id: bytes32
     wallet_id: uint32
     parent_coinspend: CoinSpend
-    inner_puzzle_hash: Optional[bytes32]
+    inner_puzzle_hash: bytes32 | None
     pending: bool
     removed_height: int
     lineage_proof: LineageProof
-    custom_data: Optional[Any]
+    custom_data: Any | None
 
     def name(self) -> bytes32:  # pragma: no cover
         return self.coin.name()

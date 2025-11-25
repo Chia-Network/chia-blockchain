@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Awaitable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
@@ -32,6 +32,7 @@ from chia.types.blockchain_format.proof_of_space import (
     is_v1_phased_out,
     make_pos,
     passes_plot_filter,
+    v1_cut_off_height,
 )
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -90,7 +91,7 @@ class HarvesterAPI:
         return proofs_found
 
     async def _handle_v2_responses(
-        self, v2_awaitables: Sequence[Awaitable[Optional[PartialProofsData]]], start_time: float, peer: WSChiaConnection
+        self, v2_awaitables: Sequence[Awaitable[PartialProofsData | None]], start_time: float, peer: WSChiaConnection
     ) -> int:
         partial_proofs_found = 0
         for quality_awaitable in asyncio.as_completed(v2_awaitables):
@@ -156,7 +157,7 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> Optional[PartialProofsData]:
+        def blocking_lookup_v2_partial_proofs(filename: Path, plot_info: PlotInfo) -> PartialProofsData | None:
             # Uses the V2 Prover object to lookup qualities only. No full proofs generated.
             try:
                 plot_id = plot_info.prover.get_id()
@@ -297,7 +298,7 @@ class HarvesterAPI:
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
 
-                                if is_v1_phased_out(proof_xs, new_challenge.last_tx_height, constants):
+                                if is_v1_phased_out(proof_xs, new_challenge.last_tx_height, self.harvester.constants):
                                     self.harvester.log.info(
                                         f"Proof dropped due to hard fork phase-out of v1 plots: {filename}"
                                     )
@@ -396,6 +397,11 @@ class HarvesterAPI:
                 if not self._plot_passes_filter(try_plot_info, new_challenge):
                     continue
                 if try_plot_info.prover.get_version() == PlotVersion.V2:
+                    # before hard fork activation, we can't farm v2 plots
+                    constants = self.harvester.constants
+                    if new_challenge.last_tx_height < constants.HARD_FORK2_HEIGHT:
+                        continue
+
                     v2_awaitables.append(
                         loop.run_in_executor(
                             self.harvester.executor,
@@ -406,13 +412,8 @@ class HarvesterAPI:
                     )
                     passed += 1
                 else:
-                    constants = self.harvester.constants
                     # after the phase-out, ignore v1 plots
-                    if (
-                        new_challenge.last_tx_height
-                        >= constants.HARD_FORK2_HEIGHT
-                        + (1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS) * constants.EPOCH_BLOCKS
-                    ):
+                    if new_challenge.last_tx_height >= v1_cut_off_height(self.harvester.constants):
                         continue
 
                     passed += 1
@@ -420,7 +421,6 @@ class HarvesterAPI:
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
-        time_taken = time.monotonic() - start
         total_proofs_found = 0
         total_v2_partial_proofs_found = 0
 
@@ -441,6 +441,7 @@ class HarvesterAPI:
                 else:
                     total_v2_partial_proofs_found = results[0]
 
+        time_taken = time.monotonic() - start
         now = uint64(time.time())
 
         farming_info = FarmingInfo(
@@ -474,7 +475,7 @@ class HarvesterAPI:
         )
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
-    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
+    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Message | None:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the harvester private key. This can also

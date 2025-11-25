@@ -6,9 +6,9 @@ import shlex
 import urllib
 import uuid
 import webbrowser
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, ClassVar, Literal, Optional, overload
+from typing import ClassVar, Literal, overload
 
 import anyio
 import click
@@ -51,7 +51,7 @@ async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout
 async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout: Literal[True]) -> str: ...
 
 
-async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout: bool = False) -> Optional[str]:
+async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout: bool = False) -> str | None:
     command = [
         "gh",
         "api",
@@ -112,7 +112,7 @@ class TestCMD:
     workflow_id: ClassVar[str] = "test.yml"
     owner: str = option("-w", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
     repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
-    ref: Optional[str] = option(
+    ref: str | None = option(
         "-f",
         "--ref",
         help="Branch or tag name (commit SHA not supported), if not specified will push HEAD to a temporary branch",
@@ -120,7 +120,7 @@ class TestCMD:
         default=None,
     )
     per: Per = option("-p", "--per", help="Per", type=click.Choice(["directory", "file"]), default="directory")
-    only: Optional[Path] = option(
+    only: Path | None = option(
         "-o", "--only", help="Only run this item, a file or directory depending on --per", type=Path
     )
     duplicates: int = option("-d", "--duplicates", help="Number of duplicates", type=int, default=1)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
@@ -107,7 +107,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: dict[str, Any]
 
 async def peer_async(
     node_type: str,
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     show_connections: bool,
     add_connection: str,

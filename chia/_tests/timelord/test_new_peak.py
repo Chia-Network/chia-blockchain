@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
-from chia_rs import BlockRecord, FullBlock, SubEpochSummary, UnfinishedBlock
+from chia_rs import BlockRecord, FullBlock, SubEpochSummary, UnfinishedBlock, is_overflow_block
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64, uint128
 
@@ -20,6 +18,13 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord_api import TimelordAPI
+
+
+def last_unfinished(tl: TimelordAPI, *, overflow: bool) -> timelord_protocol.NewUnfinishedBlockTimelord:
+    if overflow:
+        return tl.timelord.overflow_blocks[-1]
+    else:
+        return tl.timelord.unfinished_blocks[-1]
 
 
 class TestNewPeak:
@@ -128,7 +133,8 @@ class TestNewPeak:
             )
             await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
-            assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
+            overflow = is_overflow_block(bt.constants, timelord_unf_block.reward_chain_block.signage_point_index)
+            assert last_unfinished(timelord_api, overflow=overflow).get_hash() == timelord_unf_block.get_hash()
             new_peak = timelord_peak_from_block(b1, block_2)
             assert timelord_unf_block.reward_chain_block.total_iters <= new_peak.reward_chain_block.total_iters
             await timelord_api.new_peak_timelord(new_peak)
@@ -195,7 +201,9 @@ class TestNewPeak:
                     bytes32.zeros,
                 )
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
-                assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
+
+                overflow = is_overflow_block(bt.constants, timelord_unf_block.reward_chain_block.signage_point_index)
+                assert last_unfinished(timelord_api, overflow=overflow).get_hash() == timelord_unf_block.get_hash()
                 new_peak = timelord_peak_from_block(b2, block_2)
 
                 # timelord knows unfinished block_1 that has lower iterations,
@@ -210,7 +218,8 @@ class TestNewPeak:
                     == peak.reward_chain_block.get_hash()
                 )
                 # check unfinished block_1 is still in cache
-                assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
+                overflow = is_overflow_block(bt.constants, timelord_unf_block.reward_chain_block.signage_point_index)
+                assert last_unfinished(timelord_api, overflow=overflow).get_hash() == timelord_unf_block.get_hash()
 
                 # full node gets block_1 unfinished
                 block_1_unf = UnfinishedBlock(
@@ -375,7 +384,8 @@ class TestNewPeak:
 
                 # add unfinished and make sure we cache it
                 await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
-                assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
+                overflow = is_overflow_block(bt.constants, timelord_unf_block.reward_chain_block.signage_point_index)
+                assert last_unfinished(timelord_api, overflow=overflow).get_hash() == timelord_unf_block.get_hash()
                 new_peak = timelord_peak_from_block(b1, block_1)
                 assert timelord_unf_block.reward_chain_block.total_iters >= new_peak.reward_chain_block.total_iters
                 await timelord_api.new_peak_timelord(new_peak)
@@ -535,9 +545,10 @@ class TestNewPeak:
                 )
 
             await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
-            assert timelord_api.timelord.unfinished_blocks[-1].get_hash() == timelord_unf_block.get_hash()
+            overflow = is_overflow_block(bt.constants, timelord_unf_block.reward_chain_block.signage_point_index)
+            assert last_unfinished(timelord_api, overflow=overflow).get_hash() == timelord_unf_block.get_hash()
             assert (
-                timelord_api.timelord.unfinished_blocks[-1].reward_chain_block.get_hash()
+                last_unfinished(timelord_api, overflow=overflow).reward_chain_block.get_hash()
                 == timelord_unf_block.reward_chain_block.get_hash()
             )
 
@@ -583,7 +594,7 @@ def get_recent_reward_challenges(blockchain: Blockchain) -> list[tuple[bytes32, 
     if peak is None:
         return []
     recent_rc: list[tuple[bytes32, uint128]] = []
-    curr: Optional[BlockRecord] = peak
+    curr: BlockRecord | None = peak
     while curr is not None and len(recent_rc) < 2 * blockchain.constants.MAX_SUB_SLOT_BLOCKS:
         if curr != peak:
             recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
@@ -606,7 +617,7 @@ def timelord_peak_from_block(
 ) -> timelord_protocol.NewPeakTimelord:
     peak = blockchain.block_record(block.header_hash)
     _, difficulty = get_next_sub_slot_iters_and_difficulty(blockchain.constants, False, peak, blockchain)
-    ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+    ses: SubEpochSummary | None = next_sub_epoch_summary(
         blockchain.constants, blockchain, peak.required_iters, block, True
     )
 

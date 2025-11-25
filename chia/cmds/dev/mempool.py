@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 import click
 
@@ -27,7 +26,7 @@ def mempool_cmd(ctx: click.Context) -> None:
 )
 @click.argument("path", type=str)
 @click.pass_context
-def import_mempool_cmd(ctx: click.Context, rpc_port: Optional[int], path: str) -> None:
+def import_mempool_cmd(ctx: click.Context, rpc_port: int | None, path: str) -> None:
     import asyncio
 
     with open(path) as file:
@@ -50,7 +49,7 @@ def import_mempool_cmd(ctx: click.Context, rpc_port: Optional[int], path: str) -
 )
 @click.argument("path", type=str)
 @click.pass_context
-def export_mempool_cmd(ctx: click.Context, rpc_port: Optional[int], path: str) -> None:
+def export_mempool_cmd(ctx: click.Context, rpc_port: int | None, path: str) -> None:
     import asyncio
 
     asyncio.run(export_mempool_async(rpc_port, ChiaCliContext.set_default(ctx).root_path, path))
@@ -67,7 +66,7 @@ def export_mempool_cmd(ctx: click.Context, rpc_port: Optional[int], path: str) -
     default=None,
 )
 @click.pass_context
-def create_block_cmd(ctx: click.Context, rpc_port: Optional[int]) -> None:
+def create_block_cmd(ctx: click.Context, rpc_port: int | None) -> None:
     import asyncio
 
     asyncio.run(create_block_async(rpc_port, ChiaCliContext.set_default(ctx).root_path))

@@ -7,7 +7,7 @@ import logging
 import time
 from itertools import chain
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiofiles
 import click
@@ -117,13 +117,13 @@ def get_block_hash_for_height(height: int, height_to_hash: bytes) -> bytes32:
 )
 def cli(
     root_path: str,
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     spends_with_conditions: bool,
     block_spends: bool,
     additions_and_removals: bool,
     pipeline_depth: int,
-    start_height: Optional[int] = None,
-    end_height: Optional[int] = None,
+    start_height: int | None = None,
+    end_height: int | None = None,
 ) -> None:
     root_path_path = Path(root_path)
     requests_per_batch = 0
@@ -197,13 +197,13 @@ async def node_additions_removals(
 
 async def cli_async(
     root_path: Path,
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     spends_with_conditions: bool,
     block_spends: bool,
     additions_and_removals: bool,
     pipeline_depth: int,
     start_height: int,
-    end_height: Optional[int] = None,
+    end_height: int | None = None,
 ) -> None:
     async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (
         node_client,

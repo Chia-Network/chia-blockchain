@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 from chia_rs.sized_bytes import bytes32
 
@@ -30,13 +30,13 @@ def solution_for_metadata_layer(inner_solution: Program) -> Program:
 
 @dataclass(frozen=True)
 class MetadataOuterPuzzle:
-    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], PuzzleInfo | None]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Optional[Program]], Optional[Program]]
-    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle, Program | None], Program | None]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Program | None]
 
-    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
         matched, curried_args = match_metadata_layer_puzzle(puzzle)
         if matched:
             _, metadata, updater_hash, inner_puzzle = curried_args
@@ -53,7 +53,7 @@ class MetadataOuterPuzzle:
             return None
         return None  # Uncomment above when match_metadata_layer_puzzle works
 
-    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+    def asset_id(self, constructor: PuzzleInfo) -> bytes32 | None:
         return bytes32(constructor["updater_hash"])
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
@@ -63,25 +63,25 @@ class MetadataOuterPuzzle:
         return puzzle_for_metadata_layer(constructor["metadata"], constructor["updater_hash"], inner_puzzle)
 
     def get_inner_puzzle(
-        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Optional[Program] = None
-    ) -> Optional[Program]:
+        self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+    ) -> Program | None:
         matched, curried_args = match_metadata_layer_puzzle(puzzle_reveal)
         if matched:
             _, _, _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
+                deep_inner_puzzle: Program | None = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle), None)
                 return deep_inner_puzzle
             else:
                 return inner_puzzle
         else:
             raise ValueError("This driver is not for the specified puzzle reveal")
 
-    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Program | None:
         my_inner_solution: Program = solution.first()
         also = constructor.also()
         if also:
-            deep_inner_solution: Optional[Program] = self._get_inner_solution(also, my_inner_solution)
+            deep_inner_solution: Program | None = self._get_inner_solution(also, my_inner_solution)
             return deep_inner_solution
         else:
             return my_inner_solution

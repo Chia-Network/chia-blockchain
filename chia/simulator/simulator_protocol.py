@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -21,7 +20,7 @@ class ReorgProtocol(Streamable):
     old_index: uint32
     new_index: uint32
     puzzle_hash: bytes32
-    seed: Optional[bytes32]
+    seed: bytes32 | None
 
 
 @streamable

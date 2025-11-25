@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from typing_extensions import Protocol
 
@@ -25,6 +25,6 @@ class SolverApiStub(ApiProtocol, Protocol):
         ...
 
     @metadata.request(peer_required=False)
-    async def solve(self, request: SolverInfo) -> Optional[Message]:
+    async def solve(self, request: SolverInfo) -> Message | None:
         """Handle solver request."""
         ...

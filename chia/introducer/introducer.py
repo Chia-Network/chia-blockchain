@@ -6,7 +6,7 @@ import logging
 import random
 import time
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import dns.asyncresolver
 from chia_rs.sized_ints import uint16, uint64
@@ -42,7 +42,7 @@ class Introducer:
         self.dns_servers = dns_servers
         self.resolver = dns.asyncresolver.Resolver()
         self._shut_down = False
-        self._server: Optional[ChiaServer] = None
+        self._server: ChiaServer | None = None
         self.log = logging.getLogger(__name__)
 
     @contextlib.asynccontextmanager
@@ -62,7 +62,7 @@ class Introducer:
         # TODO: fill this out?
         pass
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
+    def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def set_server(self, server: ChiaServer):

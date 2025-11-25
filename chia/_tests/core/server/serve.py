@@ -7,7 +7,7 @@ import logging.config
 import pathlib
 import sys
 import threading
-from typing import Optional, final, overload
+from typing import final, overload
 
 from chia._tests.util.misc import create_logger
 from chia.server.chia_policy import ChiaPolicy
@@ -47,7 +47,7 @@ async def async_main(
     shutdown_path: pathlib.Path,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    port_holder: Optional[list[int]] = None,
+    port_holder: list[int] | None = None,
 ) -> None: ...
 
 
@@ -58,22 +58,22 @@ async def async_main(
     thread_end_event: threading.Event,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    port_holder: Optional[list[int]] = None,
+    port_holder: list[int] | None = None,
 ) -> None: ...
 
 
 async def async_main(
     *,
     out_path: pathlib.Path,
-    shutdown_path: Optional[pathlib.Path] = None,
-    thread_end_event: Optional[threading.Event] = None,
+    shutdown_path: pathlib.Path | None = None,
+    thread_end_event: threading.Event | None = None,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    port_holder: Optional[list[int]] = None,
+    port_holder: list[int] | None = None,
 ) -> None:
     with out_path.open(mode="w") as file:
         logger = create_logger(file=file)
-        file_task: Optional[asyncio.Task[None]] = None
+        file_task: asyncio.Task[None] | None = None
         if thread_end_event is None:
             assert shutdown_path is not None
             thread_end_event = threading.Event()

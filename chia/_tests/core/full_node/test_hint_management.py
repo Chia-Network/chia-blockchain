@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
@@ -38,7 +36,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])
     await _validate_and_add_block(empty_blockchain, blocks[1])
-    br: Optional[BlockRecord] = empty_blockchain.get_peak()
+    br: BlockRecord | None = empty_blockchain.get_peak()
     assert br is not None
 
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, [])
@@ -56,7 +54,7 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])
     await _validate_and_add_block(empty_blockchain, blocks[1])
-    br: Optional[BlockRecord] = empty_blockchain.get_peak()
+    br: BlockRecord | None = empty_blockchain.get_peak()
     assert br is not None
 
     rewards: list[Coin] = [

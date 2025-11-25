@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
-
 from chia_rs import ConsensusConstants, RewardChainBlock, RewardChainBlockUnfinished
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -15,7 +13,7 @@ from chia.consensus.pot_iterations import (
 
 def iters_from_block(
     constants: ConsensusConstants,
-    reward_chain_block: Union[RewardChainBlock, RewardChainBlockUnfinished],
+    reward_chain_block: RewardChainBlock | RewardChainBlockUnfinished,
     sub_slot_iters: uint64,
     difficulty: uint64,
     height: uint32,

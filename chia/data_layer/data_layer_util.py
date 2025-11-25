@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import aiosqlite
 from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
@@ -250,8 +250,8 @@ class InternalNode:
     left_hash: bytes32
     right_hash: bytes32
 
-    left: Optional[Node] = None
-    right: Optional[Node] = None
+    left: Node | None = None
+    right: Node | None = None
 
     @classmethod
     def from_child_nodes(cls, left: Node, right: Node) -> InternalNode:
@@ -307,7 +307,7 @@ unspecified = Unspecified.instance
 @dataclass(frozen=True)
 class Root:
     store_id: bytes32
-    node_hash: Optional[bytes32]
+    node_hash: bytes32 | None
     generation: int
     status: Status
 
@@ -352,7 +352,7 @@ class Root:
         }
 
 
-node_type_to_class: dict[NodeType, type[Union[InternalNode, TerminalNode]]] = {
+node_type_to_class: dict[NodeType, type[InternalNode | TerminalNode]] = {
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
@@ -454,7 +454,7 @@ class Layer:
 class MakeOfferRequest:
     maker: tuple[OfferStore, ...]
     taker: tuple[OfferStore, ...]
-    fee: Optional[uint64]
+    fee: uint64 | None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> MakeOfferRequest:
@@ -569,7 +569,7 @@ class MakeOfferResponse:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferRequest:
     offer: Offer
-    fee: Optional[uint64]
+    fee: uint64 | None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> TakeOfferRequest:
@@ -609,8 +609,8 @@ class TakeOfferResponse:
 class VerifyOfferResponse:
     success: bool
     valid: bool
-    error: Optional[str] = None
-    fee: Optional[uint64] = None
+    error: str | None = None
+    fee: uint64 | None = None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> VerifyOfferResponse:
@@ -635,7 +635,7 @@ class CancelOfferRequest:
     trade_id: bytes32
     # cancel on chain (secure) vs. just locally
     secure: bool
-    fee: Optional[uint64]
+    fee: uint64 | None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> CancelOfferRequest:
@@ -691,7 +691,7 @@ class ClearPendingRootsRequest:
 class ClearPendingRootsResponse:
     success: bool
 
-    root: Optional[Root]
+    root: Root | None
     # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
@@ -765,7 +765,7 @@ class KeysValuesCompressed:
     keys_values_hashed: dict[bytes32, bytes32]
     key_hash_to_length: dict[bytes32, int]
     leaf_hash_to_length: dict[bytes32, int]
-    root_hash: Optional[bytes32]
+    root_hash: bytes32 | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -773,7 +773,7 @@ class KeysPaginationData:
     total_pages: int
     total_bytes: int
     keys: list[bytes]
-    root_hash: Optional[bytes32]
+    root_hash: bytes32 | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -781,7 +781,7 @@ class KeysValuesPaginationData:
     total_pages: int
     total_bytes: int
     keys_values: list[TerminalNode]
-    root_hash: Optional[bytes32]
+    root_hash: bytes32 | None
 
 
 @dataclasses.dataclass(frozen=True)

@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from types import FrameType
-from typing import Any, Optional, TextIO
+from typing import Any, TextIO
 
 from chia_rs import G1Element
 from chia_rs.sized_ints import uint32
@@ -141,7 +141,7 @@ class Command(Protocol):
     async def __call__(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]: ...
 
 
-def _get_keys_by_fingerprints(fingerprints: Optional[list[uint32]]) -> tuple[list[KeyData], set[uint32]]:
+def _get_keys_by_fingerprints(fingerprints: list[uint32] | None) -> tuple[list[KeyData], set[uint32]]:
     all_keys = Keychain().get_keys(include_secrets=True)
     missing_fingerprints = set()
 
@@ -189,19 +189,19 @@ class WebSocketServer:
         self.services: dict[str, list[subprocess.Popen]] = dict()
         self.plots_queue: list[dict] = []
         self.connections: dict[str, set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
-        self.ping_job: Optional[asyncio.Task] = None
+        self.ping_job: asyncio.Task | None = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
         self.heartbeat = self.net_config.get("daemon_heartbeat", 300)
-        self.webserver: Optional[WebServer] = None
+        self.webserver: WebServer | None = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = asyncio.Event()
         self.state_changed_msg_queue: asyncio.Queue[StatusMessage] = asyncio.Queue()
-        self.state_changed_task: Optional[asyncio.Task] = None
+        self.state_changed_task: asyncio.Task | None = None
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
@@ -248,7 +248,7 @@ class WebSocketServer:
     async def _accept_signal(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
@@ -407,7 +407,7 @@ class WebSocketServer:
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
-    ) -> Optional[tuple[str, set[WebSocketResponse]]]:
+    ) -> tuple[str, set[WebSocketResponse]] | None:
         """
         This function gets called when new message is received via websocket.
         """
@@ -518,8 +518,8 @@ class WebSocketServer:
 
     async def unlock_keyring(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        key: Optional[str] = request.get("key", None)
+        error: str | None = None
+        key: str | None = request.get("key", None)
         if type(key) is not str:
             return {"success": False, "error": "missing key"}
 
@@ -554,8 +554,8 @@ class WebSocketServer:
         request: dict[str, Any],
     ) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        key: Optional[str] = request.get("key", None)
+        error: str | None = None
+        key: str | None = request.get("key", None)
         if type(key) is not str:
             return {"success": False, "error": "missing key"}
 
@@ -571,10 +571,10 @@ class WebSocketServer:
 
     async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        current_passphrase: Optional[str] = None
-        new_passphrase: Optional[str] = None
-        passphrase_hint: Optional[str] = request.get("passphrase_hint", None)
+        error: str | None = None
+        current_passphrase: str | None = None
+        new_passphrase: str | None = None
+        passphrase_hint: str | None = request.get("passphrase_hint", None)
         save_passphrase: bool = request.get("save_passphrase", False)
 
         if using_default_passphrase():
@@ -615,8 +615,8 @@ class WebSocketServer:
 
     async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        current_passphrase: Optional[str] = None
+        error: str | None = None
+        current_passphrase: str | None = None
 
         if not Keychain.has_master_passphrase():
             return {"success": False, "error": "passphrase not set"}

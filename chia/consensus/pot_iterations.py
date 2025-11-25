@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import ConsensusConstants, PlotParam, ProofOfSpace
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -57,8 +55,8 @@ def validate_pospace_and_get_required_iters(
     height: uint32,
     difficulty: uint64,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
-) -> Optional[uint64]:
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
+) -> uint64 | None:
+    q_str: bytes32 | None = verify_and_get_quality_string(
         proof_of_space,
         constants,
         challenge,

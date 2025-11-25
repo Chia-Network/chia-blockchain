@@ -7,11 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from time import monotonic
-from typing import Optional
 
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
-    MEMPOOL_MODE,
     AugSchemeMPL,
     BlockBuilder,
     Coin,
@@ -74,7 +72,7 @@ class MempoolRemoveInfo:
 @dataclass
 class MempoolAddInfo:
     removals: list[MempoolRemoveInfo]
-    error: Optional[Err]
+    error: Err | None
 
 
 class MempoolRemoveReason(Enum):
@@ -255,7 +253,7 @@ class Mempool:
         row = cursor.fetchone()
         return int(row[0])
 
-    def get_item_by_id(self, item_id: bytes32) -> Optional[MempoolItem]:
+    def get_item_by_id(self, item_id: bytes32) -> MempoolItem | None:
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT * FROM tx WHERE name=?", (item_id,))
             row = cursor.fetchone()
@@ -289,7 +287,7 @@ class Mempool:
             items.extend(self._row_to_item(row) for row in cursor)
         return items
 
-    def get_min_fee_rate(self, cost: int) -> Optional[float]:
+    def get_min_fee_rate(self, cost: int) -> float | None:
         """
         Gets the minimum fpc rate that a transaction with specified cost will need in order to get included.
         """
@@ -507,7 +505,7 @@ class Mempool:
         constants: ConsensusConstants,
         prev_tx_height: uint32,
         timeout: float,
-    ) -> Optional[NewBlockGenerator]:
+    ) -> NewBlockGenerator | None:
         """
         prev_tx_height is needed in case we fast-forward a transaction and we
         need to re-run its puzzle.
@@ -535,7 +533,7 @@ class Mempool:
             f"spends: {len(removals)} additions: {len(additions)}",
         )
 
-        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
+        flags = get_flags_for_height_and_constants(prev_tx_height, constants) | DONT_VALIDATE_SIGNATURE
 
         err, conds = run_block_generator2(
             block_program,
@@ -571,7 +569,7 @@ class Mempool:
 
     def create_bundle_from_mempool_items(
         self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float = 1.0
-    ) -> Optional[tuple[SpendBundle, list[Coin]]]:
+    ) -> tuple[SpendBundle, list[Coin]] | None:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         processed_spend_bundles = 0
@@ -688,7 +686,7 @@ class Mempool:
 
     def create_block_generator2(
         self, constants: ConsensusConstants, prev_tx_height: uint32, timeout: float
-    ) -> Optional[NewBlockGenerator]:
+    ) -> NewBlockGenerator | None:
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         additions: list[Coin] = []
         removals: list[Coin] = []

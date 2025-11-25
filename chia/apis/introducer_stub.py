@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 from typing_extensions import Protocol
 
@@ -30,6 +30,6 @@ class IntroducerApiStub(ApiProtocol, Protocol):
         self,
         request: RequestPeersIntroducer,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Handle request for peers from a node."""
         ...

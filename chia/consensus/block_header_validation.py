@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from chia_rs import (
     AugSchemeMPL,
@@ -54,7 +53,7 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
-) -> tuple[Optional[uint64], Optional[ValidationError]]:
+) -> tuple[uint64 | None, ValidationError | None]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
@@ -125,7 +124,7 @@ def validate_unfinished_header_block(
         first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
     )
     # 2. Check finished slots that have been crossed since prev_b
-    ses_hash: Optional[bytes32] = None
+    ses_hash: bytes32 | None = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
         # Finished a slot(s) since previous block. The first sub-slot must have at least one block, and all
         # subsequent sub-slots must be empty
@@ -162,9 +161,9 @@ def validate_unfinished_header_block(
                     return None, ValidationError(Err.SHOULD_NOT_HAVE_ICC)
             else:
                 assert prev_b is not None
-                icc_iters_committed: Optional[uint64] = None
-                icc_iters_proof: Optional[uint64] = None
-                icc_challenge_hash: Optional[bytes32] = None
+                icc_iters_committed: uint64 | None = None
+                icc_iters_proof: uint64 | None = None
+                icc_challenge_hash: bytes32 | None = None
                 icc_vdf_input = None
                 if prev_b.deficit < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                     # There should be no ICC chain if the last block's deficit is 16
@@ -770,10 +769,16 @@ def validate_unfinished_header_block(
             != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
-    # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
+    # 20b. If pospace has a pool pk, check pool target signature. Should not check this for genesis block.
     elif header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
         assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
         assert header_block.foliage.foliage_block_data.pool_signature is not None
+
+        # v2 plots require pool contract puzzle hash, not pool pk
+        # TODO: todo_v2_plots add test coverage of this check
+        if header_block.reward_chain_block.proof_of_space.param().strength_v2 is not None:
+            return None, ValidationError(Err.INVALID_POOL_TARGET)
+
         if not AugSchemeMPL.verify(
             header_block.reward_chain_block.proof_of_space.pool_public_key,
             bytes(header_block.foliage.foliage_block_data.pool_target),
@@ -849,7 +854,7 @@ def validate_finished_header_block(
     expected_vs: ValidationState,
     check_sub_epoch_summary: bool = True,
     skip_commitment_validation: bool = False,
-) -> tuple[Optional[uint64], Optional[ValidationError]]:
+) -> tuple[uint64 | None, ValidationError | None]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
@@ -881,7 +886,7 @@ def validate_finished_header_block(
     assert required_iters is not None
 
     if header_block.height == 0:
-        prev_b: Optional[BlockRecord] = None
+        prev_b: BlockRecord | None = None
         genesis_block = True
     else:
         prev_b = blocks.block_record(header_block.prev_header_hash)
@@ -1024,7 +1029,7 @@ def validate_finished_header_block(
                 last_ss = header_block.finished_sub_slots[-1]
                 assert last_ss.infused_challenge_chain is not None
                 icc_vdf_challenge: bytes32 = last_ss.infused_challenge_chain.get_hash()
-                icc_vdf_input: Optional[ClassgroupElement] = ClassgroupElement.get_default_element()
+                icc_vdf_input: ClassgroupElement | None = ClassgroupElement.get_default_element()
             else:
                 assert prev_b is not None
                 if prev_b.is_challenge_block(constants):

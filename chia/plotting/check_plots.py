@@ -7,7 +7,6 @@ from collections.abc import Sequence
 from pathlib import Path
 from threading import Lock
 from time import monotonic, sleep
-from typing import Optional
 
 from chia_rs import G1Element, solve_proof
 from chia_rs.sized_ints import uint8, uint32
@@ -41,8 +40,8 @@ def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshR
 
 def check_plots(
     root_path: Path,
-    num: Optional[int],
-    challenge_start: Optional[int],
+    num: int | None,
+    challenge_start: int | None,
     grep_string: str,
     list_duplicates: bool,
     debug_show_memo: bool,

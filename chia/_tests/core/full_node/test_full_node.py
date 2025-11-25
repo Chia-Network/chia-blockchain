@@ -7,11 +7,12 @@ import logging
 import random
 import time
 from collections.abc import Awaitable, Coroutine
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from chia_rs import (
     AugSchemeMPL,
+    Coin,
     ConsensusConstants,
     Foliage,
     FoliageTransactionBlock,
@@ -109,6 +110,13 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+
+def find_reward_coin(b: FullBlock, puzzle_hash: bytes32) -> Coin:
+    for c in b.get_included_reward_coins():
+        if c.puzzle_hash == puzzle_hash:
+            return c
+    raise ValueError("no reward coin with the specified puzzle hash found")
 
 
 def test_pre_validation_result() -> None:
@@ -246,7 +254,7 @@ async def test_block_compression(
     await time_out_assert(30, check_transaction_confirmed, True, tr)
 
     # Confirm generator is not compressed
-    program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+    program: SerializedProgram | None = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
     assert program is not None
     assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
@@ -812,11 +820,10 @@ async def test_respond_unfinished(
         block_list_input=blocks,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=ph,
-        pool_reward_puzzle_hash=ph,
     )
     await full_node_1.full_node.add_block(blocks[-2])
     await full_node_1.full_node.add_block(blocks[-1])
-    coin_to_spend = blocks[-1].get_included_reward_coins()[0]
+    coin_to_spend = find_reward_coin(blocks[-1], ph)
 
     spend_bundle = wallet_a.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
@@ -936,7 +943,6 @@ async def test_new_transaction_and_mempool(
         3,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=wallet_ph,
-        pool_reward_puzzle_hash=wallet_ph,
     )
     for block in blocks:
         await full_node_1.full_node.add_block(block)
@@ -993,7 +999,7 @@ async def test_new_transaction_and_mempool(
     included_tx = 0
     not_included_tx = 0
     seen_bigger_transaction_has_high_fee = False
-    successful_bundle: Optional[WalletSpendBundle] = None
+    successful_bundle: WalletSpendBundle | None = None
 
     # Fill mempool
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1127,7 +1133,6 @@ async def test_request_respond_transaction(
         block_list_input=blocks,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=wallet_ph,
-        pool_reward_puzzle_hash=wallet_ph,
     )
 
     incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
@@ -1148,9 +1153,8 @@ async def test_request_respond_transaction(
 
     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-    spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(100), receiver_puzzlehash, blocks[-1].get_included_reward_coins()[0]
-    )
+    coin = find_reward_coin(blocks[-1], wallet_ph)
+    spend_bundle = wallet_a.generate_signed_transaction(uint64(100), receiver_puzzlehash, coin)
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
     res = await full_node_1.respond_transaction(respond_transaction, peer)
@@ -1192,7 +1196,6 @@ async def test_respond_transaction_fail(
         block_list_input=blocks,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=cb_ph,
-        pool_reward_puzzle_hash=cb_ph,
     )
     await asyncio.sleep(1)
     while incoming_queue.qsize() > 0:
@@ -1204,11 +1207,8 @@ async def test_respond_transaction_fail(
 
     await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 3))
     # Invalid transaction does not propagate
-    spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(100_000_000_000_000),
-        receiver_puzzlehash,
-        blocks_new[-1].get_included_reward_coins()[0],
-    )
+    coin = find_reward_coin(blocks_new[-1], cb_ph)
+    spend_bundle = wallet_a.generate_signed_transaction(uint64(100_000_000_000_000), receiver_puzzlehash, coin)
 
     assert spend_bundle is not None
     respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -1228,18 +1228,15 @@ async def test_request_block(
     full_node_1, _full_node_2, _server_1, _server_2, wallet_a, wallet_receiver, bt = wallet_nodes
     blocks = await full_node_1.get_all_full_blocks()
 
+    wallet_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
         3,
         block_list_input=blocks,
         guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
-        pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+        farmer_reward_puzzle_hash=wallet_ph,
     )
-    spend_bundle = wallet_a.generate_signed_transaction(
-        uint64(1123),
-        wallet_receiver.get_new_puzzlehash(),
-        blocks[-1].get_included_reward_coins()[0],
-    )
+    coin = find_reward_coin(blocks[-1], wallet_ph)
+    spend_bundle = wallet_a.generate_signed_transaction(uint64(1123), wallet_receiver.get_new_puzzlehash(), coin)
     blocks = bt.get_consecutive_blocks(
         1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
     )
@@ -1280,18 +1277,19 @@ async def test_request_blocks(
     blocks = await full_node_1.get_all_full_blocks()
 
     # create more blocks than constants.MAX_BLOCK_COUNT_PER_REQUEST (32)
+    wallet_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
         33,
         block_list_input=blocks,
         guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
-        pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+        farmer_reward_puzzle_hash=wallet_ph,
     )
 
+    coin = find_reward_coin(blocks[-1], wallet_ph)
     spend_bundle = wallet_a.generate_signed_transaction(
         uint64(1123),
         wallet_receiver.get_new_puzzlehash(),
-        blocks[-1].get_included_reward_coins()[0],
+        coin,
     )
     blocks_t = bt.get_consecutive_blocks(
         1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
@@ -1473,7 +1471,7 @@ async def test_new_unfinished_block2_forward_limit(
 
     unf_blocks: list[UnfinishedBlock] = []
 
-    last_reward_hash: Optional[bytes32] = None
+    last_reward_hash: bytes32 | None = None
     for idx in range(6):
         # we include a different transaction in each block. This makes the
         # foliage different in each of them, but the reward block (plot) the same
@@ -1769,7 +1767,7 @@ async def test_request_unfinished_block2(
 
     # the "best" unfinished block according to the metric we use to pick one
     # deterministically
-    best_unf: Optional[UnfinishedBlock] = None
+    best_unf: UnfinishedBlock | None = None
 
     for idx in range(6):
         # we include a different transaction in each block. This makes the
@@ -3226,7 +3224,7 @@ async def declare_pos_unfinished_block(
     await full_node_api.declare_proof_of_space(pospace, dummy_peer)
     tx_peak = blockchain.get_tx_peak()
     assert tx_peak is not None
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
+    q_str: bytes32 | None = verify_and_get_quality_string(
         block.reward_chain_block.proof_of_space,
         blockchain.constants,
         challenge,
@@ -3259,7 +3257,7 @@ async def add_tx_to_mempool(
     coinbase_puzzlehash: bytes32,
     receiver_puzzlehash: bytes32,
     amount: uint64,
-) -> Optional[SpendBundle]:
+) -> SpendBundle | None:
     spend_coin = None
     coins = spend_block.get_included_reward_coins()
     for coin in coins:
@@ -3325,7 +3323,9 @@ async def test_pending_tx_cache_retry_on_new_peak(
         wallet = WalletTool(test_constants)
         ph = wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph, pool_reward_puzzle_hash=ph
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=ph,
         )
         for block in blocks:
             await full_node_api.full_node.add_block(block)
@@ -3333,7 +3333,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
         assert peak is not None
         current_height = peak.height
         # Create a transaction with a height condition that makes it pending
-        coin = blocks[-1].get_included_reward_coins()[0]
+        coin = find_reward_coin(blocks[-1], ph)
         if condition == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
             condition_height = 1
         else:
@@ -3406,13 +3406,11 @@ async def test_ban_for_mismatched_tx_cost_fee(
     else:
         node = full_node_2.full_node
         ws_con = ws_con_2
-    blocks = bt.get_consecutive_blocks(
-        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=wallet_ph, pool_reward_puzzle_hash=wallet_ph
-    )
+    blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=wallet_ph)
     for block in blocks:
         await node.add_block(block)
     # Create a transaction and add it to the relevant full node's mempool
-    coin = blocks[-1].get_included_reward_coins()[0]
+    coin = find_reward_coin(blocks[-1], wallet_ph)
     sb = wallet.generate_signed_transaction(uint64(42), wallet_ph, coin)
     sb_name = sb.name()
     await node.add_transaction(sb, sb_name, ws_con)

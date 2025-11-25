@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 from chia_rs import G1Element, G2Element, TransactionsInfo, serialized_length
 from chia_rs.sized_bytes import bytes32
@@ -203,7 +203,7 @@ def skip_transactions_info(buf: memoryview) -> memoryview:
     return skip_list(buf, skip_coin)
 
 
-def generator_from_block(buf: memoryview) -> Optional[bytes]:
+def generator_from_block(buf: memoryview) -> bytes | None:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
@@ -228,7 +228,7 @@ def generator_from_block(buf: memoryview) -> Optional[bytes]:
 @dataclass(frozen=True)
 class GeneratorBlockInfo:
     prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
+    transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
 
 
@@ -284,7 +284,7 @@ def header_block_from_block(
 
     buf2 = skip_optional(buf2, skip_foliage_transaction_block)  # foliage_transaction_block
 
-    transactions_info: Optional[TransactionsInfo] = None
+    transactions_info: TransactionsInfo | None = None
     # we make it optional even if it's not by default
     # if request_filter is True it will read extra bytes and populate it properly
     transactions_info_optional: bytes = bytes([0])

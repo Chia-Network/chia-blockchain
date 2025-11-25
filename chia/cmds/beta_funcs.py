@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 import click
 
@@ -36,7 +37,7 @@ def prompt_beta_warning() -> bool:
 
 
 def prompt_for_beta_path(default_path: Path) -> Path:
-    path: Optional[Path] = None
+    path: Path | None = None
     for _ in range(3):
         user_input = input(
             "\nEnter a directory where the beta test logs can be stored or press enter to use the default "
@@ -65,7 +66,7 @@ def prompt_for_beta_path(default_path: Path) -> Path:
 
 
 def prompt_for_metrics_log_interval(default_interval: int) -> int:
-    interval: Optional[int] = None
+    interval: int | None = None
     for _ in range(3):
         user_input = input(
             "\nEnter a number of seconds as interval in which analytics getting logged, press enter to use the default "

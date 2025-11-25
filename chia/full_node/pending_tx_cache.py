@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -17,7 +16,7 @@ class ConflictTxCache:
     _cache_cost: int = field(default=0, init=False)
     _txs: dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
 
-    def get(self, bundle_name: bytes32) -> Optional[MempoolItem]:
+    def get(self, bundle_name: bytes32) -> MempoolItem | None:
         return self._txs.get(bundle_name, None)
 
     def add(self, item: MempoolItem) -> None:
@@ -56,7 +55,7 @@ class PendingTxCache:
     _txs: dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
     _by_height: SortedDict[uint32, dict[bytes32, MempoolItem]] = field(default_factory=SortedDict, init=False)
 
-    def get(self, bundle_name: bytes32) -> Optional[MempoolItem]:
+    def get(self, bundle_name: bytes32) -> MempoolItem | None:
         return self._txs.get(bundle_name, None)
 
     def add(self, item: MempoolItem) -> None:

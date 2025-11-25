@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import Optional
 
 from chia_rs import FullBlock, HeaderBlock, SpendBundleConditions
 from chia_rs.sized_bytes import bytes32
@@ -12,7 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 
 
 def get_block_header(
-    block: FullBlock, removals_and_additions: Optional[tuple[Collection[bytes32], Collection[Coin]]] = None
+    block: FullBlock, removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
 ) -> HeaderBlock:
     """
     Returns a HeaderBlock from a FullBlock.
@@ -51,7 +50,7 @@ def get_block_header(
     )
 
 
-def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> tuple[list[bytes32], list[Coin]]:
+def tx_removals_and_additions(results: SpendBundleConditions | None) -> tuple[list[bytes32], list[Coin]]:
     """
     Doesn't return farmer and pool reward.
     """

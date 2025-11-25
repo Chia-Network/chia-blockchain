@@ -11,7 +11,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, overload
+from typing import Any, overload
 from urllib.parse import urlparse
 
 import boto3
@@ -30,7 +30,7 @@ plugin_version = "0.1.0"
 @dataclass(frozen=True)
 class StoreConfig:
     id: bytes32
-    bucket: Optional[str]
+    bucket: str | None
     urls: set[str]
 
     @classmethod
@@ -142,9 +142,7 @@ class S3Plugin:
     @overload
     def get_path_for_filename(self, store_id: bytes32, filename: None, group_files_by_store: bool) -> None: ...
 
-    def get_path_for_filename(
-        self, store_id: bytes32, filename: Optional[str], group_files_by_store: bool
-    ) -> Optional[Path]:
+    def get_path_for_filename(self, store_id: bytes32, filename: str | None, group_files_by_store: bool) -> Path | None:
         if filename is None:
             return None
 
@@ -158,9 +156,7 @@ class S3Plugin:
     @overload
     def get_s3_target_from_path(self, store_id: bytes32, path: None, group_files_by_store: bool) -> None: ...
 
-    def get_s3_target_from_path(
-        self, store_id: bytes32, path: Optional[Path], group_files_by_store: bool
-    ) -> Optional[str]:
+    def get_s3_target_from_path(self, store_id: bytes32, path: Path | None, group_files_by_store: bool) -> str | None:
         if path is None:
             return None
 
@@ -174,7 +170,7 @@ class S3Plugin:
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket_str = self.get_bucket(store_id)
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            full_tree_name: Optional[str] = data.get("full_tree_filename", None)
+            full_tree_name: str | None = data.get("full_tree_filename", None)
             diff_name: str = data["diff_filename"]
             group_files_by_store: bool = data.get("group_files_by_store", False)
 

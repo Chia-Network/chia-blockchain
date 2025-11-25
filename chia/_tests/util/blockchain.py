@@ -5,7 +5,6 @@ import os
 import pickle  # noqa: S403  # TODO: use explicit serialization instead of pickle
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Optional
 
 from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_ints import uint64
@@ -49,8 +48,8 @@ def persistent_blocks(
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
-    block_list_input: Optional[list[FullBlock]] = None,
-    time_per_block: Optional[float] = None,
+    block_list_input: list[FullBlock] | None = None,
+    time_per_block: float | None = None,
     dummy_block_references: bool = False,
     include_transactions: bool = False,
 ) -> list[FullBlock]:
@@ -112,7 +111,7 @@ def new_test_db(
     empty_sub_slots: int,
     bt: BlockTools,
     block_list_input: list[FullBlock],
-    time_per_block: Optional[float],
+    time_per_block: float | None,
     *,
     normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS

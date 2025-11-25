@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from chia.util.config import load_config
 from chia.util.path import path_from_root
@@ -9,7 +9,7 @@ from chia.util.path import path_from_root
 
 def db_backup_func(
     root_path: Path,
-    backup_db_file: Optional[Path] = None,
+    backup_db_file: Path | None = None,
     *,
     no_indexes: bool,
 ) -> None:

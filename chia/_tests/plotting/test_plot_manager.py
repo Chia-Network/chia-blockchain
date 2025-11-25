@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, Optional, cast
+from typing import cast
 
 import pytest
 from chia_rs import G1Element
@@ -664,7 +664,7 @@ async def test_cache_lifetime(environment: Environment) -> None:
 )
 @pytest.mark.anyio
 async def test_callback_event_raises(environment, event_to_raise: PlotRefreshEvents):
-    last_event_fired: Optional[PlotRefreshEvents] = None
+    last_event_fired: PlotRefreshEvents | None = None
 
     def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
         nonlocal last_event_fired

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Optional
 
 import click
 from chia_rs.sized_bytes import bytes32
@@ -41,7 +40,7 @@ class ListCMD:
     show_unconfirmed: bool = option(
         "-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True
     )
-    paginate: Optional[bool] = option(
+    paginate: bool | None = option(
         "--paginate/--no-paginate",
         default=None,
         help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
@@ -73,7 +72,7 @@ class CombineCMD(TransactionEndpoint):
     id: int = option(
         "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
     )
-    target_amount: Optional[CliAmount] = option(
+    target_amount: CliAmount | None = option(
         "-a",
         "--target-amount",
         help="Select coins until this amount (in XCH or CAT) is reached. \

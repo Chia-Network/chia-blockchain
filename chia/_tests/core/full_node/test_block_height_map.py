@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import struct
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from chia_rs import SubEpochSummary
@@ -27,7 +26,7 @@ def gen_ses(height: int) -> SubEpochSummary:
 
 
 async def new_block(
-    db: DBWrapper2, block_hash: bytes32, parent: bytes32, height: int, is_peak: bool, ses: Optional[SubEpochSummary]
+    db: DBWrapper2, block_hash: bytes32, parent: bytes32, height: int, is_peak: bool, ses: SubEpochSummary | None
 ) -> None:
     async with db.writer_maybe_transaction() as conn:
         cursor = await conn.execute(
@@ -67,7 +66,7 @@ async def setup_db(db: DBWrapper2) -> None:
 # and the chain_id will be mixed in to the hashes, to form a separate chain at
 # the same heights as the main chain
 async def setup_chain(
-    db: DBWrapper2, length: int, *, chain_id: int = 0, ses_every: Optional[int] = None, start_height: int = 0
+    db: DBWrapper2, length: int, *, chain_id: int = 0, ses_every: int | None = None, start_height: int = 0
 ) -> None:
     height = start_height
     peak_hash = gen_block_hash(height + chain_id * 65536)

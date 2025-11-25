@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
@@ -33,7 +34,7 @@ class PaginatedRequestData(Protocol):
 @dataclasses.dataclass(frozen=True)
 class FilterItem(Streamable):
     key: str
-    value: Optional[str]
+    value: str | None
 
 
 @streamable
@@ -108,7 +109,7 @@ class FarmerRpcApi:
             "/connect_to_solver": self.connect_to_solver,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: dict[str, Any] | None) -> list[WsRpcMessage]:
         payloads = []
 
         if change_data is None:
@@ -363,7 +364,7 @@ class FarmerRpcApi:
 
     async def get_pool_login_link(self, request: dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
-        login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
+        login_link: str | None = await self.service.generate_login_link(launcher_id)
         if login_link is None:
             raise ValueError(f"Failed to generate login link for {launcher_id.hex()}")
         return {"login_link": login_link}

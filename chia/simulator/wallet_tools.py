@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import AugSchemeMPL, CoinSpend, ConsensusConstants, G1Element, G2Element, PrivateKey, SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -37,7 +37,7 @@ class WalletTool:
     pubkey_num_lookup: dict[bytes, uint32] = {}  # noqa: RUF012
     puzzle_pk_cache: dict[bytes32, PrivateKey] = {}  # noqa: RUF012
 
-    def __init__(self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None):
+    def __init__(self, constants: ConsensusConstants, sk: PrivateKey | None = None):
         self.constants = constants
         self.current_balance = 0
         self.my_utxos: set = set()
@@ -106,9 +106,9 @@ class WalletTool:
         coins: list[Coin],
         condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]],
         fee: int = 0,
-        secret_key: Optional[PrivateKey] = None,
-        additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
-        memo: Optional[bytes32] = None,
+        secret_key: PrivateKey | None = None,
+        additional_outputs: list[tuple[bytes32, int]] | None = None,
+        memo: bytes32 | None = None,
     ) -> list[CoinSpend]:
         spends = []
 
@@ -206,10 +206,10 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coin: Coin,
-        condition_dic: Optional[dict[ConditionOpcode, list[ConditionWithArgs]]] = None,
+        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] | None = None,
         fee: int = 0,
-        additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
-        memo: Optional[bytes32] = None,
+        additional_outputs: list[tuple[bytes32, int]] | None = None,
+        memo: bytes32 | None = None,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
@@ -224,9 +224,9 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coins: list[Coin],
-        condition_dic: Optional[dict[ConditionOpcode, list[ConditionWithArgs]]] = None,
+        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] | None = None,
         fee: int = 0,
-        additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
+        additional_outputs: list[tuple[bytes32, int]] | None = None,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}

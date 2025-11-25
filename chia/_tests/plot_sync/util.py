@@ -4,7 +4,6 @@ import contextlib
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
@@ -25,7 +24,7 @@ class WSChiaConnectionDummy:
     connection_type: NodeType
     peer_node_id: bytes32
     peer_info: PeerInfo = PeerInfo("127.0.0.1", uint16(0))
-    last_sent_message: Optional[Message] = None
+    last_sent_message: Message | None = None
 
     async def send_message(self, message: Message) -> None:
         self.last_sent_message = message

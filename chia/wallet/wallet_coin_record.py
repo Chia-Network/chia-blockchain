@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -34,7 +34,7 @@ class WalletCoinRecord:
     # The launcher coin ID will change and will break all hardcode offer tests in CAT/NFT/DL, etc.
     # TODO Change hardcode offer in unit tests
     coin_type: CoinType = field(default=CoinType.NORMAL, hash=False)
-    metadata: Optional[VersionedBlob] = field(default=None, hash=False)
+    metadata: VersionedBlob | None = field(default=None, hash=False)
 
     def wallet_identifier(self) -> StreamableWalletIdentifier:
         return StreamableWalletIdentifier(uint32(self.wallet_id), uint8(self.wallet_type))

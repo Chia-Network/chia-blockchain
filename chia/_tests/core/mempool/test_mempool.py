@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import pytest
 from chia_rs import (
@@ -26,6 +26,7 @@ from clvm_tools.binutils import assemble
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.connection_utils import add_dummy_connection, connect_and_get_peer
+from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.core.mempool.test_mempool_manager import (
     IDENTITY_PUZZLE_HASH,
     TEST_COIN,
@@ -100,7 +101,7 @@ def wallet_a(bt: BlockTools) -> WalletTool:
 def generate_test_spend_bundle(
     wallet: WalletTool,
     coin: Coin,
-    condition_dic: Optional[dict[ConditionOpcode, list[ConditionWithArgs]]] = None,
+    condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] | None = None,
     fee: uint64 = uint64(0),
     amount: uint64 = uint64(1000),
     new_puzzle_hash: bytes32 = BURN_PUZZLE_HASH,
@@ -350,7 +351,7 @@ async def respond_transaction(
     peer: WSChiaConnection,
     tx_bytes: bytes = b"",
     test: bool = False,
-) -> tuple[MempoolInclusionStatus, Optional[Err]]:
+) -> tuple[MempoolInclusionStatus, Err | None]:
     """
     Receives a full transaction from peer.
     If tx is added to mempool, send tx_id to others. (new_transaction)
@@ -380,7 +381,6 @@ async def next_block(full_node_1: FullNodeSimulator, wallet_a: WalletTool, bt: B
         block_list_input=blocks,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
         genesis_timestamp=uint64(10_000),
         time_per_block=10,
     )
@@ -395,7 +395,7 @@ co = ConditionOpcode
 mis = MempoolInclusionStatus
 
 
-async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
+async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Message | None:
     tx = wallet_protocol.SendTransaction(sb)
     return await node.send_transaction(tx, test=True)
 
@@ -576,14 +576,14 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        spend_bundle1 = generate_test_spend_bundle(wallet_a, blocks[-1].get_included_reward_coins()[0])
+        coin_1 = find_reward_coin(blocks[-1], reward_ph)
+        spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1)
 
         assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
@@ -591,9 +591,10 @@ class TestMempoolManager:
         assert err is None
         assert status == MempoolInclusionStatus.SUCCESS
 
+        coin_1 = find_reward_coin(blocks[-1], reward_ph)
         spend_bundle2 = generate_test_spend_bundle(
             wallet_a,
-            blocks[-1].get_included_reward_coins()[0],
+            coin_1,
             new_puzzle_hash=BURN_PUZZLE_HASH_2,
         )
         assert spend_bundle2 is not None
@@ -621,7 +622,6 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
 
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
@@ -704,19 +704,17 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
 
         await add_blocks_in_batches(blocks, full_node_1.full_node)
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        coins = iter(blocks[-1].get_included_reward_coins())
-        coin1 = next(coins)
+        coin1 = find_reward_coin(blocks[-1], reward_ph)
 
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = sb.replace(aggregated_signature=G2Element.generator())
-        res: Optional[Message] = await send_sb(full_node_1, sb)
+        res: Message | None = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
         assert ack.status == MempoolInclusionStatus.FAILED.value
@@ -730,8 +728,8 @@ class TestMempoolManager:
         dic: dict[ConditionOpcode, list[ConditionWithArgs]],
         fee: int = 0,
         num_blocks: int = 3,
-        coin: Optional[Coin] = None,
-    ) -> tuple[list[FullBlock], SpendBundle, WSChiaConnection, MempoolInclusionStatus, Optional[Err]]:
+        coin: Coin | None = None,
+    ) -> tuple[list[FullBlock], SpendBundle, WSChiaConnection, MempoolInclusionStatus, Err | None]:
         reward_ph = wallet_a.get_new_puzzlehash()
         full_node_1, server_1, bt = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
@@ -741,7 +739,6 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
         _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
         for node_id, wsc in server_1.all_connections.items():
@@ -755,9 +752,8 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + num_blocks)
 
-        spend_bundle1 = generate_test_spend_bundle(
-            wallet_a, coin or blocks[-num_blocks + 2].get_included_reward_coins()[0], dic, uint64(fee)
-        )
+        coin1 = find_reward_coin(blocks[2 - num_blocks], reward_ph)
+        spend_bundle1 = generate_test_spend_bundle(wallet_a, coin or coin1, dic, uint64(fee))
 
         assert spend_bundle1 is not None
 
@@ -772,7 +768,7 @@ class TestMempoolManager:
         node_server_bt: tuple[FullNodeSimulator, ChiaServer, BlockTools],
         wallet_a: WalletTool,
         test_fun: Callable[[Coin, Coin], SpendBundle],
-    ) -> tuple[list[FullBlock], SpendBundle, MempoolInclusionStatus, Optional[Err]]:
+    ) -> tuple[list[FullBlock], SpendBundle, MempoolInclusionStatus, Err | None]:
         reward_ph = wallet_a.get_new_puzzlehash()
         full_node_1, server_1, bt = node_server_bt
         blocks = await full_node_1.get_all_full_blocks()
@@ -782,7 +778,6 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             time_per_block=10,
         )
         _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
@@ -797,8 +792,8 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        coin_1 = blocks[-2].get_included_reward_coins()[0]
-        coin_2 = blocks[-1].get_included_reward_coins()[0]
+        coin_1 = find_reward_coin(blocks[-2], reward_ph)
+        coin_2 = find_reward_coin(blocks[-1], reward_ph)
 
         bundle = test_fun(coin_1, coin_2)
 
@@ -1256,7 +1251,7 @@ class TestMempoolManager:
         self,
         assert_garbage: bool,
         announce_garbage: bool,
-        expected: Optional[Err],
+        expected: Err | None,
         expected_included: MempoolInclusionStatus,
         one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
         wallet_a: WalletTool,
@@ -1469,7 +1464,7 @@ class TestMempoolManager:
         self,
         assert_garbage: bool,
         announce_garbage: bool,
-        expected: Optional[Err],
+        expected: Err | None,
         expected_included: MempoolInclusionStatus,
         one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
         wallet_a: WalletTool,
@@ -1741,7 +1736,6 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
 
         peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
@@ -1757,7 +1751,7 @@ class TestMempoolManager:
 
         fee = 9
 
-        coin_1 = blocks[-2].get_included_reward_coins()[0]
+        coin_1 = find_reward_coin(blocks[-2], reward_ph)
         coin_2 = None
         for coin in blocks[-1].get_included_reward_coins():
             if coin.amount == coin_1.amount:
@@ -1801,13 +1795,12 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
 
         await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-        # coin = blocks[-1].get_included_reward_coins()[0]
+        # coin = find_reward_coin(blocks[-1], reward_ph)
         # spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
         coin = await next_block(full_node_1, wallet_a, bt)
         spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
@@ -1849,7 +1842,6 @@ class TestMempoolManager:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
 
         await add_blocks_in_batches(blocks, full_node_1.full_node)
@@ -2530,7 +2522,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_softfork_condition(
-        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+        self, mempool: bool, condition: str, expect_error: int | None, softfork_height: uint32
     ) -> None:
         npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
         print(npc_result)
@@ -2550,7 +2542,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_message_condition(
-        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+        self, mempool: bool, condition: str, expect_error: int | None, softfork_height: uint32
     ) -> None:
         npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
         print(npc_result)
@@ -2854,14 +2846,14 @@ class TestMaliciousGenerators:
             5,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
         )
 
         await add_blocks_in_batches(blocks, full_node_1.full_node)
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
-        spend_bundle = generate_test_spend_bundle(wallet_a, blocks[-1].get_included_reward_coins()[0])
+        coin_1 = find_reward_coin(blocks[-1], reward_ph)
+        spend_bundle = generate_test_spend_bundle(wallet_a, coin_1)
         cs = spend_bundle.coin_spends[0]
         c = cs.coin
         coin_0 = Coin(c.parent_coin_info, bytes32([1] * 32), c.amount)
@@ -2920,7 +2912,7 @@ def test_items_by_feerate(items: list[MempoolItem], expected: list[Coin]) -> Non
 
     assert len(ordered_items) == len(expected)
 
-    last_fpc: Optional[float] = None
+    last_fpc: float | None = None
     for mi, expected_coin in zip(ordered_items, expected):
         assert len(mi.bundle_coin_spends) == 1
         assert next(iter(mi.bundle_coin_spends.values())).coin_spend.coin == expected_coin
@@ -3413,7 +3405,7 @@ async def test_lineage_cache(seeded_random: random.Random) -> None:
         bytes32.random(seeded_random), bytes32.random(seeded_random), bytes32.random(seeded_random)
     )
 
-    async def callback1(ph: bytes32) -> Optional[UnspentLineageInfo]:
+    async def callback1(ph: bytes32) -> UnspentLineageInfo | None:
         nonlocal called
         called += 1
         return info1
@@ -3432,7 +3424,7 @@ async def test_lineage_cache(seeded_random: random.Random) -> None:
 
     called = 0
 
-    async def callback_none(ph: bytes32) -> Optional[UnspentLineageInfo]:
+    async def callback_none(ph: bytes32) -> UnspentLineageInfo | None:
         nonlocal called
         called += 1
         return None

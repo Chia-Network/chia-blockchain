@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from chia_rs import CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -18,7 +17,7 @@ from chia.util.errors import Err, ValidationError
 @dataclass(frozen=True)
 class HintedCoin:
     coin: Coin
-    hint: Optional[bytes32]
+    hint: bytes32 | None
 
 
 def compute_spend_hints_and_additions(
@@ -54,12 +53,12 @@ def compute_spend_hints_and_additions(
         assert rf is not None
 
         coin: Coin = Coin(cs.coin.name(), bytes32(rf), uint64(condition.at("rrf").as_int()))
-        hint: Optional[bytes32] = None
+        hint: bytes32 | None = None
         if (
             condition.at("rrr") != Program.NIL  # There's more than two arguments
             and condition.at("rrrf").atom is None  # The 3rd argument is a cons
         ):
-            potential_hint: Optional[bytes] = condition.at("rrrff").atom
+            potential_hint: bytes | None = condition.at("rrrff").atom
             if potential_hint is not None and len(potential_hint) == 32:
                 hint = bytes32(potential_hint)
         hinted_coins[bytes32(coin.name())] = HintedCoin(coin, hint)

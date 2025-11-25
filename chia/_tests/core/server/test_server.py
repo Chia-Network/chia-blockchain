@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, ClassVar, cast
+from typing import ClassVar, cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32

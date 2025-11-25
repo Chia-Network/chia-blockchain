@@ -10,7 +10,7 @@ import textwrap
 from contextlib import closing
 from pathlib import Path
 from time import monotonic
-from typing import Any, Optional
+from typing import Any
 
 import zstd
 
@@ -25,8 +25,8 @@ from chia.util.path import path_from_root
 # the configuration file also be updated
 def db_upgrade_func(
     root_path: Path,
-    in_db_path: Optional[Path] = None,
-    out_db_path: Optional[Path] = None,
+    in_db_path: Path | None = None,
+    out_db_path: Path | None = None,
     *,
     no_update_config: bool = False,
     force: bool = False,

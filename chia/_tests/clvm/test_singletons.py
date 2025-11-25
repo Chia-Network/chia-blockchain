@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey, SpendBundle
 from chia_rs.sized_bytes import bytes32
@@ -54,9 +52,9 @@ async def make_and_spend_bundle(
     coin: Coin,
     delegated_puzzle: Program,
     coinsols: list[CoinSpend],
-    ex_error: Optional[Err] = None,
+    ex_error: Err | None = None,
     fail_msg: str = "",
-    cost_logger: Optional[CostLogger] = None,
+    cost_logger: CostLogger | None = None,
     cost_log_msg: str = "",
 ):
     signature: G2Element = sign_delegated_puz(delegated_puzzle, coin)

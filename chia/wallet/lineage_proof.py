@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
@@ -20,9 +20,9 @@ class LineageProofField(Enum):
 @streamable
 @dataclass(frozen=True)
 class LineageProof(Streamable):
-    parent_name: Optional[bytes32] = None
-    inner_puzzle_hash: Optional[bytes32] = None
-    amount: Optional[uint64] = None
+    parent_name: bytes32 | None = None
+    inner_puzzle_hash: bytes32 | None = None
+    amount: uint64 | None = None
 
     @classmethod
     def from_program(cls, program: Program, fields: list[LineageProofField]) -> LineageProof:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import click
 import yaml
@@ -33,7 +32,7 @@ def configure(
     testnet: str,
     peer_connect_timeout: str,
     crawler_db_path: str,
-    crawler_minimum_version_count: Optional[int],
+    crawler_minimum_version_count: int | None,
     seeder_domain_name: str,
     seeder_nameserver: str,
     set_solver_trusted_peers_only: str,

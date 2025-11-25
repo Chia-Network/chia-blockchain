@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, cast
+from typing import cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -310,7 +310,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
             )
         )
     ).coins[0]
-    did_lineage_parent: Optional[bytes32] = None
+    did_lineage_parent: bytes32 | None = None
     txs: list[TransactionRecord] = []
     nft_ids = set()
     for i in range(0, n, chunk):

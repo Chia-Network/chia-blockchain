@@ -58,9 +58,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     wallet_tool = bt.get_pool_wallet_tool()
     ph = wallet_tool.get_new_puzzlehash()
     num_blocks = 3
-    blocks = bt.get_consecutive_blocks(
-        num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
-    )
+    blocks = bt.get_consecutive_blocks(num_blocks, [], guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph)
     coinbase = None
     for coin in blocks[2].get_included_reward_coins():
         if coin.puzzle_hash == ph and coin.amount == 250000000000:
@@ -124,9 +122,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     ph = wallet_tool.get_new_puzzlehash()
 
     num_blocks = 3
-    blocks = bt.get_consecutive_blocks(
-        num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
-    )
+    blocks = bt.get_consecutive_blocks(num_blocks, [], guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph)
 
     coinbase = None
     for coin in blocks[2].get_included_reward_coins():

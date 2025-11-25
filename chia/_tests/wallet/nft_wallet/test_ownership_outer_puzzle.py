@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16
 from clvm_tools.binutils import assemble
@@ -29,10 +27,10 @@ def test_ownership_outer_puzzle() -> None:
     ownership_puzzle: Program = puzzle_for_ownership_layer(owner, Program.to(transfer_program), ACS)
     ownership_puzzle_empty: Program = puzzle_for_ownership_layer(Program.NIL, Program.to(transfer_program), ACS)
     ownership_puzzle_default: Program = puzzle_for_ownership_layer(owner, transfer_program_default, ACS)
-    ownership_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle))
-    ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_empty))
-    ownership_driver_default: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_default))
-    transfer_program_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(transfer_program_default))
+    ownership_driver: PuzzleInfo | None = match_puzzle(uncurry_puzzle(ownership_puzzle))
+    ownership_driver_empty: PuzzleInfo | None = match_puzzle(uncurry_puzzle(ownership_puzzle_empty))
+    ownership_driver_default: PuzzleInfo | None = match_puzzle(uncurry_puzzle(ownership_puzzle_default))
+    transfer_program_driver: PuzzleInfo | None = match_puzzle(uncurry_puzzle(transfer_program_default))
 
     assert ownership_driver is not None
     assert ownership_driver_empty is not None

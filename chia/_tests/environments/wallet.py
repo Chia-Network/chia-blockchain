@@ -6,7 +6,7 @@ import operator
 import unittest
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -50,9 +50,9 @@ OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operato
 
 
 class BalanceCheckingError(Exception):
-    errors: dict[Union[int, str], list[str]]
+    errors: dict[int | str, list[str]]
 
-    def __init__(self, errors: dict[Union[int, str], list[str]]) -> None:
+    def __init__(self, errors: dict[int | str, list[str]]) -> None:
         self.errors = errors
 
     def __repr__(self) -> str:
@@ -69,10 +69,10 @@ class WalletState:
 
 @dataclass
 class WalletStateTransition:
-    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
-    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
-    pre_block_additional_balance_info: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
-    post_block_additional_balance_info: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
+    pre_block_balance_updates: dict[int | str, dict[str, int]] = field(default_factory=dict)
+    post_block_balance_updates: dict[int | str, dict[str, int]] = field(default_factory=dict)
+    pre_block_additional_balance_info: dict[int | str, dict[str, int]] = field(default_factory=dict)
+    post_block_additional_balance_info: dict[int | str, dict[str, int]] = field(default_factory=dict)
 
 
 @dataclass
@@ -121,7 +121,7 @@ class WalletEnvironment:
     def xch_wallet(self) -> Wallet:
         return self.service._node.wallet_state_manager.main_wallet
 
-    def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
+    def dealias_wallet_id(self, wallet_id_or_alias: int | str) -> uint32:
         """
         This function turns something that is either a wallet id or a wallet alias into a wallet id.
         """
@@ -131,7 +131,7 @@ class WalletEnvironment:
             else uint32(self.wallet_aliases[wallet_id_or_alias])
         )
 
-    def alias_wallet_id(self, wallet_id: uint32) -> Union[uint32, str]:
+    def alias_wallet_id(self, wallet_id: uint32) -> uint32 | str:
         """
         This function turns a wallet id into an alias if one is available or the same wallet id if one is not.
         """
@@ -141,7 +141,7 @@ class WalletEnvironment:
         else:
             return wallet_id
 
-    async def check_balances(self, additional_balance_info: dict[Union[int, str], dict[str, int]] = {}) -> None:
+    async def check_balances(self, additional_balance_info: dict[int | str, dict[str, int]] = {}) -> None:
         """
         This function checks the internal representation of what the balances should be against the balances that the
         wallet actually returns via the RPC.
@@ -151,7 +151,7 @@ class WalletEnvironment:
         dealiased_additional_balance_info: dict[uint32, dict[str, int]] = {
             self.dealias_wallet_id(k): v for k, v in additional_balance_info.items()
         }
-        errors: dict[Union[int, str], list[str]] = {}
+        errors: dict[int | str, list[str]] = {}
         for wallet_id in self.wallet_state_manager.wallets:
             if wallet_id not in self.wallet_states:
                 raise KeyError(f"No wallet state for wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)})")
@@ -189,7 +189,7 @@ class WalletEnvironment:
         if errors != {}:
             raise BalanceCheckingError(errors)
 
-    async def change_balances(self, update_dictionary: dict[Union[int, str], dict[str, int]]) -> None:
+    async def change_balances(self, update_dictionary: dict[int | str, dict[str, int]]) -> None:
         """
         This method changes the internal representation of what the wallet balances should be. This is probably
         necessary to call before check_balances as most wallet operations will result in a balance change that causes
