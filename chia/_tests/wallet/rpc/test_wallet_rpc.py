@@ -386,14 +386,24 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
         )
     ).signed_tx
 
+    with pytest.raises(ValueError, match="Cannot add conditions to a transaction if no new fee spend is being added"):
+        await client.push_transactions(
+            PushTransactions(transactions=[tx]),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(Remark(rest=Program.to("foo")),),
+        )
+
     resp_client = await client.push_transactions(
         PushTransactions(transactions=[tx], fee=uint64(10)),
         wallet_environments.tx_config,
     )
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     resp = await client.fetch("push_transactions", {"transactions": [bytes(tx).hex()], "fee": 10})
     assert resp["success"]
+    await full_node_api.wait_for_wallet_synced(wallet_node)
 
     spend_bundle = WalletSpendBundle.aggregate(
         [tx.spend_bundle for tx in resp_client.transactions if tx.spend_bundle is not None]
