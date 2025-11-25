@@ -9,6 +9,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -53,7 +54,11 @@ async def test_notification_store_backwards_compat() -> None:
 )
 @pytest.mark.anyio
 async def test_notifications(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+    self_hostname: str,
+    two_wallet_nodes: Any,
+    trusted: Any,
+    seeded_random: random.Random,
+    consensus_mode: ConsensusMode,
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -90,11 +95,13 @@ async def test_notifications(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)
 
-    funds_1 = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
+    funds_1: int = sum(calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        funds_1 += sum(calculate_pool_reward(uint32(i)) for i in range(1, 3))
     funds_2 = 0
 
-    await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
-    await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
+    await time_out_assert(30, wallet_1.get_unconfirmed_balance, uint64(funds_1))
+    await time_out_assert(30, wallet_1.get_confirmed_balance, uint64(funds_1))
 
     notification_manager_1 = wsm_1.notification_manager
     notification_manager_2 = wsm_2.notification_manager
@@ -124,15 +131,15 @@ async def test_notifications(
             AMOUNT = uint64(1)
             FEE = uint64(0)
         elif case in {"allow", "allow_larger"}:
-            wallet_node_2.config["required_notification_amount"] = 750000000000
+            wallet_node_2.config["required_notification_amount"] = 75000000000
             if case == "allow_larger":
-                AMOUNT = uint64(1000000000000)
+                AMOUNT = uint64(100000000000)
             else:
-                AMOUNT = uint64(750000000000)
+                AMOUNT = uint64(75000000000)
             FEE = uint64(1)
         elif case == "block_too_large":
             msg = bytes([0] * 10001)
-            AMOUNT = uint64(750000000000)
+            AMOUNT = uint64(75000000000)
             FEE = uint64(0)
         else:
             raise Exception(f"Unhandled case: {case!r}")
