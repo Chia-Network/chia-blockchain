@@ -345,7 +345,7 @@ async def test_block_compression(
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            [uint64(3_000_000_000_000)],
+            [uint64(750_000_000_000)],
             [ph],
             action_scope,
         )
