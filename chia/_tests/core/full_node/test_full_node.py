@@ -195,7 +195,7 @@ async def test_sync_no_farmer(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("tx_size", [3_000_000_000_000])
+@pytest.mark.parametrize("tx_size", [750_000_000_000])
 async def test_block_compression(
     setup_two_nodes_and_wallet: OldSimulatorsAndWallets, empty_blockchain: Blockchain, tx_size: int, self_hostname: str
 ) -> None:
@@ -342,7 +342,7 @@ async def test_block_compression(
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
-            [uint64(3_000_000_000_000)],
+            [uint64(750_000_000_000)],
             [ph],
             action_scope,
         )
