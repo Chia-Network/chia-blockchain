@@ -21,6 +21,7 @@ from chia.wallet.util.wallet_sync_utils import validate_additions, validate_remo
 async def test_basics(bt: BlockTools) -> None:
     num_blocks = 20
     blocks = bt.get_consecutive_blocks(num_blocks)
+    blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
 
     coins = list(itertools.chain.from_iterable(map(lambda block: block.get_included_reward_coins(), blocks)))
 
