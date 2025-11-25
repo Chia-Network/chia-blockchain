@@ -625,7 +625,7 @@ class TestBlockHeaderValidation:
             create_block_tools_async(
                 constants=constants.replace(
                     SUB_SLOT_ITERS_STARTING=uint64(2**12),
-                    DIFFICULTY_STARTING=uint64(2**14),
+                    DIFFICULTY_STARTING=uint64(constants.DIFFICULTY_STARTING * 2),
                 ),
                 keychain=keychain,
             ) as bt_high_iters,
@@ -2587,9 +2587,13 @@ class TestBodyValidation:
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
-        await _validate_and_add_block(
-            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, skip_prevalidation=True
-        )
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+        else:
+            # after the hard fork activation, we no longer allow block references
+            expected_error = Err.TOO_MANY_GENERATOR_REFS
+
+        await _validate_and_add_block(b, block_2, expected_error=expected_error, skip_prevalidation=True)
 
         # Hash should be correct when there is a ref list
         await _validate_and_add_block(b, blocks[-1])
@@ -2606,17 +2610,18 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
 
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=tx,
-            block_refs=[blocks[-1].height],
-        )
-        block = blocks[-1]
-        # once the hard fork activated, we no longer use this form of block
-        # compression anymore
-        assert len(block.transactions_generator_ref_list) == 0
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            blocks = bt.get_consecutive_blocks(
+                1,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                transaction_data=tx,
+                block_refs=[blocks[-1].height],
+            )
+            block = blocks[-1]
+            # once the hard fork activated, we no longer use this form of block
+            # compression anymore
+            assert len(block.transactions_generator_ref_list) == 0
 
     @pytest.mark.anyio
     async def test_cost_exceeds_max(
@@ -3590,11 +3595,11 @@ class TestReorgs:
             2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
 
-        spend_block = blocks[10]
         spend_coin = None
-        for coin in spend_block.get_included_reward_coins():
-            if coin.puzzle_hash == coinbase_puzzlehash:
-                spend_coin = coin
+        for bl in blocks[-2:]:
+            for coin in bl.get_included_reward_coins():
+                if coin.puzzle_hash == coinbase_puzzlehash:
+                    spend_coin = coin
         assert spend_coin is not None
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, spend_coin)
 
@@ -3696,7 +3701,7 @@ class TestReorgs:
         )
 
         # overlong encoding became invalid in the 3.0 hard fork
-        if consensus_mode == ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
