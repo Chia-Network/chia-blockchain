@@ -28,7 +28,6 @@ from pytest import MonkeyPatch
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.simulation.test_simulation import test_constants_modified
 from chia._tests.util.misc import (
     BenchmarkRunner,
     ComparableEnum,
@@ -99,6 +98,20 @@ from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
+
+test_constants_modified = test_constants.replace(
+    DIFFICULTY_STARTING=uint64(2**8),
+    DISCRIMINANT_SIZE_BITS=uint16(1024),
+    SUB_EPOCH_BLOCKS=uint32(140),
+    WEIGHT_PROOF_THRESHOLD=uint8(2),
+    WEIGHT_PROOF_RECENT_BLOCKS=uint32(350),
+    MAX_SUB_SLOT_BLOCKS=uint32(50),
+    NUM_SPS_SUB_SLOT=uint8(32),  # Must be a power of 2
+    EPOCH_BLOCKS=uint32(280),
+    SUB_SLOT_ITERS_STARTING=uint64(2**20),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(5),
+)
 
 
 @pytest.fixture(name="ether_setup", autouse=True)
