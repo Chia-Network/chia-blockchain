@@ -3591,8 +3591,11 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
         }
     )
 
-    with pytest.raises(ResponseFailureError, match="501 coins is greater then the maximum limit of 500 coins"):
+    with pytest.raises(ValueError, match="501 coins is greater then the maximum limit of 500 coins"):
         await dataclasses.replace(xch_request, number_of_coins=501).run()
+
+    with pytest.raises(ValueError, match="Cannot split into 0 new coins"):
+        await dataclasses.replace(xch_request, number_of_coins=0).run()
 
     with pytest.raises(ResponseFailureError, match="Could not find coin with ID 00000000000000000"):
         await dataclasses.replace(xch_request, target_coin_id=bytes32.zeros).run()
@@ -3623,10 +3626,6 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
         await env.rpc_client.split_coins(rpc_request, wallet_environments.tx_config)
 
     del env.wallet_state_manager.wallets[uint32(42)]
-
-    await dataclasses.replace(xch_request, number_of_coins=0).run()
-    output = (capsys.readouterr()).out
-    assert "Transaction sent" not in output
 
     with wallet_environments.new_puzzle_hashes_allowed():
         await xch_request.run()
@@ -3787,13 +3786,13 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     )
 
     # Test some error cases first
-    with pytest.raises(ResponseFailureError, match="greater then the maximum limit"):
+    with pytest.raises(ValueError, match="greater then the maximum limit"):
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(501)).run()
 
-    with pytest.raises(ResponseFailureError, match="You need at least two coins to combine"):
+    with pytest.raises(ValueError, match="You need at least two coins to combine"):
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)).run()
 
-    with pytest.raises(ResponseFailureError, match="More coin IDs specified than desired number of coins to combine"):
+    with pytest.raises(ValueError, match="More coin IDs specified than desired number of coins to combine"):
         await dataclasses.replace(xch_combine_request, input_coins=(bytes32.zeros,) * 100).run()
 
     # We catch this one

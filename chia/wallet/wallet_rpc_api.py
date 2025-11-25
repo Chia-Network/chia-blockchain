@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
@@ -89,7 +89,7 @@ from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
-from chia.wallet.util.query_filter import FilterMode, HashFilter
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -1376,57 +1376,13 @@ class WalletRpcApi:
     async def split_coins(
         self, request: SplitCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> SplitCoinsResponse:
-        if request.number_of_coins > 500:
-            raise ValueError(f"{request.number_of_coins} coins is greater then the maximum limit of 500 coins.")
-
-        optional_coin = await self.service.wallet_state_manager.coin_store.get_coin_record(request.target_coin_id)
-        if optional_coin is None:
-            raise ValueError(f"Could not find coin with ID {request.target_coin_id}")
-        else:
-            coin = optional_coin.coin
-
-        total_amount = request.amount_per_coin * request.number_of_coins
-
-        if coin.amount < total_amount:
-            raise ValueError(
-                f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}, exiting."
-            )
-
-        if request.wallet_id not in self.service.wallet_state_manager.wallets:
-            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
-        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
-        if not isinstance(wallet, (Wallet, CATWallet)):
-            raise ValueError("Cannot split coins from non-fungible wallet types")
-
-        outputs = [
-            CreateCoin(
-                await action_scope.get_puzzle_hash(
-                    self.service.wallet_state_manager, override_reuse_puzhash_with=False
-                ),
-                request.amount_per_coin,
-            )
-            for _ in range(request.number_of_coins)
-        ]
-        if len(outputs) == 0:
-            return SplitCoinsResponse([], [])
-
-        if wallet.type() == WalletType.STANDARD_WALLET and coin.amount < total_amount + request.fee:
-            async with action_scope.use() as interface:
-                interface.side_effects.selected_coins.append(coin)
-            coins = await wallet.select_coins(
-                uint64(total_amount + request.fee - coin.amount),
-                action_scope,
-            )
-            coins.add(coin)
-        else:
-            coins = {coin}
-
-        await wallet.generate_signed_transaction(
-            [output.amount for output in outputs],
-            [output.puzzle_hash for output in outputs],
-            action_scope,
-            request.fee,
-            coins=coins,
+        await self.service.wallet_state_manager.split_coins(
+            action_scope=action_scope,
+            wallet_id=request.wallet_id,
+            target_coin_id=request.target_coin_id,
+            amount_per_coin=request.amount_per_coin,
+            number_of_coins=request.number_of_coins,
+            fee=request.fee,
             extra_conditions=extra_conditions,
         )
 
@@ -1437,93 +1393,17 @@ class WalletRpcApi:
     async def combine_coins(
         self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> CombineCoinsResponse:
-        # Some "number of coins" validation
-        if request.number_of_coins > request.coin_num_limit:
-            raise ValueError(
-                f"{request.number_of_coins} coins is greater then the maximum limit of {request.coin_num_limit} coins."
-            )
-        if request.number_of_coins < 1:
-            raise ValueError("You need at least two coins to combine")
-        if len(request.target_coin_ids) > request.number_of_coins:
-            raise ValueError("More coin IDs specified than desired number of coins to combine")
-
-        if request.wallet_id not in self.service.wallet_state_manager.wallets:
-            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
-        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
-        if not isinstance(wallet, (Wallet, CATWallet)):
-            raise ValueError("Cannot combine coins from non-fungible wallet types")
-
-        coins: list[Coin] = []
-
-        # First get the coin IDs specified
-        if request.target_coin_ids != []:
-            coins.extend(
-                cr.coin
-                for cr in (
-                    await self.service.wallet_state_manager.coin_store.get_coin_records(
-                        wallet_id=request.wallet_id,
-                        coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
-                    )
-                ).records
-            )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.selected_coins.extend(coins)
-
-        # Next let's select enough coins to meet the target + fee if there is one
-        fungible_amount_needed = uint64(0) if request.target_coin_amount is None else request.target_coin_amount
-        if isinstance(wallet, Wallet):
-            fungible_amount_needed = uint64(fungible_amount_needed + request.fee)
-        amount_selected = sum(c.amount for c in coins)
-        if amount_selected < fungible_amount_needed:  # implicit fungible_amount_needed > 0 here
-            coins.extend(
-                await wallet.select_coins(
-                    amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
-                )
-            )
-
-        if len(coins) > request.number_of_coins:
-            raise ValueError(
-                f"Options specified cannot be met without selecting more coins than specified: {len(coins)}"
-            )
-
-        # Now let's select enough coins to get to the target number to combine
-        if len(coins) < request.number_of_coins:
-            async with action_scope.use() as interface:
-                coins.extend(
-                    cr.coin
-                    for cr in (
-                        await self.service.wallet_state_manager.coin_store.get_coin_records(
-                            wallet_id=request.wallet_id,
-                            limit=uint32(request.number_of_coins - len(coins)),
-                            order=CoinRecordOrder.amount,
-                            coin_id_filter=HashFilter(
-                                [c.name() for c in interface.side_effects.selected_coins],
-                                mode=uint8(FilterMode.exclude.value),
-                            ),
-                            reverse=request.largest_first,
-                        )
-                    ).records
-                )
-
-        async with action_scope.use() as interface:
-            interface.side_effects.selected_coins.extend(coins)
-
-        primary_output_amount = (
-            uint64(sum(c.amount for c in coins)) if request.target_coin_amount is None else request.target_coin_amount
-        )
-        if isinstance(wallet, Wallet):
-            primary_output_amount = uint64(primary_output_amount - request.fee)
-
-        await wallet.generate_signed_transaction(
-            [primary_output_amount],
-            [await action_scope.get_puzzle_hash(self.service.wallet_state_manager)],
-            action_scope,
-            request.fee,
-            coins=set(coins),
+        await self.service.wallet_state_manager.combine_coins(
+            action_scope=action_scope,
+            wallet_id=request.wallet_id,
+            number_of_coins=request.number_of_coins,
+            largest_first=request.largest_first,
+            coin_num_limit=request.coin_num_limit,
+            fee=request.fee,
+            target_coin_amount=request.target_coin_amount,
+            target_coin_ids=request.target_coin_ids if request.target_coin_ids != [] else None,
             extra_conditions=extra_conditions,
         )
-
         return CombineCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
     @marshal
