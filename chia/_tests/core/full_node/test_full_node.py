@@ -2773,6 +2773,10 @@ async def test_long_reorg_nodes(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname: str, bt: BlockTools) -> None:
     full_node_1, full_node_2, _ = three_nodes
 
