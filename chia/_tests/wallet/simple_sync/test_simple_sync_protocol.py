@@ -7,6 +7,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from colorlog import getLogger
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import add_dummy_connection
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -40,7 +41,9 @@ async def get_all_messages_in_queue(queue: asyncio.Queue[Message]) -> list[Messa
 
 
 @pytest.mark.anyio
-async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+async def test_subscribe_for_ph(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 4
     full_nodes, wallets, _ = simulator_and_wallet
     full_node_api = full_nodes[0]
@@ -89,10 +92,17 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
     all_zero_coin = set(zero_coin)
     notified_zero_coins = set()
 
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # farmer reward
+        coins_per_block = 1
+    else:
+        # farmer and pool reward
+        coins_per_block = 2
+
     for message in all_messages:
         if message.type == ProtocolMessageTypes.coin_state_update.value:
             coin_state_update = CoinStateUpdate.from_bytes(message.data)
-            assert len(coin_state_update.items) == 2  # 2 per height farmer / pool reward
+            assert len(coin_state_update.items) == coins_per_block
             for coin_state in coin_state_update.items:
                 notified_zero_coins.add(coin_state)
 
@@ -131,10 +141,17 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     notified_all_coins = set()
 
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # farmer reward
+        coins_per_block = 1
+    else:
+        # farmer and pool reward
+        coins_per_block = 2
+
     for message in all_messages:
         if message.type == ProtocolMessageTypes.coin_state_update.value:
             coin_state_update = CoinStateUpdate.from_bytes(message.data)
-            assert len(coin_state_update.items) == 2  # 2 per height farmer / pool reward
+            assert len(coin_state_update.items) == coins_per_block
             for coin_state in coin_state_update.items:
                 notified_all_coins.add(coin_state)
 
@@ -152,22 +169,29 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
         else:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
-    )
+    funds: int = sum(calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1))
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        funds += sum(calculate_pool_reward(uint32(i)) for i in range(1, num_blocks + 1))
+
     fn_amount = sum(
         cr.coin.amount
         for cr in await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, puzzle_hash)
     )
 
-    await time_out_assert(20, wallet.get_confirmed_balance, funds)
+    await time_out_assert(20, wallet.get_confirmed_balance, uint64(funds))
     assert funds == fn_amount
 
     msg_1 = wallet_protocol.RegisterForPhUpdates([puzzle_hash], uint32(0))
     msg_response_1 = await full_node_api.register_for_ph_updates(msg_1, fake_wallet_peer)
     assert msg_response_1.type == ProtocolMessageTypes.respond_to_ph_updates.value
     data_response_1 = RespondToCoinUpdates.from_bytes(msg_response_1.data)
-    assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # farmer reward
+        coins_per_block = 1
+    else:
+        # farmer and pool reward
+        coins_per_block = 2
+    assert len(data_response_1.coin_states) == coins_per_block * num_blocks
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -216,7 +240,9 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
 
 @pytest.mark.anyio
-async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+async def test_subscribe_for_coin_id(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 4
     full_nodes, wallets, _ = simulator_and_wallet
     full_node_api = full_nodes[0]
@@ -236,11 +262,11 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     for _ in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
-    )
+    funds: int = sum(calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks))
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        funds += uint64(sum(calculate_pool_reward(uint32(i)) for i in range(1, num_blocks)))
 
-    await time_out_assert(20, standard_wallet.get_confirmed_balance, funds)
+    await time_out_assert(20, standard_wallet.get_confirmed_balance, uint64(funds))
 
     my_coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
     coin_to_spend = my_coins[0].coin
@@ -376,27 +402,39 @@ async def test_subscribe_for_ph_reorg(
     assert len(coin_update_messages) == 2
     first = coin_update_messages[0]
 
-    assert len(first.items) == 2
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # after hard fork 2 we only redirect the farmer reward to the test
+        # wallet. v2 plots don't support redirecting the pool reward
+        assert len(first.items) == 1
+    else:
+        assert len(first.items) == 2
     first_state_coin_1 = first.items[0]
     assert first_state_coin_1.spent_height is None
     assert first_state_coin_1.created_height is not None
-    first_state_coin_2 = first.items[1]
-    assert first_state_coin_2.spent_height is None
-    assert first_state_coin_2.created_height is not None
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        first_state_coin_2 = first.items[1]
+        assert first_state_coin_2.spent_height is None
+        assert first_state_coin_2.created_height is not None
 
     second = coin_update_messages[1]
     assert second.fork_height == fork_height
-    assert len(second.items) == 2
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        assert len(second.items) == 1
+    else:
+        assert len(second.items) == 2
     second_state_coin_1 = second.items[0]
     assert second_state_coin_1.spent_height is None
     assert second_state_coin_1.created_height is None
-    second_state_coin_2 = second.items[1]
-    assert second_state_coin_2.spent_height is None
-    assert second_state_coin_2.created_height is None
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        second_state_coin_2 = second.items[1]
+        assert second_state_coin_2.spent_height is None
+        assert second_state_coin_2.created_height is None
 
 
 @pytest.mark.anyio
-async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+async def test_subscribe_for_coin_id_reorg(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 4
     long_blocks = 20
     full_nodes, wallets, _ = simulator_and_wallet
@@ -454,13 +492,19 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
     assert len(coin_update_messages) == 1
     update = coin_update_messages[0]
     coin_states = update.items
-    assert len(coin_states) == 2
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+        # after hard fork 2 we only redirect the farmer reward to the test
+        # wallet. v2 plots don't support redirecting the pool reward
+        assert len(coin_states) == 1
+    else:
+        assert len(coin_states) == 2
     first_coin = coin_states[0]
     assert first_coin.spent_height is None
     assert first_coin.created_height is None
-    second_coin = coin_states[1]
-    assert second_coin.spent_height is None
-    assert second_coin.created_height is None
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        second_coin = coin_states[1]
+        assert second_coin.spent_height is None
+        assert second_coin.created_height is None
 
 
 @pytest.mark.anyio
