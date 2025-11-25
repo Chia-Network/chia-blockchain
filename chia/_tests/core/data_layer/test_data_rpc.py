@@ -777,6 +777,7 @@ async def test_get_owned_stores(
             assert res is not None
             launcher_id = bytes32.from_hexstr(res["id"])
             expected_store_ids.append(launcher_id)
+            await full_node_api.wait_for_wallet_synced(wallet_node)
 
         await time_out_assert(4, check_mempool_spend_count, True, full_node_api, 3)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
