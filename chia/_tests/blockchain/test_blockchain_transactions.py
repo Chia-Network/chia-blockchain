@@ -8,6 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.generator_tools_testing import run_and_get_removals_and_additions
 from chia.consensus.blockchain import AddBlockResult
 from chia.full_node.full_node_api import FullNodeAPI
@@ -174,6 +175,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DUPLICATE_OUTPUT)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_validate_blockchain_with_reorg_double_spend(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -285,6 +291,11 @@ class TestBlockchainTransactions:
         )
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_validate_blockchain_spend_reorg_coin(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], softfork_height: uint32
     ) -> None:
@@ -370,6 +381,11 @@ class TestBlockchainTransactions:
         await add_blocks_in_batches(new_blocks, full_node_api_1.full_node)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_validate_blockchain_spend_reorg_cb_coin(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -411,6 +427,11 @@ class TestBlockchainTransactions:
         await add_blocks_in_batches(new_blocks, full_node_api_1.full_node)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_validate_blockchain_spend_reorg_since_genesis(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -612,6 +633,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_puzzle_announcement_consumed(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -760,6 +786,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_height_relative(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -827,6 +858,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_seconds_relative(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -898,6 +934,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_seconds_absolute(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -971,6 +1012,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_fee_condition(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:

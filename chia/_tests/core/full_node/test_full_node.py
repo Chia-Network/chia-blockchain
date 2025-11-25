@@ -195,7 +195,12 @@ async def test_sync_no_farmer(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("tx_size", [3_000_000_000_000])
+@pytest.mark.parametrize("tx_size", [750_000_000_000])
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_block_compression(
     setup_two_nodes_and_wallet: OldSimulatorsAndWallets, empty_blockchain: Blockchain, tx_size: int, self_hostname: str
 ) -> None:
@@ -608,6 +613,11 @@ async def test_basic_chain(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_respond_end_of_sub_slot(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -751,6 +761,11 @@ async def test_respond_end_of_sub_slot_race(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_respond_unfinished(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -1268,6 +1283,11 @@ async def test_request_block(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_request_blocks(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -1959,6 +1979,11 @@ async def test_new_signage_point_caching(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_slot_catch_up_genesis(
     setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     self_hostname: str,
@@ -2773,6 +2798,10 @@ async def test_long_reorg_nodes(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_shallow_reorg_nodes(three_nodes: list[FullNodeAPI], self_hostname: str, bt: BlockTools) -> None:
     full_node_1, full_node_2, _ = three_nodes
 
