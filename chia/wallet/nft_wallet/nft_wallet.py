@@ -821,7 +821,7 @@ class NFTWallet:
                 if asset is None:
                     wallet = wallet_state_manager.main_wallet
                 else:
-                    wallet = await wallet_state_manager.get_wallet_for_asset_id(asset.hex())
+                    wallet = await wallet_state_manager.get_wallet_for_asset_id(asset)
                 if asset in royalty_payments:
                     royalty_amount: int = sum(p.amount for _, p in royalty_payments[asset])
                 else:
@@ -872,7 +872,7 @@ class NFTWallet:
                 if asset is None:
                     wallet = wallet_state_manager.main_wallet
                 else:
-                    wallet = await wallet_state_manager.get_wallet_for_asset_id(asset.hex())
+                    wallet = await wallet_state_manager.get_wallet_for_asset_id(asset)
 
                 # First, sending all the coins to the OFFER_MOD
                 async with wallet_state_manager.new_action_scope(

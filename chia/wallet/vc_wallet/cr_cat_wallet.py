@@ -72,8 +72,8 @@ class CRCATWallet(CATWallet):
     wallet_info_type: ClassVar[type[CRCATInfo]] = CRCATInfo
 
     @staticmethod
-    def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
-        return f"CAT {limitations_program_hash_hex[:16]}..."
+    def default_wallet_name_for_unknown_cat(limitations_program_hash: bytes32) -> str:
+        return f"CAT {limitations_program_hash.hex()[:16]}..."
 
     @property
     def cost_of_single_tx(self) -> int:
@@ -97,7 +97,7 @@ class CRCATWallet(CATWallet):
         cls,
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        limitations_program_hash_hex: str,
+        limitations_program_hash: bytes32,
         name: str | None = None,
         authorized_providers: list[bytes32] | None = None,
         proofs_checker: ProofsChecker | None = None,
@@ -107,21 +107,19 @@ class CRCATWallet(CATWallet):
         self = cls()
         self.standard_wallet = wallet
         if name is None:
-            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
+            name = self.default_wallet_name_for_unknown_cat(limitations_program_hash)
         self.log = logging.getLogger(name)
-
-        tail_hash = bytes32.from_hexstr(limitations_program_hash_hex)
 
         for id, w in wallet_state_manager.wallets.items():
             if w.type() == cls.type():
                 assert isinstance(w, cls)
-                if w.get_asset_id() == limitations_program_hash_hex:
+                if w.get_asset_id() == limitations_program_hash:
                     self.log.warning("Not creating wallet for already existing CR-CAT wallet")
                     return w
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.info = cls.wallet_info_type(tail_hash, None, authorized_providers, proofs_checker)
+        self.info = cls.wallet_info_type(limitations_program_hash, None, authorized_providers, proofs_checker)
         info_as_string = bytes(self.info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CRCAT, info_as_string)
 
@@ -147,7 +145,7 @@ class CRCATWallet(CATWallet):
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
-            puzzle_driver["tail"].hex(),
+            puzzle_driver["tail"],
             name,
             [bytes32(provider) for provider in cr_layer["authorized_providers"]],
             ProofsChecker.from_program(uncurry_puzzle(cr_layer["proofs_checker"])),
@@ -201,8 +199,8 @@ class CRCATWallet(CATWallet):
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    def get_asset_id(self) -> str:
-        return bytes(self.info.limitations_program_hash).hex()
+    def get_asset_id(self) -> bytes32:
+        return self.info.limitations_program_hash
 
     async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
         raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")

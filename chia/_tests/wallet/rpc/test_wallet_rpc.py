@@ -239,7 +239,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
     if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
-        expected_balance_dict["asset_id"] = "0x" + wallet.get_asset_id()
+        expected_balance_dict["asset_id"] = "0x" + wallet.get_asset_id().hex()
     else:
         expected_balance_dict["asset_id"] = None
     assert (
@@ -1137,7 +1137,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     asset_id = (await env_0.rpc_client.get_cat_asset_id(CATGetAssetID(cat_0_id))).asset_id
     assert (
         await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))
-    ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id.hex())
+    ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id)
     await env_0.rpc_client.set_cat_name(CATSetName(cat_0_id, "My cat"))
     assert (await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))).name == "My cat"
     asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(CATAssetIDToName(asset_id))

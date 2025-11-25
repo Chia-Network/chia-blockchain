@@ -1150,7 +1150,7 @@ class WalletRpcApi:
                     self.service.wallet_state_manager.state_changed("wallet_created")
                     return {
                         "type": cat_wallet.type(),
-                        "asset_id": asset_id,
+                        "asset_id": asset_id.hex(),
                         "wallet_id": cat_wallet.id(),
                         "transactions": None,  # tx_endpoint wrapper will take care of this
                     }
@@ -1163,7 +1163,7 @@ class WalletRpcApi:
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
-                        wallet_state_manager, main_wallet, request["asset_id"], name
+                        wallet_state_manager, main_wallet, bytes32.from_hexstr(request["asset_id"]), name
                     )
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
 
@@ -1346,7 +1346,7 @@ class WalletRpcApi:
             wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
         if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             assert isinstance(wallet, CATWallet)
-            wallet_balance["asset_id"] = wallet.get_asset_id()
+            wallet_balance["asset_id"] = wallet.get_asset_id().hex()
             if wallet.type() == WalletType.CRCAT:
                 assert isinstance(wallet, CRCATWallet)
                 wallet_balance["pending_approval_balance"] = await wallet.get_pending_approval_balance()
@@ -2193,12 +2193,12 @@ class WalletRpcApi:
     @marshal
     async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
-        asset_id: str = wallet.get_asset_id()
-        return CATGetAssetIDResponse(asset_id=bytes32.from_hexstr(asset_id), wallet_id=request.wallet_id)
+        asset_id = wallet.get_asset_id()
+        return CATGetAssetIDResponse(asset_id=asset_id, wallet_id=request.wallet_id)
 
     @marshal
     async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
-        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request.asset_id.hex())
+        wallet = await self.service.wallet_state_manager.get_wallet_for_asset_id(request.asset_id)
         if wallet is None:
             if request.asset_id.hex() in DEFAULT_CATS:
                 return CATAssetIDToNameResponse(wallet_id=None, name=DEFAULT_CATS[request.asset_id.hex()]["name"])
