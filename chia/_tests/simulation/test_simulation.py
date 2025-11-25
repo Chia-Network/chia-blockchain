@@ -12,8 +12,9 @@ import dns.rdtypes.IN.AAAA
 import pytest
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint16, uint32, uint64
+from chia_rs.sized_ints import uint16, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode, test_constants_modified
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.setup_nodes import FullSystem, OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -24,7 +25,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
@@ -35,20 +36,6 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 chiapos_version = importlib.metadata.version("chiapos")
-
-test_constants_modified = test_constants.replace(
-    DIFFICULTY_STARTING=uint64(2**8),
-    DISCRIMINANT_SIZE_BITS=uint16(1024),
-    SUB_EPOCH_BLOCKS=uint32(140),
-    WEIGHT_PROOF_THRESHOLD=uint8(2),
-    WEIGHT_PROOF_RECENT_BLOCKS=uint32(350),
-    MAX_SUB_SLOT_BLOCKS=uint32(50),
-    NUM_SPS_SUB_SLOT=uint8(32),  # Must be a power of 2
-    EPOCH_BLOCKS=uint32(280),
-    SUB_SLOT_ITERS_STARTING=uint64(2**20),
-    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(5),
-    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(5),
-)
 
 
 # TODO: Ideally, the db_version should be the (parameterized) db_version
@@ -204,6 +191,7 @@ class TestSimulation:
         self,
         two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
+        consensus_mode: ConsensusMode,
     ) -> None:
         num_blocks = 2
         full_nodes, wallets, _ = two_wallet_nodes
@@ -225,7 +213,9 @@ class TestSimulation:
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        block_reward = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
+        block_reward: int = calculate_base_farmer_reward(uint32(1))
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            block_reward += calculate_pool_reward(uint32(1))
         funds = block_reward
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
@@ -360,6 +350,7 @@ class TestSimulation:
         amount: int,
         coin_count: int,
         simulator_and_wallet: OldSimulatorsAndWallets,
+        consensus_mode: ConsensusMode,
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -382,7 +373,13 @@ class TestSimulation:
 
         # The expected number of coins were received.
         spendable_coins = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
-        assert len(spendable_coins) == coin_count
+
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            assert len(spendable_coins) == coin_count
+        else:
+            # In this case we only receive farmer rewards, each worth exactly
+            # 250 billion mojos. Rounding up
+            assert len(spendable_coins) == (amount + 250_000_000_000 - 1) // 250_000_000_000
 
     @pytest.mark.anyio
     async def test_wait_transaction_records_entered_mempool(
