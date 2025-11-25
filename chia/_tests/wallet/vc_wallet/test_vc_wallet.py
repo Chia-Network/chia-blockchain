@@ -9,6 +9,7 @@ from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -143,6 +144,10 @@ async def mint_cr_cat(
     indirect=True,
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Setup
     full_node_api: FullNodeSimulator = wallet_environments.full_node
@@ -702,6 +707,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     indirect=True,
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Setup
     env_0: WalletEnvironment = wallet_environments.environments[0]

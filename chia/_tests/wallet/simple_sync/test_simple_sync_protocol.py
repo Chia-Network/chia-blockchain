@@ -318,7 +318,9 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+async def test_subscribe_for_ph_reorg(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 4
     long_blocks = 20
     full_nodes, wallets, _ = simulator_and_wallet

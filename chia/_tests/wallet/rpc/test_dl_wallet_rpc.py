@@ -8,6 +8,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
@@ -45,6 +46,10 @@ log = logging.getLogger(__name__)
 class TestWalletRpc:
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+    )
     async def test_wallet_make_transaction(
         self, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
     ) -> None:

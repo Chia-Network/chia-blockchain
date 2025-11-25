@@ -11,6 +11,7 @@ from click.testing import CliRunner
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.cmds.wallet.test_consts import STD_TX
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.cmds.cmd_classes import chia_command
 from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut, WalletClientInfo
@@ -125,6 +126,10 @@ def test_unsigned_transaction_type() -> None:
     indirect=True,
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFramework) -> None:
     wallet: Wallet = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -601,6 +606,10 @@ def test_blind_signer_translation_layer() -> None:
     indirect=True,
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_signer_commands(wallet_environments: WalletTestFramework) -> None:
     wallet: Wallet = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager

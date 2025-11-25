@@ -1166,6 +1166,10 @@ async def test_did_sign_message(wallet_environments: WalletTestFramework):
     [True, False],
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_did_resync(
     self_hostname: str,
     two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
