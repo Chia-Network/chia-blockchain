@@ -291,10 +291,10 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     argvalues=[
         (0, 5),
         (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 6),
-        (0xFFFFFFFC, 7),
-        (0xFFFFFFFD, 8),
-        (0xFFFFFFFF, 8),
+        (0xFFFFFFFB, 4),
+        (0xFFFFFFFC, 3),
+        (0xFFFFFFFD, 2),
+        (0xFFFFFFFF, 2),
     ],
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
