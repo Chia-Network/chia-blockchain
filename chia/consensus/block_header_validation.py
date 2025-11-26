@@ -1098,10 +1098,9 @@ def validate_finished_header_block(
         mmr_root = header_block.reward_chain_block.header_mmr_root
 
         if mmr_root != expected_mmr_root:
+            expected_hash = None if expected_mmr_root is None else expected_mmr_root.hex()
             log.error(
-                f"Invalid header MMR root at height {header_block.height}. "
-                f"Expected: {expected_mmr_root.hex()}, "
-                f"Got: {mmr_root}"
+                f"Invalid header MMR root at height {header_block.height}. Expected: {expected_hash}, Got: {mmr_root}"
             )
             return None, ValidationError(Err.INVALID_REWARD_BLOCK_HASH)
 

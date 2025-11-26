@@ -27,7 +27,7 @@ class BlockCache:
     def __init__(
         self,
         blocks: dict[bytes32, BlockRecord],
-        mmr_manager: Optional[BlockchainMMRManager] = None,
+        mmr_manager: BlockchainMMRManager | None = None,
     ):
         self._block_records = blocks
         self._height_to_hash = {block.height: hh for hh, block in blocks.items()}

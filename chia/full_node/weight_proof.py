@@ -920,7 +920,7 @@ def _validate_summaries_weight(
 ) -> bool:
     num_over = summaries[-1].num_blocks_overflow
     ses_end_height = (len(summaries) - 1) * constants.SUB_EPOCH_BLOCKS + num_over - 1
-    curr: Optional[HeaderBlock] = None
+    curr: HeaderBlock | None = None
     for block in weight_proof.recent_chain_data:
         if block.reward_chain_block.height == ses_end_height:
             curr = block

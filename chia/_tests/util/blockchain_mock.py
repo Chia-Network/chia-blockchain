@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpochSegments, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
@@ -21,16 +21,16 @@ class StubMMRManager:
 
     def get_mmr_root_for_block(
         self,
-        prev_header_hash: Optional[bytes32],
+        prev_header_hash: bytes32 | None,
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: Any,
-    ) -> bytes32:
+    ) -> bytes32 | None:
         # Return empty bytes for test contexts
-        return bytes32([0] * 32)
+        return None
 
-    def get_current_mmr_root(self) -> bytes32:
-        return bytes32([0] * 32)
+    def get_current_mmr_root(self) -> bytes32 | None:
+        return None
 
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         # No-op for stub manager

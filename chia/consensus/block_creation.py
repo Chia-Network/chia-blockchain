@@ -429,7 +429,7 @@ def unfinished_block_to_full_block(
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
-    header_mmr_root: Optional[bytes32],
+    header_mmr_root: bytes32 | None,
     constants: ConsensusConstants,
 ) -> FullBlock:
     """
@@ -531,10 +531,10 @@ def unfinished_block_to_full_block_with_mmr(
     cc_ip_proof: VDFProof,
     rc_ip_vdf: VDFInfo,
     rc_ip_proof: VDFProof,
-    icc_ip_vdf: Optional[VDFInfo],
-    icc_ip_proof: Optional[VDFProof],
+    icc_ip_vdf: VDFInfo | None,
+    icc_ip_proof: VDFProof | None,
     finished_sub_slots: list[EndOfSubSlotBundle],
-    prev_block: Optional[BlockRecord],
+    prev_block: BlockRecord | None,
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,

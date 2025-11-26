@@ -30,7 +30,7 @@ class AugmentedBlockchain:
     _height_to_hash: dict[uint32, bytes32]
     mmr_manager: MMRManagerProtocol
 
-    def __init__(self, underlying: BlocksProtocol, fork_height: Optional[int] = None) -> None:
+    def __init__(self, underlying: BlocksProtocol, fork_height: int | None = None) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
@@ -158,13 +158,13 @@ class AugmentedBlockchain:
 
     def get_mmr_root_for_block(
         self,
-        prev_header_hash: Optional[bytes32],
+        prev_header_hash: bytes32 | None,
         new_sp_index: int,
         starts_new_slot: bool,
-    ) -> bytes32:
+    ) -> bytes32 | None:
         return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
 
-    def get_current_mmr_root(self) -> bytes32:
+    def get_current_mmr_root(self) -> bytes32 | None:
         return self.mmr_manager.get_current_mmr_root()
 
     def add_block_to_mmr(self, block_record: BlockRecord) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
@@ -16,24 +16,23 @@ log = logging.getLogger(__name__)
 class BlockchainMMRManager:
     """
     Manages MMR state for blockchain operations.
-    Tracks MMR of header hashes for proof of weight.
-    Includes checkpointing system for efficient rollback during reorgs.
+    Includes checkpointing for efficient rollback during reorgs.
     """
 
     _mmr: MerkleMountainRange
-    _last_block: Optional[BlockRecord]
+
     _checkpoints: dict[int, MerkleMountainRange]  # height -> MMR snapshot
     _checkpoint_interval: int
     _max_checkpoints: int
 
     def __init__(
-        self, mmr: Optional[BlockchainMMRManager] = None, checkpoint_interval: int = 1000, max_checkpoints: int = 10
+        self, mmr: BlockchainMMRManager | None = None, checkpoint_interval: int = 1000, max_checkpoints: int = 10
     ) -> None:
         # Current MMR state
         if mmr is not None:
             self._mmr = mmr._mmr.copy()
-            self._last_header_hash: Optional[bytes32] = mmr._last_header_hash
-            self._last_height: Optional[uint32] = mmr._last_height
+            self._last_header_hash: bytes32 | None = mmr._last_header_hash
+            self._last_height: uint32 | None = mmr._last_height
             self._checkpoints = {h: mmr_snap.copy() for h, mmr_snap in mmr._checkpoints.items()}
             self._checkpoint_interval = mmr._checkpoint_interval
             self._max_checkpoints = mmr._max_checkpoints
@@ -52,17 +51,9 @@ class BlockchainMMRManager:
         """
         Add a block to the MMR in sequential order.
         This should be called for blocks in height order to maintain MMR integrity.
-
-        Args:
-            header_hash: Hash of the block header
-            prev_hash: Hash of the previous block header
-            height: Block height
         """
 
-        # For blocks loaded from disk during initialization, they might not be in order
         # Only add blocks that are the next expected height
-
-        # TODO v2_WP handle genesis block properly
         if self._last_header_hash is not None and (prev_hash != self._last_header_hash):
             # Skip blocks that are out of order or duplicate
             log.warning(
@@ -70,6 +61,7 @@ class BlockchainMMRManager:
                 f"(expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
             )
             return
+        # genesis case is equivilant to normal case
         assert self._last_height is None or height == self._last_height + 1
         # Add block's header hash to the MMR
         self._mmr.append(header_hash)
@@ -88,13 +80,13 @@ class BlockchainMMRManager:
                 del self._checkpoints[oldest_checkpoint]
                 log.debug(f"Removed old MMR checkpoint at height {oldest_checkpoint}")
 
-        log.debug(f"Added block {height} to MMR, new root: {self._mmr.get_root().hex()}")
+        log.debug(f"Added block {height} to MMR, new root: {self._mmr.get_root()}")
 
-    def get_current_mmr_root(self) -> bytes32:
+    def get_current_mmr_root(self) -> bytes32 | None:
         """Get the current MMR root representing all blocks added so far"""
         return self._mmr.get_root()
 
-    def get_inclusion_proof(self, header_hash: bytes32) -> Optional[tuple[Any, ...]]:
+    def get_inclusion_proof(self, header_hash: bytes32) -> tuple[Any, ...] | None:
         """Get inclusion proof for a header hash"""
         return self._mmr.get_inclusion_proof(header_hash)
 
@@ -105,54 +97,70 @@ class BlockchainMMRManager:
         peak_index, proof_bytes, other_peak_roots = proof
         return self._mmr.verify_inclusion(header_hash, peak_index, proof_bytes, other_peak_roots)
 
+    def _build_mmr_to_block(self, target_block: BlockRecord, blocks: BlockRecordsProtocol) -> bytes32 | None:
+        """
+        Build an MMR containing all blocks from genesis to target_block (inclusive).
+        Uses checkpoints or current MMR state when available to avoid rebuilding from genesis.
+        """
+        target_height = target_block.height
+
+        # Fast path: if current MMR is already at target height, use it directly
+        if self._last_height is not None and self._last_height == target_height:
+            if self._last_header_hash == target_block.header_hash:
+                log.debug(f"Using current MMR state at height {target_height}")
+                return self._mmr.get_root()
+
+        # Try to find the best starting point (current MMR or checkpoint)
+        best_start_height = -1
+        best_mmr = None
+
+        # Check checkpoints - sort in descending order and take first match
+        for checkpoint_height in sorted(self._checkpoints.keys(), reverse=True):
+            if checkpoint_height <= target_height and checkpoint_height > best_start_height:
+                best_start_height = checkpoint_height
+                best_mmr = self._checkpoints[checkpoint_height].copy()
+                log.debug(f"Using checkpoint at height {checkpoint_height} as starting point")
+
+        # If we have a starting point, use it; otherwise start from genesis
+        if best_mmr is not None:
+            mmr = best_mmr
+            start_height = best_start_height + 1
+        else:
+            mmr = MerkleMountainRange.create()
+            start_height = 0
+            log.debug(f"Building MMR from genesis to {target_height}")
+
+        # Append remaining blocks from start_height to target_height
+        for height in range(start_height, target_height + 1):
+            block = blocks.height_to_block_record(uint32(height))
+            mmr.append(block.header_hash)
+
+        return mmr.get_root()
+
     def get_mmr_root_for_block(
         self,
-        prev_header_hash: Optional[bytes32],
+        prev_header_hash: bytes32 | None,
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: BlockRecordsProtocol,
-    ) -> bytes32:
+    ) -> bytes32 | None:
         """
         Compute MMR root for a block with sp/slot filtering.
 
         Works for both block validation and creation by computing finalized blocks
         relative to the given sp/slot parameters.
-
-        Args:
-            prev_header_hash: Header hash of previous block (None for genesis)
-            new_sp_index: Signage point index of the block
-            starts_new_slot: True if block starts a new slot (len(finished_sub_slots) > 0)
-            blocks: BlockRecordsProtocol to walk the chain
-
-        Returns:
-            MMR root containing only finalized blocks relative to block's sp/slot
         """
         if prev_header_hash is None:
             # Genesis block has empty MMR
-            return bytes32([0] * 32)
+            return None
 
         prev_block = blocks.block_record(prev_header_hash)
 
         if starts_new_slot:
             # New slot - all blocks up to and including prev_block are finalized
-            # Collect all blocks from genesis to prev_block
-            chain_blocks = []
-            current = prev_block
-            while current.height >= 0:
-                chain_blocks.append(current)
-                if current.height == 0:
-                    break
-                current = blocks.block_record(current.prev_hash)
-            chain_blocks.reverse()
-
-            # Build MMR
-            filtered_mmr = MerkleMountainRange.create()
-            for block in chain_blocks:
-                filtered_mmr.append(block.header_hash)
-
-            log.debug(f"New slot: Built MMR with all {len(chain_blocks)} blocks up to height {prev_block.height}")
-
-            return filtered_mmr.get_root()
+            mmr_root = self._build_mmr_to_block(prev_block, blocks)
+            log.debug(f"New slot: Built MMR with all blocks up to height {prev_block.height}")
+            return mmr_root
 
         # Same slot - need to find cutoff based on sp_index
         # Walk backwards from prev_block to find highest finalized block
@@ -186,28 +194,16 @@ class BlockchainMMRManager:
         if cutoff_block is None:
             # No finalized blocks
             log.debug(f"No finalized blocks for new block (sp={new_sp_index})")
-            return bytes32([0] * 32)
+            return None
 
-        # Collect all blocks from genesis to cutoff
-        chain_blocks = []
-        current = cutoff_block
-        while current.height > 0:
-            chain_blocks.append(current)
-            current = blocks.block_record(current.prev_hash)
-        chain_blocks.append(current)  # Add genesis
-        chain_blocks.reverse()
-
-        # Build MMR
-        filtered_mmr = MerkleMountainRange.create()
-        for block in chain_blocks:
-            filtered_mmr.append(block.header_hash)
-
+        # Build MMR from genesis to cutoff block
+        mmr_root = self._build_mmr_to_block(cutoff_block, blocks)
         log.debug(
-            f"Built MMR for new block (sp={new_sp_index}) with {len(chain_blocks)} finalized blocks "
+            f"Built MMR for new block (sp={new_sp_index}) with finalized blocks "
             f"(cutoff at height {cutoff_block.height})"
         )
 
-        return filtered_mmr.get_root()
+        return mmr_root
 
     def rollback_to_height(self, target_height: int, blocks: BlockRecordsProtocol) -> None:
         """
@@ -226,7 +222,6 @@ class BlockchainMMRManager:
         if target_height == 0:
             # Reset to genesis
             self._mmr = MerkleMountainRange.create()
-            self._last_block = None
             return
 
         # Find the best checkpoint to start from
