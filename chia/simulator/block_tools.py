@@ -1330,7 +1330,7 @@ class BlockTools:
                             f"refs: {len(full_block.transactions_generator_ref_list):3} "
                             f"iters: {block_record.total_iters} "
                             f"[{'TransactionBlock ' if block_record.is_transaction_block else ''}"
-                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}]"
+                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}"
                             "Overflow]"
                         )
                         last_timestamp = new_timestamp

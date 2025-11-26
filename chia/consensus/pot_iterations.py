@@ -55,6 +55,7 @@ def validate_pospace_and_get_required_iters(
     height: uint32,
     difficulty: uint64,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
+    height_agnostic: bool = False,
 ) -> uint64 | None:
     q_str: bytes32 | None = verify_and_get_quality_string(
         proof_of_space,
@@ -63,6 +64,7 @@ def validate_pospace_and_get_required_iters(
         cc_sp_hash,
         height=height,
         prev_transaction_block_height=prev_transaction_block_height,
+        height_agnostic=height_agnostic,
     )
     if q_str is None:
         return None
