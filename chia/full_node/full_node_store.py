@@ -890,6 +890,7 @@ class FullNodeStore:
                     sp: SignagePoint | None = sps[i]
                     if sp is not None and sp.rc_vdf is not None and sp.rc_vdf.challenge == last_rc_infusion:
                         found_rc_hash = True
+                        break
                 sp = sps[index]
                 if (
                     found_rc_hash
