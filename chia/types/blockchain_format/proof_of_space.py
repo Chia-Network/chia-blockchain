@@ -46,7 +46,7 @@ def get_plot_id(pos: ProofOfSpace) -> bytes32:
     plot_param = pos.param()
     if plot_param.strength_v2 is not None:
         assert pos.pool_contract_puzzle_hash is not None
-        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, plot_param.strength_v2)
+        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, uint8(plot_param.strength_v2))
 
     assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
     if pos.pool_public_key is None:
@@ -211,13 +211,14 @@ def passes_plot_filter(
 
 def calculate_prefix_bits(constants: ConsensusConstants, height: uint32, plot_param: PlotParam) -> int:
     if plot_param.strength_v2 is not None:
+        prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2)
         if height >= constants.PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT:
-            return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 3
-        if height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
-            return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 2
-        if height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
-            return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2 + 1
-        return constants.NUMBER_ZERO_BITS_PLOT_FILTER_V2
+            prefix_bits -= 3
+        elif height >= constants.PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT:
+            prefix_bits -= 2
+        elif height >= constants.PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT:
+            prefix_bits -= 1
+        return max(0, prefix_bits)
 
     prefix_bits = int(constants.NUMBER_ZERO_BITS_PLOT_FILTER_V1)
     if height >= constants.PLOT_FILTER_32_HEIGHT:

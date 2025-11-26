@@ -67,6 +67,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_request_types import (
+    CancelOffer,
     CreateNewDL,
     CreateOfferForIDs,
     DLDeleteMirror,
@@ -1289,9 +1290,7 @@ class DataLayer:
             store_ids = [offered.launcher_id for offered in summary.offered]
 
         await self.wallet_rpc.cancel_offer(
-            trade_id=trade_id,
-            secure=secure,
-            fee=fee,
+            CancelOffer(trade_id=trade_id, secure=secure, fee=fee, push=True),
             # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
             # This is not a change in behavior, the default was already implicit.
             tx_config=DEFAULT_TX_CONFIG,

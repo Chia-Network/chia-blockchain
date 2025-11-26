@@ -310,7 +310,7 @@ class FullNodeAPI:
 
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
-            await self.full_node.transaction_queue.put(
+            self.full_node.transaction_queue.put(
                 TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test, peers_with_tx),
                 peer.peer_node_id,
             )
@@ -1434,7 +1434,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
         queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
-        await self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
+        self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
         try:
             with anyio.fail_after(delay=45):
                 status, error = await queue_entry.done.wait()
