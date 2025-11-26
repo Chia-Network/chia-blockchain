@@ -95,6 +95,7 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
+    Addition,
     AddKey,
     CancelOffer,
     CancelOffers,
@@ -108,6 +109,7 @@ from chia.wallet.wallet_request_types import (
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
     CreateOfferForIDs,
+    CreateSignedTransaction,
     DefaultCAT,
     DeleteKey,
     DeleteNotifications,
@@ -180,37 +182,34 @@ async def farm_transaction(
 
 async def create_tx_outputs(
     wallet: Wallet, tx_config: TXConfig, output_args: list[tuple[int, list[str] | None]]
-) -> list[dict[str, Any]]:
-    outputs = []
+) -> list[Addition]:
     async with wallet.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
-        for args in output_args:
-            output = {
-                "amount": uint64(args[0]),
-                "puzzle_hash": await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
-            }
-            if args[1] is not None:
-                assert len(args[1]) > 0
-                output["memos"] = args[1]
-            outputs.append(output)
-    return outputs
+        return [
+            Addition(
+                amount=uint64(args[0]),
+                puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
+                memos=None if args[1] is None or len(args[1]) == 0 else args[1],
+            )
+            for args in output_args
+        ]
 
 
 def assert_tx_amounts(
     tx: TransactionRecord,
-    outputs: list[dict[str, Any]],
+    outputs: list[Addition],
     *,
     amount_fee: uint64,
     change_expected: bool,
     is_cat: bool = False,
 ) -> None:
     assert tx.fee_amount == amount_fee
-    assert tx.amount == sum(output["amount"] for output in outputs)
+    assert tx.amount == sum(output.amount for output in outputs)
     expected_additions = len(outputs) + 1 if change_expected else len(outputs)
     assert len(tx.additions) == expected_additions
     addition_amounts = [addition.amount for addition in tx.additions]
     removal_amounts = [removal.amount for removal in tx.removals]
     for output in outputs:
-        assert output["amount"] in addition_amounts
+        assert output.amount in addition_amounts
     if is_cat:
         assert (sum(removal_amounts) - sum(addition_amounts)) == 0
     else:
@@ -379,9 +378,8 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
 
     tx = (
         await client.create_signed_transactions(
-            outputs,
+            CreateSignedTransaction(additions=outputs, fee=uint64(100)),
             tx_config=wallet_environments.tx_config,
-            fee=uint64(100),
         )
     ).signed_tx
 
@@ -573,7 +571,7 @@ async def test_create_signed_transaction(
     env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, output_args)
-    amount_outputs = sum(output["amount"] for output in outputs)
+    amount_outputs = sum(output.amount for output in outputs)
     amount_fee = uint64(fee)
 
     wallet_id = 1
@@ -603,7 +601,7 @@ async def test_create_signed_transaction(
         )
 
     if is_cat:
-        amount_total = amount_outputs
+        amount_total: int = amount_outputs
     else:
         amount_total = amount_outputs + amount_fee
 
@@ -611,7 +609,7 @@ async def test_create_signed_transaction(
     if select_coin:
         select_coins_response = await wallet_1_rpc.select_coins(
             SelectCoins.from_coin_selection_config(
-                amount=amount_total,
+                amount=uint64(amount_total),
                 wallet_id=uint32(wallet_id),
                 coin_selection_config=wallet_environments.tx_config.coin_selection_config,
             )
@@ -621,15 +619,17 @@ async def test_create_signed_transaction(
 
     txs = (
         await wallet_1_rpc.create_signed_transactions(
-            outputs,
-            coins=[selected_coin] if selected_coin is not None else [],
-            fee=amount_fee,
-            wallet_id=wallet_id,
+            CreateSignedTransaction(
+                additions=outputs,
+                coins=[selected_coin] if selected_coin is not None else None,
+                fee=amount_fee,
+                wallet_id=uint32(wallet_id),
+                push=True,
+            ),
             # shouldn't actually block it
             tx_config=wallet_environments.tx_config.override(
                 excluded_coin_amounts=[uint64(selected_coin.amount)] if selected_coin is not None else [],
             ),
-            push=True,
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
@@ -722,18 +722,18 @@ async def test_create_signed_transaction(
     addition_dict: dict[bytes32, Coin] = {addition.name(): addition for addition in additions}
     memo_dictionary: dict[bytes32, list[bytes]] = compute_memos(spend_bundle)
     for output in outputs:
-        if "memos" in output:
+        if output.memos is not None:
             found: bool = False
             for addition_id, addition in addition_dict.items():
                 if (
                     is_cat
-                    and addition.amount == output["amount"]
-                    and memo_dictionary[addition_id][0] == output["puzzle_hash"]
-                    and memo_dictionary[addition_id][1:] == [memo.encode() for memo in output["memos"]]
+                    and addition.amount == output.amount
+                    and memo_dictionary[addition_id][0] == output.puzzle_hash
+                    and memo_dictionary[addition_id][1:] == [memo.encode() for memo in output.memos]
                 ) or (
-                    addition.amount == output["amount"]
-                    and addition.puzzle_hash == output["puzzle_hash"]
-                    and memo_dictionary[addition_id] == [memo.encode() for memo in output["memos"]]
+                    addition.amount == output.amount
+                    and addition.puzzle_hash == output.puzzle_hash
+                    and memo_dictionary[addition_id] == [memo.encode() for memo in output.memos]
                 ):
                     found = True
             assert found
@@ -768,7 +768,9 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_environme
     outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, [(signed_tx_amount, None)])
     tx_res: TransactionRecord = (
         await client.create_signed_transactions(
-            outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_coin_announcements,)
+            CreateSignedTransaction(additions=outputs),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(*tx_coin_announcements,),
         )
     ).signed_tx
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
@@ -804,7 +806,9 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_environ
     outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, [(signed_tx_amount, None)])
     tx_res = (
         await client.create_signed_transactions(
-            outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_puzzle_announcements,)
+            CreateSignedTransaction(additions=outputs),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(*tx_puzzle_announcements,),
         )
     ).signed_tx
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
@@ -837,7 +841,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
 
         tx = (
             await wallet_1_rpc.create_signed_transactions(
-                outputs,
+                CreateSignedTransaction(additions=outputs),
                 wallet_environments.tx_config.override(
                     excluded_coin_ids=[c.name() for c in select_coins_response.coins],
                 ),
@@ -862,7 +866,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
 
         with pytest.raises(ValueError):
             await wallet_1_rpc.create_signed_transactions(
-                outputs,
+                CreateSignedTransaction(additions=outputs),
                 wallet_environments.tx_config.override(
                     excluded_coin_ids=[c.name() for c in select_coins_response.coins],
                 ),
@@ -900,13 +904,13 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
     outputs = await create_tx_outputs(
         wallet_2, wallet_environments.tx_config, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])]
     )
-    amount_outputs = sum(output["amount"] for output in outputs)
+    amount_outputs = sum(output.amount for output in outputs)
     amount_fee = uint64(amount_outputs + 1)
 
     send_tx_res: TransactionRecord = (
         await client.send_transaction_multi(
             1,
-            outputs,
+            [{**output.to_json_dict(), "puzzle_hash": output.puzzle_hash} for output in outputs],
             wallet_environments.tx_config,
             coins=select_coins_response.coins,
             fee=amount_fee,
@@ -929,7 +933,8 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
     memos = tx_confirmed.memos
     assert len(memos) == len(outputs)
     for output in outputs:
-        assert [output["memos"][0].encode()] in memos.values()
+        assert output.memos is not None
+        assert [output.memos[0].encode()] in memos.values()
     spend_bundle = send_tx_res.spend_bundle
     assert spend_bundle is not None
     for key in memos.keys():

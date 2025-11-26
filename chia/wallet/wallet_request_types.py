@@ -14,8 +14,15 @@ from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    ConditionValidTimes,
+    conditions_to_json_dicts,
+)
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
@@ -1441,7 +1448,7 @@ class CombineCoinsResponse(TransactionEndpointResponse):
     pass
 
 
-# utility for CATSpend
+# utility for CATSpend/CreateSignedTransaction
 # unfortunate that we can't use CreateCoin but the memos are taken as strings not bytes
 @streamable
 @dataclass(frozen=True)
@@ -1879,6 +1886,63 @@ class VCRevokeResponse(TransactionEndpointResponse):
 class SendTransactionMultiResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class CSTCoinAnnouncement(Streamable):
+    coin_id: bytes32
+    message: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class CSTPuzzleAnnouncement(Streamable):
+    puzzle_hash: bytes32
+    message: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateSignedTransaction(TransactionEndpointRequest):
+    additions: list[Addition] = field(default_factory=default_raise)
+    wallet_id: uint32 | None = None
+    coins: list[Coin] | None = None
+    morph_bytes: bytes | None = None
+    coin_announcements: list[CSTCoinAnnouncement] = field(default_factory=list)
+    puzzle_announcements: list[CSTPuzzleAnnouncement] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if len(self.additions) < 1:
+            raise ValueError("Must have at least one addition")
+        super().__post_init__()
+
+    @property
+    def coin_set(self) -> set[Coin] | None:
+        if self.coins is None:
+            return None
+        else:
+            return set(self.coins)
+
+    @property
+    def asserted_coin_announcements(self) -> tuple[AssertCoinAnnouncement, ...]:
+        return tuple(
+            AssertCoinAnnouncement(
+                asserted_id=ca.coin_id,
+                asserted_msg=(ca.message if self.morph_bytes is None else std_hash(self.morph_bytes + ca.message)),
+            )
+            for ca in self.coin_announcements
+        )
+
+    @property
+    def asserted_puzzle_announcements(self) -> tuple[AssertPuzzleAnnouncement, ...]:
+        return tuple(
+            AssertPuzzleAnnouncement(
+                asserted_ph=pa.puzzle_hash,
+                asserted_msg=(pa.message if self.morph_bytes is None else std_hash(self.morph_bytes + pa.message)),
+            )
+            for pa in self.puzzle_announcements
+        )
 
 
 @streamable

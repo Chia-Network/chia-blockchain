@@ -29,17 +29,15 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
-from chia.util.hash import std_hash
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.r_cat_wallet import RCATWallet
 from chia.wallet.conditions import (
-    AssertCoinAnnouncement,
     AssertConcurrentSpend,
-    AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
     CreateCoin,
@@ -134,6 +132,8 @@ from chia.wallet.wallet_request_types import (
     CreateNewDLResponse,
     CreateOfferForIDs,
     CreateOfferForIDsResponse,
+    CreateSignedTransaction,
+    CreateSignedTransactionsResponse,
     DefaultCAT,
     DeleteKey,
     DeleteNotifications,
@@ -3322,88 +3322,59 @@ class WalletRpcApi:
         }
 
     @tx_endpoint(push=False)
+    @marshal
     async def create_signed_transaction(
         self,
-        request: dict[str, Any],
+        request: CreateSignedTransaction,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
-    ) -> EndpointResult:
-        if "wallet_id" in request:
-            wallet_id = uint32(request["wallet_id"])
-            wallet = self.service.wallet_state_manager.wallets[wallet_id]
+    ) -> CreateSignedTransactionsResponse:
+        if request.wallet_id is not None:
+            wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         else:
             wallet = self.service.wallet_state_manager.main_wallet
 
-        assert isinstance(wallet, (Wallet, CATWallet, CRCATWallet)), (
+        assert isinstance(wallet, (Wallet, CATWallet, CRCATWallet, RCATWallet)), (
             "create_signed_transaction only works for standard and CAT wallets"
         )
 
-        if "additions" not in request or len(request["additions"]) < 1:
+        if len(request.additions) < 1:
             raise ValueError("Specify additions list")
 
-        additions: list[dict[str, Any]] = request["additions"]
-        amount_0: uint64 = uint64(additions[0]["amount"])
+        amount_0: uint64 = uint64(request.additions[0].amount)
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
-        puzzle_hash_0 = bytes32.from_hexstr(additions[0]["puzzle_hash"])
+        puzzle_hash_0 = request.additions[0].puzzle_hash
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
-        memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
+        memos_0 = (
+            [] if request.additions[0].memos is None else [mem.encode("utf-8") for mem in request.additions[0].memos]
+        )
 
         additional_outputs: list[CreateCoin] = []
-        for addition in additions[1:]:
-            receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
-            if len(receiver_ph) != 32:
-                raise ValueError(f"Address must be 32 bytes. {receiver_ph.hex()}")
-            amount = uint64(addition["amount"])
-            if amount > self.service.constants.MAX_COIN_AMOUNT:
+        for addition in request.additions[1:]:
+            if addition.amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-            memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append(CreateCoin(receiver_ph, amount, memos))
+            memos = [] if addition.memos is None else [mem.encode("utf-8") for mem in addition.memos]
+            additional_outputs.append(CreateCoin(addition.puzzle_hash, addition.amount, memos))
 
-        fee: uint64 = uint64(request.get("fee", 0))
-
-        coins = None
-        if "coins" in request and len(request["coins"]) > 0:
-            coins = {Coin.from_json_dict(coin_json) for coin_json in request["coins"]}
-
-        async def _generate_signed_transaction() -> EndpointResult:
+        async def _generate_signed_transaction() -> CreateSignedTransactionsResponse:
             await wallet.generate_signed_transaction(
                 [amount_0] + [output.amount for output in additional_outputs],
                 [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
                 action_scope,
-                fee,
-                coins=coins,
+                request.fee,
+                coins=request.coin_set,
                 memos=[memos_0] + [output.memos if output.memos is not None else [] for output in additional_outputs],
                 extra_conditions=(
                     *extra_conditions,
-                    *(
-                        AssertCoinAnnouncement(
-                            asserted_id=bytes32.from_hexstr(ca["coin_id"]),
-                            asserted_msg=(
-                                hexstr_to_bytes(ca["message"])
-                                if request.get("morph_bytes") is None
-                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"]))
-                            ),
-                        )
-                        for ca in request.get("coin_announcements", [])
-                    ),
-                    *(
-                        AssertPuzzleAnnouncement(
-                            asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
-                            asserted_msg=(
-                                hexstr_to_bytes(pa["message"])
-                                if request.get("morph_bytes") is None
-                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"]))
-                            ),
-                        )
-                        for pa in request.get("puzzle_announcements", [])
-                    ),
+                    *request.asserted_coin_announcements,
+                    *request.asserted_puzzle_announcements,
                 ),
             )
-            # tx_endpoint wrapper will take care of this
-            return {"signed_txs": None, "signed_tx": None, "transactions": None}
+            # tx_endpoint wrapper will take care of these default values
+            return CreateSignedTransactionsResponse([], [], [], REPLACEABLE_TRANSACTION_RECORD)
 
         if hold_lock:
             async with self.service.wallet_state_manager.lock:

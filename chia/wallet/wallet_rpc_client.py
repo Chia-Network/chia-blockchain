@@ -43,6 +43,7 @@ from chia.wallet.wallet_request_types import (
     CreateNewDLResponse,
     CreateOfferForIDs,
     CreateOfferForIDsResponse,
+    CreateSignedTransaction,
     CreateSignedTransactionsResponse,
     DeleteKey,
     DeleteNotifications,
@@ -396,40 +397,17 @@ class WalletRpcClient(RpcClient):
 
     async def create_signed_transactions(
         self,
-        additions: list[dict[str, Any]],
+        request: CreateSignedTransaction,
         tx_config: TXConfig,
-        coins: list[Coin] | None = None,
-        fee: uint64 = uint64(0),
-        wallet_id: int | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> CreateSignedTransactionsResponse:
-        # Converts bytes to hex for puzzle hashes
-        additions_hex = []
-        for ad in additions:
-            additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
-            if "memos" in ad:
-                additions_hex[-1]["memos"] = ad["memos"]
-
-        request = {
-            "additions": additions_hex,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-
-        if coins is not None and len(coins) > 0:
-            coins_json = [c.to_json_dict() for c in coins]
-            request["coins"] = coins_json
-
-        if wallet_id:
-            request["wallet_id"] = wallet_id
-
-        response = await self.fetch("create_signed_transaction", request)
-        return json_deserialize_with_clvm_streamable(response, CreateSignedTransactionsResponse)
+        return CreateSignedTransactionsResponse.from_json_dict(
+            await self.fetch(
+                "create_signed_transaction",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def select_coins(self, request: SelectCoins) -> SelectCoinsResponse:
         return SelectCoinsResponse.from_json_dict(await self.fetch("select_coins", request.to_json_dict()))
