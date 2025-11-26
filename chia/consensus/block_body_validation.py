@@ -7,10 +7,12 @@ from dataclasses import dataclass, field
 
 from chia_rs import (
     BlockRecord,
+    CoinRecord,
     ConsensusConstants,
     FullBlock,
     SpendBundleConditions,
     UnfinishedBlock,
+    check_time_locks,
     compute_merkle_set_root,
     is_canonical_serialization,
 )
@@ -20,10 +22,8 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.coin_record import CoinRecord
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 
@@ -561,14 +561,15 @@ async def validate_block_body(
     # 21. Verify conditions
     # verify absolute/relative height/time conditions
     if conds is not None:
-        error = check_time_locks(
+        error: int | None = check_time_locks(
             removal_coin_records,
             conds,
             prev_transaction_block_height,
             prev_transaction_block_timestamp,
         )
         if error is not None:
-            return error
+            # TODO: standardise errors across Rust and Python so cast is not necesary here
+            return Err(error)
 
     # 22. Verify aggregated signature is done in pre-validation
     if not block.transactions_info.aggregated_signature:

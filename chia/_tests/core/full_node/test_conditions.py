@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 
 import pytest
-from chia_rs import AugSchemeMPL, FullBlock, G2Element, SpendBundle
+from chia_rs import AugSchemeMPL, CoinRecord, FullBlock, G2Element, SpendBundle
 from chia_rs.sized_ints import uint32, uint64
 from clvm_tools.binutils import assemble
 
@@ -21,7 +21,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.casts import int_to_bytes

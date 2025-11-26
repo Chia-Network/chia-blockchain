@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import aiosqlite
-from chia_rs import AugSchemeMPL, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
@@ -34,7 +34,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on

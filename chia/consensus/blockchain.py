@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia_rs import (
     BlockRecord,
+    CoinRecord,
     ConsensusConstants,
     EndOfSubSlotBundle,
     FullBlock,
@@ -39,7 +40,6 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
-from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.validation_state import ValidationState

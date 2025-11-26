@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, Coin, CoinRecord, CoinSpend, CoinState, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 from clvm_tools.binutils import assemble
@@ -24,7 +24,6 @@ from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes

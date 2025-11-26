@@ -73,8 +73,8 @@ async def test_all_endpoints():
         assert len(coin_records) == 2
         coin_records = await sim_client.get_coin_records_by_hint(non_existent_hint)
         assert len(coin_records) == 0
-        coin_records = await sim_client.get_coin_records_by_puzzle_hash(acs.get_tree_hash())
-        next_coin = coin_records[-1].coin
+        coin_records = await sim_client.get_coin_records_by_puzzle_hash(acs.get_tree_hash(), include_spent_coins=False)
+        next_coin = next(cr.coin for cr in coin_records if cr.coin.amount >= 2)
         height = sim.get_height()
         acs_hint_next_coin = make_spend(
             next_coin,

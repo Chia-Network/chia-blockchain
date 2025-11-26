@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Any, BinaryIO, final
 
-from chia_rs import Coin, G1Element, G2Element, PrivateKey
+from chia_rs import Coin, CoinRecord, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self
@@ -13,7 +13,6 @@ from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts

@@ -11,12 +11,14 @@ from chia_rs import (
     ELIGIBLE_FOR_DEDUP,
     ELIGIBLE_FOR_FF,
     AugSchemeMPL,
+    CoinRecord,
     CoinSpend,
     ConsensusConstants,
     G2Element,
     SpendBundle,
     SpendBundleConditions,
     SpendConditions,
+    check_time_locks,
     get_conditions_from_spendbundle,
     run_block_generator2,
 )
@@ -27,7 +29,6 @@ from chiabip158 import PyBIP158
 from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.eligible_coin_spends import (
@@ -60,7 +61,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -436,15 +436,17 @@ class TestCheckTimeLocks:
         conds: SpendBundleConditions,
         expected: Err | None,
     ) -> None:
-        assert (
-            check_time_locks(
-                dict(self.REMOVALS),
-                conds,
-                self.PREV_BLOCK_HEIGHT,
-                self.PREV_BLOCK_TIMESTAMP,
-            )
-            == expected
+        res: int | None = check_time_locks(
+            dict(self.REMOVALS),
+            conds,
+            self.PREV_BLOCK_HEIGHT,
+            self.PREV_BLOCK_TIMESTAMP,
         )
+        e: Err | None = None
+        if res is not None:
+            # TODO: remove when Rust errors and Python Errors are the same
+            e = Err(res)
+        assert e == expected
 
 
 def expect(
@@ -2348,7 +2350,7 @@ class TestCoins:
             self.lineage_info[ph] = UnspentLineageInfo(c.name(), c.parent_coin_info, bytes32([42] * 32))
 
     def spend_coin(self, coin_id: bytes32, height: uint32 = uint32(10)) -> None:
-        self.coin_records[coin_id] = dataclasses.replace(self.coin_records[coin_id], spent_block_index=height)
+        self.coin_records[coin_id] = self.coin_records[coin_id].replace(spent_block_index=height)
 
     def update_lineage(self, puzzle_hash: bytes32, coin: Coin | None) -> None:
         if coin is None:
