@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs.sized_ints import uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.cmds.units import units
 from chia.server.server import ChiaServer
@@ -78,6 +79,7 @@ async def test_simulation_farm_rewards_to_wallet(
     amount: int,
     coin_count: int,
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    consensus_mode: ConsensusMode,
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -100,7 +102,12 @@ async def test_simulation_farm_rewards_to_wallet(
 
     # The expected number of coins were received.
     all_coin_records = await wallet.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet.id())
-    assert len(all_coin_records) == coin_count
+    if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+        assert len(all_coin_records) == coin_count
+    else:
+        # In this case we only receive farmer rewards, each worth exactly
+        # 250 billion mojos. Rounding up
+        assert len(all_coin_records) == (amount + 250_000_000_000 - 1) // 250_000_000_000
 
 
 @pytest.mark.anyio
