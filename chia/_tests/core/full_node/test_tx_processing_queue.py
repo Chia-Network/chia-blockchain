@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import cast
 
 import pytest
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
-from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry, TransactionQueueFull
+from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry, TransactionQueueFull
 from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
@@ -17,12 +18,17 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class FakeTransactionQueueEntry:
-    index: int
-    peer_id: bytes32 | None
+    index: int = field(compare=False)
+    peer_id: bytes32 | None = field(compare=False)
+    peers_with_tx: dict[bytes32, PeerWithTx] | None = field(compare=False)
 
 
-def get_transaction_queue_entry(peer_id: bytes32 | None, tx_index: int) -> TransactionQueueEntry:  # easy shortcut
-    return cast(TransactionQueueEntry, FakeTransactionQueueEntry(index=tx_index, peer_id=peer_id))
+def get_transaction_queue_entry(
+    peer_id: bytes32 | None, tx_index: int, peers_with_tx: dict[bytes32, PeerWithTx] | None = None
+) -> TransactionQueueEntry:  # easy shortcut
+    if peers_with_tx is None:
+        peers_with_tx = {}
+    return cast(TransactionQueueEntry, FakeTransactionQueueEntry(tx_index, peer_id, peers_with_tx))
 
 
 @pytest.mark.anyio
@@ -135,20 +141,79 @@ async def test_queue_cleanup_and_fairness(seeded_random: random.Random) -> None:
     peer_b = bytes32.random(seeded_random)
     peer_c = bytes32.random(seeded_random)
 
+    higher_tx_cost = uint64(20)
+    lower_tx_cost = uint64(10)
+    higher_tx_fee = uint64(5)
+    lower_tx_fee = uint64(1)
     # 2 for a, 1 for b, 2 for c
-    peer_tx_a = [get_transaction_queue_entry(peer_a, i) for i in range(2)]
-    peer_tx_b = [get_transaction_queue_entry(peer_b, 0)]
-    peer_tx_c = [get_transaction_queue_entry(peer_c, i) for i in range(2)]
+    peer_tx_a = [
+        get_transaction_queue_entry(peer_a, 0, {peer_a: PeerWithTx(str(peer_a), lower_tx_fee, higher_tx_cost)}),
+        get_transaction_queue_entry(peer_a, 1, {peer_a: PeerWithTx(str(peer_a), higher_tx_fee, lower_tx_cost)}),
+    ]
+    peer_tx_b = [
+        get_transaction_queue_entry(peer_b, 0, {peer_b: PeerWithTx(str(peer_b), higher_tx_fee, lower_tx_cost)})
+    ]
+    peer_tx_c = [
+        get_transaction_queue_entry(peer_c, 0, {peer_c: PeerWithTx(str(peer_c), higher_tx_fee, lower_tx_cost)}),
+        get_transaction_queue_entry(peer_c, 1, {peer_c: PeerWithTx(str(peer_c), lower_tx_fee, higher_tx_cost)}),
+    ]
 
     list_txs = peer_tx_a + peer_tx_b + peer_tx_c
     for tx in list_txs:
         transaction_queue.put(tx, tx.peer_id)  # type: ignore[attr-defined]
 
-    resulting_ids = []
+    entries = []
     for _ in range(3):  # we validate we get one transaction per peer
-        resulting_ids.append((await transaction_queue.pop()).peer_id)  # type: ignore[attr-defined]
-    assert [peer_a, peer_b, peer_c] == resulting_ids  # all peers have been properly included in the queue.
-    second_resulting_ids = []
+        entry = await transaction_queue.pop()
+        entries.append((entry.peer_id, entry.index))  # type: ignore[attr-defined]
+    assert [(peer_a, 1), (peer_b, 0), (peer_c, 0)] == entries  # all peers have been properly included in the queue.
+    second_entries = []
     for _ in range(2):  # we validate that we properly queue the last 2 transactions
-        second_resulting_ids.append((await transaction_queue.pop()).peer_id)  # type: ignore[attr-defined]
-    assert [peer_a, peer_c] == second_resulting_ids
+        entry = await transaction_queue.pop()
+        second_entries.append((entry.peer_id, entry.index))  # type: ignore[attr-defined]
+    assert [(peer_a, 0), (peer_c, 1)] == second_entries
+
+
+@pytest.mark.anyio
+async def test_peer_queue_prioritization_fallback() -> None:
+    """
+    Tests prioritization fallback, when `peer_id` is not in `peers_with_tx` and
+    we compute the fee per cost (for priority) using values from the peer with
+    the highest advertised cost, even if that results in a lower fee per cost.
+    """
+    queue = TransactionQueue(42, log)
+    peer1 = bytes32.random()
+    peer2 = bytes32.random()
+    # We'll be using this peer to test the fallback, so we don't include it in
+    # peers with transactions maps.
+    peer3 = bytes32.random()
+    peers_with_tx1 = {
+        # This has FPC of 5.0
+        peer1: PeerWithTx(str(peer1), uint64(10), uint64(2)),
+        # This has FPC of 2.0 but higher advertised cost
+        peer2: PeerWithTx(str(peer2), uint64(20), uint64(10)),
+    }
+    tx1 = get_transaction_queue_entry(peer3, 0, peers_with_tx1)
+    queue.put(tx1, peer3)
+    peers_with_tx2 = {
+        # This has FPC of 3.0
+        peer1: PeerWithTx(str(peer1), uint64(30), uint64(10)),
+        # This has FPC of 4.0 but lower advertised cost
+        peer2: PeerWithTx(str(peer2), uint64(20), uint64(5)),
+    }
+    tx2 = get_transaction_queue_entry(peer3, 1, peers_with_tx2)
+    queue.put(tx2, peer3)
+    tx3 = get_transaction_queue_entry(peer3, 2, {})
+    queue.put(tx3, peer3)
+    # tx2 gets top priority with FPC 3.0 instead of 4.0 due to higher cost fallback
+    assert queue._queue_dict[peer3].queue[0][0] == -3.0
+    entry = await queue.pop()
+    assert entry.index == 1  # type: ignore[attr-defined]
+    # tx1 comes next with FPC 2.0 instead of 5.0 due to higher cost fallback
+    assert queue._queue_dict[peer3].queue[0][0] == -2.0
+    entry = await queue.pop()
+    assert entry.index == 0  # type: ignore[attr-defined]
+    # tx3 comes next with infinity priority due to no `peers_with_tx`
+    assert queue._queue_dict[peer3].queue[0][0] == float("inf")
+    entry = await queue.pop()
+    assert entry.index == 2  # type: ignore[attr-defined]
