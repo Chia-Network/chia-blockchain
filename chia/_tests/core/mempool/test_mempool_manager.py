@@ -436,7 +436,7 @@ class TestCheckTimeLocks:
         conds: SpendBundleConditions,
         expected: Err | None,
     ) -> None:
-        res: int | Err | None = check_time_locks(
+        res: int | None = check_time_locks(
             dict(self.REMOVALS),
             conds,
             self.PREV_BLOCK_HEIGHT,

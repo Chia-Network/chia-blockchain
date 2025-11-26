@@ -561,7 +561,7 @@ async def validate_block_body(
     # 21. Verify conditions
     # verify absolute/relative height/time conditions
     if conds is not None:
-        error = check_time_locks(
+        error: int | None = check_time_locks(
             removal_coin_records,
             conds,
             prev_transaction_block_height,
