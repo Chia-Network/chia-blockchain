@@ -1,0 +1,70 @@
+(mod
+  (
+    M  ; the number of necessary puzzles to execute
+    MERKLE_ROOT  ; A root of all available puzzles
+    delegated_puzzle_hash  ; A puzzle hash to run that all members must agree to
+    member_proof  ; A partially revealed merkle tree with only the leaves being used fully revealed
+  )
+
+  (include sha256tree.clib)
+
+  ; utility
+  (defun merge_list (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge_list (r list_a) list_b))
+        list_b
+    )
+  )
+
+  ; delegated puzzle validation
+  (defun-inline branch_hash_and_merge_info ((tree1 conditions1 total1) (tree2 conditions2 total2))
+    (list
+      (sha256 2 tree1 tree2)
+      (merge_list conditions1 conditions2)
+      (+ total1 total2)
+    )
+  )
+
+  (defun handle_branch (branch delegated_puzzle_hash)
+    (if (l branch)
+        (hash_and_run branch delegated_puzzle_hash)
+        (list branch () 0)
+    )
+  )
+
+  (defun hash_and_run (tree delegated_puzzle_hash)
+    (if (f tree)
+        (branch_hash_and_merge_info (handle_branch (f tree) delegated_puzzle_hash) (handle_branch (r tree) delegated_puzzle_hash))
+        (list
+          (sha256 1 (sha256tree (f (r tree))))
+          (a (f (r tree)) (c delegated_puzzle_hash (r (r tree))))
+          1
+        )
+    )
+  )
+
+  ; main checks
+  (defun run_delegated_puzzle
+    (
+      M
+      MERKLE_ROOT
+      (
+        proven_root
+        conditions
+        total_validations
+      )
+    )
+
+    (if (all (= M total_validations) (= MERKLE_ROOT proven_root))
+        conditions
+        (x)
+    )
+  )
+
+  ; enter main
+  (run_delegated_puzzle
+    M
+    MERKLE_ROOT
+    (hash_and_run member_proof delegated_puzzle_hash)
+  )
+)
