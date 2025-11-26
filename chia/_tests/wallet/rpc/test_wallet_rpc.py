@@ -188,9 +188,7 @@ async def create_tx_outputs(
         return [
             Addition(
                 amount=uint64(args[0]),
-                puzzle_hash=await action_scope.get_puzzle_hash(
-                    wallet.wallet_state_manager, override_reuse_puzhash_with=False
-                ),
+                puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
                 memos=None if args[1] is None or len(args[1]) == 0 else args[1],
             )
             for args in output_args
