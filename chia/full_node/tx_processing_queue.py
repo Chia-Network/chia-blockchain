@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import logging
 from dataclasses import dataclass, field
-from queue import SimpleQueue
+from queue import PriorityQueue, SimpleQueue
 from typing import ClassVar, Generic, TypeVar
 
 from chia_rs import SpendBundle
@@ -85,7 +85,7 @@ class TransactionQueue:
     _list_cursor: int  # this is which index
     _queue_length: asyncio.Semaphore
     _index_to_peer_map: list[bytes32]
-    _queue_dict: dict[bytes32, SimpleQueue[TransactionQueueEntry]]
+    _queue_dict: dict[bytes32, PriorityQueue[tuple[float, TransactionQueueEntry]]]
     _high_priority_queue: SimpleQueue[TransactionQueueEntry]
     peer_size_limit: int
     log: logging.Logger
@@ -104,10 +104,23 @@ class TransactionQueue:
             self._high_priority_queue.put(tx)
         else:
             if peer_id not in self._queue_dict:
-                self._queue_dict[peer_id] = SimpleQueue()
+                self._queue_dict[peer_id] = PriorityQueue()
                 self._index_to_peer_map.append(peer_id)
             if self._queue_dict[peer_id].qsize() < self.peer_size_limit:
-                self._queue_dict[peer_id].put(tx)
+                tx_info = tx.peers_with_tx.get(peer_id)
+                if tx_info is not None and tx_info.advertised_cost > 0:
+                    fpc = tx_info.advertised_fee / tx_info.advertised_cost
+                    # PriorityQueue returns lowest first so we invert
+                    priority = -fpc
+                else:
+                    # Compute the fee per cost using values from the peer with
+                    # the highest advertised cost.
+                    priority = float("inf")
+                    tx_info = max(tx.peers_with_tx.values(), key=lambda p: p.advertised_cost, default=None)
+                    if tx_info is not None and tx_info.advertised_cost > 0:
+                        fpc = tx_info.advertised_fee / tx_info.advertised_cost
+                        priority = -fpc
+                self._queue_dict[peer_id].put((priority, tx))
             else:
                 self.log.warning(f"Transaction queue full for peer {peer_id}")
                 raise TransactionQueueFull(f"Transaction queue full for peer {peer_id}")
@@ -121,7 +134,7 @@ class TransactionQueue:
         while True:
             peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
             if not peer_queue.empty():
-                result = peer_queue.get()
+                _, result = peer_queue.get()
             self._list_cursor += 1
             if self._list_cursor > len(self._index_to_peer_map) - 1:
                 # reset iterator
