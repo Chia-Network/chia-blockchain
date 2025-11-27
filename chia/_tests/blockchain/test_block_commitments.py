@@ -39,7 +39,7 @@ class TestCommitments:
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
-
+        passed_sp_or_slot = False
         async with create_blockchain(constants, 2) as (blockchain, _):
             for i, block in enumerate(blocks):
                 if block.height in {50, 200, 499}:
@@ -62,10 +62,16 @@ class TestCommitments:
                     await _validate_and_add_block(
                         blockchain, block_no_challenge_root, expected_error=Err.INVALID_POSPACE
                     )
-                blockchain.remove_block_record
+
+                if i > 0 and (
+                    len(block.finished_sub_slots) > 0
+                    or block.reward_chain_block.signage_point_index
+                    != blocks[i - 1].reward_chain_block.signage_point_index
+                ):
+                    passed_sp_or_slot = True
                 await _validate_and_add_block_no_error(blockchain, block)
                 log.info(f"Successfully added {block.height}")
-                assert block.reward_chain_block.header_mmr_root is not None
+                assert (not passed_sp_or_slot) or (block.reward_chain_block.header_mmr_root is not None)
 
             peak = blockchain.get_peak()
             assert peak is not None

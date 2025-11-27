@@ -1,230 +1,279 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
-from chia_rs import MerkleSet
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.vdf import VDFInfo
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
 
 
-@streamable
-@dataclass(frozen=True)
-class VDFProofMmr(Streamable):
+# ------------------------------------------------------------------------------
+# MMR position/height utilities
+# ------------------------------------------------------------------------------
+
+
+def get_height(flat_index: int) -> int:
     """
-    Represents a VDFInfo and ClassgroupElement pair in an MMR
+    Calculate the height of a node in a flat MMR array.
     """
+    x = flat_index + 1  # Work with 1-based for easier math
 
-    vdf_info: VDFInfo
-    classgroup_element: ClassgroupElement
+    while True:
+        # Check if x is "all ones" (1, 3, 7, 15...) -> Peak of perfect binary tree
+        if (x & (x + 1)) == 0:
+            return x.bit_length() - 1
 
-    def get_hash(self) -> bytes32:
-        """
-        Combines the VDFInfo and ClassgroupElement into a single hash for the MMR
-        """
-        # Serialize VDFInfo components
-        challenge_bytes = bytes(self.vdf_info.challenge)  # 32 bytes
-        iters_bytes = self.vdf_info.number_of_iterations.to_bytes(8, "big", signed=False)  # 8 bytes
-        output_bytes = bytes(self.vdf_info.output.data)  # 100 bytes
-
-        # Serialize ClassgroupElement
-        element_bytes = bytes(self.classgroup_element.data)  # 100 bytes
-
-        # Combine all components and hash them
-        combined = challenge_bytes + iters_bytes + output_bytes + element_bytes
-        return std_hash(combined)
+        # Not a peak, subtract left sibling mountain size
+        msb_val = 1 << (x.bit_length() - 1)
+        subtree_size = msb_val - 1
+        x -= subtree_size
 
 
-@streamable
-@dataclass(frozen=True)
-class MMRPeak(Streamable):
+def get_peak_positions(size: int) -> list[int]:
     """
-    Represents a peak in the Merkle Mountain Range.
-    Note: merkle_set is not stored as part of the streamable data,
-    it is reconstructed from elements when needed.
+    Identify the indices of the mountain peaks.
+    Returns indices [Rightmost Peak (Smallest), ... Leftmost Peak (Tallest)]
     """
+    peaks = []
+    idx = size - 1
 
-    height: uint64  # Height of this peak in the mountain range
-    elements: List[bytes32]  # Elements stored in this peak
-    root: bytes32  # Cached root hash of this peak
+    while idx >= 0:
+        peaks.append(idx)
+        height = get_height(idx)
+        # Size of this mountain = 2^(h+1) - 1
+        mountain_size = (1 << (height + 1)) - 1
+        idx -= mountain_size
 
-    @classmethod
-    def create(cls, height: int, elements: List[bytes32]) -> MMRPeak:
-        """Create a new MMRPeak with the given height and elements"""
-        if height < 0:
-            raise ValueError("Height cannot be negative")
-        if not elements:
-            raise ValueError("Elements list cannot be empty")
-
-        merkle_set = MerkleSet(elements)
-        root = merkle_set.get_root()
-
-        return cls(uint64(height), elements, root)
-
-    def get_merkle_set(self) -> MerkleSet:
-        """Get a MerkleSet for this peak's elements"""
-        return MerkleSet(self.elements)
-
-    def get_proof(self, leaf: bytes32) -> Tuple[bool, bytes]:
-        """Get inclusion proof for a leaf"""
-        merkle_set = self.get_merkle_set()
-        return merkle_set.is_included_already_hashed(leaf)
-
-    def get_num_leaves(self) -> int:
-        """Get number of leaves in this peak"""
-        return len(self.elements)
+    return peaks
 
 
-@streamable
-@dataclass(frozen=True)
+def leaf_index_to_pos(leaf_index: int) -> int:
+    """
+    Convert a leaf index (0-based) to its position in the flat MMR.
+    Formula: 2*L - popcount(L)
+    """
+    return 2 * leaf_index - bin(leaf_index).count("1")
+
+
+# ------------------------------------------------------------------------------
+# Class Implementation
+# ------------------------------------------------------------------------------
+
+
 class MerkleMountainRange(Streamable):
-    peaks: List[MMRPeak]
-    size: uint64  # Number of leaves
+    """
+    Flat MMR implementation.
+    """
 
-    @classmethod
-    def create(cls) -> MerkleMountainRange:
-        return cls([], uint64(0))
+    nodes: list[bytes32]
+    size: uint32
+
+    def __init__(self, nodes: list[bytes32] | None = None, size: uint32 = uint32(0)) -> None:
+        self.nodes = [] if nodes is None else nodes
+        self.size = size
 
     def append(self, leaf: bytes32) -> None:
-        if not isinstance(leaf, bytes32):
-            raise ValueError("Leaf must be bytes32")
+        nodes = self.nodes
+        curr_index = len(nodes)
+        nodes.append(leaf)
 
-        peaks = list(self.peaks)
-        carry: MMRPeak = MMRPeak.create(uint64(0), [leaf])
-        peaks.append(carry)
+        curr_height = 0
 
-        # Repeatedly merge from right to left as long as there are adjacent peaks of the same height
-        while len(peaks) >= 2 and peaks[-1].height == peaks[-2].height:
-            merged_elements = peaks[-2].elements + peaks[-1].elements
-            merged_peak = MMRPeak.create(uint64(peaks[-1].height + 1), merged_elements)
-            peaks = peaks[:-2] + [merged_peak]
+        # Merge upwards
+        while True:
+            # Size of subtree at current height: 2^(h+1) - 1
+            subtree_size = (1 << (curr_height + 1)) - 1
 
-        object.__setattr__(self, "peaks", peaks)
-        object.__setattr__(self, "size", self.size + 1)
-        log.debug(f"Appended new leaf, MMR size is now {self.size}")
+            # Potential left sibling is 'subtree_size' back
+            left_sibling_index = curr_index - subtree_size
 
-    def get_root(self) -> bytes32:
-        if not self.peaks:
-            return bytes32([0] * 32)
-        # Hash all peak roots together, order matters for consistency
-        peak_roots: bytes = b"".join(peak.root for peak in self.peaks)
-        return std_hash(peak_roots)
+            if left_sibling_index < 0:
+                break
 
-    def get_inclusion_proof(self, leaf: bytes32) -> Optional[Tuple[int, bytes, List[bytes32]]]:
-        """
-        Returns (peak_index, proof_in_peak, other_peak_roots)
-        - peak_index: which peak the leaf is in
-        - proof_in_peak: Merkle proof (as bytes) for the leaf in that peak
-        - other_peak_roots: roots of the other peaks (for full MMR root verification)
-        """
-        if not isinstance(leaf, bytes32):
-            raise ValueError("Leaf must be bytes32")
+            # If left node has same height, merge
+            if get_height(left_sibling_index) == curr_height:
+                left_hash = nodes[left_sibling_index]
+                right_hash = nodes[curr_index]
 
-        for idx, peak in enumerate(self.peaks):
-            included, proof = peak.get_proof(leaf)
-            if included:
-                other_roots: List[bytes32] = [p.root for i, p in enumerate(self.peaks) if i != idx]
-                log.debug(f"Found inclusion proof for leaf in peak {idx}")
-                return (idx, proof, other_roots)
-        log.debug("Leaf not found in any peak")
-        return None
+                parent_hash = std_hash(left_hash + right_hash)
 
-    def verify_inclusion(self, leaf: bytes32, peak_index: int, proof: bytes, other_peak_roots: List[bytes32]) -> bool:
-        """Verify inclusion proof for a leaf"""
-        if peak_index < 0 or peak_index >= len(self.peaks):
-            raise ValueError("Invalid peak index")
+                # Append parent
+                nodes.append(parent_hash)
 
-        # Verify the proof in the specified peak
-        peak = self.peaks[peak_index]
-        merkle_set = peak.get_merkle_set()
-        included, actual_proof = merkle_set.is_included_already_hashed(leaf)
-        if not included or actual_proof != proof:
-            return False
+                # Move focus to the new parent
+                curr_index = len(nodes) - 1
+                curr_height += 1
+            else:
+                # Different heights means we started a new mountain - stop merging
+                break
 
-        # Verify other peak roots match
-        expected_other_roots = [p.root for i, p in enumerate(self.peaks) if i != peak_index]
-        if other_peak_roots != expected_other_roots:
-            return False
+        self.size = uint32(self.size + 1)
+        log.debug(f"Appended new leaf, MMR size is now {self.size}, total nodes: {len(self.nodes)}")
 
-        return True
+    def get_root(self) -> bytes32 | None:
+        """Get the MMR root by bagging the peaks."""
+        peak_indices = get_peak_positions(len(self.nodes))
+        if not peak_indices:
+            return None
 
-    def verify_batch_inclusion(self, leaves: List[bytes32], proofs: List[Tuple[int, bytes, List[bytes32]]]) -> bool:
-        """
-        Verify multiple inclusion proofs efficiently
-        Returns True if all leaves are verified, False otherwise
-        """
-        if len(leaves) != len(proofs):
-            raise ValueError("Number of leaves must match number of proofs")
+        # Bagging Order: Rightmost (Smallest) -> Leftmost (Tallest)
+        current_hash = self.nodes[peak_indices[0]]
 
-        for leaf, (peak_index, proof_bytes, other_peaks) in zip(leaves, proofs):
-            if not self.verify_inclusion(leaf, peak_index, proof_bytes, other_peaks):
-                return False
+        for i in range(1, len(peak_indices)):
+            left_peak = self.nodes[peak_indices[i]]
+            current_hash = std_hash(left_peak + current_hash)
 
-        return True
+        return current_hash
 
-    def get_height(self) -> int:
-        """Returns the height of the tallest peak in the MMR"""
-        if not self.peaks:
+    def get_tree_height(self) -> int:
+        if self.size == 0:
             return 0
-        # Find the maximum height among all peaks
-        return max(peak.height for peak in self.peaks)
-
-    def __bytes__(self) -> bytes:
-        """Serialize the MMR to bytes for streamable support"""
-        # Format: [size (8 bytes)][num_peaks (4 bytes)][peak_data...]
-        # For each peak: [height (4 bytes)][num_elements (4 bytes)][elements...]
-        result = self.size.to_bytes(8, "big")
-        result += len(self.peaks).to_bytes(4, "big")
-
-        for peak in self.peaks:
-            result += peak.height.to_bytes(4, "big")
-            result += len(peak.elements).to_bytes(4, "big")
-            for element in peak.elements:
-                result += bytes(element)
-
-        return result
-
-    @classmethod
-    def from_bytes(cls, data: bytes) -> MerkleMountainRange:
-        """Deserialize the MMR from bytes for streamable support"""
-        if len(data) < 12:  # Minimum size: size(8) + num_peaks(4)
-            raise ValueError("Data too short")
-
-        size = uint64(int.from_bytes(data[0:8], "big"))
-        num_peaks = int.from_bytes(data[8:12], "big")
-
-        pos = 12
-        peaks = []
-        for _ in range(num_peaks):
-            if pos + 8 > len(data):
-                raise ValueError("Data too short")
-
-            height = int.from_bytes(data[pos : pos + 4], "big")
-            num_elements = int.from_bytes(data[pos + 4 : pos + 8], "big")
-            pos += 8
-
-            if pos + 32 * num_elements > len(data):
-                raise ValueError("Data too short")
-
-            elements = []
-            for _ in range(num_elements):
-                elements.append(bytes32(data[pos : pos + 32]))
-                pos += 32
-
-            peaks.append(MMRPeak.create(height, elements))
-
-        return cls(peaks, size)
+        peak_indices = get_peak_positions(len(self.nodes))
+        if not peak_indices:
+            return 0
+        return get_height(peak_indices[-1])
 
     def copy(self) -> MerkleMountainRange:
-        # Copy peaks (preserve height and root, duplicate elements list)
-        new_peaks = [MMRPeak(peak.height, list(peak.elements), peak.root) for peak in self.peaks]
-        # Return a new MerkleMountainRange with copied peaks and same size
-        return MerkleMountainRange(new_peaks, uint64(self.size))
+        return MerkleMountainRange(list(self.nodes), uint32(self.size))
+
+    def get_inclusion_proof_by_index(self, leaf_index: int) -> tuple[uint32, bytes, list[bytes32], bytes32] | None:
+        """
+        Generate inclusion proof for the N-th leaf.
+        """
+        if leaf_index >= self.size:
+            return None
+
+        # 1. Find start position
+        flat_idx = leaf_index_to_pos(leaf_index)
+        if flat_idx >= len(self.nodes):
+            return None
+
+        proof_path = []
+        flags_bits = []
+
+        # 2. Climb the mountain
+        curr = flat_idx
+        while True:
+            h = get_height(curr)
+
+            # The offset to a sibling at this height is 2^(h+1) - 1
+            sibling_offset = (1 << (h + 1)) - 1
+
+            # Case A: We are a Left Child?
+            # Then Right Sibling is at `curr + sibling_offset`
+            right_sibling_idx = curr + sibling_offset
+
+            if right_sibling_idx < len(self.nodes) and get_height(right_sibling_idx) == h:
+                # Yes, we are Left. Record Right Sibling.
+                sibling_hash = self.nodes[right_sibling_idx]
+                proof_path.append(sibling_hash)
+                flags_bits.append(1)  # 1 = Sibling is Right
+
+                # Parent is immediately after the Right Sibling
+                curr = right_sibling_idx + 1
+
+            else:
+                # Case B: We might be a Right Child
+                # Then Left Sibling is at `curr - sibling_offset`
+                left_sibling_idx = curr - sibling_offset
+
+                if left_sibling_idx >= 0 and get_height(left_sibling_idx) == h:
+                    # Yes, we are Right. Record Left Sibling.
+                    sibling_hash = self.nodes[left_sibling_idx]
+                    proof_path.append(sibling_hash)
+                    flags_bits.append(0)  # 0 = Sibling is Left
+
+                    # Parent is immediately after Us
+                    curr += 1
+                else:
+                    # Case C: No sibling -> We are a Peak
+                    break
+
+        # 3. Collect peaks
+        peak_indices = get_peak_positions(len(self.nodes))
+        all_peaks = [self.nodes[i] for i in peak_indices]
+
+        # 4. Find which peak we ended up at
+        peak_index: uint32 | None = None
+        for idx, peak_pos in enumerate(peak_indices):
+            if peak_pos == curr:
+                peak_index = uint32(idx)
+                break
+
+        if peak_index is None:
+            return None
+
+        # 5. Serialize
+        flags = 0
+        for i, bit in enumerate(flags_bits):
+            flags |= (bit & 1) << i
+        num_flag_bytes = (len(flags_bits) + 7) // 8 if flags_bits else 1
+        flags_bytes = flags.to_bytes(num_flag_bytes, "little")
+
+        proof_bytes = len(proof_path).to_bytes(2, "big") + flags_bytes + b"".join(bytes(s) for s in proof_path)
+
+        # Exclude our peak from the list of roots
+        other_peak_roots = [all_peaks[i] for i in range(len(all_peaks)) if i != peak_index]
+
+        return (peak_index, proof_bytes, other_peak_roots, all_peaks[peak_index])
+
+
+def verify_mmr_inclusion(
+    mmr_root: bytes32,
+    leaf: bytes32,
+    peak_index: uint32,
+    proof_bytes: bytes,
+    other_peak_roots: list[bytes32],
+    expected_peak_root: bytes32,
+) -> bool:
+    if len(proof_bytes) < 2:
+        return False
+
+    num_siblings = int.from_bytes(proof_bytes[0:2], "big")
+    num_flag_bytes = (num_siblings + 7) // 8 if num_siblings > 0 else 1
+
+    if len(proof_bytes) != 2 + num_flag_bytes + num_siblings * 32:
+        return False
+
+    # Extract flags
+    flags_bytes = proof_bytes[2 : 2 + num_flag_bytes]
+    flags_bits = []
+    for byte in flags_bytes:
+        for i in range(8):
+            flags_bits.append((byte >> i) & 1)
+
+    # Extract siblings
+    siblings = []
+    sibling_start = 2 + num_flag_bytes
+    for i in range(num_siblings):
+        offset = sibling_start + i * 32
+        siblings.append(bytes32(proof_bytes[offset : offset + 32]))
+
+    # Reconstruct Peak
+    current_hash = leaf
+    for i, sibling in enumerate(siblings):
+        direction = flags_bits[i]
+        if direction == 0:  # Sibling is Left
+            current_hash = std_hash(sibling + current_hash)
+        else:  # Sibling is Right
+            current_hash = std_hash(current_hash + sibling)
+
+    if current_hash != expected_peak_root:
+        return False
+
+    # Reconstruct Root (Bagging)
+    all_peak_roots = [*other_peak_roots[:peak_index], current_hash, *other_peak_roots[peak_index:]]
+
+    if not all_peak_roots:
+        return False
+
+    current_hash = all_peak_roots[0]
+    for i in range(1, len(all_peak_roots)):
+        left_peak = all_peak_roots[i]
+        current_hash = std_hash(left_peak + current_hash)
+
+    return current_hash == mmr_root

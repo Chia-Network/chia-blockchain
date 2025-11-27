@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
@@ -37,7 +36,7 @@ class BlockchainMMRManager:
             self._checkpoint_interval = mmr._checkpoint_interval
             self._max_checkpoints = mmr._max_checkpoints
         else:
-            self._mmr: MerkleMountainRange = MerkleMountainRange.create()
+            self._mmr: MerkleMountainRange = MerkleMountainRange()
             self._last_header_hash = None
             self._last_height = None
             self._checkpoints: dict[int, MerkleMountainRange] = {}
@@ -86,17 +85,6 @@ class BlockchainMMRManager:
         """Get the current MMR root representing all blocks added so far"""
         return self._mmr.get_root()
 
-    def get_inclusion_proof(self, header_hash: bytes32) -> tuple[Any, ...] | None:
-        """Get inclusion proof for a header hash"""
-        return self._mmr.get_inclusion_proof(header_hash)
-
-    def verify_inclusion_proof(self, header_hash: bytes32, proof: tuple[Any, ...]) -> bool:
-        """Verify inclusion proof against current MMR"""
-        if proof is None:
-            return False
-        peak_index, proof_bytes, other_peak_roots = proof
-        return self._mmr.verify_inclusion(header_hash, peak_index, proof_bytes, other_peak_roots)
-
     def _build_mmr_to_block(self, target_block: BlockRecord, blocks: BlockRecordsProtocol) -> bytes32 | None:
         """
         Build an MMR containing all blocks from genesis to target_block (inclusive).
@@ -126,7 +114,7 @@ class BlockchainMMRManager:
             mmr = best_mmr
             start_height = best_start_height + 1
         else:
-            mmr = MerkleMountainRange.create()
+            mmr = MerkleMountainRange()
             start_height = 0
             log.debug(f"Building MMR from genesis to {target_height}")
 
@@ -167,29 +155,32 @@ class BlockchainMMRManager:
         current = prev_block
         cutoff_block = None
 
-        while current.height > 0:
-            prev = blocks.block_record(current.prev_hash)
-
+        while True:
             # Check if prev is finalized relative to new block:
-            # 1. Crossed slot boundary
+            # 1. Earlier signage point
+            if current.signage_point_index < new_sp_index:
+                cutoff_block = current
+                log.debug(
+                    f"Found earlier sp at height {current.height} "
+                    f"(sp={current.signage_point_index} < {new_sp_index}), cutoff at {current.height}"
+                )
+                break
+
+            # TODO: do we include all from genesis or from the fork point?
+            if current.height == 0:
+                # Reached genesis without finding cutoff
+                break
+
+            # 2. Crossed slot boundary
             if current.first_in_sub_slot:
-                cutoff_block = prev
+                cutoff_block = blocks.block_record(current.prev_hash)
                 log.debug(
                     f"Found slot boundary at height {current.height}, "
-                    f"cutoff at {prev.height} for new block (sp={new_sp_index})"
+                    f"cutoff at {current.height - 1} for new block (sp={new_sp_index})"
                 )
                 break
 
-            # 2. Earlier signage point
-            if prev.signage_point_index < new_sp_index:
-                cutoff_block = prev
-                log.debug(
-                    f"Found earlier sp at height {prev.height} "
-                    f"(sp={prev.signage_point_index} < {new_sp_index}), cutoff at {prev.height}"
-                )
-                break
-
-            current = prev
+            current = blocks.block_record(current.prev_hash)
 
         if cutoff_block is None:
             # No finalized blocks
@@ -221,7 +212,7 @@ class BlockchainMMRManager:
 
         if target_height == 0:
             # Reset to genesis
-            self._mmr = MerkleMountainRange.create()
+            self._mmr = MerkleMountainRange()
             return
 
         # Find the best checkpoint to start from
@@ -238,7 +229,7 @@ class BlockchainMMRManager:
         else:
             # No suitable checkpoint, start from genesis
             log.debug(f"Rolling back MMR from genesis to height {target_height}")
-            self._mmr = MerkleMountainRange.create()
+            self._mmr = MerkleMountainRange()
             start_height = 0
 
         # Rebuild from checkpoint/genesis to target height
