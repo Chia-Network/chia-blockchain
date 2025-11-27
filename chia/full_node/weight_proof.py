@@ -124,6 +124,9 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
+        if len(summary_heights) <= 1:
+            log.error("failed not enough sub epochs")
+            return None
         zero_hash = self.blockchain.height_to_hash(uint32(0))
         assert zero_hash is not None
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)
@@ -138,6 +141,7 @@ class WeightProofHandler:
         ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
         if ses_blocks is None:
             return None
+        assert len(ses_blocks) == len(summary_heights)
 
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_rec.height:
@@ -171,17 +175,8 @@ class WeightProofHandler:
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
     def get_seed_for_proof(self, summary_heights: list[uint32], tip_height: uint32) -> bytes32:
-        count = 0
-        ses = None
-        for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
-            if ses_height <= tip_height:
-                count += 1
-            if count == 2:
-                ses = self.blockchain.get_ses(ses_height)
-                break
-        assert ses is not None
-        seed = ses.get_hash()
-        return seed
+        ses_height = list(filter(lambda h: h <= tip_height, reversed(summary_heights)))[1]
+        return self.blockchain.get_ses(ses_height).get_hash()
 
     async def _get_recent_chain(self, tip_height: uint32) -> list[HeaderBlock] | None:
         recent_chain: list[HeaderBlock] = []
