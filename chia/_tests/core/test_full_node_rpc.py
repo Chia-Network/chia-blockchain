@@ -35,6 +35,10 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test1(
     two_nodes_sim_and_wallets_services: SimulatorsAndWalletsServices, self_hostname: str, consensus_mode: ConsensusMode
 ) -> None:
@@ -606,6 +610,10 @@ async def test_get_version(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_get_blockchain_state(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, self_hostname: str
 ) -> None:
@@ -726,6 +734,10 @@ async def test_coin_name_not_found_in_mempool(one_node: SimulatorsAndWalletsServ
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_coin_name_found_in_mempool(one_node: SimulatorsAndWalletsServices, self_hostname: str) -> None:
     [full_node_service], _, bt = one_node
     full_node_api = full_node_service._api

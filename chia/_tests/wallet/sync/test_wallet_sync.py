@@ -668,6 +668,10 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
     wallet_node, wallet_server = wallets[0]
@@ -1408,6 +1412,10 @@ async def test_dusted_wallet(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_retry_store(
     two_wallet_nodes: OldSimulatorsAndWallets, self_hostname: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:

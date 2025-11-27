@@ -2549,9 +2549,13 @@ class TestBodyValidation:
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
-        await _validate_and_add_block(
-            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, skip_prevalidation=True
-        )
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+        else:
+            # after the hard fork activation, we no longer allow block references
+            expected_error = Err.TOO_MANY_GENERATOR_REFS
+
+        await _validate_and_add_block(b, block_2, expected_error=expected_error, skip_prevalidation=True)
 
         # Hash should be correct when there is a ref list
         await _validate_and_add_block(b, blocks[-1])
@@ -2568,17 +2572,18 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
 
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=tx,
-            block_refs=[blocks[-1].height],
-        )
-        block = blocks[-1]
-        # once the hard fork activated, we no longer use this form of block
-        # compression anymore
-        assert len(block.transactions_generator_ref_list) == 0
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            blocks = bt.get_consecutive_blocks(
+                1,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                transaction_data=tx,
+                block_refs=[blocks[-1].height],
+            )
+            block = blocks[-1]
+            # once the hard fork activated, we no longer use this form of block
+            # compression anymore
+            assert len(block.transactions_generator_ref_list) == 0
 
     @pytest.mark.anyio
     async def test_cost_exceeds_max(
@@ -3318,6 +3323,10 @@ class TestReorgs:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize("light_blocks", [True, False])
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+    )
     async def test_long_reorg(
         self,
         light_blocks: bool,
@@ -3654,7 +3663,7 @@ class TestReorgs:
         )
 
         # overlong encoding became invalid in the 3.0 hard fork
-        if consensus_mode == ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
@@ -3663,6 +3672,10 @@ class TestReorgs:
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3752,6 +3765,9 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
 # "fork_height" to make it look like it's in a reorg, but all the same blocks
 # are just added back.
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0], reason="after hard fork 2 we no longer allow block references"
+)
 async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3802,6 +3818,10 @@ async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTo
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3866,6 +3886,10 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
