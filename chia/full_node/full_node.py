@@ -19,6 +19,7 @@ from chia_rs import (
     AugSchemeMPL,
     BlockRecord,
     BLSCache,
+    CoinRecord,
     CoinState,
     ConsensusConstants,
     EndOfSubSlotBundle,
@@ -77,7 +78,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
-from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo

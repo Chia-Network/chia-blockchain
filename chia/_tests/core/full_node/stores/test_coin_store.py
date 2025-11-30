@@ -6,7 +6,7 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from chia_rs import CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import CoinRecord, CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -25,7 +25,6 @@ from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.casts import int_to_bytes
 from chia.util.db_wrapper import DBWrapper2

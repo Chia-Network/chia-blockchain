@@ -13,6 +13,7 @@ import pytest
 from chia_rs import (
     AugSchemeMPL,
     Coin,
+    CoinRecord,
     ConsensusConstants,
     Foliage,
     FoliageTransactionBlock,
@@ -92,7 +93,6 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs

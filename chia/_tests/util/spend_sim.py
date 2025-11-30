@@ -12,6 +12,7 @@ from typing import Any
 import anyio
 from chia_rs import (
     DONT_VALIDATE_SIGNATURE,
+    CoinRecord,
     CoinSpend,
     ConsensusConstants,
     G2Element,
@@ -34,7 +35,6 @@ from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
-from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem

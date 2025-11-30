@@ -45,6 +45,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    CancelOffer,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
     CATGetName,
@@ -930,11 +931,8 @@ async def cancel_offer(
 
         cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
         res = await wallet_client.cancel_offer(
-            offer_id,
-            CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-            secure=secure,
-            fee=fee,
-            push=push,
+            CancelOffer(trade_id=offer_id, secure=secure, fee=fee, push=push),
+            tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             timelock_info=condition_valid_times,
         )
         if push or not secure:

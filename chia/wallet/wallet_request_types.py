@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Any, BinaryIO, final
 
-from chia_rs import Coin, G1Element, G2Element, PrivateKey
+from chia_rs import Coin, CoinRecord, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self
@@ -13,7 +13,6 @@ from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
@@ -1402,6 +1401,12 @@ class SplitCoins(TransactionEndpointRequest):
     amount_per_coin: uint64 = field(default_factory=default_raise)
     target_coin_id: bytes32 = field(default_factory=default_raise)
 
+    def __post_init__(self) -> None:
+        if self.number_of_coins > 500:
+            raise ValueError(f"{self.number_of_coins} coins is greater then the maximum limit of 500 coins.")
+        if self.number_of_coins == 0:
+            raise ValueError("Cannot split into 0 new coins")
+
 
 @streamable
 @dataclass(frozen=True)
@@ -1418,6 +1423,16 @@ class CombineCoins(TransactionEndpointRequest):
     target_coin_ids: list[bytes32] = field(default_factory=list)
     target_coin_amount: uint64 | None = None
     coin_num_limit: uint16 = uint16(500)
+
+    def __post_init__(self) -> None:
+        if self.number_of_coins > self.coin_num_limit:
+            raise ValueError(
+                f"{self.number_of_coins} coins is greater then the maximum limit of {self.coin_num_limit} coins."
+            )
+        if self.number_of_coins < 2:
+            raise ValueError("You need at least two coins to combine")
+        if len(self.target_coin_ids) > self.number_of_coins:
+            raise ValueError("More coin IDs specified than desired number of coins to combine")
 
 
 @streamable
@@ -2012,8 +2027,25 @@ class GetAllOffersResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CancelOffer(TransactionEndpointRequest):
+    trade_id: bytes32 = field(default_factory=default_raise)
+    secure: bool = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
+
+
+@streamable
+@dataclass(frozen=True)
+class CancelOffers(TransactionEndpointRequest):
+    secure: bool = field(default_factory=default_raise)
+    batch_fee: uint64 = uint64(0)
+    batch_size: uint16 = uint16(5)
+    cancel_all: bool = False
+    asset_id: str = "xch"
 
 
 @streamable

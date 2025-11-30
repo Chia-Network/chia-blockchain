@@ -128,7 +128,7 @@ def b32(key: str) -> bytes32:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("5706ae15c4a437399f464c64ef4f33c362d860ccd2945b76b3ebdb0505783817"),
+        pos_challenge=b32("4cfaacbd2782db64d07cf490ca938534adb07dfbd2f92b0e479e2e5b196178db"),
         plot_size=PlotParam.make_v2(32),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -180,7 +180,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     ProofOfSpaceCase(
         id="not passing the plot filter v2",
         plot_size=PlotParam.make_v2(2),
-        pos_challenge=b32("fb1d676f0e3ce173f4e6cfb06d7059886cbc3b91cf65be0af0fc2fbe569c6597"),
+        pos_challenge=b32("aefba5c94bc9bbfe2c538b7faaaf03384ac5a6170e40b024657df6b0a27c34a7"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
@@ -291,10 +291,10 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     argvalues=[
         (0, 5),
         (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 6),
-        (0xFFFFFFFC, 7),
-        (0xFFFFFFFD, 8),
-        (0xFFFFFFFF, 8),
+        (0xFFFFFFFB, 4),
+        (0xFFFFFFFC, 3),
+        (0xFFFFFFFD, 2),
+        (0xFFFFFFFF, 2),
     ],
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:

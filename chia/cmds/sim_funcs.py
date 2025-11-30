@@ -8,7 +8,7 @@ from random import randint
 from typing import Any
 
 from aiohttp import ClientConnectorError
-from chia_rs import PrivateKey
+from chia_rs import CoinRecord, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -17,7 +17,6 @@ from chia.cmds.start_funcs import async_start
 from chia.protocols.outbound_message import NodeType
 from chia.server.resolve_peer_info import set_peer_info
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, save_config
 from chia.util.errors import KeychainFingerprintExists

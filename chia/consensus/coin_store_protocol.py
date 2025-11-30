@@ -3,12 +3,11 @@ from __future__ import annotations
 from collections.abc import Collection
 from typing import Protocol
 
-from chia_rs import CoinState
+from chia_rs import CoinRecord, CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
 
 

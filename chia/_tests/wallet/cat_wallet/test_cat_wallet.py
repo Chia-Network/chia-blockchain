@@ -121,7 +121,7 @@ async def mint_cat(
             )
 
     cat_wallet = await wallet_type.get_or_create_wallet_for_cat(
-        environment.wallet_state_manager, environment.xch_wallet, tail_hash.hex(), *extra_args
+        environment.wallet_state_manager, environment.xch_wallet, tail_hash, *extra_args
     )
 
     await wallet_environments.process_pending_states(
@@ -577,7 +577,7 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework,
 
     # Test that the a default CAT will initialize correctly
     asset = DEFAULT_CATS[next(iter(DEFAULT_CATS))]
-    asset_id = asset["asset_id"]
+    asset_id = bytes32.from_hexstr(asset["asset_id"])
     if wallet_type is RCATWallet:
         extra_args: Any = (bytes32.zeros,)
     else:
