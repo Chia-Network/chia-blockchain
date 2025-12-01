@@ -16,6 +16,19 @@ from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, CRCATVersion
 MetadataTypes = ClawbackMetadata | CRCATMetadata
 
 
+@dataclass(frozen=True, kw_only=True)
+class WalletCoinRecordMetadataParsingError(Exception):
+    coin_id: bytes32
+    metadata: VersionedBlob | None
+    coin_type: CoinType
+
+    def __repr__(self) -> str:
+        return f"Unknown metadata {self.metadata} for coin_id {self.coin_id} of type {self.coin_type}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
 @dataclass(frozen=True)
 class WalletCoinRecord:
     """
@@ -49,7 +62,11 @@ class WalletCoinRecord:
             and self.metadata.version == CRCATVersion.V1.value
         ):
             return CRCATMetadata.from_bytes(self.metadata.blob)
-        raise ValueError(f"Unknown metadata {self.metadata} for coin_type {self.coin_type}")
+        raise WalletCoinRecordMetadataParsingError(
+            coin_id=self.coin.name(),
+            metadata=self.metadata,
+            coin_type=self.coin_type,
+        )
 
     def name(self) -> bytes32:
         return self.coin.name()
