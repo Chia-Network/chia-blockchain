@@ -100,7 +100,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
@@ -1577,7 +1577,7 @@ class WalletRpcApi:
                 coin_batch = {
                     coin_record.coin: coin_record.parsed_metadata() for coin_record in records_list[i : i + batch_size]
                 }
-            except ValueError as e:
+            except WalletCoinRecordMetadataParsingError as e:
                 log.error("Failed to spend clawback coin: %s", e)
                 continue
             await self.service.wallet_state_manager.spend_clawback_coins(
