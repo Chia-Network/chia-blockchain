@@ -1385,7 +1385,7 @@ def __validate_pospace(
         cc_sp_hash,
         height,
         curr_diff,
-        height,  # this is only used for plot ID filter in this call, not phase-out
+        uint32(0),  # not used, since height_agnostic=True
         height_agnostic=True,
     )
     if required_iters is None:
