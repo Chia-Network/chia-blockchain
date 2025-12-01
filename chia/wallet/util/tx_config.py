@@ -32,6 +32,15 @@ class CoinSelectionConfig:
     def override(self, **kwargs: Any) -> CoinSelectionConfig:
         return dataclasses.replace(self, **kwargs)
 
+    def filter_coins(self, coins: set[Coin]) -> set[Coin]:
+        return {
+            coin
+            for coin in coins
+            if self.min_coin_amount <= coin.amount <= self.max_coin_amount
+            and coin.amount not in self.excluded_coin_amounts
+            and coin.name() not in self.excluded_coin_ids
+        }
+
 
 @dataclasses.dataclass(frozen=True)
 class TXConfig(CoinSelectionConfig):
