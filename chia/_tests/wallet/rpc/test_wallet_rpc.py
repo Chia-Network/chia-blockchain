@@ -47,6 +47,7 @@ from chia._tests.wallet.test_wallet_coin_store import (
 from chia.cmds.coins import CombineCMD, SplitCMD
 from chia.cmds.param_types import CliAmount
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -4236,3 +4237,227 @@ def test_send_transaction_multi_post_init() -> None:
         SendTransactionMulti(  # type: ignore[type-var]
             wallet_id=uint32(1),
         ).convert_to_proxy(VCSpend)
+
+
+def test_create_new_wallet_post_init() -> None:
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Invalid pool wallet initial state: FOO"),
+    ):
+        NewPoolWalletInitialTargetState(state="FOO")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("target_puzzle_hash must be set when state is FARMING_TO_POOL"),
+    ):
+        NewPoolWalletInitialTargetState(state="FARMING_TO_POOL")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("pool_url must be set when state is FARMING_TO_POOL"),
+    ):
+        NewPoolWalletInitialTargetState(state="FARMING_TO_POOL", target_puzzle_hash=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("relative_lock_height must be set when state is FARMING_TO_POOL"),
+    ):
+        NewPoolWalletInitialTargetState(state="FARMING_TO_POOL", target_puzzle_hash=bytes32.zeros, pool_url="")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("target_puzzle_hash is only valid for FARMING_TO_POOL"),
+    ):
+        NewPoolWalletInitialTargetState(state="SELF_POOLING", target_puzzle_hash=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("pool_url is only valid for FARMING_TO_POOL"),
+    ):
+        NewPoolWalletInitialTargetState(state="SELF_POOLING", pool_url="")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("relative_lock_height is only valid for FARMING_TO_POOL"),
+    ):
+        NewPoolWalletInitialTargetState(state="SELF_POOLING", relative_lock_height=uint32(0))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify a "mode" when creating a new CAT wallet'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.CAT_WALLET)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Support for this RPC mode has been dropped."),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.CAT_WALLET, mode=WalletCreationMode.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify an "amount" of CATs to generate'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.CAT_WALLET, mode=WalletCreationMode.NEW, test=True)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"asset_id" is not an argument for new CAT wallets. Maybe you meant existing?'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.NEW,
+            test=True,
+            amount=uint64(0),
+            asset_id=bytes32.zeros,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify an "asset_id" when creating an existing CAT wallet'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.CAT_WALLET, mode=WalletCreationMode.EXISTING)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"amount" is not an argument for existing CAT wallets'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.CAT_WALLET,
+            mode=WalletCreationMode.EXISTING,
+            asset_id=bytes32.zeros,
+            amount=uint64(0),
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"test" mode is not supported except for new CAT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, test=True)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, asset_id=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"mode": "existing" is only valid for CAT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, mode=WalletCreationMode.EXISTING)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify "did_type": "new/recovery"'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify an "amount" when creating a new DID'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Recovery options are no longer supported. "backup_dids" cannot be set.'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.NEW, amount=uint64(0), backup_dids=["foo"]
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_data" is only an option in "did_type": "recovery"'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.NEW, amount=uint64(0), backup_data="foo"
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Cannot specify an "amount" when recovering a DID'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.RECOVERY, amount=uint64(0))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Cannot specify "backup_dids" when recovering a DID'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.RECOVERY, backup_dids=["foo"])
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Cannot specify "metadata" when recovering a DID'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.RECOVERY, metadata={"foo": "bar"})
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Must specify "backup_data" when recovering a DID'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.DID_WALLET, did_type=DIDType.RECOVERY)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_type" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, did_type=DIDType.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_dids" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, backup_dids=["foo"])
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"metadata" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, metadata={"foo": "bar"})
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"wallet_name" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, wallet_name="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_data" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, backup_data="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_id" is only a valid argument for NFT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.POOL_WALLET, did_id="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"initial_target_state" is required for new pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.POOL_WALLET)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"initial_target_state" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.NFT_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delayed_ph" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, p2_singleton_delayed_ph=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, p2_singleton_delay_time=uint64(0))
