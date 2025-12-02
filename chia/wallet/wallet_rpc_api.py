@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 from collections.abc import Callable
+from itertools import count
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -2270,40 +2271,25 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> CancelOffersResponse:
-        if request.cancel_all:
-            asset_id: str | None = None
-        else:
-            asset_id = request.asset_id
-
-        start: int = 0
-        end: int = start + request.batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
-        log.info(f"Start cancelling offers for  {'asset_id: ' + asset_id if asset_id is not None else 'all'} ...")
+        log.info(f"Start cancelling offers for  {'all' if request.cancel_all else 'asset_id: ' + request.asset_id} ...")
         # Traverse offers page by page
-        key = None
-        if asset_id is not None and asset_id != "xch":
-            key = bytes32.from_hexstr(asset_id)
-        while True:
-            records: dict[bytes32, TradeRecord] = {}
-            trades = await trade_mgr.trade_store.get_trades_between(
-                start,
-                end,
-                reverse=True,
-                exclude_my_offers=False,
-                exclude_taken_offers=True,
-                include_completed=False,
-            )
-            for trade in trades:
-                if request.cancel_all:
-                    records[trade.trade_id] = trade
-                    continue
-                if trade.offer and trade.offer != b"":
-                    offer = Offer.from_bytes(trade.offer)
-                    if key in offer.arbitrage():
-                        records[trade.trade_id] = trade
-                        continue
+        for start in count(0, request.batch_size):
+            records = {
+                record.trade_id: record
+                for record in await trade_mgr.trade_store.get_trades_between(
+                    start,
+                    start + request.batch_size,
+                    reverse=True,
+                    exclude_my_offers=False,
+                    exclude_taken_offers=True,
+                    include_completed=False,
+                )
+                if request.cancel_all
+                or (record.offer != b"" and request.query_key in Offer.from_bytes(record.offer).arbitrage())
+            }
 
-            if len(records) == 0:
+            if records == {}:
                 break
 
             async with self.service.wallet_state_manager.lock:
@@ -2316,12 +2302,7 @@ class WalletRpcApi:
                     extra_conditions=extra_conditions,
                 )
 
-            log.info(f"Cancelled offers {start} to {end} ...")
-            # If fewer records were returned than requested, we're done
-            if len(trades) < request.batch_size:
-                break
-            start = end
-            end += request.batch_size
+            log.info(f"Created offer cancellations for {start} to {start + request.batch_size} ...")
 
         return CancelOffersResponse([], [])  # tx_endpoint wrapper will take care of this
 

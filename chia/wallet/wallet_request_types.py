@@ -2111,6 +2111,14 @@ class CancelOffers(TransactionEndpointRequest):
     cancel_all: bool = False
     asset_id: str = "xch"
 
+    @property
+    def query_key(self) -> bytes32 | None:
+        if self.cancel_all:
+            return None
+        if self.asset_id != "xch":
+            return bytes32.from_hexstr(self.asset_id)
+        return None
+
 
 @streamable
 @dataclass(frozen=True)
