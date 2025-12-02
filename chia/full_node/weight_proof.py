@@ -1385,7 +1385,8 @@ def __validate_pospace(
         cc_sp_hash,
         height,
         curr_diff,
-        uint32(max(0, height - constants.MAX_SUB_SLOT_BLOCKS)),
+        uint32(0),  # not used, since height_agnostic=True
+        height_agnostic=True,
     )
     if required_iters is None:
         log.error("could not verify proof of space")

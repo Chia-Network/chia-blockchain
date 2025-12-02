@@ -131,16 +131,18 @@ def verify_and_get_quality_string(
     *,
     height: uint32,
     prev_transaction_block_height: uint32,  # this is the height of the last tx block before the current block SP
+    height_agnostic: bool = False,
 ) -> bytes32 | None:
     plot_param = pos.param()
 
-    if plot_param.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
-        log.info("v1 proof has been phased-out and is no longer valid")
-        return None
+    if not height_agnostic:
+        if plot_param.size_v1 is not None and is_v1_phased_out(pos.proof, prev_transaction_block_height, constants):
+            log.info("v1 proof has been phased-out and is no longer valid")
+            return None
 
-    if plot_param.strength_v2 is not None and prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
-        log.info("v2 proof support has not yet activated")
-        return None
+        if plot_param.strength_v2 is not None and prev_transaction_block_height < constants.HARD_FORK2_HEIGHT:
+            log.info("v2 proof support has not yet activated")
+            return None
 
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     # Except v2 plots, they only support pool contract puzzle hash
@@ -167,7 +169,7 @@ def verify_and_get_quality_string(
     # we use different plot filter prefix sizes depending on v1 or v2 plots
     prefix_bits = calculate_prefix_bits(constants, height, plot_param)
     if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
-        log.error("Did not pass the plot filter")
+        log.error(f"Did not pass the plot filter. prefix bits: {prefix_bits} {'V1' if plot_param.size_v1 else 'V2'}")
         return None
 
     if plot_param.size_v1 is not None:
