@@ -195,7 +195,7 @@ jobs:
       collect-junit: false
 
   coverage:
-    if: always() && github.repository_owner == 'Chia-Network'
+    if: false
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:

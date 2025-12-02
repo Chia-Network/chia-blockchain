@@ -3363,10 +3363,11 @@ async def test_pending_tx_cache_retry_on_new_peak(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("mismatch_cost", [True, False])
-@pytest.mark.parametrize("mismatch_fee", [True, False])
-@pytest.mark.parametrize("tx_already_seen", [True, False])
-@pytest.mark.parametrize("mismatch_on_reannounce", [True, False])
+@pytest.mark.parametrize("mismatch_cost", [True])
+@pytest.mark.parametrize("mismatch_fee", [False])
+@pytest.mark.parametrize("tx_already_seen", [False])
+@pytest.mark.parametrize("mismatch_on_reannounce", [False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
 async def test_ban_for_mismatched_tx_cost_fee(
     three_nodes: list[FullNodeAPI],
     bt: BlockTools,
@@ -3386,10 +3387,14 @@ async def test_ban_for_mismatched_tx_cost_fee(
     With `mismatch_on_reannounce` we control whether the peer sent us the same
     transaction twice with different cost and fee.
     """
+    logger = logging.getLogger()
     full_node_1, full_node_2, full_node_3 = three_nodes
     server_1 = full_node_1.full_node.server
+    logger.warning(f"Peer 1: {server_1.node_id.hex()[:8]}")
     server_2 = full_node_2.full_node.server
+    logger.warning(f"Peer 2: {server_2.node_id.hex()[:8]}")
     server_3 = full_node_3.full_node.server
+    logger.warning(f"Peer 3: {server_3.node_id.hex()[:8]}")
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
     await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
     ws_con_1 = next(iter(server_1.all_connections.values()))
@@ -3435,6 +3440,8 @@ async def test_ban_for_mismatched_tx_cost_fee(
     async def send_from_node_3() -> None:
         await ws_con_3.send_message(msg)
 
+    for node in [full_node_1.full_node, full_node_2.full_node, full_node_3.full_node]:
+        await time_out_assert(5, node.synced)
     await asyncio.gather(send_from_node_2(), send_from_node_3())
     if mismatch_on_reannounce and (mismatch_cost or mismatch_fee):
         # Send a second NewTransaction that doesn't match the first

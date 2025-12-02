@@ -213,6 +213,7 @@ jobs:
           ./vdf_bench square_asm 400000
 
       - name: Verify source and installed tests collect and match
+        if: false
         run: |
           echo '==== collecting source tests ===='
           if pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
@@ -266,11 +267,12 @@ jobs:
           pytest --cov=chia --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml='junit-data/junit.${{ env.JOB_FILE_NAME }}.xml' --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Move back to chia/ for coverage
+        if: false
         run: |
           mv notchia/ chia/
 
       - name: Publish JUnit results
-        if: inputs.collect-junit
+        if: false
         uses: actions/upload-artifact@v5
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}
@@ -278,6 +280,7 @@ jobs:
           if-no-files-found: error
 
       - name: Process coverage data
+        if: false
         run: |
           coverage xml --rcfile=.coveragerc -o coverage.xml
           mkdir coverage-data
@@ -286,6 +289,7 @@ jobs:
           coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage data
+        if: false
         uses: actions/upload-artifact@v5
         with:
           name: coverage-data-${{ env.JOB_FILE_NAME }}

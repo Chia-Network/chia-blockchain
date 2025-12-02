@@ -94,34 +94,63 @@ async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, t
         # Limit to asking a few peers, it's possible that this tx got included on chain already
         # Highly unlikely that the peers that advertised a tx don't respond to a request. Also, if we
         # drop some transactions, we don't want to re-fetch too many times
-        for _ in range(5):
+        for i in range(5):
+            full_node.log.warning(
+                f"tx_request_and_timeout attempt for tx {transaction_id.hex()[:8]}, loop index {i}, "
+                f"dynamic peers_with_tx has {len(full_node.full_node_store.peers_with_tx.get(transaction_id, {}))}"
+            )
             peers_with_tx = full_node.full_node_store.peers_with_tx.get(transaction_id)
             if peers_with_tx is None:
+                full_node.log.warning(f"tx {transaction_id.hex()[:8]} not in the dynamic peers_with_tx.. breaking")
                 break
             peers_to_try = set(peers_with_tx) - tried_peers
             if len(peers_to_try) == 0:
+                full_node.log.warning(f"peers_to_try got 0 for tx {transaction_id.hex()[:8]}.. breaking")
                 break
             peer_id = peers_to_try.pop()
             tried_peers.add(peer_id)
             assert full_node.server is not None
             if peer_id not in full_node.server.all_connections:
+                full_node.log.warning(f"peer {peer_id.hex()[:8]} not in all_connections.. continuing")
                 continue
             random_peer = full_node.server.all_connections[peer_id]
             request_tx = full_node_protocol.RequestTransaction(transaction_id)
             msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
+            full_node.log.warning(
+                f"About to send request_transaction message for {transaction_id.hex()[:8]} to peer {peer_id.hex()[:8]}"
+            )
             await random_peer.send_message(msg)
+            full_node.log.warning(
+                f"request_transaction message sent, waiting 5 seconds for tx {transaction_id.hex()[:8]} to be received from peer {peer_id.hex()[:8]}"
+            )
             await asyncio.sleep(5)
+            full_node.log.warning(
+                f"Done waiting 5 seconds for tx {transaction_id.hex()[:8]}, about to check the mempool"
+            )
             if full_node.mempool_manager.seen(transaction_id):
+                full_node.log.warning(f"tx {transaction_id.hex()[:8]} is seen in the mempool")
                 break
+            else:
+                full_node.log.warning(
+                    f"tx {transaction_id.hex()[:8]} is not seen in the mempool despite waiting 5 seconds for it, "
+                    f"peer is {peer_id.hex()[:8]} and loop index is {i}"
+                )
+        full_node.log.warning(f"reached the end of the loop for tx {transaction_id.hex()[:8]}")
     except asyncio.CancelledError:
-        pass
+        full_node.log.warning(f"asyncio.CancelledError for tx {transaction_id.hex()[:8]}")
     finally:
+        full_node.log.warning(f"finally code path for tx {transaction_id.hex()[:8]}")
         # Always Cleanup
         if transaction_id in full_node.full_node_store.peers_with_tx:
+            full_node.log.warning(
+                f"popping tx {transaction_id.hex()[:8]} from peers_with_tx, we are {full_node.server.node_id.hex()[:8]}"
+            )
             full_node.full_node_store.peers_with_tx.pop(transaction_id)
         if transaction_id in full_node.full_node_store.pending_tx_request:
+            full_node.log.warning(f"popping tx {transaction_id.hex()[:8]} from pending_tx_request")
             full_node.full_node_store.pending_tx_request.pop(transaction_id)
         if task_id in full_node.full_node_store.tx_fetch_tasks:
+            full_node.log.warning(f"popping task_id {task_id.hex()[:8]} from tx_fetch_tasks")
             full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
 
@@ -204,6 +233,9 @@ class FullNodeAPI:
         A peer notifies us of a new transaction.
         Requests a full transaction if we haven't seen it previously, and if the fees are enough.
         """
+        self.log.warning(
+            f"new_transaction {transaction.transaction_id.hex()[:8]} from peer {peer.peer_node_id.hex()[:8]}"
+        )
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -233,7 +265,14 @@ class FullNodeAPI:
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             # If there's current pending request just add this peer to the set of peers that have this tx
             if transaction.transaction_id in self.full_node.full_node_store.pending_tx_request:
+                self.log.warning(
+                    f"new_transaction with already pending request for tx {transaction.transaction_id.hex()[:8]} "
+                    f"from peer {self.full_node.full_node_store.pending_tx_request[transaction.transaction_id].hex()[:8]}"
+                )
                 current_map = self.full_node.full_node_store.peers_with_tx.get(transaction.transaction_id)
+                self.log.warning(
+                    f"current_map has peers {[p.hex()[:8] for p in current_map] if current_map is not None else None}"
+                )
                 if current_map is None:
                     self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = {
                         peer.peer_node_id: PeerWithTx(
@@ -256,8 +295,13 @@ class FullNodeAPI:
                 current_map[peer.peer_node_id] = PeerWithTx(
                     peer_host=peer.peer_info.host, advertised_fee=transaction.fees, advertised_cost=transaction.cost
                 )
+                self.log.warning(f"current_map now has peers {[p.hex()[:8] for p in current_map]}")
                 return None
 
+            self.log.warning(
+                f"new_transaction with no pending request for tx {transaction.transaction_id.hex()[:8]} "
+                f"from peer {peer.peer_node_id.hex()[:8]}"
+            )
             self.full_node.full_node_store.pending_tx_request[transaction.transaction_id] = peer.peer_node_id
             self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = {
                 peer.peer_node_id: PeerWithTx(
@@ -275,12 +319,16 @@ class FullNodeAPI:
 
     @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Message | None:
+        self.log.warning(f"request_transaction called with tx ID {request.transaction_id.hex()[:8]}")
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
         spend_bundle = self.full_node.mempool_manager.get_spendbundle(request.transaction_id)
         if spend_bundle is None:
+            self.log.warning(
+                f"request_transaction - we don't have tx ID {request.transaction_id.hex()[:8]} and we're returning None"
+            )
             return None
 
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
@@ -302,17 +350,32 @@ class FullNodeAPI:
         """
         assert tx_bytes != b""
         spend_name = std_hash(tx_bytes)
+        our_peer_id = self.full_node.server.node_id.hex()[:8]
+        self.log.warning(
+            f"respond_transaction called and we received tx with ID {spend_name.hex()[:8]} from peer "
+            f"{peer.peer_node_id.hex()[:8]}, we are {our_peer_id}"
+        )
         if spend_name in self.full_node.full_node_store.pending_tx_request:
             self.full_node.full_node_store.pending_tx_request.pop(spend_name)
         peers_with_tx = {}
         if spend_name in self.full_node.full_node_store.peers_with_tx:
+            self.log.warning(f"we're about to pop tx {spend_name.hex()[:8]} from our peers_with_tx")
             peers_with_tx = self.full_node.full_node_store.peers_with_tx.pop(spend_name)
+            self.log.warning(f"we (peer {our_peer_id}) popped tx {spend_name.hex()[:8]} from our peers_with_tx")
 
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
+            self.log.warning(
+                f"respond_transaction - about to enqueue tx with ID {spend_name.hex()[:8]} from peer "
+                f"{peer.peer_node_id.hex()[:8]} in respond_transaction"
+            )
             self.full_node.transaction_queue.put(
                 TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test, peers_with_tx),
                 peer.peer_node_id,
+            )
+            self.log.warning(
+                f"respond_transaction - enqueued tx with ID {spend_name.hex()[:8]} from peer "
+                f"{peer.peer_node_id.hex()[:8]} in respond_transaction"
             )
         except TransactionQueueFull:
             pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
