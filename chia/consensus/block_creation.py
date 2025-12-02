@@ -485,6 +485,7 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_block.reward_chain_sp_signature,
         rc_ip_vdf,
         icc_ip_vdf,
+        None,
         is_transaction_block,
     )
     if prev_block is None:

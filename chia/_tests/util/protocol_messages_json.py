@@ -264,6 +264,7 @@ respond_proof_of_weight_json: dict[str, Any] = {
                 "num_blocks_overflow": 190,
                 "new_sub_slot_iters": 10527522631566046685,
                 "new_difficulty": 989988965238543242,
+                "challenge_merkle_root": None,
             }
         ],
         "sub_epoch_segments": [
@@ -460,6 +461,7 @@ respond_proof_of_weight_json: dict[str, Any] = {
                             "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                         },
                     },
+                    "header_mmr_root": None,
                     "is_transaction_block": False,
                 },
                 "challenge_chain_sp_proof": {
@@ -654,6 +656,7 @@ respond_blocks_json: dict[str, Any] = {
                         "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                     },
                 },
+                "header_mmr_root": None,
                 "is_transaction_block": False,
             },
             "challenge_chain_sp_proof": {
@@ -830,6 +833,7 @@ respond_blocks_json: dict[str, Any] = {
                         "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                     },
                 },
+                "header_mmr_root": None,
                 "is_transaction_block": False,
             },
             "challenge_chain_sp_proof": {
@@ -1012,6 +1016,7 @@ respond_block_json: dict[str, Any] = {
                     "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                 },
             },
+            "header_mmr_root": None,
             "is_transaction_block": False,
         },
         "challenge_chain_sp_proof": {
@@ -1562,6 +1567,7 @@ respond_header_block_json: dict[str, Any] = {
                     "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                 },
             },
+            "header_mmr_root": None,
             "is_transaction_block": False,
         },
         "challenge_chain_sp_proof": {
@@ -1743,6 +1749,7 @@ respond_block_headers_json: dict[str, Any] = {
                         "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                     },
                 },
+                "header_mmr_root": None,
                 "is_transaction_block": False,
             },
             "challenge_chain_sp_proof": {
@@ -1998,6 +2005,7 @@ respond_header_blocks_json: dict[str, Any] = {
                         "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                     },
                 },
+                "header_mmr_root": None,
                 "is_transaction_block": False,
             },
             "challenge_chain_sp_proof": {
@@ -2632,6 +2640,7 @@ new_peak_timelord_json: dict[str, Any] = {
                 "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
             },
         },
+        "header_mmr_root": None,
         "is_transaction_block": False,
     },
     "difficulty": 7661623532867338566,
@@ -2643,6 +2652,7 @@ new_peak_timelord_json: dict[str, Any] = {
         "num_blocks_overflow": 4,
         "new_difficulty": 14666749803532899046,
         "new_sub_slot_iters": 10901191956946573440,
+        "challenge_merkle_root": None,
     },
     "previous_reward_challenges": [
         ["0x5bb65d8662d561ed2fc17e4177ba61c43017ee7e5418091d38968e36ce380d11", 134240022887890669757150210097251845335]
@@ -2706,6 +2716,7 @@ new_unfinished_block_timelord_json: dict[str, Any] = {
         "num_blocks_overflow": 4,
         "new_difficulty": 14666749803532899046,
         "new_sub_slot_iters": 10901191956946573440,
+        "challenge_merkle_root": None,
     },
     "rc_prev": "0x0f90296b605904a794e4e98852e3b22e0d9bee2fa07abb12df6cecbdb778e1e5",
 }

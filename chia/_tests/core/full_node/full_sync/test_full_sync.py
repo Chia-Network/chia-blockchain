@@ -384,6 +384,7 @@ async def test_block_ses_mismatch(
             s.num_blocks_overflow,
             uint64(s.new_difficulty * 2) if s.new_difficulty is not None else None,
             uint64(s.new_sub_slot_iters * 2) if s.new_sub_slot_iters is not None else None,
+            None,
         )
         # manually try sync with wrong sub epoch summary list
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)

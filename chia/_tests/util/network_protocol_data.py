@@ -243,6 +243,7 @@ sub_epochs = SubEpochData(
     uint8(190),
     uint64(10527522631566046685),
     uint64(989988965238543242),
+    None,
 )
 
 classgroup_element = ClassgroupElement.get_default_element()
@@ -320,6 +321,7 @@ reward_chain_block = RewardChainBlock(
     g2_element,
     vdf_info,
     vdf_info,
+    None,
     False,
 )
 
@@ -1057,6 +1059,7 @@ sub_epoch_summary = SubEpochSummary(
     uint8(4),
     uint64(14666749803532899046),
     uint64(10901191956946573440),
+    None,
 )
 
 new_peak_timelord = timelord_protocol.NewPeakTimelord(
