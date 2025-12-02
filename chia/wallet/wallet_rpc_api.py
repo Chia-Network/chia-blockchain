@@ -25,9 +25,8 @@ from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
+from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
@@ -69,9 +68,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
@@ -88,6 +85,7 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter
+from chia.wallet.util.signing import verify_signature
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -1835,57 +1833,13 @@ class WalletRpcApi:
 
     @marshal
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
-        """
-        Given a public key, message and signature, verify if it is valid.
-        :param request:
-        :return:
-        """
-        # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
-        # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        if request.signing_mode is None:
-            signing_mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        else:
-            try:
-                signing_mode = SigningMode(request.signing_mode)
-            except ValueError:
-                raise ValueError(f"Invalid signing mode: {request.signing_mode!r}")
-
-        if signing_mode in {SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS}:
-            # CHIP-0002 message signatures are made over the tree hash of:
-            #   ("Chia Signed Message", message)
-            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, request.message)).get_tree_hash()
-        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
-            # Message is expected to be a hex string
-            message_to_verify = hexstr_to_bytes(request.message)
-        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
-            # Message is expected to be a UTF-8 string
-            message_to_verify = bytes(request.message, "utf-8")
-        else:
-            raise ValueError(f"Unsupported signing mode: {request.signing_mode!r}")
-
-        # Verify using the BLS message augmentation scheme
-        is_valid = AugSchemeMPL.verify(
-            request.pubkey,
-            message_to_verify,
-            request.signature,
+        return verify_signature(
+            signing_mode=request.signing_mode_enum,
+            public_key=request.pubkey,
+            message=request.message,
+            signature=request.signature,
+            address=request.address,
         )
-        if request.address is not None:
-            # For signatures made by the sign_message_by_address/sign_message_by_id
-            # endpoints, the "address" field should contain the p2_address of the NFT/DID
-            # that was used to sign the message.
-            puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
-            expected_puzzle_hash: bytes32 | None = None
-            if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
-                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(request.pubkey))
-                expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
-            else:
-                expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(request.pubkey)
-            if puzzle_hash != expected_puzzle_hash:
-                return VerifySignatureResponse(isValid=False, error="Public key doesn't match the address")
-        if is_valid:
-            return VerifySignatureResponse(isValid=is_valid)
-        else:
-            return VerifySignatureResponse(isValid=False, error="Signature is invalid.")
 
     @marshal
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:

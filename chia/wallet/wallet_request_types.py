@@ -13,6 +13,7 @@ from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
+from chia.types.signing_mode import SigningMode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
@@ -373,6 +374,18 @@ class VerifySignature(Streamable):
     signature: G2Element
     signing_mode: str | None = None
     address: str | None = None
+
+    @property
+    def signing_mode_enum(self) -> SigningMode:
+        # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
+        # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        if self.signing_mode is None:
+            return SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        else:
+            try:
+                return SigningMode(self.signing_mode)
+            except ValueError:
+                raise ValueError(f"Invalid signing mode: {self.signing_mode!r}")
 
 
 @streamable
