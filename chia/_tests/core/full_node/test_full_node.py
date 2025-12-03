@@ -3435,6 +3435,8 @@ async def test_ban_for_mismatched_tx_cost_fee(
     async def send_from_node_3() -> None:
         await ws_con_3.send_message(msg)
 
+    for node in [full_node_1.full_node, full_node_2.full_node, full_node_3.full_node]:
+        await time_out_assert(5, node.synced)
     await asyncio.gather(send_from_node_2(), send_from_node_3())
     if mismatch_on_reannounce and (mismatch_cost or mismatch_fee):
         # Send a second NewTransaction that doesn't match the first
