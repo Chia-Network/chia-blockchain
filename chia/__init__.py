@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import importlib.metadata
+from importlib.metadata import version, PackageNotFoundError
 import sys
 
 __version__: str
+
 try:
-    __version__ = importlib.metadata.version("chia-blockchain")
-except importlib.metadata.PackageNotFoundError:
-    # package is not installed
-    __version__ = "unknown"
-except KeyError:
+    __version__ = version("chia-blockchain")
+except (PackageNotFoundError, KeyError):
     __version__ = "unknown"
 
 try:
