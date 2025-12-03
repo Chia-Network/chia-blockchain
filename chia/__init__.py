@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from importlib.metadata import version, PackageNotFoundError
 import sys
+from importlib.metadata import PackageNotFoundError, version
 
 __version__: str
 
