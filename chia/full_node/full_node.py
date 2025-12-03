@@ -257,7 +257,7 @@ class FullNode:
                                 # empty except it has the database_version table
                                 pass
 
-            self._block_store = await BlockStore.create(self.db_wrapper, self.constants)
+            self._block_store = await BlockStore.create(self.db_wrapper)
             self._hint_store = await HintStore.create(self.db_wrapper)
             self._coin_store = await CoinStore.create(self.db_wrapper)
             self.log.info("Initializing blockchain from disk")
@@ -1129,8 +1129,6 @@ class FullNode:
         self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {peak_height}")
         self.sync_store.set_sync_mode(True)
         self._state_changed("sync_mode")
-        # Convert Old format summaries to new format
-
         return fork_point, summaries
 
     async def sync_from_fork_point(
@@ -2512,9 +2510,6 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
-        # TODO v2_WP: compute actual MMR root at signage point
-        header_mmr_root = bytes32.zeros
-
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,
             difficulty,
@@ -2522,7 +2517,7 @@ class FullNode:
             block.foliage,
             ses,
             rc_prev,
-            header_mmr_root,
+            self.blockchain.get_current_mmr_root(),
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
@@ -2638,9 +2633,6 @@ class FullNode:
                 unfinished_block.reward_chain_block.signage_point_index,
             )
         )
-        # add the mmr root to the block,
-        # maybe we checnge the back pointer to the prev mmr root instead of the previous header
-        # dont have the prev header hash present in the unfunished block add it when we finish the block
 
         block: FullBlock = unfinished_block_to_full_block_with_mmr(
             unfinished_block,

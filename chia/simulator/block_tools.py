@@ -836,7 +836,7 @@ class BlockTools:
                 skip_slots=skip_slots,
                 timestamp=(uint64(time.time()) if genesis_timestamp is None else genesis_timestamp),
             )
-            self.mmr_manager.add_block_to_mmr(genesis.header_hash, genesis.prev_header_hash, genesis.height)
+            # MMR will be populated after BlockRecords are created via load_block_list
             self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
@@ -844,10 +844,8 @@ class BlockTools:
         else:
             initial_block_list_len = len(block_list)
             num_empty_slots_added = uint32(0)  # Allows forcing empty slots in the beginning, for testing purposes
-            # Reset MMR manager and rebuild from existing blocks
+            # Reset MMR manager - will be populated after BlockRecords are created via load_block_list
             self.mmr_manager = BlockchainMMRManager()
-            for b in block_list:
-                self.mmr_manager.add_block_to_mmr(b.header_hash, b.prev_header_hash, b.height)
 
         if num_blocks == 0:
             return block_list
@@ -865,6 +863,11 @@ class BlockTools:
             blocks = self._block_cache
         else:
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
+
+        # Populate MMR from existing BlockRecords
+        for full_block in block_list:
+            block_record = blocks[full_block.header_hash]
+            self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block

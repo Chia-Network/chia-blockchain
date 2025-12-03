@@ -54,7 +54,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
             journal_mode="OFF",
             synchronous="OFF",
         ) as db_wrapper1:
-            block_store1 = await BlockStore.create(db_wrapper1, test_constants)
+            block_store1 = await BlockStore.create(db_wrapper1)
             coin_store1 = await CoinStore.create(db_wrapper1)
             hint_store1 = await HintStore.create(db_wrapper1)
             if with_hints:
@@ -79,11 +79,11 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
 
         async with DBWrapper2.managed(database=in_file, reader_count=1, db_version=1) as db_wrapper1:
             async with DBWrapper2.managed(database=out_file, reader_count=1, db_version=2) as db_wrapper2:
-                block_store1 = await BlockStore.create(db_wrapper1, test_constants)
+                block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
                 hint_store1 = await HintStore.create(db_wrapper1)
 
-                block_store2 = await BlockStore.create(db_wrapper2, test_constants)
+                block_store2 = await BlockStore.create(db_wrapper2)
                 coin_store2 = await CoinStore.create(db_wrapper2)
                 hint_store2 = await HintStore.create(db_wrapper2)
 

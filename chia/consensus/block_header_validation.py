@@ -1083,8 +1083,6 @@ def validate_finished_header_block(
         first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
     )
     if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-        # Compute expected MMR root with sp/slot filtering
-        # Use prev_block, sp_index, and slot info from the block being validated
         prev_hash = header_block.foliage.prev_block_hash if header_block.height > 0 else None
         sp_index = header_block.reward_chain_block.signage_point_index
         starts_new_slot = len(header_block.finished_sub_slots) > 0

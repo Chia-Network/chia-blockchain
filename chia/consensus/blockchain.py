@@ -108,7 +108,6 @@ class Blockchain:
     coin_store: CoinStoreProtocol
     # Store
     block_store: BlockStore
-    # MMR manager for incremental MMR computation
     mmr_manager: MMRManagerProtocol
     # Used to verify blocks in parallel
     pool: Executor
@@ -1014,7 +1013,6 @@ class Blockchain:
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
-        # Add block to MMR manager for incremental MMR computation
         self.add_block_to_mmr(block_record)
 
     async def persist_sub_epoch_challenge_segments(

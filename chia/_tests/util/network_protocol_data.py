@@ -1085,7 +1085,7 @@ new_unfinished_block_timelord = timelord_protocol.NewUnfinishedBlockTimelord(
     foliage,
     sub_epoch_summary,
     bytes32(bytes.fromhex("0f90296b605904a794e4e98852e3b22e0d9bee2fa07abb12df6cecbdb778e1e5")),
-    bytes32.zeros,
+    None,
 )
 
 new_infusion_point_vdf = timelord_protocol.NewInfusionPointVDF(

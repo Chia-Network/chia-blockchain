@@ -5,17 +5,17 @@ import logging
 import pytest
 from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint8, uint32
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_exactly
-from chia._tests.simulation.test_simulation import test_constants
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.protocols import full_node_protocol
+from chia.simulator.block_tools import test_constants
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
 
@@ -34,10 +34,8 @@ class TestCommitments:
         blocks = fork_height2_0_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(0),
-            HARD_FORK_HEIGHT=uint32(2),
-            PLOT_FILTER_128_HEIGHT=uint32(10),
-            PLOT_FILTER_64_HEIGHT=uint32(15),
-            PLOT_FILTER_32_HEIGHT=uint32(20),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
         )
         passed_sp_or_slot = False
         async with create_blockchain(constants, 2) as (blockchain, _):
@@ -87,10 +85,8 @@ class TestCommitments:
         blocks = fork_height2_500_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(500),
-            HARD_FORK_HEIGHT=uint32(2),
-            PLOT_FILTER_128_HEIGHT=uint32(10),
-            PLOT_FILTER_64_HEIGHT=uint32(15),
-            PLOT_FILTER_32_HEIGHT=uint32(20),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
         )
 
         passed_fork = False
@@ -158,6 +154,8 @@ class TestSyncWithCommitments:
         blocks = fork_height2_0_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(0),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
         )
 
         async with setup_two_nodes(constants, db_version, self_hostname) as (
@@ -206,10 +204,8 @@ class TestSyncWithCommitments:
         blocks = fork_height2_500_1000_blocks
         constants = test_constants.replace(
             HARD_FORK2_HEIGHT=uint32(500),
-            HARD_FORK_HEIGHT=uint32(2),
-            PLOT_FILTER_128_HEIGHT=uint32(10),
-            PLOT_FILTER_64_HEIGHT=uint32(15),
-            PLOT_FILTER_32_HEIGHT=uint32(20),
+            HARD_FORK_HEIGHT=uint32(0),
+            PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
         )
 
         async with setup_two_nodes(constants, db_version, self_hostname) as (

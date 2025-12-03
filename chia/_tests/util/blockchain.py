@@ -26,7 +26,7 @@ async def create_blockchain(
     db_uri = generate_in_memory_db_uri()
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)
-        store = await BlockStore.create(wrapper, constants)
+        store = await BlockStore.create(wrapper)
         path = Path(".")
         height_map = await BlockHeightMap.create(path, wrapper)
         bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)

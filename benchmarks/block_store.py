@@ -33,7 +33,6 @@ from chia._tests.util.benchmarks import (
     rand_vdf_proof,
     rewards,
 )
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 
@@ -58,7 +57,7 @@ async def run_add_block_benchmark(version: int) -> None:
     header_hashes = []
 
     async with setup_db("block-store-benchmark.db", version) as db_wrapper:
-        block_store = await BlockStore.create(db_wrapper, DEFAULT_CONSTANTS)
+        block_store = await BlockStore.create(db_wrapper)
 
         block_height = 1
         timestamp = uint64(1631794488)
@@ -100,7 +99,7 @@ async def run_add_block_benchmark(version: int) -> None:
                     uint8(random.randint(0, 255)),  # num_blocks_overflow: uint8
                     None,  # new_difficulty: Optional[uint64]
                     None,  # new_sub_slot_iters: Optional[uint64]
-                    bytes32.zeros,  # challenge_merkle_root: bytes32
+                    None,  # challenge_merkle_root: Optional[bytes32]
                 )
 
             has_pool_pk = random.randint(0, 1)
@@ -128,7 +127,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 rand_g2(),  # reward_chain_sp_signature
                 rand_vdf(),  # reward_chain_ip_vdf
                 rand_vdf() if deficit < 16 else None,
-                None,  # header_mmr_root - dummy for benchmark
+                None,  # header_mmr_root
                 is_transaction,
             )
 

@@ -49,20 +49,13 @@ def make_sub_epoch_summary(
     # This is not technically because more blocks can potentially be included than 2*MAX_SUB_SLOT_BLOCKS,
     # But assuming less than 128 overflow blocks get infused in the first 2 slots, it's not an issue
     if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1:
-        # Only compute challenge merkle root after hard fork activation
-        # Before fork, use None; after fork, compute actual root
-        challenge_root = (
-            compute_challenge_merkle_root(constants, blocks, blocks_included_height)
-            if blocks_included_height >= constants.HARD_FORK2_HEIGHT
-            else None
-        )
         return SubEpochSummary(
             constants.GENESIS_CHALLENGE,
             constants.GENESIS_CHALLENGE,
             uint8(0),
             None,
             None,
-            challenge_root,
+            None,  # No challenge root in first sub-epoch
         )
     if prev_ses_block is None:
         curr: BlockRecord = prev_prev_block
@@ -74,9 +67,6 @@ def make_sub_epoch_summary(
     assert prev_ses_block.finished_reward_slot_hashes is not None
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
-
-    # Only compute challenge merkle root after hard fork activation
-    # Before fork, use None; after fork, compute actual root
     prev_tx_block = pre_sp_tx_block_height(
         constants=constants,
         blocks=blocks,

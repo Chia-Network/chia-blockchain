@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
 
@@ -57,7 +56,7 @@ class MerkleTree:
 
     def _proof(
         self, puzzle_hashes: list[bytes32], searching_for: bytes32
-    ) -> tuple[Optional[int], Optional[list[bytes32]], bytes32, Optional[int]]:
+    ) -> tuple[int | None, list[bytes32] | None, bytes32, int | None]:
         if len(puzzle_hashes) == 1:
             atom_hash = hash_an_atom(puzzle_hashes[0])
             if puzzle_hashes[0] == searching_for:
@@ -95,6 +94,6 @@ class MerkleTree:
 
             return (final_path, final_list, pair_hash, bit_num + 1 if bit_num is not None else None)
 
-    def generate_proof(self, leaf_reveal: bytes32) -> tuple[Optional[int], list[Optional[list[bytes32]]]]:
+    def generate_proof(self, leaf_reveal: bytes32) -> tuple[int | None, list[list[bytes32] | None]]:
         proof = self._proof(self.nodes, leaf_reveal)
         return (proof[0], [proof[1]])

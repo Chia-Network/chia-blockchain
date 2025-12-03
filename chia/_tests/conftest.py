@@ -476,43 +476,36 @@ def default_10000_blocks_compact(bt, consensus_mode):
     )
 
 
-# Fixture for blocks with fork height = 0 (all blocks have new commitments)
 @pytest.fixture(scope="session")
 async def fork_height2_0_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
     """Creates 1000 blocks with HARD_FORK2_HEIGHT=0 so all blocks contain new commitments"""
     from chia._tests.util.blockchain import persistent_blocks
     from chia.simulator.block_tools import create_block_tools_async
 
-    # Create custom constants with HARD_FORK2_HEIGHT=0
     constants = test_constants.replace(
         HARD_FORK2_HEIGHT=uint32(0),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     )
-
-    # Create custom block tools with these constants
     bt_fork_zero = await create_block_tools_async(constants=constants, keychain=get_keychain, testrun_uid=testrun_uid)
-
     version = "_fork_height_zero"
     if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version += "_hardfork"
-
     return persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_zero, seed=b"fork_zero")
 
 
-# Fixture for blocks with fork height = 500 (transition from old to new commitments)
 @pytest.fixture(scope="session")
 async def fork_height2_500_1000_blocks(consensus_mode, get_keychain, anyio_backend, testrun_uid: str):
     """Creates 1000 blocks with HARD_FORK2_HEIGHT=500 so fork activates mid-chain"""
     from chia._tests.util.blockchain import persistent_blocks
     from chia.simulator.block_tools import create_block_tools_async
 
-    # Create custom constants with HARD_FORK2_HEIGHT=500
     constants = test_constants.replace(
         HARD_FORK2_HEIGHT=uint32(500),
+        HARD_FORK_HEIGHT=uint32(0),
+        PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     )
-
-    # Create custom block tools with these constants
     bt_fork_500 = await create_block_tools_async(constants=constants, keychain=get_keychain, testrun_uid=testrun_uid)
-
     version = "_fork_height_500"
     if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version += "_hardfork"

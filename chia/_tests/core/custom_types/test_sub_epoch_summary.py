@@ -13,7 +13,7 @@ def test_sub_epoch_summary_basic() -> None:
         num_blocks_overflow=uint8(7),
         new_difficulty=uint64(8),
         new_sub_slot_iters=uint64(9),
-        challenge_merkle_root=bytes32.zeros,  # placeholder
+        challenge_merkle_root=None,
     )
 
     # Test basic properties
@@ -22,7 +22,7 @@ def test_sub_epoch_summary_basic() -> None:
     assert ses.num_blocks_overflow == uint8(7)
     assert ses.new_difficulty == uint64(8)
     assert ses.new_sub_slot_iters == uint64(9)
-    assert ses.challenge_merkle_root == bytes32.zeros
+    assert ses.challenge_merkle_root is None
 
 
 def test_sub_epoch_summary_with_different_merkle_roots() -> None:
@@ -33,7 +33,7 @@ def test_sub_epoch_summary_with_different_merkle_roots() -> None:
         num_blocks_overflow=uint8(7),
         new_difficulty=uint64(8),
         new_sub_slot_iters=uint64(9),
-        challenge_merkle_root=bytes32.zeros,  # different value
+        challenge_merkle_root=bytes32([1] * 32),  # different value
     )
 
     ses2 = SubEpochSummary(
@@ -42,7 +42,7 @@ def test_sub_epoch_summary_with_different_merkle_roots() -> None:
         num_blocks_overflow=uint8(7),
         new_difficulty=uint64(8),
         new_sub_slot_iters=uint64(9),
-        challenge_merkle_root=bytes32([1] * 32),  # different value
+        challenge_merkle_root=bytes32([2] * 32),  # different value
     )
 
     # Different merkle roots should create different objects
@@ -57,7 +57,7 @@ def test_sub_epoch_summary_optional_fields() -> None:
         num_blocks_overflow=uint8(3),
         new_difficulty=None,
         new_sub_slot_iters=None,
-        challenge_merkle_root=bytes32.zeros,  # placeholder
+        challenge_merkle_root=bytes32([2] * 32),
     )
 
     assert ses.new_difficulty is None
@@ -70,7 +70,7 @@ def test_sub_epoch_summary_optional_fields() -> None:
         num_blocks_overflow=uint8(3),
         new_difficulty=uint64(4),
         new_sub_slot_iters=None,
-        challenge_merkle_root=bytes32.zeros,  # placeholder
+        challenge_merkle_root=bytes32([2] * 32),
     )
 
     assert ses2.new_difficulty == uint64(4)

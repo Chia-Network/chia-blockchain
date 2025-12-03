@@ -47,6 +47,7 @@ from chia.types.weight_proof import (
 )
 from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
+from chia.util.hash import std_hash
 from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.task_referencer import create_referenced_task
 
@@ -103,7 +104,6 @@ class WeightProofHandler:
             if ses_height > tip_height:
                 break
             ses = self.blockchain.get_ses(ses_height)
-            # Convert new format to old format for weight proof
             log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
@@ -905,8 +905,7 @@ def _map_sub_epoch_summaries(
 
         # add to dict
         summaries.append(ses)
-        # Use fork-aware hashing for SubEpochSummary
-        ses_hash = bytes32(ses.get_hash())
+        ses_hash = std_hash(ses)
     # add last sub epoch weight
     sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
     return summaries, total_weight, sub_epoch_weight_list
@@ -1267,8 +1266,6 @@ def validate_recent_blocks(
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 expected_vs = ValidationState(ssi, diff, None)
-                # Convert to new format for validation
-
                 caluclated_required_iters, error = validate_finished_header_block(
                     constants,
                     sub_blocks,
