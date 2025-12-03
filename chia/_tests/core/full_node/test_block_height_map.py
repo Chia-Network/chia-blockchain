@@ -22,7 +22,7 @@ def gen_block_hash(height: int) -> bytes32:
 def gen_ses(height: int) -> SubEpochSummary:
     prev_ses = gen_block_hash(height + 0xFA0000)
     reward_chain_hash = gen_block_hash(height + 0xFC0000)
-    return SubEpochSummary(prev_ses, reward_chain_hash, uint8(0), None, None)
+    return SubEpochSummary(prev_ses, reward_chain_hash, uint8(0), None, None, None)
 
 
 async def new_block(
