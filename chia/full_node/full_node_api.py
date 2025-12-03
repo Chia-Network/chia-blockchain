@@ -25,7 +25,6 @@ from chia_rs import (
     PoolTarget,
     RespondToPhUpdates,
     RewardChainBlockUnfinished,
-    SpendBundle,
     SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
@@ -813,11 +812,11 @@ class FullNodeAPI:
     ) -> Message | None:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: list[SpendBundle] = self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
+        items = self.full_node.mempool_manager.get_items_not_in_filter(received_filter, limit=100)
 
         for item in items:
-            transaction = full_node_protocol.RespondTransaction(item)
-            msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
+            transaction = full_node_protocol.NewTransaction(item.name, item.cost, item.fee)
+            msg = make_msg(ProtocolMessageTypes.new_transaction, transaction)
             await peer.send_message(msg)
         return None
 
