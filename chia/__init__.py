@@ -9,6 +9,8 @@ try:
 except importlib.metadata.PackageNotFoundError:
     # package is not installed
     __version__ = "unknown"
+except KeyError:
+    __version__ = "unknown"
 
 try:
     assert False
