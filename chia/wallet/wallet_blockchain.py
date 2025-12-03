@@ -7,12 +7,12 @@ from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia._tests.util.blockchain_mock import StubMMRManager
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err

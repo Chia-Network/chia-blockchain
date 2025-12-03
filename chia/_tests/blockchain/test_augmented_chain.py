@@ -11,9 +11,9 @@ from chia_rs.sized_ints import uint32
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
-from chia._tests.util.blockchain_mock import StubMMRManager
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.simulator.block_tools import BlockTools
 from chia.util.errors import Err
 
