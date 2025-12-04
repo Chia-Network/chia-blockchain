@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import operator
-import unittest
+import unittest.mock
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, cast
