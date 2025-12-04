@@ -244,7 +244,6 @@ sub_epochs = SubEpochData(
     uint64(10527522631566046685),
     uint64(989988965238543242),
     None,
-    None,
 )
 
 classgroup_element = ClassgroupElement.get_default_element()
