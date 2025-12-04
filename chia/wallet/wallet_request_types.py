@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any, BinaryIO, final
+from typing import Any, BinaryIO, TypeVar, final
 
 from chia_rs import Coin, CoinRecord, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
@@ -40,7 +40,11 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
-from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
+from chia.wallet.util.tx_config import (
+    CoinSelectionConfig,
+    CoinSelectionConfigLoader,
+    TXConfig,
+)
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
@@ -497,7 +501,10 @@ class SelectCoins(CoinSelectionConfigLoader):
 
     @classmethod
     def from_coin_selection_config(
-        cls, wallet_id: uint32, amount: uint64, coin_selection_config: CoinSelectionConfig
+        cls,
+        wallet_id: uint32,
+        amount: uint64,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Self:
         return cls(
             wallet_id=wallet_id,
@@ -1295,7 +1302,10 @@ class TransactionEndpointRequest(Streamable):
             return super().to_json_dict()
 
     def json_serialize_for_transport(
-        self, tx_config: TXConfig, extra_conditions: tuple[Condition, ...], timelock_info: ConditionValidTimes
+        self,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...],
+        timelock_info: ConditionValidTimes,
     ) -> dict[str, Any]:
         return {
             **tx_config.to_json_dict(),
@@ -1877,17 +1887,6 @@ class VCRevokeResponse(TransactionEndpointResponse):
     pass
 
 
-# TODO: The section below needs corresponding request types
-# TODO: The section below should be added to the API (currently only for client)
-
-
-@streamable
-@dataclass(frozen=True)
-class SendTransactionMultiResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
-
-
 @streamable
 @dataclass(frozen=True)
 class CSTCoinAnnouncement(Streamable):
@@ -1952,6 +1951,94 @@ class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_tx: TransactionRecord
 
 
+_T_SendTransactionMultiProxy = TypeVar("_T_SendTransactionMultiProxy", CATSpend, CreateSignedTransaction)
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionMulti(TransactionEndpointRequest):
+    # primarily for cat_spend
+    wallet_id: uint32 = field(default_factory=default_raise)
+    additions: list[Addition] | None = None  # for both
+    amount: uint64 | None = None
+    inner_address: str | None = None
+    memos: list[str] | None = None
+    coins: list[Coin] | None = None  # for both
+    extra_delta: str | None = None  # str to support negative ints :(
+    tail_reveal: bytes | None = None
+    tail_solution: bytes | None = None
+    # for create_signed_transaction
+    morph_bytes: bytes | None = None
+    coin_announcements: list[CSTCoinAnnouncement] | None = None
+    puzzle_announcements: list[CSTPuzzleAnnouncement] | None = None
+
+    def convert_to_proxy(self, proxy_type: type[_T_SendTransactionMultiProxy]) -> _T_SendTransactionMultiProxy:
+        if proxy_type is CATSpend:
+            if self.morph_bytes is not None:
+                raise ValueError(
+                    'Specified "morph_bytes" for a CAT-type wallet. Maybe you meant to specify an XCH wallet?'
+                )
+            elif self.coin_announcements is not None or self.puzzle_announcements is not None:
+                raise ValueError(
+                    'Specified "coin/puzzle_announcements" for a CAT-type wallet.'
+                    "Maybe you meant to specify an XCH wallet?"
+                )
+
+            # not sure why mypy hasn't understood this is purely a CATSpend
+            return proxy_type(
+                wallet_id=self.wallet_id,
+                additions=self.additions,  # type: ignore[arg-type]
+                amount=self.amount,  # type: ignore[call-arg]
+                inner_address=self.inner_address,
+                memos=self.memos,
+                coins=self.coins,
+                extra_delta=self.extra_delta,
+                tail_reveal=self.tail_reveal,
+                tail_solution=self.tail_solution,
+                fee=self.fee,
+                push=self.push,
+                sign=self.sign,
+            )
+        elif proxy_type is CreateSignedTransaction:
+            if self.amount is not None:
+                raise ValueError('Specified "amount" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?')
+            elif self.inner_address is not None:
+                raise ValueError(
+                    'Specified "inner_address" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'
+                )
+            elif self.memos is not None:
+                raise ValueError('Specified "memos" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?')
+            elif self.extra_delta is not None or self.tail_reveal is not None or self.tail_solution is not None:
+                raise ValueError(
+                    'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+                    "Maybe you meant to specify a CAT-type wallet?"
+                )
+            elif self.additions is None:
+                raise ValueError('"additions" are required for XCH wallets.')
+
+            # not sure why mypy hasn't understood this is purely a CreateSignedTransaction
+            return proxy_type(
+                additions=self.additions,
+                wallet_id=self.wallet_id,
+                coins=self.coins,
+                morph_bytes=self.morph_bytes,  # type: ignore[call-arg]
+                coin_announcements=self.coin_announcements if self.coin_announcements is not None else [],
+                puzzle_announcements=self.puzzle_announcements if self.puzzle_announcements is not None else [],
+                fee=self.fee,
+                push=self.push,
+                sign=self.sign,
+            )
+        else:
+            raise ValueError("An unsupported wallet type was selected for `send_transaction_multi`")
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionMultiResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
+
+
 @streamable
 @dataclass(frozen=True)
 class _OfferEndpointResponse(TransactionEndpointResponse):
@@ -1962,7 +2049,10 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
         old_offer_override = getattr(self.offer, "json_serialization_override", None)
         object.__setattr__(self.offer, "json_serialization_override", lambda o: o.to_bech32())
         try:
-            response = {**super().to_json_dict(), "trade_record": self.trade_record.to_json_dict_convenience()}
+            response = {
+                **super().to_json_dict(),
+                "trade_record": self.trade_record.to_json_dict_convenience(),
+            }
         except Exception:
             object.__setattr__(self.offer, "json_serialization_override", old_offer_override)
             raise
@@ -2040,7 +2130,10 @@ class GetOfferResponse(Streamable):
     trade_record: TradeRecord
 
     def to_json_dict(self) -> dict[str, Any]:
-        return {**super().to_json_dict(), "trade_record": self.trade_record.to_json_dict_convenience()}
+        return {
+            **super().to_json_dict(),
+            "trade_record": self.trade_record.to_json_dict_convenience(),
+        }
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
@@ -2073,7 +2166,10 @@ class GetAllOffersResponse(Streamable):
     trade_records: list[TradeRecord]
 
     def to_json_dict(self) -> dict[str, Any]:
-        return {**super().to_json_dict(), "trade_records": [tr.to_json_dict_convenience() for tr in self.trade_records]}
+        return {
+            **super().to_json_dict(),
+            "trade_records": [tr.to_json_dict_convenience() for tr in self.trade_records],
+        }
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:

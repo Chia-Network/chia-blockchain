@@ -278,6 +278,8 @@ from chia.wallet.wallet_request_types import (
     SendNotification,
     SendNotificationResponse,
     SendTransaction,
+    SendTransactionMulti,
+    SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
     SignMessageByAddress,
@@ -376,23 +378,38 @@ def tx_endpoint(
             ):
                 raise ValueError("Relative timelocks are not currently supported in the RPC")
 
-            async with self.service.wallet_state_manager.new_action_scope(
-                tx_config,
-                push=request.get("push", push),
-                merge_spends=request.get("merge_spends", merge_spends),
-                sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
-            ) as action_scope:
+            if "action_scope_override" in kwargs:
                 response: EndpointResult = await func(
                     self,
                     request,
                     *args,
-                    action_scope,
+                    kwargs["action_scope_override"],
                     extra_conditions=extra_conditions,
-                    **kwargs,
+                    **{k: v for k, v in kwargs.items() if k != "action_scope_override"},
                 )
+                action_scope = cast(WalletActionScope, kwargs["action_scope_override"])
+            else:
+                async with self.service.wallet_state_manager.new_action_scope(
+                    tx_config,
+                    push=request.get("push", push),
+                    merge_spends=request.get("merge_spends", merge_spends),
+                    sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+                ) as action_scope:
+                    response = await func(
+                        self,
+                        request,
+                        *args,
+                        action_scope,
+                        extra_conditions=extra_conditions,
+                        **kwargs,
+                    )
 
             if func.__name__ == "create_new_wallet" and "transactions" not in response:
                 # unfortunately, this API isn't solely a tx endpoint
+                return response
+
+            if "action_scope_override" in kwargs:
+                # deferring to parent action scope
                 return response
 
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
@@ -1514,35 +1531,41 @@ class WalletRpcApi:
         # tx_endpoint will take care of the default values here
         return SendTransactionResponse([], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros)
 
-    async def send_transaction_multi(self, request: dict[str, Any]) -> EndpointResult:
+    @tx_endpoint(push=True)
+    @marshal
+    async def send_transaction_multi(
+        self,
+        request: SendTransactionMulti,
+        action_scope: WalletActionScope,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> SendTransactionMultiResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        # This is required because this is a "@tx_endpoint" that calls other @tx_endpoints
-        request.setdefault("push", True)
-        request.setdefault("merge_spends", True)
-
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            if wallet.type() in {WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
-                assert isinstance(wallet, CATWallet)
-                response = await self.cat_spend(request, hold_lock=False)
-                transaction = response["transaction"]
-                transactions = response["transactions"]
+            if issubclass(type(wallet), CATWallet):
+                await self.cat_spend(
+                    request.convert_to_proxy(CATSpend).json_serialize_for_transport(
+                        action_scope.config.tx_config, extra_conditions, ConditionValidTimes()
+                    ),
+                    hold_lock=False,
+                    action_scope_override=action_scope,
+                )
             else:
-                response = await self.create_signed_transaction(request, hold_lock=False)
-                transaction = response["signed_tx"]
-                transactions = response["transactions"]
+                await self.create_signed_transaction(
+                    request.convert_to_proxy(CreateSignedTransaction).json_serialize_for_transport(
+                        action_scope.config.tx_config, extra_conditions, ConditionValidTimes()
+                    ),
+                    hold_lock=False,
+                    action_scope_override=action_scope,
+                )
 
-        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {
-            "transaction": transaction,
-            "transaction_id": TransactionRecord.from_json_dict(transaction).name,
-            "transactions": transactions,
-            "unsigned_transactions": response["unsigned_transactions"],
-        }
+        # tx_endpoint will take care of these values
+        return SendTransactionMultiResponse(
+            [], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros
+        )
 
     @tx_endpoint(push=True, merge_spends=False)
     @marshal

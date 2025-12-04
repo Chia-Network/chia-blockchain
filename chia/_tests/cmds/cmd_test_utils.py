@@ -13,7 +13,7 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
-from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
+from chia._tests.cmds.wallet.test_consts import get_bytes32
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -30,7 +30,6 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_request_types import (
     CATAssetIDToName,
@@ -46,7 +45,6 @@ from chia.wallet.wallet_request_types import (
     NFTCalculateRoyaltiesResponse,
     NFTGetInfo,
     NFTGetInfoResponse,
-    SendTransactionMultiResponse,
     SignMessageByAddress,
     SignMessageByAddressResponse,
     SignMessageByID,
@@ -233,44 +231,6 @@ class TestWalletRpcClient(TestRpcClient):
                 {asset.asset: (asset.royalty_address, asset.royalty_percentage) for asset in request.royalty_assets},
                 {asset.asset: asset.amount for asset in request.fungible_assets},
             )
-        )
-
-    async def send_transaction_multi(
-        self,
-        wallet_id: int,
-        additions: list[dict[str, object]],
-        tx_config: TXConfig,
-        coins: list[Coin] | None = None,
-        fee: uint64 = uint64(0),
-        push: bool = True,
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> SendTransactionMultiResponse:
-        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee, push, timelock_info))
-        name = bytes32([2] * 32)
-        return SendTransactionMultiResponse(
-            [STD_UTX],
-            [STD_TX],
-            TransactionRecord(
-                confirmed_at_height=uint32(1),
-                created_at_time=uint64(1234),
-                to_puzzle_hash=bytes32([1] * 32),
-                to_address=encode_puzzle_hash(bytes32([1] * 32), "xch"),
-                amount=uint64(12345678),
-                fee_amount=uint64(1234567),
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=WalletSpendBundle([], G2Element()),
-                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-                wallet_id=uint32(1),
-                sent_to=[("aaaaa", uint8(1), None)],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=name,
-                memos={bytes32([3] * 32): [bytes([4] * 32)]},
-                valid_times=ConditionValidTimes(),
-            ),
-            name,
         )
 
 

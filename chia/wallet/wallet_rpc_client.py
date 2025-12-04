@@ -7,7 +7,6 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.coin import Coin
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
@@ -184,6 +183,7 @@ from chia.wallet.wallet_request_types import (
     SendNotification,
     SendNotificationResponse,
     SendTransaction,
+    SendTransactionMulti,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -340,33 +340,17 @@ class WalletRpcClient(RpcClient):
 
     async def send_transaction_multi(
         self,
-        wallet_id: int,
-        additions: list[dict[str, Any]],
+        request: SendTransactionMulti,
         tx_config: TXConfig,
-        coins: list[Coin] | None = None,
-        fee: uint64 = uint64(0),
-        push: bool = True,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SendTransactionMultiResponse:
-        # Converts bytes to hex for puzzle hashes
-        additions_hex = []
-        for ad in additions:
-            additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
-            if "memos" in ad:
-                additions_hex[-1]["memos"] = ad["memos"]
-        request = {
-            "wallet_id": wallet_id,
-            "additions": additions_hex,
-            "fee": fee,
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if coins is not None and len(coins) > 0:
-            coins_json = [c.to_json_dict() for c in coins]
-            request["coins"] = coins_json
-        response = await self.fetch("send_transaction_multi", request)
-        return json_deserialize_with_clvm_streamable(response, SendTransactionMultiResponse)
+        return SendTransactionMultiResponse.from_json_dict(
+            await self.fetch(
+                "send_transaction_multi",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def spend_clawback_coins(
         self,
