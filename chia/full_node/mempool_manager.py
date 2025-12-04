@@ -1000,8 +1000,8 @@ class MempoolManager:
         log.log(logging.WARNING if duration > 1 else logging.INFO, f"new_peak() took {duration:0.2f} seconds")
         return NewPeakInfo(txs_added, mempool_item_removals)
 
-    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[SpendBundle]:
-        items: list[SpendBundle] = []
+    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[MempoolItem]:
+        items: list[MempoolItem] = []
 
         assert limit > 0
 
@@ -1011,7 +1011,7 @@ class MempoolManager:
                 return items
             if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                 continue
-            items.append(item.to_spend_bundle())
+            items.append(item)
 
         return items
 

@@ -1142,7 +1142,7 @@ async def test_get_items_not_in_filter() -> None:
     # Don't filter anything
     empty_filter = PyBIP158([])
     result = mempool_manager.get_items_not_in_filter(empty_filter)
-    assert result == [sb3, sb2, sb1]
+    assert [item.to_spend_bundle() for item in result] == [sb3, sb2, sb1]
 
     # Filter everything
     full_filter = PyBIP158([bytearray(sb1_name), bytearray(sb2_name), bytearray(sb3_name)])
@@ -1162,16 +1162,16 @@ async def test_get_items_not_in_filter() -> None:
 
     # With a limit of one, sb2 has the highest FPC
     result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=1)
-    assert result == [sb2]
+    assert [item.to_spend_bundle() for item in result] == [sb2]
 
     # With a higher limit, all bundles aside from sb3 get included
     result = mempool_manager.get_items_not_in_filter(sb3_filter, limit=5)
-    assert result == [sb2, sb1]
+    assert [item.to_spend_bundle() for item in result] == [sb2, sb1]
 
     # Filter two of the spend bundles
     sb2_and_3_filter = PyBIP158([bytearray(sb2_name), bytearray(sb3_name)])
     result = mempool_manager.get_items_not_in_filter(sb2_and_3_filter)
-    assert result == [sb1]
+    assert [item.to_spend_bundle() for item in result] == [sb1]
 
 
 @pytest.mark.anyio
