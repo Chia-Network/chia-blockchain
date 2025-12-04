@@ -465,6 +465,11 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_one_sb_per_two_slots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         num_blocks = 20

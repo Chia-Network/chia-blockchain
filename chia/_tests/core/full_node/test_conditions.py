@@ -273,6 +273,11 @@ class TestConditions:
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_MY_COIN_ID_FAILED)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_valid_my_id(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
         coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
@@ -280,6 +285,11 @@ class TestConditions:
         await check_conditions(bt, conditions)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_invalid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
         coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)
@@ -293,6 +303,11 @@ class TestConditions:
         await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_valid_coin_announcement(self, bt: BlockTools) -> None:
         blocks = await initial_blocks(bt)
         coin = find_reward_coin(blocks[-2], EASY_PUZZLE_HASH)

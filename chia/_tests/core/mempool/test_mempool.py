@@ -814,6 +814,11 @@ class TestMempoolManager:
         return blocks, bundle, status, err
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_invalid_block_index(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -865,6 +870,11 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_block_index_garbage(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -880,6 +890,11 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_negative_block_index(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -942,6 +957,11 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_block_age_garbage(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -960,6 +980,11 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_negative_block_age(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -1095,6 +1120,11 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_height_pending(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -1275,6 +1305,11 @@ class TestMempoolManager:
     # ensure one spend can assert a coin announcement from another spend, even
     # though the conditions have garbage at the end
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     @pytest.mark.parametrize(
         "assert_garbage,announce_garbage,expected,expected_included",
         [
@@ -1323,6 +1358,11 @@ class TestMempoolManager:
             assert mempool_bundle == bundle
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_coin_announcement_missing_arg(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:
@@ -1345,6 +1385,11 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_coin_announcement_missing_arg2(
         self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
     ) -> None:

@@ -34,6 +34,11 @@ log = logging.getLogger(__name__)
 
 class TestBlockchainTransactions:
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_basic_blockchain_tx(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
@@ -721,6 +726,11 @@ class TestBlockchainTransactions:
         await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_assert_height_absolute(
         self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
     ) -> None:
