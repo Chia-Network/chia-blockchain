@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 
@@ -9,7 +11,7 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.wallet_request_types import SignMessageByAddressResponse, VerifySignatureResponse
+from chia.wallet.wallet_request_types import VerifySignatureResponse
 
 # CHIP-0002 message signing as documented at:
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md
@@ -61,7 +63,13 @@ def verify_signature(
         return VerifySignatureResponse(isValid=False, error="Signature is invalid.")
 
 
-def sign_message(secret_key: PrivateKey, message: str, mode: SigningMode) -> SignMessageByAddressResponse:
+@dataclass(kw_only=True, frozen=True)
+class SignMessageResponse:
+    pubkey: G1Element
+    signature: G2Element
+
+
+def sign_message(secret_key: PrivateKey, message: str, mode: SigningMode) -> SignMessageResponse:
     public_key = secret_key.get_g1()
     if mode == SigningMode.CHIP_0002_HEX_INPUT:
         hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
@@ -71,8 +79,7 @@ def sign_message(secret_key: PrivateKey, message: str, mode: SigningMode) -> Sig
         hex_message = bytes.fromhex(message)
     else:
         hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
-    return SignMessageByAddressResponse(
+    return SignMessageResponse(
         pubkey=public_key,
         signature=AugSchemeMPL.sign(secret_key, hex_message),
-        signing_mode=mode.value,
     )
