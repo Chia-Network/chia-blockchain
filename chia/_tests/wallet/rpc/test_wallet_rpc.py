@@ -2437,6 +2437,7 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node)
     addr = encode_puzzle_hash(ph, "txch")
     tx_amount = uint64(15600000)
     created_tx = (
