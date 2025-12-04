@@ -16,6 +16,10 @@ from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, CRCATVersion
 MetadataTypes = ClawbackMetadata | CRCATMetadata
 
 
+class WalletCoinRecordMetadataParsingError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class WalletCoinRecord:
     """
@@ -41,7 +45,7 @@ class WalletCoinRecord:
 
     def parsed_metadata(self) -> MetadataTypes:
         if self.metadata is None:
-            raise ValueError("Can't parse None metadata")
+            raise WalletCoinRecordMetadataParsingError("Can't parse None metadata")
         if self.coin_type == CoinType.CLAWBACK and self.metadata.version == ClawbackVersion.V1.value:
             return ClawbackMetadata.from_bytes(self.metadata.blob)
         if (
@@ -49,7 +53,9 @@ class WalletCoinRecord:
             and self.metadata.version == CRCATVersion.V1.value
         ):
             return CRCATMetadata.from_bytes(self.metadata.blob)
-        raise ValueError(f"Unknown metadata {self.metadata} for coin_type {self.coin_type}")
+        raise WalletCoinRecordMetadataParsingError(
+            f"Unknown metadata {self.metadata} for coin_id {self.coin.name()} of type {self.coin_type}"
+        )
 
     def name(self) -> bytes32:
         return self.coin.name()

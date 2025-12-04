@@ -69,7 +69,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles import p2_delegated_conditions
-from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
@@ -97,7 +97,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
@@ -1558,7 +1558,6 @@ class WalletRpcApi:
         :param fee: transaction fee in mojos
         :return:
         """
-        # Get inner puzzle
         coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
             coin_id_filter=HashFilter.include(request.coin_ids),
             coin_type=CoinType.CLAWBACK,
@@ -1566,31 +1565,23 @@ class WalletRpcApi:
             spent_range=UInt32Range(stop=uint32(0)),
         )
 
-        coins: dict[Coin, ClawbackMetadata] = {}
         batch_size = (
             request.batch_size
             if request.batch_size is not None
             else self.service.wallet_state_manager.config.get("auto_claim", {}).get("batch_size", 50)
         )
-        for coin_id, coin_record in coin_records.coin_id_to_record.items():
+        records_list = list(coin_records.coin_id_to_record.values())
+        for i in range(0, len(records_list), batch_size):
             try:
-                metadata = coin_record.parsed_metadata()
-                assert isinstance(metadata, ClawbackMetadata)
-                coins[coin_record.coin] = metadata
-                if len(coins) >= batch_size:
-                    await self.service.wallet_state_manager.spend_clawback_coins(
-                        coins,
-                        request.fee,
-                        action_scope,
-                        request.force,
-                        extra_conditions=extra_conditions,
-                    )
-                    coins = {}
-            except Exception as e:
-                log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
-        if len(coins) > 0:
+                coin_batch = {
+                    coin_record.coin: coin_record.parsed_metadata() for coin_record in records_list[i : i + batch_size]
+                }
+            except WalletCoinRecordMetadataParsingError as e:
+                log.error("Failed to spend clawback coin: %s", e)
+                continue
             await self.service.wallet_state_manager.spend_clawback_coins(
-                coins,
+                # Semantically, we're guaranteed the right type here, but the typing isn't there
+                coin_batch,  # type: ignore[arg-type]
                 request.fee,
                 action_scope,
                 request.force,

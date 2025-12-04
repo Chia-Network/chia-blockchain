@@ -401,7 +401,7 @@ class BlockTools:
         prev_tx_height: uint32,
         dummy_block_references: bool,
         include_transactions: bool,
-        transaction_data: SpendBundle | None,
+        block_generator: NewBlockGenerator | None,
         block_refs: list[uint32],
     ) -> NewBlockGenerator | None:
         if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
@@ -423,26 +423,12 @@ class BlockTools:
         else:
             dummy_refs = []
 
-        if transaction_data is not None:
-            # this means the caller passed in transaction_data
+        if block_generator is not None:
+            # this means the caller passed in block_generator
             # to be included in the block.
-            additions = compute_additions_unchecked(transaction_data)
-            removals = transaction_data.removals()
-            if curr.height >= self.constants.HARD_FORK_HEIGHT:
-                program = simple_solution_generator_backrefs(transaction_data).program
-            else:
-                program = simple_solution_generator(transaction_data).program
-            block_refs = []
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
-            return NewBlockGenerator(
-                program,
-                [],
-                block_refs,
-                transaction_data.aggregated_signature,
-                additions,
-                removals,
-                cost,
-            )
+            assert block_refs == [], "block references cannot be combined with block_generator"
+            assert not dummy_block_references, "(dummy) block references cannot be combined with block_generator"
+            return block_generator
 
         if include_transactions:
             # if the caller did not pass in specific
@@ -893,6 +879,26 @@ class BlockTools:
         # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
 
+        block_generator: NewBlockGenerator | None = None
+        if transaction_data is not None:
+            additions = compute_additions_unchecked(transaction_data)
+            removals = transaction_data.removals()
+            if curr.height >= self.constants.HARD_FORK_HEIGHT:
+                program = simple_solution_generator_backrefs(transaction_data).program
+            else:
+                program = simple_solution_generator(transaction_data).program
+            block_refs = []
+            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
+            block_generator = NewBlockGenerator(
+                program,
+                [],
+                block_refs,
+                transaction_data.aggregated_signature,
+                additions,
+                removals,
+                cost,
+            )
+
         # Start at the last block in block list
         # Get the challenge for that slot
         while True:
@@ -995,7 +1001,7 @@ class BlockTools:
                             available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
-                            transaction_data=transaction_data,
+                            block_generator=block_generator,
                             include_transactions=include_transactions,
                             block_refs=block_refs,
                         )
@@ -1034,7 +1040,7 @@ class BlockTools:
                             overflow_rc_challenge=None,
                         )
                         if block_record.is_transaction_block:
-                            transaction_data = None
+                            block_generator = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1307,7 +1313,7 @@ class BlockTools:
                             available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
-                            transaction_data=transaction_data,
+                            block_generator=block_generator,
                             include_transactions=include_transactions,
                             block_refs=block_refs,
                         )
@@ -1346,7 +1352,7 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
                         if block_record.is_transaction_block:
-                            transaction_data = None
+                            block_generator = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1362,7 +1368,7 @@ class BlockTools:
                             f"refs: {len(full_block.transactions_generator_ref_list):3} "
                             f"iters: {block_record.total_iters} "
                             f"[{'TransactionBlock ' if block_record.is_transaction_block else ''}"
-                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}]"
+                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}"
                             "Overflow]"
                         )
                         last_timestamp = new_timestamp

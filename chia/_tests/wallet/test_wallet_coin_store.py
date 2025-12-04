@@ -13,7 +13,7 @@ from chia.util.streamable import Streamable, UInt32Range, UInt64Range, Versioned
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
 
 clawback_metadata = ClawbackMetadata(uint64(0), bytes32(b"1" * 32), bytes32(b"2" * 32))
@@ -133,7 +133,7 @@ class DummyWalletCoinRecords:
     ],
 )
 def test_wallet_coin_record_parsed_metadata_failures(invalid_record: WalletCoinRecord, error: str) -> None:
-    with pytest.raises(ValueError, match=error):
+    with pytest.raises(WalletCoinRecordMetadataParsingError, match=error):
         invalid_record.parsed_metadata()
 
 
