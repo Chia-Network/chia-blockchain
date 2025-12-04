@@ -403,6 +403,18 @@ class SignMessageByAddress(Streamable):
     is_hex: bool = False
     safe_mode: bool = True
 
+    @property
+    def signing_mode_enum(self) -> SigningMode:
+        mode: SigningMode = SigningMode.CHIP_0002
+        if self.is_hex and self.safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not self.is_hex and not self.safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif self.is_hex and not self.safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+
+        return mode
+
 
 @streamable
 @dataclass(frozen=True)

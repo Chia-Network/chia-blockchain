@@ -85,7 +85,7 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter
-from chia.wallet.util.signing import verify_signature
+from chia.wallet.util.signing import sign_message, verify_signature
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -1848,21 +1848,13 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
-        mode: SigningMode = SigningMode.CHIP_0002
-        if request.is_hex and request.safe_mode:
-            mode = SigningMode.CHIP_0002_HEX_INPUT
-        elif not request.is_hex and not request.safe_mode:
-            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
-        elif request.is_hex and not request.safe_mode:
-            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request.message, puzzle_hash, mode
+        synthetic_secret_key = self.service.wallet_state_manager.main_wallet.convert_secret_key_to_synthetic(
+            await self.service.wallet_state_manager.get_private_key(decode_puzzle_hash(request.address))
         )
-        return SignMessageByAddressResponse(
-            pubkey=pubkey,
-            signature=signature,
-            signing_mode=mode.value,
+        return sign_message(
+            secret_key=synthetic_secret_key,
+            message=request.message,
+            mode=request.signing_mode_enum,
         )
 
     @marshal
