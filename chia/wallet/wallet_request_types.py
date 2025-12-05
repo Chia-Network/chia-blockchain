@@ -2469,3 +2469,34 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
             ).to_json_dict()
 
         return super().from_json_dict(json_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class CRCATApprovePending(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    min_amount_to_claim: uint64 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class CRCATApprovePendingResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class GetFarmedAmount(Streamable):
+    include_pool_rewards: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetFarmedAmountResponse(Streamable):
+    farmed_amount: uint64
+    pool_reward_amount: uint64
+    farmer_reward_amount: uint64
+    fee_amount: uint64
+    last_height_farmed: uint32
+    last_time_farmed: uint64
+    blocks_won: uint32
