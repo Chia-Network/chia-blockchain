@@ -1,0 +1,10 @@
+(mod
+  (
+    WRAPPER
+    DELEGATED_PUZZLE
+    wrapper_solution
+    delegated_solution
+  )
+
+  (a WRAPPER (c (a DELEGATED_PUZZLE delegated_solution) wrapper_solution))
+)
