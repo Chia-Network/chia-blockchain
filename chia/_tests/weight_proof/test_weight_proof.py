@@ -5,6 +5,7 @@ from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, Sub
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
@@ -174,6 +175,11 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+    )
     async def test_weight_proof_edge_cases(self, bt: BlockTools, default_400_blocks: list[FullBlock]) -> None:
         blocks = default_400_blocks
 

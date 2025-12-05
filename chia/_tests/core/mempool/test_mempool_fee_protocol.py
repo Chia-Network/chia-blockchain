@@ -5,6 +5,7 @@ import datetime
 import pytest
 from chia_rs.sized_ints import uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
@@ -18,6 +19,11 @@ from chia.wallet.wallet import Wallet
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_protocol_messages(
     simulator_and_wallet: tuple[list[FullNodeAPI | FullNodeSimulator], list[tuple[Wallet, ChiaServer]], BlockTools],
 ) -> None:

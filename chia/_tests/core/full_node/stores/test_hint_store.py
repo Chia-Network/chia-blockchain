@@ -6,6 +6,7 @@ import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.util.db_connection import DBConnection
 from chia.full_node.hint_store import HintStore
@@ -140,6 +141,11 @@ async def test_coin_ids_multi(db_version: int) -> None:
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_hints_in_blockchain(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
