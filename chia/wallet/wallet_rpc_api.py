@@ -82,7 +82,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, OfferSummary
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.address_type import AddressType, is_valid_address
+from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_valid_address
 from chia.wallet.util.clvm_streamable import json_serialize_with_clvm_streamable
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
@@ -104,6 +104,7 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
+    Addition,
     AddKey,
     AddKeyResponse,
     ApplySignatures,
@@ -1507,24 +1508,25 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Wallet)
-
-        # TODO: Add support for multiple puzhash/amount/memo sets
-        selected_network = self.service.config["selected_network"]
-        expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
-        if request.address[0 : len(expected_prefix)] != expected_prefix:
-            raise ValueError("Unexpected Address Prefix")
-
-        await wallet.generate_signed_transaction(
-            [request.amount],
-            [decode_puzzle_hash(request.address)],
-            action_scope,
-            request.fee,
-            memos=[[mem.encode("utf-8") for mem in request.memos]],
-            puzzle_decorator_override=[request.puzzle_decorator[0].to_json_dict()]
-            if request.puzzle_decorator is not None
-            else None,
-            extra_conditions=extra_conditions,
+        await self.create_signed_transaction(
+            CreateSignedTransaction(
+                additions=[
+                    Addition(
+                        request.amount,
+                        decode_puzzle_hash(
+                            ensure_valid_address(
+                                request.address, allowed_types={AddressType.XCH}, config=self.service.config
+                            )
+                        ),
+                        request.memos,
+                    )
+                ],
+                wallet_id=request.wallet_id,
+                fee=request.fee,
+                puzzle_decorator=request.puzzle_decorator,
+            ).json_serialize_for_transport(action_scope.config.tx_config, extra_conditions, ConditionValidTimes()),
+            hold_lock=False,
+            action_scope_override=action_scope,
         )
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
@@ -3362,6 +3364,9 @@ class WalletRpcApi:
                 request.fee,
                 coins=request.coin_set,
                 memos=[memos_0] + [output.memos if output.memos is not None else [] for output in additional_outputs],
+                puzzle_decorator_override=[dec.to_json_dict() for dec in request.puzzle_decorator]
+                if request.puzzle_decorator is not None
+                else None,
                 extra_conditions=(
                     *extra_conditions,
                     *request.asserted_coin_announcements,

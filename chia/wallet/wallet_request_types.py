@@ -1910,6 +1910,10 @@ class CreateSignedTransaction(TransactionEndpointRequest):
     morph_bytes: bytes | None = None
     coin_announcements: list[CSTCoinAnnouncement] = field(default_factory=list)
     puzzle_announcements: list[CSTPuzzleAnnouncement] = field(default_factory=list)
+    # Technically this value was meant to support many types here
+    # However, only one is supported right now and there are no plans to extend
+    # So, as a slight hack, we'll specify that only Clawback is supported
+    puzzle_decorator: list[ClawbackPuzzleDecoratorOverride] | None = None
 
     def __post_init__(self) -> None:
         if len(self.additions) < 1:
