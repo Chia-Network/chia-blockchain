@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
@@ -15,6 +14,8 @@ from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
     NFTAddURI,
     NFTAddURIResponse,
     NFTGetNFTs,
@@ -38,21 +39,22 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
 def test_nft_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
-    # set RPC Client
-    class NFTCreateRpcClient(TestWalletRpcClient):
-        async def create_new_nft_wallet(self, did_id: str, name: str | None = None) -> dict[str, Any]:
-            self.add_to_log("create_new_nft_wallet", (did_id, name))
-            return {"wallet_id": 4}
-
-    inst_rpc_client = NFTCreateRpcClient()
-    did_id = encode_puzzle_hash(get_bytes32(2), "did:chia:")
+    inst_rpc_client = TestWalletRpcClient()
+    did_id = "did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c"
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = ["wallet", "nft", "create", FINGERPRINT_ARG, "-ntest", "--did-id", did_id]
     # these are various things that should be in the output
     assert_list = [f"Successfully created an NFT wallet with id 4 on key {FINGERPRINT}"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "create_new_nft_wallet": [(did_id, "test")],
+        "create_new_wallet": [
+            (
+                CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, name="test", did_id=did_id, push=True),
+                DEFAULT_TX_CONFIG,
+                tuple(),
+                ConditionValidTimes(),
+            )
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

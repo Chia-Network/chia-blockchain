@@ -992,9 +992,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
         )
 
     # Test fall-through raise in create
-    mocker.patch.object(
-        test_rpc_client, "create_new_pool_wallet", create=True, side_effect=ValueError("Injected error")
-    )
+    mocker.patch.object(test_rpc_client, "create_new_wallet", create=True, side_effect=ValueError("Injected error"))
     with pytest.raises(CliRpcConnectionError, match="Error creating plot NFT: Injected error"):
         await create(
             wallet_info=WalletClientInfo(client=cast(WalletRpcClient, test_rpc_client), fingerprint=0, config=dict()),

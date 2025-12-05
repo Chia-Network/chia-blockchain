@@ -15,7 +15,15 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.wallet_request_types import NFTGetNFTs, NFTMintBulk, NFTMintMetadata, PushTransactions, SelectCoins
+from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
+    NFTGetNFTs,
+    NFTMintBulk,
+    NFTMintMetadata,
+    PushTransactions,
+    SelectCoins,
+)
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -263,9 +271,15 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
     hex_did_id = did_wallet_maker.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(env_0.node.config))
 
-    nft_wallet_maker = await env_0.rpc_client.create_new_nft_wallet(name="NFT WALLET 1", did_id=hmr_did_id)
+    create_wallet_res = await env_0.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, name="NFT WALLET 1", did_id=hmr_did_id, push=True),
+        wallet_environments.tx_config,
+    )
 
-    await env_1.rpc_client.create_new_nft_wallet(name="NFT WALLET 2", did_id=None)
+    await env_1.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, name="NFT WALLET 2", did_id=None, push=True),
+        wallet_environments.tx_config,
+    )
 
     await env_0.change_balances({"nft": {"init": True}})
     await env_1.change_balances({"nft": {"init": True}})
@@ -316,7 +330,7 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
     for i in range(0, n, chunk):
         resp = await env_0.rpc_client.nft_mint_bulk(
             NFTMintBulk(
-                wallet_id=nft_wallet_maker["wallet_id"],
+                wallet_id=create_wallet_res.wallet_id,
                 metadata_list=[NFTMintMetadata.from_json_dict(metadata) for metadata in metadata_list[i : i + chunk]],
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=uint16.construct_optional(royalty_percentage),

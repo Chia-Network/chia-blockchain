@@ -34,7 +34,14 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_request_types import DIDFindLostDID, DIDGetCurrentCoinInfo, DIDGetInfo
+from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
+    DIDFindLostDID,
+    DIDGetCurrentCoinInfo,
+    DIDGetInfo,
+    DIDType,
+)
 from chia.wallet.wallet_rpc_api import WalletRpcApi
 
 
@@ -284,11 +291,14 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
     backup_data = did_wallet_1.create_backup()
 
     # Wallet2 recovers DIDWallet2 to a new set of keys
-    await env_2.rpc_client.create_new_did_wallet(
-        uint64(1),
-        DEFAULT_TX_CONFIG,
-        type="recovery",
-        backup_data=backup_data,
+    await env_2.rpc_client.create_new_wallet(
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.DID_WALLET,
+            did_type=DIDType.RECOVERY,
+            backup_data=backup_data,
+            push=True,
+        ),
+        wallet_environments.tx_config,
     )
     did_wallet_2 = env_2.wallet_state_manager.get_wallet(id=uint32(2), required_type=DIDWallet)
     current_coin_info_response = await env_0.rpc_client.did_get_current_coin_info(
