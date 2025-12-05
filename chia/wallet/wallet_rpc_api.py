@@ -14,7 +14,6 @@ from chia_rs.sized_ints import uint16, uint32, uint64
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.pools.pool_wallet import PoolWallet
@@ -3509,20 +3508,10 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet = await self.service.wallet_state_manager.get_dl_wallet(create_if_not_found=True)
+        await (await self.service.wallet_state_manager.get_dl_wallet(create_if_not_found=True)).track_new_launcher_id(
+            request.launcher_id
+        )
 
-        peer_list = self.service.get_full_node_peers_in_order()
-        peer_length = len(peer_list)
-        for i, peer in enumerate(peer_list):
-            try:
-                await dl_wallet.track_new_launcher_id(
-                    request.launcher_id,
-                    peer,
-                )
-            except LauncherCoinNotFoundError as e:
-                if i == peer_length - 1:
-                    raise e  # raise the error if we've tried all peers
-                continue  # try some other peers, maybe someone has it
         return Empty()
 
     @marshal
