@@ -12,7 +12,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import make_spend
-from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
@@ -111,6 +110,9 @@ class Wallet:
 
     def id(self) -> uint32:
         return self.wallet_id
+
+    def convert_secret_key_to_synthetic(self, secret_key: PrivateKey) -> PrivateKey:
+        return calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
@@ -360,22 +362,6 @@ class Wallet:
 
         self.log.debug(f"Spends is {spends}")
         return spends
-
-    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> tuple[G1Element, G2Element]:
-        # CHIP-0002 message signing as documented at:
-        # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
-        private = await self.wallet_state_manager.get_private_key(puzzle_hash)
-        synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-        synthetic_pk = synthetic_secret_key.get_g1()
-        if mode == SigningMode.CHIP_0002_HEX_INPUT:
-            hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
-        elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
-            hex_message = bytes(message, "utf-8")
-        elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
-            hex_message = bytes.fromhex(message)
-        else:
-            hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
-        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
 
     async def generate_signed_transaction(
         self,

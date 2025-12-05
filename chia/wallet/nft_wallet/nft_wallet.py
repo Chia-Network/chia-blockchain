@@ -14,7 +14,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.util.hash import std_hash
 from chia.wallet.conditions import (
@@ -38,8 +37,6 @@ from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
     puzzle_for_pk,
 )
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, create_singleton_puzzle
@@ -497,23 +494,11 @@ class NFTWallet:
         else:
             return puzzle_info
 
-    async def sign_message(self, message: str, nft: NFTCoinInfo, mode: SigningMode) -> tuple[G1Element, G2Element]:
+    async def current_p2_puzzle_hash(self, nft: NFTCoinInfo) -> bytes32:
         uncurried_nft = UncurriedNFT.uncurry(*nft.full_puzzle.uncurry())
         if uncurried_nft is not None:
             p2_puzzle = uncurried_nft.p2_puzzle
-            puzzle_hash = p2_puzzle.get_tree_hash()
-            private = await self.wallet_state_manager.get_private_key(puzzle_hash)
-            synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-            synthetic_pk = synthetic_secret_key.get_g1()
-            if mode == SigningMode.CHIP_0002_HEX_INPUT:
-                hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
-            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
-                hex_message = bytes(message, "utf-8")
-            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
-                hex_message = bytes.fromhex(message)
-            else:
-                hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
-            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
+            return p2_puzzle.get_tree_hash()
         else:
             raise ValueError("Invalid NFT puzzle.")
 

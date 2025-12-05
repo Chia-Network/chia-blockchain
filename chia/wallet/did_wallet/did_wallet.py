@@ -16,7 +16,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,
@@ -30,8 +29,6 @@ from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_i
 from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
     puzzle_for_pk,
     puzzle_hash_for_pk,
 )
@@ -898,27 +895,15 @@ class DIDWallet:
 
         return parent_info
 
-    async def sign_message(self, message: str, mode: SigningMode) -> tuple[G1Element, G2Element]:
+    async def current_p2_puzzle_hash(self) -> bytes32:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
         if puzzle_args is not None:
             p2_puzzle, _, _, _, _ = puzzle_args
-            puzzle_hash = p2_puzzle.get_tree_hash()
-            private = await self.wallet_state_manager.get_private_key(puzzle_hash)
-            synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-            synthetic_pk = synthetic_secret_key.get_g1()
-            if mode == SigningMode.CHIP_0002_HEX_INPUT:
-                hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
-            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
-                hex_message = bytes(message, "utf-8")
-            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
-                hex_message = bytes.fromhex(message)
-            else:
-                hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
-            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
+            return p2_puzzle.get_tree_hash()
         else:
-            raise ValueError("Invalid inner DID puzzle.")
+            raise ValueError("Invalid DID inner puzzle.")
 
     async def generate_new_decentralised_id(
         self,
