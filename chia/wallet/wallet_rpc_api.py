@@ -2007,52 +2007,34 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
     ) -> CATSpendResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
-
-        amounts: list[uint64] = []
-        puzzle_hashes: list[bytes32] = []
-        memos: list[list[bytes]] = []
-        if request.additions is not None:
-            for addition in request.additions:
-                if addition.amount > self.service.constants.MAX_COIN_AMOUNT:
-                    raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
-                amounts.append(addition.amount)
-                puzzle_hashes.append(addition.puzzle_hash)
-                if addition.memos is not None:
-                    memos.append([mem.encode("utf-8") for mem in addition.memos])
-        else:
-            # Our __post_init__ guards against these not being None
-            amounts.append(request.amount)  # type: ignore[arg-type]
-            puzzle_hashes.append(decode_puzzle_hash(request.inner_address))  # type: ignore[arg-type]
-            if request.memos is not None:
-                memos.append([mem.encode("utf-8") for mem in request.memos])
-        coins: set[Coin] | None = None
-        if request.coins is not None and len(request.coins) > 0:
-            coins = set(request.coins)
-
-        if hold_lock:
-            async with self.service.wallet_state_manager.lock:
-                await wallet.generate_signed_transaction(
-                    amounts,
-                    puzzle_hashes,
-                    action_scope,
-                    request.fee,
-                    cat_discrepancy=request.cat_discrepancy,
-                    coins=coins,
-                    memos=memos if memos else None,
-                    extra_conditions=extra_conditions,
-                )
-        else:
-            await wallet.generate_signed_transaction(
-                amounts,
-                puzzle_hashes,
-                action_scope,
-                request.fee,
-                cat_discrepancy=request.cat_discrepancy,
-                coins=coins,
-                memos=memos if memos else None,
-                extra_conditions=extra_conditions,
-            )
+        await self.create_signed_transaction(
+            CreateSignedTransaction(
+                additions=request.additions
+                if request.additions is not None
+                else [
+                    Addition(
+                        # Our __post_init__ guards against these not being None
+                        request.amount,  # type: ignore[arg-type]
+                        decode_puzzle_hash(
+                            ensure_valid_address(
+                                request.inner_address,  # type: ignore[arg-type]
+                                allowed_types={AddressType.XCH},
+                                config=self.service.config,
+                            )
+                        ),
+                        request.memos,
+                    )
+                ],
+                wallet_id=request.wallet_id,
+                fee=request.fee,
+                coins=request.coins,
+                extra_delta=request.extra_delta,
+                tail_reveal=request.tail_reveal,
+                tail_solution=request.tail_solution,
+            ).json_serialize_for_transport(action_scope.config.tx_config, extra_conditions, ConditionValidTimes()),
+            hold_lock=hold_lock,
+            action_scope_override=action_scope,
+        )
 
         # tx_endpoint will fill in these default values
         return CATSpendResponse([], [], transaction=REPLACEABLE_TRANSACTION_RECORD, transaction_id=bytes32.zeros)
@@ -3367,6 +3349,7 @@ class WalletRpcApi:
                 puzzle_decorator_override=[dec.to_json_dict() for dec in request.puzzle_decorator]
                 if request.puzzle_decorator is not None
                 else None,
+                cat_discrepancy=request.cat_discrepancy,
                 extra_conditions=(
                     *extra_conditions,
                     *request.asserted_coin_announcements,
