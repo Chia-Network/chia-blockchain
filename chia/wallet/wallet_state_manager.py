@@ -10,7 +10,7 @@ import traceback
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, CoinRecord, CoinSpend, CoinState, ConsensusConstants, G1Element, G2Element, PrivateKey
@@ -2498,8 +2498,26 @@ class WalletStateManager:
         await result.commit(self)
         self.state_changed("wallet_created")
 
+    async def unconfirmed_additions_or_removals_for_wallet(
+        self, *, wallet_id: uint32, get: Literal["additions", "removals"]
+    ) -> set[Coin]:
+        unconfirmed_tx: list[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        return_set: set[Coin] = set()
+        for tx in unconfirmed_tx:
+            hint_dict = tx.hint_dict()
+            checked_set = tx.removals if get == "removals" else tx.additions
+            for coin in checked_set:
+                if await self.does_coin_belong_to_wallet(coin, wallet_id, hint_dict):
+                    return_set.add(coin)
+
+        return return_set
+
     async def get_spendable_coins_for_wallet(
-        self, wallet_id: int, records: set[WalletCoinRecord] | None = None, in_one_block: bool = False
+        self,
+        wallet_id: int,
+        records: set[WalletCoinRecord] | None = None,
+        pending_removals: set[bytes32] | None = None,
+        in_one_block: bool = False,
     ) -> set[WalletCoinRecord]:
         wallet = self.wallets[uint32(wallet_id)]
         wallet_type = wallet.type()
@@ -2510,22 +2528,20 @@ class WalletStateManager:
                 records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
         # Coins that are currently part of a transaction
-        unconfirmed_tx: list[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        removal_dict: dict[bytes32, Coin] = {}
-        for tx in unconfirmed_tx:
-            for coin in tx.removals:
-                # TODO, "if" might not be necessary once unconfirmed tx doesn't contain coins for other wallets
-                if await self.does_coin_belong_to_wallet(coin, wallet_id, tx.hint_dict()):
-                    removal_dict[coin.name()] = coin
+        if pending_removals is None:
+            pending_removals = {
+                coin.name()
+                for coin in await self.unconfirmed_additions_or_removals_for_wallet(
+                    wallet_id=uint32(wallet_id), get="removals"
+                )
+            }
 
         # Coins that are part of the trade
         offer_locked_coins: dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
 
         filtered = set()
         for record in records:
-            if record.coin.name() in offer_locked_coins:
-                continue
-            if record.coin.name() in removal_dict:
+            if record.coin.name() in {*offer_locked_coins.keys(), *pending_removals}:
                 continue
             if hasattr(wallet, "is_coin_spendable") and not await wallet.is_coin_spendable(record):
                 continue

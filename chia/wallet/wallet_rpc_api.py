@@ -1674,50 +1674,42 @@ class WalletRpcApi:
 
         state_mgr = self.service.wallet_state_manager
         async with state_mgr.lock:
-            all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(request.wallet_id)
-            spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(request.wallet_id, all_coin_records))
-
-            # Now we get the unconfirmed transactions and manually derive the additions and removals.
-            unconfirmed_transactions: list[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
-                request.wallet_id
+            # Removals
+            unconfirmed_removals = await state_mgr.unconfirmed_additions_or_removals_for_wallet(
+                wallet_id=request.wallet_id, get="removals"
             )
-            unconfirmed_removal_ids: dict[bytes32, uint64] = {
-                coin.name(): transaction.created_at_time
-                for transaction in unconfirmed_transactions
-                for coin in transaction.removals
-            }
-            unconfirmed_additions: list[Coin] = [
-                coin
-                for transaction in unconfirmed_transactions
-                for coin in transaction.additions
-                if await state_mgr.does_coin_belong_to_wallet(coin, request.wallet_id)
-            ]
-            valid_spendable_cr: list[CoinRecord] = []
-            unconfirmed_removals: list[CoinRecord] = []
-            for coin_record in all_coin_records:
-                if coin_record.name() in unconfirmed_removal_ids:
-                    unconfirmed_removals.append(coin_record.to_coin_record(unconfirmed_removal_ids[coin_record.name()]))
+            unconfirmed_removal_ids = {coin.name() for coin in unconfirmed_removals}
+            removal_records: list[CoinRecord] = []
+            for coin_record in (
+                await state_mgr.coin_store.get_coin_records(
+                    coin_id_filter=HashFilter.include(list(unconfirmed_removal_ids))
+                )
+            ).records:
+                removal_records.append(await state_mgr.get_coin_record_by_wallet_record(coin_record))
 
-            cs_config = request.autofill(constants=self.service.wallet_state_manager.constants)
-            for coin_record in spendable_coins:  # remove all the unconfirmed coins, exclude coins and dust.
-                if coin_record.name() in unconfirmed_removal_ids:
-                    continue
-                if coin_record.coin.name() in cs_config.excluded_coin_ids:
-                    continue
-                if (coin_record.coin.amount < cs_config.min_coin_amount) or (
-                    coin_record.coin.amount > cs_config.max_coin_amount
-                ):
-                    continue
-                if coin_record.coin.amount in cs_config.excluded_coin_amounts:
-                    continue
-                c_r = await state_mgr.get_coin_record_by_wallet_record(coin_record)
-                assert c_r is not None and c_r.coin == coin_record.coin  # this should never happen
-                valid_spendable_cr.append(c_r)
+            # Additions
+            unconfirmed_additions = await state_mgr.unconfirmed_additions_or_removals_for_wallet(
+                wallet_id=request.wallet_id, get="additions"
+            )
+
+            # Spendable coins
+            unfiltered_spendable_coin_records = await state_mgr.get_spendable_coins_for_wallet(
+                request.wallet_id, pending_removals=unconfirmed_removal_ids
+            )
+            filtered_spendable_coins = request.autofill(
+                constants=self.service.wallet_state_manager.constants
+            ).filter_coins({cr.coin for cr in unfiltered_spendable_coin_records})
+            filtered_spendable_coin_records = list(
+                cr for cr in unfiltered_spendable_coin_records if cr.coin in filtered_spendable_coins
+            )
+            valid_spendable_cr: list[CoinRecord] = []
+            for coin_record in filtered_spendable_coin_records:
+                valid_spendable_cr.append(await state_mgr.get_coin_record_by_wallet_record(coin_record))
 
         return GetSpendableCoinsResponse(
             confirmed_records=valid_spendable_cr,
-            unconfirmed_removals=unconfirmed_removals,
-            unconfirmed_additions=unconfirmed_additions,
+            unconfirmed_removals=removal_records,
+            unconfirmed_additions=list(unconfirmed_additions),
         )
 
     @marshal
