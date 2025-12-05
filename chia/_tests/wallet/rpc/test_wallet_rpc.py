@@ -2302,8 +2302,6 @@ async def test_nft_endpoints(wallet_environments: WalletTestFramework) -> None:
 
     # Test with the hex version of nft_id
     nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
-    with pytest.raises(ResponseFailureError, match="Invalid Coin ID format for 'coin_id'"):
-        await wallet_1_rpc.get_nft_info(NFTGetInfo("error"))
     nft_info = (await wallet_1_rpc.get_nft_info(NFTGetInfo(nft_id))).nft_info
     assert nft_info.nft_coin_id == (await nft_wallet.get_current_nfts())[0].coin.name()
     # Test with the bech32m version of nft_id

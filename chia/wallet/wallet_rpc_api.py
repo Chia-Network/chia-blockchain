@@ -2719,7 +2719,7 @@ class WalletRpcApi:
 
     @marshal
     async def nft_get_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
-        if request.coin_id.startswith(AddressType.DID.hrp(self.service.config)):
+        if request.coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(request.coin_id)
         else:
             coin_id = bytes32.from_hexstr(request.coin_id)
