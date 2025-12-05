@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from chia_rs.sized_ints import uint32, uint64
-
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -37,6 +35,8 @@ from chia.wallet.wallet_request_types import (
     CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CRCATApprovePending,
+    CRCATApprovePendingResponse,
     CreateNewDL,
     CreateNewDLResponse,
     CreateNewWallet,
@@ -949,25 +949,17 @@ class WalletRpcClient(RpcClient):
 
     async def crcat_approve_pending(
         self,
-        wallet_id: uint32,
-        min_amount_to_claim: uint64,
+        request: CRCATApprovePending,
         tx_config: TXConfig,
-        fee: uint64 = uint64(0),
-        push: bool = True,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> list[TransactionRecord]:
-        response = await self.fetch(
-            "crcat_approve_pending",
-            {
-                "wallet_id": wallet_id,
-                "min_amount_to_claim": min_amount_to_claim,
-                "fee": fee,
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+    ) -> CRCATApprovePendingResponse:
+        return CRCATApprovePendingResponse.from_json_dict(
+            await self.fetch(
+                "crcat_approve_pending",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
         )
-        return [TransactionRecord.from_json_dict(tx) for tx in response["transactions"]]
 
     async def gather_signing_info(
         self,

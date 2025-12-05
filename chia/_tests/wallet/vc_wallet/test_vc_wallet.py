@@ -32,6 +32,7 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
     Addition,
     CATSpend,
+    CRCATApprovePending,
     CreateSignedTransaction,
     GetTransactions,
     GetWallets,
@@ -509,10 +510,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Claim the pending approval to our wallet
     await client_1.crcat_approve_pending(
-        env_1.dealias_wallet_id("crcat"),
-        uint64(90),
+        CRCATApprovePending(
+            wallet_id=env_1.dealias_wallet_id("crcat"), min_amount_to_claim=uint64(90), fee=uint64(90), push=True
+        ),
         wallet_environments.tx_config,
-        fee=uint64(90),
     )
     await wallet_environments.process_pending_states(
         [

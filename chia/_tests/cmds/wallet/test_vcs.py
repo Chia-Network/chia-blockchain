@@ -9,13 +9,14 @@ from chia_rs.sized_ints import uint32, uint64
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.vc_wallet.vc_drivers import VCLineageProof, VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_request_types import (
+    CRCATApprovePending,
+    CRCATApprovePendingResponse,
     GetWallets,
     VCAddProofs,
     VCGet,
@@ -335,25 +336,23 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: tuple[TestRpcC
     class VcsApproveRCATSRpcClient(TestWalletRpcClient):
         async def crcat_approve_pending(
             self,
-            wallet_id: uint32,
-            min_amount_to_claim: uint64,
+            request: CRCATApprovePending,
             tx_config: TXConfig,
-            fee: uint64 = uint64(0),
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> list[TransactionRecord]:
+        ) -> CRCATApprovePendingResponse:
             self.add_to_log(
                 "crcat_approve_pending",
                 (
-                    wallet_id,
-                    min_amount_to_claim,
+                    request.wallet_id,
+                    request.min_amount_to_claim,
                     tx_config,
-                    fee,
-                    push,
+                    request.fee,
+                    request.push,
                     timelock_info,
                 ),
             )
-            return [STD_TX]
+            return CRCATApprovePendingResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = VcsApproveRCATSRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

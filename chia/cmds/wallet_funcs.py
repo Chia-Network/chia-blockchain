@@ -53,6 +53,7 @@ from chia.wallet.wallet_request_types import (
     CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
+    CRCATApprovePending,
     CreateNewWallet,
     CreateNewWalletType,
     CreateOfferForIDs,
@@ -1937,18 +1938,22 @@ async def approve_r_cats(
     async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fp, config):
         if wallet_client is None:
             return
-        txs = await wallet_client.crcat_approve_pending(
-            wallet_id=wallet_id,
-            min_amount_to_claim=min_amount_to_claim.convert_amount(units["cat"]),
-            fee=fee,
-            tx_config=CMDTXConfigLoader(
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                reuse_puzhash=reuse,
-            ).to_tx_config(units["cat"], config, fp),
-            push=push,
-            timelock_info=condition_valid_times,
-        )
+        txs = (
+            await wallet_client.crcat_approve_pending(
+                CRCATApprovePending(
+                    wallet_id=wallet_id,
+                    min_amount_to_claim=min_amount_to_claim.convert_amount(units["cat"]),
+                    fee=fee,
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
+                    min_coin_amount=min_coin_amount,
+                    max_coin_amount=max_coin_amount,
+                    reuse_puzhash=reuse,
+                ).to_tx_config(units["cat"], config, fp),
+                timelock_info=condition_valid_times,
+            )
+        ).transactions
 
         if push:
             print("VC successfully approved R-CATs!")
