@@ -18,7 +18,7 @@ jobs:
         with:
           mode: exactly
           count: 1
-          labels: "Added, Changed, Fixed"
+          labels: "Added, Changed, Fixed, dependencies"
           exit_type: success
       - run: echo SUCCESS
         if: steps.check-labels.outputs.status == 'success'

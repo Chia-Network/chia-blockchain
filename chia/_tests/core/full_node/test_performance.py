@@ -36,7 +36,6 @@ class TestPerformance:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_ph,
-            pool_reward_puzzle_hash=wallet_ph,
         )
         for block in blocks:
             await full_node_1.full_node.add_block(block)

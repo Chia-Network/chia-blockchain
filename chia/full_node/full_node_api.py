@@ -13,6 +13,7 @@ import anyio
 from chia_rs import (
     AugSchemeMPL,
     BlockRecord,
+    CoinRecord,
     CoinState,
     EndOfSubSlotBundle,
     FoliageBlockData,
@@ -24,7 +25,6 @@ from chia_rs import (
     PoolTarget,
     RespondToPhUpdates,
     RewardChainBlockUnfinished,
-    SpendBundle,
     SubEpochSummary,
     UnfinishedBlock,
     additions_and_removals,
@@ -67,7 +67,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -310,7 +309,7 @@ class FullNodeAPI:
 
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         try:
-            await self.full_node.transaction_queue.put(
+            self.full_node.transaction_queue.put(
                 TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test, peers_with_tx),
                 peer.peer_node_id,
             )
@@ -813,11 +812,11 @@ class FullNodeAPI:
     ) -> Message | None:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: list[SpendBundle] = self.full_node.mempool_manager.get_items_not_in_filter(received_filter)
+        items = self.full_node.mempool_manager.get_items_not_in_filter(received_filter, limit=100)
 
         for item in items:
-            transaction = full_node_protocol.RespondTransaction(item)
-            msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
+            transaction = full_node_protocol.NewTransaction(item.name, item.cost, item.fee)
+            msg = make_msg(ProtocolMessageTypes.new_transaction, transaction)
             await peer.send_message(msg)
         return None
 
@@ -1434,7 +1433,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
         queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
-        await self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
+        self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
         try:
             with anyio.fail_after(delay=45):
                 status, error = await queue_entry.done.wait()

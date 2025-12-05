@@ -99,6 +99,7 @@ from chia.types.blockchain_format.proof_of_space import (
     generate_taproot_sk,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -385,7 +386,7 @@ class BlockTools:
         prev_tx_height: uint32,
         dummy_block_references: bool,
         include_transactions: bool,
-        transaction_data: SpendBundle | None,
+        block_generator: NewBlockGenerator | None,
         block_refs: list[uint32],
     ) -> NewBlockGenerator | None:
         if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
@@ -407,26 +408,12 @@ class BlockTools:
         else:
             dummy_refs = []
 
-        if transaction_data is not None:
-            # this means the caller passed in transaction_data
+        if block_generator is not None:
+            # this means the caller passed in block_generator
             # to be included in the block.
-            additions = compute_additions_unchecked(transaction_data)
-            removals = transaction_data.removals()
-            if curr.height >= self.constants.HARD_FORK_HEIGHT:
-                program = simple_solution_generator_backrefs(transaction_data).program
-            else:
-                program = simple_solution_generator(transaction_data).program
-            block_refs = []
-            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
-            return NewBlockGenerator(
-                program,
-                [],
-                block_refs,
-                transaction_data.aggregated_signature,
-                additions,
-                removals,
-                cost,
-            )
+            assert block_refs == [], "block references cannot be combined with block_generator"
+            assert not dummy_block_references, "(dummy) block references cannot be combined with block_generator"
+            return block_generator
 
         if include_transactions:
             # if the caller did not pass in specific
@@ -829,6 +816,12 @@ class BlockTools:
         if num_blocks == 0:
             return block_list
 
+        if block_list[-1].height >= constants.HARD_FORK2_HEIGHT and pool_reward_puzzle_hash is not None:
+            raise ValueError(
+                "block height is past hard fork 2 activation. v2 plots don't "
+                "support pool puzzle hashes, only contract hashes"
+            )
+
         blocks: dict[bytes32, BlockRecord]
         if block_list[-1].header_hash == self._block_cache_header:
             height_to_hash = self._block_cache_height_to_hash
@@ -860,6 +853,26 @@ class BlockTools:
         sub_slots_finished = 0
         # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
+
+        block_generator: NewBlockGenerator | None = None
+        if transaction_data is not None:
+            additions = compute_additions_unchecked(transaction_data)
+            removals = transaction_data.removals()
+            if curr.height >= self.constants.HARD_FORK_HEIGHT:
+                program = simple_solution_generator_backrefs(transaction_data).program
+            else:
+                program = simple_solution_generator(transaction_data).program
+            block_refs = []
+            cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
+            block_generator = NewBlockGenerator(
+                program,
+                [],
+                block_refs,
+                transaction_data.aggregated_signature,
+                additions,
+                removals,
+                cost,
+            )
 
         # Start at the last block in block list
         # Get the challenge for that slot
@@ -963,7 +976,7 @@ class BlockTools:
                             available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
-                            transaction_data=transaction_data,
+                            block_generator=block_generator,
                             include_transactions=include_transactions,
                             block_refs=block_refs,
                         )
@@ -1001,7 +1014,7 @@ class BlockTools:
                             overflow_rc_challenge=None,
                         )
                         if block_record.is_transaction_block:
-                            transaction_data = None
+                            block_generator = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1269,7 +1282,7 @@ class BlockTools:
                             available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
-                            transaction_data=transaction_data,
+                            block_generator=block_generator,
                             include_transactions=include_transactions,
                             block_refs=block_refs,
                         )
@@ -1307,7 +1320,7 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
                         if block_record.is_transaction_block:
-                            transaction_data = None
+                            block_generator = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1323,7 +1336,7 @@ class BlockTools:
                             f"refs: {len(full_block.transactions_generator_ref_list):3} "
                             f"iters: {block_record.total_iters} "
                             f"[{'TransactionBlock ' if block_record.is_transaction_block else ''}"
-                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}]"
+                            f"{'V1 ' if proof_of_space.param().size_v1 else 'V2 '}"
                             "Overflow]"
                         )
                         last_timestamp = new_timestamp
@@ -1570,6 +1583,9 @@ class BlockTools:
         rng = random.Random()
         rng.seed(seed)
 
+        sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
+        phase_out_epochs = num_phase_out_epochs(constants)
+
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1577,8 +1593,6 @@ class BlockTools:
             prefix_bits = calculate_prefix_bits(constants, height, plot_info.prover.get_param())
             if not passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 continue
-
-            phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
 
             if plot_info.prover.get_version() == PlotVersion.V2:
                 # v2 plots aren't valid until after the hard fork
@@ -1614,7 +1628,7 @@ class BlockTools:
                     difficulty,
                     signage_point,
                 )
-                if required_iters >= calculate_sp_interval_iters(constants, sub_slot_iters):
+                if required_iters >= sp_interval_iters:
                     continue
 
                 proof = b""

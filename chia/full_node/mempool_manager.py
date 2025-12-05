@@ -13,9 +13,11 @@ from chia_rs import (
     ELIGIBLE_FOR_FF,
     MEMPOOL_MODE,
     BLSCache,
+    CoinRecord,
     ConsensusConstants,
     SpendBundle,
     SpendBundleConditions,
+    check_time_locks,
     get_flags_for_height_and_constants,
     supports_fast_forward,
     validate_clvm_and_signature,
@@ -25,7 +27,6 @@ from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
-from chia.consensus.check_time_locks import check_time_locks
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -33,7 +34,6 @@ from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemov
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.clvm_cost import CLVMCost
-from chia.types.coin_record import CoinRecord
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -471,6 +471,12 @@ class MempoolManager:
         finally:
             self._worker_queue_size -= 1
 
+        if sbc.num_atoms > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
+            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many atoms")
+
+        if sbc.num_pairs > sbc.cost * 60_000_000 / self.constants.MAX_BLOCK_COST_CLVM:
+            raise ValidationError(Err.INVALID_SPEND_BUNDLE, "too many pairs")
+
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
 
@@ -725,12 +731,15 @@ class MempoolManager:
         # point-of-view of the next block to be farmed. Therefore we pass in the
         # current peak's height and timestamp
         assert self.peak.timestamp is not None
-        tl_error: Err | None = check_time_locks(
+        tl_error_rust: int | None = check_time_locks(
             removal_record_dict,
             conds,
             self.peak.height,
             self.peak.timestamp,
         )
+        tl_error: Err | None = None
+        if tl_error_rust is not None:
+            tl_error = Err(tl_error_rust)
 
         timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 
@@ -991,8 +1000,8 @@ class MempoolManager:
         log.log(logging.WARNING if duration > 1 else logging.INFO, f"new_peak() took {duration:0.2f} seconds")
         return NewPeakInfo(txs_added, mempool_item_removals)
 
-    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[SpendBundle]:
-        items: list[SpendBundle] = []
+    def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> list[MempoolItem]:
+        items: list[MempoolItem] = []
 
         assert limit > 0
 
@@ -1002,7 +1011,7 @@ class MempoolManager:
                 return items
             if mempool_filter.Match(bytearray(item.spend_bundle_name)):
                 continue
-            items.append(item.to_spend_bundle())
+            items.append(item)
 
         return items
 

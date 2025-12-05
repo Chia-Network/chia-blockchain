@@ -45,6 +45,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_request_types import (
+    CancelOffer,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
     CATGetName,
@@ -64,8 +65,10 @@ from chia.wallet.wallet_request_types import (
     DIDUpdateMetadata,
     ExtendDerivationIndex,
     FungibleAsset,
+    GetAllOffers,
     GetNextAddress,
     GetNotifications,
+    GetOffer,
     GetTransaction,
     GetTransactions,
     GetWalletBalance,
@@ -258,8 +261,8 @@ async def get_transactions(
             await wallet_client.get_transactions(
                 GetTransactions(
                     uint32(wallet_id),
-                    start=uint16(offset),
-                    end=uint16(offset + limit),
+                    start=uint32(offset),
+                    end=uint32(offset + limit),
                     sort_key=sort_key.name,
                     reverse=reverse,
                     type_filter=type_filter,
@@ -768,16 +771,20 @@ async def get_offers(
 
             # Traverse offers page by page
             while True:
-                new_records: list[TradeRecord] = await wallet_client.get_all_offers(
-                    start,
-                    end,
-                    sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
-                    reverse=reverse,
-                    file_contents=file_contents,
-                    exclude_my_offers=exclude_my_offers,
-                    exclude_taken_offers=exclude_taken_offers,
-                    include_completed=include_completed,
-                )
+                new_records: list[TradeRecord] = (
+                    await wallet_client.get_all_offers(
+                        GetAllOffers(
+                            start=uint16(start),
+                            end=uint16(end),
+                            sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
+                            reverse=reverse,
+                            file_contents=file_contents,
+                            exclude_my_offers=exclude_my_offers,
+                            exclude_taken_offers=exclude_taken_offers,
+                            include_completed=include_completed,
+                        )
+                    )
+                ).trade_records
                 records.extend(new_records)
 
                 # If fewer records were returned than requested, we're done
@@ -787,7 +794,7 @@ async def get_offers(
                 start = end
                 end += batch_size
         else:
-            records = [await wallet_client.get_offer(offer_id, file_contents)]
+            records = [(await wallet_client.get_offer(GetOffer(offer_id, file_contents))).trade_record]
             if filepath is not None:
                 with open(pathlib.Path(filepath), "w") as file:
                     file.write(Offer.from_bytes(records[0].offer).to_bech32())
@@ -919,16 +926,13 @@ async def cancel_offer(
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        trade_record = await wallet_client.get_offer(offer_id, file_contents=True)
+        trade_record = (await wallet_client.get_offer(GetOffer(offer_id, file_contents=True))).trade_record
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
         cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
         res = await wallet_client.cancel_offer(
-            offer_id,
-            CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-            secure=secure,
-            fee=fee,
-            push=push,
+            CancelOffer(trade_id=offer_id, secure=secure, fee=fee, push=push),
+            tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             timelock_info=condition_valid_times,
         )
         if push or not secure:

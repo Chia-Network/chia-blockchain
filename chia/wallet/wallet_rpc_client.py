@@ -7,11 +7,8 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
-from chia.types.blockchain_format.coin import Coin
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.tx_config import TXConfig
@@ -21,7 +18,9 @@ from chia.wallet.wallet_request_types import (
     AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
+    CancelOffer,
     CancelOfferResponse,
+    CancelOffers,
     CancelOffersResponse,
     CATAssetIDToName,
     CATAssetIDToNameResponse,
@@ -43,6 +42,7 @@ from chia.wallet.wallet_request_types import (
     CreateNewDLResponse,
     CreateOfferForIDs,
     CreateOfferForIDsResponse,
+    CreateSignedTransaction,
     CreateSignedTransactionsResponse,
     DeleteKey,
     DeleteNotifications,
@@ -97,6 +97,8 @@ from chia.wallet.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetAllOffers,
+    GetAllOffersResponse,
     GetCATListResponse,
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
@@ -107,6 +109,8 @@ from chia.wallet.wallet_request_types import (
     GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffer,
+    GetOfferResponse,
     GetOffersCountResponse,
     GetOfferSummary,
     GetOfferSummaryResponse,
@@ -179,6 +183,7 @@ from chia.wallet.wallet_request_types import (
     SendNotification,
     SendNotificationResponse,
     SendTransaction,
+    SendTransactionMulti,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -335,33 +340,17 @@ class WalletRpcClient(RpcClient):
 
     async def send_transaction_multi(
         self,
-        wallet_id: int,
-        additions: list[dict[str, Any]],
+        request: SendTransactionMulti,
         tx_config: TXConfig,
-        coins: list[Coin] | None = None,
-        fee: uint64 = uint64(0),
-        push: bool = True,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SendTransactionMultiResponse:
-        # Converts bytes to hex for puzzle hashes
-        additions_hex = []
-        for ad in additions:
-            additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
-            if "memos" in ad:
-                additions_hex[-1]["memos"] = ad["memos"]
-        request = {
-            "wallet_id": wallet_id,
-            "additions": additions_hex,
-            "fee": fee,
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if coins is not None and len(coins) > 0:
-            coins_json = [c.to_json_dict() for c in coins]
-            request["coins"] = coins_json
-        response = await self.fetch("send_transaction_multi", request)
-        return json_deserialize_with_clvm_streamable(response, SendTransactionMultiResponse)
+        return SendTransactionMultiResponse.from_json_dict(
+            await self.fetch(
+                "send_transaction_multi",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def spend_clawback_coins(
         self,
@@ -392,40 +381,17 @@ class WalletRpcClient(RpcClient):
 
     async def create_signed_transactions(
         self,
-        additions: list[dict[str, Any]],
+        request: CreateSignedTransaction,
         tx_config: TXConfig,
-        coins: list[Coin] | None = None,
-        fee: uint64 = uint64(0),
-        wallet_id: int | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = False,
     ) -> CreateSignedTransactionsResponse:
-        # Converts bytes to hex for puzzle hashes
-        additions_hex = []
-        for ad in additions:
-            additions_hex.append({"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()})
-            if "memos" in ad:
-                additions_hex[-1]["memos"] = ad["memos"]
-
-        request = {
-            "additions": additions_hex,
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-
-        if coins is not None and len(coins) > 0:
-            coins_json = [c.to_json_dict() for c in coins]
-            request["coins"] = coins_json
-
-        if wallet_id:
-            request["wallet_id"] = wallet_id
-
-        response = await self.fetch("create_signed_transaction", request)
-        return json_deserialize_with_clvm_streamable(response, CreateSignedTransactionsResponse)
+        return CreateSignedTransactionsResponse.from_json_dict(
+            await self.fetch(
+                "create_signed_transaction",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
 
     async def select_coins(self, request: SelectCoins) -> SelectCoinsResponse:
         return SelectCoinsResponse.from_json_dict(await self.fetch("select_coins", request.to_json_dict()))
@@ -702,102 +668,40 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
-        res = await self.fetch("get_offer", {"trade_id": trade_id.hex(), "file_contents": file_contents})
-        offer_str = bytes(Offer.from_bech32(res["offer"])).hex() if file_contents else ""
-        return TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
+    async def get_offer(self, request: GetOffer) -> GetOfferResponse:
+        return GetOfferResponse.from_json_dict(await self.fetch("get_offer", request.to_json_dict()))
 
-    async def get_all_offers(
-        self,
-        start: int = 0,
-        end: int = 50,
-        sort_key: str | None = None,
-        reverse: bool = False,
-        file_contents: bool = False,
-        exclude_my_offers: bool = False,
-        exclude_taken_offers: bool = False,
-        include_completed: bool = False,
-    ) -> list[TradeRecord]:
-        res = await self.fetch(
-            "get_all_offers",
-            {
-                "start": start,
-                "end": end,
-                "sort_key": sort_key,
-                "reverse": reverse,
-                "file_contents": file_contents,
-                "exclude_my_offers": exclude_my_offers,
-                "exclude_taken_offers": exclude_taken_offers,
-                "include_completed": include_completed,
-            },
-        )
-
-        records = []
-        if file_contents:
-            optional_offers = [bytes(Offer.from_bech32(o)).hex() for o in res["offers"]]
-        else:
-            optional_offers = [""] * len(res["trade_records"])
-        for record, offer in zip(res["trade_records"], optional_offers):
-            records.append(TradeRecord.from_json_dict_convenience(record, offer))
-
-        return records
+    async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
+        return GetAllOffersResponse.from_json_dict(await self.fetch("get_all_offers", request.to_json_dict()))
 
     async def get_offers_count(self) -> GetOffersCountResponse:
         return GetOffersCountResponse.from_json_dict(await self.fetch("get_offers_count", {}))
 
     async def cancel_offer(
         self,
-        trade_id: bytes32,
+        request: CancelOffer,
         tx_config: TXConfig,
-        fee: int = 0,
-        secure: bool = True,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> CancelOfferResponse:
-        res = await self.fetch(
-            "cancel_offer",
-            {
-                "trade_id": trade_id.hex(),
-                "secure": secure,
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return CancelOfferResponse.from_json_dict(
+            await self.fetch(
+                "cancel_offer", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-
-        return json_deserialize_with_clvm_streamable(res, CancelOfferResponse)
 
     async def cancel_offers(
         self,
+        request: CancelOffers,
         tx_config: TXConfig,
-        batch_fee: int = 0,
-        secure: bool = True,
-        batch_size: int = 5,
-        cancel_all: bool = False,
-        asset_id: bytes32 | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> CancelOffersResponse:
-        res = await self.fetch(
-            "cancel_offers",
-            {
-                "secure": secure,
-                "batch_fee": batch_fee,
-                "batch_size": batch_size,
-                "cancel_all": cancel_all,
-                "asset_id": None if asset_id is None else asset_id.hex(),
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return CancelOffersResponse.from_json_dict(
+            await self.fetch(
+                "cancel_offers", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
         )
-
-        return json_deserialize_with_clvm_streamable(res, CancelOffersResponse)
 
     async def get_cat_list(self) -> GetCATListResponse:
         return GetCATListResponse.from_json_dict(await self.fetch("get_cat_list", {}))

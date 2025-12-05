@@ -2,18 +2,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
-from chia_rs import ConsensusConstants, SpendBundle
+from chia_rs import CoinRecord, ConsensusConstants, SpendBundle, check_time_locks
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
-from chia.consensus.check_time_locks import check_time_locks
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_record import CoinRecord
 from chia.util.errors import Err
 
 MAX_COST = 11000000000
@@ -114,7 +112,7 @@ class CoinStore:
         for spent_coin in removals:
             coin_name = spent_coin.name()
             coin_record = self._db[coin_name]
-            self._db[coin_name] = replace(coin_record, spent_block_index=now.height)
+            self._db[coin_name] = coin_record.replace(spent_block_index=now.height)
         return additions, spend_bundle.coin_spends
 
     def coins_for_puzzle_hash(self, puzzle_hash: bytes32) -> Iterator[Coin]:

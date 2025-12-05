@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from random import Random
 
 import pytest
-from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program, SpendBundle
+from chia_rs import AugSchemeMPL, Coin, CoinRecord, CoinSpend, CoinState, Program, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
@@ -25,7 +25,6 @@ from chia.simulator import simulator_protocol
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.start_simulator import SimulatorFullNodeService
-from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.hash import std_hash
 from chia.wallet.wallet_service import WalletService

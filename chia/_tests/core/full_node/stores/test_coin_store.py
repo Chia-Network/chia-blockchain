@@ -6,7 +6,7 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from chia_rs import CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import CoinRecord, CoinState, FullBlock, additions_and_removals, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
@@ -25,7 +25,6 @@ from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.coin_record import CoinRecord
 from chia.types.mempool_item import UnspentLineageInfo
 from chia.util.casts import int_to_bytes
 from chia.util.db_wrapper import DBWrapper2
@@ -67,7 +66,6 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
         10,
         [],
         farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
     )
 
     coins_to_spend: list[Coin] = []
@@ -86,7 +84,6 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
             10,
             blocks,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             transaction_data=spend_bundle,
         )
 
@@ -374,11 +371,9 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
     async with DBConnection(db_version) as db_wrapper:
         num_blocks = 20
         farmer_ph = bytes32(32 * b"0")
-        pool_ph = bytes32(32 * b"1")
         blocks = bt.get_consecutive_blocks(
             num_blocks,
             farmer_reward_puzzle_hash=farmer_ph,
-            pool_reward_puzzle_hash=pool_ph,
             guarantee_transaction_block=True,
         )
         coin_store = await CoinStore.create(db_wrapper)
@@ -391,7 +386,7 @@ async def test_get_puzzle_hash(tmp_dir: Path, db_version: int, bt: BlockTools) -
         assert peak is not None
         assert peak.height == num_blocks - 1
 
-        coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(True, pool_ph)
+        coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(True, bt.pool_ph)
         coins_pool = await coin_store.get_coin_records_by_puzzle_hash(True, farmer_ph)
 
         assert len(coins_farmer) == num_blocks - 2

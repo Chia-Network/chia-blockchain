@@ -16,6 +16,7 @@ from chia.types.blockchain_format.proof_of_space import (
     check_plot_param,
     is_v1_phased_out,
     make_pos,
+    num_phase_out_epochs,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -127,7 +128,7 @@ def b32(key: str) -> bytes32:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("2b76a5fe5d4ae062ba9e80b5bcb0e9c1301f3a2787b8f3141e3fb458d1c1864c"),
+        pos_challenge=b32("4cfaacbd2782db64d07cf490ca938534adb07dfbd2f92b0e479e2e5b196178db"),
         plot_size=PlotParam.make_v2(32),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -143,6 +144,14 @@ def b32(key: str) -> bytes32:
         plot_public_key=G1Element(),
         height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
         expected_error="v2 proof support has not yet activated",
+    ),
+    ProofOfSpaceCase(
+        id="v2 plot with pool pk",
+        pos_challenge=bytes32(b"1" * 32),
+        plot_size=PlotParam.make_v2(2),
+        plot_public_key=G1Element(),
+        pool_public_key=G1Element(),
+        expected_error="v2 plots require pool_contract_puzzle_hash, pool public key is not supported",
     ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
@@ -170,8 +179,8 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
 @datacases(
     ProofOfSpaceCase(
         id="not passing the plot filter v2",
-        plot_size=PlotParam.make_v2(28),
-        pos_challenge=b32("be7ac7436520a3fa259a618a2c54de4ca8b8d2319c1ec5b11a2ef4c025c2e0a6"),
+        plot_size=PlotParam.make_v2(2),
+        pos_challenge=b32("aefba5c94bc9bbfe2c538b7faaaf03384ac5a6170e40b024657df6b0a27c34a7"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
@@ -197,7 +206,7 @@ def test_verify_and_get_quality_string_v2(caplog: pytest.LogCaptureFixture, case
             pos=pos,
             constants=DEFAULT_CONSTANTS,
             original_challenge_hash=b32("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"),
-            signage_point=b32("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
+            signage_point=b32("0xf7c1bd874da5e709d4713d60c8a70639eb1167b367a9c3787c65c1e582e2e662"),
             height=case.height,
             prev_transaction_block_height=case.height,
         )
@@ -282,10 +291,10 @@ def test_calculate_prefix_bits_v1(height: uint32, expected: int) -> None:
     argvalues=[
         (0, 5),
         (0xFFFFFFFA, 5),
-        (0xFFFFFFFB, 6),
-        (0xFFFFFFFC, 7),
-        (0xFFFFFFFD, 8),
-        (0xFFFFFFFF, 8),
+        (0xFFFFFFFB, 4),
+        (0xFFFFFFFC, 3),
+        (0xFFFFFFFD, 2),
+        (0xFFFFFFFF, 2),
     ],
 )
 def test_calculate_prefix_bits_v2(height: uint32, expected: int) -> None:
@@ -296,7 +305,7 @@ def test_v1_phase_out() -> None:
     constants = DEFAULT_CONSTANTS.replace(HARD_FORK2_HEIGHT=uint32(500000))
     rng = random.Random()
 
-    phase_out_epochs = 1 << constants.PLOT_V1_PHASE_OUT_EPOCH_BITS
+    phase_out_epochs = num_phase_out_epochs(constants)
     print(f"phase-out epochs: {phase_out_epochs}")
 
     for epoch in range(-5, phase_out_epochs + 5):

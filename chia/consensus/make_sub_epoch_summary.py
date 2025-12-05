@@ -52,6 +52,7 @@ def make_sub_epoch_summary(
             uint8(0),
             None,
             None,
+            None,
         )
     if prev_ses_block is None:
         curr: BlockRecord = prev_prev_block
@@ -69,6 +70,7 @@ def make_sub_epoch_summary(
         uint8(prev_ses_block.height % constants.SUB_EPOCH_BLOCKS),
         new_difficulty,
         new_sub_slot_iters,
+        None,  # challenge_merkle_root
     )
 
 

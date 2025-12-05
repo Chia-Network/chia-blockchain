@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import aiosqlite
 import pytest
-from chia_rs import CoinSpend, G1Element, G2Element
+from chia_rs import CoinRecord, CoinSpend, G1Element, G2Element
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
@@ -51,7 +51,6 @@ from chia.rpc.rpc_client import ResponseFailureError
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -96,7 +95,10 @@ from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
+    Addition,
     AddKey,
+    CancelOffer,
+    CancelOffers,
     CATAssetIDToName,
     CATGetAssetID,
     CATGetName,
@@ -107,6 +109,7 @@ from chia.wallet.wallet_request_types import (
     ClawbackPuzzleDecoratorOverride,
     CombineCoins,
     CreateOfferForIDs,
+    CreateSignedTransaction,
     DefaultCAT,
     DeleteKey,
     DeleteNotifications,
@@ -121,9 +124,11 @@ from chia.wallet.wallet_request_types import (
     DIDTransferDID,
     DIDUpdateMetadata,
     FungibleAsset,
+    GetAllOffers,
     GetCoinRecordsByNames,
     GetNextAddress,
     GetNotifications,
+    GetOffer,
     GetOfferSummary,
     GetPrivateKey,
     GetSpendableCoins,
@@ -147,10 +152,12 @@ from chia.wallet.wallet_request_types import (
     SelectCoins,
     SendNotification,
     SendTransaction,
+    SendTransactionMulti,
     SetWalletResyncOnStartup,
     SpendClawbackCoins,
     SplitCoins,
     TakeOffer,
+    VCSpend,
     VerifySignature,
     VerifySignatureResponse,
 )
@@ -177,37 +184,34 @@ async def farm_transaction(
 
 async def create_tx_outputs(
     wallet: Wallet, tx_config: TXConfig, output_args: list[tuple[int, list[str] | None]]
-) -> list[dict[str, Any]]:
-    outputs = []
+) -> list[Addition]:
     async with wallet.wallet_state_manager.new_action_scope(tx_config, push=True) as action_scope:
-        for args in output_args:
-            output = {
-                "amount": uint64(args[0]),
-                "puzzle_hash": await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
-            }
-            if args[1] is not None:
-                assert len(args[1]) > 0
-                output["memos"] = args[1]
-            outputs.append(output)
-    return outputs
+        return [
+            Addition(
+                amount=uint64(args[0]),
+                puzzle_hash=await action_scope.get_puzzle_hash(wallet.wallet_state_manager),
+                memos=None if args[1] is None or len(args[1]) == 0 else args[1],
+            )
+            for args in output_args
+        ]
 
 
 def assert_tx_amounts(
     tx: TransactionRecord,
-    outputs: list[dict[str, Any]],
+    outputs: list[Addition],
     *,
     amount_fee: uint64,
     change_expected: bool,
     is_cat: bool = False,
 ) -> None:
     assert tx.fee_amount == amount_fee
-    assert tx.amount == sum(output["amount"] for output in outputs)
+    assert tx.amount == sum(output.amount for output in outputs)
     expected_additions = len(outputs) + 1 if change_expected else len(outputs)
     assert len(tx.additions) == expected_additions
     addition_amounts = [addition.amount for addition in tx.additions]
     removal_amounts = [removal.amount for removal in tx.removals]
     for output in outputs:
-        assert output["amount"] in addition_amounts
+        assert output.amount in addition_amounts
     if is_cat:
         assert (sum(removal_amounts) - sum(addition_amounts)) == 0
     else:
@@ -235,7 +239,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
     if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
-        expected_balance_dict["asset_id"] = "0x" + wallet.get_asset_id()
+        expected_balance_dict["asset_id"] = "0x" + wallet.get_asset_id().hex()
     else:
         expected_balance_dict["asset_id"] = None
     assert (
@@ -376,20 +380,29 @@ async def test_push_transactions(wallet_environments: WalletTestFramework) -> No
 
     tx = (
         await client.create_signed_transactions(
-            outputs,
+            CreateSignedTransaction(additions=outputs, fee=uint64(100)),
             tx_config=wallet_environments.tx_config,
-            fee=uint64(100),
         )
     ).signed_tx
+
+    with pytest.raises(ValueError, match="Cannot add conditions to a transaction if no new fee spend is being added"):
+        await client.push_transactions(
+            PushTransactions(transactions=[tx]),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(Remark(rest=Program.to("foo")),),
+        )
 
     resp_client = await client.push_transactions(
         PushTransactions(transactions=[tx], fee=uint64(10)),
         wallet_environments.tx_config,
     )
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
+    await full_node_api.wait_for_wallet_synced(wallet_node)
     resp = await client.fetch("push_transactions", {"transactions": [bytes(tx).hex()], "fee": 10})
     assert resp["success"]
+    await full_node_api.wait_for_wallet_synced(wallet_node)
 
     spend_bundle = WalletSpendBundle.aggregate(
         [tx.spend_bundle for tx in resp_client.transactions if tx.spend_bundle is not None]
@@ -560,7 +573,7 @@ async def test_create_signed_transaction(
     env_2.wallet_aliases = {"xch": 1, "cat": 2}
 
     outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, output_args)
-    amount_outputs = sum(output["amount"] for output in outputs)
+    amount_outputs = sum(output.amount for output in outputs)
     amount_fee = uint64(fee)
 
     wallet_id = 1
@@ -590,7 +603,7 @@ async def test_create_signed_transaction(
         )
 
     if is_cat:
-        amount_total = amount_outputs
+        amount_total: int = amount_outputs
     else:
         amount_total = amount_outputs + amount_fee
 
@@ -598,7 +611,7 @@ async def test_create_signed_transaction(
     if select_coin:
         select_coins_response = await wallet_1_rpc.select_coins(
             SelectCoins.from_coin_selection_config(
-                amount=amount_total,
+                amount=uint64(amount_total),
                 wallet_id=uint32(wallet_id),
                 coin_selection_config=wallet_environments.tx_config.coin_selection_config,
             )
@@ -608,15 +621,17 @@ async def test_create_signed_transaction(
 
     txs = (
         await wallet_1_rpc.create_signed_transactions(
-            outputs,
-            coins=[selected_coin] if selected_coin is not None else [],
-            fee=amount_fee,
-            wallet_id=wallet_id,
+            CreateSignedTransaction(
+                additions=outputs,
+                coins=[selected_coin] if selected_coin is not None else None,
+                fee=amount_fee,
+                wallet_id=uint32(wallet_id),
+                push=True,
+            ),
             # shouldn't actually block it
             tx_config=wallet_environments.tx_config.override(
                 excluded_coin_amounts=[uint64(selected_coin.amount)] if selected_coin is not None else [],
             ),
-            push=True,
         )
     ).transactions
     change_expected = not selected_coin or selected_coin.amount - amount_total > 0
@@ -709,18 +724,18 @@ async def test_create_signed_transaction(
     addition_dict: dict[bytes32, Coin] = {addition.name(): addition for addition in additions}
     memo_dictionary: dict[bytes32, list[bytes]] = compute_memos(spend_bundle)
     for output in outputs:
-        if "memos" in output:
+        if output.memos is not None:
             found: bool = False
             for addition_id, addition in addition_dict.items():
                 if (
                     is_cat
-                    and addition.amount == output["amount"]
-                    and memo_dictionary[addition_id][0] == output["puzzle_hash"]
-                    and memo_dictionary[addition_id][1:] == [memo.encode() for memo in output["memos"]]
+                    and addition.amount == output.amount
+                    and memo_dictionary[addition_id][0] == output.puzzle_hash
+                    and memo_dictionary[addition_id][1:] == [memo.encode() for memo in output.memos]
                 ) or (
-                    addition.amount == output["amount"]
-                    and addition.puzzle_hash == output["puzzle_hash"]
-                    and memo_dictionary[addition_id] == [memo.encode() for memo in output["memos"]]
+                    addition.amount == output.amount
+                    and addition.puzzle_hash == output.puzzle_hash
+                    and memo_dictionary[addition_id] == [memo.encode() for memo in output.memos]
                 ):
                     found = True
             assert found
@@ -755,7 +770,9 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_environme
     outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, [(signed_tx_amount, None)])
     tx_res: TransactionRecord = (
         await client.create_signed_transactions(
-            outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_coin_announcements,)
+            CreateSignedTransaction(additions=outputs),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(*tx_coin_announcements,),
         )
     ).signed_tx
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
@@ -791,7 +808,9 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_environ
     outputs = await create_tx_outputs(wallet_2, wallet_environments.tx_config, [(signed_tx_amount, None)])
     tx_res = (
         await client.create_signed_transactions(
-            outputs, tx_config=wallet_environments.tx_config, extra_conditions=(*tx_puzzle_announcements,)
+            CreateSignedTransaction(additions=outputs),
+            tx_config=wallet_environments.tx_config,
+            extra_conditions=(*tx_puzzle_announcements,),
         )
     ).signed_tx
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
@@ -824,7 +843,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
 
         tx = (
             await wallet_1_rpc.create_signed_transactions(
-                outputs,
+                CreateSignedTransaction(additions=outputs),
                 wallet_environments.tx_config.override(
                     excluded_coin_ids=[c.name() for c in select_coins_response.coins],
                 ),
@@ -849,7 +868,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_environments
 
         with pytest.raises(ValueError):
             await wallet_1_rpc.create_signed_transactions(
-                outputs,
+                CreateSignedTransaction(additions=outputs),
                 wallet_environments.tx_config.override(
                     excluded_coin_ids=[c.name() for c in select_coins_response.coins],
                 ),
@@ -887,16 +906,19 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
     outputs = await create_tx_outputs(
         wallet_2, wallet_environments.tx_config, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])]
     )
-    amount_outputs = sum(output["amount"] for output in outputs)
+    amount_outputs = sum(output.amount for output in outputs)
     amount_fee = uint64(amount_outputs + 1)
 
     send_tx_res: TransactionRecord = (
         await client.send_transaction_multi(
-            1,
-            outputs,
-            wallet_environments.tx_config,
-            coins=select_coins_response.coins,
-            fee=amount_fee,
+            SendTransactionMulti(
+                wallet_id=uint32(1),
+                additions=outputs,
+                coins=select_coins_response.coins,
+                fee=amount_fee,
+                push=True,
+            ),
+            tx_config=wallet_environments.tx_config,
         )
     ).transaction
     spend_bundle = send_tx_res.spend_bundle
@@ -916,7 +938,8 @@ async def test_send_transaction_multi(wallet_environments: WalletTestFramework) 
     memos = tx_confirmed.memos
     assert len(memos) == len(outputs)
     for output in outputs:
-        assert [output["memos"][0].encode()] in memos.values()
+        assert output.memos is not None
+        assert [output.memos[0].encode()] in memos.values()
     spend_bundle = send_tx_res.spend_bundle
     assert spend_bundle is not None
     for key in memos.keys():
@@ -945,9 +968,9 @@ async def test_get_transactions(wallet_environments: WalletTestFramework) -> Non
     unconfirmed_txs_count = 0
     assert len(all_transactions) == expected_initial_txs_count
     # Test transaction pagination
-    some_transactions = (await client.get_transactions(GetTransactions(uint32(1), uint16(0), uint16(5)))).transactions
+    some_transactions = (await client.get_transactions(GetTransactions(uint32(1), uint32(0), uint32(5)))).transactions
     some_transactions_2 = (
-        await client.get_transactions(GetTransactions(uint32(1), uint16(5), uint16(10)))
+        await client.get_transactions(GetTransactions(uint32(1), uint32(5), uint32(10)))
     ).transactions
     assert some_transactions == all_transactions[0:5]
     assert some_transactions_2 == all_transactions[5:10]
@@ -1133,7 +1156,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
     asset_id = (await env_0.rpc_client.get_cat_asset_id(CATGetAssetID(cat_0_id))).asset_id
     assert (
         await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))
-    ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id.hex())
+    ).name == wallet_type.default_wallet_name_for_unknown_cat(asset_id)
     await env_0.rpc_client.set_cat_name(CATSetName(cat_0_id, "My cat"))
     assert (await env_0.rpc_client.get_cat_name(CATGetName(cat_0_id))).name == "My cat"
     asset_to_name_response = await env_0.rpc_client.cat_asset_id_to_name(CATAssetIDToName(asset_id))
@@ -1447,10 +1470,11 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await env_2.rpc_client.create_wallet_for_existing_cat(cat_asset_id)
     wallet_2_address = (await env_2.rpc_client.get_next_address(GetNextAddress(cat_wallet_id, False))).address
-    adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
+    adds = [Addition(puzzle_hash=decode_puzzle_hash(wallet_2_address), amount=uint64(4), memos=["the cat memo"])]
     tx_res = (
         await env_1.rpc_client.send_transaction_multi(
-            cat_wallet_id, additions=adds, tx_config=wallet_environments.tx_config, fee=uint64(0)
+            SendTransactionMulti(wallet_id=uint32(cat_wallet_id), additions=adds, fee=uint64(0), push=True),
+            tx_config=wallet_environments.tx_config,
         )
     ).transaction
     spend_bundle = tx_res.spend_bundle
@@ -1509,7 +1533,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         CreateOfferForIDs(offer={str(1): "-5", cat_asset_id.hex(): "1"}, validate_only=True),
         tx_config=wallet_environments.tx_config,
     )
-    all_offers = await env_1.rpc_client.get_all_offers()
+    all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 0
 
     driver_dict = {
@@ -1553,7 +1577,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     assert offer_validity_response.id == offer.name()
     assert offer_validity_response.valid
 
-    all_offers = await env_1.rpc_client.get_all_offers(file_contents=True)
+    all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers(file_contents=True))).trade_records
     assert len(all_offers) == 1
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
@@ -1575,24 +1599,32 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     ).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
-    await env_1.rpc_client.cancel_offer(offer.name(), wallet_environments.tx_config, secure=False)
+    await env_1.rpc_client.cancel_offer(
+        CancelOffer(
+            trade_id=offer.name(),
+            secure=False,
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
 
-    trade_record = await env_1.rpc_client.get_offer(offer.name(), file_contents=True)
+    trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name(), file_contents=True))).trade_record
     assert trade_record.offer == bytes(offer)
     assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
     failed_cancel_res = await env_1.rpc_client.cancel_offer(
-        offer.name(), wallet_environments.tx_config, fee=uint64(1), secure=True
+        CancelOffer(trade_id=offer.name(), fee=uint64(1), secure=True, push=True),
+        tx_config=wallet_environments.tx_config,
     )
 
-    trade_record = await env_1.rpc_client.get_offer(offer.name())
+    trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name()))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
     create_res = await env_1.rpc_client.create_offer_for_ids(
         CreateOfferForIDs(offer={str(1): "-5", str(cat_wallet_id): "1"}, fee=uint64(1)),
         tx_config=wallet_environments.tx_config,
     )
-    all_offers = await env_1.rpc_client.get_all_offers()
+    all_offers = (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
     assert len(all_offers) == 2
     offer_count = await env_1.rpc_client.get_offers_count()
     assert offer_count.total == 2
@@ -1672,7 +1704,7 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     )
 
     async def is_trade_confirmed(client: WalletRpcClient, offer: Offer) -> bool:
-        trade_record = await client.get_offer(offer.name())
+        trade_record = (await client.get_offer(GetOffer(offer.name()))).trade_record
         return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
 
     await time_out_assert(15, is_trade_confirmed, True, env_1.rpc_client, offer)
@@ -1681,26 +1713,36 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
     def only_ids(trades: list[TradeRecord]) -> list[bytes32]:
         return [t.trade_id for t in trades]
 
-    trade_record = await env_1.rpc_client.get_offer(offer.name())
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True)  # confirmed at index descending
+    trade_record = (await env_1.rpc_client.get_offer(GetOffer(offer.name()))).trade_record
+    all_offers = (  # confirmed at index descending
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True))
+    ).trade_records
     assert len(all_offers) == 2
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
-    all_offers = await env_1.rpc_client.get_all_offers(
-        include_completed=True, reverse=True
-    )  # confirmed at index ascending
+    all_offers = (  # confirmed at index ascending
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, reverse=True))
+    ).trade_records
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
+    all_offers = (  # most relevant
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, sort_key="RELEVANCE"))
+    ).trade_records
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await env_1.rpc_client.get_all_offers(
-        include_completed=True, sort_key="RELEVANCE", reverse=True
-    )  # least relevant
+    all_offers = (  # least relevant
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, sort_key="RELEVANCE", reverse=True))
+    ).trade_records
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=0, end=1)
+    all_offers = (
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(1)))
+    ).trade_records
     assert len(all_offers) == 1
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=50)
+    all_offers = (
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(10)))
+    ).trade_records
     assert len(all_offers) == 0
-    all_offers = await env_1.rpc_client.get_all_offers(include_completed=True, start=0, end=50)
+    all_offers = (
+        await env_1.rpc_client.get_all_offers(GetAllOffers(include_completed=True, start=uint16(0), end=uint16(50)))
+    ).trade_records
     assert len(all_offers) == 2
 
     await env_1.rpc_client.create_offer_for_ids(
@@ -1708,11 +1750,27 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 2
     )
-    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, batch_size=1)
+    await env_1.rpc_client.cancel_offers(
+        CancelOffers(secure=True, batch_size=uint16(1), push=True), tx_config=wallet_environments.tx_config
+    )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
     )
     await wallet_environments.process_pending_states(
         [
@@ -1749,11 +1807,27 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 2
     )
-    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, cancel_all=True)
+    await env_1.rpc_client.cancel_offers(
+        CancelOffers(secure=True, cancel_all=True, push=True), tx_config=wallet_environments.tx_config
+    )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
     )
 
     await wallet_environments.process_pending_states(
@@ -1797,15 +1871,40 @@ async def test_offer_endpoints(wallet_environments: WalletTestFramework, wallet_
         tx_config=wallet_environments.tx_config,
     )
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 1
     )
-    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, asset_id=bytes32.zeros)
-    assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await env_1.rpc_client.cancel_offers(
+        CancelOffers(secure=True, asset_id=bytes32.zeros.hex(), push=True), tx_config=wallet_environments.tx_config
     )
-    await env_1.rpc_client.cancel_offers(wallet_environments.tx_config, asset_id=cat_asset_id)
     assert (
-        len([o for o in await env_1.rpc_client.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 1
+    )
+    await env_1.rpc_client.cancel_offers(
+        CancelOffers(secure=True, asset_id=cat_asset_id.hex(), push=True), tx_config=wallet_environments.tx_config
+    )
+    assert (
+        len(
+            [
+                o
+                for o in (await env_1.rpc_client.get_all_offers(GetAllOffers())).trade_records
+                if o.status == TradeStatus.PENDING_ACCEPT.value
+            ]
+        )
+        == 0
     )
 
     with pytest.raises(ValueError, match="not currently supported"):
@@ -2344,6 +2443,7 @@ async def test_key_and_address_endpoints(wallet_environments: WalletTestFramewor
 
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node)
     addr = encode_puzzle_hash(ph, "txch")
     tx_amount = uint64(15600000)
     created_tx = (
@@ -3502,8 +3602,11 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
         }
     )
 
-    with pytest.raises(ResponseFailureError, match="501 coins is greater then the maximum limit of 500 coins"):
+    with pytest.raises(ValueError, match="501 coins is greater then the maximum limit of 500 coins"):
         await dataclasses.replace(xch_request, number_of_coins=501).run()
+
+    with pytest.raises(ValueError, match="Cannot split into 0 new coins"):
+        await dataclasses.replace(xch_request, number_of_coins=0).run()
 
     with pytest.raises(ResponseFailureError, match="Could not find coin with ID 00000000000000000"):
         await dataclasses.replace(xch_request, target_coin_id=bytes32.zeros).run()
@@ -3534,10 +3637,6 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
         await env.rpc_client.split_coins(rpc_request, wallet_environments.tx_config)
 
     del env.wallet_state_manager.wallets[uint32(42)]
-
-    await dataclasses.replace(xch_request, number_of_coins=0).run()
-    output = (capsys.readouterr()).out
-    assert "Transaction sent" not in output
 
     with wallet_environments.new_puzzle_hashes_allowed():
         await xch_request.run()
@@ -3698,13 +3797,13 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     )
 
     # Test some error cases first
-    with pytest.raises(ResponseFailureError, match="greater then the maximum limit"):
+    with pytest.raises(ValueError, match="greater then the maximum limit"):
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(501)).run()
 
-    with pytest.raises(ResponseFailureError, match="You need at least two coins to combine"):
+    with pytest.raises(ValueError, match="You need at least two coins to combine"):
         await dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)).run()
 
-    with pytest.raises(ResponseFailureError, match="More coin IDs specified than desired number of coins to combine"):
+    with pytest.raises(ValueError, match="More coin IDs specified than desired number of coins to combine"):
         await dataclasses.replace(xch_combine_request, input_coins=(bytes32.zeros,) * 100).run()
 
     # We catch this one
@@ -3955,3 +4054,115 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
             )
         ]
     )
+
+
+def test_send_transaction_multi_post_init() -> None:
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "morph_bytes" for a CAT-type wallet. Maybe you meant to specify an XCH wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            morph_bytes=b"",
+        ).convert_to_proxy(CATSpend)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "coin/puzzle_announcements" for a CAT-type wallet.Maybe you meant to specify an XCH wallet?'
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            coin_announcements=[],
+        ).convert_to_proxy(CATSpend)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "coin/puzzle_announcements" for a CAT-type wallet.Maybe you meant to specify an XCH wallet?'
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            puzzle_announcements=[],
+        ).convert_to_proxy(CATSpend)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "amount" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            amount=uint64(100),
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "inner_address" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            inner_address="foo",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('Specified "memos" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            memos=["foo"],
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+            "Maybe you meant to specify a CAT-type wallet?"
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            extra_delta="1",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+            "Maybe you meant to specify a CAT-type wallet?"
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            tail_reveal=b"",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+            "Maybe you meant to specify a CAT-type wallet?"
+        ),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+            tail_solution=b"",
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"additions" are required for XCH wallets.'),
+    ):
+        SendTransactionMulti(
+            wallet_id=uint32(1),
+        ).convert_to_proxy(CreateSignedTransaction)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("An unsupported wallet type was selected for `send_transaction_multi`"),
+    ):
+        SendTransactionMulti(  # type: ignore[type-var]
+            wallet_id=uint32(1),
+        ).convert_to_proxy(VCSpend)

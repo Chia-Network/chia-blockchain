@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any, BinaryIO, final
+from typing import Any, BinaryIO, TypeVar, final
 
-from chia_rs import Coin, G1Element, G2Element, PrivateKey
+from chia_rs import Coin, CoinRecord, G1Element, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from typing_extensions import Self
@@ -13,10 +13,16 @@ from chia.data_layer.data_layer_wallet import DataLayerSummary, Mirror
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.types.blockchain_format.program import Program
-from chia.types.coin_record import CoinRecord
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    ConditionValidTimes,
+    conditions_to_json_dicts,
+)
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.notification_store import Notification
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
@@ -34,7 +40,11 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
-from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
+from chia.wallet.util.tx_config import (
+    CoinSelectionConfig,
+    CoinSelectionConfigLoader,
+    TXConfig,
+)
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import Balance
@@ -272,8 +282,8 @@ class GetTransactionResponse(Streamable):
 @dataclass(frozen=True)
 class GetTransactions(Streamable):
     wallet_id: uint32
-    start: uint16 | None = None
-    end: uint16 | None = None
+    start: uint32 | None = None
+    end: uint32 | None = None
     sort_key: str | None = None
     reverse: bool = False
     to_address: str | None = None
@@ -491,7 +501,10 @@ class SelectCoins(CoinSelectionConfigLoader):
 
     @classmethod
     def from_coin_selection_config(
-        cls, wallet_id: uint32, amount: uint64, coin_selection_config: CoinSelectionConfig
+        cls,
+        wallet_id: uint32,
+        amount: uint64,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Self:
         return cls(
             wallet_id=wallet_id,
@@ -1289,7 +1302,10 @@ class TransactionEndpointRequest(Streamable):
             return super().to_json_dict()
 
     def json_serialize_for_transport(
-        self, tx_config: TXConfig, extra_conditions: tuple[Condition, ...], timelock_info: ConditionValidTimes
+        self,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...],
+        timelock_info: ConditionValidTimes,
     ) -> dict[str, Any]:
         return {
             **tx_config.to_json_dict(),
@@ -1402,6 +1418,12 @@ class SplitCoins(TransactionEndpointRequest):
     amount_per_coin: uint64 = field(default_factory=default_raise)
     target_coin_id: bytes32 = field(default_factory=default_raise)
 
+    def __post_init__(self) -> None:
+        if self.number_of_coins > 500:
+            raise ValueError(f"{self.number_of_coins} coins is greater then the maximum limit of 500 coins.")
+        if self.number_of_coins == 0:
+            raise ValueError("Cannot split into 0 new coins")
+
 
 @streamable
 @dataclass(frozen=True)
@@ -1419,6 +1441,16 @@ class CombineCoins(TransactionEndpointRequest):
     target_coin_amount: uint64 | None = None
     coin_num_limit: uint16 = uint16(500)
 
+    def __post_init__(self) -> None:
+        if self.number_of_coins > self.coin_num_limit:
+            raise ValueError(
+                f"{self.number_of_coins} coins is greater then the maximum limit of {self.coin_num_limit} coins."
+            )
+        if self.number_of_coins < 2:
+            raise ValueError("You need at least two coins to combine")
+        if len(self.target_coin_ids) > self.number_of_coins:
+            raise ValueError("More coin IDs specified than desired number of coins to combine")
+
 
 @streamable
 @dataclass(frozen=True)
@@ -1426,7 +1458,7 @@ class CombineCoinsResponse(TransactionEndpointResponse):
     pass
 
 
-# utility for CATSpend
+# utility for CATSpend/CreateSignedTransaction
 # unfortunate that we can't use CreateCoin but the memos are taken as strings not bytes
 @streamable
 @dataclass(frozen=True)
@@ -1855,15 +1887,61 @@ class VCRevokeResponse(TransactionEndpointResponse):
     pass
 
 
-# TODO: The section below needs corresponding request types
-# TODO: The section below should be added to the API (currently only for client)
+@streamable
+@dataclass(frozen=True)
+class CSTCoinAnnouncement(Streamable):
+    coin_id: bytes32
+    message: bytes
 
 
 @streamable
 @dataclass(frozen=True)
-class SendTransactionMultiResponse(TransactionEndpointResponse):
-    transaction: TransactionRecord
-    transaction_id: bytes32
+class CSTPuzzleAnnouncement(Streamable):
+    puzzle_hash: bytes32
+    message: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class CreateSignedTransaction(TransactionEndpointRequest):
+    additions: list[Addition] = field(default_factory=default_raise)
+    wallet_id: uint32 | None = None
+    coins: list[Coin] | None = None
+    morph_bytes: bytes | None = None
+    coin_announcements: list[CSTCoinAnnouncement] = field(default_factory=list)
+    puzzle_announcements: list[CSTPuzzleAnnouncement] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if len(self.additions) < 1:
+            raise ValueError("Must have at least one addition")
+        super().__post_init__()
+
+    @property
+    def coin_set(self) -> set[Coin] | None:
+        if self.coins is None:
+            return None
+        else:
+            return set(self.coins)
+
+    @property
+    def asserted_coin_announcements(self) -> tuple[AssertCoinAnnouncement, ...]:
+        return tuple(
+            AssertCoinAnnouncement(
+                asserted_id=ca.coin_id,
+                asserted_msg=(ca.message if self.morph_bytes is None else std_hash(self.morph_bytes + ca.message)),
+            )
+            for ca in self.coin_announcements
+        )
+
+    @property
+    def asserted_puzzle_announcements(self) -> tuple[AssertPuzzleAnnouncement, ...]:
+        return tuple(
+            AssertPuzzleAnnouncement(
+                asserted_ph=pa.puzzle_hash,
+                asserted_msg=(pa.message if self.morph_bytes is None else std_hash(self.morph_bytes + pa.message)),
+            )
+            for pa in self.puzzle_announcements
+        )
 
 
 @streamable
@@ -1871,6 +1949,94 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
+
+
+_T_SendTransactionMultiProxy = TypeVar("_T_SendTransactionMultiProxy", CATSpend, CreateSignedTransaction)
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionMulti(TransactionEndpointRequest):
+    # primarily for cat_spend
+    wallet_id: uint32 = field(default_factory=default_raise)
+    additions: list[Addition] | None = None  # for both
+    amount: uint64 | None = None
+    inner_address: str | None = None
+    memos: list[str] | None = None
+    coins: list[Coin] | None = None  # for both
+    extra_delta: str | None = None  # str to support negative ints :(
+    tail_reveal: bytes | None = None
+    tail_solution: bytes | None = None
+    # for create_signed_transaction
+    morph_bytes: bytes | None = None
+    coin_announcements: list[CSTCoinAnnouncement] | None = None
+    puzzle_announcements: list[CSTPuzzleAnnouncement] | None = None
+
+    def convert_to_proxy(self, proxy_type: type[_T_SendTransactionMultiProxy]) -> _T_SendTransactionMultiProxy:
+        if proxy_type is CATSpend:
+            if self.morph_bytes is not None:
+                raise ValueError(
+                    'Specified "morph_bytes" for a CAT-type wallet. Maybe you meant to specify an XCH wallet?'
+                )
+            elif self.coin_announcements is not None or self.puzzle_announcements is not None:
+                raise ValueError(
+                    'Specified "coin/puzzle_announcements" for a CAT-type wallet.'
+                    "Maybe you meant to specify an XCH wallet?"
+                )
+
+            # not sure why mypy hasn't understood this is purely a CATSpend
+            return proxy_type(
+                wallet_id=self.wallet_id,
+                additions=self.additions,  # type: ignore[arg-type]
+                amount=self.amount,  # type: ignore[call-arg]
+                inner_address=self.inner_address,
+                memos=self.memos,
+                coins=self.coins,
+                extra_delta=self.extra_delta,
+                tail_reveal=self.tail_reveal,
+                tail_solution=self.tail_solution,
+                fee=self.fee,
+                push=self.push,
+                sign=self.sign,
+            )
+        elif proxy_type is CreateSignedTransaction:
+            if self.amount is not None:
+                raise ValueError('Specified "amount" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?')
+            elif self.inner_address is not None:
+                raise ValueError(
+                    'Specified "inner_address" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?'
+                )
+            elif self.memos is not None:
+                raise ValueError('Specified "memos" for an XCH wallet. Maybe you meant to specify a CAT-type wallet?')
+            elif self.extra_delta is not None or self.tail_reveal is not None or self.tail_solution is not None:
+                raise ValueError(
+                    'Specified "extra_delta", "tail_reveal", or "tail_solution" for an XCH wallet.'
+                    "Maybe you meant to specify a CAT-type wallet?"
+                )
+            elif self.additions is None:
+                raise ValueError('"additions" are required for XCH wallets.')
+
+            # not sure why mypy hasn't understood this is purely a CreateSignedTransaction
+            return proxy_type(
+                additions=self.additions,
+                wallet_id=self.wallet_id,
+                coins=self.coins,
+                morph_bytes=self.morph_bytes,  # type: ignore[call-arg]
+                coin_announcements=self.coin_announcements if self.coin_announcements is not None else [],
+                puzzle_announcements=self.puzzle_announcements if self.puzzle_announcements is not None else [],
+                fee=self.fee,
+                push=self.push,
+                sign=self.sign,
+            )
+        else:
+            raise ValueError("An unsupported wallet type was selected for `send_transaction_multi`")
+
+
+@streamable
+@dataclass(frozen=True)
+class SendTransactionMultiResponse(TransactionEndpointResponse):
+    transaction: TransactionRecord
+    transaction_id: bytes32
 
 
 @streamable
@@ -1883,7 +2049,10 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
         old_offer_override = getattr(self.offer, "json_serialization_override", None)
         object.__setattr__(self.offer, "json_serialization_override", lambda o: o.to_bech32())
         try:
-            response = {**super().to_json_dict(), "trade_record": self.trade_record.to_json_dict_convenience()}
+            response = {
+                **super().to_json_dict(),
+                "trade_record": self.trade_record.to_json_dict_convenience(),
+            }
         except Exception:
             object.__setattr__(self.offer, "json_serialization_override", old_offer_override)
             raise
@@ -1949,8 +2118,102 @@ class TakeOfferResponse(_OfferEndpointResponse):  # Inheriting for de-dup sake
 
 @streamable
 @dataclass(frozen=True)
+class GetOffer(Streamable):
+    trade_id: bytes32
+    file_contents: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetOfferResponse(Streamable):
+    offer: str | None
+    trade_record: TradeRecord
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **super().to_json_dict(),
+            "trade_record": self.trade_record.to_json_dict_convenience(),
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            offer=json_dict["offer"],
+            trade_record=TradeRecord.from_json_dict_convenience(
+                json_dict["trade_record"],
+                bytes(Offer.from_bech32(json_dict["offer"])).hex() if json_dict["offer"] is not None else "",
+            ),
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAllOffers(Streamable):
+    start: uint16 = uint16(0)
+    end: uint16 = uint16(10)
+    exclude_my_offers: bool = False
+    exclude_taken_offers: bool = False
+    include_completed: bool = False
+    sort_key: str | None = None
+    reverse: bool = False
+    file_contents: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAllOffersResponse(Streamable):
+    offers: list[str] | None
+    trade_records: list[TradeRecord]
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **super().to_json_dict(),
+            "trade_records": [tr.to_json_dict_convenience() for tr in self.trade_records],
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        return cls(
+            offers=json_dict["offers"],
+            trade_records=[
+                TradeRecord.from_json_dict_convenience(
+                    json_tr,
+                    bytes(Offer.from_bech32(json_dict["offers"][i])).hex() if json_dict["offers"] is not None else "",
+                )
+                for i, json_tr in enumerate(json_dict["trade_records"])
+            ],
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class CancelOffer(TransactionEndpointRequest):
+    trade_id: bytes32 = field(default_factory=default_raise)
+    secure: bool = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
+
+
+@streamable
+@dataclass(frozen=True)
+class CancelOffers(TransactionEndpointRequest):
+    secure: bool = field(default_factory=default_raise)
+    batch_fee: uint64 = uint64(0)
+    batch_size: uint16 = uint16(5)
+    cancel_all: bool = False
+    asset_id: str = "xch"
+
+    @property
+    def query_key(self) -> bytes32 | None:
+        if self.cancel_all:
+            return None
+        if self.asset_id != "xch":
+            return bytes32.from_hexstr(self.asset_id)
+        return None
 
 
 @streamable

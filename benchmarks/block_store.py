@@ -99,6 +99,7 @@ async def run_add_block_benchmark(version: int) -> None:
                     uint8(random.randint(0, 255)),  # num_blocks_overflow: uint8
                     None,  # new_difficulty: Optional[uint64]
                     None,  # new_sub_slot_iters: Optional[uint64]
+                    None,  # challenge_merkle_root: Optional[bytes32]
                 )
 
             has_pool_pk = random.randint(0, 1)
@@ -126,6 +127,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 rand_g2(),  # reward_chain_sp_signature
                 rand_vdf(),  # reward_chain_ip_vdf
                 rand_vdf() if deficit < 16 else None,
+                None,  # header_mmr_root
                 is_transaction,
             )
 

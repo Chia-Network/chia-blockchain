@@ -28,7 +28,6 @@ async def test_protocol_messages(
         35,
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
     )
 
     full_node_sim: FullNodeAPI | FullNodeSimulator = full_nodes[0]

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from chia_rs import BlockRecord, CoinSpend, EndOfSubSlotBundle, FullBlock, SpendBundle
+from chia_rs import BlockRecord, CoinRecord, CoinSpend, EndOfSubSlotBundle, FullBlock, SpendBundle
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.signage_point import SignagePoint
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpendWithConditions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs

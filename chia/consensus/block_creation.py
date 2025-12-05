@@ -345,6 +345,10 @@ def create_unfinished_block(
 
     cc_sp_hash: bytes32 = slot_cc_challenge
 
+    if proof_of_space.param().strength_v2 is not None:
+        # v2 plots don't support pool public key
+        assert proof_of_space.pool_public_key is None
+
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
     if signage_point.cc_vdf is not None:
         assert signage_point.rc_vdf is not None
@@ -481,6 +485,7 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_block.reward_chain_sp_signature,
         rc_ip_vdf,
         icc_ip_vdf,
+        None,
         is_transaction_block,
     )
     if prev_block is None:

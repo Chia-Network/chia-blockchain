@@ -53,7 +53,7 @@ boto3 = ">=1.35.43"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = ">=1.5.2"  # bip158-style wallet filters
 chiapos = ">=2.0.10"  # proof of space
 chia-puzzles-py = ">=0.20.1"
-chia_rs = ">=0.34, <0.35"
+chia_rs = ">=0.35, <0.36"
 chiavdf = ">=1.1.10"  # timelord and vdf verification
 click = ">=8.1.7"  # For the CLI
 clvm = ">=0.9.14"
@@ -81,7 +81,7 @@ zstd = [
 	{version=">=1.5.5.1", python = ">=3.12", source="chia"},
 ]
 importlib-resources = ">=6.4.5"
-hsms = ">=0.3.1"
+hsms = ">=0.3.2"
 aiohttp_cors = { version = ">=0.7.0", optional = true }
 build = { version = ">=1.2.1", optional = true }
 coverage = { version = ">=7.6.4", optional = true }

@@ -30,7 +30,9 @@ from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import (
+    Addition,
     CATSpend,
+    CreateSignedTransaction,
     GetTransactions,
     GetWallets,
     VCAddProofs,
@@ -69,14 +71,16 @@ async def mint_cr_cat(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
     tx = (
         await client_0.create_signed_transactions(
-            [
-                {
-                    "puzzle_hash": cat_puzzle.get_tree_hash(),
-                    "amount": CAT_AMOUNT_0,
-                }
-            ],
+            CreateSignedTransaction(
+                wallet_id=uint32(1),
+                additions=[
+                    Addition(
+                        puzzle_hash=cat_puzzle.get_tree_hash(),
+                        amount=CAT_AMOUNT_0,
+                    )
+                ],
+            ),
             tx_config,
-            wallet_id=1,
         )
     ).signed_tx
     spend_bundle = tx.spend_bundle
@@ -164,7 +168,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         did_id: bytes32 = bytes32.from_hexstr(
             (
                 await DIDWallet.create_new_did_wallet(
@@ -172,9 +176,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 )
             ).get_my_DID()
         )
+    await full_node_api.wait_for_wallet_synced(wallet_node_0)
 
     # Mint a VC
-    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         ph = await action_scope.get_puzzle_hash(wallet_0.wallet_state_manager)
     vc_record = (
         await client_0.vc_mint(
@@ -462,8 +467,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         await client_1.get_transactions(
             GetTransactions(
                 uint32(env_1.dealias_wallet_id("crcat")),
-                uint16(0),
-                uint16(1),
+                uint32(0),
+                uint32(1),
                 reverse=True,
                 type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
             )
@@ -848,7 +853,7 @@ async def test_cat_wallet_conversion(
 
     # Key point of test: create a normal CAT wallet first, and see if it gets converted to CR-CAT wallet
     await CATWallet.get_or_create_wallet_for_cat(
-        wallet_node_0.wallet_state_manager, wallet_0, Program.NIL.get_tree_hash().hex()
+        wallet_node_0.wallet_state_manager, wallet_0, Program.NIL.get_tree_hash()
     )
 
     did_id = bytes32.zeros

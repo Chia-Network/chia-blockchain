@@ -100,6 +100,7 @@ def get_reward_chain_block(height: uint32) -> Generator[RewardChainBlock, None, 
                             g2(),  # reward_chain_sp_signature
                             vdf(),  # reward_chain_ip_vdf
                             infused_challenge_chain_ip_vdf,
+                            None,  # header_mmr_root
                             has_transactions,
                         )
 
