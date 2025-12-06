@@ -1069,9 +1069,8 @@ class FullNode:
             tb = traceback.format_exc()
             self.log.error(f"Error with syncing: {type(e)}{tb}")
         finally:
-            if self._shut_down:
-                return None
-            await self._finish_sync(fork_point)
+            if not self._shut_down:
+                await self._finish_sync(fork_point)
 
     async def request_validate_wp(
         self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
