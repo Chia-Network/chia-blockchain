@@ -90,7 +90,9 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     class NFTCreateRpcClient(TestWalletRpcClient):
         async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
             self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
-            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
+            return NFTGetWalletDIDResponse(
+                did_id="did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c"
+            )
 
         async def mint_nft(
             self,
@@ -123,11 +125,11 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 ),
             )
             return NFTMintNFTResponse(
-                [STD_UTX],
-                [STD_TX],
-                uint32(request.wallet_id),
-                WalletSpendBundle([], G2Element()),
-                bytes32.zeros.hex(),
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                wallet_id=uint32(request.wallet_id),
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                nft_id=bytes32.zeros.hex(),
             )
 
     inst_rpc_client = NFTCreateRpcClient()
@@ -215,7 +217,12 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                     extra_conditions,
                 ),
             )
-            return NFTAddURIResponse([STD_UTX], [STD_TX], request.wallet_id, WalletSpendBundle([], G2Element()))
+            return NFTAddURIResponse(
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                wallet_id=request.wallet_id,
+                spend_bundle=WalletSpendBundle([], G2Element()),
+            )
 
     inst_rpc_client = NFTAddUriRpcClient()
     nft_coin_id = get_bytes32(2).hex()
@@ -285,10 +292,10 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 ),
             )
             return NFTTransferNFTResponse(
-                [STD_UTX],
-                [STD_TX],
-                request.wallet_id,
-                WalletSpendBundle([], G2Element()),
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                wallet_id=request.wallet_id,
+                spend_bundle=WalletSpendBundle([], G2Element()),
             )
 
     inst_rpc_client = NFTTransferRpcClient()
@@ -367,7 +374,7 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                         p2_address=get_bytes32(8),
                     )
                 )
-            return NFTGetNFTsResponse(request.wallet_id, nft_list)
+            return NFTGetNFTsResponse(wallet_id=request.wallet_id, nft_list=nft_list)
 
     inst_rpc_client = NFTListRpcClient()
     launcher_ids = [bytes32([i] * 32).hex() for i in range(50, 60)]
@@ -422,10 +429,10 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 ),
             )
             return NFTSetNFTDIDResponse(
-                [STD_UTX],
-                [STD_TX],
-                request.wallet_id,
-                WalletSpendBundle([], G2Element()),
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                wallet_id=request.wallet_id,
+                spend_bundle=WalletSpendBundle([], G2Element()),
             )
 
     inst_rpc_client = NFTSetDidRpcClient()

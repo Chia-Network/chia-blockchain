@@ -326,7 +326,7 @@ async def test_plotnft_cli_show_with_farmer(
         assert "Current state" not in out
 
         wallet_id = await create_new_plotnft(wallet_environments)
-        pw_info = (await wallet_rpc.pw_status(PWStatus(uint32(wallet_id)))).state
+        pw_info = (await wallet_rpc.pw_status(PWStatus(wallet_id=uint32(wallet_id)))).state
 
         await ShowPlotNFTCMD(
             context=ChiaCliContext(root_path=root_path),
@@ -680,7 +680,7 @@ async def test_plotnft_cli_claim(
     # Create a self-pooling plotnft
     wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
 
-    status = (await wallet_rpc.pw_status(PWStatus(uint32(wallet_id)))).state
+    status = (await wallet_rpc.pw_status(PWStatus(wallet_id=uint32(wallet_id)))).state
     async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         our_ph = await action_scope.get_puzzle_hash(wallet_state_manager)
     bt = wallet_environments.full_node.bt
@@ -878,7 +878,7 @@ async def test_plotnft_cli_change_payout(
     root_path = wallet_environments.environments[0].node.root_path
 
     wallet_id = await create_new_plotnft(wallet_environments)
-    pw_info = (await wallet_rpc.pw_status(PWStatus(uint32(wallet_id)))).state
+    pw_info = (await wallet_rpc.pw_status(PWStatus(wallet_id=uint32(wallet_id)))).state
 
     # This tests what happens when using None for root_path
     mocker.patch("chia.cmds.plotnft_funcs.DEFAULT_ROOT_PATH", root_path)

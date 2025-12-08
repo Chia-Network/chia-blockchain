@@ -131,7 +131,7 @@ def test_did_set_name(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     class DidSetNameRpcClient(TestWalletRpcClient):
         async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
             self.add_to_log("did_set_wallet_name", (request.wallet_id, request.name))
-            return DIDSetWalletNameResponse(request.wallet_id)
+            return DIDSetWalletNameResponse(wallet_id=request.wallet_id)
 
     inst_rpc_client = DidSetNameRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -239,7 +239,10 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
                 (request.wallet_id, request.metadata, tx_config, request.push, extra_conditions, timelock_info),
             )
             return DIDUpdateMetadataResponse(
-                [STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(request.wallet_id)
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                wallet_id=uint32(request.wallet_id),
             )
 
     inst_rpc_client = DidUpdateMetadataRpcClient()
@@ -282,7 +285,7 @@ def test_did_find_lost(capsys: object, get_test_cli_clients: tuple[TestRpcClient
                 "find_lost_did",
                 (request.coin_id, request.recovery_list_hash, request.metadata, request.num_verification),
             )
-            return DIDFindLostDIDResponse(get_bytes32(2))
+            return DIDFindLostDIDResponse(latest_coin_id=get_bytes32(2))
 
     inst_rpc_client = DidFindLostRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -322,7 +325,9 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcCl
             self.add_to_log(
                 "did_message_spend", (request.wallet_id, tx_config, extra_conditions, request.push, timelock_info)
             )
-            return DIDMessageSpendResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()))
+            return DIDMessageSpendResponse(
+                unsigned_transactions=[STD_UTX], transactions=[STD_TX], spend_bundle=WalletSpendBundle([], G2Element())
+            )
 
     inst_rpc_client = DidMessageSpendRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -391,10 +396,10 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 ),
             )
             return DIDTransferDIDResponse(
-                [STD_UTX],
-                [STD_TX],
-                STD_TX,
-                STD_TX.name,
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                transaction=STD_TX,
+                transaction_id=STD_TX.name,
             )
 
     inst_rpc_client = DidTransferRpcClient()

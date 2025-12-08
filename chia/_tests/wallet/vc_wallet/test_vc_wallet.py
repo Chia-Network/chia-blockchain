@@ -240,7 +240,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_id=vc_record.vc.launcher_id))).vc_record
     assert new_vc_record is not None
 
     # Spend VC
@@ -296,7 +296,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(),
         ]
     )
-    vc_record_updated: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    vc_record_updated: VCRecord | None = (await client_0.vc_get(VCGet(vc_id=vc_record.vc.launcher_id))).vc_record
     assert vc_record_updated is not None
     assert vc_record_updated.vc.proof_hash == proof_root
 
@@ -325,7 +325,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Doing it again just to make sure it doesn't care
     await client_0.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs))
     assert (
-        await client_0.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root))
+        await client_0.vc_get_proofs_for_root(VCGetProofsForRoot(root=proof_root))
     ).to_vc_proofs().key_value_pairs == proofs.key_value_pairs
     get_list_reponse = await client_0.vc_get_list(VCGetList())
     assert len(get_list_reponse.vc_records) == 1
@@ -467,9 +467,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     pending_tx = (
         await client_1.get_transactions(
             GetTransactions(
-                uint32(env_1.dealias_wallet_id("crcat")),
-                uint32(0),
-                uint32(1),
+                wallet_id=uint32(env_1.dealias_wallet_id("crcat")),
+                start=uint32(0),
+                end=uint32(1),
                 reverse=True,
                 type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CRCAT_PENDING]),
             )
@@ -637,7 +637,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             ),
         ]
     )
-    vc_record_updated = (await client_1.vc_get(VCGet(vc_record_updated.vc.launcher_id))).vc_record
+    vc_record_updated = (await client_1.vc_get(VCGet(vc_id=vc_record_updated.vc.launcher_id))).vc_record
     assert vc_record_updated is not None
 
     # Revoke VC
@@ -753,7 +753,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             )
         ]
     )
-    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    new_vc_record: VCRecord | None = (await client_0.vc_get(VCGet(vc_id=vc_record.vc.launcher_id))).vc_record
     assert new_vc_record is not None
 
     # Test a negative case real quick (mostly unrelated)
@@ -809,7 +809,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             )
         ]
     )
-    vc_record_revoked: VCRecord | None = (await client_0.vc_get(VCGet(vc_record.vc.launcher_id))).vc_record
+    vc_record_revoked: VCRecord | None = (await client_0.vc_get(VCGet(vc_id=vc_record.vc.launcher_id))).vc_record
     assert vc_record_revoked is None
     assert (
         len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
