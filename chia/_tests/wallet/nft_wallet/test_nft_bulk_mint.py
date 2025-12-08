@@ -433,7 +433,12 @@ async def test_nft_mint_rpc(wallet_environments: WalletTestFramework, zero_royal
     )
 
     # check NFT edition numbers
-    nfts = [nft for nft in (await env_1.rpc_client.list_nfts(NFTGetNFTs(uint32(env_1.wallet_aliases["nft"])))).nft_list]
+    nfts = [
+        nft
+        for nft in (
+            await env_1.rpc_client.list_nfts(NFTGetNFTs(wallet_id=uint32(env_1.wallet_aliases["nft"])))
+        ).nft_list
+    ]
     for nft in nfts:
         edition_num = nft.edition_number
         meta_dict = metadata_list[edition_num - 1]

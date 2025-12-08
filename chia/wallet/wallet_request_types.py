@@ -54,36 +54,32 @@ from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
-def default_raise() -> Any:  # pragma: no cover
-    raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
-
-
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class Empty(Streamable):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class LogIn(Streamable):
     fingerprint: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class LogInResponse(Streamable):
     fingerprint: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetLoggedInFingerprintResponse(Streamable):
     fingerprint: uint32 | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetPublicKeysResponse(Streamable):
     keyring_is_locked: bool
     public_key_fingerprints: list[uint32] | None = None
@@ -98,14 +94,14 @@ class GetPublicKeysResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetPrivateKey(Streamable):
     fingerprint: uint32
 
 
 # utility for `GetPrivateKeyResponse`
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetPrivateKeyFormat(Streamable):
     fingerprint: uint32
     sk: PrivateKey
@@ -116,45 +112,45 @@ class GetPrivateKeyFormat(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetPrivateKeyResponse(Streamable):
     private_key: GetPrivateKeyFormat
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GenerateMnemonicResponse(Streamable):
     mnemonic: list[str]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class AddKey(Streamable):
     mnemonic: list[str]
     label: str | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class AddKeyResponse(Streamable):
     fingerprint: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DeleteKey(Streamable):
     fingerprint: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CheckDeleteKey(Streamable):
     fingerprint: uint32
     max_ph_to_search: uint16 = uint16(100)
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CheckDeleteKeyResponse(Streamable):
     fingerprint: uint32
     used_for_farmer_rewards: bool
@@ -163,13 +159,13 @@ class CheckDeleteKeyResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SetWalletResyncOnStartup(Streamable):
     enable: bool = True
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetSyncStatusResponse(Streamable):
     synced: bool
     syncing: bool
@@ -177,13 +173,13 @@ class GetSyncStatusResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetHeightInfoResponse(Streamable):
     height: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PushTX(Streamable):
     spend_bundle: WalletSpendBundle
 
@@ -200,19 +196,19 @@ class PushTX(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTimestampForHeight(Streamable):
     height: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTimestampForHeightResponse(Streamable):
     timestamp: uint64
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetWallets(Streamable):
     type: uint16 | None = None
     include_data: bool = True
@@ -220,27 +216,27 @@ class GetWallets(Streamable):
 
 # utility for GetWalletsResponse
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class WalletInfoResponse(WalletInfo):
     authorized_providers: list[bytes32] = field(default_factory=list)
     flags_needed: list[str] = field(default_factory=list)
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetWalletsResponse(Streamable):
     wallets: list[WalletInfoResponse]
     fingerprint: uint32 | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetWalletBalance(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetWalletBalances(Streamable):
     wallet_ids: list[uint32] | None = None
 
@@ -249,40 +245,40 @@ class GetWalletBalances(Streamable):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class BalanceResponse(Balance):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    wallet_type: uint8 = field(default_factory=default_raise)
+    wallet_id: uint32
+    wallet_type: uint8
     fingerprint: uint32 | None = None
     asset_id: bytes32 | None = None
     pending_approval_balance: uint64 | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetWalletBalanceResponse(Streamable):
     wallet_balance: BalanceResponse
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetWalletBalancesResponse(Streamable):
     wallet_balances: dict[uint32, BalanceResponse]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransaction(Streamable):
     transaction_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactionResponse(Streamable):
     transaction: TransactionRecord
     transaction_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactions(Streamable):
     wallet_id: uint32
     start: uint32 | None = None
@@ -336,20 +332,20 @@ class TransactionRecordMetadata:
 
 # utility for GetTransactionsResponse
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class TransactionRecordWithMetadata(TransactionRecord):
     metadata: TransactionRecordMetadata | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactionsResponse(Streamable):
     transactions: list[TransactionRecordWithMetadata]
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetNotifications(Streamable):
     ids: list[bytes32] | None = None
     start: uint32 | None = None
@@ -357,19 +353,19 @@ class GetNotifications(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetNotificationsResponse(Streamable):
     notifications: list[Notification]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DeleteNotifications(Streamable):
     ids: list[bytes32] | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VerifySignature(Streamable):
     message: str
     pubkey: G1Element
@@ -379,14 +375,14 @@ class VerifySignature(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VerifySignatureResponse(Streamable):
     isValid: bool
     error: str | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SignMessageByAddress(Streamable):
     address: str
     message: str
@@ -395,7 +391,7 @@ class SignMessageByAddress(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SignMessageByAddressResponse(Streamable):
     pubkey: G1Element
     signature: G2Element
@@ -403,7 +399,7 @@ class SignMessageByAddressResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SignMessageByID(Streamable):
     id: str
     message: str
@@ -412,7 +408,7 @@ class SignMessageByID(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SignMessageByIDResponse(Streamable):
     pubkey: G1Element
     signature: G2Element
@@ -421,13 +417,13 @@ class SignMessageByIDResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactionMemo(Streamable):
     transaction_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactionMemoResponse(Streamable):
     transaction_memos: dict[bytes32, dict[bytes32, list[bytes]]]
 
@@ -453,7 +449,7 @@ class GetTransactionMemoResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactionCount(Streamable):
     wallet_id: uint32
     confirmed: bool | None = None
@@ -461,14 +457,14 @@ class GetTransactionCount(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetTransactionCountResponse(Streamable):
     wallet_id: uint32
     count: uint16
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetNextAddress(Streamable):
     wallet_id: uint32
     new_address: bool = False
@@ -476,23 +472,23 @@ class GetNextAddress(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetNextAddressResponse(Streamable):
     wallet_id: uint32
     address: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DeleteUnconfirmedTransactions(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SelectCoins(CoinSelectionConfigLoader):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    amount: uint64 = field(default_factory=default_raise)
+    wallet_id: uint32
+    amount: uint64
     exclude_coins: list[Coin] | None = None  # for backwards compatibility
 
     def __post_init__(self) -> None:
@@ -520,15 +516,15 @@ class SelectCoins(CoinSelectionConfigLoader):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SelectCoinsResponse(Streamable):
     coins: list[Coin]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetSpendableCoins(CoinSelectionConfigLoader):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
 
     @classmethod
     def from_coin_selection_config(cls, wallet_id: uint32, coin_selection_config: CoinSelectionConfig) -> Self:
@@ -542,7 +538,7 @@ class GetSpendableCoins(CoinSelectionConfigLoader):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetSpendableCoinsResponse(Streamable):
     confirmed_records: list[CoinRecord]
     unconfirmed_removals: list[CoinRecord]
@@ -550,7 +546,7 @@ class GetSpendableCoinsResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNames(Streamable):
     names: list[bytes32]
     start_height: uint32 | None = None
@@ -559,31 +555,31 @@ class GetCoinRecordsByNames(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetCoinRecordsByNamesResponse(Streamable):
     coin_records: list[CoinRecord]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetCurrentDerivationIndexResponse(Streamable):
     index: uint32 | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ExtendDerivationIndex(Streamable):
     index: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ExtendDerivationIndexResponse(Streamable):
     index: uint32 | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetOffersCountResponse(Streamable):
     total: uint16
     my_offers_count: uint16
@@ -591,7 +587,7 @@ class GetOffersCountResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DefaultCAT(Streamable):
     asset_id: bytes32
     name: str
@@ -599,39 +595,39 @@ class DefaultCAT(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetCATListResponse(Streamable):
     cat_list: list[DefaultCAT]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATSetName(Streamable):
     wallet_id: uint32
     name: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATSetNameResponse(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATGetName(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATGetNameResponse(Streamable):
     wallet_id: uint32
     name: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class StrayCAT(Streamable):
     asset_id: bytes32
     name: str
@@ -640,39 +636,39 @@ class StrayCAT(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetStrayCATsResponse(Streamable):
     stray_cats: list[StrayCAT]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATGetAssetID(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATGetAssetIDResponse(Streamable):
     wallet_id: uint32
     asset_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATAssetIDToName(Streamable):
     asset_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATAssetIDToNameResponse(Streamable):
     wallet_id: uint32 | None
     name: str | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetOfferSummary(Streamable):
     offer: str
     advanced: bool = False
@@ -683,7 +679,7 @@ class GetOfferSummary(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetOfferSummaryResponse(Streamable):
     id: bytes32
     summary: OfferSummary | None = None
@@ -717,53 +713,53 @@ class GetOfferSummaryResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CheckOfferValidity(Streamable):
     offer: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CheckOfferValidityResponse(Streamable):
     valid: bool
     id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDSetWalletName(Streamable):
     wallet_id: uint32
     name: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDSetWalletNameResponse(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetWalletName(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetWalletNameResponse(Streamable):
     wallet_id: uint32
     name: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetInfo(Streamable):
     coin_id: str
     latest: bool = True
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetInfoResponse(Streamable):
     did_id: str
     latest_coin: bytes32
@@ -779,7 +775,7 @@ class DIDGetInfoResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDFindLostDID(Streamable):
     coin_id: str
     recovery_list_hash: bytes32 | None = None
@@ -788,31 +784,31 @@ class DIDFindLostDID(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDFindLostDIDResponse(Streamable):
     latest_coin_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetPubkey(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetPubkeyResponse(Streamable):
     pubkey: G1Element
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetCurrentCoinInfo(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetCurrentCoinInfoResponse(Streamable):
     wallet_id: uint32
     my_did: str
@@ -822,26 +818,26 @@ class DIDGetCurrentCoinInfoResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDCreateBackupFile(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDCreateBackupFileResponse(Streamable):
     wallet_id: uint32
     backup_data: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetDID(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetDIDResponse(Streamable):
     wallet_id: uint32
     my_did: str
@@ -849,33 +845,33 @@ class DIDGetDIDResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetMetadata(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDGetMetadataResponse(Streamable):
     wallet_id: uint32
     metadata: dict[str, str]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTCountNFTs(Streamable):
     wallet_id: uint32 | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTCountNFTsResponse(Streamable):
     wallet_id: uint32 | None
     count: uint64
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetNFTs(Streamable):
     wallet_id: uint32 | None = None
     start_index: uint32 = uint32(0)
@@ -883,38 +879,38 @@ class NFTGetNFTs(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetNFTsResponse(Streamable):
     wallet_id: uint32 | None
     nft_list: list[NFTInfo]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetByDID(Streamable):
     did_id: str | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetByDIDResponse(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetWalletDID(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetWalletDIDResponse(Streamable):
     did_id: str | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTSetNFTStatus(Streamable):
     wallet_id: uint32
     coin_id: bytes32
@@ -923,7 +919,7 @@ class NFTSetNFTStatus(Streamable):
 
 # utility for NFTGetWalletsWithDIDsResponse
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTWalletWithDID(Streamable):
     wallet_id: uint32
     did_id: str
@@ -931,27 +927,27 @@ class NFTWalletWithDID(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetWalletsWithDIDsResponse(Streamable):
     nft_wallets: list[NFTWalletWithDID]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetInfo(Streamable):
     coin_id: str
     latest: bool = True
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTGetInfoResponse(Streamable):
     nft_info: NFTInfo
 
 
 # utility for NFTCalculateRoyalties
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class RoyaltyAsset(Streamable):
     asset: str
     royalty_address: str
@@ -960,14 +956,14 @@ class RoyaltyAsset(Streamable):
 
 # utility for NFTCalculateRoyalties
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class FungibleAsset(Streamable):
     asset: str | None
     amount: uint64
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTCalculateRoyalties(Streamable):
     royalty_assets: list[RoyaltyAsset] = field(default_factory=list)
     fungible_assets: list[FungibleAsset] = field(default_factory=list)
@@ -981,7 +977,7 @@ class NFTCalculateRoyalties(Streamable):
 
 # utility for NFTCalculateRoyaltiesResponse
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class RoyaltySummary(Streamable):
     royalty_asset: str
     fungible_asset: str | None
@@ -990,7 +986,7 @@ class RoyaltySummary(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTCalculateRoyaltiesResponse(Streamable):
     nft_info: list[RoyaltySummary]
 
@@ -1019,12 +1015,12 @@ class NFTCalculateRoyaltiesResponse(Streamable):
         # backwards compatibility. This means the code below has some logic it
         # probably shouldn't have ignoring "assets" named "success".
         return cls(
-            [
+            nft_info=[
                 RoyaltySummary(
-                    royalty_asset,
-                    summary["asset"],
-                    summary["address"],
-                    uint64(summary["amount"]),
+                    royalty_asset=royalty_asset,
+                    fungible_asset=summary["asset"],
+                    royalty_address=summary["address"],
+                    royalty_amount=uint64(summary["amount"]),
                 )
                 for royalty_asset, summaries in json_dict.items()
                 if royalty_asset != "success"
@@ -1035,65 +1031,65 @@ class NFTCalculateRoyaltiesResponse(Streamable):
 
 # utility for NFTSetDIDBulk
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTCoin(Streamable):
     nft_coin_id: str
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWStatus(Streamable):
     wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWStatusResponse(Streamable):
     state: PoolWalletInfo
     unconfirmed_transactions: list[TransactionRecord]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLTrackNew(Streamable):
     launcher_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLStopTracking(Streamable):
     launcher_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLLatestSingleton(Streamable):
     launcher_id: bytes32
     only_confirmed: bool = False
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLLatestSingletonResponse(Streamable):
     singleton: SingletonRecord | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLSingletonsByRoot(Streamable):
     launcher_id: bytes32
     root: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLSingletonsByRootResponse(Streamable):
     singletons: list[SingletonRecord]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLHistory(Streamable):
     launcher_id: bytes32
     min_generation: uint32 | None = None
@@ -1102,45 +1098,45 @@ class DLHistory(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLHistoryResponse(Streamable):
     history: list[SingletonRecord]
     count: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLOwnedSingletonsResponse(Streamable):
     singletons: list[SingletonRecord]
     count: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLGetMirrors(Streamable):
     launcher_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLGetMirrorsResponse(Streamable):
     mirrors: list[Mirror]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCGet(Streamable):
     vc_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCGetResponse(Streamable):
     vc_record: VCRecord | None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCGetList(Streamable):
     start: uint32 = uint32(0)
     end: uint32 = uint32(50)
@@ -1148,7 +1144,7 @@ class VCGetList(Streamable):
 
 # utility for VC endpoints
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCProofsRPC(Streamable):
     key_value_pairs: list[tuple[str, str]]
 
@@ -1157,12 +1153,12 @@ class VCProofsRPC(Streamable):
 
     @classmethod
     def from_vc_proofs(cls, vc_proofs: VCProofs) -> Self:
-        return cls([(key, value) for key, value in vc_proofs.key_value_pairs.items()])
+        return cls(key_value_pairs=[(key, value) for key, value in vc_proofs.key_value_pairs.items()])
 
 
 # utility for VCGetListResponse
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCProofWithHash(Streamable):
     hash: bytes32
     proof: VCProofsRPC | None
@@ -1171,7 +1167,7 @@ class VCProofWithHash(Streamable):
 # utility for VCGetListResponse
 @final
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCRecordWithCoinID(VCRecord):
     coin_id: bytes32
 
@@ -1181,7 +1177,7 @@ class VCRecordWithCoinID(VCRecord):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCGetListResponse(Streamable):
     vc_records: list[VCRecordWithCoinID]
     proofs: list[VCProofWithHash]
@@ -1202,11 +1198,11 @@ class VCGetListResponse(Streamable):
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> VCGetListResponse:
         return cls(
-            [VCRecordWithCoinID.from_json_dict(vc_record) for vc_record in json_dict["vc_records"]],
-            [
+            vc_records=[VCRecordWithCoinID.from_json_dict(vc_record) for vc_record in json_dict["vc_records"]],
+            proofs=[
                 VCProofWithHash(
-                    bytes32.from_hexstr(proof_hash),
-                    None if potential_proofs is None else VCProofsRPC.from_vc_proofs(VCProofs(potential_proofs)),
+                    hash=bytes32.from_hexstr(proof_hash),
+                    proof=None if potential_proofs is None else VCProofsRPC.from_vc_proofs(VCProofs(potential_proofs)),
                 )
                 for proof_hash, potential_proofs in json_dict["proofs"].items()
             ],
@@ -1214,74 +1210,74 @@ class VCGetListResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCAddProofs(VCProofsRPC):
     def to_json_dict(self) -> dict[str, Any]:
         return {"proofs": self.to_vc_proofs().key_value_pairs}
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
-        return cls([(key, value) for key, value in json_dict["proofs"].items()])
+        return cls(key_value_pairs=[(key, value) for key, value in json_dict["proofs"].items()])
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCGetProofsForRoot(Streamable):
     root: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCGetProofsForRootResponse(VCAddProofs):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GatherSigningInfo(Streamable):
     spends: list[Spend]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GatherSigningInfoResponse(Streamable):
     signing_instructions: SigningInstructions
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ApplySignatures(Streamable):
     spends: list[Spend]
     signing_responses: list[SigningResponse]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ApplySignaturesResponse(Streamable):
     signed_transactions: list[SignedTransaction]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SubmitTransactions(Streamable):
     signed_transactions: list[SignedTransaction]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SubmitTransactionsResponse(Streamable):
     mempool_ids: list[bytes32]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ExecuteSigningInstructions(Streamable):
     signing_instructions: SigningInstructions
     partial_allowed: bool = False
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ExecuteSigningInstructionsResponse(Streamable):
     signing_responses: list[SigningResponse]
 
@@ -1319,7 +1315,7 @@ class TransactionEndpointRequest(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: list[UnsignedTransaction]
     transactions: list[TransactionRecord]
@@ -1327,7 +1323,7 @@ class TransactionEndpointResponse(Streamable):
 
 # utility for SendTransaction
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ClawbackPuzzleDecoratorOverride(Streamable):
     decorator: str
     clawback_timelock: uint64
@@ -1339,11 +1335,11 @@ class ClawbackPuzzleDecoratorOverride(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SendTransaction(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    amount: uint64 = field(default_factory=default_raise)
-    address: str = field(default_factory=default_raise)
+    wallet_id: uint32
+    amount: uint64
+    address: str
     memos: list[str] = field(default_factory=list)
     # Technically this value was meant to support many types here
     # However, only one is supported right now and there are no plans to extend
@@ -1352,44 +1348,44 @@ class SendTransaction(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SendTransactionResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SpendClawbackCoins(TransactionEndpointRequest):
-    coin_ids: list[bytes32] = field(default_factory=default_raise)
+    coin_ids: list[bytes32]
     batch_size: uint16 | None = None
     force: bool = False
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SpendClawbackCoinsResponse(TransactionEndpointResponse):
     transaction_ids: list[bytes32]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SendNotification(TransactionEndpointRequest):
-    target: bytes32 = field(default_factory=default_raise)
-    message: bytes = field(default_factory=default_raise)
+    target: bytes32
+    message: bytes
     amount: uint64 = uint64(0)
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SendNotificationResponse(TransactionEndpointResponse):
     tx: TransactionRecord
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PushTransactions(TransactionEndpointRequest):
-    transactions: list[TransactionRecord] = field(default_factory=default_raise)
+    transactions: list[TransactionRecord]
     push: bool | None = True
 
     # We allow for flexibility in transaction parsing here so we need to override
@@ -1408,7 +1404,7 @@ class PushTransactions(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PushTransactionsResponse(TransactionEndpointResponse):
     pass
 
@@ -1416,10 +1412,10 @@ class PushTransactionsResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class SplitCoins(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    number_of_coins: uint16 = field(default_factory=default_raise)
-    amount_per_coin: uint64 = field(default_factory=default_raise)
-    target_coin_id: bytes32 = field(default_factory=default_raise)
+    wallet_id: uint32
+    number_of_coins: uint16
+    amount_per_coin: uint64
+    target_coin_id: bytes32
 
     def __post_init__(self) -> None:
         if self.number_of_coins > 500:
@@ -1429,7 +1425,7 @@ class SplitCoins(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SplitCoinsResponse(TransactionEndpointResponse):
     pass
 
@@ -1437,7 +1433,7 @@ class SplitCoinsResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class CombineCoins(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
     number_of_coins: uint16 = uint16(500)
     largest_first: bool = False
     target_coin_ids: list[bytes32] = field(default_factory=list)
@@ -1456,7 +1452,7 @@ class CombineCoins(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CombineCoinsResponse(TransactionEndpointResponse):
     pass
 
@@ -1464,7 +1460,7 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 # utility for CATSpend/CreateSignedTransaction
 # unfortunate that we can't use CreateCoin but the memos are taken as strings not bytes
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class Addition(Streamable):
     amount: uint64
     puzzle_hash: bytes32
@@ -1474,7 +1470,7 @@ class Addition(Streamable):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class CATSpend(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
     additions: list[Addition] | None = None
     amount: uint64 | None = None
     inner_address: str | None = None
@@ -1510,7 +1506,7 @@ class CATSpend(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CATSpendResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
@@ -1519,13 +1515,13 @@ class CATSpendResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DIDMessageSpend(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
     coin_announcements: list[bytes] = field(default_factory=list)
     puzzle_announcements: list[bytes] = field(default_factory=list)
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDMessageSpendResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
 
@@ -1533,12 +1529,12 @@ class DIDMessageSpendResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DIDUpdateMetadata(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
     metadata: dict[str, str] = field(default_factory=dict)
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDUpdateMetadataResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
     wallet_id: uint32
@@ -1547,8 +1543,8 @@ class DIDUpdateMetadataResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DIDTransferDID(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    inner_address: str = field(default_factory=default_raise)
+    wallet_id: uint32
+    inner_address: str
     with_recovery_info: bool = True
 
     def __post_init__(self) -> None:
@@ -1558,7 +1554,7 @@ class DIDTransferDID(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DIDTransferDIDResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
@@ -1567,11 +1563,11 @@ class DIDTransferDIDResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class NFTMintNFTRequest(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    royalty_address: str | None = field(default_factory=default_raise)
-    target_address: str | None = field(default_factory=default_raise)
-    uris: list[str] = field(default_factory=default_raise)
-    hash: bytes32 = field(default_factory=default_raise)
+    wallet_id: uint32
+    royalty_address: str | None
+    target_address: str | None
+    uris: list[str]
+    hash: bytes32
     royalty_amount: uint16 = uint16(0)
     meta_uris: list[str] = field(default_factory=list)
     license_uris: list[str] = field(default_factory=list)
@@ -1583,7 +1579,7 @@ class NFTMintNFTRequest(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTMintNFTResponse(TransactionEndpointResponse):
     wallet_id: uint32
     spend_bundle: WalletSpendBundle
@@ -1593,13 +1589,13 @@ class NFTMintNFTResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class NFTSetNFTDID(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    nft_coin_id: bytes32 = field(default_factory=default_raise)
+    wallet_id: uint32
+    nft_coin_id: bytes32
     did_id: str | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTSetNFTDIDResponse(TransactionEndpointResponse):
     wallet_id: uint32
     spend_bundle: WalletSpendBundle
@@ -1608,12 +1604,12 @@ class NFTSetNFTDIDResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class NFTSetDIDBulk(TransactionEndpointRequest):
-    nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
+    nft_coin_list: list[NFTCoin]
     did_id: str | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTSetDIDBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
     tx_num: uint16
@@ -1623,12 +1619,12 @@ class NFTSetDIDBulkResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class NFTTransferBulk(TransactionEndpointRequest):
-    nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
-    target_address: str = field(default_factory=default_raise)
+    nft_coin_list: list[NFTCoin]
+    target_address: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: list[uint32]
     tx_num: uint16
@@ -1638,11 +1634,11 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class CreateNewDL(TransactionEndpointRequest):
-    root: bytes32 = field(default_factory=default_raise)
+    root: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateNewDLResponse(TransactionEndpointResponse):
     launcher_id: bytes32
 
@@ -1650,26 +1646,26 @@ class CreateNewDLResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DLUpdateRoot(TransactionEndpointRequest):
-    launcher_id: bytes32 = field(default_factory=default_raise)
-    new_root: bytes32 = field(default_factory=default_raise)
+    launcher_id: bytes32
+    new_root: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLUpdateRootResponse(TransactionEndpointResponse):
     tx_record: TransactionRecord
 
 
 # utilities for DLUpdateMultiple
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class LauncherRootPair(Streamable):
     launcher_id: bytes32
     new_root: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLUpdateMultipleUpdates(Streamable):
     launcher_root_pairs: list[LauncherRootPair]
 
@@ -1681,10 +1677,10 @@ class DLUpdateMultipleUpdates(Streamable):
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         return cls(
-            [
+            launcher_root_pairs=[
                 LauncherRootPair(
-                    bytes32.from_hexstr(key),
-                    bytes32.from_hexstr(value),
+                    launcher_id=bytes32.from_hexstr(key),
+                    new_root=bytes32.from_hexstr(value),
                 )
                 for key, value in json_dict.items()
             ]
@@ -1694,7 +1690,7 @@ class DLUpdateMultipleUpdates(Streamable):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DLUpdateMultiple(TransactionEndpointRequest):
-    updates: DLUpdateMultipleUpdates = field(default_factory=default_raise)
+    updates: DLUpdateMultipleUpdates
 
     # TODO: deprecate the kinda silly format of this RPC and delete this function
     def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
@@ -1702,7 +1698,7 @@ class DLUpdateMultiple(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLUpdateMultipleResponse(TransactionEndpointResponse):
     pass
 
@@ -1710,13 +1706,13 @@ class DLUpdateMultipleResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DLNewMirror(TransactionEndpointRequest):
-    launcher_id: bytes32 = field(default_factory=default_raise)
-    amount: uint64 = field(default_factory=default_raise)
-    urls: list[str] = field(default_factory=default_raise)
+    launcher_id: bytes32
+    amount: uint64
+    urls: list[str]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLNewMirrorResponse(TransactionEndpointResponse):
     pass
 
@@ -1724,41 +1720,41 @@ class DLNewMirrorResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class DLDeleteMirror(TransactionEndpointRequest):
-    coin_id: bytes32 = field(default_factory=default_raise)
+    coin_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DLDeleteMirrorResponse(TransactionEndpointResponse):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTTransferNFT(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    target_address: str = field(default_factory=default_raise)
-    nft_coin_id: str = field(default_factory=default_raise)
+    wallet_id: uint32
+    target_address: str
+    nft_coin_id: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTTransferNFTResponse(TransactionEndpointResponse):
     wallet_id: uint32
     spend_bundle: WalletSpendBundle
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTAddURI(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    uri: str = field(default_factory=default_raise)
-    key: str = field(default_factory=default_raise)
-    nft_coin_id: str = field(default_factory=default_raise)
+    wallet_id: uint32
+    uri: str
+    key: str
+    nft_coin_id: str
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTAddURIResponse(TransactionEndpointResponse):
     wallet_id: uint32
     spend_bundle: WalletSpendBundle
@@ -1766,7 +1762,7 @@ class NFTAddURIResponse(TransactionEndpointResponse):
 
 # utility for NFTBulkMint
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTMintMetadata(Streamable):
     uris: list[str]
     hash: bytes32
@@ -1779,10 +1775,10 @@ class NFTMintMetadata(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTMintBulk(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    metadata_list: list[NFTMintMetadata] = field(default_factory=default_raise)
+    wallet_id: uint32
+    metadata_list: list[NFTMintMetadata]
     royalty_address: str | None = None
     royalty_percentage: uint16 | None = None
     target_list: list[str] = field(default_factory=list)
@@ -1798,23 +1794,23 @@ class NFTMintBulk(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NFTMintBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
     nft_id_list: list[str]
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWJoinPool(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    pool_url: str = field(default_factory=default_raise)
-    target_puzzlehash: bytes32 = field(default_factory=default_raise)
-    relative_lock_height: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
+    pool_url: str
+    target_puzzlehash: bytes32
+    relative_lock_height: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWJoinPoolResponse(TransactionEndpointResponse):
     total_fee: uint64
     transaction: TransactionRecord
@@ -1822,13 +1818,13 @@ class PWJoinPoolResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWSelfPool(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWSelfPoolResponse(TransactionEndpointResponse):
     total_fee: uint64
     transaction: TransactionRecord
@@ -1836,14 +1832,14 @@ class PWSelfPoolResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWAbsorbRewards(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
     max_spends_in_tx: uint16 | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PWAbsorbRewardsResponse(TransactionEndpointResponse):
     state: PoolWalletInfo
     transaction: TransactionRecord
@@ -1851,63 +1847,63 @@ class PWAbsorbRewardsResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCMint(TransactionEndpointRequest):
-    did_id: str = field(default_factory=default_raise)
+    did_id: str
     target_address: str | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCMintResponse(TransactionEndpointResponse):
     vc_record: VCRecord
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCSpend(TransactionEndpointRequest):
-    vc_id: bytes32 = field(default_factory=default_raise)
+    vc_id: bytes32
     new_puzhash: bytes32 | None = None
     new_proof_hash: bytes32 | None = None
     provider_inner_puzhash: bytes32 | None = None
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCSpendResponse(TransactionEndpointResponse):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCRevoke(TransactionEndpointRequest):
-    vc_parent_id: bytes32 = field(default_factory=default_raise)
+    vc_parent_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class VCRevokeResponse(TransactionEndpointResponse):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CSTCoinAnnouncement(Streamable):
     coin_id: bytes32
     message: bytes
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CSTPuzzleAnnouncement(Streamable):
     puzzle_hash: bytes32
     message: bytes
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateSignedTransaction(TransactionEndpointRequest):
-    additions: list[Addition] = field(default_factory=default_raise)
+    additions: list[Addition]
     wallet_id: uint32 | None = None
     coins: list[Coin] | None = None
     morph_bytes: bytes | None = None
@@ -1948,7 +1944,7 @@ class CreateSignedTransaction(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
     signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
@@ -1958,10 +1954,10 @@ _T_SendTransactionMultiProxy = TypeVar("_T_SendTransactionMultiProxy", CATSpend,
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SendTransactionMulti(TransactionEndpointRequest):
     # primarily for cat_spend
-    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_id: uint32
     additions: list[Addition] | None = None  # for both
     amount: uint64 | None = None
     inner_address: str | None = None
@@ -2036,14 +2032,14 @@ class SendTransactionMulti(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SendTransactionMultiResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class _OfferEndpointResponse(TransactionEndpointResponse):
     offer: Offer  # gotta figure out how to ignore this in streamable
     trade_record: TradeRecord
@@ -2076,10 +2072,10 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateOfferForIDs(TransactionEndpointRequest):
     # a hack for dict[str, int] because streamable doesn't support negative ints
-    offer: dict[str, str] = field(default_factory=default_raise)
+    offer: dict[str, str]
     driver_dict: dict[bytes32, PuzzleInfo] | None = None
     solver: Solver | None = None
     validate_only: bool = False
@@ -2097,15 +2093,15 @@ class CreateOfferForIDs(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateOfferForIDsResponse(_OfferEndpointResponse):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class TakeOffer(TransactionEndpointRequest):
-    offer: str = field(default_factory=default_raise)
+    offer: str
     solver: Solver | None = None
 
     @cached_property
@@ -2114,20 +2110,20 @@ class TakeOffer(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class TakeOfferResponse(_OfferEndpointResponse):  # Inheriting for de-dup sake
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetOffer(Streamable):
     trade_id: bytes32
     file_contents: bool = False
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetOfferResponse(Streamable):
     offer: str | None
     trade_record: TradeRecord
@@ -2150,7 +2146,7 @@ class GetOfferResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetAllOffers(Streamable):
     start: uint16 = uint16(0)
     end: uint16 = uint16(10)
@@ -2163,7 +2159,7 @@ class GetAllOffers(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetAllOffersResponse(Streamable):
     offers: list[str] | None
     trade_records: list[TradeRecord]
@@ -2189,22 +2185,22 @@ class GetAllOffersResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CancelOffer(TransactionEndpointRequest):
-    trade_id: bytes32 = field(default_factory=default_raise)
-    secure: bool = field(default_factory=default_raise)
+    trade_id: bytes32
+    secure: bool
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CancelOfferResponse(TransactionEndpointResponse):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CancelOffers(TransactionEndpointRequest):
-    secure: bool = field(default_factory=default_raise)
+    secure: bool
     batch_fee: uint64 = uint64(0)
     batch_size: uint16 = uint16(5)
     cancel_all: bool = False
@@ -2220,7 +2216,7 @@ class CancelOffers(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CancelOffersResponse(TransactionEndpointResponse):
     pass
 
@@ -2247,9 +2243,9 @@ class DIDType(Enum):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateNewWallet(TransactionEndpointRequest):
-    wallet_type: CreateNewWalletType = field(default_factory=default_raise)
+    wallet_type: CreateNewWalletType
     # CAT_WALLET
     mode: WalletCreationMode | None = None  # required
     amount: uint64 | None = None  # required in "new"
@@ -2355,7 +2351,7 @@ class CreateNewWallet(TransactionEndpointRequest):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CreateNewWalletResponse(TransactionEndpointResponse):
     type: str  # Alias for WalletType which is IntEnum and therefore incompatible
     wallet_id: uint32
@@ -2472,26 +2468,26 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CRCATApprovePending(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default_factory=default_raise)
-    min_amount_to_claim: uint64 = field(default_factory=default_raise)
+    wallet_id: uint32
+    min_amount_to_claim: uint64
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class CRCATApprovePendingResponse(TransactionEndpointResponse):
     pass
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetFarmedAmount(Streamable):
     include_pool_rewards: bool = False
 
 
 @streamable
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class GetFarmedAmountResponse(Streamable):
     farmed_amount: uint64
     pool_reward_amount: uint64
