@@ -93,7 +93,6 @@ async def setup_two_nodes(
 
     config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        print("Setting up two nodes with bt1")
         async with (
             create_block_tools_async(
                 constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
@@ -123,7 +122,6 @@ async def setup_two_nodes(
                 fn1 = service1._api
                 fn2 = service2._api
 
-                print("Yielding two nodes")
                 yield fn1, fn2, fn1.full_node.server, fn2.full_node.server, bt1
 
 
