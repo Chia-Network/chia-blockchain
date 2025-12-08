@@ -10,8 +10,8 @@ import ssl
 import sys
 import tempfile
 import time
-from collections.abc import AsyncIterator, Callable, Sequence
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
@@ -2204,19 +2204,20 @@ async def create_block_tools_async(
         yield bt
 
 
+@contextmanager
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Path | None = None,
     keychain: Keychain | None = None,
     config_overrides: dict[str, Any] | None = None,
-) -> BlockTools:
+) -> Iterator[BlockTools]:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
     with BlockTools(constants, root_path, keychain, config_overrides=config_overrides) as bt:
         asyncio.get_event_loop().run_until_complete(bt.setup_keys())
         asyncio.get_event_loop().run_until_complete(bt.setup_plots())
-        return bt
+        yield bt
 
 
 def make_unfinished_block(
