@@ -33,25 +33,25 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
 
 async def run_test_chain_benchmark() -> None:
     with TempKeyring() as keychain:
-        bt = await create_block_tools_async(constants=test_constants, keychain=keychain)
-        with enable_profiler(True, "load-test-chain"):
-            start = time.monotonic()
-            for version in ["", "_hardfork"]:
-                for count, name in [
-                    (400, "test_blocks_400_rc5"),
-                    (1000, "test_blocks_1000_rc5"),
-                    (1000, "pre_genesis_empty_slots_1000_blocksrc5"),
-                    (1500, "test_blocks_1500_rc5"),
-                    (10000, "test_blocks_10000_rc5"),
-                    (758 + 320, "test_blocks_long_reorg_rc5"),
-                    (2000, "test_blocks_2000_compact_rc5"),
-                    (10000, "test_blocks_10000_compact_rc5"),
-                ]:
-                    persistent_blocks(count, f"{name}{version}.db", bt, seed=b"100")
-            end = time.monotonic()
-        KeyringWrapper.cleanup_shared_instance()
+        async with create_block_tools_async(constants=test_constants, keychain=keychain) as bt:
+            with enable_profiler(True, "load-test-chain"):
+                start = time.monotonic()
+                for version in ["", "_hardfork"]:
+                    for count, name in [
+                        (400, "test_blocks_400_rc5"),
+                        (1000, "test_blocks_1000_rc5"),
+                        (1000, "pre_genesis_empty_slots_1000_blocksrc5"),
+                        (1500, "test_blocks_1500_rc5"),
+                        (10000, "test_blocks_10000_rc5"),
+                        (758 + 320, "test_blocks_long_reorg_rc5"),
+                        (2000, "test_blocks_2000_compact_rc5"),
+                        (10000, "test_blocks_10000_compact_rc5"),
+                    ]:
+                        persistent_blocks(count, f"{name}{version}.db", bt, seed=b"100")
+                end = time.monotonic()
+            KeyringWrapper.cleanup_shared_instance()
 
-        print(f"time to load test chains: {end - start:.2f}s")
+            print(f"time to load test chains: {end - start:.2f}s")
 
 
 if __name__ == "__main__":

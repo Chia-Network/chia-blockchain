@@ -2448,31 +2448,30 @@ async def test_invalid_capability_can_connect(
 @pytest.mark.anyio
 async def test_node_start_with_existing_blocks(db_version: int) -> None:
     with TempKeyring(populate=True) as keychain:
-        block_tools = await create_block_tools_async(keychain=keychain)
+        async with create_block_tools_async(keychain=keychain) as block_tools:
+            blocks_per_cycle = 5
+            expected_height = 0
 
-        blocks_per_cycle = 5
-        expected_height = 0
+            for cycle in range(2):
+                async with setup_full_node(
+                    consensus_constants=block_tools.constants,
+                    db_name="node_restart_test.db",
+                    self_hostname=block_tools.config["self_hostname"],
+                    local_bt=block_tools,
+                    simulator=True,
+                    db_version=db_version,
+                    reuse_db=True,
+                ) as service:
+                    simulator_api = service._api
+                    assert isinstance(simulator_api, FullNodeSimulator)
+                    await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
 
-        for cycle in range(2):
-            async with setup_full_node(
-                consensus_constants=block_tools.constants,
-                db_name="node_restart_test.db",
-                self_hostname=block_tools.config["self_hostname"],
-                local_bt=block_tools,
-                simulator=True,
-                db_version=db_version,
-                reuse_db=True,
-            ) as service:
-                simulator_api = service._api
-                assert isinstance(simulator_api, FullNodeSimulator)
-                await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
+                    expected_height += blocks_per_cycle
+                    assert simulator_api.full_node._blockchain is not None
+                    block_record = simulator_api.full_node._blockchain.get_peak()
 
-                expected_height += blocks_per_cycle
-                assert simulator_api.full_node._blockchain is not None
-                block_record = simulator_api.full_node._blockchain.get_peak()
-
-                assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
-                assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
+                    assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
+                    assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
 
 
 @pytest.mark.anyio
