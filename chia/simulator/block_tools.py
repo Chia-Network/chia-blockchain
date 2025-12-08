@@ -262,7 +262,7 @@ class BlockTools:
 
         self._tempdir = None
         if root_path is None:
-            self._tempdir = tempfile.TemporaryDirectory()
+            self._tempdir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
