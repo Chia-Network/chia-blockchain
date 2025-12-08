@@ -1693,14 +1693,6 @@ async def test_long_sync_untrusted_break(
             f"Connection closed: {untrusted_conn.peer_info.host}, node id: {untrusted_full_node_server.node_id.hex()}"
             in caplog.text
         )
-        # check that we disconnected from the untrusted peer
-        # assert re.match(r"Connection closed:.*", caplog.text)
-
-        # connection.peer_info.host
-        # wallet_server.connections.values()
-
-        # assert re.match(f"Connection closed:.*, node id: {untrusted_full_node_server.node_id.hex()}", caplog.text)
-
         # And that we only have a trusted peer left
         await time_out_assert(30, only_trusted_peer)
 
