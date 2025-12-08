@@ -8,7 +8,5 @@ from pathlib import Path
 
 @contextlib.contextmanager
 def TempFile() -> Iterator[Path]:
-    path = Path(tempfile.NamedTemporaryFile().name)
-    yield path
-    if path.exists():
-        path.unlink()
+    with tempfile.NamedTemporaryFile() as f:
+        yield Path(f.name)
