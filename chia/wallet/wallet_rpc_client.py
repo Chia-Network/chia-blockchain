@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.rpc.rpc_client import RpcClient
-from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
@@ -40,6 +39,8 @@ from chia.wallet.wallet_request_types import (
     CombineCoinsResponse,
     CreateNewDL,
     CreateNewDLResponse,
+    CreateNewWallet,
+    CreateNewWalletResponse,
     CreateOfferForIDs,
     CreateOfferForIDsResponse,
     CreateSignedTransaction,
@@ -324,6 +325,20 @@ class WalletRpcClient(RpcClient):
     async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
         return GetNextAddressResponse.from_json_dict(await self.fetch("get_next_address", request.to_json_dict()))
 
+    async def create_new_wallet(
+        self,
+        request: CreateNewWallet,
+        tx_config: TXConfig,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> CreateNewWalletResponse:
+        return CreateNewWalletResponse.from_json_dict(
+            await self.fetch(
+                "create_new_wallet",
+                request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info),
+            )
+        )
+
     async def send_transaction(
         self,
         request: SendTransaction,
@@ -408,37 +423,6 @@ class WalletRpcClient(RpcClient):
         )
 
     # DID wallet
-    async def create_new_did_wallet(
-        self,
-        amount: int,
-        tx_config: TXConfig,
-        fee: int = 0,
-        name: str | None = "DID Wallet",
-        backup_ids: list[str] = [],
-        required_num: int = 0,
-        type: str = "new",
-        backup_data: str = "",
-        push: bool = True,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> dict[str, Any]:
-        request = {
-            "wallet_type": "did_wallet",
-            "did_type": type,
-            "backup_dids": backup_ids,
-            "num_of_backup_ids_needed": required_num,
-            "amount": amount,
-            "fee": fee,
-            "wallet_name": name,
-            "push": push,
-            "backup_data": backup_data,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        response = await self.fetch("create_new_wallet", request)
-        return response
-
     async def get_did_id(self, request: DIDGetDID) -> DIDGetDIDResponse:
         return DIDGetDIDResponse.from_json_dict(await self.fetch("did_get_did", request.to_json_dict()))
 
@@ -517,41 +501,6 @@ class WalletRpcClient(RpcClient):
     async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
         return DIDGetWalletNameResponse.from_json_dict(await self.fetch("did_get_wallet_name", request.to_json_dict()))
 
-    # TODO: test all invocations of create_new_pool_wallet with new fee arg.
-    async def create_new_pool_wallet(
-        self,
-        target_puzzlehash: bytes32 | None,
-        pool_url: str | None,
-        relative_lock_height: uint32,
-        backup_host: str,
-        mode: str,
-        state: str,
-        fee: uint64,
-        p2_singleton_delay_time: uint64 | None = None,
-        p2_singleton_delayed_ph: bytes32 | None = None,
-        extra_conditions: tuple[Condition, ...] = tuple(),
-        timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> TransactionRecord:
-        request = {
-            "wallet_type": "pool_wallet",
-            "mode": mode,
-            "initial_target_state": {
-                "target_puzzle_hash": target_puzzlehash.hex() if target_puzzlehash else None,
-                "relative_lock_height": relative_lock_height,
-                "pool_url": pool_url,
-                "state": state,
-            },
-            "fee": fee,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            **timelock_info.to_json_dict(),
-        }
-        if p2_singleton_delay_time is not None:
-            request["p2_singleton_delay_time"] = p2_singleton_delay_time
-        if p2_singleton_delayed_ph is not None:
-            request["p2_singleton_delayed_ph"] = p2_singleton_delayed_ph.hex()
-        res = await self.fetch("create_new_wallet", request)
-        return TransactionRecord.from_json_dict(res["transaction"])
-
     async def pw_self_pool(
         self,
         request: PWSelfPool,
@@ -595,16 +544,6 @@ class WalletRpcClient(RpcClient):
         return PWStatusResponse.from_json_dict(await self.fetch("pw_status", request.to_json_dict()))
 
     # CATS
-    async def create_new_cat_and_wallet(
-        self, amount: uint64, fee: uint64 = uint64(0), test: bool = False
-    ) -> dict[str, Any]:
-        request = {"wallet_type": "cat_wallet", "mode": "new", "amount": amount, "fee": fee, "test": test}
-        return await self.fetch("create_new_wallet", request)
-
-    async def create_wallet_for_existing_cat(self, asset_id: bytes) -> dict[str, Any]:
-        request = {"wallet_type": "cat_wallet", "asset_id": asset_id.hex(), "mode": "existing"}
-        return await self.fetch("create_new_wallet", request)
-
     async def get_cat_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
         return CATGetAssetIDResponse.from_json_dict(await self.fetch("cat_get_asset_id", request.to_json_dict()))
 
@@ -707,11 +646,6 @@ class WalletRpcClient(RpcClient):
         return GetCATListResponse.from_json_dict(await self.fetch("get_cat_list", {}))
 
     # NFT wallet
-    async def create_new_nft_wallet(self, did_id: str | None, name: str | None = None) -> dict[str, Any]:
-        request = {"wallet_type": "nft_wallet", "did_id": did_id, "name": name}
-        response = await self.fetch("create_new_wallet", request)
-        return response
-
     async def mint_nft(
         self,
         request: NFTMintNFTRequest,
