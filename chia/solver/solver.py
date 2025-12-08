@@ -68,7 +68,7 @@ class Solver:
             self.log.info("Solver service shutdown complete")
 
     def solve(self, partial_proof: PartialProof, plot_id: bytes32, strength: int, size: int) -> bytes | None:
-        self.log.info(f"Solve request: partial={partial_proof.proof_fragments[:5]} plot-id: {plot_id} k: {size}")
+        self.log.info(f"Solve request: partial={partial_proof.fragments[:5]} plot-id: {plot_id} k: {size}")
         try:
             return solve_proof(partial_proof, plot_id, strength, size)
         except Exception:
