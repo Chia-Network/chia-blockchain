@@ -872,3 +872,6 @@ async def test_cat_wallet_conversion(
     await time_out_assert_not_none(
         15, check_length, 0, wallet_node_0.wallet_state_manager.get_all_wallet_info_entries, WalletType.CAT
     )
+
+    client_0.close()
+    await client_0.await_closed()
