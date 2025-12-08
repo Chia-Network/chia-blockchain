@@ -960,12 +960,12 @@ async def get_b_tools_1(get_temp_keyring, testrun_uid: str):
 
 @pytest.fixture(scope="function")
 async def get_b_tools(get_temp_keyring, testrun_uid):
-    local_b_tools = await create_block_tools_async(
+    async with create_block_tools_async(
         constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
-    )
-    new_config = local_b_tools._config
-    local_b_tools.change_config(new_config)
-    return local_b_tools
+    ) as local_b_tools:
+        new_config = local_b_tools._config
+        local_b_tools.change_config(new_config)
+        yield local_b_tools
 
 
 @pytest.fixture(scope="function")

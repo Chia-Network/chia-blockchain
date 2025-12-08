@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
 from types import TracebackType
-from typing import Any, Self
+from typing import Any
 
 import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
@@ -44,6 +44,7 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
+from typing_extensions import Self
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
