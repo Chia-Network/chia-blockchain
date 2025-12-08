@@ -1637,9 +1637,7 @@ class BlockTools:
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
-            qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(
-                new_challenge, constants.QUALITY_PROOF_SCAN_FILTER
-            )
+            qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
             for idx, quality in enumerate(qualities):
                 required_iters = calculate_iterations_quality(
@@ -1659,9 +1657,8 @@ class BlockTools:
                         continue
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
-                    partial_proof = plot_info.prover.get_partial_proof(quality)
                     strength = plot_info.prover.get_strength()
-                    proof = solve_proof(partial_proof, plot_id, strength, constants.PLOT_SIZE_V2)
+                    proof = solve_proof(quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2)
 
                 # Look up local_sk from plot to save locked memory
                 (

@@ -325,8 +325,8 @@ async def test_harvester_has_no_server(
     assert harvester_server.webserver is None
 
 
-test_partial_proof = PartialProof([uint64(256)] * 64)
-test_partial_proof2 = PartialProof([uint64(4096)] * 64)
+test_partial_proof = PartialProof([uint64(256)] * 16)
+test_partial_proof2 = PartialProof([uint64(4096)] * 16)
 
 
 @pytest.mark.anyio

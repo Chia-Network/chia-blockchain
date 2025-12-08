@@ -166,9 +166,7 @@ class HarvesterAPI:
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
-                qualities = plot_info.prover.get_qualities_for_challenge(
-                    sp_challenge_hash, self.harvester.constants.QUALITY_PROOF_SCAN_FILTER
-                )
+                qualities = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
 
                 # If no partial proofs are found, return None
                 if len(qualities) == 0:
@@ -204,8 +202,7 @@ class HarvesterAPI:
                     assert isinstance(plot_info.prover, V2Prover)
                     assert isinstance(quality, V2Quality)
 
-                    partial_proof = plot_info.prover.get_partial_proof(quality)
-                    good_partial_proofs.append(partial_proof)
+                    good_partial_proofs.append(quality.get_partial_proof())
 
                 if len(good_partial_proofs) == 0:
                     return None
@@ -239,9 +236,7 @@ class HarvesterAPI:
                     new_challenge.sp_hash,
                 )
                 try:
-                    qualities = plot_info.prover.get_qualities_for_challenge(
-                        sp_challenge_hash, self.harvester.constants.QUALITY_PROOF_SCAN_FILTER
-                    )
+                    qualities = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
                 except RuntimeError as e:
                     if str(e) == "Timeout waiting for context queue.":
                         self.harvester.log.warning(
