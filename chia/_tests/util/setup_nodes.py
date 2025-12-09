@@ -385,9 +385,6 @@ async def setup_full_system_inner(
     self_hostname = shared_b_tools.config["self_hostname"]
 
     async with AsyncExitStack() as async_exit_stack:
-        vdf1_port = uint16(find_available_listen_port("vdf1"))
-        vdf2_port = uint16(find_available_listen_port("vdf2"))
-
         if b_tools is None:
             b_tools = await async_exit_stack.enter_async_context(
                 create_block_tools_async(
@@ -400,6 +397,9 @@ async def setup_full_system_inner(
                     constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
                 )
             )
+
+        vdf1_port = uint16(find_available_listen_port("vdf1"))
+        vdf2_port = uint16(find_available_listen_port("vdf2"))
 
         await async_exit_stack.enter_async_context(
             setup_vdf_clients(bt=b_tools, self_hostname=self_hostname, port=vdf1_port)
