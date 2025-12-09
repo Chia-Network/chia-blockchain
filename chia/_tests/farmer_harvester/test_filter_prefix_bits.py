@@ -78,10 +78,10 @@ async def farmer_harvester_with_filter_size_9(
             await time_out_assert(15, have_connections, True)
             yield harvester_service, farmer_service._api
 
-        farmer_rpc_cl.close()
-        harvester_rpc_cl.close()
-        await farmer_rpc_cl.await_closed()
-        await harvester_rpc_cl.await_closed()
+            farmer_rpc_cl.close()
+            harvester_rpc_cl.close()
+            await farmer_rpc_cl.await_closed()
+            await harvester_rpc_cl.await_closed()
 
 
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
