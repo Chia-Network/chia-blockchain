@@ -9,7 +9,7 @@ import dataclasses
 import logging
 from collections.abc import AsyncIterator
 from enum import IntEnum
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from typing_extensions import final
 
@@ -49,7 +49,7 @@ class PriorityMutex(Generic[_T_Priority]):
     """
 
     _deques: dict[_T_Priority, collections.deque[_Element]]
-    _active: Optional[_Element] = None
+    _active: _Element | None = None
 
     @classmethod
     def create(cls, priority_type: type[_T_Priority]) -> PriorityMutex[_T_Priority]:
@@ -66,7 +66,7 @@ class PriorityMutex(Generic[_T_Priority]):
         if task is None:
             raise Exception(f"unable to check current task, got: {task!r}")
         if self._active is not None and self._active.task is task:
-            raise NestedLockUnsupportedError()
+            raise NestedLockUnsupportedError
 
         element = _Element(task=task)
 

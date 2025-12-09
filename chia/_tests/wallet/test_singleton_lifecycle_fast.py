@@ -1,34 +1,34 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, TypeVar, cast, get_args, get_origin
+from typing import Any, TypeVar, cast, get_args, get_origin
 
-from chia_rs import G1Element, G2Element
+from chia_rs import CoinSpend, G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
 from chia._tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.pools.pool_puzzles import POOL_MEMBER_MOD
+from chia.pools.pool_puzzles import POOL_WAITING_ROOM_MOD as POOL_WAITINGROOM_MOD
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.singleton_top_layer import (
+    P2_SINGLETON_OR_DELAYED_MOD as P2_SINGLETON_MOD,
+)
+from chia.wallet.puzzles.singleton_top_layer import P2_SINGLETON_OR_DELAYED_MOD_HASH as P2_SINGLETON_MOD_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER, SINGLETON_MOD, SINGLETON_MOD_HASH
+from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH as LAUNCHER_PUZZLE_HASH
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
-
-LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD_HASH = P2_SINGLETON_MOD.get_tree_hash()
+LAUNCHER_PUZZLE = SINGLETON_LAUNCHER
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)
 ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q . 1) 3)")).get_tree_hash()
@@ -66,10 +66,9 @@ def satisfies_hint(obj: T, type_hint: type[T]) -> bool:
                     object_hint_pairs.extend((v, args[1]) for v in obj.values())
                 else:
                     raise NotImplementedError(f"Type {origin} is not yet supported")
-        else:
-            # Handle concrete types
-            if type(obj) is not type_hint:
-                return False
+        # Handle concrete types
+        elif type(obj) is not type_hint:
+            return False
     return True
 
 
@@ -80,7 +79,7 @@ class PuzzleDB:
     def add_puzzle(self, puzzle: Program) -> None:
         self._db[puzzle.get_tree_hash()] = Program.from_bytes(bytes(puzzle))
 
-    def puzzle_for_hash(self, puzzle_hash: bytes32) -> Optional[Program]:
+    def puzzle_for_hash(self, puzzle_hash: bytes32) -> Program | None:
         return self._db.get(puzzle_hash)
 
 
@@ -211,7 +210,7 @@ def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: list[Program],
     claim_p2_nft = p2_singleton_spend_type == "claim-p2-nft"
     if claim_p2_nft:
         singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash", bytes32)
-        p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name", bytes)
+        p2_singleton_coin_name = from_kwargs(kwargs, "p2_singleton_coin_name", bytes32)
         solution = Program.to([singleton_inner_puzzle_hash, p2_singleton_coin_name])
         return solution
     raise ValueError("can't solve `delayed-spend` yet")
@@ -239,7 +238,7 @@ class SingletonWallet:
     current_state: Coin
     lineage_proof: Program
 
-    def inner_puzzle(self, puzzle_db: PuzzleDB) -> Optional[Program]:
+    def inner_puzzle(self, puzzle_db: PuzzleDB) -> Program | None:
         puzzle = puzzle_db.puzzle_for_hash(self.current_state.puzzle_hash)
         if puzzle is None:
             return None
@@ -329,7 +328,7 @@ def launcher_conditions_and_spend_bundle(
         launcher_amount=launcher_amount,
         metadata=metadata,
     )
-    coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
+    coin_spend = make_spend(launcher_coin, launcher_puzzle, solution)
     spend_bundle = WalletSpendBundle([coin_spend], G2Element())
     return launcher_id, expected_conditions, spend_bundle
 
@@ -386,11 +385,9 @@ def claim_p2_singleton(
         p2_singleton_puzzle,
         p2_singleton_spend_type="claim-p2-nft",
         singleton_inner_puzzle_hash=inner_puzzle_hash,
-        p2_singleton_coin_name=p2_singleton_coin_name,
+        p2_singleton_coin_name=bytes32(p2_singleton_coin_name),
     )
-    p2_singleton_coin_spend = make_spend(
-        p2_singleton_coin, SerializedProgram.from_program(p2_singleton_puzzle), p2_singleton_solution
-    )
+    p2_singleton_coin_spend = make_spend(p2_singleton_coin, p2_singleton_puzzle, p2_singleton_solution)
     expected_p2_singleton_announcement = AssertCoinAnnouncement(
         asserted_id=p2_singleton_coin_name, asserted_msg=b"$"
     ).msg_calc

@@ -3,11 +3,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from chia_rs import Coin
-
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.ints import uint64
+from chia_rs import Coin, SpendBundleConditions
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 log = logging.getLogger(__name__)
 
@@ -227,11 +225,11 @@ def peers_for_spend_bundle(
 
     for spend in conds.spends:
         coin_ids.add(bytes32(spend.coin_id))
-        puzzle_hashes.add(bytes32(spend.puzzle_hash))
+        puzzle_hashes.add(spend.puzzle_hash)
 
         for puzzle_hash, amount, memo in spend.create_coin:
             coin_ids.add(Coin(spend.coin_id, puzzle_hash, uint64(amount)).name())
-            puzzle_hashes.add(bytes32(puzzle_hash))
+            puzzle_hashes.add(puzzle_hash)
 
             if memo is not None and len(memo) == 32:
                 puzzle_hashes.add(bytes32(memo))

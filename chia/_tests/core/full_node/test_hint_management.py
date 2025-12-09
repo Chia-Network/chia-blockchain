@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
+from chia_rs import BlockRecord
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, StateChangeSummary
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
@@ -38,7 +36,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])
     await _validate_and_add_block(empty_blockchain, blocks[1])
-    br: Optional[BlockRecord] = empty_blockchain.get_peak()
+    br: BlockRecord | None = empty_blockchain.get_peak()
     assert br is not None
 
     scs = StateChangeSummary(br, uint32(0), [], removals, additions, [])
@@ -56,7 +54,7 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     blocks = bt.get_consecutive_blocks(2)
     await _validate_and_add_block(empty_blockchain, blocks[0])
     await _validate_and_add_block(empty_blockchain, blocks[1])
-    br: Optional[BlockRecord] = empty_blockchain.get_peak()
+    br: BlockRecord | None = empty_blockchain.get_peak()
     assert br is not None
 
     rewards: list[Coin] = [

@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, TypeVar
 
-from chia.util.ints import uint8, uint32
+from chia_rs.sized_ints import uint8, uint32
+
 from chia.util.streamable import Streamable, streamable
 
 if TYPE_CHECKING:
@@ -26,15 +27,14 @@ class WalletType(IntEnum):
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
     VC = 13
-    DAO = 14
-    DAO_CAT = 15
     CRCAT = 57
+    RCAT = 132
 
     def to_json_dict(self) -> str:
         # yes, this isn't a `dict`, but it is json and
         # unfortunately the magic method name is misleading
-        # not sure this code is used
-        # TODO: determine if this code is used and if not, remove it
+
+        # This gets called with EnhancedJSONEncoder in the RPC
         return self.name
 
 

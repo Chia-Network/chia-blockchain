@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar
+
+from chia_rs import RespondToPhUpdates
 
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
+from chia.protocols.outbound_message import NodeType
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
@@ -14,9 +16,11 @@ from chia.wallet.wallet_node import WalletNode
 
 class WalletNodeAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.wallet_stub import WalletNodeApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("WalletNodeAPI", None)
+        # Verify this class implements the WalletNodeApiStub protocol
+        def _protocol_check(self: WalletNodeAPI) -> WalletNodeApiStub:
+            return self
 
     log: logging.Logger
     wallet_node: WalletNode
@@ -37,14 +41,12 @@ class WalletNodeAPI:
         """
         The full node has rejected our request for removals.
         """
-        pass
 
     @metadata.request()
     async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest):
         """
         The full node has rejected our request for additions.
         """
-        pass
 
     @metadata.request(peer_required=True, execute_task=True)
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
@@ -81,7 +83,6 @@ class WalletNodeAPI:
         """
         The full node has rejected our request for a header.
         """
-        pass
 
     @metadata.request()
     async def respond_block_header(self, response: wallet_protocol.RespondBlockHeader):
@@ -187,11 +188,11 @@ class WalletNodeAPI:
     #       subclass, as you might expect it wouldn't be.  Maybe we can get the
     #       protocol working right back at the api.request definition.
     @metadata.request()  # type: ignore[type-var]
-    async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
+    async def respond_to_ph_updates(self, request: RespondToPhUpdates):
         pass
 
     @metadata.request()
-    async def respond_to_coin_update(self, request: wallet_protocol.RespondToCoinUpdates):
+    async def respond_to_coin_updates(self, request: wallet_protocol.RespondToCoinUpdates):
         pass
 
     @metadata.request()

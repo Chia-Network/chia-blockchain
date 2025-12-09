@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import click
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.units import units
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
 one_decimal_mojo = Decimal("1e-12")
@@ -19,9 +21,9 @@ one_decimal_mojo = Decimal("1e-12")
 
 def validate_uint64(
     value: str,
-    fail_func: Callable[[str, Optional[click.Parameter], Optional[click.Context]], None],
-    param: Optional[click.Parameter],
-    ctx: Optional[click.Context],
+    fail_func: Callable[[str, click.Parameter | None, click.Context | None], None],
+    param: click.Parameter | None,
+    ctx: click.Context | None,
 ) -> uint64:
     try:
         d_value = Decimal(value)
@@ -40,9 +42,9 @@ def validate_uint64(
 
 def validate_decimal_xch(
     value: str,
-    fail_func: Callable[[str, Optional[click.Parameter], Optional[click.Context]], None],
-    param: Optional[click.Parameter],
-    ctx: Optional[click.Context],
+    fail_func: Callable[[str, click.Parameter | None, click.Context | None], None],
+    param: click.Parameter | None,
+    ctx: click.Context | None,
 ) -> Decimal:
     try:
         d_value = Decimal(value)
@@ -63,7 +65,7 @@ class TransactionFeeParamType(click.ParamType):
     name: str = "XCH"  # type name for cli, TODO: Change once the mojo flag is implemented
     value_limit: Decimal = Decimal("0.5")
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> uint64:
         # suggested by click, but we are not using it to avoid possible misinterpretation of units.
         # if isinstance(value, uint64):
         #     return value
@@ -88,11 +90,11 @@ class CliAmount:
     """
 
     mojos: bool
-    amount: Union[uint64, Decimal, None]  # uint64 if mojos, Decimal if not, None if default value is none
+    amount: uint64 | Decimal | None  # uint64 if mojos, Decimal if not, None if default value is none
 
     def convert_amount_with_default(
-        self, mojo_per_unit: int, default_value: Optional[uint64] = uint64(0)
-    ) -> Optional[uint64]:
+        self, mojo_per_unit: int, default_value: uint64 | None = uint64(0)
+    ) -> uint64 | None:
         if self.amount is None:  # if the value is set to none, return the default value
             return default_value
         return self.convert_amount(mojo_per_unit)
@@ -121,7 +123,7 @@ class AmountParamType(click.ParamType):
 
     name: str = "XCH"  # type name for cli, TODO: Change once the mojo flag is implemented
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAmount:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> CliAmount:
         # suggested by click, but being left in as mojos flag makes default misrepresentation less likely.
         if isinstance(value, CliAmount):
             return value
@@ -163,7 +165,7 @@ class AddressParamType(click.ParamType):
 
     name: str = "Address"  # type name for cli
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> CliAddress:
         # suggested by click, but not really used so removed to make unexpected types more obvious.
         # if isinstance(value, CliAddress):
         #    return value
@@ -173,14 +175,23 @@ class AddressParamType(click.ParamType):
             hrp, _b32data = bech32_decode(value)
             if hrp in {"xch", "txch"}:  # I hate having to load the config here
                 addr_type: AddressType = AddressType.XCH
-                expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
+
+                # attempt to get cached prefix
+                expected_prefix: str | None = None
+                root_path = DEFAULT_ROOT_PATH
+
+                if ctx is not None:
+                    context = ChiaCliContext.set_default(ctx)
+                    root_path = context.root_path
+                    expected_prefix = context.expected_prefix
+
                 if expected_prefix is None:
-                    root_path = ctx.obj["root_path"] if ctx is not None else DEFAULT_ROOT_PATH
                     config = load_config(root_path, "config.yaml")
                     expected_prefix = selected_network_address_prefix(config)
 
-                    if ctx is not None:
-                        ctx.obj["expected_prefix"] = expected_prefix  # cache prefix
+                if ctx is not None:
+                    context.expected_prefix = expected_prefix  # cache prefix
+
                 # now that we have the expected prefix, we can validate the address is for the right network
                 if hrp != expected_prefix:
                     self.fail(f"Unexpected Address Prefix: {hrp}, are you sure its for the right network?", param, ctx)
@@ -198,7 +209,7 @@ class Bytes32ParamType(click.ParamType):
 
     name: str = "HexString"  # type name for cli
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> bytes32:
         # suggested by click but deemed not necessary due to unnecessary complexity.
         # if isinstance(value, bytes32):
         #     return value
@@ -217,7 +228,7 @@ class Uint64ParamType(click.ParamType):
 
     name: str = uint64.__name__  # type name for cli
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
+    def convert(self, value: Any, param: click.Parameter | None, ctx: click.Context | None) -> uint64:
         if isinstance(value, uint64):  # required by click
             return value
         if not isinstance(value, str):

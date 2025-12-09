@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
-from .constants import ConsensusConstants
+from chia.util.hash import std_hash
 
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
@@ -14,7 +14,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     SLOT_BLOCKS_TARGET=uint32(32),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(16),  # Must be less than half of SLOT_BLOCKS_TARGET
     MAX_SUB_SLOT_BLOCKS=uint32(128),  # Must be less than half of SUB_EPOCH_BLOCKS
-    NUM_SPS_SUB_SLOT=uint32(64),  # Must be a power of 2
+    NUM_SPS_SUB_SLOT=uint8(64),  # Must be a power of 2
     SUB_SLOT_ITERS_STARTING=uint64(2**27),
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
@@ -26,9 +26,15 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     EPOCH_BLOCKS=uint32(4608),  # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
     SIGNIFICANT_BITS=uint8(8),  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS=uint16(1024),  # Max is 1024 (based on ClassGroupElement int size)
-    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9),  # H(plot signature of the challenge) must start with these many zeroes
-    MIN_PLOT_SIZE=uint8(32),  # 32 for mainnet
-    MAX_PLOT_SIZE=uint8(50),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(
+        9
+    ),  # H(plot signature of the challenge) must start with these many zeroes, for v1 plots
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(
+        5
+    ),  # H(plot signature of the challenge) must start with these many zeroes. for v2 plots
+    MIN_PLOT_SIZE_V1=uint8(32),  # 32 for mainnet
+    MAX_PLOT_SIZE_V1=uint8(50),
+    PLOT_SIZE_V2=uint8(28),
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     NUM_SP_INTERVALS_EXTRA=uint8(3),  # The number of sp intervals to add to the signage point
     MAX_FUTURE_TIME2=uint32(2 * 60),  # The next block can have a timestamp of at most these many seconds in the future
@@ -38,7 +44,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # Default used for tests is std_hash(b'')
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     # Forks of chia should change the AGG_SIG_*_ADDITIONAL_DATA values to provide
-    # replay attack protection. This is set to mainnet genesis challange
+    # replay attack protection. This is set to mainnet genesis challenge
     AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
     AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
     AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
@@ -69,22 +75,42 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # inclusive, so the max allowed range of 32 is a request for 33 blocks
     # (which is allowed)
     MAX_BLOCK_COUNT_PER_REQUESTS=uint32(32),
-    MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
-    SOFT_FORK5_HEIGHT=uint32(5940000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
+    # TODO: todo_v2_plots finalize fork height
+    HARD_FORK2_HEIGHT=uint32(0xFFFFFFFA),
+    # starting at the hard fork 2 height, v1 plots will gradually be phased out,
+    # and stop working entirely after (1 << this) many epochs
+    PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
+    MIN_PLOT_STRENGTH=uint8(2),
+    MAX_PLOT_STRENGTH=uint8(32),
+    QUALITY_PROOF_SCAN_FILTER=uint8(5),
+    # TODO: todo_v2_plots finalize plot filter schedule
+    PLOT_FILTER_V2_FIRST_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFB),
+    PLOT_FILTER_V2_SECOND_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFC),
+    PLOT_FILTER_V2_THIRD_ADJUSTMENT_HEIGHT=uint32(0xFFFFFFFD),
 )
 
 
 def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
-    if network_id == "testnet11":
-        if "SOFT_FORK5_HEIGHT" not in overrides:
-            overrides["SOFT_FORK5_HEIGHT"] = 1340000
+    # These constants changed names to support v2 plots
+    if "MIN_PLOT_SIZE_V1" not in overrides and "MIN_PLOT_SIZE" in overrides:
+        overrides["MIN_PLOT_SIZE_V1"] = overrides["MIN_PLOT_SIZE"]
+        overrides.pop("MIN_PLOT_SIZE")
+    if "MAX_PLOT_SIZE_V1" not in overrides and "MAX_PLOT_SIZE" in overrides:
+        overrides["MAX_PLOT_SIZE_V1"] = overrides["MAX_PLOT_SIZE"]
+        overrides.pop("MAX_PLOT_SIZE")
+    if network_id in {"testnet11", "testneta"}:
+        if "PLOT_SIZE_V2" not in overrides:
+            overrides["PLOT_SIZE_V2"] = 28
+    if network_id == "testneta":
+        if "HARD_FORK_HEIGHT" not in overrides:
+            overrides["HARD_FORK_HEIGHT"] = 3693395

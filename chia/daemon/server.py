@@ -10,24 +10,23 @@ import signal
 import ssl
 import subprocess
 import sys
-import time
 import traceback
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from types import FrameType
-from typing import Any, Optional, TextIO
+from typing import Any, TextIO
 
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from typing_extensions import Protocol
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
@@ -39,7 +38,6 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
@@ -48,6 +46,7 @@ from chia.util.network import WebServer
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
@@ -55,15 +54,29 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import WSMsgType, web
+    from aiohttp import WSMessage, WSMsgType, web
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     sys.exit()
+
+
+def redact_sensitive_data(obj: Any, redaction_triggers: Collection[str] = ("pass", "key", "secret", "mnemonic")) -> Any:
+    """Recursively redact sensitive data from nested dictionaries."""
+    if isinstance(obj, dict):
+        return {
+            key: "***<redacted>***"
+            if any(trigger.casefold() in key.casefold() for trigger in redaction_triggers)
+            else redact_sensitive_data(value, redaction_triggers)
+            for key, value in obj.items()
+        }
+    else:
+        return obj
 
 
 log = logging.getLogger(__name__)
@@ -128,7 +141,7 @@ class Command(Protocol):
     async def __call__(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]: ...
 
 
-def _get_keys_by_fingerprints(fingerprints: Optional[list[uint32]]) -> tuple[list[KeyData], set[uint32]]:
+def _get_keys_by_fingerprints(fingerprints: list[uint32] | None) -> tuple[list[KeyData], set[uint32]]:
     all_keys = Keychain().get_keys(include_secrets=True)
     missing_fingerprints = set()
 
@@ -176,44 +189,43 @@ class WebSocketServer:
         self.services: dict[str, list[subprocess.Popen]] = dict()
         self.plots_queue: list[dict] = []
         self.connections: dict[str, set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
-        self.ping_job: Optional[asyncio.Task] = None
+        self.ping_job: asyncio.Task | None = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
         self.heartbeat = self.net_config.get("daemon_heartbeat", 300)
-        self.webserver: Optional[WebServer] = None
+        self.webserver: WebServer | None = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = asyncio.Event()
         self.state_changed_msg_queue: asyncio.Queue[StatusMessage] = asyncio.Queue()
-        self.state_changed_task: Optional[asyncio.Task] = None
+        self.state_changed_task: asyncio.Task | None = None
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
         self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
-        # Note: the minimum_version has been already set to TLSv1_2
+        # Note: the minimum_version has been already set to TLSv1_3
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
-        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
-            try:
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
-            except ValueError:
-                # in case the attempt above confused the config, set it again (likely not needed but doesn't hurt)
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-
-        if self.ssl_context.minimum_version is not ssl.TLSVersion.TLSv1_3:
-            self.log.warning(
-                (
-                    "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
-                    "A future version of Chia will require TLS1.3."
-                ),
-                ssl.OPENSSL_VERSION,
+        # Daemon is internal connections, so override to TLSv1_2 only if specified in the config
+        if self.net_config.get("daemon_allow_tls_1_2", False):
+            self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+            self.ssl_context.set_ciphers(
+                "ECDHE-ECDSA-AES256-GCM-SHA384:"
+                "ECDHE-RSA-AES256-GCM-SHA384:"
+                "ECDHE-ECDSA-CHACHA20-POLY1305:"
+                "ECDHE-RSA-CHACHA20-POLY1305:"
+                "ECDHE-ECDSA-AES128-GCM-SHA256:"
+                "ECDHE-RSA-AES128-GCM-SHA256:"
+                "ECDHE-ECDSA-AES256-SHA384:"
+                "ECDHE-RSA-AES256-SHA384:"
+                "ECDHE-ECDSA-AES128-SHA256:"
+                "ECDHE-RSA-AES128-SHA256"
             )
 
-        self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
+        self.state_changed_task = create_referenced_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -236,7 +248,7 @@ class WebSocketServer:
     async def _accept_signal(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
@@ -250,7 +262,7 @@ class WebSocketServer:
         cancel_task_safe(self.state_changed_task, self.log)
         service_names = list(self.services.keys())
         stop_service_jobs = [
-            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+            create_referenced_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
         ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
@@ -267,7 +279,6 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug("Received message: %s", msg)
             decoded: WsRpcMessage = {
                 "command": "",
                 "ack": False,
@@ -281,6 +292,10 @@ class WebSocketServer:
                     decoded = json.loads(msg.data)
                     if "data" not in decoded:
                         decoded["data"] = {}
+
+                    redacted_data = redact_sensitive_data(decoded)
+                    redacted_message = WSMessage(msg.type, redacted_data, msg.extra)
+                    self.log.debug("Received message: %s", redacted_message)
 
                     maybe_response = await self.handle_message(ws, decoded)
                     if maybe_response is None:
@@ -297,6 +312,7 @@ class WebSocketServer:
 
                 await self.send_all_responses(connections, response)
             else:
+                self.log.debug("Received non-text message")
                 service_names = self.remove_connection(ws)
 
                 if len(service_names) == 0:
@@ -391,7 +407,7 @@ class WebSocketServer:
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
-    ) -> Optional[tuple[str, set[WebSocketResponse]]]:
+    ) -> tuple[str, set[WebSocketResponse]] | None:
         """
         This function gets called when new message is received via websocket.
         """
@@ -502,8 +518,8 @@ class WebSocketServer:
 
     async def unlock_keyring(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        key: Optional[str] = request.get("key", None)
+        error: str | None = None
+        key: str | None = request.get("key", None)
         if type(key) is not str:
             return {"success": False, "error": "missing key"}
 
@@ -538,8 +554,8 @@ class WebSocketServer:
         request: dict[str, Any],
     ) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        key: Optional[str] = request.get("key", None)
+        error: str | None = None
+        key: str | None = request.get("key", None)
         if type(key) is not str:
             return {"success": False, "error": "missing key"}
 
@@ -555,10 +571,10 @@ class WebSocketServer:
 
     async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        current_passphrase: Optional[str] = None
-        new_passphrase: Optional[str] = None
-        passphrase_hint: Optional[str] = request.get("passphrase_hint", None)
+        error: str | None = None
+        current_passphrase: str | None = None
+        new_passphrase: str | None = None
+        passphrase_hint: str | None = request.get("passphrase_hint", None)
         save_passphrase: bool = request.get("save_passphrase", False)
 
         if using_default_passphrase():
@@ -599,8 +615,8 @@ class WebSocketServer:
 
     async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
-        error: Optional[str] = None
-        current_passphrase: Optional[str] = None
+        error: str | None = None
+        current_passphrase: str | None = None
 
         if not Keychain.has_master_passphrase():
             return {"success": False, "error": "passphrase not set"}
@@ -669,7 +685,7 @@ class WebSocketServer:
                     pk = sk.get_g1()
                 else:
                     pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
-                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
+                wallet_address = encode_puzzle_hash(puzzle_hash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
                 else:
@@ -829,7 +845,7 @@ class WebSocketServer:
                     if word in new_data:
                         return None
             else:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
@@ -1057,7 +1073,7 @@ class WebSocketServer:
                 break
 
         if next_plot_id is not None:
-            loop.create_task(self._start_plotting(next_plot_id, loop, queue))
+            create_referenced_task(self._start_plotting(next_plot_id, loop, queue))
 
     def _post_process_plotting_job(self, job: dict[str, Any]):
         id: str = job["id"]
@@ -1132,7 +1148,10 @@ class WebSocketServer:
 
         finally:
             if current_process is not None:
-                self.services[service_name].remove(current_process)
+                try:
+                    self.services[service_name].remove(current_process)
+                except KeyError:
+                    pass
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
@@ -1192,7 +1211,8 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
+                # TODO: stop dropping tasks on the floor
+                create_referenced_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1352,9 +1372,8 @@ class WebSocketServer:
                 "service": service,
                 "queue": self.extract_plot_queue(),
             }
-        else:
-            if self.ping_job is None:
-                self.ping_job = asyncio.create_task(self.ping_task())
+        elif self.ping_job is None:
+            self.ping_job = create_referenced_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response
@@ -1542,7 +1561,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
-    initialize_service_logging("daemon", config)
+    initialize_service_logging("daemon", config, root_path=root_path)
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
@@ -1589,11 +1608,13 @@ def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
 
 
 def main() -> int:
-    from chia.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.default_root import resolve_root_path
     from chia.util.keychain import Keychain
 
+    root_path = resolve_root_path(override=None)
+
     wait_for_unlock = "--wait-for-unlock" in sys.argv[1:] and Keychain.is_keyring_locked()
-    return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
+    return run_daemon(root_path, wait_for_unlock)
 
 
 if __name__ == "__main__":

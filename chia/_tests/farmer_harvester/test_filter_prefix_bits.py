@@ -2,24 +2,24 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
+from chia_rs import FullBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
-from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
+from chia._tests.util.setup_nodes import setup_farmer_solver_multi_harvester
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer_api import FarmerAPI
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
+from chia.harvester.harvester_service import HarvesterService
 from chia.protocols import farmer_protocol
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.simulator.block_tools import create_block_tools_async, test_constants
-from chia.types.aliases import HarvesterService
 from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 
 
@@ -56,11 +56,11 @@ async def farmer_harvester_with_filter_size_9(
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     local_b_tools = await create_block_tools_async(
-        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(9)), keychain=get_temp_keyring
+        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(9)), keychain=get_temp_keyring
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
-    async with setup_farmer_multi_harvester(
+    async with setup_farmer_solver_multi_harvester(
         local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
     ) as (harvesters, farmer_service, _):
         harvester_service = harvesters[0]
@@ -94,7 +94,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
     state_change = None
     state_change_data = None
 
-    def state_changed_callback(change: str, change_data: Optional[dict[str, Any]]) -> None:
+    def state_changed_callback(change: str, change_data: dict[str, Any] | None) -> None:
         nonlocal state_change, state_change_data
         state_change = change
         state_change_data = change_data
@@ -121,6 +121,7 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         sub_slot_iters=uint64(1000000),
         signage_point_index=uint8(2),
         peak_height=peak_height,
+        last_tx_height=uint32(0),
     )
     await farmer_api.new_signage_point(sp)
     await time_out_assert(5, state_has_changed, True)

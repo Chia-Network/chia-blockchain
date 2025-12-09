@@ -2,17 +2,7 @@ line-length = 120
 
 [lint]
 preview = true
-select = [
-	"PL",  # Pylint
-	"I",  # Isort
-	"FA",  # Flake8: future-annotations
-	"UP",  # Pyupgrade
-	"RUF", # Ruff specific
-	# Flake8 core
-	"F",
-	"E",
-	"W",
-]
+select = ["ALL"]
 explicit-preview-rules = false
 ignore = [
     # Pylint convention
@@ -35,15 +25,23 @@ ignore = [
     # Should probably fix these
     "PLR6301", # no-self-use
     "PLR2004", # magic-value-comparison
-    "PLR1704", # redefined-argument-from-local
-    "PLR5501", # collapsible-else-if
 
     # Pylint warning
     "PLW1641", # eq-without-hash
     # Should probably fix these
-    "PLW2901", # redefined-loop-name
     "PLW1514", # unspecified-encoding
     "PLW0603", # global-statement
+
+    # Flake8 async
+    # Should probably fix these
+    "ASYNC230", # blocking-open-call-in-async-function
+    "ASYNC240", # pathlib for async operations
+    "ASYNC250", # blocking-input-call-in-async-function
+    # Should probably fix these after dealing with shielding for anyio
+    "ASYNC109", # async-function-with-timeout
+
+    # flake8-implicit-str-concat
+    "ISC003", # explicit-string-concatenation
 
     # Ruff Specific
 
@@ -51,10 +49,70 @@ ignore = [
     # Its purpose is to prevent accidenatally assigning mutable defaults. However, this is a bit overkill for that.
     # That being said, it would be nice to add some way to actually guard against that specific mutable default behavior.
     "RUF009", # function-call-in-dataclass-default-argument
+    "RUF056", # falsy-dict-get-fallback
     # Should probably fix this
-    "RUF029",
+    "RUF029", # unused-async
+
+    # Security linter
+    "S603", # subprocess-without-shell-equals-true
+    # Should probably fix this
+    "S104", # hardcoded-bind-all-interfaces
+    "S110", # try-except-pass
+    "S112", # try-except-continue
+    "S311", # suspicious-non-cryptographic-random-usage
+    "S608", # hardcoded-sql-expression
+    # Need review on which of these we can/should fix
+    "S101", # assert
+    "S404", # suspicious-subprocess-import
+    "S607", # start-process-with-partial-path
+
+    # Should fix
+    "FBT",  # boolean positional usage: ~2100 errors
+    "ANN",  # function annotations: ~1100 errors  # Gets fixed with mypy-exclusion removal
+    "G",  # logging format: ~1000 errors
+    "RET",  # return linting: ~700 errors
+    "B",  # potential bugs linting: ~600 errors
+    "PT",  # pytest styling: ~600 errors
+    "SIM",  # code simplifications: ~500 errors
+    "A",  # bad behavior relative to builtins: ~200 errors
+    "PTH",  # pathlib linting: ~200 errors
+    "PGH",  # cheap code quality improvements: ~100 errors
+    "LOG",  # logging: <50 errors
+    # Might be nice, might be annoying
+    "BLE001",  # blind exceptions: ~300 errors
+    "D",  # docstrings: ~9000 errors,
+    "TRY",  # proper exception behavior: ~1300 errors
+    "EM",  # exception messages: ~1000 errors
+    "C",  # comprehensions: ~600 errors
+    "SLF",  # private member access: ~600 errors
+    "FURB",  # "refurbishing" and "modernizing": ~200 errors
+    "PERF",  # anti-pattern linting: ~200 errors
+    "N",  # pep8 naming: ~200 errors
+    # Probably fine for our purposes
+    "COM812",  # trailing commas: ~5000 errors
+    "CPY001",  # copyright notices: ~900 errors
+    "TC",  # type checking linting: ~1700 errors  # Too much reliance on runtime types to enable this
+    "T",  # using print: ~1300 errors  # might want to enable this but not for CLI or tools/
+    "TD",  # formatting of TODOs: ~800 errors
+    "DOC",  # also docstrings: ~700 errors
+    "ARG",  # unused arguments: ~500 errors
+    "ERA",  # commented out code: ~400 errors
+    "DTZ",  # datetimez:  <50 errors  # likely needs the tzlocal library as a dependency
+    "FIX",  # TODOs, etc: ~400 errors
 ]
 
+[lint.per-file-ignores]
+"chia/_tests/*" = ["S106"]
+
+[lint.flake8-implicit-str-concat]
+# Found 3279 errors.
+# allow-multiline = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-tidy-imports.banned-api]
+ "asyncio.create_task".msg = "Use `from chia.util.task_referencer import create_referenced_task` and `create_referenced_task()`"
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

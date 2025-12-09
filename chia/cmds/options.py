@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Callable, TypeVar, Union
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import click
 
 from chia.cmds.param_types import TransactionFeeParamType
 
-FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
+FC = TypeVar("FC", bound=Callable[..., Any] | click.Command)
 
 
 def create_fingerprint(required: bool = False) -> Callable[[FC], FC]:

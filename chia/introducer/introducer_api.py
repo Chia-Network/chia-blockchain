@@ -1,24 +1,27 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar
+
+from chia_rs.sized_ints import uint64
 
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.api_protocol import ApiMetadata
-from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
-from chia.util.ints import uint64
 
 
 class IntroducerAPI:
     if TYPE_CHECKING:
-        from chia.server.api_protocol import ApiProtocol
+        from chia.apis.introducer_stub import IntroducerApiStub
 
-        _protocol_check: ClassVar[ApiProtocol] = cast("IntroducerAPI", None)
+        # Verify this class implements the IntroducerApiStub protocol
+        def _protocol_check(self: IntroducerAPI) -> IntroducerApiStub:
+            return self
 
     log: logging.Logger
     introducer: Introducer
@@ -39,7 +42,7 @@ class IntroducerAPI:
         self,
         request: RequestPeersIntroducer,
         peer: WSChiaConnection,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         max_peers = self.introducer.max_peers_to_send
         if self.introducer.server is None or self.introducer.server.introducer_peers is None:
             return None
@@ -63,6 +66,13 @@ class IntroducerAPI:
 
             if len(peers) >= max_peers:
                 break
+
+        if len(peers) < max_peers:
+            peers_needed = max_peers - len(peers)
+            self.introducer.log.info(f"Querying dns servers for {peers_needed} peers")
+            extra_peers = await self.introducer.get_peers_from_dns(peers_needed)
+            self.introducer.log.info(f"Received {len(extra_peers)} peers from dns server")
+            peers.extend(extra_peers)
 
         self.introducer.log.info(f"Sending vetted {peers}")
 

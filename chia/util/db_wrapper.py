@@ -12,7 +12,7 @@ from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, TextIO, Union
+from typing import Any, TextIO
 
 import aiosqlite
 import anyio
@@ -32,7 +32,7 @@ class DBWrapperError(Exception):
 
 
 class ForeignKeyError(DBWrapperError):
-    def __init__(self, violations: Iterable[Union[aiosqlite.Row, tuple[str, object, str, object]]]) -> None:
+    def __init__(self, violations: Iterable[aiosqlite.Row | tuple[str, object, str, object]]) -> None:
         self.violations: list[dict[str, object]] = []
 
         for violation in violations:
@@ -54,14 +54,21 @@ class InternalError(DBWrapperError):
     pass
 
 
+class PurposefulAbort(DBWrapperError):
+    obj: object
+
+    def __init__(self, obj: object) -> None:
+        self.obj = obj
+
+
 def generate_in_memory_db_uri() -> str:
     # We need to use shared cache as our DB wrapper uses different types of connections
     return f"file:db_{secrets.token_hex(16)}?mode=memory&cache=shared"
 
 
 async def execute_fetchone(
-    c: aiosqlite.Connection, sql: str, parameters: Optional[Iterable[Any]] = None
-) -> Optional[sqlite3.Row]:
+    c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] | None = None
+) -> sqlite3.Row | None:
     rows = await c.execute_fetchall(sql, parameters)
     for row in rows:
         return row
@@ -69,12 +76,13 @@ async def execute_fetchone(
 
 
 async def _create_connection(
-    database: Union[str, Path],
+    database: str | Path,
     uri: bool = False,
-    log_file: Optional[TextIO] = None,
-    name: Optional[str] = None,
+    log_file: TextIO | None = None,
+    name: str | None = None,
 ) -> aiosqlite.Connection:
-    connection = await aiosqlite.connect(database=database, uri=uri)
+    # To avoid https://github.com/python/cpython/issues/118172
+    connection = await aiosqlite.connect(database=database, uri=uri, cached_statements=0)
 
     if log_file is not None:
         await connection.set_trace_callback(functools.partial(sql_trace_callback, file=log_file, name=name))
@@ -84,10 +92,10 @@ async def _create_connection(
 
 @contextlib.asynccontextmanager
 async def manage_connection(
-    database: Union[str, Path],
+    database: str | Path,
     uri: bool = False,
-    log_file: Optional[TextIO] = None,
-    name: Optional[str] = None,
+    log_file: TextIO | None = None,
+    name: str | None = None,
 ) -> AsyncIterator[aiosqlite.Connection]:
     connection: aiosqlite.Connection
     connection = await _create_connection(database=database, uri=uri, log_file=log_file, name=name)
@@ -99,7 +107,7 @@ async def manage_connection(
             await connection.close()
 
 
-def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> None:
+def sql_trace_callback(req: str, file: TextIO, name: str | None = None) -> None:
     timestamp = datetime.now().strftime("%H:%M:%S.%f")
     if name is not None:
         line = f"{timestamp} {name} {req}\n"
@@ -116,15 +124,14 @@ def get_host_parameter_limit() -> int:
 
         limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
         host_parameter_limit = connection.getlimit(limit_number)
-    else:
-        # guessing based on defaults, seems you can't query
+    # guessing based on defaults, seems you can't query
 
-        # https://www.sqlite.org/changes.html#version_3_32_0
-        # Increase the default upper bound on the number of parameters from 999 to 32766.
-        if sqlite3.sqlite_version_info >= (3, 32, 0):
-            host_parameter_limit = 32766
-        else:
-            host_parameter_limit = 999
+    # https://www.sqlite.org/changes.html#version_3_32_0
+    # Increase the default upper bound on the number of parameters from 999 to 32766.
+    elif sqlite3.sqlite_version_info >= (3, 32, 0):
+        host_parameter_limit = 32766
+    else:
+        host_parameter_limit = 999
     return host_parameter_limit
 
 
@@ -133,13 +140,13 @@ def get_host_parameter_limit() -> int:
 class DBWrapper2:
     _write_connection: aiosqlite.Connection
     db_version: int = 1
-    _log_file: Optional[TextIO] = None
+    _log_file: TextIO | None = None
     host_parameter_limit: int = get_host_parameter_limit()
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0
     _in_use: dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
-    _current_writer: Optional[asyncio.Task[object]] = None
+    _current_writer: asyncio.Task[object] | None = None
     _savepoint_name: int = 0
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
@@ -153,16 +160,16 @@ class DBWrapper2:
     @contextlib.asynccontextmanager
     async def managed(
         cls,
-        database: Union[str, Path],
+        database: str | Path,
         *,
         db_version: int = 1,
         uri: bool = False,
         reader_count: int = 4,
-        log_path: Optional[Path] = None,
+        log_path: Path | None = None,
         journal_mode: str = "WAL",
-        synchronous: Optional[str] = None,
-        foreign_keys: Optional[bool] = None,
-        row_factory: Optional[type[aiosqlite.Row]] = None,
+        synchronous: str | None = None,
+        foreign_keys: bool | None = None,
+        row_factory: type[aiosqlite.Row] | None = None,
     ) -> AsyncIterator[DBWrapper2]:
         if foreign_keys is None:
             foreign_keys = False
@@ -210,16 +217,16 @@ class DBWrapper2:
     @classmethod
     async def create(
         cls,
-        database: Union[str, Path],
+        database: str | Path,
         *,
         db_version: int = 1,
         uri: bool = False,
         reader_count: int = 4,
-        log_path: Optional[Path] = None,
+        log_path: Path | None = None,
         journal_mode: str = "WAL",
-        synchronous: Optional[str] = None,
+        synchronous: str | None = None,
         foreign_keys: bool = False,
-        row_factory: Optional[type[aiosqlite.Row]] = None,
+        row_factory: type[aiosqlite.Row] | None = None,
     ) -> DBWrapper2:
         # WARNING: please use .managed() instead
         if log_path is None:
@@ -283,7 +290,7 @@ class DBWrapper2:
     @contextlib.asynccontextmanager
     async def writer(
         self,
-        foreign_key_enforcement_enabled: Optional[bool] = None,
+        foreign_key_enforcement_enabled: bool | None = None,
     ) -> AsyncIterator[aiosqlite.Connection]:
         """
         Initiates a new, possibly nested, transaction. If this task is already
@@ -306,7 +313,7 @@ class DBWrapper2:
                 #       probably skip the nested foreign key check when exiting since
                 #       we don't have many foreign key errors and so it is likely ok
                 #       to save the extra time checking twice.
-                raise NestedForeignKeyDelayedRequestError()
+                raise NestedForeignKeyDelayedRequestError
             async with self._savepoint_ctx():
                 yield self._write_connection
             return

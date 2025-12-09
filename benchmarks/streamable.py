@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import json
+import random
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from statistics import stdev
 from time import process_time as clock
-from typing import Any, Callable, Optional, TextIO, Union
+from typing import Any, TextIO
 
 import click
+from chia_rs import FullBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint64
 
-from benchmarks.utils import EnumType, get_commit_hash
-from chia._tests.util.benchmarks import rand_bytes, rand_full_block, rand_hash
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint64
+from benchmarks.utils import get_commit_hash
+from chia._tests.util.benchmarks import rand_full_block, rand_hash
 from chia.util.streamable import Streamable, streamable
 
 # to run this benchmark:
@@ -42,29 +44,29 @@ class BenchmarkMiddle(Streamable):
 @streamable
 @dataclass(frozen=True)
 class BenchmarkClass(Streamable):
-    a: Optional[BenchmarkMiddle]
-    b: Optional[BenchmarkMiddle]
+    a: BenchmarkMiddle | None
+    b: BenchmarkMiddle | None
     c: BenchmarkMiddle
     d: list[BenchmarkMiddle]
     e: tuple[BenchmarkMiddle, BenchmarkMiddle, BenchmarkMiddle]
 
 
 def get_random_inner() -> BenchmarkInner:
-    return BenchmarkInner(rand_bytes(20).hex())
+    return BenchmarkInner(random.randbytes(20).hex())
 
 
 def get_random_middle() -> BenchmarkMiddle:
     a: uint64 = uint64(10)
     b: list[bytes32] = [rand_hash() for _ in range(a)]
-    c: tuple[str, bool, uint8, list[bytes]] = ("benchmark", False, uint8(1), [rand_bytes(a) for _ in range(a)])
+    c: tuple[str, bool, uint8, list[bytes]] = ("benchmark", False, uint8(1), [random.randbytes(a) for _ in range(a)])
     d: tuple[BenchmarkInner, BenchmarkInner] = (get_random_inner(), get_random_inner())
     e: BenchmarkInner = get_random_inner()
     return BenchmarkMiddle(a, b, c, d, e)
 
 
 def get_random_benchmark_object() -> BenchmarkClass:
-    a: Optional[BenchmarkMiddle] = None
-    b: Optional[BenchmarkMiddle] = get_random_middle()
+    a: BenchmarkMiddle | None = None
+    b: BenchmarkMiddle | None = get_random_middle()
     c: BenchmarkMiddle = get_random_middle()
     d: list[BenchmarkMiddle] = [get_random_middle() for _ in range(5)]
     e: tuple[BenchmarkMiddle, BenchmarkMiddle, BenchmarkMiddle] = (
@@ -78,10 +80,10 @@ def get_random_benchmark_object() -> BenchmarkClass:
 def print_row(
     *,
     mode: str,
-    us_per_iteration: Union[str, float],
-    stdev_us_per_iteration: Union[str, float],
-    avg_iterations: Union[str, int],
-    stdev_iterations: Union[str, float],
+    us_per_iteration: str | float,
+    stdev_us_per_iteration: str | float,
+    avg_iterations: str | int,
+    stdev_iterations: str | float,
     end: str = "\n",
 ) -> None:
     print(
@@ -141,14 +143,14 @@ def to_bytes(obj: Any) -> bytes:
 @dataclass
 class ModeParameter:
     conversion_cb: Callable[[Any], Any]
-    preparation_cb: Optional[Callable[[Any], Any]] = None
+    preparation_cb: Callable[[Any], Any] | None = None
 
 
 @dataclass
 class BenchmarkParameter:
     data_class: type[Any]
     object_creation_cb: Callable[[], Any]
-    mode_parameter: dict[Mode, Optional[ModeParameter]]
+    mode_parameter: dict[Mode, ModeParameter | None]
 
 
 benchmark_parameter: dict[Data, BenchmarkParameter] = {
@@ -201,12 +203,12 @@ def pop_data(key: str, *, old: dict[str, Any], new: dict[str, Any]) -> tuple[Any
     return old.pop(key), new.pop(key)
 
 
-def print_compare_row(c0: str, c1: Union[str, float], c2: Union[str, float], c3: Union[str, float]) -> None:
+def print_compare_row(c0: str, c1: str | float, c2: str | float, c3: str | float) -> None:
     print(f"{c0:<12} | {c1:<16} | {c2:<16} | {c3:<12}")
 
 
 def compare_results(
-    old: dict[str, dict[str, dict[str, Union[float, int]]]], new: dict[str, dict[str, dict[str, Union[float, int]]]]
+    old: dict[str, dict[str, dict[str, float | int]]], new: dict[str, dict[str, dict[str, float | int]]]
 ) -> None:
     old_version, new_version = pop_data("version", old=old, new=new)
     if old_version != new_version:
@@ -225,8 +227,8 @@ def compare_results(
 
 
 @click.command()
-@click.option("-d", "--data", default=Data.all, type=EnumType(Data))
-@click.option("-m", "--mode", default=Mode.all, type=EnumType(Mode))
+@click.option("-d", "--data", default=Data.all, type=click.Choice(Data))
+@click.option("-m", "--mode", default=Mode.all, type=click.Choice(Mode))
 @click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
 @click.option("-t", "--ms", default=50, help="Milliseconds per run")
 @click.option("--live/--no-live", default=False, help="Print live results (slower)")

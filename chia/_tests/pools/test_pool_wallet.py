@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.benchmarks import rand_g1, rand_hash
 from chia.pools.pool_wallet import PoolWallet
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.wallet_action_scope import WalletActionScope
 
 
 @dataclass
@@ -20,10 +21,14 @@ class MockStandardWallet:
     async def get_new_puzzlehash(self) -> bytes32:
         return self.canned_puzzlehash
 
+    async def get_puzzle_hash(self, new: bool) -> bytes32:
+        return self.canned_puzzlehash
+
 
 @dataclass
 class MockWalletStateManager:
-    root_path: Optional[Path] = None
+    root_path: Path | None = None
+    config: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -38,7 +43,7 @@ class MockPoolWalletConfig:
 
 @dataclass
 class MockPoolState:
-    pool_url: Optional[str]
+    pool_url: str | None
     target_puzzle_hash: bytes32
     owner_pubkey: G1Element
 
@@ -48,6 +53,14 @@ class MockPoolWalletInfo:
     launcher_id: bytes32
     p2_singleton_puzzle_hash: bytes32
     current: MockPoolState
+
+
+@dataclass
+class MockActionScope:
+    payout_instructions_ph: bytes32
+
+    async def get_puzzle_hash(self, wallet_state_manager: Any) -> bytes32:
+        return self.payout_instructions_ph
 
 
 @pytest.mark.anyio
@@ -104,7 +117,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
         wallet_id=MagicMock(),
     )
 
-    await wallet.update_pool_config()
+    await wallet.update_pool_config(cast(WalletActionScope, MockActionScope(payout_instructions_ph)))
 
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id
@@ -187,7 +200,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
         wallet_id=MagicMock(),
     )
 
-    await wallet.update_pool_config()
+    await wallet.update_pool_config(MagicMock())
 
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id

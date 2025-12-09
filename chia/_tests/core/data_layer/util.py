@@ -8,15 +8,16 @@ import shutil
 import subprocess
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Union, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, overload
+
+from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 # from subprocess.pyi
-_FILE = Union[None, int, IO[Any]]
+_FILE = int | IO[Any] | None
 
 
 if TYPE_CHECKING:
@@ -33,8 +34,8 @@ async def general_insert(
     store_id: bytes32,
     key: bytes,
     value: bytes,
-    reference_node_hash: Optional[bytes32],
-    side: Optional[Side],
+    reference_node_hash: bytes32 | None,
+    side: Side | None,
 ) -> bytes32:
     insert_result = await data_store.insert(
         key=key,
@@ -122,12 +123,12 @@ class ChiaRoot:
 
     def run(
         self,
-        args: list[Union[str, os_PathLike_str]],
+        args: list[str | os_PathLike_str],
         *other_args: Any,
         check: bool = True,
         encoding: str = "utf-8",
-        stdout: Optional[_FILE] = subprocess.PIPE,
-        stderr: Optional[_FILE] = subprocess.PIPE,
+        stdout: _FILE | None = subprocess.PIPE,
+        stderr: _FILE | None = subprocess.PIPE,
         **kwargs: Any,
     ) -> subprocess_CompletedProcess_str:
         # TODO: --root-path doesn't seem to work here...
@@ -142,7 +143,7 @@ class ChiaRoot:
         chia_executable = shutil.which("chia")
         if chia_executable is None:
             chia_executable = "chia"
-        modified_args: list[Union[str, os_PathLike_str]] = [
+        modified_args: list[str | os_PathLike_str] = [
             self.scripts_path.joinpath(chia_executable),
             "--root-path",
             self.path,
@@ -165,7 +166,7 @@ class ChiaRoot:
         return self.path.joinpath("log", "debug.log").read_text(encoding="utf-8")
 
     def print_log(self) -> None:
-        log_text: Optional[str]
+        log_text: str | None
 
         try:
             log_text = self.read_log()
@@ -203,8 +204,8 @@ def create_valid_node_values(
 
 def create_valid_node_values(
     node_type: NodeType,
-    left_hash: Optional[bytes32] = None,
-    right_hash: Optional[bytes32] = None,
+    left_hash: bytes32 | None = None,
+    right_hash: bytes32 | None = None,
 ) -> dict[str, Any]:
     if node_type == NodeType.INTERNAL:
         assert left_hash is not None

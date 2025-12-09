@@ -1,41 +1,24 @@
 from __future__ import annotations
 
 import contextlib
-import enum
 import os
 import subprocess
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Generic, Optional, TypeVar, Union
-
-import click
 
 from chia.util.db_wrapper import DBWrapper2
 
-_T_Enum = TypeVar("_T_Enum", bound=enum.Enum)
-
-
-# Workaround to allow `Enum` with click.Choice: https://github.com/pallets/click/issues/605#issuecomment-901099036
-class EnumType(click.Choice, Generic[_T_Enum]):
-    def __init__(self, enum: type[_T_Enum], case_sensitive: bool = False) -> None:
-        self.__enum = enum
-        super().__init__(choices=[item.value for item in enum], case_sensitive=case_sensitive)
-
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> _T_Enum:
-        converted_str = super().convert(value, param, ctx)
-        return self.__enum(converted_str)
-
 
 @contextlib.asynccontextmanager
-async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> AsyncIterator[DBWrapper2]:
+async def setup_db(name: str | os.PathLike[str], db_version: int) -> AsyncIterator[DBWrapper2]:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
     except FileNotFoundError:
         pass
 
-    log_path: Optional[Path]
+    log_path: Path | None
     if "--sql-logging" in sys.argv:
         log_path = Path("sql.log")
     else:
@@ -64,7 +47,7 @@ def get_commit_hash() -> str:
         sys.exit("Failed to get the commit hash")
     try:
         if len(subprocess.run(["git", "status", "-s"], check=True, stdout=subprocess.PIPE).stdout) > 0:
-            raise Exception()
+            raise Exception
     except Exception:
         commit_hash += "-dirty"
     return commit_hash

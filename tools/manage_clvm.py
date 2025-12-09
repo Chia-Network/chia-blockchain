@@ -12,8 +12,7 @@ import typing
 
 import click
 import typing_extensions
-
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
 
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
@@ -27,7 +26,7 @@ cache_path = root.joinpath(".chia_cache", "manage_clvm.json")
 # accessible via entry points.
 sys.path = [path for path in sys.path if path != os.fspath(here)]
 
-from clvm_tools_rs import compile_clvm  # noqa: E402
+from chialisp import compile_clvm  # noqa: E402
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram  # noqa: E402
 
@@ -89,7 +88,7 @@ def load_cache(file: typing.IO[str]) -> Cache:
     try:
         loaded_version = loaded_cache["version"]
     except KeyError as e:
-        raise NoCacheVersionError() from e
+        raise NoCacheVersionError from e
 
     if loaded_version != current_cache_version:
         raise WrongCacheVersionError(found_version=loaded_version, expected_version=current_cache_version)

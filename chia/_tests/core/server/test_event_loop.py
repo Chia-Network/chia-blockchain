@@ -30,7 +30,9 @@ def test_base_event_loop_has_methods() -> None:
         assert hasattr(base_selector_event_loop, "create_server")
         method = getattr(base_selector_event_loop, "create_server")
         assert inspect.ismethod(method)
-        if sys.version_info >= (3, 11):
+        if sys.version_info >= (3, 13):
+            expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, keep_alive=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)"  # noqa: E501
+        elif sys.version_info >= (3, 11):
             expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)"  # noqa: E501
         else:
             expected_signature = "(protocol_factory, host=None, port=None, *, family=<AddressFamily.AF_UNSPEC: 0>, flags=<AddressInfo.AI_PASSIVE: 1>, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, start_serving=True)"  # noqa: E501
@@ -62,7 +64,7 @@ def test_base_event_loop_has_methods() -> None:
         )
 
         assert inspect.isfunction(_chia_create_server)
-        expected_signature = "(cls: 'Any', protocol_factory: '_ProtocolFactory', host: 'Any', port: 'Any', *, family: 'socket.AddressFamily' = <AddressFamily.AF_UNSPEC: 0>, flags: 'socket.AddressInfo' = <AddressInfo.AI_PASSIVE: 1>, sock: 'Any' = None, backlog: 'int' = 100, ssl: '_SSLContext' = None, reuse_address: 'Optional[bool]' = None, reuse_port: 'Optional[bool]' = None, ssl_handshake_timeout: 'Optional[float]' = 30, start_serving: 'bool' = True) -> 'PausableServer'"  # noqa: E501
+        expected_signature = "(cls: 'Any', protocol_factory: '_ProtocolFactory', host: 'Any', port: 'Any', *, family: 'socket.AddressFamily' = <AddressFamily.AF_UNSPEC: 0>, flags: 'socket.AddressInfo' = <AddressInfo.AI_PASSIVE: 1>, sock: 'Any' = None, backlog: 'int' = 100, ssl: '_SSLContext' = None, reuse_address: 'bool | None' = None, reuse_port: 'bool | None' = None, ssl_handshake_timeout: 'float | None' = 30, start_serving: 'bool' = True) -> 'PausableServer'"  # noqa: E501
         assert str(inspect.signature(_chia_create_server)) == expected_signature
 
         class EchoProtocol(asyncio.Protocol):
@@ -103,7 +105,13 @@ def test_base_event_loop_has_methods() -> None:
 
         for func in ("_attach", "_detach"):
             assert hasattr(base_server, func)
-            method = getattr(base_server, func)
-            assert str(inspect.signature(method)) == "()"
+            if sys.version_info >= (3, 13):
+                # https://github.com/python/cpython/blob/bcee1c322115c581da27600f2ae55e5439c027eb/Lib/asyncio/base_events.py#L296
+                method = getattr(base_server, func)
+                assert str(inspect.signature(method)) == "(transport)"
+            else:
+                method = getattr(base_server, func)
+                assert str(inspect.signature(method)) == "()"
+
     finally:
         selector_event_loop.close()

@@ -1,25 +1,37 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Optional
+
+from chia_puzzles_py.programs import (
+    P2_SINGLETON,
+    P2_SINGLETON_OR_DELAYED_PUZHASH,
+    SINGLETON_TOP_LAYER_V1_1,
+    SINGLETON_TOP_LAYER_V1_1_HASH,
+)
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER as SINGLETON_LAUNCHER_BYTES,
+)
+from chia_puzzles_py.programs import (
+    SINGLETON_LAUNCHER_HASH as SINGLETON_LAUNCHER_HASH_BYTES,
+)
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clsp")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+SINGLETON_MOD = Program.from_bytes(SINGLETON_TOP_LAYER_V1_1)
+SINGLETON_MOD_HASH = bytes32(SINGLETON_TOP_LAYER_V1_1_HASH)
+P2_SINGLETON_MOD = Program.from_bytes(P2_SINGLETON)
+P2_SINGLETON_OR_DELAYED_MOD = Program.from_bytes(P2_SINGLETON_OR_DELAYED_PUZHASH)
+SINGLETON_LAUNCHER = Program.from_bytes(SINGLETON_LAUNCHER_BYTES)
+SINGLETON_LAUNCHER_HASH = bytes32(SINGLETON_LAUNCHER_HASH_BYTES)
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 
@@ -225,7 +237,7 @@ def launch_conditions_and_coinsol(
 def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
     parent_name: bytes32 = coin_spend.coin.parent_coin_info
 
-    inner_puzzle_hash: Optional[bytes32] = None
+    inner_puzzle_hash: bytes32 | None = None
     if coin_spend.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
         full_puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         r = full_puzzle.uncurry()
@@ -308,8 +320,8 @@ def claim_p2_singleton(
     p2_singleton_coin: Coin,
     singleton_inner_puzhash: bytes32,
     launcher_id: bytes32,
-    delay_time: Optional[uint64] = None,
-    delay_ph: Optional[bytes32] = None,
+    delay_time: uint64 | None = None,
+    delay_ph: bytes32 | None = None,
 ) -> tuple[Program, Program, CoinSpend]:
     assertion = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(p2_singleton_coin.name() + b"$")])
     announcement = Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin.name()])

@@ -4,13 +4,14 @@ import os
 import pathlib
 import sys
 import time
-from collections.abc import AsyncIterable, Awaitable, Iterator
-from typing import Any, Callable
+from collections.abc import AsyncIterable, Awaitable, Callable, Iterator
+from typing import Any
 
 import pytest
 
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.core.data_layer.util import (
     ChiaRoot,
@@ -22,7 +23,6 @@ from chia._tests.core.data_layer.util import (
 from chia._tests.util.misc import closing_chia_root_popen
 from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 # TODO: These are more general than the data layer and should either move elsewhere or
 #       be replaced with an existing common approach.  For now they can at least be
@@ -61,8 +61,13 @@ def store_id_fixture() -> bytes32:
 
 
 @pytest.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(database_uri: str) -> AsyncIterable[DataStore]:
-    async with DataStore.managed(database=database_uri, uri=True) as store:
+async def raw_data_store_fixture(database_uri: str, tmp_path: pathlib.Path) -> AsyncIterable[DataStore]:
+    async with DataStore.managed(
+        database=database_uri,
+        uri=True,
+        merkle_blobs_path=tmp_path.joinpath("merkle-blobs"),
+        key_value_blobs_path=tmp_path.joinpath("key-value-blobs"),
+    ) as store:
         yield store
 
 

@@ -1,29 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
-from clvm.casts import int_to_bytes
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.get_block_generator import get_block_generator
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32
+from chia.util.casts import int_to_bytes
 
 
 @dataclass(frozen=True)
 class BR:
     prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
+    transactions_generator: SerializedProgram | None
     transactions_generator_ref_list: list[uint32]
 
 
 @dataclass(frozen=True)
 class FB:
     prev_header_hash: bytes32
-    transactions_generator: Optional[SerializedProgram]
+    transactions_generator: SerializedProgram | None
     height: uint32
 
 

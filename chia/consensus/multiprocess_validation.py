@@ -5,32 +5,38 @@ import copy
 import logging
 import time
 import traceback
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Optional
 
-from chia_rs import SpendBundleConditions, get_flags_for_height_and_constants, run_block_generator, run_block_generator2
+from chia_rs import (
+    BlockRecord,
+    ConsensusConstants,
+    FullBlock,
+    SpendBundleConditions,
+    SubEpochSummary,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
 
+from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.get_block_challenge import get_block_challenge
+from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
+from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.consensus.pot_iterations import (
+    is_overflow_block,
+    validate_pospace_and_get_required_iters,
+)
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
-from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -39,9 +45,9 @@ log = logging.getLogger(__name__)
 @streamable
 @dataclass(frozen=True)
 class PreValidationResult(Streamable):
-    error: Optional[uint16]
-    required_iters: Optional[uint64]  # Iff error is None
-    conds: Optional[SpendBundleConditions]  # Iff error is None and block is a transaction block
+    error: uint16 | None
+    required_iters: uint64 | None  # Iff error is None
+    conds: SpendBundleConditions | None  # Iff error is None and block is a transaction block
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
 
     @property
@@ -53,11 +59,11 @@ class PreValidationResult(Streamable):
 
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
-    block: FullBlock, prev_generators: list[bytes], constants: ConsensusConstants
-) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
+    block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
+) -> tuple[int | None, SpendBundleConditions | None]:
     assert block.transactions_generator is not None
     assert block.transactions_info is not None
-    flags = get_flags_for_height_and_constants(block.height, constants)
+    flags = get_flags_for_height_and_constants(prev_tx_height, constants)
     if block.height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2
     else:
@@ -77,8 +83,8 @@ def _pre_validate_block(
     constants: ConsensusConstants,
     blockchain: BlockRecordsProtocol,
     block: FullBlock,
-    prev_generators: Optional[list[bytes]],
-    conds: Optional[SpendBundleConditions],
+    prev_generators: list[bytes] | None,
+    conds: SpendBundleConditions | None,
     expected_vs: ValidationState,
 ) -> PreValidationResult:
     """
@@ -94,12 +100,11 @@ def _pre_validate_block(
 
     try:
         validation_start = time.monotonic()
-        tx_additions: list[Coin] = []
-        removals: list[bytes32] = []
+        removals_and_additions: tuple[Collection[bytes32], Collection[Coin]] | None = None
         if conds is not None:
             assert conds.validated_signature is True
             assert block.transactions_generator is not None
-            removals, tx_additions = tx_removals_and_additions(conds)
+            removals_and_additions = tx_removals_and_additions(conds)
         elif block.transactions_generator is not None:
             assert prev_generators is not None
             assert block.transactions_info is not None
@@ -110,7 +115,14 @@ def _pre_validate_block(
                     uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, uint32(validation_time * 1000)
                 )
 
-            err, conds = _run_block(block, prev_generators, constants)
+            prev_tx_height = pre_sp_tx_block_height(
+                constants=constants,
+                blocks=blockchain,
+                prev_b_hash=block.prev_header_hash,
+                sp_index=block.reward_chain_block.signage_point_index,
+                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            )
+            err, conds = _run_block(block, prev_generators, prev_tx_height, constants)
 
             assert (err is None) != (conds is None)
             if err is not None:
@@ -118,18 +130,20 @@ def _pre_validate_block(
                 return PreValidationResult(uint16(err), None, None, uint32(validation_time * 1000))
             assert conds is not None
             assert conds.validated_signature is True
-            removals, tx_additions = tx_removals_and_additions(conds)
+            removals_and_additions = tx_removals_and_additions(conds)
+        elif block.is_transaction_block():
+            # This is a transaction block with just reward coins.
+            removals_and_additions = ([], [])
 
         assert conds is None or conds.validated_signature is True
-        header_block = get_block_header(block, tx_additions, removals)
         required_iters, error = validate_finished_header_block(
             constants,
             blockchain,
-            header_block,
+            get_block_header(block, removals_and_additions),
             True,  # check_filter
             expected_vs,
         )
-        error_int: Optional[uint16] = None
+        error_int: uint16 | None = None
         if error is not None:
             error_int = uint16(error.code.value)
 
@@ -152,10 +166,10 @@ async def pre_validate_block(
     blockchain: AugmentedBlockchain,
     block: FullBlock,
     pool: Executor,
-    conds: Optional[SpendBundleConditions],
+    conds: SpendBundleConditions | None,
     vs: ValidationState,
     *,
-    wp_summaries: Optional[list[SubEpochSummary]] = None,
+    wp_summaries: list[SubEpochSummary] | None = None,
 ) -> Awaitable[PreValidationResult]:
     """
     This method must be called under the blockchain lock
@@ -181,7 +195,7 @@ async def pre_validate_block(
         wp_summaries:
         validate_signatures:
     """
-    prev_b: Optional[BlockRecord] = None
+    prev_b: BlockRecord | None = None
 
     async def return_error(error_code: Err) -> PreValidationResult:
         return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
@@ -204,19 +218,24 @@ async def pre_validate_block(
         cc_sp_hash: bytes32 = challenge
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-    q_str: Optional[bytes32] = verify_and_get_quality_string(
-        block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
-    )
-    if q_str is None:
-        return return_error(Err.INVALID_POSPACE)
 
-    required_iters: uint64 = calculate_iterations_quality(
-        constants.DIFFICULTY_CONSTANT_FACTOR,
-        q_str,
-        block.reward_chain_block.proof_of_space.size,
-        vs.difficulty,
+    required_iters = validate_pospace_and_get_required_iters(
+        constants,
+        block.reward_chain_block.proof_of_space,
+        challenge,
         cc_sp_hash,
+        block.height,
+        vs.difficulty,
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+        ),
     )
+    if required_iters is None:
+        return return_error(Err.INVALID_POSPACE)
 
     try:
         block_rec = block_to_block_record(
@@ -240,10 +259,10 @@ async def pre_validate_block(
     blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
     prev_b = block_rec
 
-    previous_generators: Optional[list[bytes]] = None
+    previous_generators: list[bytes] | None = None
 
     try:
-        block_generator: Optional[BlockGenerator] = await get_block_generator(blockchain.lookup_block_generators, block)
+        block_generator: BlockGenerator | None = await get_block_generator(blockchain.lookup_block_generators, block)
         if block_generator is not None:
             previous_generators = block_generator.generator_refs
     except ValueError:

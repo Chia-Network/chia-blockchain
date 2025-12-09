@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any
 
 import pytest
+from chia_rs.sized_ints import uint16
 
 from chia._tests.util.misc import Marks, RecordingWebServer, datacases
+from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.rpc_server import RpcServer
-from chia.server.outbound_message import NodeType
-from chia.util.ints import uint16
 
 non_fetch_client_methods = {
     RpcClient.create,
@@ -21,18 +21,18 @@ non_fetch_client_methods = {
     RpcClient.await_closed,
 }
 
-client_fetch_methods = {
+client_fetch_methods = [
     attribute
     for name, attribute in vars(RpcClient).items()
     if callable(attribute) and attribute not in non_fetch_client_methods and not name.startswith("__")
-}
+]
 
 
 @dataclass
 class InvalidCreateCase:
     id: str
-    root_path: Optional[Path] = None
-    net_config: Optional[dict[str, Any]] = None
+    root_path: Path | None = None
+    net_config: dict[str, Any] | None = None
     marks: Marks = ()
 
 

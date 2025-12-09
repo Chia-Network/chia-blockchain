@@ -4,25 +4,25 @@ import logging
 import pathlib
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, get_flags_for_height_and_constants
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
+from chia._tests.core.make_block_generator import make_block_generator
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run_with_cost
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-
-from .make_block_generator import make_block_generator
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
@@ -58,9 +58,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     wallet_tool = bt.get_pool_wallet_tool()
     ph = wallet_tool.get_new_puzzlehash()
     num_blocks = 3
-    blocks = bt.get_consecutive_blocks(
-        num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
-    )
+    blocks = bt.get_consecutive_blocks(num_blocks, [], guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph)
     coinbase = None
     for coin in blocks[2].get_included_reward_coins():
         if coin.puzzle_hash == ph and coin.amount == 250000000000:
@@ -89,9 +87,15 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     coin_spend = spend_bundle.coin_spends[0]
     assert npc_result.conds is not None
     assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
-    spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin, softfork_height, bt.constants)
-    assert spend_info.puzzle == coin_spend.puzzle_reveal
-    assert spend_info.solution == coin_spend.solution
+    puzzle, solution = get_puzzle_and_solution_for_coin(
+        program.program,
+        program.generator_refs,
+        bt.constants.MAX_BLOCK_COST_CLVM,
+        coin_spend.coin,
+        get_flags_for_height_and_constants(softfork_height, bt.constants),
+    )
+    assert puzzle == coin_spend.puzzle_reveal
+    assert solution == coin_spend.solution
 
     if softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
@@ -118,9 +122,7 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
     ph = wallet_tool.get_new_puzzlehash()
 
     num_blocks = 3
-    blocks = bt.get_consecutive_blocks(
-        num_blocks, [], guarantee_transaction_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
-    )
+    blocks = bt.get_consecutive_blocks(num_blocks, [], guarantee_transaction_block=True, farmer_reward_puzzle_hash=ph)
 
     coinbase = None
     for coin in blocks[2].get_included_reward_coins():
@@ -170,8 +172,14 @@ async def test_mempool_mode(softfork_height: int, bt: BlockTools) -> None:
         bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
         uint64(300),
     )
-    spend_info = get_puzzle_and_solution_for_coin(generator, coin, softfork_height, bt.constants)
-    assert spend_info.puzzle.to_program() == puzzle
+    puz, _solution = get_puzzle_and_solution_for_coin(
+        generator.program,
+        generator.generator_refs,
+        bt.constants.MAX_BLOCK_COST_CLVM,
+        coin,
+        get_flags_for_height_and_constants(0, bt.constants),
+    )
+    assert puz == puzzle.to_serialized()
 
 
 @pytest.mark.anyio
@@ -275,20 +283,23 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
 
     with benchmark_runner.assert_runtime(seconds=0.1):
         total_cost = 0
-        for i in range(0, 1000):
-            cost, _result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+        for i in range(1000):
+            cost, _result = run_with_cost(puzzle_program, test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 
 
 @pytest.mark.anyio
 async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner) -> None:
+    from chia_puzzles_py.programs import CHIALISP_DESERIALISATION
+
     from chia._tests.core.large_block import LARGE_BLOCK
-    from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
+
+    DESERIALIZE_MOD = Program.from_bytes(CHIALISP_DESERIALISATION)
 
     assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
-    _, result = LARGE_BLOCK.transactions_generator.run_with_cost(
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
+    _, result = run_with_cost(
+        LARGE_BLOCK.transactions_generator, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
     )
 
     coin_spends = result.first()
@@ -309,5 +320,11 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     with benchmark_runner.assert_runtime(seconds=8.5):
         for _ in range(3):
             for c in spent_coins:
-                spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)
-                assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash
+                puz, _solution = get_puzzle_and_solution_for_coin(
+                    generator.program,
+                    generator.generator_refs,
+                    test_constants.MAX_BLOCK_COST_CLVM,
+                    c,
+                    get_flags_for_height_and_constants(0, test_constants),
+                )
+                assert puz.get_tree_hash() == c.puzzle_hash

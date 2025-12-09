@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional
+from chia_rs import BlockRecord, ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.significant_bits import count_significant_bits, truncate_to_significant_bits
 
 
@@ -137,10 +135,10 @@ def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     height: uint32,
-    prev_header_hash: Optional[bytes32],
+    prev_header_hash: bytes32 | None,
     deficit: uint8,
     block_at_height_included_ses: bool,
-    prev_ses_block: Optional[BlockRecord] = None,
+    prev_ses_block: BlockRecord | None = None,
 ) -> tuple[bool, bool]:
     """
     Returns a bool tuple
@@ -224,10 +222,9 @@ def _get_next_sub_slot_iters(
     if next_height < constants.EPOCH_BLOCKS:
         return uint64(constants.SUB_SLOT_ITERS_STARTING)
 
-    if not blocks.contains_block(prev_header_hash):
+    prev_b = blocks.try_block_record(prev_header_hash)
+    if prev_b is None:
         raise ValueError(f"Header hash {prev_header_hash} not in blocks")
-
-    prev_b: BlockRecord = blocks.block_record(prev_header_hash)
 
     # If we are in the same epoch, return same ssi
     if not skip_epoch_check:
@@ -304,10 +301,9 @@ def _get_next_difficulty(
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
-    if not blocks.contains_block(prev_header_hash):
+    prev_b = blocks.try_block_record(prev_header_hash)
+    if prev_b is None:
         raise ValueError(f"Header hash {prev_header_hash} not in blocks")
-
-    prev_b: BlockRecord = blocks.block_record(prev_header_hash)
 
     # If we are in the same slot as previous block, return same difficulty
     if not skip_epoch_check:
@@ -357,7 +353,7 @@ def _get_next_difficulty(
 def get_next_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     is_first_in_sub_slot: bool,
-    prev_b: Optional[BlockRecord],
+    prev_b: BlockRecord | None,
     blocks: BlockRecordsProtocol,
 ) -> tuple[uint64, uint64]:
     """

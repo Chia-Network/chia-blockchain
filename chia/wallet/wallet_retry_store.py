@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from chia_rs import CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 
 class WalletRetryStore:
@@ -22,10 +20,7 @@ class WalletRetryStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS retry_store("
-                " coin_state blob PRIMARY KEY,"
-                " peer blob,"
-                " fork_height int)"
+                "CREATE TABLE IF NOT EXISTS retry_store( coin_state blob PRIMARY KEY, peer blob, fork_height int)"
             )
 
         return self
@@ -40,7 +35,7 @@ class WalletRetryStore:
 
         return [(CoinState.from_bytes(row[0]), bytes32(row[1]), uint32(row[2])) for row in rows]
 
-    async def add_state(self, state: CoinState, peer_id: bytes32, fork_height: Optional[uint32]) -> None:
+    async def add_state(self, state: CoinState, peer_id: bytes32, fork_height: uint32 | None) -> None:
         """
         Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
         """

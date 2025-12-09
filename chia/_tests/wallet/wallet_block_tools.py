@@ -1,33 +1,41 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
+from typing import Any
 
-from chia_rs import G1Element, G2Element, compute_merkle_set_root
+from chia_rs import (
+    BlockRecord,
+    ConsensusConstants,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    G2Element,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlock,
+    RewardChainBlockUnfinished,
+    SpendBundle,
+    TransactionsInfo,
+    UnfinishedBlock,
+    compute_merkle_set_root,
+)
+from chia_rs.sized_bytes import bytes32, bytes100
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from chiabip158 import PyBIP158
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle import SpendBundle
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
     bytes32.zeros,
@@ -50,12 +58,12 @@ class WalletBlockTools(BlockTools):
     def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: Optional[list[FullBlock]] = None,
+        block_list_input: list[FullBlock] | None = None,
         *,
-        farmer_reward_puzzle_hash: Optional[bytes32] = None,
-        pool_reward_puzzle_hash: Optional[bytes32] = None,
-        transaction_data: Optional[SpendBundle] = None,
-        genesis_timestamp: Optional[uint64] = None,
+        farmer_reward_puzzle_hash: bytes32 | None = None,
+        pool_reward_puzzle_hash: bytes32 | None = None,
+        transaction_data: SpendBundle | None = None,
+        genesis_timestamp: uint64 | None = None,
         **kwargs: Any,  # We're overriding so there's many arguments no longer used.
     ) -> list[FullBlock]:
         assert num_blocks > 0
@@ -78,7 +86,7 @@ class WalletBlockTools(BlockTools):
             height_to_hash, _, blocks = load_block_list(block_list_input, constants)
 
         if len(block_list_input) > 0:
-            latest_block: Optional[BlockRecord] = blocks[block_list_input[-1].header_hash]
+            latest_block: BlockRecord | None = blocks[block_list_input[-1].header_hash]
             assert latest_block is not None
             assert latest_block.timestamp is not None
             last_timestamp = latest_block.timestamp
@@ -86,10 +94,10 @@ class WalletBlockTools(BlockTools):
             latest_block = None
             last_timestamp = uint64((int(time.time()) if genesis_timestamp is None else genesis_timestamp) - 20)
 
-        for _ in range(0, num_blocks):
+        for _ in range(num_blocks):
             additions = []
             removals = []
-            block_generator: Optional[BlockGenerator] = None
+            block_generator: BlockGenerator | None = None
             if transaction_data is not None and len(block_list_input) > 0:
                 additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
@@ -153,7 +161,7 @@ def load_block_list(
 def finish_block(
     constants: ConsensusConstants,
     unfinished_block: UnfinishedBlock,
-    prev_block: Optional[BlockRecord],
+    prev_block: BlockRecord | None,
     blocks: dict[bytes32, BlockRecord],
 ) -> tuple[FullBlock, BlockRecord]:
     if prev_block is None:
@@ -179,6 +187,7 @@ def finish_block(
             G2Element(),
             DEFAULT_VDF_INFO,
             DEFAULT_VDF_INFO,
+            None,  # header_mmr_root
             prev_block is not None,
         ),
         DEFAULT_VDF_PROOF,
@@ -203,8 +212,8 @@ def get_full_block_and_block_record(
     last_timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
-    prev_block: Optional[BlockRecord],
-    block_generator: Optional[BlockGenerator],
+    prev_block: BlockRecord | None,
+    block_generator: BlockGenerator | None,
     additions: list[Coin],
     removals: list[Coin],
 ) -> tuple[FullBlock, BlockRecord, float]:

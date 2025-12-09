@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional
+from chia_rs import CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.protocols.wallet_protocol import CoinState
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32
 
 
 class WalletInterestedStore:
@@ -60,7 +59,7 @@ class WalletInterestedStore:
             rows_hex = await cursor.fetchall()
         return [(bytes32(bytes.fromhex(row[0])), row[1]) for row in rows_hex]
 
-    async def get_interested_puzzle_hash_wallet_id(self, puzzle_hash: bytes32) -> Optional[int]:
+    async def get_interested_puzzle_hash_wallet_id(self, puzzle_hash: bytes32) -> int | None:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT wallet_id FROM interested_puzzle_hashes WHERE puzzle_hash=?", (puzzle_hash.hex(),)
@@ -88,7 +87,7 @@ class WalletInterestedStore:
         self,
         asset_id: bytes32,
         name: str,
-        first_seen_height: Optional[uint32],
+        first_seen_height: uint32 | None,
         sender_puzzle_hash: bytes32,
     ) -> None:
         """
@@ -130,7 +129,7 @@ class WalletInterestedStore:
         self,
         asset_id: bytes32,
         coin_state: CoinState,
-        fork_height: Optional[uint32],
+        fork_height: uint32 | None,
     ) -> None:
         """
         Add an unacknowledged coin state of a CAT to the database. It will be inserted into the retry store when the

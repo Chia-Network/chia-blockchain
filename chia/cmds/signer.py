@@ -5,7 +5,6 @@ import os
 import time
 from collections.abc import Sequence
 from dataclasses import replace
-from functools import cached_property
 from pathlib import Path
 from threading import Event, Thread
 from typing import TypeVar
@@ -15,30 +14,30 @@ from chia_rs import AugSchemeMPL, G2Element
 from hsms.util.byte_chunks import create_chunks_for_blob, optimal_chunk_size_for_max_chunk_size
 from segno import QRCode, make_qr
 
-from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, command_helper, option
-from chia.cmds.cmds_util import TransactionBundle
-from chia.cmds.wallet import wallet_cmd
+from chia.cmds.cmd_classes import chia_command, command_helper, option
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
-from chia.rpc.wallet_request_types import (
-    ApplySignatures,
-    ExecuteSigningInstructions,
-    GatherSigningInfo,
-    PushTransactions,
-)
 from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable, byte_serialize_clvm_streamable
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    PushTransactions,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def _clear_screen() -> None:
     # Cross-platform screen clear
-    os.system("cls" if os.name == "nt" else "clear")
+    # TODO: consider if not-nt anyways could avoid os.system()
+    os.system("cls" if os.name == "nt" else "clear")  # noqa: S605
 
 
-@wallet_cmd.group("signer", help="Get information for an external signer")
+@click.group("signer", help="Get information for an external signer")
 def signer_cmd() -> None:
     pass  # pragma: no cover
 
@@ -91,37 +90,6 @@ class QrCodeDisplay:
                 stop_event.set()
                 t.join()
                 stop_event.clear()
-
-
-@command_helper
-class TransactionsIn:
-    transaction_file_in: str = option(
-        "--transaction-file-in",
-        "-i",
-        type=str,
-        help="Transaction file to use as input",
-        required=True,
-    )
-
-    @cached_property
-    def transaction_bundle(self) -> TransactionBundle:
-        with open(Path(self.transaction_file_in), "rb") as file:
-            return TransactionBundle.from_bytes(file.read())
-
-
-@command_helper
-class TransactionsOut:
-    transaction_file_out: str = option(
-        "--transaction-file-out",
-        "-o",
-        type=str,
-        help="Transaction filename to use as output",
-        required=True,
-    )
-
-    def handle_transaction_output(self, output: list[TransactionRecord]) -> None:
-        with open(Path(self.transaction_file_out), "wb") as file:
-            file.write(bytes(TransactionBundle(output)))
 
 
 @command_helper
@@ -194,8 +162,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
                 return
             elif len(self.output_file) != len(outputs):
                 print(
-                    "Incorrect number of file outputs specified, "
-                    f"expected: {len(outputs)} got {len(self.output_file)}"
+                    f"Incorrect number of file outputs specified, expected: {len(outputs)} got {len(self.output_file)}"
                 )
                 return
             else:
@@ -209,9 +176,10 @@ class SPOut(QrCodeDisplay, _SPTranslation):
 
 
 @chia_command(
-    signer_cmd,
-    "gather_signing_info",
-    "Gather the information from a transaction that a signer needs in order to create a signature",
+    group=signer_cmd,
+    name="gather_signing_info",
+    short_help="gather signer information",
+    help="Gather the information from a transaction that a signer needs in order to create a signature",
 )
 class GatherSigningInfoCMD:
     sp_out: SPOut
@@ -232,7 +200,12 @@ class GatherSigningInfoCMD:
             self.sp_out.handle_clvm_output([signing_instructions])
 
 
-@chia_command(signer_cmd, "apply_signatures", "Apply a signer's signatures to a transaction bundle")
+@chia_command(
+    group=signer_cmd,
+    name="apply_signatures",
+    short_help="apply signatures",
+    help="Apply a signer's signatures to a transaction bundle",
+)
 class ApplySignaturesCMD:
     txs_out: TransactionsOut
     sp_in: SPIn
@@ -270,7 +243,12 @@ class ApplySignaturesCMD:
             self.txs_out.handle_transaction_output(new_transactions)
 
 
-@chia_command(signer_cmd, "execute_signing_instructions", "Given some signing instructions, return signing responses")
+@chia_command(
+    group=signer_cmd,
+    name="execute_signing_instructions",
+    short_help="execute signing instructions",
+    help="Given some signing instructions, return signing responses",
+)
 class ExecuteSigningInstructionsCMD:
     sp_out: SPOut
     sp_in: SPIn
@@ -292,7 +270,11 @@ class ExecuteSigningInstructionsCMD:
             )
 
 
-@chia_command(wallet_cmd, "push_transactions", "Push a transaction bundle to the wallet to send to the network")
+@chia_command(
+    name="push_transactions",
+    short_help="push transaction bundle",
+    help="Push a transaction bundle to the wallet to send to the network",
+)
 class PushTransactionsCMD:
     txs_in: TransactionsIn
     rpc_info: NeedsWalletRPC

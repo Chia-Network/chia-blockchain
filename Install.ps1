@@ -37,8 +37,6 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-git submodule update --init mozilla-ca
-
 if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
 {
     Write-Output "Unable to find py"
@@ -48,7 +46,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9"
+$supportedPythonVersions = "3.13", "3.12", "3.11", "3.10"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -95,6 +93,9 @@ if ($openSSLVersion -lt 269488367)
     Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
 }
 
+$SQLiteVersionStr = (py -$pythonVersion -c 'import sys; import sqlite3; print(sqlite3.sqlite_version)')
+Write-Output "SQLite version is: $SQLiteVersionStr"
+
 $extras_cli = @()
 foreach ($extra in $extras)
 {
@@ -102,13 +103,10 @@ foreach ($extra in $extras)
     $extras_cli += $extra
 }
 
-if (-not (Get-Item -ErrorAction SilentlyContinue ".penv/Scripts/poetry.exe").Exists)
-{
-    ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
-}
+./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
-.penv/Scripts/poetry install @extras_cli
+.penv/Scripts/poetry sync @extras_cli
 
 if ($i)
 {

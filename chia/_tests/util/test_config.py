@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
+
+from chia_rs.sized_ints import uint16
 
 from chia._tests.util.misc import DataCase, Marks, datacases
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
+from chia.server.resolve_peer_info import get_unresolved_peer_infos, set_peer_info
 from chia.types.peer_info import UnresolvedPeerInfo
-from chia.util.config import get_unresolved_peer_infos, set_peer_info
-from chia.util.ints import uint16
 
 
 @dataclass
@@ -157,8 +158,8 @@ class SetPeerInfoCase(DataCase):
     service_config: dict[str, Any]
     requested_node_type: NodeType
     expected_service_config: dict[str, Any]
-    peer_host: Optional[str] = None
-    peer_port: Optional[int] = None
+    peer_host: str | None = None
+    peer_port: int | None = None
     marks: Marks = ()
 
     @property

@@ -3,17 +3,30 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import io
 import os
 import pprint
 import traceback
-from collections.abc import Collection
-from enum import Enum
-from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, TypeVar, Union, get_type_hints
+from collections.abc import Callable, Collection
+from enum import Enum, EnumMeta
+from types import UnionType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    ClassVar,
+    Literal,
+    TypeVar,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
-from typing_extensions import Literal, get_args, get_origin
+from typing_extensions import Self
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
@@ -119,11 +132,19 @@ def is_type_SpecificOptional(f_type: object) -> bool:
     """
     Returns true for types such as Optional[T], but not Optional, or T.
     """
-    return get_origin(f_type) == Union and get_args(f_type)[1]() is None
+    return get_origin(f_type) in {Union, UnionType} and get_args(f_type)[1]() is None
 
 
 def is_type_Tuple(f_type: object) -> bool:
     return get_origin(f_type) is tuple or f_type is tuple
+
+
+def is_type_Dict(f_type: object) -> bool:
+    return get_origin(f_type) is dict or f_type is dict
+
+
+def is_type_Enum(f_type: object) -> bool:
+    return type(f_type) is EnumMeta
 
 
 def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
@@ -144,6 +165,12 @@ def convert_list(convert_func: ConvertFunctionType, items: list[Any]) -> list[An
     if not isinstance(items, list):
         raise InvalidTypeError(list, type(items))
     return [convert_func(item) for item in items]
+
+
+def convert_dict(
+    key_converter: ConvertFunctionType, value_converter: ConvertFunctionType, mapping: dict[Any, Any]
+) -> dict[Any, Any]:
+    return {key_converter(key): value_converter(value) for key, value in mapping.items()}
 
 
 def convert_hex_string(item: str) -> bytes:
@@ -196,7 +223,7 @@ def streamable_from_dict(klass: type[_T_Streamable], item: Any) -> _T_Streamable
 
 
 def function_to_convert_one_item(
-    f_type: type[Any], json_parser: Optional[Callable[[object], Streamable]] = None
+    f_type: type[Any], json_parser: Callable[[object, type[object]], Streamable] | None = None
 ) -> ConvertFunctionType:
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0], json_parser)
@@ -213,10 +240,16 @@ def function_to_convert_one_item(
         convert_inner_func = function_to_convert_one_item(inner_type, json_parser)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
+    elif is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_converter = function_to_convert_one_item(inner_types[0], json_parser)
+        value_converter = function_to_convert_one_item(inner_types[1], json_parser)
+        return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
-            json_parser = f_type.from_json_dict
-        return json_parser
+            return f_type.from_json_dict  # type: ignore[no-any-return]
+        else:
+            return functools.partial(json_parser, streamable_type=f_type)  # type: ignore[call-arg]
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
@@ -257,17 +290,24 @@ def function_to_post_init_process_one_item(f_type: type[object]) -> ConvertFunct
         inner_type = get_args(f_type)[0]
         process_inner_func = function_to_post_init_process_one_item(inner_type)
         return lambda items: convert_list(process_inner_func, items)  # type: ignore[arg-type]
+    if is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_converter = function_to_post_init_process_one_item(inner_types[0])
+        value_converter = function_to_post_init_process_one_item(inner_types[1])
+        return lambda mapping: convert_dict(key_converter, value_converter, mapping)  # type: ignore[arg-type]
     return lambda item: post_init_process_item(f_type, item)
 
 
 def recurse_jsonify(
-    d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None, **next_recursion_env: Any
+    d: Any, next_recursion_step: Callable[[Any, Any], Any] | None = None, **next_recursion_env: Any
 ) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
     if next_recursion_step is None:
         next_recursion_step = recurse_jsonify
+    if getattr(d, "json_serialization_override", None) is not None:
+        return d.json_serialization_override(d)
     if dataclasses.is_dataclass(d):
         new_dict = {}
         for field in dataclasses.fields(d):
@@ -283,13 +323,14 @@ def recurse_jsonify(
     elif isinstance(d, dict):
         new_dict = {}
         for name, val in d.items():
-            new_dict[name] = next_recursion_step(val, None, **next_recursion_env)
+            new_dict[next_recursion_step(name, None, **next_recursion_env)] = next_recursion_step(
+                val, None, **next_recursion_env
+            )
         return new_dict
-
+    elif isinstance(d, Enum):
+        return next_recursion_step(d.value, None, **next_recursion_env)
     elif issubclass(type(d), bytes):
         return f"0x{bytes(d).hex()}"
-    elif isinstance(d, Enum):
-        return d.name
     elif isinstance(d, bool):
         return d
     elif isinstance(d, int):
@@ -297,7 +338,7 @@ def recurse_jsonify(
     elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
-        ret: Union[list[Any], dict[str, Any], str, None, int] = d.to_json_dict()
+        ret: list[Any] | dict[str, Any] | str | int | None = d.to_json_dict()
         return ret
     raise UnsupportedType(f"failed to jsonify {d} (type: {type(d)})")
 
@@ -323,7 +364,7 @@ def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"]
     f.write(value.to_bytes(4, byteorder))
 
 
-def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Optional[object]:
+def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> object | None:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
@@ -365,6 +406,19 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: list[ParseFunctionType]) -
     return tuple(full_list)
 
 
+def parse_dict(
+    f: BinaryIO, key_parse_inner_type_f: ParseFunctionType, value_parse_inner_type_f: ParseFunctionType
+) -> dict[object, object]:
+    # We know this is a list of tuples but our parse_list hint doesn't help us here
+    keys_and_values: list[tuple[object, object]] = parse_list(  # type: ignore[assignment]
+        f, lambda inner_f: parse_tuple(inner_f, [key_parse_inner_type_f, value_parse_inner_type_f])
+    )
+    parsed_dict: dict[object, object] = dict(keys_and_values)
+    if len(parsed_dict) < len(keys_and_values):
+        raise ValueError("duplicate dict keys found when deserializing")
+    return parsed_dict
+
+
 def parse_str(f: BinaryIO) -> str:
     str_size = parse_uint32(f)
     str_read_bytes = f.read(str_size)
@@ -399,6 +453,15 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
         inner_types = get_args(f_type)
         list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
         return lambda f: parse_tuple(f, list_parse_inner_type_f)
+    if is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_parse_inner_type_f = function_to_parse_one_item(inner_types[0])
+        value_parse_inner_type_f = function_to_parse_one_item(inner_types[1])
+        return lambda f: parse_dict(f, key_parse_inner_type_f, value_parse_inner_type_f)
+    if is_type_Enum(f_type):
+        if not hasattr(f_type, "_streamable_proxy"):
+            raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
+        return lambda f: f_type(function_to_parse_one_item(f_type._streamable_proxy)(f))
     if f_type is str:
         return parse_str
     raise UnsupportedType(f"Type {f_type} does not have parse")
@@ -427,6 +490,21 @@ def stream_tuple(stream_inner_type_funcs: list[StreamFunctionType], item: Any, f
     assert len(stream_inner_type_funcs) == len(item)
     for i in range(len(item)):
         stream_inner_type_funcs[i](item[i], f)
+
+
+def stream_dict(
+    key_stream_inner_type_func: StreamFunctionType,
+    value_stream_inner_type_func: StreamFunctionType,
+    item: Any,
+    f: BinaryIO,
+) -> None:
+    return stream_list(
+        lambda inner_item, inner_f: stream_tuple(
+            [key_stream_inner_type_func, value_stream_inner_type_func], inner_item, inner_f
+        ),
+        list(item.items()),
+        f,
+    )
 
 
 def stream_str(item: Any, f: BinaryIO) -> None:
@@ -469,6 +547,18 @@ def function_to_stream_one_item(f_type: type[Any]) -> StreamFunctionType:
         for i in range(len(inner_types)):
             stream_inner_type_funcs.append(function_to_stream_one_item(inner_types[i]))
         return lambda item, f: stream_tuple(stream_inner_type_funcs, item, f)
+    elif is_type_Dict(f_type):
+        inner_types = get_args(f_type)
+        key_stream_inner_type_func = function_to_stream_one_item(inner_types[0])
+        value_stream_inner_type_func = function_to_stream_one_item(inner_types[1])
+        return lambda item, f: stream_dict(key_stream_inner_type_func, value_stream_inner_type_func, item, f)
+    elif is_type_Enum(f_type):
+        if not hasattr(f_type, "_streamable_proxy"):
+            raise UnsupportedType(f"Using Enum ({f_type}) in streamable requires a 'streamable_enum' wrapper.")
+        return lambda item, f: function_to_stream_one_item(f_type._streamable_proxy)(
+            f_type._streamable_proxy(item.value),  # type: ignore[attr-defined]
+            f,
+        )
     elif f_type is str:
         return stream_str
     elif f_type is bool:
@@ -575,9 +665,9 @@ class Streamable:
             raise
 
     @classmethod
-    def parse(cls: type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
+    def parse(cls, f: BinaryIO) -> Self:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: _T_Streamable = object.__new__(cls)
+        obj: Self = object.__new__(cls)
         for field in cls._streamable_fields:
             object.__setattr__(obj, field.name, field.parse_function(f))
         return obj
@@ -590,7 +680,7 @@ class Streamable:
         return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
-    def from_bytes(cls: type[_T_Streamable], blob: bytes) -> _T_Streamable:
+    def from_bytes(cls, blob: bytes) -> Self:
         f = io.BytesIO(blob)
         parsed = cls.parse(f)
         assert f.read() == b""
@@ -617,7 +707,7 @@ class Streamable:
         return ret
 
     @classmethod
-    def from_json_dict(cls: type[_T_Streamable], json_dict: dict[str, Any]) -> _T_Streamable:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
         return streamable_from_dict(cls, json_dict)
 
 
@@ -640,3 +730,15 @@ class UInt32Range(Streamable):
 class UInt64Range(Streamable):
     start: uint64 = uint64(0)
     stop: uint64 = uint64.MAXIMUM
+
+
+_T_Enum = TypeVar("_T_Enum", bound=EnumMeta)
+
+
+def streamable_enum(proxy: type[object]) -> Callable[[_T_Enum], _T_Enum]:
+    def streamable_enum_wrapper(cls: _T_Enum) -> _T_Enum:
+        setattr(cls, "_streamable_proxy", proxy)
+        setattr(cls, "_ignore_", ["_streamable_proxy"])
+        return cls
+
+    return streamable_enum_wrapper

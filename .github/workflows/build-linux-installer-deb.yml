@@ -39,25 +39,27 @@ permissions:
 jobs:
   version:
     uses: ./.github/workflows/reflow-version.yml
+    with:
+      release_type: ${{ inputs.release_type }}
 
   build:
     name: Build ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - version
-    container: chianetwork/ubuntu-20.04-builder:latest
+    container: chianetwork/ubuntu-22.04-builder:python312
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
         os:
           - runs-on: ubuntu-latest
             arch: amd64
             madmax-suffix: "x86-64"
             bladebit-suffix: "ubuntu-x86-64.tar.gz"
             arch-artifact-name: intel
-          - runs-on: [Linux, ARM64]
+          - runs-on: ubuntu-24.04-arm
             arch: arm64
             madmax-suffix: "arm64"
             bladebit-suffix: "ubuntu-arm64.tar.gz"
@@ -65,7 +67,7 @@ jobs:
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
-      SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CHIA_BLOCKCHAIN: ${{ needs.version.outputs.chia-installer-version }}
+      POETRY_DYNAMIC_VERSIONING_OVERRIDE: "chia-blockchain=${{ needs.version.outputs.chia-installer-version }}"
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
@@ -75,7 +77,7 @@ jobs:
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -89,6 +91,11 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
 
       - name: Get latest madmax plotter
         env:
@@ -133,8 +140,8 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
-          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
-          ls bladebit* | xargs -I{} chmod +x {}
+          find . -maxdepth 1 -name '*.tar.gz' -print0 | xargs -0 -I{} bash -c 'tar -xzf {} && rm {}'
+          find . -maxdepth 1 -name 'bladebit*' -print0 | xargs -0 -I{} chmod +x {}
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install
@@ -175,7 +182,7 @@ jobs:
           sh build_linux_deb-2-installer.sh ${{ matrix.os.arch }}
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: chia-installers-linux-deb-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
@@ -200,7 +207,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - python-version: ["3.10"]
+          - python-version: ["3.12"]
             os:
               - matrix: debian
                 file-type:
@@ -252,21 +259,17 @@ jobs:
       matrix:
         os:
           - runs-on:
-              arm: [linux, arm64]
+              arm: [ubuntu-24.04-arm]
               intel: [ubuntu-latest]
         distribution:
-          - name: debian:bullseye
-            type: debian
-            # https://packages.debian.org/bullseye/python/python3 (3.9)
-            url: "docker://debian:bullseye"
           - name: debian:bookworm
             type: debian
             # https://packages.debian.org/bookworm/python/python3 (3.11)
             url: "docker://debian:bookworm"
-          - name: ubuntu:focal (20.04)
-            type: ubuntu
-            # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
-            url: "docker://ubuntu:focal"
+          - name: debian:trixie
+            type: debian
+            # https://packages.debian.org/trixie/python/python3 (3.13)
+            url: "docker://debian:trixie"
           - name: ubuntu:jammy (22.04)
             type: ubuntu
             # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
@@ -297,7 +300,7 @@ jobs:
       - uses: Chia-Network/actions/clean-workspace@main
 
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         id: download
         with:
           name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
@@ -332,7 +335,7 @@ jobs:
         shell: bash
         if: matrix.mode.name == 'GUI'
         run: |
-          [ $(stat -c %a:%G:%U /opt/chia/chrome-sandbox) == "4755:root:root" ]
+          [ "$(stat -c %a:%G:%U /opt/chia/chrome-sandbox)" == "4755:root:root" ]
 
       - name: Remove package
         run: |

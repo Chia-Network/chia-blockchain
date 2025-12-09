@@ -12,15 +12,17 @@ import os
 import random
 import sysconfig
 import tempfile
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import AsyncExitStack
-from typing import Any, Callable, Union
+from typing import Any
 
 import aiohttp
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs import ConsensusConstants
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest import MonkeyPatch
 
 from chia._tests import ether
@@ -47,14 +49,15 @@ from chia._tests.util.setup_nodes import (
 )
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.consensus.constants import ConsensusConstants
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.farmer.farmer_service import FarmerService
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.full_node.full_node_service import FullNodeService
+from chia.harvester.harvester_rpc_client import HarvesterRpcClient
+from chia.harvester.harvester_service import HarvesterService
+from chia.seeder.crawler_service import CrawlerService
 from chia.seeder.dns_server import DNSServer
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_services import (
     setup_crawler,
@@ -62,37 +65,40 @@ from chia.simulator.setup_services import (
     setup_full_node,
     setup_introducer,
     setup_seeder,
+    setup_solver,
     setup_timelord,
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-
-# Set spawn after stdlib imports, but before other imports
-from chia.types.aliases import (
-    CrawlerService,
-    FarmerService,
-    FullNodeService,
-    HarvesterService,
-    TimelordService,
-    WalletService,
-)
-from chia.types.peer_info import PeerInfo
+from chia.solver.solver_service import SolverService
+from chia.timelord.timelord_service import TimelordService
+from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_rpc_client import WalletRpcClient
+from chia.wallet.wallet_service import WalletService
 
+# TODO: review how this is now after other imports and before some stdlib imports...  :[
+# Set spawn after stdlib imports, but before other imports
 multiprocessing.set_start_method("spawn")
 
+from dataclasses import replace
 from pathlib import Path
 
-from chia._tests.util.setup_nodes import setup_farmer_multi_harvester
+from chia_rs.sized_ints import uint128
+
+from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
+from chia._tests.util.setup_nodes import setup_farmer_solver_multi_harvester
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.wallet_node import Balance
 
 
 @pytest.fixture(name="ether_setup", autouse=True)
@@ -189,12 +195,13 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_5 = 2
+    HARD_FORK_3_0 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_5],
+    # TODO: todo_v2_plots add HARD_FORK_3_0 mode as well as after phase-out
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
 )
 def consensus_mode(request):
     return request.param
@@ -210,18 +217,26 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
-    if consensus_mode >= ConsensusMode.SOFT_FORK_5:
+
+    if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
         ret = ret.replace(
-            SOFT_FORK5_HEIGHT=uint32(2),
+            HARD_FORK_HEIGHT=uint32(2),
+            PLOT_FILTER_128_HEIGHT=uint32(10),
+            PLOT_FILTER_64_HEIGHT=uint32(15),
+            PLOT_FILTER_32_HEIGHT=uint32(20),
+            HARD_FORK2_HEIGHT=uint32(2),
         )
+
     return ret
 
 
 @pytest.fixture(scope="session", name="bt")
-async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend) -> BlockTools:
+async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend, testrun_uid: str) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    _shared_block_tools = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
-    return _shared_block_tools
+    shared_block_tools = await create_block_tools_async(
+        constants=blockchain_constants, keychain=get_keychain, testrun_uid=testrun_uid
+    )
+    return shared_block_tools
 
 
 # if you have a system that has an unusual hostname for localhost and you want
@@ -261,7 +276,7 @@ def db_version(request) -> int:
     return request.param
 
 
-SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000, 5940000]
+SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000, 6800000]
 
 
 @pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
@@ -459,6 +474,11 @@ def default_10000_blocks_compact(bt, consensus_mode):
         normalized_to_identity_cc_sp=True,
         seed=b"1000_compact",
     )
+
+
+# If you add another test chain, don't forget to also add a "build_test_chains"
+# generator to chia/_tests/blockchain/test_build_chains.py as well as a test in
+# the same file.
 
 
 @pytest.fixture(scope="function")
@@ -772,7 +792,7 @@ async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def one_node(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[list[Service], list[FullNodeSimulator], BlockTools]]:
+) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
     async with setup_simulators_and_wallets_service(1, 0, blockchain_constants) as _:
         yield _
 
@@ -780,7 +800,7 @@ async def one_node(
 @pytest.fixture(scope="function")
 async def one_node_one_block(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
+) -> AsyncIterator[tuple[FullNodeAPI | FullNodeSimulator, ChiaServer, BlockTools]]:
     async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
         (nodes, _, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -792,7 +812,6 @@ async def one_node_one_block(
             1,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             genesis_timestamp=uint64(10000),
             time_per_block=10,
         )
@@ -821,7 +840,6 @@ async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
             1,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
             genesis_timestamp=uint64(10000),
             time_per_block=10,
         )
@@ -849,7 +867,7 @@ async def farmer_one_harvester_simulator_wallet(
     ]
 ]:
     async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as (nodes, wallets, bt):
-        async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
+        async with setup_farmer_solver_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as (
             harvester_services,
             farmer_service,
             _,
@@ -862,31 +880,54 @@ FarmerOneHarvester = tuple[list[HarvesterService], FarmerService, BlockTools]
 
 @pytest.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[FarmerOneHarvester]:
-    async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True) as _:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True
+    ) as _:
         yield _
+
+
+FarmerOneHarvesterSolver = tuple[list[HarvesterService], FarmerService, SolverService, BlockTools]
+
+
+@pytest.fixture(scope="function")
+async def farmer_one_harvester_solver(
+    tmp_path: Path, get_b_tools: BlockTools
+) -> AsyncIterator[FarmerOneHarvesterSolver]:
+    async with setup_solver(tmp_path / "solver", get_b_tools, get_b_tools.constants) as solver_service:
+        solver_peer = UnresolvedPeerInfo(get_b_tools.config["self_hostname"], solver_service._server.get_port())
+        async with setup_farmer_solver_multi_harvester(
+            get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True, solver_peer=solver_peer
+        ) as (harvester_services, farmer_service, bt):
+            yield harvester_services, farmer_service, solver_service, bt
 
 
 @pytest.fixture(scope="function")
 async def farmer_one_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[tuple[list[Service], Service]]:
-    async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False) as _:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False
+    ) as _:
         yield _
 
 
 @pytest.fixture(scope="function")
 async def farmer_two_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[tuple[list[Service], Service]]:
-    async with setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False) as _:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False
+    ) as _:
         yield _
 
 
 @pytest.fixture(scope="function")
 async def farmer_three_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[tuple[list[Service], Service]]:
-    async with setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False) as _:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
+    async with setup_farmer_solver_multi_harvester(
+        get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False
+    ) as _:
         yield _
 
 
@@ -910,13 +951,17 @@ def get_temp_keyring():
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools_1(get_temp_keyring):
-    return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+async def get_b_tools_1(get_temp_keyring, testrun_uid: str):
+    return await create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    )
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools(get_temp_keyring):
-    local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+async def get_b_tools(get_temp_keyring, testrun_uid):
+    local_b_tools = await create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
     return local_b_tools
@@ -1218,25 +1263,28 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 
 @pytest.fixture(scope="function")
 async def farmer_harvester_2_simulators_zero_bits_plot_filter(
-    tmp_path: Path, get_temp_keyring: Keychain
+    tmp_path: Path,
+    get_temp_keyring: Keychain,
+    testrun_uid,
 ) -> AsyncIterator[
     tuple[
         FarmerService,
         HarvesterService,
-        Union[FullNodeService, SimulatorFullNodeService],
-        Union[FullNodeService, SimulatorFullNodeService],
+        FullNodeService | SimulatorFullNodeService,
+        FullNodeService | SimulatorFullNodeService,
         BlockTools,
     ]
 ]:
     zero_bit_plot_filter_consts = test_constants_modified.replace(
-        NUMBER_ZERO_BITS_PLOT_FILTER=uint8(0),
-        NUM_SPS_SUB_SLOT=uint32(8),
+        NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(0),
+        NUM_SPS_SUB_SLOT=uint8(8),
     )
 
     async with AsyncExitStack() as async_exit_stack:
         bt = await create_block_tools_async(
             zero_bit_plot_filter_consts,
             keychain=get_temp_keyring,
+            testrun_uid=testrun_uid,
         )
 
         config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
@@ -1249,6 +1297,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                 num_pool_plots=0,
                 num_non_keychain_plots=0,
                 config_overrides=config_overrides,
+                testrun_uid=testrun_uid,
             )
             for _ in range(2)
         ]
@@ -1267,10 +1316,13 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             )
             for index in range(len(bts))
         ]
-
-        [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
-            setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True)
-        )
+        async with setup_solver(tmp_path / "solver", bt, bt.constants) as solver_service:
+            solver_peer = UnresolvedPeerInfo(bt.config["self_hostname"], solver_service._server.get_port())
+            [harvester_service], farmer_service, _ = await async_exit_stack.enter_async_context(
+                setup_farmer_solver_multi_harvester(
+                    bt, 1, tmp_path, bt.constants, start_services=True, solver_peer=solver_peer
+                )
+            )
 
         yield farmer_service, harvester_service, simulators[0], simulators[1], bt
 
@@ -1293,3 +1345,121 @@ async def recording_web_server_fixture(self_hostname: str) -> AsyncIterator[Reco
 )
 def use_delta_sync(request: SubRequest):
     return request.param
+
+
+# originally from _tests/wallet/conftest.py
+@pytest.fixture(scope="function", params=[True, False])
+def trusted_full_node(request: Any) -> bool:
+    trusted: bool = request.param
+    return trusted
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def tx_config(request: Any) -> TXConfig:
+    return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
+
+
+# This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
+# These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
+@pytest.fixture(scope="function")
+async def wallet_environments(
+    trusted_full_node: bool,
+    tx_config: TXConfig,
+    blockchain_constants: ConsensusConstants,
+    request: pytest.FixtureRequest,
+) -> AsyncIterator[WalletTestFramework]:
+    if "trusted" in request.param:
+        if request.param["trusted"] != trusted_full_node:
+            pytest.skip("Skipping not specified trusted mode")
+    if "reuse_puzhash" in request.param:
+        if request.param["reuse_puzhash"] != tx_config.reuse_puzhash:
+            pytest.skip("Skipping not specified reuse_puzhash mode")
+    assert len(request.param["blocks_needed"]) == request.param["num_environments"]
+    if "config_overrides" in request.param:
+        config_overrides: dict[str, Any] = request.param["config_overrides"]
+    else:  # pragma: no cover
+        config_overrides = {}
+    async with setup_simulators_and_wallets_service(
+        1,
+        request.param["num_environments"],
+        blockchain_constants,
+        initial_num_public_keys=config_overrides.get("initial_num_public_keys", 5),
+    ) as wallet_nodes_services:
+        full_node, wallet_services, bt = wallet_nodes_services
+
+        full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
+
+        wallet_rpc_clients: list[WalletRpcClient] = []
+        async with AsyncExitStack() as astack:
+            for service in wallet_services:
+                service._node.config = {
+                    **service._node.config,
+                    "trusted_peers": (
+                        {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
+                        if trusted_full_node
+                        else {}
+                    ),
+                    **config_overrides,
+                }
+                service._node.wallet_state_manager.config = service._node.config
+                # Shorten the 10 seconds default value
+                service._node.coin_state_retry_seconds = 2
+                await service._node.server.start_client(
+                    PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
+                )
+                wallet_rpc_clients.append(
+                    await astack.enter_async_context(
+                        WalletRpcClient.create_as_context(
+                            bt.config["self_hostname"],
+                            # Semantics guarantee us a non-None value here
+                            service.rpc_server.listen_port,  # type: ignore[union-attr]
+                            service.root_path,
+                            service.config,
+                        )
+                    )
+                )
+
+            wallet_states: list[WalletState] = []
+            for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
+                if blocks_needed > 0:
+                    await full_node[0]._api.farm_blocks_to_wallet(
+                        count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                    )
+                    await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
+                wallet_states.append(
+                    WalletState(
+                        Balance(
+                            confirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
+                            unconfirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
+                            spendable_balance=uint128(2_000_000_000_000 * blocks_needed),
+                            pending_change=uint64(0),
+                            max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
+                            unspent_coin_count=uint32(2 * blocks_needed),
+                            pending_coin_removal_count=uint32(0),
+                        ),
+                    )
+                )
+
+            assert full_node[0].rpc_server is not None
+            client_node = await astack.enter_async_context(
+                FullNodeRpcClient.create_as_context(
+                    bt.config["self_hostname"],
+                    full_node[0].rpc_server.listen_port,
+                    full_node[0].root_path,
+                    full_node[0].config,
+                )
+            )
+            yield WalletTestFramework(
+                full_node[0]._api,
+                client_node,
+                trusted_full_node,
+                [
+                    WalletEnvironment(
+                        service=service,
+                        rpc_client=rpc_client,
+                        wallet_states={uint32(1): wallet_state},
+                    )
+                    for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
+                ],
+                tx_config,
+            )

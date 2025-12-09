@@ -5,12 +5,15 @@ import logging
 from dataclasses import dataclass
 from time import time
 from types import TracebackType
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 from unittest.mock import ANY
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PlotParam, PrivateKey, ProofOfSpace
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
+from typing_extensions import Self
 from yarl import URL
 
 from chia import __version__
@@ -18,22 +21,21 @@ from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import UPDATE_POOL_FARMER_INFO_INTERVAL, Farmer, increment_pool_stats, strip_old_entries
+from chia.farmer.farmer_service import FarmerService
+from chia.harvester.harvester_service import HarvesterService
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
-from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.proof_of_space import (
-    ProofOfSpace,
     generate_plot_public_key,
+    make_pos,
     verify_and_get_quality_string,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ class IncrementPoolStatsCase:
     name: str
     current_time: float
     count: int
-    value: Optional[Union[int, dict[str, Any]]]
+    value: int | dict[str, Any] | None
     expected_result: Any
 
     def __init__(
@@ -64,7 +66,7 @@ class IncrementPoolStatsCase:
         name: str,
         current_time: float,
         count: int,
-        value: Optional[Union[int, dict[str, Any]]],
+        value: int | dict[str, Any] | None,
         expected_result: Any,
     ):
         prepared_p2_singleton_puzzle_hash = std_hash(b"11223344")
@@ -132,16 +134,16 @@ class NewProofOfSpaceCase:
     plot_identifier: str
     signage_point_index: uint8
     plot_id: bytes32
-    plot_size: uint8
+    plot_size: PlotParam
     plot_challenge: bytes32
     plot_public_key: G1Element
-    pool_public_key: Optional[G1Element]
+    pool_public_key: G1Element | None
     pool_contract_puzzle_hash: bytes32
     height: uint32
     proof: bytes
     pool_config: PoolWalletConfig
-    pool_difficulty: Optional[uint64]
-    authentication_token_timeout: Optional[uint8]
+    pool_difficulty: uint64 | None
+    authentication_token_timeout: uint8 | None
     farmer_private_keys: list[PrivateKey]
     authentication_keys: dict[bytes32, PrivateKey]
     use_invalid_peer_response: bool
@@ -155,8 +157,8 @@ class NewProofOfSpaceCase:
         difficulty: uint64,
         sub_slot_iters: uint64,
         pool_url: str,
-        pool_difficulty: Optional[uint64],
-        authentication_token_timeout: Optional[uint8],
+        pool_difficulty: uint64 | None,
+        authentication_token_timeout: uint8 | None,
         use_invalid_peer_response: bool,
         has_valid_authentication_keys: bool,
         expected_pool_stats: dict[str, Any],
@@ -187,12 +189,11 @@ class NewProofOfSpaceCase:
             plot_identifier="test",
             signage_point_index=uint8(1),
             plot_id=bytes32.fromhex("baaa6780c53d4b3739b8807b4ae79a76644ddf0d9e03dc7d0a6a0e613e764d9f"),
-            plot_size=uint8(32),
+            plot_size=PlotParam.make_v1(32),
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3e"
-                    "d69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
+                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
                 )
             ),
             pool_public_key=None,
@@ -572,13 +573,14 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
-    pos = ProofOfSpace(
+    pos = make_pos(
         challenge=case.plot_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=case.proof,
     )
     new_pos = NewProofOfSpace(
@@ -624,7 +626,14 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     }
 
     assert (
-        verify_and_get_quality_string(pos, DEFAULT_CONSTANTS, case.challenge_hash, case.sp_hash, height=uint32(1))
+        verify_and_get_quality_string(
+            pos,
+            DEFAULT_CONSTANTS,
+            case.challenge_hash,
+            case.sp_hash,
+            height=uint32(1),
+            prev_transaction_block_height=uint32(1),
+        )
         is not None
     )
 
@@ -667,9 +676,9 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
 class DummyPoolResponse:
     ok: bool
     status: int
-    error_code: Optional[int] = None
-    error_message: Optional[str] = None
-    new_difficulty: Optional[int] = None
+    error_code: int | None = None
+    error_message: str | None = None
+    new_difficulty: int | None = None
 
     async def text(self) -> str:
         json_dict: dict[str, Any] = dict()
@@ -681,14 +690,14 @@ class DummyPoolResponse:
 
         return json.dumps(json_dict)
 
-    async def __aenter__(self) -> DummyPoolResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         pass
 
@@ -712,13 +721,14 @@ def create_valid_pos(farmer: Farmer) -> tuple[farmer_protocol.NewSignagePoint, P
         sub_slot_iters=case.sub_slot_iters,
         signage_point_index=case.signage_point_index,
         peak_height=uint32(1),
+        last_tx_height=uint32(0),
     )
-    pos = ProofOfSpace(
+    pos = make_pos(
         challenge=case.plot_challenge,
         pool_public_key=case.pool_public_key,
         pool_contract_puzzle_hash=case.pool_contract_puzzle_hash,
         plot_public_key=case.plot_public_key,
-        size=case.plot_size,
+        version_and_size=case.plot_size,
         proof=case.proof,
     )
     new_pos = NewProofOfSpace(
@@ -880,7 +890,12 @@ async def test_farmer_pool_response(
 
     assert (
         verify_and_get_quality_string(
-            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+            pos,
+            DEFAULT_CONSTANTS,
+            sp.challenge_hash,
+            sp.challenge_chain_sp,
+            height=uint32(1),
+            prev_transaction_block_height=uint32(1),
         )
         is not None
     )
@@ -995,7 +1010,7 @@ class DummyPoolInfoResponse:
     ok: bool
     status: int
     url: URL
-    pool_info: Optional[dict[str, Any]] = None
+    pool_info: dict[str, Any] | None = None
     history: tuple[DummyClientResponse, ...] = ()
 
     async def text(self) -> str:
@@ -1004,14 +1019,14 @@ class DummyPoolInfoResponse:
 
         return json.dumps(self.pool_info)
 
-    async def __aenter__(self) -> DummyPoolInfoResponse:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         pass
 
@@ -1248,7 +1263,12 @@ async def test_farmer_additional_headers_on_partial_submit(
 
     assert (
         verify_and_get_quality_string(
-            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+            pos,
+            DEFAULT_CONSTANTS,
+            sp.challenge_hash,
+            sp.challenge_chain_sp,
+            height=uint32(1),
+            prev_transaction_block_height=uint32(1),
         )
         is not None
     )

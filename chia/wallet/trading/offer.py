@@ -1,25 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Optional, Union
+from typing import BinaryIO
 
-from chia_rs import G2Element
+from chia_puzzles_py.programs import SETTLEMENT_PAYMENT, SETTLEMENT_PAYMENT_HASH
+from chia_rs import CoinSpend, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.blockchain_format.program import INFINITE_COST, Program, run_with_cost, uncurry
+from chia.types.coin_spend import make_spend
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint64
-from chia.util.streamable import parse_rust
+from chia.util.streamable import Streamable, parse_rust, streamable
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
     Condition,
     ConditionValidTimes,
+    ConditionValidTimesAbsolute,
+    CreateCoin,
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
@@ -31,9 +34,7 @@ from chia.wallet.outer_puzzles import (
     match_puzzle,
     solve_puzzle,
 )
-from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
@@ -43,13 +44,15 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
-OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
+OfferSpecification = dict[int | bytes32, int]
+
+OFFER_MOD = Program.from_bytes(SETTLEMENT_PAYMENT)
+OFFER_MOD_HASH = bytes32(SETTLEMENT_PAYMENT_HASH)
 
 
 def detect_dependent_coin(
     names: list[bytes32], deps: dict[bytes32, list[bytes32]], announcement_dict: dict[bytes32, list[bytes32]]
-) -> Optional[tuple[bytes32, bytes32]]:
+) -> tuple[bytes32, bytes32] | None:
     # First, we check for any dependencies on coins in the same bundle
     for name in names:
         for dependency in deps[name]:
@@ -61,21 +64,35 @@ def detect_dependent_coin(
 
 
 @dataclass(frozen=True)
-class NotarizedPayment(Payment):
+class NotarizedPayment(CreateCoin):
     nonce: bytes32 = bytes32.zeros
 
     @classmethod
     def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
-        p = Payment.from_condition(with_opcode)
-        puzzle_hash, amount, memos = tuple(p.as_condition_args())
-        return cls(puzzle_hash, amount, memos, nonce)
+        p = CreateCoin.from_program(with_opcode)
+        return cls(p.puzzle_hash, p.amount, p.memos, nonce)
+
+    def name(self) -> bytes32:
+        return self.to_program().get_tree_hash()
+
+
+@streamable
+@dataclass(frozen=True)
+class OfferSummary(Streamable):
+    offered: dict[str, str]  # str for negative int support
+    requested: dict[str, str]  # str for negative int support
+    fees: uint64
+    infos: dict[str, PuzzleInfo]
+    additions: list[bytes32]
+    removals: list[bytes32]
+    valid_times: ConditionValidTimesAbsolute
 
 
 @dataclass(frozen=True, eq=False)
 class Offer:
     requested_payments: dict[
-        Optional[bytes32], list[NotarizedPayment]
+        bytes32 | None, list[NotarizedPayment]
     ]  # The key is the asset id of the asset being requested
     _bundle: WalletSpendBundle
     driver_dict: dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
@@ -84,9 +101,9 @@ class Offer:
     # ordered by the coin being spent
     _additions: dict[Coin, list[Coin]] = field(init=False, repr=False)
     _hints: dict[bytes32, bytes32] = field(init=False)
-    _offered_coins: dict[Optional[bytes32], list[Coin]] = field(init=False, repr=False)
-    _final_spend_bundle: Optional[WalletSpendBundle] = field(init=False, repr=False)
-    _conditions: Optional[dict[Coin, list[Condition]]] = field(init=False)
+    _offered_coins: dict[bytes32 | None, list[Coin]] = field(init=False, repr=False)
+    _final_spend_bundle: WalletSpendBundle | None = field(init=False, repr=False)
+    _conditions: dict[Coin, list[Condition]] | None = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -94,27 +111,26 @@ class Offer:
 
     @staticmethod
     def notarize_payments(
-        requested_payments: dict[Optional[bytes32], list[Payment]],  # `None` means you are requesting XCH
+        requested_payments: dict[bytes32 | None, list[CreateCoin]],  # `None` means you are requesting XCH
         coins: list[Coin],
-    ) -> dict[Optional[bytes32], list[NotarizedPayment]]:
+    ) -> dict[bytes32 | None, list[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
         sorted_coins: list[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: list[list[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
+        sorted_coin_list: list[list[bytes32 | uint64]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
-        notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]] = {}
+        notarized_payments: dict[bytes32 | None, list[NotarizedPayment]] = {}
         for asset_id, payments in requested_payments.items():
             notarized_payments[asset_id] = []
             for p in payments:
-                puzzle_hash, amount, memos = tuple(p.as_condition_args())
-                notarized_payments[asset_id].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
+                notarized_payments[asset_id].append(NotarizedPayment(p.puzzle_hash, p.amount, p.memos, nonce))
 
         return notarized_payments
 
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]],
+        notarized_payments: dict[bytes32 | None, list[NotarizedPayment]],
         driver_dict: dict[bytes32, PuzzleInfo],
     ) -> list[AssertPuzzleAnnouncement]:
         announcements: list[AssertPuzzleAnnouncement] = []
@@ -169,7 +185,7 @@ class Offer:
             max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
             for cs in self._bundle.coin_spends:
                 try:
-                    cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
+                    cost, conds = run_with_cost(cs.puzzle_reveal, max_cost, cs.solution)
                     max_cost -= cost
                     conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
                 except Exception:  # pragma: no cover
@@ -219,21 +235,21 @@ class Offer:
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     # It's also a little heuristic, but it should get most things
-    def _get_offered_coins(self) -> dict[Optional[bytes32], list[Coin]]:
-        offered_coins: dict[Optional[bytes32], list[Coin]] = {}
+    def _get_offered_coins(self) -> dict[bytes32 | None, list[Coin]]:
+        offered_coins: dict[bytes32 | None, list[Coin]] = {}
 
         for parent_spend in self._bundle.coin_spends:
             coins_for_this_spend: list[Coin] = []
 
             parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
-            parent_solution: Program = parent_spend.solution.to_program()
+            parent_solution = Program.from_serialized(parent_spend.solution)
             additions: list[Coin] = self._additions[parent_spend.coin]
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
                 asset_id = create_asset_id(puzzle_driver)
-                inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
-                inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
+                inner_puzzle: Program | None = get_inner_puzzle(puzzle_driver, parent_puzzle, parent_solution)
+                inner_solution: Program | None = get_inner_solution(puzzle_driver, parent_solution)
                 assert inner_puzzle is not None and inner_solution is not None
 
                 # We're going to look at the conditions created by the inner puzzle
@@ -258,10 +274,7 @@ class Offer:
                     matching_spend_additions = [
                         a
                         for a in matching_spend_additions
-                        if a.puzzle_hash
-                        == construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
-                            OFFER_MOD_HASH
-                        )
+                        if a.puzzle_hash == construct_puzzle(puzzle_driver, OFFER_MOD).get_tree_hash()
                     ]
                     if len(matching_spend_additions) == expected_num_matches:
                         coins_for_this_spend.extend(matching_spend_additions)
@@ -280,7 +293,7 @@ class Offer:
                 offered_coins[asset_id].extend(coins_for_this_spend)
         return offered_coins
 
-    def get_offered_coins(self) -> dict[Optional[bytes32], list[Coin]]:
+    def get_offered_coins(self) -> dict[bytes32 | None, list[Coin]]:
         try:
             if self._offered_coins is not None:
                 return self._offered_coins
@@ -288,58 +301,58 @@ class Offer:
             object.__setattr__(self, "_offered_coins", self._get_offered_coins())
         return self._offered_coins
 
-    def get_offered_amounts(self) -> dict[Optional[bytes32], int]:
-        offered_coins: dict[Optional[bytes32], list[Coin]] = self.get_offered_coins()
-        offered_amounts: dict[Optional[bytes32], int] = {}
+    def get_offered_amounts(self) -> dict[bytes32 | None, int]:
+        offered_coins: dict[bytes32 | None, list[Coin]] = self.get_offered_coins()
+        offered_amounts: dict[bytes32 | None, int] = {}
         for asset_id, coins in offered_coins.items():
             offered_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return offered_amounts
 
-    def get_requested_payments(self) -> dict[Optional[bytes32], list[NotarizedPayment]]:
+    def get_requested_payments(self) -> dict[bytes32 | None, list[NotarizedPayment]]:
         return self.requested_payments
 
-    def get_requested_amounts(self) -> dict[Optional[bytes32], int]:
-        requested_amounts: dict[Optional[bytes32], int] = {}
+    def get_requested_amounts(self) -> dict[bytes32 | None, int]:
+        requested_amounts: dict[bytes32 | None, int] = {}
         for asset_id, coins in self.get_requested_payments().items():
             requested_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return requested_amounts
 
-    def arbitrage(self) -> dict[Optional[bytes32], int]:
+    def arbitrage(self) -> dict[bytes32 | None, int]:
         """
         Returns a dictionary of the type of each asset and amount that is involved in the trade
         With the amount being how much their offered amount within the offer
         exceeds/falls short of their requested amount.
         """
-        offered_amounts: dict[Optional[bytes32], int] = self.get_offered_amounts()
-        requested_amounts: dict[Optional[bytes32], int] = self.get_requested_amounts()
+        offered_amounts: dict[bytes32 | None, int] = self.get_offered_amounts()
+        requested_amounts: dict[bytes32 | None, int] = self.get_requested_amounts()
 
-        arbitrage_dict: dict[Optional[bytes32], int] = {}
+        arbitrage_dict: dict[bytes32 | None, int] = {}
         for asset_id in [*requested_amounts.keys(), *offered_amounts.keys()]:
             arbitrage_dict[asset_id] = offered_amounts.get(asset_id, 0) - requested_amounts.get(asset_id, 0)
 
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> tuple[dict[str, int], dict[str, int], dict[str, dict[str, Any]], ConditionValidTimes]:
-        offered_amounts: dict[Optional[bytes32], int] = self.get_offered_amounts()
-        requested_amounts: dict[Optional[bytes32], int] = self.get_requested_amounts()
+    def summary(self) -> tuple[dict[str, str], dict[str, str], dict[str, PuzzleInfo], ConditionValidTimes]:
+        offered_amounts: dict[bytes32 | None, int] = self.get_offered_amounts()
+        requested_amounts: dict[bytes32 | None, int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: dict[Optional[bytes32], Any]) -> dict[str, Any]:
-            new_dic: dict[str, Any] = {}
+        def keys_and_amounts_to_strings(dic: dict[bytes32 | None, int]) -> dict[str, str]:
+            new_dic: dict[str, str] = {}
             for key, val in dic.items():
                 if key is None:
-                    new_dic["xch"] = val
+                    new_dic["xch"] = str(val)
                 else:
-                    new_dic[key.hex()] = val
+                    new_dic[key.hex()] = str(val)
             return new_dic
 
-        driver_dict: dict[str, Any] = {}
+        driver_dict: dict[str, PuzzleInfo] = {}
         for key, value in self.driver_dict.items():
-            driver_dict[key.hex()] = value.info
+            driver_dict[key.hex()] = value
 
         return (
-            keys_to_strings(offered_amounts),
-            keys_to_strings(requested_amounts),
+            keys_and_amounts_to_strings(offered_amounts),
+            keys_and_amounts_to_strings(requested_amounts),
             driver_dict,
             self.absolute_valid_times_ban_relatives(),
         )
@@ -411,7 +424,7 @@ class Offer:
             coin_names.append(name)
             dependencies[name] = []
             announcements[name] = []
-            conditions: Program = spend.puzzle_reveal.run_with_cost(INFINITE_COST, spend.solution)[1]
+            conditions: Program = run_with_cost(spend.puzzle_reveal, INFINITE_COST, spend.solution)[1]
             for condition in conditions.as_iter():
                 if condition.first() == 60:  # create coin announcement
                     announcements[name].append(
@@ -449,7 +462,7 @@ class Offer:
 
     @classmethod
     def aggregate(cls, offers: list[Offer]) -> Offer:
-        total_requested_payments: dict[Optional[bytes32], list[NotarizedPayment]] = {}
+        total_requested_payments: dict[bytes32 | None, list[NotarizedPayment]] = {}
         total_bundle = WalletSpendBundle([], G2Element())
         total_driver_dict: dict[bytes32, PuzzleInfo] = {}
         for offer in offers:
@@ -481,13 +494,13 @@ class Offer:
 
     # A "valid" spend means that this bundle can be pushed to the network and will succeed
     # This differs from the `to_spend_bundle` method which deliberately creates an invalid SpendBundle
-    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None, solver: Solver = Solver({})) -> WalletSpendBundle:
+    def to_valid_spend(self, arbitrage_ph: bytes32 | None = None, solver: Solver = Solver({})) -> WalletSpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 
         completion_spends: list[CoinSpend] = []
-        all_offered_coins: dict[Optional[bytes32], list[Coin]] = self.get_offered_coins()
-        total_arbitrage_amount: dict[Optional[bytes32], int] = self.arbitrage()
+        all_offered_coins: dict[bytes32 | None, list[Coin]] = self.get_offered_coins()
+        total_arbitrage_amount: dict[bytes32 | None, int] = self.arbitrage()
         for asset_id, payments in self.requested_payments.items():
             offered_coins: list[Coin] = all_offered_coins[asset_id]
 
@@ -612,7 +625,7 @@ class Offer:
     @classmethod
     def from_spend_bundle(cls, bundle: WalletSpendBundle) -> Offer:
         # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
-        requested_payments: dict[Optional[bytes32], list[NotarizedPayment]] = {}
+        requested_payments: dict[bytes32 | None, list[NotarizedPayment]] = {}
         driver_dict: dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: list[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
@@ -625,7 +638,7 @@ class Offer:
                 asset_id = None
             if coin_spend.coin.parent_coin_info == bytes32.zeros:
                 notarized_payments: list[NotarizedPayment] = []
-                for payment_group in coin_spend.solution.to_program().as_iter():
+                for payment_group in Program.from_serialized(coin_spend.solution).as_iter():
                     nonce = bytes32(payment_group.first().as_atom())
                     payment_args_list = payment_group.rest().as_iter()
                     notarized_payments.extend(
@@ -648,10 +661,10 @@ class Offer:
             return False  # don't attempt to compare against unrelated types
         return self.name() == other.name()
 
-    def compress(self, version: Optional[int] = None) -> bytes:
+    def compress(self, version: int | None = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
-            mods: list[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
+            mods: list[bytes] = [bytes(uncurry(s.puzzle_reveal)[0]) for s in as_spend_bundle.coin_spends]
             version = max(lowest_best_version(mods), 6)  # Clients lower than version 6 should not be able to parse
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 
@@ -667,7 +680,7 @@ class Offer:
             pass
         return cls.from_bytes(offer_bytes)
 
-    def to_bech32(self, prefix: str = "offer", compression_version: Optional[int] = None) -> str:
+    def to_bech32(self, prefix: str = "offer", compression_version: int | None = None) -> str:
         offer_bytes = self.compress(version=compression_version)
         encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
         return encoded

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Optional
 
 from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
 
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 
@@ -57,26 +56,56 @@ class PoolState(Streamable):
     target_puzzle_hash: bytes32  # TODO: rename target_puzzle_hash -> pay_to_address
     # owner_pubkey is set by the wallet, once
     owner_pubkey: G1Element
-    pool_url: Optional[str]
+    pool_url: str | None
     relative_lock_height: uint32
 
 
+@streamable
+@dataclass(frozen=True)
+class NewPoolWalletInitialTargetState(Streamable):
+    state: str  # must map to name of PoolSingletonState Enum
+    # only when state == "FARMING_TO_POOL"
+    target_puzzle_hash: bytes32 | None = None
+    pool_url: str | None = None
+    relative_lock_height: uint32 | None = None
+
+    def __post_init__(self) -> None:
+        if self.state not in {member.name for member in PoolSingletonState}:
+            raise ValueError(f"Invalid pool wallet initial state: {self.state}")
+        if PoolSingletonState[self.state] == PoolSingletonState.FARMING_TO_POOL:
+            if self.target_puzzle_hash is None:
+                raise ValueError("target_puzzle_hash must be set when state is FARMING_TO_POOL")
+            if self.pool_url is None:
+                raise ValueError("pool_url must be set when state is FARMING_TO_POOL")
+            if self.relative_lock_height is None:
+                raise ValueError("relative_lock_height must be set when state is FARMING_TO_POOL")
+        else:
+            if self.target_puzzle_hash is not None:
+                raise ValueError("target_puzzle_hash is only valid for FARMING_TO_POOL")
+            if self.pool_url is not None:
+                raise ValueError("pool_url is only valid for FARMING_TO_POOL")
+            if self.relative_lock_height is not None:
+                raise ValueError("relative_lock_height is only valid for FARMING_TO_POOL")
+
+        super().__post_init__()
+
+
 def initial_pool_state_from_dict(
-    state_dict: dict[str, Any],
+    initial_state: NewPoolWalletInitialTargetState,
     owner_pubkey: G1Element,
     owner_puzzle_hash: bytes32,
 ) -> PoolState:
-    state_str = state_dict["state"]
-    singleton_state: PoolSingletonState = PoolSingletonState[state_str]
+    singleton_state: PoolSingletonState = PoolSingletonState[initial_state.state]
 
     if singleton_state == SELF_POOLING:
         target_puzzle_hash = owner_puzzle_hash
         pool_url: str = ""
         relative_lock_height = uint32(0)
     elif singleton_state == FARMING_TO_POOL:
-        target_puzzle_hash = bytes32.from_hexstr(state_dict["target_puzzle_hash"])
-        pool_url = state_dict["pool_url"]
-        relative_lock_height = uint32(state_dict["relative_lock_height"])
+        # mypy doesn't know about our __post_init__
+        target_puzzle_hash = initial_state.target_puzzle_hash  # type: ignore[assignment]
+        pool_url = initial_state.pool_url  # type: ignore[assignment]
+        relative_lock_height = initial_state.relative_lock_height  # type: ignore[assignment]
     else:
         raise ValueError("Initial state must be SELF_POOLING or FARMING_TO_POOL")
 
@@ -89,7 +118,7 @@ def create_pool_state(
     state: PoolSingletonState,
     target_puzzle_hash: bytes32,
     owner_pubkey: G1Element,
-    pool_url: Optional[str],
+    pool_url: str | None,
     relative_lock_height: uint32,
 ) -> PoolState:
     if state not in {s.value for s in PoolSingletonState}:
@@ -110,7 +139,7 @@ class PoolWalletInfo(Streamable):
     """
 
     current: PoolState
-    target: Optional[PoolState]
+    target: PoolState | None
     launcher_coin: Coin
     launcher_id: bytes32
     p2_singleton_puzzle_hash: bytes32

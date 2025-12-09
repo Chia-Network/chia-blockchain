@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from hashlib import sha256
-from typing import Callable
 
-from clvm.casts import int_to_bytes
+from chia_rs.sized_bytes import bytes32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.casts import int_to_bytes
 
 CurryHashFunction = Callable[..., bytes32]
 

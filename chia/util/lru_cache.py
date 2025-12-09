@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -14,7 +14,7 @@ class LRUCache(Generic[K, V]):
         self.cache: OrderedDict[K, V] = OrderedDict()
         self.capacity = capacity
 
-    def get(self, key: K) -> Optional[V]:
+    def get(self, key: K) -> V | None:
         if key not in self.cache:
             return None
         else:
@@ -22,10 +22,14 @@ class LRUCache(Generic[K, V]):
             return self.cache[key]
 
     def put(self, key: K, value: V) -> None:
-        self.cache[key] = value
-        self.cache.move_to_end(key)
-        if len(self.cache) > self.capacity:
-            self.cache.popitem(last=False)
+        if self.capacity > 0:
+            self.cache[key] = value
+            self.cache.move_to_end(key)
+            if len(self.cache) > self.capacity:
+                self.cache.popitem(last=False)
 
     def remove(self, key: K) -> None:
         self.cache.pop(key)
+
+    def get_capacity(self) -> int:
+        return self.capacity

@@ -3,21 +3,25 @@ from __future__ import annotations
 import logging
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, Optional, cast
+from typing import cast
 
 import pytest
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint16, uint32
+from chiapos import DiskProver
 
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
+from chia.plotting.prover import V1Prover
 from chia.plotting.util import (
     PlotInfo,
     PlotRefreshEvents,
@@ -29,7 +33,6 @@ from chia.plotting.util import (
 )
 from chia.simulator.block_tools import get_plot_dir
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint16, uint32
 from chia.util.streamable import VersionedBlob
 
 log = logging.getLogger(__name__)
@@ -88,7 +91,7 @@ class PlotRefreshTester:
     expected_result_matched: bool
 
     def __init__(self, root_path: Path):
-        self.plot_manager = PlotManager(root_path, self.refresh_callback)
+        self.plot_manager = PlotManager(root_path, self.refresh_callback, DEFAULT_CONSTANTS)
         # Set a very high refresh interval here to avoid unintentional refresh cycles
         self.plot_manager.refresh_parameter = replace(
             self.plot_manager.refresh_parameter, interval_seconds=uint32(10000)
@@ -115,10 +118,9 @@ class PlotRefreshTester:
                                 if plot_info.prover.get_filename() == value.prover.get_filename():
                                     values_found += 1
                                     continue
-                        else:
-                            if value in expected_list:
-                                values_found += 1
-                                continue
+                        elif value in expected_list:
+                            values_found += 1
+                            continue
                     if values_found != len(expected_list):
                         log.error(f"{name} invalid: values_found {values_found} expected {len(expected_list)}")
                         return
@@ -507,7 +509,8 @@ async def test_plot_info_caching(environment, bt):
         assert plot_manager.plots[path].prover.get_filename() == plot_info.prover.get_filename()
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
         assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
-        assert plot_manager.plots[path].prover.get_size() == plot_info.prover.get_size()
+        assert plot_manager.plots[path].prover.get_param().size_v1 == plot_info.prover.get_param().size_v1
+        assert plot_manager.plots[path].prover.get_param().strength_v2 == plot_info.prover.get_param().strength_v2
         assert plot_manager.plots[path].prover.get_compression_level() == plot_info.prover.get_compression_level()
         assert plot_manager.plots[path].pool_public_key == plot_info.pool_public_key
         assert plot_manager.plots[path].pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash
@@ -661,7 +664,7 @@ async def test_cache_lifetime(environment: Environment) -> None:
 )
 @pytest.mark.anyio
 async def test_callback_event_raises(environment, event_to_raise: PlotRefreshEvents):
-    last_event_fired: Optional[PlotRefreshEvents] = None
+    last_event_fired: PlotRefreshEvents | None = None
 
     def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
         nonlocal last_event_fired
@@ -741,6 +744,20 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     add_plot_directory(env.root_path, str(sub_dir_1_0_1.path))
     expected_result.loaded = []
     await env.refresh_tester.run(expected_result)
+
+
+@pytest.mark.anyio
+async def test_disk_prover_from_bytes(environment: Environment):
+    env: Environment = environment
+    expected_result = PlotRefreshResult()
+    expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
+    expected_result.processed = len(env.dir_1)
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    await env.refresh_tester.run(expected_result)
+    _, plot_info = next(iter(env.refresh_tester.plot_manager.plots.items()))
+    recreated_prover = V1Prover(DiskProver.from_bytes(bytes(plot_info.prover)))
+    assert recreated_prover.get_id() == plot_info.prover.get_id()
+    assert recreated_prover.get_filename() == plot_info.prover.get_filename()
 
 
 @boolean_datacases(name="follow_links", false="no_follow", true="follow")

@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 import click
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 from click.testing import CliRunner
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo, chia_command
+from chia.cmds.cmd_classes import chia_command
+from chia.cmds.cmd_helpers import NeedsWalletRPC, TransactionsIn, TransactionsOut, WalletClientInfo
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.signer import (
     ApplySignaturesCMD,
@@ -21,24 +23,12 @@ from chia.cmds.signer import (
     QrCodeDisplay,
     SPIn,
     SPOut,
-    TransactionsIn,
-    TransactionsOut,
 )
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
-from chia.rpc.wallet_request_types import (
-    ApplySignatures,
-    ExecuteSigningInstructions,
-    GatherSigningInfo,
-    GatherSigningInfoResponse,
-    SubmitTransactions,
-)
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord
@@ -77,8 +67,15 @@ from chia.wallet.util.clvm_streamable import (
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    SubmitTransactions,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -137,7 +134,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         [coin] = await wallet.select_coins(uint64(0), action_scope)
     puzzle: Program = await wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
-    delegated_puzzle: Program = Program.to(None)
+    delegated_puzzle: Program = Program.NIL
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
     solution: Program = Program.to([None, None, None])
 
@@ -147,9 +144,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         solution,
     )
 
-    derivation_record: Optional[
-        DerivationRecord
-    ] = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+    derivation_record: (
+        DerivationRecord | None
+    ) = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
     assert derivation_record is not None
     pubkey: G1Element = derivation_record.pubkey
     atom = puzzle.uncurry()[1].at("f").atom
@@ -615,8 +612,10 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
     )
 
     AMOUNT = uint64(1)
-    async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, sign=False, push=False) as action_scope:
-        await wallet.generate_signed_transaction(AMOUNT, bytes32.zeros, action_scope)
+    async with wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, sign=False, push=False
+    ) as action_scope:
+        await wallet.generate_signed_transaction([AMOUNT], [bytes32.zeros], action_scope)
     [tx] = action_scope.side_effects.transactions
 
     runner = CliRunner()
@@ -687,6 +686,7 @@ async def test_signer_commands(wallet_environments: WalletTestFramework) -> None
         )
 
 
+@pytest.mark.filterwarnings("ignore:The parameter .* is used more than once:UserWarning")
 def test_signer_command_default_parsing() -> None:
     check_click_parsing(
         GatherSigningInfoCMD(
@@ -698,7 +698,7 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
@@ -729,9 +729,9 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_out=TransactionsOut(transaction_file_out="out"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
-        "-o",
+        "--transaction-file-out",
         "out",
         "-p",
         "sp-in",
@@ -742,7 +742,7 @@ def test_signer_command_default_parsing() -> None:
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
@@ -752,7 +752,7 @@ def test_transactions_in() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(TransactionsIn):
         def run(self) -> None:
             assert self.transaction_bundle == TransactionBundle([STD_TX])
@@ -771,7 +771,7 @@ def test_transactions_out() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(TransactionsOut):
         def run(self) -> None:
             self.handle_transaction_output([STD_TX])
@@ -824,7 +824,7 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(13))
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(SPIn):
         def run(self) -> None:
             assert self.read_sp_input(Coin) == [coin, coin]
@@ -848,8 +848,8 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
         with open("some file", "wb") as file:
             file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
-            with open("some file2", "wb") as file:
-                file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+            with open("some file2", "wb") as file2:
+                file2.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
 
         result = runner.invoke(
             cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]
@@ -881,7 +881,7 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     coin_bytes = byte_serialize_clvm_streamable(coin)
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(SPOut):
         def run(self) -> None:
             self.handle_clvm_output([coin, coin])
@@ -930,7 +930,7 @@ def test_qr_code_display() -> None:
 
     bytes_to_encode = b"foo bar qat qux bam bat"
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(group=cmd, name="temp_cmd", short_help="blah", help="n/a")
     class TempCMD(QrCodeDisplay):
         def run(self) -> None:
             self.display_qr_codes([bytes_to_encode, bytes_to_encode])

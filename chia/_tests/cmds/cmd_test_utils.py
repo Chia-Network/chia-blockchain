@@ -5,51 +5,71 @@ from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
-from chia_rs import Coin, G2Element
+from chia_rs import BlockRecord, Coin, G1Element, G2Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 import chia.cmds.wallet_funcs
 from chia._tests.cmds.testing_classes import create_test_block_record
-from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX
+from chia._tests.cmds.wallet.test_consts import STD_TX, STD_UTX, get_bytes32
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.data_layer.data_layer_rpc_client import DataLayerRpcClient
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_request_types import (
+    CATAssetIDToName,
+    CATAssetIDToNameResponse,
+    CATGetName,
+    CATGetNameResponse,
+    CreateNewWallet,
+    CreateNewWalletResponse,
+    CreateNewWalletType,
+    GetSyncStatusResponse,
+    GetTransaction,
+    GetTransactionResponse,
+    GetWallets,
+    GetWalletsResponse,
+    NFTCalculateRoyalties,
+    NFTCalculateRoyaltiesResponse,
+    NFTGetInfo,
+    NFTGetInfoResponse,
+    SignMessageByAddress,
+    SignMessageByAddressResponse,
+    SignMessageByID,
+    SignMessageByIDResponse,
+    WalletInfoResponse,
+)
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
 
-logType = dict[str, Optional[list[tuple[Any, ...]]]]
+logType = dict[str, list[tuple[Any, ...]] | None]
 
 
 @dataclass
 class TestRpcClient:
     client_type: type[RpcClient]
-    rpc_port: Optional[uint16] = None
-    root_path: Optional[Path] = None
-    config: Optional[dict[str, Any]] = None
+    rpc_port: uint16 | None = None
+    root_path: Path | None = None
+    config: dict[str, Any] | None = None
     create_called: bool = field(init=False, default=False)
     rpc_log: dict[str, list[tuple[Any, ...]]] = field(init=False, default_factory=dict)
 
@@ -87,11 +107,11 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("get_sync_status", ())
         return GetSyncStatusResponse(synced=True, syncing=False)
 
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
-        self.add_to_log("get_wallets", (wallet_type,))
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+        self.add_to_log("get_wallets", (request,))
         # we cant start with zero because ints cant have a leading zero
-        if wallet_type is not None:
-            w_type = wallet_type
+        if request.type is not None:
+            w_type = WalletType(request.type)
         elif str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
             w_type = WalletType.STANDARD_WALLET
         elif str(self.fingerprint).startswith(str(WalletType.CAT.value + 1)):
@@ -104,63 +124,83 @@ class TestWalletRpcClient(TestRpcClient):
             w_type = WalletType.POOLING_WALLET
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
-        return [{"id": 1, "type": w_type}]
+        return GetWalletsResponse([WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")])
 
-    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (transaction_id,))
-        return TransactionRecord(
-            confirmed_at_height=uint32(1),
-            created_at_time=uint64(1234),
-            to_puzzle_hash=bytes32([1] * 32),
-            amount=uint64(12345678),
-            fee_amount=uint64(1234567),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=WalletSpendBundle([], G2Element()),
-            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-            wallet_id=uint32(1),
-            sent_to=[("aaaaa", uint8(1), None)],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32([2] * 32),
-            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
-            valid_times=ConditionValidTimes(),
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        self.add_to_log("get_transaction", (request,))
+        return GetTransactionResponse(
+            TransactionRecord(
+                confirmed_at_height=uint32(1),
+                created_at_time=uint64(1234),
+                to_puzzle_hash=bytes32([1] * 32),
+                to_address=encode_puzzle_hash(bytes32([1] * 32), "xch"),
+                amount=uint64(12345678),
+                fee_amount=uint64(1234567),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+                wallet_id=uint32(1),
+                sent_to=[("aaaaa", uint8(1), None)],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=bytes32([2] * 32),
+                memos={bytes32([3] * 32): [bytes([4] * 32)]},
+                valid_times=ConditionValidTimes(),
+            ),
+            bytes32([2] * 32),
         )
 
-    async def get_cat_name(self, wallet_id: int) -> str:
-        self.add_to_log("get_cat_name", (wallet_id,))
-        return "test" + str(wallet_id)
+    async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
+        self.add_to_log("get_cat_name", (request.wallet_id,))
+        return CATGetNameResponse(request.wallet_id, "test" + str(request.wallet_id))
 
-    async def sign_message_by_address(self, address: str, message: str) -> tuple[str, str, str]:
-        self.add_to_log("sign_message_by_address", (address, message))
-        pubkey = bytes([3] * 48).hex()
-        signature = bytes([6] * 576).hex()
+    async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
+        self.add_to_log("sign_message_by_address", (request.address, request.message))
+        pubkey = G1Element.from_bytes(
+            bytes.fromhex(
+                "b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4"
+            )
+        )
+        signature = G2Element.from_bytes(
+            bytes.fromhex(
+                "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            )
+        )
         signing_mode = SigningMode.CHIP_0002.value
-        return pubkey, signature, signing_mode
+        return SignMessageByAddressResponse(pubkey, signature, signing_mode)
 
-    async def sign_message_by_id(self, id: str, message: str) -> tuple[str, str, str]:
-        self.add_to_log("sign_message_by_id", (id, message))
-        pubkey = bytes([4] * 48).hex()
-        signature = bytes([7] * 576).hex()
+    async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
+        self.add_to_log("sign_message_by_id", (request.id, request.message))
+        pubkey = G1Element.from_bytes(
+            bytes.fromhex(
+                "a9e652cb551d5978a9ee4b7aa52a4e826078a54b08a3d903c38611cb8a804a9a29c926e4f8549314a079e04ecde10cc1"
+            )
+        )
+        signature = G2Element.from_bytes(
+            bytes.fromhex(
+                "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            )
+        )
         signing_mode = SigningMode.CHIP_0002.value
-        return pubkey, signature, signing_mode
+        return SignMessageByIDResponse(pubkey, signature, bytes32.zeros, signing_mode)
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
+    async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
         """
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
-        self.add_to_log("cat_asset_id_to_name", (asset_id,))
-        if asset_id == bytes32([1] * 32):
-            return uint32(2), "test1"
-        elif asset_id == bytes32([2] * 32):
-            return uint32(3), "test2"
-        else:
-            return None
+        self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
+        for i in range(256):
+            if request.asset_id == get_bytes32(i):
+                return CATAssetIDToNameResponse(uint32(i + 1), "test" + str(i))
+        return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
-        self.add_to_log("get_nft_info", (coin_id, latest))
-        coin_id_bytes = bytes32.fromhex(coin_id)
+    async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
+        self.add_to_log("get_nft_info", (request.coin_id, request.latest))
+        coin_id_bytes = bytes32.fromhex(request.coin_id)
         nft_info = NFTInfo(
             nft_id=encode_puzzle_hash(coin_id_bytes, "nft"),
             launcher_id=bytes32([1] * 32),
@@ -183,102 +223,36 @@ class TestWalletRpcClient(TestRpcClient):
             supports_did=True,
             p2_address=bytes32([8] * 32),
         )
-        return {"nft_info": nft_info.to_json_dict()}
+        return NFTGetInfoResponse(nft_info)
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
-        fungible_asset_dict: dict[Any, uint64],
-    ) -> dict[Any, list[dict[str, Any]]]:
-        self.add_to_log("nft_calculate_royalties", (royalty_assets_dict, fungible_asset_dict))
-        return NFTWallet.royalty_calculation(
-            royalty_assets_dict=royalty_assets_dict,
-            fungible_asset_dict=fungible_asset_dict,
-        )
-
-    async def get_spendable_coins(
-        self,
-        wallet_id: int,
-        coin_selection_config: CoinSelectionConfig,
-    ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
-        """
-        We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
-        """
-        self.add_to_log(
-            "get_spendable_coins",
-            (wallet_id, coin_selection_config),
-        )
-        confirmed_records = [
-            CoinRecord(
-                Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
-                uint32(123456),
-                uint32(0),
-                False,
-                uint64(0),
-            ),
-            CoinRecord(
-                Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(1234560000)),
-                uint32(123456),
-                uint32(0),
-                False,
-                uint64(0),
-            ),
-        ]
-        unconfirmed_removals = [
-            CoinRecord(
-                Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(1234570000)),
-                uint32(123457),
-                uint32(0),
-                True,
-                uint64(0),
+        request: NFTCalculateRoyalties,
+    ) -> NFTCalculateRoyaltiesResponse:
+        self.add_to_log("nft_calculate_royalties", (request,))
+        return NFTCalculateRoyaltiesResponse.from_json_dict(
+            NFTWallet.royalty_calculation(
+                {asset.asset: (asset.royalty_address, asset.royalty_percentage) for asset in request.royalty_assets},
+                {asset.asset: asset.amount for asset in request.fungible_assets},
             )
-        ]
-        unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
-        return confirmed_records, unconfirmed_removals, unconfirmed_additions
+        )
 
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        self.add_to_log("get_next_address", (wallet_id, new_address))
-        addr = encode_puzzle_hash(bytes32([self.wallet_index] * 32), "xch")
-        self.wallet_index += 1
-        if self.wallet_index > 254:
-            self.wallet_index = 1
-        return addr
-
-    async def send_transaction_multi(
+    async def create_new_wallet(
         self,
-        wallet_id: int,
-        additions: list[dict[str, object]],
+        request: CreateNewWallet,
         tx_config: TXConfig,
-        coins: Optional[list[Coin]] = None,
-        fee: uint64 = uint64(0),
-        push: bool = True,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-    ) -> SendTransactionMultiResponse:
-        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee, push, timelock_info))
-        name = bytes32([2] * 32)
-        return SendTransactionMultiResponse(
+    ) -> CreateNewWalletResponse:
+        self.add_to_log("create_new_wallet", (request, tx_config, extra_conditions, timelock_info))
+        return CreateNewWalletResponse(
             [STD_UTX],
             [STD_TX],
-            TransactionRecord(
-                confirmed_at_height=uint32(1),
-                created_at_time=uint64(1234),
-                to_puzzle_hash=bytes32([1] * 32),
-                amount=uint64(12345678),
-                fee_amount=uint64(1234567),
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=WalletSpendBundle([], G2Element()),
-                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-                wallet_id=uint32(1),
-                sent_to=[("aaaaa", uint8(1), None)],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=name,
-                memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
-                valid_times=ConditionValidTimes(),
-            ),
-            name,
+            type=(
+                WalletType.NFT if request.wallet_type == CreateNewWalletType.NFT_WALLET else WalletType.DECENTRALIZED_ID
+            ).name,
+            wallet_id=uint32(4 if request.wallet_type == CreateNewWalletType.NFT_WALLET else 3),
+            my_did="did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
         )
 
 
@@ -288,8 +262,8 @@ class TestFullNodeRpcClient(TestRpcClient):
 
     async def get_fee_estimate(
         self,
-        target_times: Optional[list[int]],
-        cost: Optional[int],
+        target_times: list[int] | None,
+        cost: int | None,
     ) -> dict[str, Any]:
         return {}
 
@@ -321,11 +295,11 @@ class TestFullNodeRpcClient(TestRpcClient):
         self.add_to_log("get_blockchain_state", ())
         return response
 
-    async def get_block_record_by_height(self, height: int) -> Optional[BlockRecord]:
+    async def get_block_record_by_height(self, height: int) -> BlockRecord | None:
         self.add_to_log("get_block_record_by_height", (height,))
         return cast(BlockRecord, create_test_block_record(height=uint32(height)))
 
-    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         self.add_to_log("get_block_record", (header_hash,))
         return cast(BlockRecord, create_test_block_record(header_hash=header_hash))
 
@@ -381,8 +355,8 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     @asynccontextmanager
     async def test_get_any_service_client(
         client_type: type[_T_RpcClient],
-        rpc_port: Optional[int] = None,
-        root_path: Optional[Path] = None,
+        root_path: Path,
+        rpc_port: int | None = None,
         consume_errors: bool = True,
         use_ssl: bool = True,
     ) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
@@ -409,11 +383,11 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
 
     @asynccontextmanager
     async def test_get_wallet_client(
-        wallet_rpc_port: Optional[int] = None,
-        fingerprint: Optional[int] = None,
         root_path: Path = default_root,
+        wallet_rpc_port: int | None = None,
+        fingerprint: int | None = None,
     ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
-        async with test_get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
+        async with test_get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore
             assert fingerprint is not None
             yield wallet_client, fingerprint, config

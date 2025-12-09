@@ -8,16 +8,18 @@ import signal
 import sys
 from collections.abc import AsyncIterator
 from types import FrameType
-from typing import Optional, final
+from typing import final
 
 from typing_extensions import Protocol
+
+from chia.util.task_referencer import create_referenced_task
 
 
 class Handler(Protocol):
     def __call__(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None: ...
 
@@ -26,7 +28,7 @@ class AsyncHandler(Protocol):
     async def __call__(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
     ) -> None: ...
 
@@ -53,13 +55,13 @@ class SignalHandlers:
     def loop_safe_sync_signal_handler_for_async(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
         handler: AsyncHandler,
     ) -> None:
         self.remove_done_handlers()
 
-        task = asyncio.create_task(
+        task = create_referenced_task(
             handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
         )
         self.tasks.append(task)
@@ -67,7 +69,7 @@ class SignalHandlers:
     def threadsafe_sync_signal_handler_for_async(
         self,
         signal_: signal.Signals,
-        stack_frame: Optional[FrameType],
+        stack_frame: FrameType | None,
         loop: asyncio.AbstractEventLoop,
         handler: AsyncHandler,
     ) -> None:
@@ -88,7 +90,7 @@ class SignalHandlers:
 
             def ensure_signal_object_not_int(
                 signal_: int,
-                stack_frame: Optional[FrameType],
+                stack_frame: FrameType | None,
                 *,
                 handler: Handler = handler,
                 loop: asyncio.AbstractEventLoop = loop,

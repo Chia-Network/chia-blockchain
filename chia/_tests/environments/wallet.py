@@ -1,36 +1,58 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import operator
+import unittest
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.common import ServiceEnvironment
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.cmds.cmd_helpers import NeedsTXConfig, NeedsWalletRPC, TransactionEndpoint, TransactionsOut, WalletClientInfo
+from chia.cmds.param_types import CliAmount, cli_amount_none
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
-from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
-from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import LightTransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_request_types import GetWalletBalance
+from chia.wallet.wallet_rpc_api import WalletRpcApi
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+STANDARD_TX_ENDPOINT_ARGS: dict[str, Any] = TransactionEndpoint(
+    rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+    tx_config_loader=NeedsTXConfig(
+        min_coin_amount=cli_amount_none,
+        max_coin_amount=cli_amount_none,
+        coins_to_exclude=(),
+        amounts_to_exclude=(),
+        reuse=None,
+    ),
+    transaction_writer=TransactionsOut(transaction_file_out=None),
+    fee=uint64(0),
+    push=True,
+    valid_at=None,
+    expires_at=None,
+).__dict__
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
 
 class BalanceCheckingError(Exception):
-    errors: dict[Union[int, str], list[str]]
+    errors: dict[int | str, list[str]]
 
-    def __init__(self, errors: dict[Union[int, str], list[str]]) -> None:
+    def __init__(self, errors: dict[int | str, list[str]]) -> None:
         self.errors = errors
 
     def __repr__(self) -> str:
@@ -47,10 +69,10 @@ class WalletState:
 
 @dataclass
 class WalletStateTransition:
-    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
-    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
-    pre_block_additional_balance_info: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
-    post_block_additional_balance_info: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
+    pre_block_balance_updates: dict[int | str, dict[str, int]] = field(default_factory=dict)
+    post_block_balance_updates: dict[int | str, dict[str, int]] = field(default_factory=dict)
+    pre_block_additional_balance_info: dict[int | str, dict[str, int]] = field(default_factory=dict)
+    post_block_additional_balance_info: dict[int | str, dict[str, int]] = field(default_factory=dict)
 
 
 @dataclass
@@ -99,7 +121,7 @@ class WalletEnvironment:
     def xch_wallet(self) -> Wallet:
         return self.service._node.wallet_state_manager.main_wallet
 
-    def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
+    def dealias_wallet_id(self, wallet_id_or_alias: int | str) -> uint32:
         """
         This function turns something that is either a wallet id or a wallet alias into a wallet id.
         """
@@ -109,7 +131,7 @@ class WalletEnvironment:
             else uint32(self.wallet_aliases[wallet_id_or_alias])
         )
 
-    def alias_wallet_id(self, wallet_id: uint32) -> Union[uint32, str]:
+    def alias_wallet_id(self, wallet_id: uint32) -> uint32 | str:
         """
         This function turns a wallet id into an alias if one is available or the same wallet id if one is not.
         """
@@ -119,7 +141,7 @@ class WalletEnvironment:
         else:
             return wallet_id
 
-    async def check_balances(self, additional_balance_info: dict[Union[int, str], dict[str, int]] = {}) -> None:
+    async def check_balances(self, additional_balance_info: dict[int | str, dict[str, int]] = {}) -> None:
         """
         This function checks the internal representation of what the balances should be against the balances that the
         wallet actually returns via the RPC.
@@ -129,7 +151,7 @@ class WalletEnvironment:
         dealiased_additional_balance_info: dict[uint32, dict[str, int]] = {
             self.dealias_wallet_id(k): v for k, v in additional_balance_info.items()
         }
-        errors: dict[Union[int, str], list[str]] = {}
+        errors: dict[int | str, list[str]] = {}
         for wallet_id in self.wallet_state_manager.wallets:
             if wallet_id not in self.wallet_states:
                 raise KeyError(f"No wallet state for wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)})")
@@ -148,7 +170,9 @@ class WalletEnvironment:
                     else {}
                 ),
             }
-            balance_response: dict[str, int] = await self.rpc_client.get_wallet_balance(wallet_id)
+            balance_response: dict[str, int] = (
+                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))
+            ).wallet_balance.to_json_dict()
 
             if not expected_result.items() <= balance_response.items():
                 for key, value in expected_result.items():
@@ -165,7 +189,7 @@ class WalletEnvironment:
         if errors != {}:
             raise BalanceCheckingError(errors)
 
-    async def change_balances(self, update_dictionary: dict[Union[int, str], dict[str, int]]) -> None:
+    async def change_balances(self, update_dictionary: dict[int | str, dict[str, int]]) -> None:
         """
         This method changes the internal representation of what the wallet balances should be. This is probably
         necessary to call before check_balances as most wallet operations will result in a balance change that causes
@@ -204,7 +228,7 @@ class WalletEnvironment:
                 )
             else:
                 for key, change in kwargs.items():
-                    if key in "set_remainder":
+                    if key in {"set_remainder", "init"}:
                         continue
                     if "#" in key:
                         opp: str = key[0 : key.index("#")]
@@ -244,9 +268,9 @@ class WalletEnvironment:
 
     async def wait_for_transactions_to_settle(
         self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: list[bytes32] = []
-    ) -> list[TransactionRecord]:
+    ) -> list[LightTransactionRecord]:
         # Gather all pending transactions
-        pending_txs: list[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        pending_txs: list[LightTransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
         # Filter clawback txs
         pending_txs = [
             tx
@@ -260,6 +284,22 @@ class WalletEnvironment:
         return pending_txs
 
 
+class NewPuzzleHashError(Exception):
+    pass
+
+
+def catch_puzzle_hash_errors(func: Any) -> Any:
+    @contextlib.asynccontextmanager
+    async def catching_puzhash_errors(self: WalletStateManager, *args: Any, **kwargs: Any) -> Any:
+        try:
+            async with func(self, *args, **kwargs) as action_scope:
+                yield action_scope
+        except NewPuzzleHashError:
+            pass
+
+    return catching_puzhash_errors
+
+
 @dataclass
 class WalletTestFramework:
     full_node: FullNodeSimulator
@@ -267,6 +307,36 @@ class WalletTestFramework:
     trusted_full_node: bool
     environments: list[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
+
+    def cmd_tx_endpoint_args(self, env: WalletEnvironment) -> dict[str, Any]:
+        return {
+            **STANDARD_TX_ENDPOINT_ARGS,
+            "rpc_info": NeedsWalletRPC(
+                client_info=WalletClientInfo(
+                    env.rpc_client,
+                    env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                    env.wallet_state_manager.config,
+                )
+            ),
+            "tx_config_loader": NeedsTXConfig(
+                min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
+                max_coin_amount=CliAmount(amount=self.tx_config.max_coin_amount, mojos=True),
+                coins_to_exclude=tuple(self.tx_config.excluded_coin_ids),
+                amounts_to_exclude=tuple(
+                    CliAmount(amount=amt, mojos=True) for amt in self.tx_config.excluded_coin_amounts
+                ),
+                reuse=self.tx_config.reuse_puzhash,
+            ),
+        }
+
+    @staticmethod
+    @contextlib.contextmanager
+    def new_puzzle_hashes_allowed() -> Iterator[None]:
+        with unittest.mock.patch(
+            "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope",
+            catch_puzzle_hash_errors(WalletStateManager.new_action_scope),
+        ):
+            yield
 
     async def process_pending_states(
         self, state_transitions: list[WalletStateTransition], invalid_transactions: list[bytes32] = []
@@ -277,23 +347,21 @@ class WalletTestFramework:
         1) Ensures all pending transactions have entered the mempool
         2) Checks that all balances have changed properly prior to a block being farmed
         3) Farms a block (to no one in particular)
-        4) Chacks that all balances have changed properly after the block was farmed
+        4) Checks that all balances have changed properly after the block was farmed
         5) Checks that all pending transactions that were gathered in step 1 are now confirmed
         6) Checks that if `reuse_puzhash` was set, no new derivations were created
         7) Ensures the wallet is in a synced state before progressing to the rest of the test
         """
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         if self.tx_config.reuse_puzhash:
-            puzzle_hash_indexes: list[dict[uint32, Optional[DerivationRecord]]] = []
+            puzzle_hash_indexes: list[dict[uint32, int]] = []
             for env in self.environments:
-                ph_indexes: dict[uint32, Optional[DerivationRecord]] = {}
+                ph_indexes: dict[uint32, int] = {}
                 for wallet_id in env.wallet_state_manager.wallets:
-                    ph_indexes[
-                        wallet_id
-                    ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                    ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_used_count(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
-        pending_txs: list[list[TransactionRecord]] = []
+        pending_txs: list[list[LightTransactionRecord]] = []
         peak = self.full_node.full_node.blockchain.get_peak_height()
         assert peak is not None
         # Check balances prior to block
@@ -349,7 +417,9 @@ class WalletTestFramework:
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
             except TimeoutError:  # pragma: no cover
-                unconfirmed: list[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                unconfirmed: list[
+                    LightTransactionRecord
+                ] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
                 )
@@ -359,5 +429,5 @@ class WalletTestFramework:
             for env, ph_indexes_before in zip(self.environments, puzzle_hash_indexes):
                 for wallet_id, ph_index in zip(env.wallet_state_manager.wallets, ph_indexes_before):
                     assert ph_indexes_before[wallet_id] == (
-                        await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                        await env.wallet_state_manager.puzzle_store.get_used_count(wallet_id)
                     )

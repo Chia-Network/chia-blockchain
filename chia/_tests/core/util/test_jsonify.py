@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
+
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 
@@ -17,7 +18,7 @@ def test_primitives() -> None:
     @dataclass(frozen=True)
     class PrimitivesTest(Streamable):
         a: uint32
-        b: Optional[str]
+        b: str | None
         c: str
         d: bytes
         e: bytes32

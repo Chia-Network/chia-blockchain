@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Optional, TypeVar
+from typing import Any
 
-from typing_extensions import NotRequired, TypedDict, Unpack
+from chia_rs import ConsensusConstants
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+from typing_extensions import NotRequired, Self, TypedDict, Unpack
 
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 
@@ -31,6 +31,15 @@ class CoinSelectionConfig:
     # This function is purely for ergonomics
     def override(self, **kwargs: Any) -> CoinSelectionConfig:
         return dataclasses.replace(self, **kwargs)
+
+    def filter_coins(self, coins: set[Coin]) -> set[Coin]:
+        return {
+            coin
+            for coin in coins
+            if self.min_coin_amount <= coin.amount <= self.max_coin_amount
+            and coin.amount not in self.excluded_coin_amounts
+            and coin.name() not in self.excluded_coin_ids
+        }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -66,16 +75,13 @@ class AutofillArgs(TypedDict):
     logged_in_fingerprint: NotRequired[int]
 
 
-_T_CoinSelectionConfigLoader = TypeVar("_T_CoinSelectionConfigLoader", bound="CoinSelectionConfigLoader")
-
-
 @streamable
 @dataclasses.dataclass(frozen=True)
 class CoinSelectionConfigLoader(Streamable):
-    min_coin_amount: Optional[uint64] = None
-    max_coin_amount: Optional[uint64] = None
-    excluded_coin_amounts: Optional[list[uint64]] = None
-    excluded_coin_ids: Optional[list[bytes32]] = None
+    min_coin_amount: uint64 | None = None
+    max_coin_amount: uint64 | None = None
+    excluded_coin_amounts: list[uint64] | None = None
+    excluded_coin_ids: list[bytes32] | None = None
 
     def autofill(
         self,
@@ -90,10 +96,8 @@ class CoinSelectionConfigLoader(Streamable):
         )
 
     @classmethod
-    def from_json_dict(
-        cls: type[_T_CoinSelectionConfigLoader], json_dict: dict[str, Any]
-    ) -> _T_CoinSelectionConfigLoader:
-        if "excluded_coins" in json_dict:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> Self:
+        if json_dict.get("excluded_coins") is not None:
             excluded_coins: list[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
             excluded_coin_ids: list[str] = [c.name().hex() for c in excluded_coins]
             if "excluded_coin_ids" in json_dict:
@@ -103,14 +107,15 @@ class CoinSelectionConfigLoader(Streamable):
         return super().from_json_dict(json_dict)
 
     # This function is purely for ergonomics
-    def override(self, **kwargs: Any) -> CoinSelectionConfigLoader:
+    # But creates a small linting complication
+    def override(self, **kwargs: Any) -> Self:
         return dataclasses.replace(self, **kwargs)
 
 
 @streamable
 @dataclasses.dataclass(frozen=True)
 class TXConfigLoader(CoinSelectionConfigLoader):
-    reuse_puzhash: Optional[bool] = None
+    reuse_puzhash: bool | None = None
 
     def autofill(
         self,
@@ -142,10 +147,6 @@ class TXConfigLoader(CoinSelectionConfigLoader):
             autofilled_cs_config.excluded_coin_ids,
             reuse_puzhash,
         )
-
-    # This function is purely for ergonomics
-    def override(self, **kwargs: Any) -> TXConfigLoader:
-        return dataclasses.replace(self, **kwargs)
 
 
 DEFAULT_COIN_SELECTION_CONFIG = CoinSelectionConfig(uint64(0), uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT), [], [])

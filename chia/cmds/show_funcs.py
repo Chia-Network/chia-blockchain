@@ -2,24 +2,26 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
+
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
     import time
 
+    from chia_rs import BlockRecord
+    from chia_rs.sized_ints import uint64
+
     from chia.cmds.cmds_util import format_bytes
-    from chia.consensus.block_record import BlockRecord
-    from chia.util.ints import uint64
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
         print("There is no blockchain found yet. Try again shortly")
         return True
-    peak: Optional[BlockRecord] = blockchain_state["peak"]
+    peak: BlockRecord | None = blockchain_state["peak"]
     node_id = blockchain_state["node_id"]
     difficulty = blockchain_state["difficulty"]
     sub_slot_iters = blockchain_state["sub_slot_iters"]
@@ -37,7 +39,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
 
     if synced:
         print("Current Blockchain Status: Full Node Synced")
-        print("\nPeak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
+        print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
     elif peak is not None and sync_mode:
         sync_max_block = blockchain_state["sync"]["sync_tip_height"]
         sync_current_block = blockchain_state["sync"]["sync_progress_height"]
@@ -46,7 +48,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
             f"({sync_max_block - sync_current_block} behind). "
             f"({sync_current_block * 100.0 / sync_max_block:2.2f}% synced)"
         )
-        print("Peak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
+        print("Peak: Hash:", peak.header_hash if peak is not None else "")
     elif peak is not None:
         print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
     else:
@@ -57,7 +59,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
         if peak.is_transaction_block:
             peak_time = peak.timestamp
         else:
-            peak_hash = bytes32(peak.header_hash)
+            peak_hash = peak.header_hash
             curr = await node_client.get_block_record(peak_hash)
             while curr is not None and not curr.is_transaction_block:
                 curr = await node_client.get_block_record(curr.prev_hash)
@@ -86,7 +88,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
             curr = await node_client.get_block_record(curr.prev_hash)
 
         for b in added_blocks:
-            print(f"{b.height:>9} | {bytes32(b.header_hash)}")
+            print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
     return False
@@ -97,13 +99,13 @@ async def print_block_from_hash(
 ) -> None:
     import time
 
-    from chia.consensus.block_record import BlockRecord
-    from chia.types.blockchain_format.sized_bytes import bytes32
-    from chia.types.full_block import FullBlock
+    from chia_rs import BlockRecord, FullBlock
+    from chia_rs.sized_bytes import bytes32
+
     from chia.util.bech32m import encode_puzzle_hash
 
-    block: Optional[BlockRecord] = await node_client.get_block_record(bytes32.from_hexstr(block_by_header_hash))
-    full_block: Optional[FullBlock] = await node_client.get_block(bytes32.from_hexstr(block_by_header_hash))
+    block: BlockRecord | None = await node_client.get_block_record(bytes32.from_hexstr(block_by_header_hash))
+    full_block: FullBlock | None = await node_client.get_block(bytes32.from_hexstr(block_by_header_hash))
     # Would like to have a verbose flag for this
     if block is not None:
         assert full_block is not None
@@ -121,9 +123,9 @@ async def print_block_from_hash(
             )
             block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
             cost = str(full_block.transactions_info.cost)
-            tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
+            tx_filter_hash: str | bytes32 = "Not a transaction block"
             if full_block.foliage_transaction_block:
-                tx_filter_hash = bytes32(full_block.foliage_transaction_block.filter_hash)
+                tx_filter_hash = full_block.foliage_transaction_block.filter_hash
             fees: Any = block.fees
         else:
             block_time_string = "Not a transaction block"
@@ -150,7 +152,8 @@ async def print_block_from_hash(
             f"Total VDF Iterations   {block.total_iters}\n"
             f"Is a Transaction Block?{block.is_transaction_block}\n"
             f"Deficit                {block.deficit}\n"
-            f"PoSpace 'k' Size       {full_block.reward_chain_block.proof_of_space.size}\n"
+            f"PoSpace 'k' Size (v1)  {full_block.reward_chain_block.proof_of_space.param().size_v1}\n"
+            f"PoSpace strength (v2)  {full_block.reward_chain_block.proof_of_space.param().strength_v2}\n"
             f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
             f"Pool Public Key        {pool_pk}\n"
             f"Tx Filter Hash         {tx_filter_hash}\n"
@@ -188,16 +191,16 @@ async def print_fee_info(node_client: FullNodeRpcClient) -> None:
 
 
 async def show_async(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     print_fee_info_flag: bool,
     print_state: bool,
-    block_header_hash_by_height: Optional[int],
+    block_header_hash_by_height: int | None,
     block_by_header_hash: str,
 ) -> None:
     from chia.cmds.cmds_util import get_any_service_client
 
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         # Check State
         if print_state:
             if await print_blockchain_state(node_client, config) is True:

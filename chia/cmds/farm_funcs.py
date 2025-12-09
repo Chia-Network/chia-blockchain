@@ -3,40 +3,37 @@ from __future__ import annotations
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
+from chia_rs import BlockRecord
 
 from chia.cmds.cmds_util import format_bytes, format_minutes, get_any_service_client
 from chia.cmds.units import units
-from chia.consensus.block_record import BlockRecord
-from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.farmer.farmer_rpc_client import FarmerRpcClient
+from chia.full_node.full_node_rpc_client import FullNodeRpcClient
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.util.network import is_localhost
+from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
-async def get_harvesters_summary(
-    farmer_rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH
-) -> Optional[dict[str, Any]]:
-    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port, root_path) as (farmer_client, _):
+async def get_harvesters_summary(farmer_rpc_port: int | None, root_path: Path) -> dict[str, Any] | None:
+    async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_harvesters_summary()
 
 
-async def get_blockchain_state(
-    rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH
-) -> Optional[dict[str, Any]]:
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
+async def get_blockchain_state(rpc_port: int | None, root_path: Path) -> dict[str, Any] | None:
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         return await client.get_blockchain_state()
 
 
-async def get_average_block_time(rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH) -> float:
-    async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
+async def get_average_block_time(rpc_port: int | None, root_path: Path) -> float:
+    async with get_any_service_client(FullNodeRpcClient, root_path, rpc_port) as (client, _):
         blocks_to_compare = 500
         blockchain_state = await client.get_blockchain_state()
-        curr: Optional[BlockRecord] = blockchain_state["peak"]
+        curr: BlockRecord | None = blockchain_state["peak"]
         if curr is None or curr.height < (blocks_to_compare + 100):
             return SECONDS_PER_BLOCK
         while curr is not None and curr.height > 0 and not curr.is_transaction_block:
@@ -54,19 +51,21 @@ async def get_average_block_time(rpc_port: Optional[int], root_path: Path = DEFA
 
 
 async def get_wallets_stats(
-    wallet_rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH
-) -> Optional[dict[str, Any]]:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, _):
-        return await wallet_client.get_farmed_amount()
+    wallet_rpc_port: int | None,
+    root_path: Path,
+    include_pool_rewards: bool,
+) -> dict[str, Any] | None:
+    async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, _):
+        return await wallet_client.get_farmed_amount(include_pool_rewards)
 
 
-async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[list[dict[str, Any]]]:
-    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
+async def get_challenges(root_path: Path, farmer_rpc_port: int | None) -> list[dict[str, Any]] | None:
+    async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_signage_points()
 
 
-async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
-    signage_points = await get_challenges(farmer_rpc_port)
+async def challenges(root_path: Path, farmer_rpc_port: int | None, limit: int) -> None:
+    signage_points = await get_challenges(root_path, farmer_rpc_port)
     if signage_points is None:
         return None
 
@@ -82,11 +81,12 @@ async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
 
 
 async def summary(
-    rpc_port: Optional[int],
-    wallet_rpc_port: Optional[int],
-    harvester_rpc_port: Optional[int],
-    farmer_rpc_port: Optional[int],
-    root_path: Path = DEFAULT_ROOT_PATH,
+    rpc_port: int | None,
+    wallet_rpc_port: int | None,
+    harvester_rpc_port: int | None,
+    farmer_rpc_port: int | None,
+    include_pool_rewards: bool,
+    root_path: Path,
 ) -> None:
     harvesters_summary = await get_harvesters_summary(farmer_rpc_port, root_path)
     blockchain_state = None
@@ -103,7 +103,7 @@ async def summary(
     wallet_not_ready: bool = False
     amounts = None
     try:
-        amounts = await get_wallets_stats(wallet_rpc_port, root_path)
+        amounts = await get_wallets_stats(wallet_rpc_port, root_path, include_pool_rewards)
     except CliRpcConnectionError:
         wallet_not_ready = True
     except Exception:
@@ -126,8 +126,21 @@ async def summary(
     if amounts is not None:
         print(f"Total chia farmed: {amounts['farmed_amount'] / units['chia']}")
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
-        print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
-        print(f"Last height farmed: {amounts['last_height_farmed']}")
+        if include_pool_rewards:
+            print(f"Farmer rewards: {amounts['farmer_reward_amount'] / units['chia']}")
+            print(f"Pool rewards: {amounts['pool_reward_amount'] / units['chia']}")
+            print(f"Total rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
+            if blockchain_state is not None and blockchain_state["peak"] is not None:
+                peak_height = blockchain_state["peak"].height
+                blocks_since_last_farm = peak_height - amounts["last_height_farmed"]
+                print(f"Current/Last height farmed: {peak_height}/{amounts['last_height_farmed']}")
+                print(f"Blocks since last farmed: {blocks_since_last_farm}")
+                print(
+                    f"Time since last farmed: {format_minutes(int((blocks_since_last_farm * SECONDS_PER_BLOCK) / 60))}"
+                )
+        else:
+            print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
+            print(f"Last height farmed: {amounts['last_height_farmed']}")
 
     class PlotStats:
         total_plot_size = 0
@@ -205,3 +218,33 @@ async def summary(
             print("For details on farmed rewards and fees you should run 'chia wallet show'")
     else:
         print("Note: log into your key using 'chia wallet show' to see rewards for each key")
+
+
+async def solver_connect(root_path: Path, farmer_rpc_port: int | None, solver_address: str) -> None:
+    from chia.util.network import parse_host_port
+
+    try:
+        host, port = parse_host_port(solver_address)
+    except ValueError:
+        print("Solver address must be in format [IP:Port]")
+        return
+    try:
+        with lock_and_load_config(root_path, "config.yaml") as config:
+            config["farmer"]["solver_peers"] = [{"host": host, "port": port}]
+            save_config(root_path, "config.yaml", config)
+        print(f"✓ Updated config with solver peer {host}:{port}")
+    except Exception as e:
+        print(f"✗ Failed to update config: {e}")
+        return
+    try:
+        async with get_any_service_client(FarmerRpcClient, root_path, farmer_rpc_port) as (farmer_client, _):
+            result = await farmer_client.connect_to_solver(host, port)
+            if result.get("success"):
+                print(f"✓ Connected to solver at {host}:{port}")
+            else:
+                error = result.get("error", "Unknown error")
+                print(f"✗ Failed to connect to solver: {error}")
+    except CliRpcConnectionError:
+        print("✗ Could not connect to farmer. Make sure farmer is running.")
+    except Exception as e:
+        print(f"✗ Error connecting to solver: {e}")

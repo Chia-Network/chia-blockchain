@@ -3,7 +3,6 @@ from __future__ import annotations
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -19,6 +18,7 @@ from chia.cmds.beta_funcs import (
     validate_beta_path,
     validate_metrics_log_interval,
 )
+from chia.cmds.cmd_classes import ChiaCliContext
 from chia.util.beta_metrics import metrics_log_interval_default
 from chia.util.config import lock_and_load_config, save_config
 
@@ -36,8 +36,8 @@ def beta_cmd() -> None:
 @click.option("-p", "--path", help="The beta mode root path", type=str, required=False)
 @click.option("-i", "--interval", help="System metrics will be logged based on this interval", type=int, required=False)
 @click.pass_context
-def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) -> None:
-    root_path = ctx.obj["root_path"]
+def configure(ctx: click.Context, path: str | None, interval: int | None) -> None:
+    root_path = ChiaCliContext.set_default(ctx).root_path
     with lock_and_load_config(root_path, "config.yaml") as config:
         if "beta" not in config:
             raise click.ClickException("beta test mode is not enabled, enable it first with `chia beta enable`")
@@ -78,8 +78,8 @@ def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) 
 )
 @click.option("-p", "--path", help="The beta mode root path", type=str, required=False)
 @click.pass_context
-def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
-    root_path = ctx.obj["root_path"]
+def enable_cmd(ctx: click.Context, force: bool, path: str | None) -> None:
+    root_path = ChiaCliContext.set_default(ctx).root_path
     with lock_and_load_config(root_path, "config.yaml") as config:
         if config.get("beta", {}).get("enabled", False):
             raise click.ClickException("beta test mode is already enabled")
@@ -91,10 +91,14 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
         current_path = config.get("beta", {}).get("path")
         current_path = None if current_path is None else Path(current_path)
 
-        if path is None and current_path is None:
-            beta_root_path = prompt_for_beta_path(current_path or default_beta_root_path())
+        path_to_use: Path | None = None if path is None else Path(path)
+        if path_to_use is None:
+            path_to_use = current_path
+
+        if path_to_use is None:
+            beta_root_path = prompt_for_beta_path(default_beta_root_path())
         else:
-            beta_root_path = Path(path or current_path)
+            beta_root_path = path_to_use
             validate_beta_path(beta_root_path)
 
         update_beta_config(True, beta_root_path, metrics_log_interval_default, config)
@@ -107,7 +111,7 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
 @beta_cmd.command("disable", help="Disable beta test mode")
 @click.pass_context
 def disable_cmd(ctx: click.Context) -> None:
-    root_path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.set_default(ctx).root_path
     with lock_and_load_config(root_path, "config.yaml") as config:
         if not config.get("beta", {}).get("enabled", False):
             raise click.ClickException("beta test mode is not enabled")
@@ -121,7 +125,7 @@ def disable_cmd(ctx: click.Context) -> None:
 @beta_cmd.command("prepare_submission", help="Prepare the collected log data for submission")
 @click.pass_context
 def prepare_submission_cmd(ctx: click.Context) -> None:
-    with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
+    with lock_and_load_config(ChiaCliContext.set_default(ctx).root_path, "config.yaml") as config:
         beta_root_path = config.get("beta", {}).get("path", None)
         if beta_root_path is None:
             raise click.ClickException("beta test mode not enabled. Run `chia beta enable` first.")
@@ -137,7 +141,7 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
     user_input = input("Select the version you want to prepare for submission: ")
     try:
         if int(user_input) <= 0:
-            raise IndexError()
+            raise IndexError
         prepare_result = available_results[int(user_input) - 1]
     except IndexError:
         raise click.ClickException(f"Invalid choice: {user_input}")
@@ -173,7 +177,7 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
 @beta_cmd.command("status", help="Show the current beta configuration")
 @click.pass_context
 def status(ctx: click.Context) -> None:
-    with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
+    with lock_and_load_config(ChiaCliContext.set_default(ctx).root_path, "config.yaml") as config:
         beta_config = config.get("beta")
         if beta_config is None:
             raise click.ClickException("beta test mode is not enabled, enable it first with `chia beta enable`")

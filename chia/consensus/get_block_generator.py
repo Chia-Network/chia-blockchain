@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable
-from typing import Callable, Optional
+from collections.abc import Awaitable, Callable
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.types.block_protocol import BlockInfo
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32
 
 
 async def get_block_generator(
     lookup_block_generators: Callable[[bytes32, set[uint32]], Awaitable[dict[uint32, bytes]]],
     block: BlockInfo,
-) -> Optional[BlockGenerator]:
+) -> BlockGenerator | None:
     ref_list = block.transactions_generator_ref_list
     if block.transactions_generator is None:
         assert len(ref_list) == 0

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
-from clvm.casts import int_to_bytes
+from chia_rs.sized_ints import uint64
 
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
@@ -14,8 +12,8 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.casts import int_to_bytes
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -38,13 +36,13 @@ async def do_spend(
     coins: list[Coin],
     lineage_proofs: list[LineageProof],
     inner_solutions: list[Program],
-    expected_result: tuple[MempoolInclusionStatus, Optional[Err]],
+    expected_result: tuple[MempoolInclusionStatus, Err | None],
     reveal_limitations_program: bool = True,
     signatures: list[G2Element] = [],
-    extra_deltas: Optional[list[int]] = None,
+    extra_deltas: list[int] | None = None,
     additional_spends: list[WalletSpendBundle] = [],
-    limitations_solutions: Optional[list[Program]] = None,
-    cost_logger: Optional[CostLogger] = None,
+    limitations_solutions: list[Program] | None = None,
+    cost_logger: CostLogger | None = None,
     cost_log_msg: str = "",
 ) -> int:
     if limitations_solutions is None:

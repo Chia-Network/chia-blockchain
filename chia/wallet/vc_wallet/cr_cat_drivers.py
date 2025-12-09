@@ -4,22 +4,31 @@ import functools
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Optional, TypeVar
 
-from clvm.casts import int_to_bytes
+from chia_puzzles_py.programs import (
+    CONDITIONS_W_FEE_ANNOUNCE,
+    FLAG_PROOFS_CHECKER,
+)
+from chia_puzzles_py.programs import (
+    CREDENTIAL_RESTRICTION as CREDENTIAL_RESTRICTION_BYTES,
+)
+from chia_puzzles_py.programs import (
+    CREDENTIAL_RESTRICTION_HASH as CREDENTIAL_RESTRICTION_HASH_BYTES,
+)
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint64
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
+from chia.util.casts import int_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.conditions import AssertCoinAnnouncement
+from chia.wallet.conditions import AssertCoinAnnouncement, CreateCoin
 from chia.wallet.lineage_proof import LineageProof, LineageProofField
-from chia.wallet.payment import Payment
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import curry_and_treehash
@@ -35,22 +44,10 @@ from chia.wallet.vc_wallet.vc_drivers import (
 
 # Mods
 
-CREDENTIAL_RESTRICTION: Program = load_clvm_maybe_recompile(
-    "credential_restriction.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
-CREDENTIAL_RESTRICTION_HASH: bytes32 = CREDENTIAL_RESTRICTION.get_tree_hash()
-PROOF_FLAGS_CHECKER: Program = load_clvm_maybe_recompile(
-    "flag_proofs_checker.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
-PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
-    "conditions_w_fee_announce.clsp",
-    package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
-    include_standard_libraries=True,
-)
+CREDENTIAL_RESTRICTION: Program = Program.from_bytes(CREDENTIAL_RESTRICTION_BYTES)
+CREDENTIAL_RESTRICTION_HASH: bytes32 = bytes32(CREDENTIAL_RESTRICTION_HASH_BYTES)
+PROOF_FLAGS_CHECKER: Program = Program.from_bytes(FLAG_PROOFS_CHECKER)
+PENDING_VC_ANNOUNCEMENT: Program = Program.from_bytes(CONDITIONS_W_FEE_ANNOUNCE)
 CREDENTIAL_STRUCT: Program = Program.to(
     (
         (
@@ -67,7 +64,7 @@ CREDENTIAL_STRUCT: Program = Program.to(
             curry_and_treehash(
                 Program.to((1, EXTIGENT_METADATA_LAYER_HASH)).get_tree_hash_precalc(EXTIGENT_METADATA_LAYER_HASH),
                 Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
-                Program.to(None).get_tree_hash(),
+                Program.NIL.get_tree_hash(),
                 GUARANTEED_NIL_TP_HASH,
                 Program.to(GUARANTEED_NIL_TP_HASH).get_tree_hash(),
                 P2_ANNOUNCED_DELEGATED_PUZZLE_HASH,
@@ -129,7 +126,7 @@ def construct_cr_layer_hash(
 
 def match_cr_layer(
     uncurried_puzzle: UncurriedPuzzle,
-) -> Optional[tuple[list[bytes32], Program, Program]]:
+) -> tuple[list[bytes32], Program, Program] | None:
     extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
     if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         return (
@@ -169,9 +166,6 @@ def construct_pending_approval_state(puzzle_hash: bytes32, amount: uint64) -> Pr
     return PENDING_VC_ANNOUNCEMENT.curry(Program.to([[51, puzzle_hash, amount, [puzzle_hash]]]))
 
 
-_T_CRCAT = TypeVar("_T_CRCAT", bound="CRCAT")
-
-
 @dataclass(frozen=True)
 class CRCAT:
     coin: Coin
@@ -183,17 +177,17 @@ class CRCAT:
 
     @classmethod
     def launch(
-        cls: type[_T_CRCAT],
+        cls,
         # General CAT launching info
         origin_coin: Coin,
-        payment: Payment,
+        payment: CreateCoin,
         tail: Program,
         tail_solution: Program,
         # CR Layer params
         authorized_providers: list[bytes32],
         proofs_checker: Program,
         # Probably never need this but some tail might
-        optional_lineage_proof: Optional[LineageProof] = None,
+        optional_lineage_proof: LineageProof | None = None,
     ) -> tuple[Program, CoinSpend, CRCAT]:
         """
         Launch a new CR-CAT from XCH.
@@ -311,12 +305,12 @@ class CRCAT:
         return solution.at("f").at("rrrrrrf")
 
     @classmethod
-    def get_current_from_coin_spend(cls: type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
+    def get_current_from_coin_spend(cls, spend: CoinSpend) -> CRCAT:  # pragma: no cover
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
         lineage_proof = LineageProof.from_program(
-            spend.solution.to_program().at("rf"),
+            Program.from_serialized(spend.solution).at("rf"),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         )
         return CRCAT(
@@ -330,9 +324,9 @@ class CRCAT:
 
     @classmethod
     def get_next_from_coin_spend(
-        cls: type[_T_CRCAT],
+        cls,
         parent_spend: CoinSpend,
-        conditions: Optional[Program] = None,  # For optimization purposes, the conditions may already have been run
+        conditions: Program | None = None,  # For optimization purposes, the conditions may already have been run
     ) -> list[CRCAT]:
         """
         Given a coin spend, this will return the next CR-CATs that were created as an output of that spend.
@@ -342,12 +336,12 @@ class CRCAT:
         as the spend output a remark condition that was (REMARK authorized_providers proofs_checker)
         """
         coin_name: bytes32 = parent_spend.coin.name()
-        puzzle: Program = parent_spend.puzzle_reveal.to_program()
-        solution: Program = parent_spend.solution.to_program()
+        puzzle = Program.from_serialized(parent_spend.puzzle_reveal)
+        solution = Program.from_serialized(parent_spend.solution)
 
         # Get info by uncurrying
         _, tail_hash_as_prog, potential_cr_layer = puzzle.uncurry()[1].as_iter()
-        new_inner_puzzle_hash: Optional[bytes32] = None
+        new_inner_puzzle_hash: bytes32 | None = None
         if potential_cr_layer.uncurry()[0].uncurry()[0] != CREDENTIAL_RESTRICTION:
             # If the previous spend is not a CR-CAT:
             # we look for a remark condition that tells us the authorized_providers and proofs_checker
@@ -433,12 +427,12 @@ class CRCAT:
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
-        vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
+        vc_inner_puzhash: bytes32 | None,  # Optional for incomplete spends
         # Inner puzzle and solution
         inner_puzzle: Program,
         inner_solution: Program,
         # For optimization purposes the conditions may already have been run
-        conditions: Optional[Iterable[Program]] = None,
+        conditions: Iterable[Program] | None = None,
     ) -> tuple[list[AssertCoinAnnouncement], CoinSpend, list[CRCAT]]:
         """
         Spend a CR-CAT.
@@ -519,14 +513,14 @@ class CRCAT:
 
     @classmethod
     def spend_many(
-        cls: type[_T_CRCAT],
-        inner_spends: list[tuple[_T_CRCAT, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
+        cls,
+        inner_spends: list[tuple[Self, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
         # CR layer solving info
         proof_of_inclusions: Program,
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
-        vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
+        vc_inner_puzhash: bytes32 | None,  # Optional for incomplete spends
     ) -> tuple[list[AssertCoinAnnouncement], list[CoinSpend], list[CRCAT]]:
         """
         Spend a multiple CR-CATs.
@@ -542,7 +536,7 @@ class CRCAT:
         def prev_index(index: int) -> int:
             return index - 1
 
-        sorted_inner_spends: list[tuple[_T_CRCAT, int, Program, Program]] = sorted(
+        sorted_inner_spends: list[tuple[Self, int, Program, Program]] = sorted(
             inner_spends,
             key=lambda spend: spend[0].coin.name(),
         )
@@ -613,16 +607,16 @@ class CRCATSpend:
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
         inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal))
-        inner_solution: Program = CRCAT.get_inner_solution(spend.solution.to_program())
+        inner_solution: Program = CRCAT.get_inner_solution(Program.from_serialized(spend.solution))
         inner_conditions: Program = inner_puzzle.run(inner_solution)
         return cls(
             CRCAT.get_current_from_coin_spend(spend),
             inner_puzzle,
             inner_solution,
             CRCAT.get_next_from_coin_spend(spend, conditions=inner_conditions),
-            spend.solution.to_program().at("f").at("rrrrf") == Program.to(None),
+            Program.from_serialized(spend.solution).at("f").at("rrrrf") == Program.NIL,
             list(inner_conditions.as_iter()),
-            spend.solution.to_program().at("f").at("f"),
+            Program.from_serialized(spend.solution).at("f").at("f"),
         )
 
 
@@ -633,7 +627,7 @@ class ProofsChecker(Streamable):
 
     def as_program(self) -> Program:
         def byte_sort_flags(f1: str, f2: str) -> int:
-            return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.to(None) else -1
+            return 1 if Program.to([10, (1, f1), (1, f2)]).run([]) == Program.NIL else -1
 
         return PROOF_FLAGS_CHECKER.curry(
             [

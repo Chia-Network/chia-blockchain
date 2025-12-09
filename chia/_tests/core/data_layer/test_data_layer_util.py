@@ -7,13 +7,14 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.misc import Marks, datacases, measure_runtime
+from chia.data_layer.data_layer_rpc_util import MarshallableProtocol
 from chia.data_layer.data_layer_util import (
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
-    ProofOfInclusion,
-    ProofOfInclusionLayer,
     Root,
     Side,
     Status,
@@ -21,10 +22,8 @@ from chia.data_layer.data_layer_util import (
     key_hash,
     leaf_hash,
 )
-from chia.rpc.data_layer_rpc_util import MarshallableProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer
 
@@ -38,10 +37,15 @@ def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> 
     other_hashes = [bytes32([i] * 32) for i in range(layer_count)]
 
     for other_hash in other_hashes:
-        new_layer = ProofOfInclusionLayer.from_hashes(
-            primary_hash=existing_hash,
+        if other_hash_side == Side.LEFT:
+            combined_hash = internal_hash(other_hash, existing_hash)
+        else:
+            combined_hash = internal_hash(existing_hash, other_hash)
+
+        new_layer = ProofOfInclusionLayer(
             other_hash_side=other_hash_side,
             other_hash=other_hash,
+            combined_hash=combined_hash,
         )
 
         layers.append(new_layer)
@@ -72,16 +76,16 @@ def invalid_proof_of_inclusion_fixture(request: SubRequest, side: Side) -> Proof
     a_hash = bytes32(b"f" * 32)
 
     if request.param == "bad root hash":
-        layers[-1] = dataclasses.replace(layers[-1], combined_hash=a_hash)
-        return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+        layers[-1] = layers[-1].replace(combined_hash=a_hash)
+        return valid_proof_of_inclusion.replace(layers=layers)
     elif request.param == "bad other hash":
-        layers[1] = dataclasses.replace(layers[1], other_hash=a_hash)
-        return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+        layers[1] = layers[1].replace(other_hash=a_hash)
+        return valid_proof_of_inclusion.replace(layers=layers)
     elif request.param == "bad other side":
-        layers[1] = dataclasses.replace(layers[1], other_hash_side=layers[1].other_hash_side.other())
-        return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+        layers[1] = layers[1].replace(other_hash_side=Side(layers[1].other_hash_side).other())
+        return valid_proof_of_inclusion.replace(layers=layers)
     elif request.param == "bad node hash":
-        return dataclasses.replace(valid_proof_of_inclusion, node_hash=a_hash)
+        return valid_proof_of_inclusion.replace(node_hash=a_hash)
 
     raise Exception(f"Unhandled parametrization: {request.param!r}")  # pragma: no cover
 
@@ -158,13 +162,6 @@ def test_internal_hash(seeded_random: Random) -> None:
             assert definition(left_hash=left_hash, right_hash=right_hash) == reference
 
 
-def get_random_bytes(length: int, r: Random) -> bytes:
-    if length == 0:
-        return b""
-
-    return r.getrandbits(length * 8).to_bytes(length, "big")
-
-
 def test_leaf_hash(seeded_random: Random) -> None:
     def definition(key: bytes, value: bytes) -> bytes32:
         return SerializedProgram.to((key, value)).get_tree_hash()
@@ -176,13 +173,13 @@ def test_leaf_hash(seeded_random: Random) -> None:
         else:
             length = seeded_random.randrange(100)
 
-        key = get_random_bytes(length=length, r=seeded_random)
+        key = seeded_random.randbytes(length)
 
         if cycle in {1, 2}:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        value = get_random_bytes(length=length, r=seeded_random)
+        value = seeded_random.randbytes(length)
         reference = definition(key=key, value=value)
         data.append((key, value, reference))
 
@@ -205,7 +202,7 @@ def test_key_hash(seeded_random: Random) -> None:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        key = get_random_bytes(length=length, r=seeded_random)
+        key = seeded_random.randbytes(length)
         reference = definition(key=key)
         data.append((key, reference))
 

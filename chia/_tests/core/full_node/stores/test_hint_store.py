@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 
 import pytest
-from clvm.casts import int_to_bytes
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
+from chia._tests.core.full_node.test_full_node import find_reward_coin
 from chia._tests.util.db_connection import DBConnection
 from chia.full_node.hint_store import HintStore
 from chia.server.server import ChiaServer
@@ -12,10 +14,9 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.util.ints import uint64
+from chia.util.casts import int_to_bytes
 
 log = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ async def test_duplicates(db_version: int) -> None:
         hint_0 = 32 * b"\0"
         coin_id_0 = bytes32(32 * b"\4")
 
-        for i in range(0, 2):
+        for i in range(2):
             hints = [(coin_id_0, hint_0), (coin_id_0, hint_0)]
             await hint_store.add_hints(hints)
         coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
@@ -151,7 +152,6 @@ async def test_hints_in_blockchain(
         block_list_input=[],
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=bt.pool_ph,
-        pool_reward_puzzle_hash=bt.pool_ph,
     )
     for block in blocks:
         await full_node_1.full_node.add_block(block, None)
@@ -160,7 +160,7 @@ async def test_hints_in_blockchain(
     puzzle_hash = bytes32(32 * b"\0")
     amount = int_to_bytes(1)
     hint = bytes32(32 * b"\5")
-    coin_spent = blocks[-1].get_included_reward_coins()[0]
+    coin_spent = find_reward_coin(blocks[-1], bt.pool_ph)
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
     }

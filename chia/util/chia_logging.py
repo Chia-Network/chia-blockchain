@@ -4,14 +4,13 @@ import logging
 import os
 from logging.handlers import SysLogHandler
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
 from chia import __version__
 from chia.util.chia_version import chia_short_version
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 
 default_log_level = "WARNING"
@@ -47,7 +46,7 @@ def initialize_logging(
     service_name: str,
     logging_config: dict[str, Any],
     root_path: Path,
-    beta_root_path: Optional[Path] = None,
+    beta_root_path: Path | None = None,
 ) -> None:
     log_backcompat = logging_config.get("log_backcompat", False)
     log_level = logging_config.get("log_level", default_log_level)
@@ -128,8 +127,7 @@ def set_log_level(log_level: str, service_name: str) -> list[str]:
     return error_strings
 
 
-def initialize_service_logging(service_name: str, config: dict[str, Any]) -> None:
-    logging_root_path = DEFAULT_ROOT_PATH
+def initialize_service_logging(service_name: str, config: dict[str, Any], root_path: Path) -> None:
     if service_name == "daemon":
         # TODO: Maybe introduce a separate `daemon` section in the config instead of having `daemon_port`, `logging`
         #  and the daemon related stuff as top level entries.
@@ -141,6 +139,6 @@ def initialize_service_logging(service_name: str, config: dict[str, Any]) -> Non
     initialize_logging(
         service_name=service_name,
         logging_config=logging_config,
-        root_path=logging_root_path,
+        root_path=root_path,
         beta_root_path=beta_config_path,
     )

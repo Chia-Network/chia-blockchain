@@ -3,32 +3,32 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import Optional, TypeVar, Union
 
-from clvm.casts import int_from_bytes
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+from typing_extensions import Self
 
+from chia.consensus.condition_tools import conditions_dict_for_solution
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.condition_tools import conditions_dict_for_solution
+from chia.util.casts import int_from_bytes
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint32, uint64
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
 
 log = logging.getLogger(__name__)
-_T_WalletSingletonStore = TypeVar("_T_WalletSingletonStore", bound="WalletSingletonStore")
 
 
 class WalletSingletonStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
+    async def create(cls, wrapper: DBWrapper2) -> Self:
         self = cls()
         self.db_wrapper = wrapper
 
@@ -111,7 +111,7 @@ class WalletSingletonStore:
         if inner_puz is None:  # pragma: no cover
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
 
-        lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
+        lineage_bytes = [x.as_atom() for x in Program.from_serialized(coin_state.solution).first().as_iter()]
         if len(lineage_bytes) == 2:
             lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, uint64(int_from_bytes(lineage_bytes[1])))
         else:
@@ -233,7 +233,7 @@ class WalletSingletonStore:
             )
             await cursor.close()
 
-    async def count(self, wallet_id: Optional[uint32] = None) -> int:
+    async def count(self, wallet_id: uint32 | None = None) -> int:
         sql = "SELECT COUNT(singleton_id) FROM singletons WHERE removed_height=0"
         params: list[uint32] = []
         if wallet_id is not None:
@@ -245,9 +245,9 @@ class WalletSingletonStore:
                 return int(count_row[0])
         return -1  # pragma: no cover
 
-    async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
+    async def is_empty(self, wallet_id: uint32 | None = None) -> bool:
         sql = "SELECT 1 FROM singletons WHERE removed_height=0"
-        params: list[Union[uint32, bytes32]] = []
+        params: list[uint32 | bytes32] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)

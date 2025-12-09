@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import contextlib
 import os
-import pickle
+import pickle  # noqa: S403  # TODO: use explicit serialization instead of pickle
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Optional
 
+from chia_rs import ConsensusConstants, FullBlock
+from chia_rs.sized_ints import uint64
+from filelock import FileLock
+
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -25,7 +27,9 @@ async def create_blockchain(
     async with DBWrapper2.managed(database=db_uri, uri=True, reader_count=1, db_version=db_version) as wrapper:
         coin_store = await CoinStore.create(wrapper)
         store = await BlockStore.create(wrapper)
-        bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2, single_threaded=True)
+        path = Path(".")
+        height_map = await BlockHeightMap.create(path, wrapper)
+        bc1 = await Blockchain.create(coin_store, store, height_map, constants, 3, single_threaded=True, log_coins=True)
         try:
             assert bc1.get_peak() is None
             yield bc1, wrapper
@@ -44,8 +48,8 @@ def persistent_blocks(
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
-    block_list_input: Optional[list[FullBlock]] = None,
-    time_per_block: Optional[float] = None,
+    block_list_input: list[FullBlock] | None = None,
+    time_per_block: float | None = None,
     dummy_block_references: bool = False,
     include_transactions: bool = False,
 ) -> list[FullBlock]:
@@ -55,6 +59,7 @@ def persistent_blocks(
         block_list_input = []
     block_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("blocks")
     file_path = block_path_dir.joinpath(db_name)
+    lock_file_path = block_path_dir / (db_name + ".lockfile")
 
     ci = os.environ.get("CI")
     if ci is not None and not file_path.exists():
@@ -62,38 +67,41 @@ def persistent_blocks(
 
     block_path_dir.mkdir(parents=True, exist_ok=True)
 
-    if file_path.exists():
-        print(f"File found at: {file_path}")
-        try:
-            bytes_list = file_path.read_bytes()
-            block_bytes_list: list[bytes] = pickle.loads(bytes_list)
-            blocks: list[FullBlock] = []
-            for block_bytes in block_bytes_list:
-                blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
-            if len(blocks) == num_of_blocks + len(block_list_input):
-                print(f"\n loaded {file_path} with {len(blocks)} blocks")
-                return blocks
-        except EOFError:
-            print("\n error reading db file")
-    else:
-        print(f"File not found at: {file_path}")
+    with FileLock(lock_file_path):
+        if file_path.exists():
+            print(f"File found at: {file_path}")
+            try:
+                bytes_list = file_path.read_bytes()
+                # TODO: use explicit serialization instead of pickle
+                block_bytes_list: list[bytes] = pickle.loads(bytes_list)  # noqa: S301
+                blocks: list[FullBlock] = []
+                for block_bytes in block_bytes_list:
+                    blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
+                if len(blocks) == num_of_blocks + len(block_list_input):
+                    print(f"\n loaded {file_path} with {len(blocks)} blocks")
 
-    print("Creating a new test db")
-    return new_test_db(
-        file_path,
-        num_of_blocks,
-        seed,
-        empty_sub_slots,
-        bt,
-        block_list_input,
-        time_per_block,
-        normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
-        normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
-        normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
-        normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
-        dummy_block_references=dummy_block_references,
-        include_transactions=include_transactions,
-    )
+                    return blocks
+            except EOFError:
+                print("\n error reading db file")
+        else:
+            print(f"File not found at: {file_path}")
+
+        print("Creating a new test db")
+        return new_test_db(
+            file_path,
+            num_of_blocks,
+            seed,
+            empty_sub_slots,
+            bt,
+            block_list_input,
+            time_per_block,
+            normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
+            normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
+            normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
+            normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
+            dummy_block_references=dummy_block_references,
+            include_transactions=include_transactions,
+        )
 
 
 def new_test_db(
@@ -103,7 +111,7 @@ def new_test_db(
     empty_sub_slots: int,
     bt: BlockTools,
     block_list_input: list[FullBlock],
-    time_per_block: Optional[float],
+    time_per_block: float | None,
     *,
     normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
@@ -125,6 +133,7 @@ def new_test_db(
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
         dummy_block_references=dummy_block_references,
         include_transactions=include_transactions,
+        genesis_timestamp=uint64(1234567890),
     )
     block_bytes_list: list[bytes] = []
     for block in blocks:

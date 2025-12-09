@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from chia_rs import PlotParam
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -7,13 +9,15 @@ from chia.consensus.pos_quality import _expected_plot_size
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
+    calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
-test_constants = DEFAULT_CONSTANTS.replace(NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300))
+test_constants = DEFAULT_CONSTANTS.replace(
+    NUM_SPS_SUB_SLOT=uint8(32), SUB_SLOT_TIME_TARGET=uint16(300), HARD_FORK2_HEIGHT=uint32(100000000)
+)
 
 
 class TestPotIterations:
@@ -62,7 +66,7 @@ class TestPotIterations:
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
-        required_iters = uint64(int(ssi * 4 / 300))
+        required_iters = uint64(ssi * 4 / 300)
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
         assert sp_iters < ip_iters
@@ -84,34 +88,58 @@ class TestPotIterations:
         with the assumption that all farmers have access to the same VDF speed.
         """
         farmer_ks = {
-            uint8(32): 100,
-            uint8(33): 100,
-            uint8(34): 100,
-            uint8(35): 100,
-            uint8(36): 100,
+            PlotParam.make_v1(32): 100,
+            PlotParam.make_v1(33): 100,
+            PlotParam.make_v1(34): 100,
+            PlotParam.make_v1(35): 100,
+            PlotParam.make_v1(36): 100,
+            PlotParam.make_v2(2): 200,
+            PlotParam.make_v2(3): 200,
+            PlotParam.make_v2(4): 200,
         }
-        farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
-        total_space = sum(farmer_space.values())
-        percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
+        farmer_space = {k: _expected_plot_size(k, test_constants) * count for k, count in farmer_ks.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
+
+        constants = test_constants.replace(DIFFICULTY_CONSTANT_FACTOR=uint128(2**25))
         total_slots = 50
         num_sps = 16
-        sp_interval_iters = uint64(100000000 // 32)
+        sub_slot_iters = uint64(100000000)
+        sp_interval_iters = calculate_sp_interval_iters(constants, sub_slot_iters)
         difficulty = uint64(500000000000)
-
         for slot_index in range(total_slots):
             total_wins_in_slot = 0
             for sp_index in range(num_sps):
                 sp_hash = std_hash(slot_index.to_bytes(4, "big") + sp_index.to_bytes(4, "big"))
                 for k, count in farmer_ks.items():
                     for farmer_index in range(count):
-                        quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        required_iters = calculate_iterations_quality(uint128(2**25), quality, k, difficulty, sp_hash)
+                        plot_k_val = k.size_v1 if k.size_v1 is not None else constants.PLOT_SIZE_V2
+                        assert plot_k_val is not None
+                        quality = std_hash(
+                            slot_index.to_bytes(4, "big") + plot_k_val.to_bytes(1, "big") + bytes(farmer_index)
+                        )
+                        required_iters = calculate_iterations_quality(constants, quality, k, difficulty, sp_hash)
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1
+
+        total_space = sum(farmer_space.values())
+        percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
 
         win_percentage = {k: wins[k] / sum(wins.values()) for k in farmer_ks.keys()}
         for k in farmer_ks.keys():
             # Win rate is proportional to percentage of space
             assert abs(win_percentage[k] - percentage_space[k]) < 0.01
+
+
+def test_expected_plot_size_v1() -> None:
+    last_size = 2_400_000
+    for k in range(18, 50):
+        plot_size = _expected_plot_size(PlotParam.make_v1(k), test_constants)
+        assert plot_size > last_size * 2
+        last_size = plot_size
+
+
+def test_expected_plot_size_v2() -> None:
+    for strength in [2, 3, 4, 5, 6, 7]:
+        plot_size = _expected_plot_size(PlotParam.make_v2(strength), test_constants)
+        assert plot_size == 1_879_213_114

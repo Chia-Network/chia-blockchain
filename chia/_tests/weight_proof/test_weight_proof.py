@@ -1,24 +1,16 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
+from chia_rs import BlockRecord, ConsensusConstants, FullBlock, HeaderBlock, SubEpochSummary
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia._tests.util.blockchain_mock import BlockchainMock
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.pot_iterations import calculate_iterations_quality
+from chia.consensus.generator_tools import get_block_header
+from chia.consensus.pot_iterations import validate_pospace_and_get_required_iters
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
-from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint8, uint32, uint64
 
 
 async def load_blocks_dont_validate(
@@ -48,22 +40,16 @@ async def load_blocks_dont_validate(
         else:
             cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = verify_and_get_quality_string(
-            block.reward_chain_block.proof_of_space,
+        required_iters = validate_pospace_and_get_required_iters(
             constants,
+            block.reward_chain_block.proof_of_space,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,
-            height=block.height,
-        )
-        assert quality_string is not None
-
-        required_iters: uint64 = calculate_iterations_quality(
-            constants.DIFFICULTY_CONSTANT_FACTOR,
-            quality_string,
-            block.reward_chain_block.proof_of_space.size,
+            block.height,
             difficulty,
-            cc_sp,
+            uint32(0),  # prev_tx_block(blocks, prev_b), todo need to get height of prev tx block somehow here
         )
+        assert required_iters is not None
 
         sub_block = block_to_block_record(
             constants,
@@ -74,7 +60,7 @@ async def load_blocks_dont_validate(
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
-        header_cache[block.header_hash] = get_block_header(block, [], [])
+        header_cache[block.header_hash] = get_block_header(block)
         if sub_block.sub_epoch_summary_included is not None:
             sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
         prev_block = block
@@ -501,28 +487,3 @@ class TestWeightProof:
         valid, fork_point, _ = await wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
-
-
-@pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
-def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
-    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(3))
-    assert calculate_prefix_bits(constants, height) == expected
-
-
-@pytest.mark.parametrize(
-    argnames=["height", "expected"],
-    argvalues=[
-        (0, 9),
-        (5495999, 9),
-        (5496000, 8),
-        (10541999, 8),
-        (10542000, 7),
-        (15591999, 7),
-        (15592000, 6),
-        (20642999, 6),
-        (20643000, 5),
-    ],
-)
-def test_calculate_prefix_bits_default(height: uint32, expected: int) -> None:
-    constants = DEFAULT_CONSTANTS
-    assert calculate_prefix_bits(constants, height) == expected

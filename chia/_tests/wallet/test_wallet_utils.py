@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import Optional
 
 import pytest
 from chia_rs import Coin, CoinState
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 from chia.wallet.util.wallet_sync_utils import sort_coin_states
 
@@ -32,7 +31,7 @@ def assert_race_cache(cache: PeerRequestCache, expected_entries: dict[int, set[C
                 cache.get_race_cache(i)
 
 
-def dummy_coin_state(*, created_height: Optional[int], spent_height: Optional[int]) -> CoinState:
+def dummy_coin_state(*, created_height: int | None, spent_height: int | None) -> CoinState:
     return CoinState(
         Coin(bytes(b"0" * 32), bytes(b"0" * 32), uint64(0)),
         uint32.construct_optional(spent_height),
@@ -40,7 +39,7 @@ def dummy_coin_state(*, created_height: Optional[int], spent_height: Optional[in
     )
 
 
-def heights(coin_states: Collection[CoinState]) -> list[tuple[Optional[int], Optional[int]]]:
+def heights(coin_states: Collection[CoinState]) -> list[tuple[int | None, int | None]]:
     return [(coin_state.created_height, coin_state.spent_height) for coin_state in coin_states]
 
 

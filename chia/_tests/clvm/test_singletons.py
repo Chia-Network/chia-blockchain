@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey, SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.util.key_tool import KeyTool
@@ -11,12 +11,9 @@ from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 
@@ -55,9 +52,9 @@ async def make_and_spend_bundle(
     coin: Coin,
     delegated_puzzle: Program,
     coinsols: list[CoinSpend],
-    ex_error: Optional[Err] = None,
+    ex_error: Err | None = None,
     fail_msg: str = "",
-    cost_logger: Optional[CostLogger] = None,
+    cost_logger: CostLogger | None = None,
     cost_log_msg: str = "",
 ):
     signature: G2Element = sign_delegated_puz(delegated_puzzle, coin)

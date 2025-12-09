@@ -5,29 +5,27 @@ import sys
 import time
 import types
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
-from chia_rs import G1Element, PrivateKey
+from chia_rs import CoinState, FullBlock, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
+from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinState
 from chia.server.api_protocol import Self
-from chia.server.outbound_message import Message, make_msg
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
@@ -74,7 +72,7 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_private_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
 ) -> None:
     root_path = root_path_populated_with_config
     keychain = get_temp_keyring  # empty keyring
@@ -165,7 +163,7 @@ async def test_get_public_key_default_key(root_path_populated_with_config: Path,
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
 async def test_get_public_key_missing_key(
-    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: int | None
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring  # empty keyring
@@ -359,7 +357,7 @@ def test_get_last_used_fingerprint_file_cant_read_win32(
         m.setattr(WindowsPath, "read_text", patched_pathlib_path_read_text)
 
         # Calling get_last_used_fingerprint() should not throw an exception
-        last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
+        last_used_fingerprint: int | None = node.get_last_used_fingerprint()
 
         # Verify that the file is unreadable
         assert called_read_text is True
@@ -434,7 +432,7 @@ async def test_get_timestamp_for_height_from_peer(
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
 
-    async def get_timestamp(height: int) -> Optional[uint64]:
+    async def get_timestamp(height: int) -> uint64 | None:
         return await wallet_node.get_timestamp_for_height_from_peer(uint32(height), full_node_peer)
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
@@ -502,7 +500,7 @@ async def test_get_balance(
     def wallet_synced() -> bool:
         return full_node_server.node_id in wallet_node.synced_peers
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    async def restart_with_fingerprint(fingerprint: int | None) -> None:
         wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
@@ -613,7 +611,7 @@ async def test_transaction_send_cache(
 ) -> None:
     """
     The purpose of this test is to test that calling _resend_queue on the wallet node does not result in resending a
-    spend to a peer that has already recieved that spend and is currently processing it. It also tests that once we
+    spend to a peer that has already received that spend and is currently processing it. It also tests that once we
     have heard that the peer is done processing the spend, we _do_ properly resend it.
     """
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
@@ -627,7 +625,7 @@ async def test_transaction_send_cache(
 
     async def send_transaction(
         self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
-    ) -> Optional[Message]:
+    ) -> Message | None:
         logged_spends.append(request.transaction.name())
         return None
 
@@ -635,7 +633,7 @@ async def test_transaction_send_cache(
     with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
         # Generate the transaction
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-            await wallet.generate_signed_transaction(uint64(0), bytes32.zeros, action_scope)
+            await wallet.generate_signed_transaction([uint64(0)], [bytes32.zeros], action_scope)
         [tx] = action_scope.side_effects.transactions
 
         # Make sure it is sent to the peer
@@ -651,7 +649,7 @@ async def test_transaction_send_cache(
         with pytest.raises(AssertionError):
             await time_out_assert(5, logged_spends_len, 2)
 
-        # Tell the wallet that we recieved the spend (but failed to process it so it should send again)
+        # Tell the wallet that we received the spend (but failed to process it so it should send again)
         msg = make_msg(
             ProtocolMessageTypes.transaction_ack,
             wallet_protocol.TransactionAck(
@@ -688,11 +686,11 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
-    async def register_interest_in_coin(
+    async def register_for_coin_updates(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
-    ) -> Optional[Message]:
+    ) -> Message | None:
         return make_msg(
-            ProtocolMessageTypes.respond_to_coin_update,
+            ProtocolMessageTypes.respond_to_coin_updates,
             wallet_protocol.RespondToCoinUpdates(
                 [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
@@ -704,7 +702,7 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     assert full_node_api.full_node._server is not None
     with patch_request_handler(
-        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_interest_in_coin
+        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_for_coin_updates
     ):
         monkeypatch.setattr(
             wallet_node,
@@ -723,7 +721,7 @@ async def test_start_with_multiple_key_types(
 ) -> None:
     [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    async def restart_with_fingerprint(fingerprint: int | None) -> None:
         wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
@@ -754,7 +752,7 @@ async def test_start_with_multiple_keys(
 ) -> None:
     [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    async def restart_with_fingerprint(fingerprint: int | None) -> None:
         wallet_node._close()
         await wallet_node._await_closed(shutting_down=False)
         await wallet_node._start_with_fingerprint(fingerprint=fingerprint)

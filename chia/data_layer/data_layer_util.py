@@ -4,18 +4,20 @@ import dataclasses
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Optional, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Union
 
 import aiosqlite
+from chia_rs.datalayer import ProofOfInclusion, ProofOfInclusionLayer
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint64
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz
 
@@ -46,6 +48,45 @@ def leaf_hash(key: bytes, value: bytes) -> bytes32:
 def key_hash(key: bytes) -> bytes32:
     # see test for the definition this is optimized from
     return bytes32(sha256(b"\1" + key).digest())
+
+
+# TODO: allow Optional[bytes32] for `node_hash` and resolve the filenames here
+def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"
+    return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
+
+
+def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-delta-{generation}-v1.0.dat"
+    return f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat"
+
+
+def get_full_tree_filename_path(
+    foldername: Path,
+    store_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{store_id}")
+        return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-full-{generation}-v1.0.dat")
+
+
+def get_delta_filename_path(
+    foldername: Path,
+    store_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{store_id}")
+        return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -94,7 +135,6 @@ async def _dot_dump(
     root_hash: bytes32,
 ) -> str:
     terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
     n = 8
 
@@ -108,16 +148,7 @@ async def _dot_dump(
         value = terminal_node.value.hex()
         dot_nodes.append(f"""node_{hash} [shape=box, label="{hash[:n]}\\nkey: {key}\\nvalue: {value}"];""")
 
-    for internal_node in internal_nodes:
-        hash = internal_node.hash.hex()
-        left = internal_node.left_hash.hex()
-        right = internal_node.right_hash.hex()
-        dot_nodes.append(f"""node_{hash} [label="{hash[:n]}"]""")
-        dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
-        dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
-        dot_pair_boxes.append(
-            f"node [shape = box]; {{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
-        )
+    # TODO: implement for internal nodes. currently this prints only terminal nodes
 
     lines = [
         "digraph {",
@@ -128,11 +159,6 @@ async def _dot_dump(
     ]
 
     return "\n".join(lines)
-
-
-def row_to_node(row: aiosqlite.Row) -> Node:
-    cls = node_type_to_class[row["node_type"]]
-    return cls.from_row(row=row)
 
 
 class Status(IntEnum):
@@ -147,9 +173,9 @@ class NodeType(IntEnum):
 
 
 @final
-class Side(IntEnum):
-    LEFT = 0
-    RIGHT = 1
+class Side(uint8, Enum):
+    LEFT = uint8(0)
+    RIGHT = uint8(1)
 
     def other(self) -> Side:
         if self == Side.LEFT:
@@ -208,78 +234,12 @@ class TerminalNode:
         )
 
 
-@final
-@dataclass(frozen=True)
-class ProofOfInclusionLayer:
-    other_hash_side: Side
-    other_hash: bytes32
-    combined_hash: bytes32
-
-    @classmethod
-    def from_internal_node(
-        cls,
-        internal_node: InternalNode,
-        traversal_child_hash: bytes32,
-    ) -> ProofOfInclusionLayer:
-        return ProofOfInclusionLayer(
-            other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
-            other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
-            combined_hash=internal_node.hash,
-        )
-
-    @classmethod
-    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
-        combined_hash = calculate_internal_hash(
-            hash=primary_hash,
-            other_hash_side=other_hash_side,
-            other_hash=other_hash,
-        )
-
-        return cls(other_hash_side=other_hash_side, other_hash=other_hash, combined_hash=combined_hash)
+def calculate_sibling_sides_integer(proof: ProofOfInclusion) -> int:
+    return sum((1 << index if layer.other_hash_side == Side.LEFT else 0) for index, layer in enumerate(proof.layers))
 
 
-other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
-
-
-@dataclass(frozen=True)
-class ProofOfInclusion:
-    node_hash: bytes32
-    # children before parents
-    layers: list[ProofOfInclusionLayer]
-
-    @property
-    def root_hash(self) -> bytes32:
-        if len(self.layers) == 0:
-            return self.node_hash
-
-        return self.layers[-1].combined_hash
-
-    def sibling_sides_integer(self) -> int:
-        return sum(other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers))
-
-    def sibling_hashes(self) -> list[bytes32]:
-        return [layer.other_hash for layer in self.layers]
-
-    def as_program(self) -> Program:
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
-
-    def valid(self) -> bool:
-        existing_hash = self.node_hash
-
-        for layer in self.layers:
-            calculated_hash = calculate_internal_hash(
-                hash=existing_hash, other_hash_side=layer.other_hash_side, other_hash=layer.other_hash
-            )
-
-            if calculated_hash != layer.combined_hash:
-                return False
-
-            existing_hash = calculated_hash
-
-        if existing_hash != self.root_hash:
-            return False
-
-        return True
+def collect_sibling_hashes(proof: ProofOfInclusion) -> list[bytes32]:
+    return [layer.other_hash for layer in proof.layers]
 
 
 @final
@@ -290,8 +250,8 @@ class InternalNode:
     left_hash: bytes32
     right_hash: bytes32
 
-    left: Optional[Node] = None
-    right: Optional[Node] = None
+    left: Node | None = None
+    right: Node | None = None
 
     @classmethod
     def from_child_nodes(cls, left: Node, right: Node) -> InternalNode:
@@ -347,7 +307,7 @@ unspecified = Unspecified.instance
 @dataclass(frozen=True)
 class Root:
     store_id: bytes32
-    node_hash: Optional[bytes32]
+    node_hash: bytes32 | None
     generation: int
     status: Status
 
@@ -392,7 +352,7 @@ class Root:
         }
 
 
-node_type_to_class: dict[NodeType, Union[type[InternalNode], type[TerminalNode]]] = {
+node_type_to_class: dict[NodeType, type[InternalNode | TerminalNode]] = {
     NodeType.INTERNAL: InternalNode,
     NodeType.TERMINAL: TerminalNode,
 }
@@ -494,7 +454,7 @@ class Layer:
 class MakeOfferRequest:
     maker: tuple[OfferStore, ...]
     taker: tuple[OfferStore, ...]
-    fee: Optional[uint64]
+    fee: uint64 | None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> MakeOfferRequest:
@@ -609,7 +569,7 @@ class MakeOfferResponse:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferRequest:
     offer: Offer
-    fee: Optional[uint64]
+    fee: uint64 | None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> TakeOfferRequest:
@@ -649,8 +609,8 @@ class TakeOfferResponse:
 class VerifyOfferResponse:
     success: bool
     valid: bool
-    error: Optional[str] = None
-    fee: Optional[uint64] = None
+    error: str | None = None
+    fee: uint64 | None = None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> VerifyOfferResponse:
@@ -675,7 +635,7 @@ class CancelOfferRequest:
     trade_id: bytes32
     # cancel on chain (secure) vs. just locally
     secure: bool
-    fee: Optional[uint64]
+    fee: uint64 | None
 
     @classmethod
     def unmarshal(cls, marshalled: dict[str, Any]) -> CancelOfferRequest:
@@ -731,7 +691,7 @@ class ClearPendingRootsRequest:
 class ClearPendingRootsResponse:
     success: bool
 
-    root: Optional[Root]
+    root: Root | None
     # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
@@ -805,7 +765,7 @@ class KeysValuesCompressed:
     keys_values_hashed: dict[bytes32, bytes32]
     key_hash_to_length: dict[bytes32, int]
     leaf_hash_to_length: dict[bytes32, int]
-    root_hash: Optional[bytes32]
+    root_hash: bytes32 | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -813,7 +773,7 @@ class KeysPaginationData:
     total_pages: int
     total_bytes: int
     keys: list[bytes]
-    root_hash: Optional[bytes32]
+    root_hash: bytes32 | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -821,7 +781,7 @@ class KeysValuesPaginationData:
     total_pages: int
     total_bytes: int
     keys_values: list[TerminalNode]
-    root_hash: Optional[bytes32]
+    root_hash: bytes32 | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -962,13 +922,11 @@ def dl_verify_proof_internal(dl_proof: DLProof, puzzle_hash: bytes32) -> list[Ke
 
 
 async def dl_verify_proof(
-    request: dict[str, Any],
+    dlproof: DLProof,
     wallet_node: WalletNode,
     peer: WSChiaConnection,
-) -> dict[str, Any]:
+) -> VerifyProofResponse:
     """Verify a proof of inclusion for a DL singleton"""
-
-    dlproof = DLProof.from_json_dict(request)
 
     coin_id = dlproof.coin_id
     coin_states = await wallet_node.get_coin_state([coin_id], peer=peer)
@@ -982,4 +940,4 @@ async def dl_verify_proof(
         success=True,
         current_root=coin_states[0].spent_height is None,
     )
-    return response.to_json_dict()
+    return response

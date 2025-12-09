@@ -8,15 +8,25 @@ import ssl
 from collections.abc import Iterable
 from dataclasses import dataclass
 from ipaddress import IPv4Network, IPv6Network, ip_address
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from aiohttp import web
 from aiohttp.log import web_logger
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
 from typing_extensions import final
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16
 from chia.util.ip_address import IPAddress
+from chia.util.task_referencer import create_referenced_task
+
+
+def parse_host_port(host_port: str) -> tuple[str, int]:
+    """Parse a host:port string into a tuple of (host, port), raising ValueError on failure."""
+    result = urlsplit(f"//{host_port}")
+    if result.hostname and result.port:
+        return result.hostname, result.port
+    raise ValueError(f"Invalid host:port string: {host_port}")
 
 
 @final
@@ -26,8 +36,8 @@ class WebServer:
     hostname: str
     listen_port: uint16
     scheme: Literal["http", "https"]
-    _ssl_context: Optional[ssl.SSLContext] = None
-    _close_task: Optional[asyncio.Task[None]] = None
+    _ssl_context: ssl.SSLContext | None = None
+    _close_task: asyncio.Task[None] | None = None
     _prefer_ipv6: bool = False
 
     @classmethod
@@ -37,7 +47,7 @@ class WebServer:
         port: uint16,
         routes: Iterable[web.RouteDef] = (),
         max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
-        ssl_context: Optional[ssl.SSLContext] = None,
+        ssl_context: ssl.SSLContext | None = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
         shutdown_timeout: int = 60,  # Default `shutdown_timeout` from aiohttp.web_runner.BaseRunner
         prefer_ipv6: bool = False,
@@ -97,7 +107,7 @@ class WebServer:
         await self.runner.cleanup()
 
     def close(self) -> None:
-        self._close_task = asyncio.create_task(self._close())
+        self._close_task = create_referenced_task(self._close())
 
     async def await_closed(self) -> None:
         if self._close_task is None:
@@ -105,7 +115,7 @@ class WebServer:
         await self._close_task
 
 
-def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
+def is_in_network(peer_host: str, networks: Iterable[IPv4Network | IPv6Network]) -> bool:
     try:
         peer_host_ip = ip_address(peer_host)
         return any(peer_host_ip in network for network in networks)
@@ -145,7 +155,7 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     except ValueError:
         pass
     addrset: list[
-        tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[tuple[str, int], tuple[str, int, int, int]]]
+        tuple[socket.AddressFamily, socket.SocketKind, int, str, tuple[str, int] | tuple[str, int, int, int]]
     ] = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []

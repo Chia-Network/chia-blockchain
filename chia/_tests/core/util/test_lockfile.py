@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import Callable
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from sys import platform
 from time import sleep
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -75,7 +76,7 @@ def child_writer_dispatch_with_readiness_check(
             except LockfileError:
                 attempts -= 1
                 if attempts == 0:
-                    raise LockfileError()
+                    raise LockfileError
             except Exception as e:
                 log.warning(
                     f"[pid:{os.getpid()}] caught exception in child_writer_dispatch_with_readiness_check: "

@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
-from chia_rs import G2Element
+from chia_rs import (
+    ChallengeChainSubSlot,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    G2Element,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlockUnfinished,
+    RewardChainSubSlot,
+)
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.foliage import FoliageBlockData, FoliageTransactionBlock
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -38,8 +41,8 @@ class SPVDFSourceData(Streamable):
 @streamable
 @dataclass(frozen=True)
 class SignagePointSourceData(Streamable):
-    sub_slot_data: Optional[SPSubSlotSourceData] = None
-    vdf_data: Optional[SPVDFSourceData] = None
+    sub_slot_data: SPSubSlotSourceData | None = None
+    vdf_data: SPVDFSourceData | None = None
 
 
 @streamable
@@ -52,7 +55,8 @@ class NewSignagePoint(Streamable):
     sub_slot_iters: uint64
     signage_point_index: uint8
     peak_height: uint32
-    sp_source_data: Optional[SignagePointSourceData] = None
+    last_tx_height: uint32
+    sp_source_data: SignagePointSourceData | None = None
 
 
 @streamable
@@ -66,8 +70,8 @@ class DeclareProofOfSpace(Streamable):
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_signature: G2Element
     farmer_puzzle_hash: bytes32
-    pool_target: Optional[PoolTarget]
-    pool_signature: Optional[G2Element]
+    pool_target: PoolTarget | None
+    pool_signature: G2Element | None
     include_signature_source_data: bool = False
 
 
@@ -77,9 +81,9 @@ class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_hash: bytes32
     foliage_transaction_block_hash: bytes32
-    foliage_block_data: Optional[FoliageBlockData] = None
-    foliage_transaction_block_data: Optional[FoliageTransactionBlock] = None
-    rc_block_unfinished: Optional[RewardChainBlockUnfinished] = None
+    foliage_block_data: FoliageBlockData | None = None
+    foliage_transaction_block_data: FoliageTransactionBlock | None = None
+    rc_block_unfinished: RewardChainBlockUnfinished | None = None
 
 
 @streamable

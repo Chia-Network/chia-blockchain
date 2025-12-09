@@ -2,14 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element, G2Element, PartialProof, PlotParam, ProofOfSpace, RewardChainBlockUnfinished
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import int16, uint8, uint32, uint64
 
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -45,6 +42,21 @@ class NewSignagePointHarvester(Streamable):
     filter_prefix_bits: uint8
 
 
+# this message has the same message ID as NewSignagePointHarvester, but this
+# message format is used if the protocol version is 0.0.37 or higher
+@streamable
+@dataclass(frozen=True)
+class NewSignagePointHarvester2(Streamable):
+    challenge_hash: bytes32
+    difficulty: uint64
+    sub_slot_iters: uint64
+    signage_point_index: uint8
+    sp_hash: bytes32
+    pool_difficulties: list[PoolDifficulty]
+    peak_height: uint32
+    last_tx_height: uint32
+
+
 @streamable
 @dataclass(frozen=True)
 class ProofOfSpaceFeeInfo(Streamable):
@@ -60,8 +72,24 @@ class NewProofOfSpace(Streamable):
     proof: ProofOfSpace
     signage_point_index: uint8
     include_source_signature_data: bool
-    farmer_reward_address_override: Optional[bytes32]
-    fee_info: Optional[ProofOfSpaceFeeInfo]
+    farmer_reward_address_override: bytes32 | None
+    fee_info: ProofOfSpaceFeeInfo | None
+
+
+@streamable
+@dataclass(frozen=True)
+class PartialProofsData(Streamable):
+    challenge_hash: bytes32
+    sp_hash: bytes32
+    plot_identifier: str
+    partial_proofs: list[PartialProof]  # 16 * k bits blobs instead of 32-byte quality strings
+    signage_point_index: uint8
+    plot_size: uint8
+    strength: uint8
+    plot_id: bytes32
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
+    plot_public_key: G1Element
 
 
 # Source data corresponding to the hash that is sent to the Harvester for signing
@@ -92,8 +120,8 @@ class RequestSignatures(Streamable):
     sp_hash: bytes32
     messages: list[bytes32]
     # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
-    message_data: Optional[list[Optional[SignatureRequestSourceData]]]
-    rc_block_unfinished: Optional[RewardChainBlockUnfinished]
+    message_data: list[SignatureRequestSourceData | None] | None
+    rc_block_unfinished: RewardChainBlockUnfinished | None
 
 
 @streamable
@@ -106,21 +134,32 @@ class RespondSignatures(Streamable):
     farmer_pk: G1Element
     message_signatures: list[tuple[bytes32, G2Element]]
     include_source_signature_data: bool
-    farmer_reward_address_override: Optional[bytes32]
+    farmer_reward_address_override: bytes32 | None
 
 
 @streamable
 @dataclass(frozen=True)
 class Plot(Streamable):
     filename: str
+    # for backwards compatibility with previous harvester (e.g. DrPlotter)
+    # this field is either k-size (for v1 plots) or strength (for v2 plots).
+    # the most significant bit is set for v2 plots
+    # TODO: after the phase-out, v1 harvester won't be relevant anymore and we
+    # can clean this up with a new protocol version
     size: uint8
     plot_id: bytes32
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_public_key: G1Element | None
+    pool_contract_puzzle_hash: bytes32 | None
     plot_public_key: G1Element
     file_size: uint64
     time_modified: uint64
-    compression_level: Optional[uint8]
+    compression_level: uint8 | None
+
+    def param(self) -> PlotParam:
+        if (self.size & 0x80) != 0:
+            return PlotParam.make_v2(self.size & 0x7F)
+        else:
+            return PlotParam.make_v1(self.size)
 
 
 @streamable
@@ -199,7 +238,7 @@ class PlotSyncDone(Streamable):
 class PlotSyncError(Streamable):
     code: int16
     message: str
-    expected_identifier: Optional[PlotSyncIdentifier]
+    expected_identifier: PlotSyncIdentifier | None
 
     def __str__(self) -> str:
         return f"PlotSyncError: code {self.code}, count {self.message}, expected_identifier {self.expected_identifier}"
@@ -210,7 +249,7 @@ class PlotSyncError(Streamable):
 class PlotSyncResponse(Streamable):
     identifier: PlotSyncIdentifier
     message_type: int16
-    error: Optional[PlotSyncError]
+    error: PlotSyncError | None
 
     def __str__(self) -> str:
         return f"PlotSyncResponse: identifier {self.identifier}, message_type {self.message_type}, error {self.error}"

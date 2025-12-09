@@ -5,22 +5,21 @@ import os
 import sys
 from pathlib import Path, PureWindowsPath
 from random import randint
-from typing import Any, Optional
+from typing import Any
 
 from aiohttp import ClientConnectorError
-from chia_rs import PrivateKey
+from chia_rs import CoinRecord, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.start_funcs import async_start
-from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
+from chia.server.resolve_peer_info import set_peer_info
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.config import load_config, save_config, set_peer_info
+from chia.util.config import load_config, save_config
 from chia.util.errors import KeychainFingerprintExists
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -28,6 +27,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
     master_sk_to_wallet_sk_unhardened,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 
 def get_ph_from_fingerprint(fingerprint: int, key_id: int = 1) -> bytes32:
@@ -36,16 +36,16 @@ def get_ph_from_fingerprint(fingerprint: int, key_id: int = 1) -> bytes32:
         raise Exception("Fingerprint not found")
     private_key = priv_key_and_entropy[0]
     sk_for_wallet_id: PrivateKey = master_sk_to_wallet_sk(private_key, uint32(key_id))
-    puzzle_hash: bytes32 = create_puzzlehash_for_pk(sk_for_wallet_id.get_g1())
+    puzzle_hash: bytes32 = puzzle_hash_for_pk(sk_for_wallet_id.get_g1())
     return puzzle_hash
 
 
 def create_chia_directory(
     chia_root: Path,
     fingerprint: int,
-    farming_address: Optional[str],
-    plot_directory: Optional[str],
-    auto_farm: Optional[bool],
+    farming_address: str | None,
+    plot_directory: str | None,
+    auto_farm: bool | None,
     docker_mode: bool,
 ) -> dict[str, Any]:
     """
@@ -76,6 +76,7 @@ def create_chia_directory(
         config["network_overrides"]["config"]["simulator0"] = config["network_overrides"]["config"]["testnet0"].copy()
         sim_genesis = "eb8c4d20b322be8d9fddbf9412016bdffe9a2901d7edb0e364e94266d0e095f7"
         config["network_overrides"]["constants"]["simulator0"]["GENESIS_CHALLENGE"] = sim_genesis
+        config["network_overrides"]["constants"]["simulator0"]["AGG_SIG_ME_ADDITIONAL_DATA"] = sim_genesis
         # tell services to use simulator0
         config["selected_network"] = "simulator0"
         config["wallet"]["selected_network"] = "simulator0"
@@ -130,10 +131,7 @@ def create_chia_directory(
     # get fork heights then write back to config
     if "HARD_FORK_HEIGHT" not in sim_config:  # this meh code is done so that we also write to the config file.
         sim_config["HARD_FORK_HEIGHT"] = 0
-    if "SOFT_FORK5_HEIGHT" not in sim_config:
-        sim_config["SOFT_FORK5_HEIGHT"] = 0
     simulator_consts["HARD_FORK_HEIGHT"] = sim_config["HARD_FORK_HEIGHT"]
-    simulator_consts["SOFT_FORK5_HEIGHT"] = sim_config["SOFT_FORK5_HEIGHT"]
 
     # save config and return the config
     save_config(chia_root, "config.yaml", config)
@@ -155,7 +153,7 @@ def display_key_info(fingerprint: int, prefix: str) -> None:
     print("Farmer public key (m/12381/8444/0/0):", master_sk_to_farmer_sk(sk).get_g1())
     print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
     first_wallet_sk: PrivateKey = master_sk_to_wallet_sk_unhardened(sk, uint32(0))
-    wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
+    wallet_address: str = encode_puzzle_hash(puzzle_hash_for_pk(first_wallet_sk.get_g1()), prefix)
     print(f"First wallet address: {wallet_address}")
     assert seed is not None
     print("Master private key (m):", bytes(sk).hex())
@@ -165,7 +163,7 @@ def display_key_info(fingerprint: int, prefix: str) -> None:
     print(f"{mnemonic} \n")
 
 
-def generate_and_return_fingerprint(mnemonic: Optional[str] = None) -> int:
+def generate_and_return_fingerprint(mnemonic: str | None = None) -> int:
     """
     Generate and add new PrivateKey and return its fingerprint.
     """
@@ -186,8 +184,8 @@ def generate_and_return_fingerprint(mnemonic: Optional[str] = None) -> int:
 
 
 def select_fingerprint(
-    fingerprint: Optional[int] = None, mnemonic_string: Optional[str] = None, auto_generate_key: bool = False
-) -> Optional[int]:
+    fingerprint: int | None = None, mnemonic_string: str | None = None, auto_generate_key: bool = False
+) -> int | None:
     """
     Either select an existing fingerprint or create one and return it.
     """
@@ -280,11 +278,11 @@ async def get_current_height(root_path: Path) -> int:
 
 async def async_config_wizard(
     root_path: Path,
-    fingerprint: Optional[int],
-    farming_address: Optional[str],
-    plot_directory: Optional[str],
-    mnemonic_string: Optional[str],
-    auto_farm: Optional[bool],
+    fingerprint: int | None,
+    farming_address: str | None,
+    plot_directory: str | None,
+    mnemonic_string: str | None,
+    auto_farm: bool | None,
     docker_mode: bool,
     bitfield: bool,
 ) -> None:
@@ -364,7 +362,7 @@ async def print_coin_records(
         num_per_screen = 5 if paginate else len(coin_records)
         # ripped from cmds/wallet_funcs.
         for i in range(0, len(coin_records), num_per_screen):
-            for j in range(0, num_per_screen):
+            for j in range(num_per_screen):
                 if i + j >= len(coin_records):
                     break
                 print_coin_record(
@@ -392,9 +390,9 @@ async def print_wallets(config: dict[str, Any], node_client: SimulatorFullNodeRp
 
 
 async def print_status(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     show_key: bool,
     show_coins: bool,
     include_reward_coins: bool,
@@ -407,7 +405,7 @@ async def print_status(
     from chia.cmds.show_funcs import print_blockchain_state
     from chia.cmds.units import units
 
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         # Display keychain info
         if show_key:
             if fingerprint is None:
@@ -441,7 +439,7 @@ async def print_status(
 
 
 async def revert_block_height(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     num_blocks: int,
     num_new_blocks: int,
@@ -451,7 +449,7 @@ async def revert_block_height(
     """
     This function allows users to easily revert the chain to a previous state or perform a reorg.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         if use_revert_blocks:
             if num_new_blocks != 1:
                 print(f"Ignoring num_new_blocks: {num_new_blocks}, because we are not performing a reorg.")
@@ -470,7 +468,7 @@ async def revert_block_height(
 
 
 async def farm_blocks(
-    rpc_port: Optional[int],
+    rpc_port: int | None,
     root_path: Path,
     num_blocks: int,
     transaction_blocks: bool,
@@ -479,7 +477,7 @@ async def farm_blocks(
     """
     This function is used to generate new blocks.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, config):
         if target_address == "":
             target_address = config["simulator"]["farming_address"]
         if target_address is None:
@@ -496,11 +494,11 @@ async def farm_blocks(
         print(f"Block Height is now: {block_height}")
 
 
-async def set_auto_farm(rpc_port: Optional[int], root_path: Path, set_autofarm: bool) -> None:
+async def set_auto_farm(rpc_port: int | None, root_path: Path, set_autofarm: bool) -> None:
     """
     This function can be used to enable or disable Auto Farming.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+    async with get_any_service_client(SimulatorFullNodeRpcClient, root_path, rpc_port) as (node_client, _):
         current = await node_client.get_auto_farming()
         if current == set_autofarm:
             print(f"Auto farming is already {'on' if set_autofarm else 'off'}")

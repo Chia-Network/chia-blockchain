@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from typing import Union
+from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
-from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32
 
 
 async def find_fork_point_in_chain(
     blocks: BlockRecordsProtocol,
-    block_1: Union[BlockRecord, HeaderBlock],
-    block_2: Union[BlockRecord, HeaderBlock],
+    block_1: BlockRecord | HeaderBlock,
+    block_2: BlockRecord | HeaderBlock,
 ) -> int:
     """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
     are all included in chain)

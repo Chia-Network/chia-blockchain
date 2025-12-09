@@ -4,15 +4,17 @@ import logging
 import threading
 import time
 import traceback
+from collections.abc import Callable
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
-from chia_rs import G1Element
-from chiapos import DiskProver, decompressor_context_queue
+from chia_rs import ConsensusConstants, G1Element
+from chiapos import decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
+from chia.plotting.prover import get_prover_from_file
 from chia.plotting.util import (
     HarvestingMode,
     PlotInfo,
@@ -35,24 +37,26 @@ class PlotManager:
     farmer_public_keys: list[G1Element]
     pool_public_keys: list[G1Element]
     cache: Cache
-    match_str: Optional[str]
+    match_str: str | None
     open_no_key_filenames: bool
     last_refresh_time: float
     refresh_parameter: PlotsRefreshParameter
     log: Any
     _lock: threading.Lock
-    _refresh_thread: Optional[threading.Thread]
+    _refresh_thread: threading.Thread | None
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
     max_compression_level_allowed: int
     context_count: int
+    constants: ConsensusConstants
 
     def __init__(
         self,
         root_path: Path,
         refresh_callback: Callable,
-        match_str: Optional[str] = None,
+        constants: ConsensusConstants,
+        match_str: str | None = None,
         open_no_key_filenames: bool = False,
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
     ):
@@ -81,6 +85,7 @@ class PlotManager:
         self._initial = True
         self.max_compression_level_allowed = 0
         self.context_count = 0
+        self.constants = constants
 
     def __enter__(self):
         self._lock.acquire()
@@ -277,8 +282,8 @@ class PlotManager:
                     f"total_result.removed {len(total_result.removed)}, "
                     f"total_duration {total_result.duration:.2f} seconds"
                 )
-            except Exception as e:
-                log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
+            except Exception:
+                log.exception("_refresh_callback raised")
                 self.reset()
 
     def refresh_batch(self, plot_paths: list[Path], plot_directories: set[Path]) -> PlotRefreshResult:
@@ -291,7 +296,7 @@ class PlotManager:
         if self.match_str is not None:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
-        def process_file(file_path: Path) -> Optional[PlotInfo]:
+        def process_file(file_path: Path) -> PlotInfo | None:
             if not self._refreshing_enabled:
                 return None
             filename_str = str(file_path)
@@ -308,7 +313,7 @@ class PlotManager:
             if file_path in self.plots:
                 return self.plots[file_path]
 
-            entry: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
+            entry: tuple[str, set[str]] | None = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
                 _loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
@@ -323,27 +328,34 @@ class PlotManager:
                 cache_entry = self.cache.get(file_path)
                 cache_hit = cache_entry is not None
                 if not cache_hit:
-                    prover = DiskProver(str(file_path))
+                    prover = get_prover_from_file(str(file_path))
 
                     log.debug(f"process_file {file_path!s}")
 
-                    expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    expected_size = (
+                        _expected_plot_size(prover.get_param(), self.constants) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    )
 
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
+                    param = prover.get_param()
                     level = prover.get_compression_level()
-                    if level == 0:
-                        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                            log.warning(
-                                f"Not farming plot {file_path}. "
-                                f"Size is {stat_info.st_size / (1024 ** 3)} GiB, "
-                                f"but expected at least: {expected_size / (1024 ** 3)} GiB. "
-                                "We assume the file is being copied."
-                            )
-                            return None
+                    if (
+                        level == 0
+                        and stat_info.st_size < 0.98 * expected_size
+                        and param.size_v1 is not None
+                        and param.size_v1 >= 30
+                    ):
+                        log.warning(
+                            f"Not farming plot {file_path}. "
+                            f"Size is {stat_info.st_size / (1024**3)} GiB, "
+                            f"but expected at least: {expected_size / (1024**3)} GiB. "
+                            "We assume the file is being copied."
+                        )
+                        return None
 
-                    cache_entry = CacheEntry.from_disk_prover(prover)
+                    cache_entry = CacheEntry.from_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
@@ -383,7 +395,7 @@ class PlotManager:
                     self.no_key_filenames.remove(file_path)
 
                 with self.plot_filename_paths_lock:
-                    paths: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
+                    paths: tuple[str, set[str]] | None = self.plot_filename_paths.get(file_path.name)
                     if paths is None:
                         paths = (str(Path(cache_entry.prover.get_filename()).parent), set())
                         self.plot_filename_paths[file_path.name] = paths
@@ -414,11 +426,11 @@ class PlotManager:
                 log.error(f"Failed to open file {file_path}. {e} {tb}")
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
-            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
+            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_param()}, cache_hit: {cache_hit}")
 
             return new_plot_info
 
-        with self, ThreadPoolExecutor() as executor:
+        with self, ThreadPoolExecutor(thread_name_prefix="plot-process-") as executor:
             plots_refreshed: dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:

@@ -1,32 +1,30 @@
 from __future__ import annotations
 
-import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 import pytest
+from chia_rs import FullBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import test_constants
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 
 
 def rand_hash() -> bytes32:
-    ret = bytearray(32)
-    for i in range(32):
-        ret[i] = random.getrandbits(8)
-    return bytes32(ret)
+    return bytes32.random()
 
 
 def make_version(conn: sqlite3.Connection, version: int) -> None:
@@ -69,27 +67,32 @@ def add_block(
     )
 
 
-def test_db_validate_wrong_version() -> None:
+@pytest.fixture(name="default_config")
+def default_config_fixture() -> dict[str, Any]:
+    return {"full_node": {"selected_network": "local", "network_overrides": {"constants": {"local": {}}}}}
+
+
+def test_db_validate_wrong_version(default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 3)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
         assert "Database has the wrong version (3 expected 2)" in str(execinfo.value)
 
 
-def test_db_validate_missing_peak_table() -> None:
+def test_db_validate_missing_peak_table(default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 2)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
         assert "Database is missing current_peak table" in str(execinfo.value)
 
 
-def test_db_validate_missing_peak_block() -> None:
+def test_db_validate_missing_peak_block(default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 2)
@@ -98,19 +101,19 @@ def test_db_validate_missing_peak_block() -> None:
             make_block_table(conn)
 
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
         assert "Database is missing the peak block" in str(execinfo.value)
 
 
 @pytest.mark.parametrize("invalid_in_chain", [True, False])
-def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
+def test_db_validate_in_main_chain(invalid_in_chain: bool, default_config: dict[str, Any]) -> None:
     with TempFile() as db_file:
         with closing(sqlite3.connect(db_file)) as conn:
             make_version(conn, 2)
             make_block_table(conn)
 
             prev = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
-            for height in range(0, 100):
+            for height in range(100):
                 header_hash = rand_hash()
                 add_block(conn, header_hash, prev, height, True)
                 if height % 4 == 0:
@@ -122,10 +125,10 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
         if invalid_in_chain:
             with pytest.raises(RuntimeError) as execinfo:
-                validate_v2(db_file, validate_blocks=False)
+                validate_v2(db_file, config=default_config, validate_blocks=False)
             assert " (height: 96) is orphaned, but in_main_chain is set" in str(execinfo.value)
         else:
-            validate_v2(db_file, validate_blocks=False)
+            validate_v2(db_file, config=default_config, validate_blocks=False)
 
 
 async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
@@ -137,8 +140,9 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
 
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
+        height_map = await BlockHeightMap.create(Path("."), db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, height_map, test_constants, reserved_cores=0)
         sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
             if block.height != 0 and len(block.finished_sub_slots) > 0:
@@ -151,12 +155,19 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
 
 
 @pytest.mark.anyio
-async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlock]) -> None:
+async def test_db_validate_default_1000_blocks(
+    default_1000_blocks: list[FullBlock], default_config: dict[str, Any]
+) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)
 
         # we expect everything to be valid except this is a test chain, so it
         # doesn't have the correct genesis challenge
         with pytest.raises(RuntimeError) as execinfo:
-            validate_v2(db_file, validate_blocks=True)
+            validate_v2(db_file, config=default_config, validate_blocks=True)
         assert "Blockchain has invalid genesis challenge" in str(execinfo.value)
+
+        default_config["full_node"]["network_overrides"]["constants"]["local"]["AGG_SIG_ME_ADDITIONAL_DATA"] = (
+            default_1000_blocks[0].foliage.prev_block_hash.hex()
+        )
+        validate_v2(db_file, config=default_config, validate_blocks=True)

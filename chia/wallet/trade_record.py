@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional, TypeVar
+from typing import Any
+
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64
+from typing_extensions import Self
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-
-_T_TradeRecord = TypeVar("_T_TradeRecord", bound="TradeRecordOld")
 
 
 @streamable
@@ -22,16 +22,16 @@ class TradeRecordOld(Streamable):
     """
 
     confirmed_at_index: uint32
-    accepted_at_time: Optional[uint64]
+    accepted_at_time: uint64 | None
     created_at_time: uint64
     is_my_offer: bool
     sent: uint32
     offer: bytes
-    taken_offer: Optional[bytes]
+    taken_offer: bytes | None
     coins_of_interest: list[Coin]
     trade_id: bytes32
     status: uint32  # TradeStatus, enum not streamable
-    sent_to: list[tuple[str, uint8, Optional[str]]]  # MempoolSubmissionStatus.status enum not streamable
+    sent_to: list[tuple[str, uint8, str | None]]  # MempoolSubmissionStatus.status enum not streamable
 
     def to_json_dict_convenience(self) -> dict[str, Any]:
         formatted = self.to_json_dict()
@@ -50,9 +50,7 @@ class TradeRecordOld(Streamable):
         return formatted
 
     @classmethod
-    def from_json_dict_convenience(
-        cls: type[_T_TradeRecord], record: dict[str, Any], offer: str = ""
-    ) -> _T_TradeRecord:
+    def from_json_dict_convenience(cls, record: dict[str, Any], offer: str = "") -> Self:
         new_record = record.copy()
         new_record["status"] = TradeStatus[record["status"]].value
         del new_record["summary"]

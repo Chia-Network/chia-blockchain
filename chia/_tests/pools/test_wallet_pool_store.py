@@ -2,24 +2,22 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Optional
 
 import pytest
+from chia_rs import CoinSpend
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from clvm_tools import binutils
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
-from chia.util.ints import uint32, uint64
+from chia.types.coin_spend import make_spend
+from chia.wallet.util.compute_additions import compute_additions
 from chia.wallet.wallet_pool_store import WalletPoolStore
 
 
-def make_child_solution(
-    coin_spend: Optional[CoinSpend], new_coin: Optional[Coin], seeded_random: random.Random
-) -> CoinSpend:
+def make_child_solution(coin_spend: CoinSpend | None, new_coin: Coin | None, seeded_random: random.Random) -> CoinSpend:
     new_puzzle_hash: bytes32 = bytes32.random(seeded_random)
     solution = "()"
     puzzle = f"(q . ((51 0x{new_puzzle_hash.hex()} 1)))"
@@ -30,8 +28,8 @@ def make_child_solution(
         new_coin = compute_additions(coin_spend)[0]
     sol: CoinSpend = make_spend(
         new_coin,
-        SerializedProgram.from_program(puzzle_prog),
-        SerializedProgram.from_program(solution_prog),
+        puzzle_prog,
+        solution_prog,
     )
     return sol
 

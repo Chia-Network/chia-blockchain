@@ -3,17 +3,16 @@ from __future__ import annotations
 import os
 import struct
 from pathlib import Path
-from typing import Optional
 
 import pytest
+from chia_rs import SubEpochSummary
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
 
 from chia._tests.util.db_connection import DBConnection
-from chia.full_node.block_height_map import BlockHeightMap, SesCache
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.consensus.block_height_map import BlockHeightMap, SesCache
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.files import write_file_async
-from chia.util.ints import uint8, uint32
 
 
 def gen_block_hash(height: int) -> bytes32:
@@ -23,11 +22,11 @@ def gen_block_hash(height: int) -> bytes32:
 def gen_ses(height: int) -> SubEpochSummary:
     prev_ses = gen_block_hash(height + 0xFA0000)
     reward_chain_hash = gen_block_hash(height + 0xFC0000)
-    return SubEpochSummary(prev_ses, reward_chain_hash, uint8(0), None, None)
+    return SubEpochSummary(prev_ses, reward_chain_hash, uint8(0), None, None, None)
 
 
 async def new_block(
-    db: DBWrapper2, block_hash: bytes32, parent: bytes32, height: int, is_peak: bool, ses: Optional[SubEpochSummary]
+    db: DBWrapper2, block_hash: bytes32, parent: bytes32, height: int, is_peak: bool, ses: SubEpochSummary | None
 ) -> None:
     async with db.writer_maybe_transaction() as conn:
         cursor = await conn.execute(
@@ -67,7 +66,7 @@ async def setup_db(db: DBWrapper2) -> None:
 # and the chain_id will be mixed in to the hashes, to form a separate chain at
 # the same heights as the main chain
 async def setup_chain(
-    db: DBWrapper2, length: int, *, chain_id: int = 0, ses_every: Optional[int] = None, start_height: int = 0
+    db: DBWrapper2, length: int, *, chain_id: int = 0, ses_every: int | None = None, start_height: int = 0
 ) -> None:
     height = start_height
     peak_hash = gen_block_hash(height + chain_id * 65536)
@@ -511,7 +510,7 @@ class TestBlockHeightMap:
                 assert len(new_heights) == 4000 * 32
                 # pytest doesn't behave very well comparing large buffers
                 # (when the test fails). Compare small portions at a time instead
-                for idx in range(0, 2000):
+                for idx in range(2000):
                     assert new_heights[idx * 32 : idx * 32 + 32] == gen_block_hash(idx)
 
 

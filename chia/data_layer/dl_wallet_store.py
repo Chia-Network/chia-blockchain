@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, TypeVar, Union
 
 from aiosqlite import Row
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
+from typing_extensions import Self
 
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
-
-_T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
 def _row_to_singleton_record(row: Row) -> SingletonRecord:
@@ -29,7 +28,7 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
     )
 
 
-def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
+def _row_to_mirror(row: Row, confirmed_at_height: uint32 | None) -> Mirror:
     urls: list[bytes] = []
     byte_list: bytes = row[3]
     while byte_list != b"":
@@ -37,7 +36,14 @@ def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
         url = byte_list[2 : length + 2]
         byte_list = byte_list[length + 2 :]
         urls.append(url)
-    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]), confirmed_at_height)
+    return Mirror(
+        bytes32(row[0]),
+        bytes32(row[1]),
+        uint64.from_bytes(row[2]),
+        Mirror.decode_urls(urls),
+        bool(row[4]),
+        confirmed_at_height,
+    )
 
 
 class DataLayerStore:
@@ -48,7 +54,7 @@ class DataLayerStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
+    async def create(cls, db_wrapper: DBWrapper2) -> Self:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -77,9 +83,7 @@ class DataLayerStore:
             )
 
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS mirror_confirmations("
-                "coin_id blob PRIMARY KEY,"
-                "confirmed_at_height int)"
+                "CREATE TABLE IF NOT EXISTS mirror_confirmations(coin_id blob PRIMARY KEY,confirmed_at_height int)"
             )
 
             await conn.execute(
@@ -128,14 +132,14 @@ class DataLayerStore:
     async def get_all_singletons_for_launcher(
         self,
         launcher_id: bytes32,
-        min_generation: Optional[uint32] = None,
-        max_generation: Optional[uint32] = None,
-        num_results: Optional[uint32] = None,
+        min_generation: uint32 | None = None,
+        max_generation: uint32 | None = None,
+        num_results: uint32 | None = None,
     ) -> list[SingletonRecord]:
         """
         Returns stored singletons with a specific launcher ID.
         """
-        query_params: list[Union[bytes32, uint32]] = [launcher_id]
+        query_params: list[bytes32 | uint32] = [launcher_id]
         for optional_param in (min_generation, max_generation, num_results):
             if optional_param is not None:
                 query_params.append(optional_param)
@@ -158,7 +162,7 @@ class DataLayerStore:
 
         return records
 
-    async def get_singleton_record(self, coin_id: bytes32) -> Optional[SingletonRecord]:
+    async def get_singleton_record(self, coin_id: bytes32) -> SingletonRecord | None:
         """
         Checks DB for SingletonRecord with coin_id: coin_id and returns it.
         """
@@ -173,9 +177,7 @@ class DataLayerStore:
             return _row_to_singleton_record(row)
         return None
 
-    async def get_latest_singleton(
-        self, launcher_id: bytes32, only_confirmed: bool = False
-    ) -> Optional[SingletonRecord]:
+    async def get_latest_singleton(self, launcher_id: bytes32, only_confirmed: bool = False) -> SingletonRecord | None:
         """
         Checks DB for SingletonRecords with launcher_id: launcher_id and returns the most recent.
         """
@@ -233,7 +235,7 @@ class DataLayerStore:
         """
         Updates singleton record to be confirmed.
         """
-        current: Optional[SingletonRecord] = await self.get_singleton_record(coin_id)
+        current: SingletonRecord | None = await self.get_singleton_record(coin_id)
         if current is None or current.confirmed_at_height == height:
             return
 
@@ -263,7 +265,7 @@ class DataLayerStore:
                 (launcher_id, launcher_bytes),
             )
 
-    async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
+    async def get_launcher(self, launcher_id: bytes32) -> Coin | None:
         """
         Checks DB for a launcher with the specified ID and returns it.
         """
@@ -316,7 +318,7 @@ class DataLayerStore:
                     mirror.launcher_id,
                     mirror.amount.stream_to_bytes(),
                     b"".join(
-                        [uint16(len(url)).stream_to_bytes() + url for url in mirror.urls]
+                        [uint16(len(url)).stream_to_bytes() + url for url in Mirror.encode_urls(mirror.urls)]
                     ),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),

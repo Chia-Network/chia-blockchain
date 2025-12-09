@@ -3,10 +3,10 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass
-from typing import Optional
+
+from chia_rs.sized_ints import uint16, uint64
 
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
 
 
 @dataclass(frozen=False)
@@ -42,12 +42,12 @@ class IntroducerPeers:
     def __init__(self) -> None:
         self._peers: set[VettedPeer] = set()
 
-    def add(self, peer: Optional[PeerInfo]) -> bool:
+    def add(self, peer: PeerInfo | None) -> bool:
         if peer is None or not peer.port:
             return False
 
         p = VettedPeer(peer.host, peer.port)
-        p.time_added = uint64(int(time.time()))
+        p.time_added = uint64(time.time())
 
         if p in self._peers:
             return True
@@ -55,7 +55,7 @@ class IntroducerPeers:
         self._peers.add(p)
         return True
 
-    def remove(self, peer: Optional[VettedPeer]) -> bool:
+    def remove(self, peer: VettedPeer | None) -> bool:
         if peer is None or not peer.port:
             return False
         try:

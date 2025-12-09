@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import logging
 from time import perf_counter
-from typing import Optional
 
 import aiosqlite
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord, TradeRecordOld
 from chia.wallet.trading.offer import Offer
@@ -84,7 +83,7 @@ class TradeStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
+        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: str | None = None
     ) -> TradeStore:
         self = cls()
 
@@ -204,7 +203,7 @@ class TradeStore:
             )
             await cursor.close()
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO trade_record_times " "(trade_id, valid_times) " "VALUES(?, ?)",
+                "INSERT OR REPLACE INTO trade_record_times (trade_id, valid_times) VALUES(?, ?)",
                 (
                     record.trade_id,
                     bytes(record.valid_times),
@@ -227,7 +226,7 @@ class TradeStore:
         """
         Updates the status of the trade
         """
-        current: Optional[TradeRecord] = await self.get_trade_record(trade_id)
+        current: TradeRecord | None = await self.get_trade_record(trade_id)
         if current is None:
             return
         confirmed_at_index = current.confirmed_at_index
@@ -255,13 +254,13 @@ class TradeStore:
         await self.add_trade_record(tx, offer_name, replace=True)
 
     async def increment_sent(
-        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
+        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Err | None
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).
         """
 
-        current: Optional[TradeRecord] = await self.get_trade_record(id)
+        current: TradeRecord | None = await self.get_trade_record(id)
         if current is None:
             return False
 
@@ -322,7 +321,7 @@ class TradeStore:
 
         return total, my_offers_count, taken_offers_count
 
-    async def get_trade_record(self, trade_id: bytes32) -> Optional[TradeRecord]:
+    async def get_trade_record(self, trade_id: bytes32) -> TradeRecord | None:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
@@ -377,7 +376,7 @@ class TradeStore:
         start: int,
         end: int,
         *,
-        sort_key: Optional[str] = None,
+        sort_key: str | None = None,
         reverse: bool = False,
         exclude_my_offers: bool = False,
         exclude_taken_offers: bool = False,
@@ -398,8 +397,8 @@ class TradeStore:
 
         offset = start
         limit = end - start
-        where_status_clause: Optional[str] = None
-        order_by_clause: Optional[str] = None
+        where_status_clause: str | None = None
+        order_by_clause: str | None = None
 
         if not include_completed:
             # Construct a WHERE clause that only looks at active/pending statuses
@@ -412,8 +411,7 @@ class TradeStore:
         # Create an ORDER BY clause according to the desired sort type
         if sort_key is None or sort_key == "CONFIRMED_AT_HEIGHT":
             order_by_clause = (
-                f"ORDER BY confirmed_at_index {'ASC' if reverse else 'DESC'}, "
-                f"trade_id {'DESC' if reverse else 'ASC'} "
+                f"ORDER BY confirmed_at_index {'ASC' if reverse else 'DESC'}, trade_id {'DESC' if reverse else 'ASC'} "
             )
         elif sort_key == "RELEVANCE":
             # Custom sort order for statuses to separate out pending/completed offers

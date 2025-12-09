@@ -6,14 +6,14 @@ helper it's required to install the `legacy_keyring` extra dependency which can 
 from __future__ import annotations
 
 import sys
-from typing import Callable, Union, cast
+from collections.abc import Callable
+from typing import TypeAlias, cast
 
 import click
 from chia_rs import G1Element
+from chia_rs.sized_ints import uint32
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
-
-from chia.util.ints import uint32
 
 try:
     from keyrings.cryptfile.cryptfile import CryptFileKeyring
@@ -22,11 +22,10 @@ except ImportError:
         sys.exit("Use `install.sh -l` to install the legacy_keyring dependency.")
     CryptFileKeyring = None
 
-
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
 
-LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
+LegacyKeyring: TypeAlias = MacKeyring | WinKeyring | CryptFileKeyring
 
 
 CURRENT_KEY_VERSION = "1.8"

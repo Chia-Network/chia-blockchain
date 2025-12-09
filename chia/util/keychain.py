@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, overload
+from typing import Any, Literal, overload
 
 import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -79,12 +79,11 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     CS = len(mnemonic_bytes) // 4
 
     checksum = BitArray(bytes(std_hash(mnemonic_bytes)))[:CS]
-
     bitarray = BitArray(mnemonic_bytes) + checksum
     mnemonics = []
     assert len(bitarray) % 11 == 0
 
-    for i in range(0, len(bitarray) // 11):
+    for i in range(len(bitarray) // 11):
         start = i * 11
         end = start + 11
         bits = bitarray[start:end]
@@ -127,7 +126,7 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
-    for i in range(0, len(mnemonic)):
+    for i in range(len(mnemonic)):
         word = mnemonic[i]
         if word not in word_list:
             raise ValueError(f"'{word}' is not in the mnemonic dictionary; may be misspelled")
@@ -232,8 +231,8 @@ class KeyDataSecrets(Streamable):
 class KeyData(Streamable):
     fingerprint: uint32
     public_key: G1Element
-    label: Optional[str]
-    secrets: Optional[KeyDataSecrets]
+    label: str | None
+    secrets: KeyDataSecrets | None
 
     def __post_init__(self) -> None:
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
@@ -244,7 +243,7 @@ class KeyData(Streamable):
             raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
-    def from_mnemonic(cls, mnemonic: str, label: Optional[str] = None) -> KeyData:
+    def from_mnemonic(cls, mnemonic: str, label: str | None = None) -> KeyData:
         private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
         return cls(
             fingerprint=uint32(private_key.get_g1().get_fingerprint()),
@@ -254,34 +253,34 @@ class KeyData(Streamable):
         )
 
     @classmethod
-    def from_entropy(cls, entropy: bytes, label: Optional[str] = None) -> KeyData:
+    def from_entropy(cls, entropy: bytes, label: str | None = None) -> KeyData:
         return cls.from_mnemonic(bytes_to_mnemonic(entropy), label)
 
     @classmethod
-    def generate(cls, label: Optional[str] = None) -> KeyData:
+    def generate(cls, label: str | None = None) -> KeyData:
         return cls.from_mnemonic(generate_mnemonic(), label)
 
     @property
     def mnemonic(self) -> list[str]:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.mnemonic
 
     def mnemonic_str(self) -> str:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.mnemonic_str()
 
     @property
     def entropy(self) -> bytes:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.entropy
 
     @property
     def private_key(self) -> PrivateKey:
         if self.secrets is None:
-            raise KeychainSecretsMissing()
+            raise KeychainSecretsMissing
         return self.secrets.private_key
 
 
@@ -296,11 +295,11 @@ class Keychain:
     list of all keys.
     """
 
-    def __init__(self, user: Optional[str] = None, service: Optional[str] = None):
+    def __init__(self, user: str | None = None, service: str | None = None):
         self.user = user if user is not None else default_keychain_user()
         self.service = service if service is not None else default_keychain_service()
 
-        keyring_wrapper: Optional[KeyringWrapper] = KeyringWrapper.get_shared_instance()
+        keyring_wrapper: KeyringWrapper | None = KeyringWrapper.get_shared_instance()
 
         if keyring_wrapper is None:
             raise KeychainNotSet("KeyringWrapper not set")
@@ -348,25 +347,23 @@ class Keychain:
     def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
+    def add_key(self, mnemonic_or_pk: str, label: str | None) -> PrivateKey: ...
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
+    def add_key(self, mnemonic_or_pk: str, label: str | None, private: Literal[True]) -> PrivateKey: ...
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
+    def add_key(self, mnemonic_or_pk: str, label: str | None, private: Literal[False]) -> G1Element: ...
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: bool) -> Union[PrivateKey, G1Element]: ...
+    def add_key(self, mnemonic_or_pk: str, label: str | None, private: bool) -> PrivateKey | G1Element: ...
 
-    def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
-    ) -> Union[PrivateKey, G1Element]:
+    def add_key(self, mnemonic_or_pk: str, label: str | None = None, private: bool = True) -> PrivateKey | G1Element:
         """
         Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
         """
-        key: Union[PrivateKey, G1Element]
+        key: PrivateKey | G1Element
         if private:
             seed = mnemonic_to_seed(mnemonic_or_pk)
             entropy = bytes_from_mnemonic(mnemonic_or_pk)
@@ -437,7 +434,7 @@ class Keychain:
                 pass
         return None
 
-    def get_first_private_key(self) -> Optional[tuple[PrivateKey, bytes]]:
+    def get_first_private_key(self) -> tuple[PrivateKey, bytes] | None:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
@@ -445,7 +442,7 @@ class Keychain:
             return key_data.private_key, key_data.entropy
         return None
 
-    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[tuple[PrivateKey, bytes]]:
+    def get_private_key_by_fingerprint(self, fingerprint: int) -> tuple[PrivateKey, bytes] | None:
         """
         Return first private key which have the given public key fingerprint.
         """
@@ -493,7 +490,7 @@ class Keychain:
 
         return all_keys
 
-    def get_first_public_key(self) -> Optional[G1Element]:
+    def get_first_public_key(self) -> G1Element | None:
         """
         Returns the first public key.
         """
@@ -530,7 +527,7 @@ class Keychain:
         """
         remaining_fingerprints = {x[0].get_g1().get_fingerprint() for x in keys_to_delete}
         remaining_removals = len(remaining_fingerprints)
-        while len(remaining_fingerprints):
+        while len(remaining_fingerprints) > 0:
             key_to_delete = remaining_fingerprints.pop()
             if self.delete_key_by_fingerprint(key_to_delete) > 0:
                 remaining_removals -= 1
@@ -579,7 +576,7 @@ class Keychain:
         return passphrase_requirements().get("min_length", 0)  # type: ignore[no-any-return]
 
     @staticmethod
-    def passphrase_meets_requirements(passphrase: Optional[str]) -> bool:
+    def passphrase_meets_requirements(passphrase: str | None) -> bool:
         """
         Returns whether the provided passphrase satisfies the passphrase requirements.
         """
@@ -618,7 +615,7 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().has_cached_master_passphrase()
 
     @staticmethod
-    def get_cached_master_passphrase() -> Optional[str]:
+    def get_cached_master_passphrase() -> str | None:
         """
         Returns the cached master passphrase
         """
@@ -626,7 +623,7 @@ class Keychain:
         return passphrase
 
     @staticmethod
-    def set_cached_master_passphrase(passphrase: Optional[str]) -> None:
+    def set_cached_master_passphrase(passphrase: str | None) -> None:
         """
         Caches the provided master passphrase
         """
@@ -634,10 +631,10 @@ class Keychain:
 
     @staticmethod
     def set_master_passphrase(
-        current_passphrase: Optional[str],
+        current_passphrase: str | None,
         new_passphrase: str,
         *,
-        passphrase_hint: Optional[str] = None,
+        passphrase_hint: str | None = None,
         save_passphrase: bool = False,
     ) -> None:
         """
@@ -652,7 +649,7 @@ class Keychain:
         )
 
     @staticmethod
-    def remove_master_passphrase(current_passphrase: Optional[str]) -> None:
+    def remove_master_passphrase(current_passphrase: str | None) -> None:
         """
         Removes the user-provided master passphrase, and replaces it with the default
         master passphrase. The keyring contents will remain encrypted, but to the
@@ -661,14 +658,14 @@ class Keychain:
         KeyringWrapper.get_shared_instance().remove_master_passphrase(current_passphrase)
 
     @staticmethod
-    def get_master_passphrase_hint() -> Optional[str]:
+    def get_master_passphrase_hint() -> str | None:
         """
         Returns the passphrase hint from the keyring
         """
         return KeyringWrapper.get_shared_instance().get_master_passphrase_hint()
 
     @staticmethod
-    def set_master_passphrase_hint(current_passphrase: str, passphrase_hint: Optional[str]) -> None:
+    def set_master_passphrase_hint(current_passphrase: str, passphrase_hint: str | None) -> None:
         """
         Convenience method for setting/removing the passphrase hint. Requires the current
         passphrase, as the passphrase hint is written as part of a passphrase update.

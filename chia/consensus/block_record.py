@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
-
-import chia_rs
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 from typing_extensions import Protocol
-
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
-
-BlockRecord = chia_rs.BlockRecord
 
 
 class BlockRecordProtocol(Protocol):
@@ -19,14 +13,13 @@ class BlockRecordProtocol(Protocol):
     def height(self) -> uint32: ...
 
     @property
-    def timestamp(self) -> Optional[uint64]: ...
+    def timestamp(self) -> uint64 | None: ...
 
     @property
     def prev_transaction_block_height(self) -> uint32: ...
 
     @property
-    def prev_transaction_block_hash(self) -> Optional[bytes32]: ...
+    def prev_transaction_block_hash(self) -> bytes32 | None: ...
 
     @property
-    def is_transaction_block(self) -> bool:
-        return self.timestamp is not None
+    def is_transaction_block(self) -> bool: ...

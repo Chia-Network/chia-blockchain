@@ -3,18 +3,29 @@ from __future__ import annotations
 import random
 
 import importlib_resources
-from chia_rs import AugSchemeMPL, ClassgroupElement, Coin, G1Element, G2Element, VDFInfo, VDFProof
+from chia_rs import (
+    AugSchemeMPL,
+    ClassgroupElement,
+    Coin,
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    FullBlock,
+    G1Element,
+    G2Element,
+    PoolTarget,
+    ProofOfSpace,
+    RewardChainBlock,
+    TransactionsInfo,
+    VDFInfo,
+    VDFProof,
+)
+from chia_rs.sized_bytes import bytes32, bytes100
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
-from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
-from chia.types.full_block import FullBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)
@@ -29,29 +40,22 @@ def rewards(height: uint32) -> tuple[Coin, Coin]:
     return farmer_coin, pool_coin
 
 
-def rand_bytes(num: int) -> bytes:
-    ret = bytearray(num)
-    for i in range(num):
-        ret[i] = random.getrandbits(8)
-    return bytes(ret)
-
-
 def rand_hash() -> bytes32:
-    return bytes32(rand_bytes(32))
+    return bytes32.random()
 
 
 def rand_g1() -> G1Element:
-    sk = AugSchemeMPL.key_gen(rand_bytes(96))
+    sk = AugSchemeMPL.key_gen(random.randbytes(96))
     return sk.get_g1()
 
 
 def rand_g2() -> G2Element:
-    sk = AugSchemeMPL.key_gen(rand_bytes(96))
+    sk = AugSchemeMPL.key_gen(random.randbytes(96))
     return AugSchemeMPL.sign(sk, b"foobar")
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    return ClassgroupElement(bytes100(rand_bytes(100)))
+    return ClassgroupElement(bytes100.random())
 
 
 def rand_vdf() -> VDFInfo:
@@ -73,7 +77,7 @@ def rand_full_block() -> FullBlock:
         None,
         rand_g1(),
         uint8(0),
-        rand_bytes(8 * 32),
+        random.randbytes(8 * 32),
     )
 
     reward_chain_block = RewardChainBlock(
@@ -90,6 +94,7 @@ def rand_full_block() -> FullBlock:
         rand_g2(),
         rand_vdf(),
         rand_vdf(),
+        None,
         True,
     )
 

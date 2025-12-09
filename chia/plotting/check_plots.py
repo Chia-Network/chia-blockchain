@@ -3,15 +3,18 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 from threading import Lock
-from time import sleep, time
-from typing import Optional
+from time import monotonic, sleep
 
-from chia_rs import G1Element
+from chia_rs import G1Element, solve_proof
+from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.plotting.manager import PlotManager
+from chia.plotting.prover import QualityProtocol, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import (
     PlotInfo,
     PlotRefreshEvents,
@@ -25,7 +28,6 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.cpu import available_logical_cores
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
@@ -38,8 +40,8 @@ def plot_refresh_callback(event: PlotRefreshEvents, refresh_result: PlotRefreshR
 
 def check_plots(
     root_path: Path,
-    num: Optional[int],
-    challenge_start: Optional[int],
+    num: int | None,
+    challenge_start: int | None,
     grep_string: str,
     list_duplicates: bool,
     debug_show_memo: bool,
@@ -53,6 +55,7 @@ def check_plots(
         open_no_key_filenames=True,
         refresh_parameter=plot_refresh_parameter,
         refresh_callback=plot_refresh_callback,
+        constants=DEFAULT_CONSTANTS,
     )
 
     context_count = config["harvester"].get("parallel_decompressor_count", 5)
@@ -133,14 +136,16 @@ def check_plots(
         log.info("")
         log.info("")
         log.info(f"Starting to test each plot with {num} challenges each\n")
-    total_good_plots: Counter[str] = Counter()
+    total_good_plots_v1: Counter[uint8] = Counter()
+    total_good_plots_v2: int = 0
     total_size = 0
     bad_plots_list: list[Path] = []
 
     with plot_manager:
 
         def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int, lock: Lock) -> None:
-            nonlocal total_good_plots
+            nonlocal total_good_plots_v1
+            nonlocal total_good_plots_v2
             nonlocal total_size
             nonlocal bad_plots_list
 
@@ -155,7 +160,7 @@ def check_plots(
             local_sk = master_sk_to_local_sk(local_master_sk)
 
             with lock:
-                log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+                log.info(f"Testing plot {plot_path} k={pr.get_param()}")
                 if plot_info.pool_public_key is not None:
                     log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
                 if plot_info.pool_contract_puzzle_hash is not None:
@@ -168,46 +173,19 @@ def check_plots(
             caught_exception: bool = False
             for i in range(num_start, num_end):
                 challenge = std_hash(i.to_bytes(32, "big"))
+                qualities: Sequence[QualityProtocol]
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
-                    quality_start_time = int(round(time() * 1000))
-                    for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
-                        quality_spent_time = int(round(time() * 1000)) - quality_start_time
-                        if quality_spent_time > 8000:
-                            log.warning(
-                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
-                                f"to minimize risk of losing rewards. Filepath: {plot_path}"
-                            )
-                        else:
-                            log.info(f"\tLooking up qualities took: {quality_spent_time} ms. Filepath: {plot_path}")
-
-                        # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
-                        try:
-                            proof_start_time = int(round(time() * 1000))
-                            proof = pr.get_full_proof(challenge, index, parallel_read)
-                            proof_spent_time = int(round(time() * 1000)) - proof_start_time
-                            if proof_spent_time > 15000:
-                                log.warning(
-                                    f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
-                                    f"to minimize risk of losing rewards. Filepath: {plot_path}"
-                                )
-                            else:
-                                log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
-
-                            ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
-                            if quality_str == ver_quality_str:
-                                total_proofs += 1
-                            else:
-                                log.warning(
-                                    f"\tQuality doesn't match with proof. Filepath: {plot_path} "
-                                    "This can occasionally happen with a compressed plot."
-                                )
-                        except AssertionError as e:
-                            log.error(
-                                f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
-                            )
-                            caught_exception = True
-                        quality_start_time = int(round(time() * 1000))
+                    quality_start_time = round(monotonic() * 1000)
+                    qualities = pr.get_qualities_for_challenge(challenge, DEFAULT_CONSTANTS.QUALITY_PROOF_SCAN_FILTER)
+                    quality_spent_time = round(monotonic() * 1000) - quality_start_time
+                    if quality_spent_time > 8000:
+                        log.warning(
+                            f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
+                            f"to minimize risk of losing rewards. Filepath: {plot_path}"
+                        )
+                    else:
+                        log.info(f"\tLooking up qualities took: {quality_spent_time} ms. Filepath: {plot_path}")
                 except KeyboardInterrupt:
                     log.warning("Interrupted, closing")
                     return
@@ -221,9 +199,50 @@ def check_plots(
                     else:
                         log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                         caught_exception = True
+                        continue
                 except Exception as e:
                     log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                     caught_exception = True
+                    break
+
+                for index, quality in enumerate(qualities):
+                    # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
+                    try:
+                        proof_start_time = round(monotonic() * 1000)
+                        quality_str = quality.get_string()
+
+                        if isinstance(pr, V1Prover):
+                            full_proof = pr.get_full_proof(challenge, index, parallel_read)
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
+                        elif isinstance(pr, V2Prover):
+                            assert isinstance(quality, V2Quality)
+                            partial_proof = pr.get_partial_proof(quality)
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
+                            full_proof = solve_proof(
+                                partial_proof, pr.get_id(), pr.get_strength(), DEFAULT_CONSTANTS.PLOT_SIZE_V2
+                            )
+
+                        if proof_spent_time > 15000:
+                            log.warning(
+                                f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
+                                f"to minimize risk of losing rewards. Filepath: {plot_path}"
+                            )
+                        else:
+                            log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
+
+                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_param().size_v1, challenge, full_proof)
+                        if quality_str == ver_quality_str:
+                            total_proofs += 1
+                        else:
+                            log.warning(
+                                f"\tQuality doesn't match with proof. Filepath: {plot_path} "
+                                "This can occasionally happen with a compressed plot."
+                            )
+                    except AssertionError as e:
+                        log.error(
+                            f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
+                        )
+                        caught_exception = True
                 if caught_exception is True:
                     break
 
@@ -232,8 +251,14 @@ def check_plots(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
-                total_good_plots[pr.get_size()] += 1
-                total_size += plot_path.stat().st_size
+                param = pr.get_param()
+                if param.size_v1 is not None:
+                    k = param.size_v1
+                    total_good_plots_v1[k] += 1
+                    total_size += plot_path.stat().st_size
+                else:
+                    total_good_plots_v2 += 1
+                    total_size += plot_path.stat().st_size
             else:
                 log.error(
                     f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
@@ -241,7 +266,9 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, context_count)) as executor:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=max(1, context_count), thread_name_prefix="check-plots-"
+        ) as executor:
             logger_lock = Lock()
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():
@@ -253,10 +280,11 @@ def check_plots(
     log.info("")
     log.info("")
     log.info("Summary")
-    total_plots: int = sum(list(total_good_plots.values()))
+    total_plots: int = sum(list(total_good_plots_v1.values())) + total_good_plots_v2
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
-    for k, count in sorted(dict(total_good_plots).items()):
-        log.info(f"{count} plots of size {k}")
+    for k, count in sorted(dict(total_good_plots_v1).items()):
+        log.info(f"{count} v1 plots of size {k}")
+    log.info(f"{total_good_plots_v2} v2 plots")
     grand_total_bad = len(bad_plots_list) + len(plot_manager.failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots found:")

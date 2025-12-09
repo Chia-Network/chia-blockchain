@@ -4,13 +4,20 @@ import os
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
 from chia.cmds.configure import configure
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.ssl.create_ssl import create_all_ssl
+from chia.ssl.ssl_check import (
+    DEFAULT_PERMISSIONS_CERT_FILE,
+    DEFAULT_PERMISSIONS_KEY_FILE,
+    RESTRICT_MASK_CERT_FILE,
+    RESTRICT_MASK_KEY_FILE,
+    check_and_fix_permissions_for_ssl_file,
+    fix_ssl,
+)
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import (
     create_default_chia_config,
@@ -23,14 +30,6 @@ from chia.util.config import (
 from chia.util.db_version import set_db_version
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
-from chia.util.ssl_check import (
-    DEFAULT_PERMISSIONS_CERT_FILE,
-    DEFAULT_PERMISSIONS_KEY_FILE,
-    RESTRICT_MASK_CERT_FILE,
-    RESTRICT_MASK_KEY_FILE,
-    check_and_fix_permissions_for_ssl_file,
-    fix_ssl,
-)
 from chia.wallet.derive_keys import (
     _derive_path,
     _derive_path_unhardened,
@@ -38,6 +37,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_intermediate,
     master_sk_to_wallet_sk_unhardened_intermediate,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 
 def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_not_migrate_keys: dict[str, Any]) -> None:
@@ -61,7 +61,7 @@ def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_no
             updated[k] = v
 
 
-def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
+def check_keys(new_root: Path, keychain: Keychain | None = None) -> None:
     if keychain is None:
         keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
@@ -94,11 +94,11 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
 
                 all_targets.append(
                     encode_puzzle_hash(
-                        create_puzzlehash_for_pk(_derive_path_unhardened(intermediate_o, [i]).get_g1()), prefix
+                        puzzle_hash_for_pk(_derive_path_unhardened(intermediate_o, [i]).get_g1()), prefix
                     )
                 )
                 all_targets.append(
-                    encode_puzzle_hash(create_puzzlehash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix)
+                    encode_puzzle_hash(puzzle_hash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix)
                 )
                 if all_targets[-1] == config["farmer"].get("xch_target_address") or all_targets[-2] == config[
                     "farmer"
@@ -216,12 +216,12 @@ def copy_cert_files(cert_path: Path, new_path: Path) -> None:
 
 
 def init(
-    create_certs: Optional[Path],
+    create_certs: Path | None,
     root_path: Path,
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
     v1_db: bool = False,
-) -> Optional[int]:
+) -> int | None:
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):
@@ -298,6 +298,8 @@ def chia_init(
                 crawler_minimum_version_count=None,
                 seeder_domain_name="",
                 seeder_nameserver="",
+                set_solver_peer="",
+                set_solver_trusted_peers_only="",
             )
         if fix_ssl_permissions:
             fix_ssl(root_path)
@@ -324,6 +326,8 @@ def chia_init(
             crawler_minimum_version_count=None,
             seeder_domain_name="",
             seeder_nameserver="",
+            set_solver_peer="",
+            set_solver_trusted_peers_only="",
         )
     create_all_ssl(root_path)
     if fix_ssl_permissions:

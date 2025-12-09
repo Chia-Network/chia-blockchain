@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -15,7 +15,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_pk,
     generate_plot_public_key,
 )
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
@@ -27,15 +26,15 @@ class PlotKeys:
     def __init__(
         self,
         farmer_public_key: G1Element,
-        pool_public_key: Optional[G1Element],
-        pool_contract_address: Optional[str],
+        pool_public_key: G1Element | None,
+        pool_contract_address: str | None,
     ):
         self.farmer_public_key = farmer_public_key
         self.pool_public_key = pool_public_key
         self.pool_contract_address = pool_contract_address
 
     @property
-    def pool_contract_puzzle_hash(self) -> Optional[bytes32]:
+    def pool_contract_puzzle_hash(self) -> bytes32 | None:
         if self.pool_contract_address is not None:
             return decode_puzzle_hash(self.pool_contract_address)
         return None
@@ -44,10 +43,10 @@ class PlotKeys:
 class PlotKeysResolver:
     def __init__(
         self,
-        farmer_public_key: Optional[str],
-        alt_fingerprint: Optional[int],
-        pool_public_key: Optional[str],
-        pool_contract_address: Optional[str],
+        farmer_public_key: str | None,
+        alt_fingerprint: int | None,
+        pool_public_key: str | None,
+        pool_contract_address: str | None,
         root_path: Path,
         log: logging.Logger,
         connect_to_daemon: bool = False,
@@ -59,13 +58,13 @@ class PlotKeysResolver:
         self.root_path = root_path
         self.log = log
         self.connect_to_daemon = connect_to_daemon
-        self.resolved_keys: Optional[PlotKeys] = None
+        self.resolved_keys: PlotKeys | None = None
 
     async def resolve(self) -> PlotKeys:
         if self.resolved_keys is not None:
             return self.resolved_keys
 
-        keychain_proxy: Optional[KeychainProxy] = None
+        keychain_proxy: KeychainProxy | None = None
         try:
             if self.connect_to_daemon:
                 keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
@@ -78,15 +77,14 @@ class PlotKeysResolver:
             else:
                 farmer_public_key = await self.get_farmer_public_key(keychain_proxy)
 
-            pool_public_key: Optional[G1Element] = None
+            pool_public_key: G1Element | None = None
             if self.pool_public_key is not None:
                 if self.pool_contract_address is not None:
                     raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
                 pool_public_key = G1Element.from_bytes(bytes.fromhex(self.pool_public_key))
-            else:
-                if self.pool_contract_address is None:
-                    # If nothing is set, farms to the provided key (or the first key)
-                    pool_public_key = await self.get_pool_public_key(keychain_proxy)
+            elif self.pool_contract_address is None:
+                # If nothing is set, farms to the provided key (or the first key)
+                pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
             self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
         finally:
@@ -94,8 +92,8 @@ class PlotKeysResolver:
                 await keychain_proxy.close()
         return self.resolved_keys
 
-    async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[PrivateKey]:
-        sk: Optional[PrivateKey] = None
+    async def get_sk(self, keychain_proxy: KeychainProxy | None = None) -> PrivateKey | None:
+        sk: PrivateKey | None = None
         if keychain_proxy:
             try:
                 if self.alt_fingerprint is not None:
@@ -105,7 +103,7 @@ class PlotKeysResolver:
             except Exception as e:
                 log.error(f"Keychain proxy failed with error: {e}")
         else:
-            sk_ent: Optional[tuple[PrivateKey, bytes]] = None
+            sk_ent: tuple[PrivateKey, bytes] | None = None
             keychain: Keychain = Keychain()
             if self.alt_fingerprint is not None:
                 sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
@@ -116,16 +114,16 @@ class PlotKeysResolver:
                 sk = sk_ent[0]
         return sk
 
-    async def get_farmer_public_key(self, keychain_proxy: Optional[KeychainProxy] = None) -> G1Element:
-        sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
+    async def get_farmer_public_key(self, keychain_proxy: KeychainProxy | None = None) -> G1Element:
+        sk: PrivateKey | None = await self.get_sk(keychain_proxy)
         if sk is None:
             raise RuntimeError(
                 "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f"
             )
         return master_sk_to_farmer_sk(sk).get_g1()
 
-    async def get_pool_public_key(self, keychain_proxy: Optional[KeychainProxy] = None) -> G1Element:
-        sk: Optional[PrivateKey] = await self.get_sk(keychain_proxy)
+    async def get_pool_public_key(self, keychain_proxy: KeychainProxy | None = None) -> G1Element:
+        sk: PrivateKey | None = await self.get_sk(keychain_proxy)
         if sk is None:
             raise RuntimeError(
                 "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p"
@@ -134,10 +132,10 @@ class PlotKeysResolver:
 
 
 async def resolve_plot_keys(
-    farmer_public_key: Optional[str],
-    alt_fingerprint: Optional[int],
-    pool_public_key: Optional[str],
-    pool_contract_address: Optional[str],
+    farmer_public_key: str | None,
+    alt_fingerprint: int | None,
+    pool_public_key: str | None,
+    pool_contract_address: str | None,
     root_path: Path,
     log: logging.Logger,
     connect_to_daemon: bool = False,
@@ -151,7 +149,7 @@ async def create_plots(
     args: Params,
     keys: PlotKeys,
     use_datetime: bool = True,
-    test_private_keys: Optional[list[PrivateKey]] = None,
+    test_private_keys: list[PrivateKey] | None = None,
 ) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir

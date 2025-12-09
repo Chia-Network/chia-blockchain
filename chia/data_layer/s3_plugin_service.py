@@ -11,16 +11,16 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, overload
+from typing import Any, overload
 from urllib.parse import urlparse
 
 import boto3
 import yaml
 from aiohttp import web
 from botocore.exceptions import ClientError
+from chia_rs.sized_bytes import bytes32
 
 from chia.data_layer.download_data import is_filename_valid
-from chia.types.blockchain_format.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
 plugin_name = "Chia S3 Datalayer plugin"
@@ -30,7 +30,7 @@ plugin_version = "0.1.0"
 @dataclass(frozen=True)
 class StoreConfig:
     id: bytes32
-    bucket: Optional[str]
+    bucket: str | None
     urls: set[str]
 
     @classmethod
@@ -142,9 +142,7 @@ class S3Plugin:
     @overload
     def get_path_for_filename(self, store_id: bytes32, filename: None, group_files_by_store: bool) -> None: ...
 
-    def get_path_for_filename(
-        self, store_id: bytes32, filename: Optional[str], group_files_by_store: bool
-    ) -> Optional[Path]:
+    def get_path_for_filename(self, store_id: bytes32, filename: str | None, group_files_by_store: bool) -> Path | None:
         if filename is None:
             return None
 
@@ -158,9 +156,7 @@ class S3Plugin:
     @overload
     def get_s3_target_from_path(self, store_id: bytes32, path: None, group_files_by_store: bool) -> None: ...
 
-    def get_s3_target_from_path(
-        self, store_id: bytes32, path: Optional[Path], group_files_by_store: bool
-    ) -> Optional[str]:
+    def get_s3_target_from_path(self, store_id: bytes32, path: Path | None, group_files_by_store: bool) -> str | None:
         if path is None:
             return None
 
@@ -174,7 +170,7 @@ class S3Plugin:
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket_str = self.get_bucket(store_id)
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            full_tree_name: Optional[str] = data.get("full_tree_filename", None)
+            full_tree_name: str | None = data.get("full_tree_filename", None)
             diff_name: str = data["diff_filename"]
             group_files_by_store: bool = data.get("group_files_by_store", False)
 
@@ -205,7 +201,7 @@ class S3Plugin:
             target_diff_path = self.get_s3_target_from_path(store_id, diff_path, group_files_by_store)
 
             try:
-                with concurrent.futures.ThreadPoolExecutor() as pool:
+                with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-upload-") as pool:
                     if full_tree_path is not None:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
@@ -284,7 +280,7 @@ class S3Plugin:
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
-            with concurrent.futures.ThreadPoolExecutor() as pool:
+            with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-download-") as pool:
                 await asyncio.get_running_loop().run_in_executor(
                     pool, functools.partial(my_bucket.download_file, filename, str(target_filename))
                 )
@@ -330,7 +326,7 @@ class S3Plugin:
                         log.debug(f"skip {file_name} already in bucket")
                         continue
 
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                    with concurrent.futures.ThreadPoolExecutor(thread_name_prefix="s3-missing-") as pool:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
                             functools.partial(my_bucket.upload_file, file_path, target_file_name),
@@ -384,7 +380,6 @@ def read_store_ids_from_config(config: dict[str, Any]) -> list[StoreConfig]:
             else:
                 bad_store_id = "<missing>"
             log.info(f"Ignoring invalid store id: {bad_store_id}: {type(e).__name__} {e}")
-            pass
 
     return stores
 

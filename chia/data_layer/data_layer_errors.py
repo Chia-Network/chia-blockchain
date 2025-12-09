@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
 
 
 class IntegrityError(Exception):
@@ -36,6 +36,11 @@ class NodeHashError(IntegrityError):
 class KeyNotFoundError(Exception):
     def __init__(self, key: bytes) -> None:
         super().__init__(f"Key not found: {key.hex()}")
+
+
+class MerkleBlobNotFoundError(Exception):
+    def __init__(self, root_hash: bytes32) -> None:
+        super().__init__(f"Cannot find merkle blob for root hash {root_hash.hex()}")
 
 
 class OfferIntegrityError(Exception):

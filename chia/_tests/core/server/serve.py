@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-import asyncio.events
-import asyncio.protocols
 import dataclasses
 import functools
 import logging.config
 import pathlib
 import sys
 import threading
-from typing import Optional, final, overload
+from typing import final, overload
 
 from chia._tests.util.misc import create_logger
 from chia.server.chia_policy import ChiaPolicy
 from chia.server.start_service import async_run
+from chia.util.task_referencer import create_referenced_task
 
 if sys.platform == "win32":
     import _winapi
@@ -48,7 +47,7 @@ async def async_main(
     shutdown_path: pathlib.Path,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    port_holder: Optional[list[int]] = None,
+    port_holder: list[int] | None = None,
 ) -> None: ...
 
 
@@ -59,33 +58,34 @@ async def async_main(
     thread_end_event: threading.Event,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    port_holder: Optional[list[int]] = None,
+    port_holder: list[int] | None = None,
 ) -> None: ...
 
 
 async def async_main(
     *,
     out_path: pathlib.Path,
-    shutdown_path: Optional[pathlib.Path] = None,
-    thread_end_event: Optional[threading.Event] = None,
+    shutdown_path: pathlib.Path | None = None,
+    thread_end_event: threading.Event | None = None,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    port_holder: Optional[list[int]] = None,
+    port_holder: list[int] | None = None,
 ) -> None:
     with out_path.open(mode="w") as file:
         logger = create_logger(file=file)
-        file_task: Optional[asyncio.Task[None]] = None
+        file_task: asyncio.Task[None] | None = None
         if thread_end_event is None:
             assert shutdown_path is not None
             thread_end_event = threading.Event()
 
             async def dun() -> None:
-                while shutdown_path.exists():
+                # TODO: switch to event driven code
+                while shutdown_path.exists():  # noqa: ASYNC110
                     await asyncio.sleep(0.25)
 
                 thread_end_event.set()
 
-            file_task = asyncio.create_task(dun())
+            file_task = create_referenced_task(dun())
 
         loop = asyncio.get_event_loop()
         server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
@@ -97,7 +97,8 @@ async def async_main(
 
         try:
             try:
-                while not thread_end_event.is_set():
+                # TODO: switch to event driven code
+                while not thread_end_event.is_set():  # noqa: ASYNC110
                     await asyncio.sleep(0.1)
             finally:
                 # the test checks explicitly for this

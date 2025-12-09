@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import Coin, Spend
 from chia.wallet.util.clvm_streamable import (
@@ -77,14 +76,14 @@ def test_nested_serialization() -> None:
 @streamable
 @dataclasses.dataclass(frozen=True)
 class Compound(Streamable):
-    optional: Optional[BasicCLVMStreamable]
+    optional: BasicCLVMStreamable | None
     list: list[BasicCLVMStreamable]
 
 
 @clvm_streamable
 @dataclasses.dataclass(frozen=True)
 class CompoundCLVM(Streamable):
-    optional: Optional[BasicCLVMStreamable]
+    optional: BasicCLVMStreamable | None
     list: list[BasicCLVMStreamable]
 
 

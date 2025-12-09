@@ -12,7 +12,7 @@ import pathlib
 import ssl
 import subprocess
 import sys
-from collections.abc import Awaitable, Collection, Iterator
+from collections.abc import Awaitable, Callable, Collection, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
@@ -20,7 +20,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TextIO, TypeVar, Union, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TextIO, TypeVar, cast, final
 
 import aiohttp
 import pytest
@@ -29,6 +29,9 @@ import pytest
 from _pytest.nodes import Node
 from aiohttp import web
 from chia_rs import Coin
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
+from typing_extensions import Self
 
 import chia
 import chia._tests
@@ -36,23 +39,21 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
+from chia.protocols.outbound_message import Message
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
-from chia.server.outbound_message import Message
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode
 
 
 class GcMode(enum.Enum):
-    nothing = enum.auto
-    precollect = enum.auto
-    disable = enum.auto
-    enable = enum.auto
+    nothing = enum.auto()
+    precollect = enum.auto()
+    disable = enum.auto()
+    enable = enum.auto()
 
 
 @contextlib.contextmanager
@@ -87,7 +88,7 @@ class RuntimeResults:
     duration: float
     entry_file: str
     entry_line: int
-    overhead: Optional[float]
+    overhead: float | None
 
     def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
@@ -111,13 +112,13 @@ class AssertRuntimeResults:
     duration: float
     entry_file: str
     entry_line: int
-    overhead: Optional[float]
+    overhead: float | None
     limit: float
     ratio: float
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: Optional[float]
+        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: float | None
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -160,7 +161,7 @@ class AssertRuntimeResults:
 
 def measure_overhead(
     manager_maker: Callable[
-        [], contextlib.AbstractContextManager[Union[Future[RuntimeResults], Future[AssertRuntimeResults]]]
+        [], contextlib.AbstractContextManager[Future[RuntimeResults] | Future[AssertRuntimeResults]]
     ],
     cycles: int = 10,
 ) -> float:
@@ -182,7 +183,7 @@ def measure_runtime(
     label: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
-    overhead: Optional[float] = None,
+    overhead: float | None = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
     entry_file, entry_line = caller_file_and_line(
@@ -288,12 +289,12 @@ class _AssertRuntime:
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
     print: bool = True
-    overhead: Optional[float] = None
-    entry_file: Optional[str] = None
-    entry_line: Optional[int] = None
-    _results: Optional[AssertRuntimeResults] = None
-    runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
-    runtime_results_callable: Optional[Future[RuntimeResults]] = None
+    overhead: float | None = None
+    entry_file: str | None = None
+    entry_line: int | None = None
+    _results: AssertRuntimeResults | None = None
+    runtime_manager: contextlib.AbstractContextManager[Future[RuntimeResults]] | None = None
+    runtime_results_callable: Future[RuntimeResults] | None = None
     enable_assertion: bool = True
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
@@ -314,9 +315,9 @@ class _AssertRuntime:
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         if (
             self.entry_file is None
@@ -365,8 +366,8 @@ class _AssertRuntime:
 @dataclasses.dataclass
 class BenchmarkRunner:
     enable_assertion: bool = True
-    test_id: Optional[TestId] = None
-    overhead: Optional[float] = None
+    test_id: TestId | None = None
+    overhead: float | None = None
 
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
@@ -397,7 +398,7 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args: list[str]) -> Iterator[su
 
 
 # https://github.com/pytest-dev/pytest/blob/7.3.1/src/_pytest/mark/__init__.py#L45
-Marks = Union[pytest.MarkDecorator, Collection[Union[pytest.MarkDecorator, pytest.Mark]]]
+Marks = pytest.MarkDecorator | Collection[pytest.MarkDecorator | pytest.Mark]
 
 
 class DataCase(Protocol):
@@ -444,7 +445,7 @@ class CoinGenerator:
         self._seed += 1
         return uint64(self._seed)
 
-    def get(self, parent_coin_id: Optional[bytes32] = None, include_hint: bool = True) -> HintedCoin:
+    def get(self, parent_coin_id: bytes32 | None = None, include_hint: bool = True) -> HintedCoin:
         if parent_coin_id is None:
             parent_coin_id = self._get_hash()
         hint = None
@@ -477,10 +478,25 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
 
 
 def invariant_check_mempool(mempool: Mempool) -> None:
-    with mempool._db_conn as conn:
-        cursor = conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
-        val = cursor.fetchone()
-        assert (mempool._total_cost, mempool._total_fee) == val
+    cursor = mempool._db_conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
+    val = cursor.fetchone()
+    assert (mempool._total_cost, mempool._total_fee) == val
+
+    cursor = mempool._db_conn.execute("SELECT coin_id, tx FROM spends")
+    for coin_id, item_id in cursor.fetchall():
+        item = mempool._items.get(item_id)
+        assert item is not None
+        # item is expected to contain a spend of coin_id, but it might be a
+        # fast-forward spend, in which case the dictionary won't help us,
+        # but we'll have to do a linear search
+        if coin_id in item.bundle_coin_spends:
+            assert item.bundle_coin_spends[coin_id].coin_spend.coin.name() == coin_id
+            continue
+
+        assert any(
+            i.latest_singleton_lineage is not None and i.latest_singleton_lineage.coin_id == coin_id
+            for i in item.bundle_coin_spends.values()
+        )
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
@@ -500,7 +516,7 @@ class RecordingWebServer:
         hostname: str,
         port: uint16,
         max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
-        ssl_context: Optional[ssl.SSLContext] = None,
+        ssl_context: ssl.SSLContext | None = None,
         prefer_ipv6: bool = False,
     ) -> RecordingWebServer:
         web_server = await WebServer.create(
@@ -598,37 +614,37 @@ T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")
 
 
 class ComparableEnum(Enum):
-    def __lt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __lt__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__lt__(other.value)
 
-    def __le__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __le__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__le__(other.value)
 
-    def __eq__(self: T_ComparableEnum, other: object) -> bool:
+    def __eq__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return False
 
-        return cast(bool, self.value.__eq__(cast(T_ComparableEnum, other).value))
+        return cast(bool, self.value.__eq__(cast(Self, other).value))
 
-    def __ne__(self: T_ComparableEnum, other: object) -> bool:
+    def __ne__(self, other: object) -> bool:
         if self.__class__ is not other.__class__:
             return True
 
-        return cast(bool, self.value.__ne__(cast(T_ComparableEnum, other).value))
+        return cast(bool, self.value.__ne__(cast(Self, other).value))
 
-    def __gt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __gt__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
         return self.value.__gt__(other.value)
 
-    def __ge__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+    def __ge__(self, other: Self) -> object:
         if self.__class__ is not other.__class__:
             return NotImplemented
 
@@ -641,9 +657,9 @@ def is_attribute_local(o: object, name: str) -> bool:
 
 @contextlib.contextmanager
 def patch_request_handler(
-    api: Union[ApiProtocol, type[ApiProtocol]],
-    handler: Callable[..., Awaitable[Optional[Message]]],
-    request_type: Optional[ProtocolMessageTypes] = None,
+    api: ApiProtocol | type[ApiProtocol],
+    handler: Callable[..., Awaitable[Message | None]],
+    request_type: ProtocolMessageTypes | None = None,
 ) -> Iterator[None]:
     if request_type is None:
         request_type = ProtocolMessageTypes[handler.__name__]

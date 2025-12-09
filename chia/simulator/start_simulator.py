@@ -5,22 +5,23 @@ import sys
 from dataclasses import dataclass
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from chia.apis import ApiProtocolRegistry
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16
+
+from chia.apis import StubMetadataRegistry
 from chia.full_node.full_node import FullNode
-from chia.server.outbound_message import NodeType
+from chia.protocols.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli, override_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
+from chia.util.default_root import resolve_root_path
 
 SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
 
@@ -38,7 +39,7 @@ async def create_full_node_simulator_service(
     config: dict[str, Any],
     bt: BlockTools,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
+    override_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> SimulatorFullNodeService:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
@@ -64,7 +65,7 @@ async def create_full_node_simulator_service(
         rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
-        class_for_type=ApiProtocolRegistry,
+        stub_metadata_for_type=StubMetadataRegistry,
     )
 
 
@@ -77,15 +78,19 @@ class StartedSimulator:
 async def async_main(
     test_mode: bool = False,
     automated_testing: bool = False,
-    root_path: Path = DEFAULT_ROOT_PATH,
+    root_path: Path | None = None,
 ) -> StartedSimulator:
+    root_path = resolve_root_path(override=root_path)
+    # helping mypy out for now
+    assert root_path is not None
+
     # Same as full node, but the root_path is defined above
     config = load_config(root_path, "config.yaml")
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     # THIS IS Simulator specific.
-    fingerprint: Optional[int] = None
-    farming_puzzle_hash: Optional[bytes32] = None
+    fingerprint: int | None = None
+    farming_puzzle_hash: bytes32 | None = None
     plot_dir: str = "simulator/plots"
     if "simulator" in config:
         overrides = {}
@@ -130,7 +135,9 @@ async def async_main(
 
 def main() -> int:
     freeze_support()
-    return async_run(async_main()).exit_code
+    root_path = resolve_root_path(override=None)
+
+    return async_run(async_main(root_path=root_path)).exit_code
 
 
 if __name__ == "__main__":

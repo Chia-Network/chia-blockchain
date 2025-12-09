@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+
+from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
 from chia.wallet.driver_protocol import DriverProtocol
 from chia.wallet.nft_wallet.metadata_outer_puzzle import MetadataOuterPuzzle
@@ -14,6 +14,7 @@ from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.vc_wallet.cr_outer_puzzle import CROuterPuzzle
+from chia.wallet.vc_wallet.vc_drivers import RevocationOuterPuzzle
 
 """
 This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
@@ -42,11 +43,12 @@ class AssetType(Enum):
     OWNERSHIP = "ownership"
     ROYALTY_TRANSFER_PROGRAM = "royalty transfer program"
     CR = "credential restricted"
+    REVOCATION_LAYER = "revocation layer"
 
 
-def match_puzzle(puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+def match_puzzle(puzzle: UncurriedPuzzle) -> PuzzleInfo | None:
     for driver in driver_lookup.values():
-        potential_info: Optional[PuzzleInfo] = driver.match(puzzle)
+        potential_info: PuzzleInfo | None = driver.match(puzzle)
         if potential_info is not None:
             return potential_info
     return None
@@ -60,15 +62,17 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
     return driver_lookup[AssetType(constructor.type())].solve(constructor, solver, inner_puzzle, inner_solution)
 
 
-def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
-    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)
+def get_inner_puzzle(
+    constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle, solution: Program | None = None
+) -> Program | None:
+    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal, solution)
 
 
-def get_inner_solution(constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+def get_inner_solution(constructor: PuzzleInfo, solution: Program) -> Program | None:
     return driver_lookup[AssetType(constructor.type())].get_inner_solution(constructor, solution)
 
 
-def create_asset_id(constructor: PuzzleInfo) -> Optional[bytes32]:
+def create_asset_id(constructor: PuzzleInfo) -> bytes32 | None:
     return driver_lookup[AssetType(constructor.type())].asset_id(constructor)
 
 
@@ -81,4 +85,5 @@ driver_lookup: dict[AssetType, DriverProtocol] = {
     AssetType.OWNERSHIP: OwnershipOuterPuzzle(*function_args),
     AssetType.ROYALTY_TRANSFER_PROGRAM: TransferProgramPuzzle(*function_args),
     AssetType.CR: CROuterPuzzle(*function_args),
+    AssetType.REVOCATION_LAYER: RevocationOuterPuzzle(),
 }

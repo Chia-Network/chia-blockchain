@@ -1,23 +1,26 @@
 from __future__ import annotations
 
 import logging
-import time
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, CoinSpend, G1Element, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64, uint128
 from typing_extensions import Unpack
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, make_spend
+from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
-from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoinAnnouncement, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreateCoinAnnouncement,
+)
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -25,7 +28,6 @@ from chia.wallet.derive_keys import (
     _derive_path_unhardened,
     master_sk_to_singleton_owner_sk,
 )
-from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -36,7 +38,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
     solution_for_conditions,
 )
-from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
+from chia.wallet.puzzles.puzzle_utils import make_reserve_fee_condition
 from chia.wallet.signer_protocol import (
     PathHint,
     Signature,
@@ -48,9 +50,8 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
 )
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
-from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -94,15 +95,15 @@ class Wallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
-        spendable: list[WalletCoinRecord] = list(
-            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
+        return uint128(
+            sum(
+                cr.coin.amount
+                for cr in await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.id(), records, in_one_block=True
+                )
+            )
         )
-        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
-        return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
-
-    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
 
     @classmethod
     def type(cls) -> WalletType:
@@ -111,13 +112,13 @@ class Wallet:
     def id(self) -> uint32:
         return self.wallet_id
 
-    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
 
-    async def get_unconfirmed_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_spendable_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         spendable = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.id(), unspent_records
         )
@@ -172,41 +173,9 @@ class Wallet:
         public_key = await self.wallet_state_manager.get_public_key(puzzle_hash)
         return puzzle_for_pk(G1Element.from_bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        puzzle = puzzle_for_pk(dr.pubkey)
-        return puzzle
-
-    async def get_puzzle(self, new: bool) -> Program:
-        if new:
-            return await self.get_new_puzzle()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            if record is None:
-                return await self.get_new_puzzle()  # pragma: no cover
-            puzzle = puzzle_for_pk(record.pubkey)
-            return puzzle
-
-    async def get_puzzle_hash(self, new: bool) -> bytes32:
-        if new:
-            return await self.get_new_puzzlehash()
-        else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            if record is None:
-                return await self.get_new_puzzlehash()
-            return record.puzzle_hash
-
-    async def get_new_puzzlehash(self) -> bytes32:
-        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
-        return puzhash
-
     def make_solution(
         self,
-        primaries: list[Payment],
+        primaries: list[CreateCoin],
         conditions: tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program:
@@ -214,7 +183,7 @@ class Wallet:
         condition_list: list[Any] = [condition.to_program() for condition in conditions]
         if len(primaries) > 0:
             for primary in primaries:
-                condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
+                condition_list.append(primary.to_program())
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
 
@@ -235,7 +204,9 @@ class Wallet:
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: list[WalletCoinRecord] = list(await self.get_max_spendable_coins())
+        spendable_coins: list[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), in_one_block=True)
+        )
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
@@ -257,17 +228,18 @@ class Wallet:
 
     async def _generate_unsigned_transaction(
         self,
-        amount: uint64,
-        newpuzzlehash: bytes32,
+        amounts: list[uint64],
+        newpuzzlehashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        origin_id: Optional[bytes32] = None,
-        coins: Optional[set[Coin]] = None,
-        primaries_input: Optional[list[Payment]] = None,
-        memos: Optional[list[bytes]] = None,
+        origin_id: bytes32 | None = None,
+        coins: set[Coin] | None = None,
+        memos: list[list[bytes]] | None = None,
         negative_change_allowed: bool = False,
-        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
+        puzzle_decorator_override: list[dict[str, Any]] | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
+        reserve_fee: uint64 | None = None,
+        preferred_change_puzzle_hash: bytes32 | None = None,
     ) -> list[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -277,11 +249,7 @@ class Wallet:
         if puzzle_decorator_override is not None:
             decorator_manager = PuzzleDecoratorManager.create(puzzle_decorator_override)
 
-        primaries = []
-        if primaries_input is not None:
-            primaries.extend(primaries_input)
-
-        total_amount = amount + sum(primary.amount for primary in primaries) + fee
+        total_amount = sum(amounts) + fee
         total_balance = await self.get_spendable_balance()
         if coins is None:
             if total_amount > total_balance:
@@ -304,10 +272,10 @@ class Wallet:
         assert change >= 0
 
         spends: list[CoinSpend] = []
-        primary_announcement: Optional[AssertCoinAnnouncement] = None
+        primary_announcement: AssertCoinAnnouncement | None = None
 
         # Check for duplicates
-        all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
+        all_primaries_list = list(zip(amounts, newpuzzlehashes))
         if len(set(all_primaries_list)) != len(all_primaries_list):
             raise ValueError("Cannot create two identical coins")
         for coin in coins:
@@ -315,28 +283,46 @@ class Wallet:
             if origin_id in {None, coin.name()}:
                 origin_id = coin.name()
                 inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
-                    inner_puzzle, newpuzzlehash
-                )
-                target_primary: list[Payment] = []
+                decorated_target_puzzle_hashes = [
+                    decorator_manager.decorate_target_puzzle_hash(inner_puzzle, newpuzzlehash)
+                    for newpuzzlehash in newpuzzlehashes
+                ]
                 if memos is None:
-                    memos = []
-                memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
-                if (primaries_input is None and amount > 0) or primaries_input is not None:
-                    primaries.append(Payment(decorated_target_puzzle_hash, amount, memos))
-                    target_primary.append(Payment(newpuzzlehash, amount, memos))
+                    memos = [[]] * len(amounts)
+                decorated_memos = [
+                    decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, mems)
+                    for newpuzzlehash, mems in zip(newpuzzlehashes, memos)
+                ]
+
+                primaries = [
+                    CreateCoin(decorated_target_puzzle_hash, amount, mems)
+                    for decorated_target_puzzle_hash, amount, mems in zip(
+                        decorated_target_puzzle_hashes, amounts, decorated_memos
+                    )
+                ]
+                target_primaries = [
+                    CreateCoin(newpuzzlehash, amount, mems)
+                    for newpuzzlehash, amount, mems in zip(newpuzzlehashes, amounts, decorated_memos)
+                ]
 
                 if change > 0:
-                    if action_scope.config.tx_config.reuse_puzhash:
-                        change_puzzle_hash: bytes32 = coin.puzzle_hash
-                        for primary in primaries:
-                            if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
-                                # We cannot create two coins has same id, create a new puzhash for the change:
-                                change_puzzle_hash = await self.get_new_puzzlehash()
-                                break
-                    else:
-                        change_puzzle_hash = await self.get_new_puzzlehash()
-                    primaries.append(Payment(change_puzzle_hash, uint64(change)))
+                    change_puzzle_hash = (
+                        preferred_change_puzzle_hash
+                        if preferred_change_puzzle_hash is not None
+                        else await action_scope.get_puzzle_hash(self.wallet_state_manager)
+                    )
+                    for primary in primaries:
+                        if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
+                            if preferred_change_puzzle_hash is not None:
+                                raise ValueError(
+                                    "A `preferred_change_puzzle_hash` was specified that would make a duplicate output"
+                                )
+                            # We cannot create two coins has same id, create a new puzhash for the change:
+                            change_puzzle_hash = await action_scope.get_puzzle_hash(
+                                self.wallet_state_manager, override_reuse_puzhash_with=False
+                            )
+                            break
+                    primaries.append(CreateCoin(change_puzzle_hash, uint64(change)))
                 message_list: list[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
@@ -344,10 +330,10 @@ class Wallet:
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = self.make_solution(
                     primaries=primaries,
-                    fee=fee,
+                    fee=fee if reserve_fee is None else reserve_fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
-                solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
+                solution = decorator_manager.solve(inner_puzzle, target_primaries, solution)
                 primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
 
                 spends.append(
@@ -393,47 +379,45 @@ class Wallet:
 
     async def generate_signed_transaction(
         self,
-        amount: uint64,
-        puzzle_hash: bytes32,
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[set[Coin]] = None,
-        primaries: Optional[list[Payment]] = None,
-        memos: Optional[list[bytes]] = None,
-        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
+        coins: set[Coin] | None = None,
+        memos: list[list[bytes]] | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
-        origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
+        origin_id: bytes32 | None = kwargs.get("origin_id", None)
         negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
+        puzzle_decorator_override: list[dict[str, Any]] | None = kwargs.get("puzzle_decorator_override", None)
+        reserve_fee: uint64 | None = kwargs.get("reserve_fee", None)
+        preferred_change_puzzle_hash: bytes32 | None = kwargs.get("preferred_change_puzzle_hash", None)
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
         The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
-        if primaries is None:
-            non_change_amount = amount
-        else:
-            non_change_amount = uint64(amount + sum(p.amount for p in primaries))
+        non_change_amount = uint64(sum(amounts))
 
-        self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
+        self.log.debug("Generating transaction for: %s %s %r", puzzle_hashes, amounts, coins)
         transaction = await self._generate_unsigned_transaction(
-            amount,
-            puzzle_hash,
+            amounts,
+            puzzle_hashes,
             action_scope,
             fee,
             origin_id,
             coins,
-            primaries,
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
             extra_conditions=extra_conditions,
+            reserve_fee=reserve_fee,
+            preferred_change_puzzle_hash=preferred_change_puzzle_hash,
         )
         assert len(transaction) > 0
         spend_bundle = WalletSpendBundle(transaction, G2Element())
 
-        now = uint64(int(time.time()))
         add_list: list[Coin] = list(spend_bundle.additions())
         rem_list: list[Coin] = list(spend_bundle.removals())
 
@@ -444,26 +428,19 @@ class Wallet:
         else:
             assert output_amount == input_amount
 
+        to_ph = add_list[0].puzzle_hash if len(add_list) > 0 else bytes32.zeros
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
-                TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=now,
-                    to_puzzle_hash=puzzle_hash,
+                self.wallet_state_manager.new_outgoing_transaction(
+                    wallet_id=self.id(),
+                    puzzle_hash=to_ph,
                     amount=uint64(non_change_amount),
-                    fee_amount=uint64(fee),
-                    confirmed=False,
-                    sent=uint32(0),
+                    fee=fee,
                     spend_bundle=spend_bundle,
                     additions=add_list,
                     removals=rem_list,
-                    wallet_id=self.id(),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_TX.value),
                     name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
-                    valid_times=parse_timelock_info(extra_conditions),
+                    extra_conditions=extra_conditions,
                 )
             )
 
@@ -471,21 +448,27 @@ class Wallet:
         self,
         fee: uint64,
         action_scope: WalletActionScope,
+        coins: set[Coin] | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
+        reserve_fee: uint64 | None = None,
+        preferred_change_puzzle_hash: bytes32 | None = None,
     ) -> None:
-        chia_coins = await self.select_coins(fee, action_scope)
+        if coins is None:
+            coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
-            uint64(0),
-            (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
+            [],
+            [],
             action_scope,
             fee=fee,
-            coins=chia_coins,
+            coins=coins,
             extra_conditions=extra_conditions,
+            reserve_fee=reserve_fee,
+            preferred_change_puzzle_hash=preferred_change_puzzle_hash,
         )
 
     async def get_coins_to_offer(
         self,
-        asset_id: Optional[bytes32],
+        asset_id: bytes32 | None,
         amount: uint64,
         action_scope: WalletActionScope,
     ) -> set[Coin]:
@@ -499,9 +482,7 @@ class Wallet:
             return await self.select_coins(amount, sandbox)
 
     # WSChiaConnection is only imported for type checking
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: object | None) -> None:
         pass
 
     def get_name(self) -> str:
@@ -509,16 +490,19 @@ class Wallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         if hint == coin.puzzle_hash:
-            wallet_identifier: Optional[
-                WalletIdentifier
-            ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
+            wallet_identifier: (
+                WalletIdentifier | None
+            ) = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
             if wallet_identifier is not None and wallet_identifier.id == self.id():
                 return True
         return False
 
-    async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
+    def hardened_pubkey_for_path(self, path: list[int]) -> G1Element:
+        return _derive_path(self.wallet_state_manager.get_master_private_key(), path).get_g1()
+
+    async def sum_hint_for_pubkey(self, pk: bytes) -> SumHint | None:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
-        dr: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
+        dr: DerivationRecord | None = await self.wallet_state_manager.puzzle_store.record_for_puzzle_hash(
             puzzle_hash_for_synthetic_public_key(pk_parsed)
         )
         if dr is None:
@@ -529,9 +513,9 @@ class Wallet:
             pk,
         )
 
-    async def path_hint_for_pubkey(self, pk: bytes) -> Optional[PathHint]:
+    async def path_hint_for_pubkey(self, pk: bytes) -> PathHint | None:
         pk_parsed: G1Element = G1Element.from_bytes(pk)
-        index: Optional[uint32] = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pk_parsed)
+        index: uint32 | None = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pk_parsed)
         if index is None:
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                 puzzle_hash_for_synthetic_public_key(pk_parsed)
@@ -601,8 +585,7 @@ class Wallet:
                 if fingerprint_as_int not in pk_lookup:
                     if not partial_allowed:
                         raise ValueError(
-                            "No pubkey found (or path hinted to) for "
-                            f"fingerprint {int.from_bytes(fingerprint, 'big')}"
+                            f"No pubkey found (or path hinted to) for fingerprint {int.from_bytes(fingerprint, 'big')}"
                         )
                     else:
                         aggregate_responses_at_end = False

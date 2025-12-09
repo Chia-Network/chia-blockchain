@@ -59,22 +59,6 @@ echo "${CHIAVDF_POETRY_INFO_VERSION}"
 CHIAVDF_VERSION="chiavdf==${CHIAVDF_POETRY_INFO_VERSION}"
 echo "${CHIAVDF_VERSION}"
 
-ubuntu_cmake_install() {
-  UBUNTU_PRE_2004=$(python -c 'import subprocess; id = subprocess.run(["lsb_release", "-is"], stdout=subprocess.PIPE); version = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(id.stdout.decode("ascii") == "Ubuntu\n" and float(version.stdout) < float(20.04))')
-  if [ "$UBUNTU_PRE_2004" = "True" ]; then
-    echo "Installing CMake with snap."
-    sudo apt-get install snapd -y
-    sudo apt-get remove --purge cmake -y
-    hash -r
-    sudo snap install cmake --classic
-    # shellcheck disable=SC1091
-    . /etc/profile
-  else
-    echo "Ubuntu 20.04LTS and newer support CMake 3.16+"
-    sudo apt-get install cmake -y
-  fi
-}
-
 symlink_vdf_bench() {
   if [ ! -e vdf_bench ] && [ -e venv/lib/"$1"/site-packages/vdf_bench ]; then
     echo ln -s venv/lib/"$1"/site-packages/vdf_bench
@@ -111,8 +95,6 @@ if [ -e "$THE_PATH" ]; then
 else
   if [ -e venv/bin/python ] && test "$UBUNTU_DEBIAN"; then
     echo "Installing chiavdf dependencies on Ubuntu/Debian"
-    # If Ubuntu version is older than 20.04LTS then upgrade CMake
-    ubuntu_cmake_install
     # Install remaining needed development tools - assumes venv and prior run of install.sh
     echo "apt-get install libgmp-dev libboost-python-dev $PYTHON_DEV_DEPENDENCY libboost-system-dev build-essential -y"
     sudo apt-get install libgmp-dev libboost-python-dev "$PYTHON_DEV_DEPENDENCY" libboost-system-dev build-essential -y
@@ -131,7 +113,11 @@ else
     symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ] && test "$MACOS"; then
     echo "Installing chiavdf dependencies for MacOS."
-    brew install --formula --quiet boost cmake gmp
+    if ! cmake --version >/dev/null 2>&1; then
+      brew install --formula --quiet cmake
+    fi
+    # The most recent boost version causes compile errors.
+    brew install --formula --quiet boost gmp
     echo "Installing chiavdf from source."
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"

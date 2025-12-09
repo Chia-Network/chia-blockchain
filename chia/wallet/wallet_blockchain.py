@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, cast
+
+from chia_rs import BlockRecord, ConsensusConstants, HeaderBlock
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
-from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.header_block import HeaderBlock
 from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
@@ -32,10 +31,10 @@ class WalletBlockchain:
     _basic_store: KeyValStore
     _weight_proof_handler: WalletWeightProofHandler
 
-    synced_weight_proof: Optional[WeightProof]
+    synced_weight_proof: WeightProof | None
     _finished_sync_up_to: uint32
 
-    _peak: Optional[HeaderBlock]
+    _peak: HeaderBlock | None
     _height_to_hash: dict[uint32, bytes32]
     _block_records: dict[bytes32, BlockRecord]
     _latest_timestamp: uint64
@@ -71,7 +70,7 @@ class WalletBlockchain:
         return self
 
     async def new_valid_weight_proof(self, weight_proof: WeightProof, records: list[BlockRecord]) -> None:
-        peak: Optional[HeaderBlock] = await self.get_peak_block()
+        peak: HeaderBlock | None = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
             # No update, don't change anything
@@ -94,7 +93,7 @@ class WalletBlockchain:
             await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
             await self.clean_block_records()
 
-    async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Optional[Err]]:
+    async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Err | None]:
         if self.contains_block(block.header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None
         if not self.contains_block(block.prev_header_hash) and block.height > 0:
@@ -160,7 +159,7 @@ class WalletBlockchain:
 
         await self._basic_store.remove_object("PEAK_BLOCK")
 
-    async def set_peak_block(self, block: HeaderBlock, timestamp: Optional[uint64] = None) -> None:
+    async def set_peak_block(self, block: HeaderBlock, timestamp: uint64 | None = None) -> None:
         await self._basic_store.set_object("PEAK_BLOCK", block)
         self._peak = block
         if timestamp is not None:
@@ -169,13 +168,13 @@ class WalletBlockchain:
             self._latest_timestamp = block.foliage_transaction_block.timestamp
         log.info(f"Peak set to: {self._peak.height} timestamp: {self._latest_timestamp}")
 
-    async def get_peak_block(self) -> Optional[HeaderBlock]:
+    async def get_peak_block(self) -> HeaderBlock | None:
         if self._peak is not None:
             return self._peak
         header_block = await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
-        assert header_block is None or isinstance(
-            header_block, HeaderBlock
-        ), f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        assert header_block is None or isinstance(header_block, HeaderBlock), (
+            f"get_peak_block expected Optional[HeaderBlock], got {type(header_block)}"
+        )
         return header_block
 
     async def set_finished_sync_up_to(self, height: int, *, in_rollback: bool = False) -> None:
@@ -184,7 +183,7 @@ class WalletBlockchain:
             await self.clean_block_records()
 
     async def get_finished_sync_up_to(self) -> uint32:
-        h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
+        h: uint32 | None = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if h is None:
             return uint32(0)
         return h
@@ -192,7 +191,11 @@ class WalletBlockchain:
     def get_latest_timestamp(self) -> uint64:
         return self._latest_timestamp
 
-    def contains_block(self, header_hash: bytes32) -> bool:
+    def contains_block(self, header_hash: bytes32, height: uint32 | None = None) -> bool:
+        """
+        True if we have already added this block to the chain. This may return false for orphan blocks
+        that we have added but no longer keep in memory.
+        """
         return header_hash in self._block_records
 
     def contains_height(self, height: uint32) -> bool:
@@ -201,18 +204,18 @@ class WalletBlockchain:
     def height_to_hash(self, height: uint32) -> bytes32:
         return self._height_to_hash[height]
 
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return self._block_records.get(header_hash)
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
-        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        header_hash: bytes32 | None = self.height_to_hash(height)
         assert header_hash is not None
         return self._block_records[header_hash]
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
 
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
         # the wallet doesn't have the blockchain DB, this implements the
         # blockchain_interface
         return self._block_records.get(header_hash)

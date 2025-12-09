@@ -4,7 +4,7 @@
 
 | Releases                                                                                                                                        | Repo Stats                                                                                                                                                                                                           | Socials                                                                                                                                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [![Latest Release][badge-release]][link-latest] <br /> [![Latest RC][badge-rc]][link-release] <br /> [![Latest Beta][badge-beta]][link-release] | [![Coverage][badge-coverage]][link-coverage] <br /> [![Downloads][badge-downloads]][link-downloads] <br /> [![Commits][badge-commits]][link-commits] <br /> [![Contributers][badge-contributers]][link-contributers] | [![Discord][badge-discord]][link-discord] <br /> [![YouTube][badge-youtube]][link-youtube] <br /> [![Reddit][badge-reddit]][link-reddit] <br /> [![Twitter][badge-twitter]][link-twitter] |
+| [![Latest Release][badge-release]][link-latest] <br /> [![Latest RC][badge-rc]][link-release] <br /> [![Latest Beta][badge-beta]][link-release] | [![Coverage][badge-coverage]][link-coverage] <br /> [![Downloads][badge-downloads]][link-downloads] <br /> [![Commits][badge-commits]][link-commits] <br /> [![Contributors][badge-contributors]][link-contributors] | [![Discord][badge-discord]][link-discord] <br /> [![YouTube][badge-youtube]][link-youtube] <br /> [![Reddit][badge-reddit]][link-reddit] <br /> [![Twitter][badge-twitter]][link-twitter] |
 
 Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
 
@@ -20,7 +20,7 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 
 Please check out the [Chia website][link-chia], the [Intro to Chia][link-intro], and [FAQ][link-faq] for information on this project.
 
-Python 3.9+ is required. Make sure your default python version is >=3.9 by typing `python3`.
+Python 3.10+ is required. Make sure your default python version is >=3.10 by typing `python3`.
 
 If you are behind a NAT, it can be difficult for peers outside your subnet to reach you when they start up. You can enable [UPnP][link-upnp]
 on your router or add a NAT (for IPv4 but not IPv6) and firewall rules to allow TCP port 8444 access to your peer.
@@ -42,9 +42,9 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [badge-beta]: https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-beta.json&query=%24.message&logo=chianetwork&logoColor=black&label=Latest%20Beta&labelColor=%23e9fbbc&color=%231e2b2e
 [badge-beta2]: https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-beta.json&query=%24.message&logo=chianetwork&logoColor=%23e9fbbc&label=Latest%20Beta&labelColor=%23474748&color=%231e2b2e&link=https%3A%2F%2Fgithub.com%2FChia-Network%2Fchia-blockchain%2Freleases&link=https%3A%2F%2Fgithub.com%2FChia-Network%2Fchia-blockchain%2Freleases
 [badge-commits]: https://img.shields.io/github/commit-activity/w/Chia-Network/chia-blockchain?logo=GitHub
-[badge-contributers]: https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub
+[badge-contributors]: https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub
 [badge-coverage]: https://img.shields.io/coverallsCoverage/github/Chia-Network/chia-blockchain?logo=Coveralls&logoColor=red&labelColor=%23212F39
-[badge-discord]: https://dcbadge.vercel.app/api/server/chia?style=flat-square&theme=full-presence
+[badge-discord]: https://img.shields.io/badge/discord-Chia%20Network-green.svg
 [badge-discord2]: https://img.shields.io/discord/1034523881404370984.svg?label=Discord&logo=discord&colorB=1e2b2f
 [badge-downloads]: https://img.shields.io/github/downloads/Chia-Network/chia-blockchain/total?logo=GitHub
 [badge-rc]: https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-rc.json&query=%24.message&logo=chianetwork&logoColor=white&label=Latest%20RC&labelColor=%230d3349&color=%23474748
@@ -56,7 +56,7 @@ Once installed, an [Intro to Chia][link-intro] guide is available in the [Chia D
 [link-chialisp]: https://chialisp.com/
 [link-commits]: https://github.com/Chia-Network/chia-blockchain/commits/main/
 [link-consensus]: https://docs.chia.net/consensus-intro/
-[link-contributers]: https://github.com/Chia-Network/chia-blockchain/graphs/contributors
+[link-contributors]: https://github.com/Chia-Network/chia-blockchain/graphs/contributors
 [link-coverage]: https://coveralls.io/github/Chia-Network/chia-blockchain
 [link-discord]: https://discord.gg/chia
 [link-docs]: https://docs.chia.net/docs-home/

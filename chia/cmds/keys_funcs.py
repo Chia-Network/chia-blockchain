@@ -5,17 +5,16 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint32
 
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import bech32_encode, convertbits, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,
@@ -31,6 +30,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 
 
 def unlock_keyring() -> None:
@@ -58,7 +58,7 @@ def generate_and_print() -> str:
     return mnemonic
 
 
-def generate_and_add(label: Optional[str]) -> None:
+def generate_and_add(label: str | None) -> None:
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
     """
@@ -67,7 +67,7 @@ def generate_and_add(label: Optional[str]) -> None:
     query_and_add_key_info(mnemonic_or_pk=generate_mnemonic(), label=label)
 
 
-def query_and_add_key_info(mnemonic_or_pk: Optional[str], label: Optional[str] = None) -> None:
+def query_and_add_key_info(mnemonic_or_pk: str | None, label: str | None = None) -> None:
     unlock_keyring()
     if mnemonic_or_pk is None:
         mnemonic_or_pk = input("Enter the mnemonic/observer key you want to use: ")
@@ -78,7 +78,7 @@ def query_and_add_key_info(mnemonic_or_pk: Optional[str], label: Optional[str] =
     add_key_info(mnemonic_or_pk, label)
 
 
-def add_key_info(mnemonic_or_pk: str, label: Optional[str]) -> None:
+def add_key_info(mnemonic_or_pk: str, label: str | None) -> None:
     """
     Add a private key seed or public key to the keyring, with the given mnemonic and an optional label.
     """
@@ -136,7 +136,7 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
-def format_pk_bech32_maybe(prefix: Optional[str], pubkey: str) -> str:
+def format_pk_bech32_maybe(prefix: str | None, pubkey: str) -> str:
     return pubkey if prefix is None else bech32_encode(prefix, convertbits(list(bytes.fromhex(pubkey)), 8, 5))
 
 
@@ -145,8 +145,8 @@ def show_keys(
     show_mnemonic: bool,
     non_observer_derivation: bool,
     json_output: bool,
-    fingerprint: Optional[int],
-    bech32m_prefix: Optional[str],
+    fingerprint: int | None,
+    bech32m_prefix: str | None,
 ) -> None:
     """
     Prints all keys and mnemonics (if available).
@@ -190,14 +190,14 @@ def show_keys(
 
         if non_observer_derivation:
             if sk is None:
-                first_wallet_pk: Optional[G1Element] = None
+                first_wallet_pk: G1Element | None = None
             else:
                 first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
         else:
             first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.public_key, uint32(0))
 
         if first_wallet_pk is not None:
-            wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
+            wallet_address: str = encode_puzzle_hash(puzzle_hash_for_pk(first_wallet_pk), prefix)
             key["wallet_address"] = wallet_address
         else:
             key["wallet_address"] = None
@@ -250,8 +250,8 @@ def delete(fingerprint: int) -> None:
 
 
 def derive_pk_and_sk_from_hd_path(
-    master_pk: G1Element, hd_path_root: str, master_sk: Optional[PrivateKey] = None
-) -> tuple[G1Element, Optional[PrivateKey], str]:
+    master_pk: G1Element, hd_path_root: str, master_sk: PrivateKey | None = None
+) -> tuple[G1Element, PrivateKey | None, str]:
     """
     Derive a private key from the provided HD path. Takes a master key and HD path as input,
     and returns the derived key and the HD path that was used to derive it.
@@ -290,7 +290,7 @@ def derive_pk_and_sk_from_hd_path(
 
     # Derive keys along the path
     if master_sk is not None:
-        current_sk: Optional[PrivateKey] = master_sk
+        current_sk: PrivateKey | None = master_sk
         assert current_sk is not None
         for current_index, derivation_type in index_and_derivation_types:
             if derivation_type == DerivationType.NONOBSERVER:
@@ -359,10 +359,10 @@ def _clear_line_part(n: int) -> None:
 
 def _search_derived(
     current_pk: G1Element,
-    current_sk: Optional[PrivateKey],
+    current_sk: PrivateKey | None,
     search_terms: tuple[str, ...],
     path: str,
-    path_indices: Optional[list[int]],
+    path_indices: list[int] | None,
     limit: int,
     non_observer_derivation: bool,
     show_progress: bool,
@@ -417,17 +417,17 @@ def _search_derived(
             else:
                 child_sk = None
 
-        address: Optional[str] = None
+        address: str | None = None
 
         if search_address:
             # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
             assert child_pk is not None
             # TODO: consider generating addresses using other puzzles
-            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), prefix)
+            address = encode_puzzle_hash(puzzle_hash_for_pk(child_pk), prefix)
 
         for term in remaining_search_terms:
             found_item: Any = None
-            found_item_type: Optional[DerivedSearchResultType] = None
+            found_item_type: DerivedSearchResultType | None = None
 
             if search_private_key and term in str(child_sk):
                 assert child_sk is not None  # semantics above guarantee this
@@ -478,15 +478,15 @@ def _search_derived(
 
 def search_derive(
     root_path: Path,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     search_terms: tuple[str, ...],
     limit: int,
     non_observer_derivation: bool,
     show_progress: bool,
     search_types: tuple[str, ...],
-    derive_from_hd_path: Optional[str],
-    prefix: Optional[str],
-    private_key: Optional[PrivateKey],
+    derive_from_hd_path: str | None,
+    prefix: str | None,
+    private_key: PrivateKey | None,
 ) -> bool:
     """
     Searches for items derived from the provided private key, or if not specified,
@@ -513,7 +513,7 @@ def search_derive(
 
     if fingerprint is None and private_key is None:
         public_keys: list[G1Element] = Keychain().get_all_public_keys()
-        private_keys: list[Optional[PrivateKey]] = [
+        private_keys: list[PrivateKey | None] = [
             data.private_key if data.secrets is not None else None for data in Keychain().get_keys(include_secrets=True)
         ]
     elif fingerprint is None:
@@ -643,13 +643,13 @@ def search_derive(
 
 def derive_wallet_address(
     root_path: Path,
-    fingerprint: Optional[int],
+    fingerprint: int | None,
     index: int,
     count: int,
-    prefix: Optional[str],
+    prefix: str | None,
     non_observer_derivation: bool,
     show_hd_path: bool,
-    private_key: Optional[PrivateKey],
+    private_key: PrivateKey | None,
 ) -> None:
     """
     Generate wallet addresses using keys derived from the provided private key.
@@ -682,7 +682,7 @@ def derive_wallet_address(
             pubkey = master_pk_to_wallet_pk_unhardened(pk, uint32(i))
         # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
         # TODO: consider generating addresses using other puzzles
-        address = encode_puzzle_hash(create_puzzlehash_for_pk(pubkey), prefix)
+        address = encode_puzzle_hash(puzzle_hash_for_pk(pubkey), prefix)
         if show_hd_path:
             print(
                 f"Wallet address {i} "
@@ -700,16 +700,16 @@ def private_key_string_repr(private_key: PrivateKey) -> str:
 
 
 def derive_child_key(
-    fingerprint: Optional[int],
-    key_type: Optional[str],
-    derive_from_hd_path: Optional[str],
+    fingerprint: int | None,
+    key_type: str | None,
+    derive_from_hd_path: str | None,
     index: int,
     count: int,
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
-    private_key: Optional[PrivateKey],
-    bech32m_prefix: Optional[str],
+    private_key: PrivateKey | None,
+    bech32m_prefix: str | None,
 ) -> None:
     """
     Derive child keys from the provided master key.
@@ -719,7 +719,7 @@ def derive_child_key(
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=True)
         current_pk: G1Element = key_data.public_key
-        current_sk: Optional[PrivateKey] = key_data.private_key if key_data.secrets is not None else None
+        current_sk: PrivateKey | None = key_data.private_key if key_data.secrets is not None else None
     else:
         assert private_key is not None
         current_pk = private_key.get_g1()
@@ -743,11 +743,10 @@ def derive_child_key(
         if non_observer_derivation:
             assert current_sk is not None  # semantics above guarantee this
             current_sk = _derive_path(current_sk, path_indices)
+        elif current_sk is not None:
+            current_sk = _derive_path_unhardened(current_sk, path_indices)
         else:
-            if current_sk is not None:
-                current_sk = _derive_path_unhardened(current_sk, path_indices)
-            else:
-                current_pk = _derive_pk_unhardened(current_pk, path_indices)
+            current_pk = _derive_pk_unhardened(current_pk, path_indices)
 
         derivation_root_sk = current_sk
         derivation_root_pk = current_pk
@@ -768,17 +767,16 @@ def derive_child_key(
             assert derivation_root_sk is not None  # semantics above guarantee this
             sk = _derive_path(derivation_root_sk, [i])
             pk = sk.get_g1()
+        elif derivation_root_sk is not None:
+            sk = _derive_path_unhardened(derivation_root_sk, [i])
+            pk = sk.get_g1()
         else:
-            if derivation_root_sk is not None:
-                sk = _derive_path_unhardened(derivation_root_sk, [i])
-                pk = sk.get_g1()
-            else:
-                sk = None
-                pk = _derive_pk_unhardened(derivation_root_pk, [i])
+            sk = None
+            pk = _derive_pk_unhardened(derivation_root_pk, [i])
         hd_path: str = (
             " (" + hd_path_root + str(i) + ("n" if non_observer_derivation else "") + ")" if show_hd_path else ""
         )
-        key_type_str: Optional[str]
+        key_type_str: str | None
 
         if key_type is not None:
             key_type_str = key_type.capitalize()
@@ -790,7 +788,7 @@ def derive_child_key(
             print(f"{key_type_str} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 
 
-def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
+def private_key_for_fingerprint(fingerprint: int) -> PrivateKey | None:
     unlock_keyring()
     private_keys = Keychain().get_all_private_keys()
 
@@ -800,7 +798,7 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
     return None
 
 
-def prompt_for_fingerprint() -> Optional[int]:
+def prompt_for_fingerprint() -> int | None:
     fingerprints: list[int] = [pk.get_fingerprint() for pk in Keychain().get_all_public_keys()]
     while True:
         print("Choose key:")
@@ -824,8 +822,8 @@ def prompt_for_fingerprint() -> Optional[int]:
 
 
 def get_private_key_with_fingerprint_or_prompt(
-    fingerprint: Optional[int],
-) -> tuple[Optional[int], Optional[PrivateKey]]:
+    fingerprint: int | None,
+) -> tuple[int | None, PrivateKey | None]:
     """
     Get a private key with the specified fingerprint. If fingerprint is not
     specified, prompt the user to select a key.
@@ -850,8 +848,8 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
 
 
 def resolve_derivation_master_key(
-    fingerprint_or_filename: Optional[Union[int, str, Path]],
-) -> tuple[Optional[int], Optional[PrivateKey]]:
+    fingerprint_or_filename: int | str | Path | None,
+) -> tuple[int | None, PrivateKey | None]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """

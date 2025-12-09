@@ -1,17 +1,76 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
-from dataclasses import dataclass
-from queue import SimpleQueue
-from typing import Optional
+from dataclasses import dataclass, field
+from queue import PriorityQueue, SimpleQueue
+from typing import ClassVar, Generic, TypeVar
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.transaction_queue_entry import TransactionQueueEntry
+from chia_rs import SpendBundle
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
+
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.errors import Err
+
+T = TypeVar("T")
 
 
 class TransactionQueueFull(Exception):
     pass
+
+
+class ValuedEventSentinel:
+    pass
+
+
+@dataclasses.dataclass
+class ValuedEvent(Generic[T]):
+    _value_sentinel: ClassVar[ValuedEventSentinel] = ValuedEventSentinel()
+
+    _event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    _value: ValuedEventSentinel | T = _value_sentinel
+
+    def set(self, value: T) -> None:
+        if not isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value already set")
+        self._value = value
+        self._event.set()
+
+    async def wait(self) -> T:
+        await self._event.wait()
+        if isinstance(self._value, ValuedEventSentinel):
+            raise Exception("Value not set despite event being set")
+        return self._value
+
+
+@dataclasses.dataclass(frozen=True)
+class PeerWithTx:
+    peer_host: str
+    advertised_fee: uint64
+    advertised_cost: uint64
+
+
+@dataclass(frozen=True, order=True)
+class TransactionQueueEntry:
+    """
+    A transaction received from peer. This is put into a queue, and not yet in the mempool.
+    """
+
+    transaction: SpendBundle = field(compare=False)
+    transaction_bytes: bytes | None = field(compare=False)
+    spend_name: bytes32
+    peer: WSChiaConnection | None = field(compare=False)
+    test: bool = field(compare=False)
+    # IDs of peers that advertised this transaction via new_transaction, along
+    # with their hostname, fee and cost.
+    peers_with_tx: dict[bytes32, PeerWithTx] = field(default_factory=dict, compare=False)
+    done: ValuedEvent[tuple[MempoolInclusionStatus, Err | None]] = field(
+        default_factory=ValuedEvent,
+        compare=False,
+    )
 
 
 @dataclass
@@ -26,7 +85,7 @@ class TransactionQueue:
     _list_cursor: int  # this is which index
     _queue_length: asyncio.Semaphore
     _index_to_peer_map: list[bytes32]
-    _queue_dict: dict[bytes32, SimpleQueue[TransactionQueueEntry]]
+    _queue_dict: dict[bytes32, PriorityQueue[tuple[float, TransactionQueueEntry]]]
     _high_priority_queue: SimpleQueue[TransactionQueueEntry]
     peer_size_limit: int
     log: logging.Logger
@@ -40,15 +99,25 @@ class TransactionQueue:
         self.peer_size_limit = peer_size_limit
         self.log = log
 
-    async def put(self, tx: TransactionQueueEntry, peer_id: Optional[bytes32], high_priority: bool = False) -> None:
+    def put(self, tx: TransactionQueueEntry, peer_id: bytes32 | None, high_priority: bool = False) -> None:
         if peer_id is None or high_priority:  # when it's local there is no peer_id.
             self._high_priority_queue.put(tx)
         else:
             if peer_id not in self._queue_dict:
-                self._queue_dict[peer_id] = SimpleQueue()
+                self._queue_dict[peer_id] = PriorityQueue()
                 self._index_to_peer_map.append(peer_id)
             if self._queue_dict[peer_id].qsize() < self.peer_size_limit:
-                self._queue_dict[peer_id].put(tx)
+                tx_info = tx.peers_with_tx.get(peer_id)
+                if tx_info is not None and tx_info.advertised_cost > 0:
+                    fpc = tx_info.advertised_fee / tx_info.advertised_cost
+                    # PriorityQueue returns lowest first so we invert
+                    priority = -fpc
+                else:
+                    # This peer didn't advertise cost and fee information for
+                    # this transaction (it sent a `RespondTransaction` message
+                    # instead of a `NewTransaction` one).
+                    priority = float("inf")
+                self._queue_dict[peer_id].put((priority, tx))
             else:
                 self.log.warning(f"Transaction queue full for peer {peer_id}")
                 raise TransactionQueueFull(f"Transaction queue full for peer {peer_id}")
@@ -58,11 +127,11 @@ class TransactionQueue:
         await self._queue_length.acquire()
         if not self._high_priority_queue.empty():
             return self._high_priority_queue.get()
-        result: Optional[TransactionQueueEntry] = None
+        result: TransactionQueueEntry | None = None
         while True:
             peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
             if not peer_queue.empty():
-                result = peer_queue.get()
+                _, result = peer_queue.get()
             self._list_cursor += 1
             if self._list_cursor > len(self._index_to_peer_map) - 1:
                 # reset iterator

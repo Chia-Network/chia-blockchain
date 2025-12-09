@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field, replace
-from typing import Optional
 
 import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMetadataParsingError
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
 
 clawback_metadata = ClawbackMetadata(uint64(0), bytes32(b"1" * 32), bytes32(b"2" * 32))
@@ -134,7 +133,7 @@ class DummyWalletCoinRecords:
     ],
 )
 def test_wallet_coin_record_parsed_metadata_failures(invalid_record: WalletCoinRecord, error: str) -> None:
-    with pytest.raises(ValueError, match=error):
+    with pytest.raises(WalletCoinRecordMetadataParsingError, match=error):
         invalid_record.parsed_metadata()
 
 
@@ -632,7 +631,7 @@ get_coin_records_mixed_tests: list[tuple[GetCoinRecords, int, list[WalletCoinRec
 
 
 async def run_get_coin_records_test(
-    request: GetCoinRecords, total_count: Optional[int], coin_records: list[WalletCoinRecord]
+    request: GetCoinRecords, total_count: int | None, coin_records: list[WalletCoinRecord]
 ) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)

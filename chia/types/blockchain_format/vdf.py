@@ -4,15 +4,13 @@ import logging
 import traceback
 from enum import IntEnum
 from functools import lru_cache
-from typing import Optional
 
-from chia_rs import VDFInfo, VDFProof
+from chia_rs import ConsensusConstants, VDFInfo, VDFProof
+from chia_rs.sized_bytes import bytes32, bytes100
+from chia_rs.sized_ints import uint8, uint64
 from chiavdf import create_discriminant, verify_n_wesolowski
 
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
-from chia.util.ints import uint8, uint64
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +50,7 @@ def validate_vdf(
     constants: ConsensusConstants,
     input_el: ClassgroupElement,
     info: VDFInfo,
-    target_vdf_info: Optional[VDFInfo] = None,
+    target_vdf_info: VDFInfo | None = None,
 ) -> bool:
     """
     If target_vdf_info is passed in, it is compared with info.
