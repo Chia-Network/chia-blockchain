@@ -28,7 +28,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.streamable import Streamable, UInt32Range, streamable
+from chia.util.streamable import UInt32Range
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
@@ -124,6 +124,8 @@ from chia.wallet.wallet_request_types import (
     CheckOfferValidityResponse,
     CombineCoins,
     CombineCoinsResponse,
+    CRCATApprovePending,
+    CRCATApprovePendingResponse,
     CreateNewDL,
     CreateNewDLResponse,
     CreateNewWallet,
@@ -3820,12 +3822,13 @@ class WalletRpcApi:
         return VCRevokeResponse([], [])  # tx_endpoint takes care of filling this out
 
     @tx_endpoint(push=True)
+    @marshal
     async def crcat_approve_pending(
         self,
-        request: dict[str, Any],
+        request: CRCATApprovePending,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> CRCATApprovePendingResponse:
         """
         Moving any "pending approval" CR-CATs into the spendable balance of the wallet
         :param request: Required 'wallet_id'. Optional 'min_amount_to_claim' (default: full balance).
@@ -3834,27 +3837,18 @@ class WalletRpcApi:
         (CRCAT TX + fee TX)
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class CRCATApprovePending(Streamable):
-            wallet_id: uint32
-            min_amount_to_claim: uint64
-            fee: uint64 = uint64(0)
-
-        parsed_request = CRCATApprovePending.from_json_dict(request)
-        cr_cat_wallet = self.service.wallet_state_manager.wallets[parsed_request.wallet_id]
+        cr_cat_wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         assert isinstance(cr_cat_wallet, CRCATWallet)
 
         await cr_cat_wallet.claim_pending_approval_balance(
-            parsed_request.min_amount_to_claim,
+            request.min_amount_to_claim,
             action_scope,
-            fee=parsed_request.fee,
+            fee=request.fee,
             extra_conditions=extra_conditions,
         )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint will take care of default values here
+        return CRCATApprovePendingResponse([], [])
 
     @marshal
     async def gather_signing_info(

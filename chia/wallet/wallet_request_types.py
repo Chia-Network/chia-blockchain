@@ -2501,3 +2501,16 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
             ).to_json_dict()
 
         return super().from_json_dict(json_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class CRCATApprovePending(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    min_amount_to_claim: uint64 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class CRCATApprovePendingResponse(TransactionEndpointResponse):
+    pass
