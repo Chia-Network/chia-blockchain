@@ -3211,8 +3211,8 @@ class WalletStateManager:
                         recovery_list_hash = Program.from_bytes(override_recovery_list_hash)
                     if override_num_verification is not None:
                         num_verification_int = override_num_verification
-                        if override_metadata is not None:
-                            metadata = metadata_to_program(override_metadata)
+                    if override_metadata is not None:
+                        metadata = metadata_to_program(override_metadata)
                     did_puzzle = DID_INNERPUZ_MOD.curry(
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
