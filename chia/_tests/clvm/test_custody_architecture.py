@@ -7,8 +7,10 @@ from typing import Literal
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint64
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -230,7 +232,13 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
     for every combination of its nodes from size 1 - 5.
     """
     restrictions: list[Restriction[MemberOrDPuz]] = [ACSDPuzValidator()] if with_restrictions else []
-    async with sim_and_client() as (sim, client):
+    # TODO: This override is necessary because of this limitation
+    # https://github.com/Chia-Network/chia-blockchain/blob/67d617d19e5561dd573d0a6e6014db38733c66e2/chia/full_node/mempool_manager.py#L477
+    # If that doesn't exist anymore in its current form, we can remove this override.
+    async with sim_and_client(defaults=DEFAULT_CONSTANTS.replace(MAX_BLOCK_COST_CLVM=uint64(5_000_000_000))) as (
+        sim,
+        client,
+    ):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(2, 6):
                 m_of_n = PuzzleWithRestrictions(

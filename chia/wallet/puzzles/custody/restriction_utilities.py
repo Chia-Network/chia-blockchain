@@ -2,21 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from chia_puzzles_py import programs as puzzle_mods
 from chia_rs.sized_bytes import bytes32
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, Puzzle
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
 UNUSED_NONCE = 0
 
-ENFORCE_DPUZ_WRAPPERS = load_clvm_maybe_recompile(
-    "enforce_dpuz_wrappers.clsp", package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles"
-)
-ENFORCE_DPUZ_WRAPPERS_HASH = ENFORCE_DPUZ_WRAPPERS.get_tree_hash()
-ADD_DPUZ_WRAPPER = load_clvm_maybe_recompile(
-    "add_dpuz_wrapper.clsp", package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles"
-)
+ENFORCE_DPUZ_WRAPPERS = Program.from_bytes(puzzle_mods.ENFORCE_DPUZ_WRAPPERS)
+ENFORCE_DPUZ_WRAPPERS_HASH = bytes32(puzzle_mods.ENFORCE_DPUZ_WRAPPERS_HASH)
+ADD_DPUZ_WRAPPER = Program.from_bytes(puzzle_mods.ADD_DPUZ_WRAPPER)
 QUOTED_ADD_DPUZ_WRAPPER_HASH = Program.to((1, ADD_DPUZ_WRAPPER)).get_tree_hash()
 
 

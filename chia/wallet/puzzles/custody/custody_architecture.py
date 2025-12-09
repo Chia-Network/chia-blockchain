@@ -4,31 +4,21 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import ClassVar, Protocol, TypeVar
 
+from chia_puzzles_py import programs as puzzle_mods
 from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
-from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
 
-MofN_MOD = load_clvm_maybe_recompile(
-    "m_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
-)
-OneOfN_MOD = load_clvm_maybe_recompile(
-    "1_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
-)
-OneOfN_MOD_HASH = OneOfN_MOD.get_tree_hash()
-NofN_MOD = load_clvm_maybe_recompile(
-    "n_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
-)
-RESTRICTION_MOD = load_clvm_maybe_recompile(
-    "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
-)
-RESTRICTION_MOD_HASH = RESTRICTION_MOD.get_tree_hash()
-DELEGATED_PUZZLE_FEEDER = load_clvm_maybe_recompile(
-    "delegated_puzzle_feeder.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
-)
-DELEGATED_PUZZLE_FEEDER_HASH = DELEGATED_PUZZLE_FEEDER.get_tree_hash()
+MofN_MOD = Program.from_bytes(puzzle_mods.M_OF_N)
+OneOfN_MOD = Program.from_bytes(puzzle_mods.ONE_OF_N)
+OneOfN_MOD_HASH = bytes32(puzzle_mods.ONE_OF_N_HASH)
+NofN_MOD = Program.from_bytes(puzzle_mods.N_OF_N)
+RESTRICTION_MOD = Program.from_bytes(puzzle_mods.RESTRICTIONS)
+RESTRICTION_MOD_HASH = bytes32(puzzle_mods.RESTRICTIONS_HASH)
+DELEGATED_PUZZLE_FEEDER = Program.from_bytes(puzzle_mods.DELEGATED_PUZZLE_FEEDER)
+DELEGATED_PUZZLE_FEEDER_HASH = bytes32(puzzle_mods.DELEGATED_PUZZLE_FEEDER_HASH)
 # (mod (INDEX INNER_PUZZLE . inner_solution) (a INNER_PUZZLE inner_solution))
 INDEX_WRAPPER = Program.to([2, 5, 7])
 INDEX_WRAPPER_HASH = INDEX_WRAPPER.get_tree_hash()
