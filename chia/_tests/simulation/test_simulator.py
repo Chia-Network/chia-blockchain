@@ -170,7 +170,7 @@ async def test_process_transaction_records(
             )
 
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-        assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
+        assert await full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 
 @pytest.mark.anyio

@@ -63,6 +63,7 @@ class TestDos:
             await session.ws_connect(
                 url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
+        await session.close()
 
     @pytest.mark.anyio
     async def test_large_message_disconnect_and_ban(
