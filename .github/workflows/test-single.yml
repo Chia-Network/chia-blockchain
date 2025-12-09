@@ -138,7 +138,7 @@ jobs:
           git config --global core.autocrlf false
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
