@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field, replace
-from typing import List, Literal
+from typing import Literal
 
 import pytest
 from chia_rs import G2Element
+from chia_rs.sized_bytes import bytes32
 
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
@@ -89,7 +89,7 @@ ANY_PROGRAM = Program.to(None)
         ),
     ],
 )
-def test_back_and_forth_hint_parsing(restrictions: List[Restriction[MemberOrDPuz]], puzzle: Puzzle) -> None:
+def test_back_and_forth_hint_parsing(restrictions: list[Restriction[MemberOrDPuz]], puzzle: Puzzle) -> None:
     """
     This tests that a PuzzleWithRestrictions can be exported to a clvm program to be reimported from.
 
@@ -116,13 +116,13 @@ def test_unknown_puzzle_behavior() -> None:
     class PlaceholderPuzzle:
         @property
         def member_not_dpuz(self) -> bool:
-            raise NotImplementedError()  # pragma: no cover
+            raise NotImplementedError  # pragma: no cover
 
         def memo(self, nonce: int) -> Program:
-            raise NotImplementedError()  # pragma: no cover
+            raise NotImplementedError  # pragma: no cover
 
         def puzzle(self, nonce: int) -> Program:
-            raise NotImplementedError()  # pragma: no cover
+            raise NotImplementedError  # pragma: no cover
 
         def puzzle_hash(self, nonce: int) -> bytes32:
             return bytes32([nonce] * 32)
@@ -209,7 +209,7 @@ class ACSDPuzValidator:
     member_not_dpuz: Literal[False] = field(init=False, default=False)
 
     def memo(self, nonce: int) -> Program:
-        raise NotImplementedError()  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         # (mod (dpuz . program) (a program conditions))
@@ -229,12 +229,12 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
     This tests the various functionality of the MofN drivers including that m of n puzzles can be constructed and solved
     for every combination of its nodes from size 1 - 5.
     """
-    restrictions: List[Restriction[MemberOrDPuz]] = [ACSDPuzValidator()] if with_restrictions else []
+    restrictions: list[Restriction[MemberOrDPuz]] = [ACSDPuzValidator()] if with_restrictions else []
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(2, 6):
                 m_of_n = PuzzleWithRestrictions(
-                    0, [], MofN(m, [PuzzleWithRestrictions(n_i, restrictions, ACSMember()) for n_i in range(0, n)])
+                    0, [], MofN(m, [PuzzleWithRestrictions(n_i, restrictions, ACSMember()) for n_i in range(n)])
                 )
 
                 # Farm and find coin
@@ -249,7 +249,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                 announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=m_of_n_coin.name())
 
                 # Test a spend of every combination of m of n
-                for indexes in itertools.combinations(range(0, n), m):
+                for indexes in itertools.combinations(range(n), m):
                     proven_spends = {
                         PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_hash(
                             _top_level=False
@@ -304,7 +304,7 @@ class ACSMemberValidator:
     member_not_dpuz: Literal[True] = field(init=False, default=True)
 
     def memo(self, nonce: int) -> Program:
-        raise NotImplementedError()  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         # (mod (conditions . program) (a program conditions))

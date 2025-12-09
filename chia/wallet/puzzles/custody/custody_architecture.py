@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, TypeVar, Union
+from typing import ClassVar, Protocol, TypeVar
 
+from chia_rs.sized_bytes import bytes32
 from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
 
@@ -74,7 +75,7 @@ class UnknownPuzzle:
 
 
 # A spec for "restrictions" on specific inner puzzles
-MemberOrDPuz = Literal[True, False]
+MemberOrDPuz = bool
 
 _T_MemberNotDPuz_co = TypeVar("_T_MemberNotDPuz_co", bound=MemberOrDPuz, covariant=True)
 
@@ -130,7 +131,7 @@ class ProvenSpend:
 
 
 class MofNMerkleTree(MerkleTree):  # Special subclass that can generate proofs for m of n puzzles in the tree
-    def _m_of_n_proof(self, puzzle_hashes: List[bytes32], spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
+    def _m_of_n_proof(self, puzzle_hashes: list[bytes32], spends_to_prove: dict[bytes32, ProvenSpend]) -> Program:
         if len(puzzle_hashes) == 1:  # we've reached a leaf node
             if puzzle_hashes[0] in spends_to_prove:
                 spend_to_prove = spends_to_prove[puzzle_hashes[0]]
@@ -149,14 +150,14 @@ class MofNMerkleTree(MerkleTree):  # Special subclass that can generate proofs f
             else:
                 return Program.to(hash_a_pair(bytes32(first_proof.as_atom()), bytes32(rest_proof.as_atom())))
 
-    def generate_m_of_n_proof(self, spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
+    def generate_m_of_n_proof(self, spends_to_prove: dict[bytes32, ProvenSpend]) -> Program:
         return self._m_of_n_proof(self.nodes, spends_to_prove)
 
 
 @dataclass(frozen=True)
 class MofNHint:
     m: int
-    member_memos: List[Program]
+    member_memos: list[Program]
 
     def to_program(self) -> Program:
         return Program.to([self.m, self.member_memos])
@@ -173,7 +174,7 @@ class MofNHint:
 @dataclass(frozen=True)
 class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the architecture
     m: int
-    members: List[PuzzleWithRestrictions]
+    members: list[PuzzleWithRestrictions]
 
     def __post_init__(self) -> None:
         if len(list(set(self._merkle_tree.nodes))) != len(self._merkle_tree.nodes):
@@ -191,7 +192,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
         else:
             return MerkleTree(nodes)
 
-    def solve(self, spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
+    def solve(self, spends_to_prove: dict[bytes32, ProvenSpend]) -> Program:
         assert len(spends_to_prove) == self.m, "Must prove as many spends as the M value"
         if self.m == self.n:
             return Program.to([[spends_to_prove[node].solution for node in self._merkle_tree.nodes]])
@@ -233,19 +234,19 @@ class DelegatedPuzzleAndSolution:
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
-    restrictions: List[Restriction[MemberOrDPuz]]
+    restrictions: list[Restriction[MemberOrDPuz]]
     puzzle: Puzzle
     spec_namespace: ClassVar[str] = "inner_puzzle_chip?"
 
     def memo(self) -> Program:
-        restriction_hints: List[RestrictionHint] = [
+        restriction_hints: list[RestrictionHint] = [
             RestrictionHint(
                 restriction.member_not_dpuz, restriction.puzzle_hash(self.nonce), restriction.memo(self.nonce)
             )
             for restriction in self.restrictions
         ]
 
-        puzzle_hint: Union[MofNHint, PuzzleHint]
+        puzzle_hint: MofNHint | PuzzleHint
         if isinstance(self.puzzle, MofN):
             puzzle_hint = MofNHint(
                 self.puzzle.m,
@@ -292,12 +293,12 @@ class PuzzleWithRestrictions:
         )
 
     @property
-    def unknown_puzzles(self) -> Mapping[bytes32, Union[UnknownPuzzle, UnknownRestriction]]:
+    def unknown_puzzles(self) -> Mapping[bytes32, UnknownPuzzle | UnknownRestriction]:
         unknown_restrictions = {
             ur.restriction_hint.puzhash: ur for ur in self.restrictions if isinstance(ur, UnknownRestriction)
         }
 
-        unknown_puzzles: Mapping[bytes32, Union[UnknownPuzzle, UnknownRestriction]]
+        unknown_puzzles: Mapping[bytes32, UnknownPuzzle | UnknownRestriction]
         if isinstance(self.puzzle, UnknownPuzzle):
             unknown_puzzles = {self.puzzle.puzzle_hint.puzhash: self.puzzle}
         elif isinstance(self.puzzle, MofN):
@@ -314,7 +315,7 @@ class PuzzleWithRestrictions:
         }
 
     def fill_in_unknown_puzzles(self, puzzle_dict: Mapping[bytes32, Puzzle]) -> PuzzleWithRestrictions:
-        new_restrictions: List[Restriction[MemberOrDPuz]] = []
+        new_restrictions: list[Restriction[MemberOrDPuz]] = []
         for restriction in self.restrictions:
             if isinstance(restriction, UnknownRestriction) and restriction.restriction_hint.puzhash in puzzle_dict:
                 new = puzzle_dict[restriction.restriction_hint.puzhash]
@@ -411,10 +412,10 @@ class PuzzleWithRestrictions:
 
     def solve(
         self,
-        member_validator_solutions: List[Program],  # solution for the restriction puzzle
-        dpuz_validator_solutions: List[Program],
+        member_validator_solutions: list[Program],  # solution for the restriction puzzle
+        dpuz_validator_solutions: list[Program],
         member_solution: Program,
-        delegated_puzzle_and_solution: Optional[DelegatedPuzzleAndSolution] = None,
+        delegated_puzzle_and_solution: DelegatedPuzzleAndSolution | None = None,
     ) -> Program:
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             solution = Program.to([member_validator_solutions, dpuz_validator_solutions, member_solution])
