@@ -158,6 +158,7 @@ from chia.wallet.wallet_request_types import (
     SendTransaction,
     SendTransactionMulti,
     SetWalletResyncOnStartup,
+    SignMessageByAddress,
     SpendClawbackCoins,
     SplitCoins,
     TakeOffer,
@@ -3165,6 +3166,37 @@ async def test_verify_signature(
         VerifySignature.from_json_dict(updated_request)
     )
     assert res == rpc_response
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,
+            "trusted": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+async def test_sign_message_by_address(wallet_environments: WalletTestFramework) -> None:
+    client: WalletRpcClient = wallet_environments.environments[0].rpc_client
+
+    message = "foo"
+    address = await client.get_next_address(GetNextAddress(uint32(1)))
+    signed_message = await client.sign_message_by_address(SignMessageByAddress(address.address, message))
+
+    await wallet_environments.environments[0].rpc_client.verify_signature(
+        VerifySignature(
+            message=message,
+            pubkey=signed_message.pubkey,
+            signature=signed_message.signature,
+            signing_mode=signed_message.signing_mode,
+        )
+    )
 
 
 @pytest.mark.parametrize(

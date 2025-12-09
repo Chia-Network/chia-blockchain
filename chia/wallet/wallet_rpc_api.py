@@ -24,9 +24,7 @@ from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connection
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
@@ -68,9 +66,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles import p2_delegated_conditions
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
@@ -87,6 +83,7 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter
+from chia.wallet.util.signing import sign_message, verify_signature
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -101,7 +98,6 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord, WalletCoinRecordMet
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
-from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_request_types import (
     AddKey,
     AddKeyResponse,
@@ -1804,57 +1800,13 @@ class WalletRpcApi:
 
     @marshal
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
-        """
-        Given a public key, message and signature, verify if it is valid.
-        :param request:
-        :return:
-        """
-        # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
-        # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        if request.signing_mode is None:
-            signing_mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        else:
-            try:
-                signing_mode = SigningMode(request.signing_mode)
-            except ValueError:
-                raise ValueError(f"Invalid signing mode: {request.signing_mode!r}")
-
-        if signing_mode in {SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS}:
-            # CHIP-0002 message signatures are made over the tree hash of:
-            #   ("Chia Signed Message", message)
-            message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, request.message)).get_tree_hash()
-        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
-            # Message is expected to be a hex string
-            message_to_verify = hexstr_to_bytes(request.message)
-        elif signing_mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
-            # Message is expected to be a UTF-8 string
-            message_to_verify = bytes(request.message, "utf-8")
-        else:
-            raise ValueError(f"Unsupported signing mode: {request.signing_mode!r}")
-
-        # Verify using the BLS message augmentation scheme
-        is_valid = AugSchemeMPL.verify(
-            request.pubkey,
-            message_to_verify,
-            request.signature,
+        return verify_signature(
+            signing_mode=request.signing_mode_enum,
+            public_key=request.pubkey,
+            message=request.message,
+            signature=request.signature,
+            address=request.address,
         )
-        if request.address is not None:
-            # For signatures made by the sign_message_by_address/sign_message_by_id
-            # endpoints, the "address" field should contain the p2_address of the NFT/DID
-            # that was used to sign the message.
-            puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
-            expected_puzzle_hash: bytes32 | None = None
-            if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
-                puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(request.pubkey))
-                expected_puzzle_hash = bytes32(puzzle.get_tree_hash())
-            else:
-                expected_puzzle_hash = puzzle_hash_for_synthetic_public_key(request.pubkey)
-            if puzzle_hash != expected_puzzle_hash:
-                return VerifySignatureResponse(isValid=False, error="Public key doesn't match the address")
-        if is_valid:
-            return VerifySignatureResponse(isValid=is_valid)
-        else:
-            return VerifySignatureResponse(isValid=False, error="Signature is invalid.")
 
     @marshal
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
@@ -1863,21 +1815,18 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
-        mode: SigningMode = SigningMode.CHIP_0002
-        if request.is_hex and request.safe_mode:
-            mode = SigningMode.CHIP_0002_HEX_INPUT
-        elif not request.is_hex and not request.safe_mode:
-            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
-        elif request.is_hex and not request.safe_mode:
-            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
-        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request.message, puzzle_hash, mode
+        synthetic_secret_key = self.service.wallet_state_manager.main_wallet.convert_secret_key_to_synthetic(
+            await self.service.wallet_state_manager.get_private_key(decode_puzzle_hash(request.address))
+        )
+        signing_response = sign_message(
+            secret_key=synthetic_secret_key,
+            message=request.message,
+            mode=request.signing_mode_enum,
         )
         return SignMessageByAddressResponse(
-            pubkey=pubkey,
-            signature=signature,
-            signing_mode=mode.value,
+            pubkey=signing_response.pubkey,
+            signature=signing_response.signature,
+            signing_mode=request.signing_mode_enum.value,
         )
 
     @marshal
@@ -1888,52 +1837,66 @@ class WalletRpcApi:
         :return:
         """
         entity_id: bytes32 = decode_puzzle_hash(request.id)
-        selected_wallet: WalletProtocol[Any] | None = None
-        mode: SigningMode = SigningMode.CHIP_0002
-        if request.is_hex and request.safe_mode:
-            mode = SigningMode.CHIP_0002_HEX_INPUT
-        elif not request.is_hex and not request.safe_mode:
-            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
-        elif request.is_hex and not request.safe_mode:
-            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         if is_valid_address(request.id, {AddressType.DID}, self.service.config):
+            did_wallet: DIDWallet | None = None
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.DECENTRALIZED_ID.value:
                     assert isinstance(wallet, DIDWallet)
                     assert wallet.did_info.origin_coin is not None
                     if wallet.did_info.origin_coin.name() == entity_id:
-                        selected_wallet = wallet
+                        did_wallet = wallet
                         break
-            if selected_wallet is None:
+            if did_wallet is None:
                 raise ValueError(f"DID for {entity_id.hex()} doesn't exist.")
-            assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request.message, mode)
-            latest_coin_id = (await selected_wallet.get_coin()).name()
+            synthetic_secret_key = self.service.wallet_state_manager.main_wallet.convert_secret_key_to_synthetic(
+                await self.service.wallet_state_manager.get_private_key(await did_wallet.current_p2_puzzle_hash())
+            )
+            latest_coin_id = (await did_wallet.get_coin()).name()
+            signing_response = sign_message(
+                secret_key=synthetic_secret_key,
+                message=request.message,
+                mode=request.signing_mode_enum,
+            )
+            return SignMessageByIDResponse(
+                pubkey=signing_response.pubkey,
+                signature=signing_response.signature,
+                signing_mode=request.signing_mode_enum.value,
+                latest_coin_id=latest_coin_id,
+            )
         elif is_valid_address(request.id, {AddressType.NFT}, self.service.config):
+            nft_wallet: NFTWallet | None = None
             target_nft: NFTCoinInfo | None = None
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.NFT.value:
                     assert isinstance(wallet, NFTWallet)
                     nft: NFTCoinInfo | None = await wallet.get_nft(entity_id)
                     if nft is not None:
-                        selected_wallet = wallet
+                        nft_wallet = wallet
                         target_nft = nft
                         break
-            if selected_wallet is None or target_nft is None:
+            if nft_wallet is None or target_nft is None:
                 raise ValueError(f"NFT for {entity_id.hex()} doesn't exist.")
 
-            assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(request.message, target_nft, mode)
+            assert isinstance(nft_wallet, NFTWallet)
+            synthetic_secret_key = self.service.wallet_state_manager.main_wallet.convert_secret_key_to_synthetic(
+                await self.service.wallet_state_manager.get_private_key(
+                    await nft_wallet.current_p2_puzzle_hash(target_nft)
+                )
+            )
             latest_coin_id = target_nft.coin.name()
+            signing_response = sign_message(
+                secret_key=synthetic_secret_key,
+                message=request.message,
+                mode=request.signing_mode_enum,
+            )
+            return SignMessageByIDResponse(
+                pubkey=signing_response.pubkey,
+                signature=signing_response.signature,
+                signing_mode=request.signing_mode_enum.value,
+                latest_coin_id=latest_coin_id,
+            )
         else:
             raise ValueError(f"Unknown ID type, {request.id}")
-
-        return SignMessageByIDResponse(
-            pubkey=pubkey,
-            signature=signature,
-            latest_coin_id=latest_coin_id,
-            signing_mode=mode.value,
-        )
 
     ##########################################################################################
     # CATs and Trading

@@ -15,6 +15,7 @@ from chia.data_layer.singleton_record import SingletonRecord
 from chia.pools.pool_wallet_info import NewPoolWalletInitialTargetState, PoolWalletInfo
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
+from chia.types.signing_mode import SigningMode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.streamable import Streamable, streamable, streamable_enum
@@ -377,12 +378,35 @@ class VerifySignature(Streamable):
     signing_mode: str | None = None
     address: str | None = None
 
+    @property
+    def signing_mode_enum(self) -> SigningMode:
+        # Default to BLS_MESSAGE_AUGMENTATION_HEX_INPUT as this RPC was originally designed to verify
+        # signatures made by `chia keys sign`, which uses BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        if self.signing_mode is None:
+            return SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+        else:
+            try:
+                return SigningMode(self.signing_mode)
+            except ValueError:
+                raise ValueError(f"Invalid signing mode: {self.signing_mode!r}")
+
 
 @streamable
 @dataclass(frozen=True)
 class VerifySignatureResponse(Streamable):
     isValid: bool
     error: str | None = None
+
+
+def signing_mode_enum(request: SignMessageByAddress | SignMessageByID) -> SigningMode:
+    if request.is_hex and request.safe_mode:
+        return SigningMode.CHIP_0002_HEX_INPUT
+    elif not request.is_hex and not request.safe_mode:
+        return SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+    elif request.is_hex and not request.safe_mode:
+        return SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
+
+    return SigningMode.CHIP_0002
 
 
 @streamable
@@ -392,6 +416,10 @@ class SignMessageByAddress(Streamable):
     message: str
     is_hex: bool = False
     safe_mode: bool = True
+
+    @property
+    def signing_mode_enum(self) -> SigningMode:
+        return signing_mode_enum(self)
 
 
 @streamable
@@ -409,6 +437,10 @@ class SignMessageByID(Streamable):
     message: str
     is_hex: bool = False
     safe_mode: bool = True
+
+    @property
+    def signing_mode_enum(self) -> SigningMode:
+        return signing_mode_enum(self)
 
 
 @streamable

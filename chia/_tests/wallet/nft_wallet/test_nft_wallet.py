@@ -668,6 +668,124 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
+async def test_sign_message_by_nft_id(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_node = env.node
+    wallet = env.xch_wallet
+
+    env.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
+
+    nft_wallet_0 = await env.rpc_client.fetch("create_new_wallet", dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    assert isinstance(nft_wallet_0, dict)
+    assert nft_wallet_0.get("success")
+    assert env.wallet_aliases["nft"] == nft_wallet_0["wallet_id"]
+
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        wallet_ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+    await env.rpc_client.mint_nft(
+        request=NFTMintNFTRequest(
+            wallet_id=uint32(env.wallet_aliases["nft"]),
+            royalty_address=encode_puzzle_hash(wallet_ph, AddressType.NFT.hrp(wallet_node.config)),
+            target_address=None,
+            hash=bytes32.from_hexstr("0xD4584AD463139FA8C0D9F68F4B59F185D4584AD463139FA8C0D9F68F4B59F185"),
+            uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},  # tested above
+                    "nft": {"init": True, "pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},  # tested above
+                    "nft": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            )
+        ]
+    )
+
+    nft_list = await env.rpc_client.list_nfts(NFTGetNFTs(uint32(env.wallet_aliases["nft"])))
+    nft_id = nft_list.nft_list[0].nft_id
+
+    # Test general string
+    message = "Hello World"
+    response = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(
+            id=nft_id,
+            message=message,
+        )
+    )
+    puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
+    assert AugSchemeMPL.verify(
+        response.pubkey,
+        puzzle.get_tree_hash(),
+        response.signature,
+    )
+    # Test hex string
+    message = "0123456789ABCDEF"
+    response = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(
+            id=nft_id,
+            message=message,
+            is_hex=True,
+        )
+    )
+    puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+
+    assert AugSchemeMPL.verify(
+        response.pubkey,
+        puzzle.get_tree_hash(),
+        response.signature,
+    )
+
+    # Test BLS sign string
+    message = "Hello World"
+    response = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(
+            id=nft_id,
+            message=message,
+            is_hex=False,
+            safe_mode=False,
+        )
+    )
+
+    assert AugSchemeMPL.verify(
+        response.pubkey,
+        bytes(message, "utf-8"),
+        response.signature,
+    )
+    # Test BLS sign hex
+    message = "0123456789ABCDEF"
+    response = await env.rpc_client.sign_message_by_id(
+        SignMessageByID(
+            id=nft_id,
+            message=message,
+            is_hex=True,
+            safe_mode=False,
+        )
+    )
+
+    assert AugSchemeMPL.verify(
+        response.pubkey,
+        hexstr_to_bytes(message),
+        response.signature,
+    )
+
+
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.anyio
 async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFramework) -> None:
     env = wallet_environments.environments[0]
     wallet_node = env.node
