@@ -53,6 +53,9 @@ from chia.wallet.wallet_request_types import (
     CATSpend,
     CATSpendResponse,
     ClawbackPuzzleDecoratorOverride,
+    CRCATApprovePending,
+    CreateNewWallet,
+    CreateNewWalletType,
     CreateOfferForIDs,
     DeleteNotifications,
     DeleteUnconfirmedTransactions,
@@ -62,6 +65,7 @@ from chia.wallet.wallet_request_types import (
     DIDMessageSpend,
     DIDSetWalletName,
     DIDTransferDID,
+    DIDType,
     DIDUpdateMetadata,
     ExtendDerivationIndex,
     FungibleAsset,
@@ -99,6 +103,7 @@ from chia.wallet.wallet_request_types import (
     VCMint,
     VCRevoke,
     VCSpend,
+    WalletCreationMode,
 )
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
@@ -484,8 +489,16 @@ async def add_token(
         existing_info = await wallet_client.cat_asset_id_to_name(CATAssetIDToName(asset_id))
 
         if existing_info.wallet_id is None:
-            response = await wallet_client.create_wallet_for_existing_cat(asset_id)
-            wallet_id = response["wallet_id"]
+            response = await wallet_client.create_new_wallet(
+                CreateNewWallet(
+                    wallet_type=CreateNewWalletType.CAT_WALLET,
+                    mode=WalletCreationMode.EXISTING,
+                    asset_id=asset_id,
+                    push=True,
+                ),
+                tx_config=DEFAULT_TX_CONFIG,
+            )
+            wallet_id = response.wallet_id
             await wallet_client.set_cat_name(CATSetName(wallet_id, token_name))
             print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
         else:
@@ -1045,16 +1058,20 @@ async def create_did_wallet(
 ) -> list[TransactionRecord]:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
-            response = await wallet_client.create_new_did_wallet(
-                amount,
-                CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-                fee,
-                name,
-                push=push,
+            response = await wallet_client.create_new_wallet(
+                CreateNewWallet(
+                    wallet_type=CreateNewWalletType.DID_WALLET,
+                    did_type=DIDType.NEW,
+                    amount=uint64(amount),
+                    fee=fee,
+                    wallet_name=name,
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
                 timelock_info=condition_valid_times,
             )
-            wallet_id = response["wallet_id"]
-            my_did = response["my_did"]
+            wallet_id = response.wallet_id
+            my_did = response.my_did
             print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
             print(f"Successfully created a DID {my_did} in the newly created DID wallet")
             return []  # TODO: fix this endpoint to return transactions
@@ -1244,9 +1261,16 @@ async def create_nft_wallet(
 ) -> None:
     async with get_wallet_client(root_path, wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         try:
-            response = await wallet_client.create_new_nft_wallet(did_id.original_address if did_id else None, name)
-            wallet_id = response["wallet_id"]
-            print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
+            response = await wallet_client.create_new_wallet(
+                CreateNewWallet(
+                    wallet_type=CreateNewWalletType.NFT_WALLET,
+                    did_id=(did_id.original_address if did_id else None),
+                    name=name,
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+            )
+            print(f"Successfully created an NFT wallet with id {response.wallet_id} on key {fingerprint}")
         except Exception as e:
             print(f"Failed to create NFT wallet: {e}")
 
@@ -1914,18 +1938,22 @@ async def approve_r_cats(
     async with get_wallet_client(root_path, wallet_rpc_port, fingerprint) as (wallet_client, fp, config):
         if wallet_client is None:
             return
-        txs = await wallet_client.crcat_approve_pending(
-            wallet_id=wallet_id,
-            min_amount_to_claim=min_amount_to_claim.convert_amount(units["cat"]),
-            fee=fee,
-            tx_config=CMDTXConfigLoader(
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                reuse_puzhash=reuse,
-            ).to_tx_config(units["cat"], config, fp),
-            push=push,
-            timelock_info=condition_valid_times,
-        )
+        txs = (
+            await wallet_client.crcat_approve_pending(
+                CRCATApprovePending(
+                    wallet_id=wallet_id,
+                    min_amount_to_claim=min_amount_to_claim.convert_amount(units["cat"]),
+                    fee=fee,
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
+                    min_coin_amount=min_coin_amount,
+                    max_coin_amount=max_coin_amount,
+                    reuse_puzhash=reuse,
+                ).to_tx_config(units["cat"], config, fp),
+                timelock_info=condition_valid_times,
+            )
+        ).transactions
 
         if push:
             print("VC successfully approved R-CATs!")

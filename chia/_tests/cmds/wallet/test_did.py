@@ -17,6 +17,8 @@ from chia.wallet.did_wallet.did_info import did_recovery_is_nil
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
     DIDFindLostDID,
     DIDFindLostDIDResponse,
     DIDGetDID,
@@ -29,6 +31,7 @@ from chia.wallet.wallet_request_types import (
     DIDSetWalletNameResponse,
     DIDTransferDID,
     DIDTransferDIDResponse,
+    DIDType,
     DIDUpdateMetadata,
     DIDUpdateMetadataResponse,
 )
@@ -54,27 +57,7 @@ def test_did_recovery_is_nil(program: Program, result: bool) -> None:
 def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
-    # set RPC Client
-    class DidCreateRpcClient(TestWalletRpcClient):
-        async def create_new_did_wallet(
-            self,
-            amount: int,
-            tx_config: TXConfig,
-            fee: int = 0,
-            name: str | None = "DID Wallet",
-            backup_ids: list[str] | None = None,
-            required_num: int = 0,
-            push: bool = True,
-            timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> dict[str, str | int]:
-            if backup_ids is None:
-                backup_ids = []
-            self.add_to_log(
-                "create_new_did_wallet", (amount, tx_config, fee, name, backup_ids, required_num, push, timelock_info)
-            )
-            return {"wallet_id": 3, "my_did": "did:chia:testdid123456"}
-
-    inst_rpc_client = DidCreateRpcClient()
+    inst_rpc_client = TestWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
         "wallet",
@@ -92,12 +75,27 @@ def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     # these are various things that should be in the output
     assert_list = [
         "Successfully created a DID wallet with name test and id 3 on key 123456",
-        "Successfully created a DID did:chia:testdid123456 in the newly created DID wallet",
+        (
+            "Successfully created a DID did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c"
+            " in the newly created DID wallet"
+        ),
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "create_new_did_wallet": [
-            (3, DEFAULT_TX_CONFIG, 100000000000, "test", [], 0, True, test_condition_valid_times)
+        "create_new_wallet": [
+            (
+                CreateNewWallet(
+                    wallet_type=CreateNewWalletType.DID_WALLET,
+                    did_type=DIDType.NEW,
+                    amount=uint64(3),
+                    wallet_name="test",
+                    fee=uint64(100_000_000_000),
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+                tuple(),
+                test_condition_valid_times,
+            )
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
