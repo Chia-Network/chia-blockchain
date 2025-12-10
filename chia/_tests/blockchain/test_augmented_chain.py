@@ -12,6 +12,8 @@ from chia_rs.sized_ints import uint32
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
 from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.simulator.block_tools import BlockTools
 from chia.util.errors import Err
 
@@ -25,6 +27,7 @@ class NullBlockchain:
 
     added_blocks: set[bytes32] = field(default_factory=set)
     heights: dict[uint32, bytes32] = field(default_factory=dict)
+    mmr_manager: MMRManagerProtocol = StubMMRManager()
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
