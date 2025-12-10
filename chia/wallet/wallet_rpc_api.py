@@ -1508,6 +1508,8 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionResponse:
+        # opportunity to raise
+        self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Wallet)
         await self.create_signed_transaction(
             CreateSignedTransaction(
                 additions=[
@@ -2007,6 +2009,8 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
         hold_lock: bool = True,
     ) -> CATSpendResponse:
+        # opportunity to raise
+        self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
         await self.create_signed_transaction(
             CreateSignedTransaction(
                 additions=request.additions
