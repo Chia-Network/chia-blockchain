@@ -18,7 +18,13 @@ from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
+from chia.pools.pool_wallet_info import (
+    FARMING_TO_POOL,
+    PoolState,
+    PoolWalletInfo,
+    create_pool_state,
+    initial_pool_state_from_dict,
+)
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
@@ -45,7 +51,6 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.derive_keys import (
-    MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     match_address_to_sk,
@@ -197,6 +202,8 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
+    GetFarmedAmount,
+    GetFarmedAmountResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -1243,32 +1250,12 @@ class WalletRpcApi:
             )
         elif request.wallet_type == CreateNewWalletType.POOL_WALLET:
             if request.mode == WalletCreationMode.NEW:
-                owner_puzzle_hash: bytes32 = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
-
-                from chia.pools.pool_wallet_info import initial_pool_state_from_dict
-
                 async with self.service.wallet_state_manager.lock:
-                    # We assign a pseudo unique id to each pool wallet, so that each one gets its own deterministic
-                    # owner and auth keys. The public keys will go on the blockchain, and the private keys can be found
-                    # using the root SK and trying each index from zero. The indexes are not fully unique though,
-                    # because the PoolWallet is not created until the tx gets confirmed on chain. Therefore if we
-                    # make multiple pool wallets at the same time, they will have the same ID.
-                    max_pwi = 1
-                    for _, wallet in self.service.wallet_state_manager.wallets.items():
-                        if wallet.type() == WalletType.POOLING_WALLET:
-                            max_pwi += 1
-
-                    if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
-                        raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
-
-                    owner_pk: G1Element = self.service.wallet_state_manager.main_wallet.hardened_pubkey_for_path(
-                        # copied from chia.wallet.derive_keys. Could maybe be an exported constant in the future.
-                        [12381, 8444, 5, max_pwi]
-                    )
-
                     assert request.initial_target_state is not None  # mypy doesn't know about our __post_init__
                     initial_target_state = initial_pool_state_from_dict(
-                        request.initial_target_state, owner_pk, owner_puzzle_hash
+                        request.initial_target_state,
+                        self.service.wallet_state_manager.new_pool_wallet_pubkey(),
+                        await action_scope.get_puzzle_hash(self.service.wallet_state_manager),
                     )
                     assert initial_target_state is not None
 
@@ -3200,7 +3187,8 @@ class WalletRpcApi:
             "total_count": result.total_count,
         }
 
-    async def get_farmed_amount(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_farmed_amount(self, request: GetFarmedAmount) -> GetFarmedAmountResponse:
         tx_records: list[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
         amount = 0
         pool_reward_amount = 0
@@ -3209,14 +3197,12 @@ class WalletRpcApi:
         blocks_won = 0
         last_height_farmed = uint32(0)
 
-        include_pool_rewards = request.get("include_pool_rewards", False)
-
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
             if record.type == TransactionType.COINBASE_REWARD.value:
                 if (
-                    not include_pool_rewards
+                    not request.include_pool_rewards
                     and self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET
                 ):
                     # Don't add pool rewards for pool wallets unless explicitly requested
@@ -3236,19 +3222,19 @@ class WalletRpcApi:
             last_height_farmed = max(last_height_farmed, height)
             amount += record.amount
 
-        last_time_farmed = uint64(
+        last_time_farmed = (
             await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
         )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
-        return {
-            "farmed_amount": amount,
-            "pool_reward_amount": pool_reward_amount,
-            "farmer_reward_amount": farmer_reward_amount,
-            "fee_amount": fee_amount,
-            "last_height_farmed": last_height_farmed,
-            "last_time_farmed": last_time_farmed,
-            "blocks_won": blocks_won,
-        }
+        return GetFarmedAmountResponse(
+            farmed_amount=uint64(amount),
+            pool_reward_amount=uint64(pool_reward_amount),
+            farmer_reward_amount=uint64(farmer_reward_amount),
+            fee_amount=uint64(fee_amount),
+            last_height_farmed=uint32(last_height_farmed),
+            last_time_farmed=uint64(last_time_farmed),
+            blocks_won=uint32(blocks_won),
+        )
 
     @tx_endpoint(push=False)
     @marshal

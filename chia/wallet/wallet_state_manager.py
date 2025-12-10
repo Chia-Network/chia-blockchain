@@ -59,10 +59,12 @@ from chia.wallet.conditions import (
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
+    MAX_POOL_WALLETS,
     _derive_path,
     _derive_pk_unhardened,
     master_pk_to_wallet_pk_unhardened,
     master_pk_to_wallet_pk_unhardened_intermediate,
+    master_sk_to_singleton_owner_sk,
     master_sk_to_wallet_sk,
     master_sk_to_wallet_sk_intermediate,
     master_sk_to_wallet_sk_unhardened,
@@ -2988,3 +2990,19 @@ class WalletStateManager:
             coins=set(coins),
             extra_conditions=extra_conditions,
         )
+
+    def new_pool_wallet_pubkey(self) -> G1Element:
+        # We assign a pseudo unique id to each pool wallet, so that each one gets its own deterministic
+        # owner and auth keys. The public keys will go on the blockchain, and the private keys can be found
+        # using the root SK and trying each index from zero. The indexes are not fully unique though,
+        # because the PoolWallet is not created until the tx gets confirmed on chain. Therefore if we
+        # make multiple pool wallets at the same time, they will have the same ID.
+        max_pwi = 1
+        for _, wallet in self.wallets.items():
+            if wallet.type() == WalletType.POOLING_WALLET:
+                max_pwi += 1
+
+        if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
+            raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
+
+        return master_sk_to_singleton_owner_sk(self.get_master_private_key(), uint32(max_pwi)).get_g1()
