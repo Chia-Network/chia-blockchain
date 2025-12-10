@@ -216,6 +216,8 @@ class MempoolManager:
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
+        log.info("Closing mempool DB connection")
+        self.mempool._db_conn.close()
 
     def create_bundle_from_mempool(
         self, last_tb_header_hash: bytes32, item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None
