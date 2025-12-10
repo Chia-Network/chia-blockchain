@@ -44,8 +44,8 @@ class EasyDPuzWrapper:
 @pytest.mark.anyio
 async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        restriction = ValidatorStackRestriction([EasyDPuzWrapper(), EasyDPuzWrapper()])
-        pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
+        restriction = ValidatorStackRestriction(required_wrappers=[EasyDPuzWrapper(), EasyDPuzWrapper()])
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
 
         # Farm and find coin
         await sim.farm_block(pwr.puzzle_hash())
@@ -92,8 +92,8 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 @pytest.mark.anyio
 async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        restriction = ValidatorStackRestriction([Timelock(uint64(100))])
-        pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
+        restriction = ValidatorStackRestriction(required_wrappers=[Timelock(uint64(100))])
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
 
         # Farm and find coin
         await sim.farm_block(pwr.puzzle_hash())
@@ -210,8 +210,8 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
         anticipated_right_side_pwr = anticipated_m_of_n.members[1]
 
         # The current puzzle
-        restriction = ValidatorStackRestriction([recovery_restriction])
-        pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
+        restriction = ValidatorStackRestriction(required_wrappers=[recovery_restriction])
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
         pwr_hash = pwr.puzzle_hash()
 
         # Some brief memo checking

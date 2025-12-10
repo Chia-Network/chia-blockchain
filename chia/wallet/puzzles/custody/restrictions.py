@@ -45,7 +45,7 @@ class Timelock:
         return self.puzzle(nonce).get_tree_hash()
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class Force1of2wRestrictedVariable:
     left_side_hash: bytes32
     right_side_restrictions: list[Restriction[MemberOrDPuz]]

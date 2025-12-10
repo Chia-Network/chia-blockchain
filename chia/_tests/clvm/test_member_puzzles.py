@@ -218,7 +218,9 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         ].coin
 
         launcher_coin = Coin(coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
-        singleton_member_puzzle = PuzzleWithRestrictions(0, [], SingletonMember(launcher_coin.name()))
+        singleton_member_puzzle = PuzzleWithRestrictions(
+            nonce=0, restrictions=[], puzzle=SingletonMember(singleton_id=launcher_coin.name())
+        )
 
         singleton_struct = (
             SINGLETON_TOP_LAYER_MOD.get_tree_hash(),
@@ -354,7 +356,9 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
         delegated_puzzle = Program.to(1)
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
 
-        bls_puzzle = PuzzleWithRestrictions(0, [], FixedPuzzleMember(delegated_puzzle_hash))
+        bls_puzzle = PuzzleWithRestrictions(
+            nonce=0, restrictions=[], puzzle=FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
+        )
         memo = PuzzleHint(
             bls_puzzle.puzzle.puzzle_hash(0),
             bls_puzzle.puzzle.memo(0),

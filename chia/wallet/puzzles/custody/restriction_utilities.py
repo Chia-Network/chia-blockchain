@@ -16,7 +16,7 @@ ADD_DPUZ_WRAPPER = Program.from_bytes(puzzle_mods.ADD_DPUZ_WRAPPER)
 QUOTED_ADD_DPUZ_WRAPPER_HASH = Program.to((1, ADD_DPUZ_WRAPPER)).get_tree_hash()
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ValidatorStackRestriction:
     required_wrappers: list[Puzzle]
 

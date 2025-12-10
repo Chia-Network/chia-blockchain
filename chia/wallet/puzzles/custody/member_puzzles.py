@@ -21,7 +21,7 @@ SINGLETON_MEMBER_MOD = Program.from_bytes(puzzle_mods.SINGLETON_MEMBER)
 FIXED_PUZZLE_MEMBER_MOD = Program.from_bytes(puzzle_mods.FIXED_PUZZLE_MEMBER)
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class BLSWithTaprootMember(Puzzle):
     synthetic_key: G1Element | None = None
     public_key: G1Element | None = None
@@ -59,7 +59,7 @@ class BLSWithTaprootMember(Puzzle):
         return Program.to([0])
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class SingletonMember(Puzzle):
     singleton_id: bytes32
     singleton_mod_hash: bytes32 = SINGLETON_TOP_LAYER_MOD_HASH
@@ -76,7 +76,7 @@ class SingletonMember(Puzzle):
         return self.puzzle(nonce).get_tree_hash()
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class FixedPuzzleMember(Puzzle):
     fixed_puzzle_hash: bytes32
 
