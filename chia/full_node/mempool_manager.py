@@ -976,7 +976,7 @@ class MempoolManager:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
-             old_pool._db_conn.close()
+            old_pool._db_conn.close()
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())
