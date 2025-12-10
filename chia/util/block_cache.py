@@ -6,6 +6,12 @@ from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
+
+if TYPE_CHECKING:
+    pass
+
 
 # implements BlockRecordsProtocol
 class BlockCache:
@@ -16,18 +22,25 @@ class BlockCache:
 
     _block_records: dict[bytes32, BlockRecord]
     _height_to_hash: dict[uint32, bytes32]
+    mmr_manager: MMRManagerProtocol
 
     def __init__(
         self,
         blocks: dict[bytes32, BlockRecord],
+        mmr_manager: BlockchainMMRManager | None = None,
     ):
         self._block_records = blocks
         self._height_to_hash = {block.height: hh for hh, block in blocks.items()}
+        if mmr_manager is not None:
+            self.mmr_manager = mmr_manager
+        else:
+            self.mmr_manager = BlockchainMMRManager()
 
     def add_block(self, block: BlockRecord) -> None:
         hh = block.header_hash
         self._block_records[hh] = block
         self._height_to_hash[block.height] = hh
+        self.mmr_manager.add_block_to_mmr(block.header_hash, block.prev_hash, block.height)
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
