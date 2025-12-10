@@ -104,6 +104,8 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
+    GetFarmedAmount,
+    GetFarmedAmountResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -391,8 +393,8 @@ class WalletRpcClient(RpcClient):
             await self.fetch("extend_derivation_index", request.to_json_dict())
         )
 
-    async def get_farmed_amount(self, include_pool_rewards: bool = False) -> dict[str, Any]:
-        return await self.fetch("get_farmed_amount", {"include_pool_rewards": include_pool_rewards})
+    async def get_farmed_amount(self, request: GetFarmedAmount) -> GetFarmedAmountResponse:
+        return GetFarmedAmountResponse.from_json_dict(await self.fetch("get_farmed_amount", request.to_json_dict()))
 
     async def create_signed_transactions(
         self,

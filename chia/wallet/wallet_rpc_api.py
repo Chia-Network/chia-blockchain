@@ -202,6 +202,8 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetCoinRecordsByNamesResponse,
     GetCurrentDerivationIndexResponse,
+    GetFarmedAmount,
+    GetFarmedAmountResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -3185,7 +3187,8 @@ class WalletRpcApi:
             "total_count": result.total_count,
         }
 
-    async def get_farmed_amount(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_farmed_amount(self, request: GetFarmedAmount) -> GetFarmedAmountResponse:
         tx_records: list[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
         amount = 0
         pool_reward_amount = 0
@@ -3194,14 +3197,12 @@ class WalletRpcApi:
         blocks_won = 0
         last_height_farmed = uint32(0)
 
-        include_pool_rewards = request.get("include_pool_rewards", False)
-
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
             if record.type == TransactionType.COINBASE_REWARD.value:
                 if (
-                    not include_pool_rewards
+                    not request.include_pool_rewards
                     and self.service.wallet_state_manager.wallets[record.wallet_id].type() == WalletType.POOLING_WALLET
                 ):
                     # Don't add pool rewards for pool wallets unless explicitly requested
@@ -3221,19 +3222,19 @@ class WalletRpcApi:
             last_height_farmed = max(last_height_farmed, height)
             amount += record.amount
 
-        last_time_farmed = uint64(
+        last_time_farmed = (
             await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
         )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
-        return {
-            "farmed_amount": amount,
-            "pool_reward_amount": pool_reward_amount,
-            "farmer_reward_amount": farmer_reward_amount,
-            "fee_amount": fee_amount,
-            "last_height_farmed": last_height_farmed,
-            "last_time_farmed": last_time_farmed,
-            "blocks_won": blocks_won,
-        }
+        return GetFarmedAmountResponse(
+            farmed_amount=uint64(amount),
+            pool_reward_amount=uint64(pool_reward_amount),
+            farmer_reward_amount=uint64(farmer_reward_amount),
+            fee_amount=uint64(fee_amount),
+            last_height_farmed=uint32(last_height_farmed),
+            last_time_farmed=uint64(last_time_farmed),
+            blocks_won=uint32(blocks_won),
+        )
 
     @tx_endpoint(push=False)
     @marshal

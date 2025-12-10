@@ -130,6 +130,8 @@ from chia.wallet.wallet_request_types import (
     FungibleAsset,
     GetAllOffers,
     GetCoinRecordsByNames,
+    GetFarmedAmount,
+    GetFarmedAmountResponse,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -468,21 +470,20 @@ async def test_get_farmed_amount(wallet_environments: WalletTestFramework) -> No
     env = wallet_environments.environments[0]
     wallet_rpc_client = env.rpc_client
 
-    get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
+    get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount(GetFarmedAmount())
     get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(
         GetTimestampForHeight(uint32(3))
     )  # genesis + 2
 
-    expected_result = {
-        "blocks_won": 2,
-        "farmed_amount": 4_000_000_000_000,
-        "farmer_reward_amount": 500_000_000_000,
-        "fee_amount": 0,
-        "last_height_farmed": 3,
-        "last_time_farmed": get_timestamp_for_height_result.timestamp,
-        "pool_reward_amount": 3_500_000_000_000,
-        "success": True,
-    }
+    expected_result = GetFarmedAmountResponse(
+        blocks_won=uint32(2),
+        farmed_amount=uint64(4_000_000_000_000),
+        farmer_reward_amount=uint64(500_000_000_000),
+        fee_amount=uint64(0),
+        last_height_farmed=uint32(3),
+        last_time_farmed=uint64(get_timestamp_for_height_result.timestamp),
+        pool_reward_amount=uint64(3_500_000_000_000),
+    )
     assert get_farmed_amount_result == expected_result
 
 
@@ -514,8 +515,8 @@ async def test_get_farmed_amount_with_fee(wallet_environments: WalletTestFramewo
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    result = await wallet_rpc_client.get_farmed_amount()
-    assert result["fee_amount"] == fee_amount
+    result = await wallet_rpc_client.get_farmed_amount(GetFarmedAmount())
+    assert result.fee_amount == fee_amount
 
 
 @pytest.mark.parametrize(
