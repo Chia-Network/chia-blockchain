@@ -39,7 +39,7 @@ from packaging.version import Version
 
 from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.block_creation import unfinished_block_to_full_block
+from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import AddBlockResult, Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -2517,6 +2517,7 @@ class FullNode:
             block.foliage,
             ses,
             rc_prev,
+            self.blockchain.get_current_mmr_root(),
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
@@ -2633,7 +2634,7 @@ class FullNode:
             )
         )
 
-        block: FullBlock = unfinished_block_to_full_block(
+        block: FullBlock = unfinished_block_to_full_block_with_mmr(
             unfinished_block,
             request.challenge_chain_ip_vdf,
             request.challenge_chain_ip_proof,
@@ -2646,6 +2647,7 @@ class FullNode:
             self.blockchain,
             sp_total_iters,
             difficulty,
+            self.constants,
         )
         if not self.has_valid_pool_sig(block):
             self.log.warning("Trying to make a pre-farm block but height is not 0")

@@ -6,6 +6,7 @@ from chia_rs import BlockRecord, ConsensusConstants, FullBlock, SubEpochSummary,
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.challenge_tree import compute_challenge_merkle_root
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import (
     _get_next_difficulty,
@@ -14,6 +15,7 @@ from chia.consensus.difficulty_adjustment import (
     get_next_sub_slot_iters_and_difficulty,
     height_can_be_first_in_epoch,
 )
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
 
 log = logging.getLogger(__name__)
@@ -26,6 +28,7 @@ def make_sub_epoch_summary(
     prev_prev_block: BlockRecord,
     new_difficulty: uint64 | None,
     new_sub_slot_iters: uint64 | None,
+    sp_index: uint8,
     prev_ses_block: BlockRecord | None = None,
 ) -> SubEpochSummary:
     """
@@ -52,7 +55,7 @@ def make_sub_epoch_summary(
             uint8(0),
             None,
             None,
-            None,
+            None,  # No challenge root in first sub-epoch
         )
     if prev_ses_block is None:
         curr: BlockRecord = prev_prev_block
@@ -64,14 +67,36 @@ def make_sub_epoch_summary(
     assert prev_ses_block.finished_reward_slot_hashes is not None
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
-    return SubEpochSummary(
+    prev_tx_block = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=prev_prev_block.prev_hash,
+        sp_index=sp_index,
+        first_in_sub_slot=True,
+    )
+    if prev_tx_block >= constants.HARD_FORK2_HEIGHT:
+        challenge_root = compute_challenge_merkle_root(constants, blocks, blocks_included_height)
+        log.debug(
+            f"make_sub_epoch_summary: height={blocks_included_height} >= fork_height={constants.HARD_FORK2_HEIGHT}, "
+            f"computed challenge_root={challenge_root.hex()}"
+        )
+    else:
+        challenge_root = None
+        log.debug(
+            f"make_sub_epoch_summary: height={blocks_included_height} < fork_height={constants.HARD_FORK2_HEIGHT}, "
+            f"using None for challenge_root"
+        )
+
+    result = SubEpochSummary(
         prev_ses,
         prev_ses_block.finished_reward_slot_hashes[-1],
         uint8(prev_ses_block.height % constants.SUB_EPOCH_BLOCKS),
         new_difficulty,
         new_sub_slot_iters,
-        None,  # challenge_merkle_root
+        challenge_root,
     )
+    log.debug(f"make_sub_epoch_summary result hash: {result.get_hash().hex()}")
+    return result
 
 
 def next_sub_epoch_summary(
@@ -205,4 +230,5 @@ def next_sub_epoch_summary(
         prev_b,
         next_difficulty,
         next_sub_slot_iters,
+        sp_index=block.reward_chain_block.signage_point_index,
     )

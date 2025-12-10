@@ -715,7 +715,13 @@ def _create_sub_epoch_data(
     #  New work difficulty and iterations per sub-slot
     sub_slot_iters = sub_epoch_summary.new_sub_slot_iters
     new_difficulty = sub_epoch_summary.new_difficulty
-    return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty, None)
+    return SubEpochData(
+        reward_chain_hash,
+        previous_sub_epoch_overflows,
+        sub_slot_iters,
+        new_difficulty,
+        sub_epoch_summary.challenge_merkle_root,
+    )
 
 
 async def _challenge_block_vdfs(
@@ -879,7 +885,7 @@ def _map_sub_epoch_summaries(
             data.num_blocks_overflow,
             data.new_difficulty,
             data.new_sub_slot_iters,
-            None,
+            data.challenge_merkle_root,
         )
 
         if idx < len(sub_epoch_data) - 1:
@@ -913,7 +919,7 @@ def _validate_summaries_weight(
 ) -> bool:
     num_over = summaries[-1].num_blocks_overflow
     ses_end_height = (len(summaries) - 1) * constants.SUB_EPOCH_BLOCKS + num_over - 1
-    curr = None
+    curr: HeaderBlock | None = None
     for block in weight_proof.recent_chain_data:
         if block.reward_chain_block.height == ses_end_height:
             curr = block
@@ -1261,7 +1267,13 @@ def validate_recent_blocks(
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 expected_vs = ValidationState(ssi, diff, None)
                 caluclated_required_iters, error = validate_finished_header_block(
-                    constants, sub_blocks, block, False, expected_vs, ses_blocks > 2
+                    constants,
+                    sub_blocks,
+                    block,
+                    False,
+                    expected_vs,
+                    ses_blocks > 2,
+                    skip_commitment_validation=True,
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
@@ -1278,6 +1290,8 @@ def validate_recent_blocks(
             validated_block_count += 1
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
+        # Convert to new format for block record creation
+
         block_record = header_block_to_sub_block_record(
             constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
         )

@@ -53,6 +53,7 @@ def block_to_block_record(
             blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            block.reward_chain_block.signage_point_index,
             prev_ses_block,
         )
         if ses.get_hash() != found_ses_hash:
