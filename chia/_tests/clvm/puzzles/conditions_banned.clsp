@@ -1,7 +1,7 @@
 (mod
   (Conditions)
-  (if (= Conditions ())
-      ()
+  (if Conditions
       (x "conditions banned")
+      ()
   )
 )
