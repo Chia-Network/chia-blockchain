@@ -18,7 +18,13 @@ from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
+from chia.pools.pool_wallet_info import (
+    FARMING_TO_POOL,
+    PoolState,
+    PoolWalletInfo,
+    create_pool_state,
+    initial_pool_state_from_dict,
+)
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
@@ -45,7 +51,6 @@ from chia.wallet.conditions import (
     parse_timelock_info,
 )
 from chia.wallet.derive_keys import (
-    MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     match_address_to_sk,
@@ -1243,32 +1248,12 @@ class WalletRpcApi:
             )
         elif request.wallet_type == CreateNewWalletType.POOL_WALLET:
             if request.mode == WalletCreationMode.NEW:
-                owner_puzzle_hash: bytes32 = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
-
-                from chia.pools.pool_wallet_info import initial_pool_state_from_dict
-
                 async with self.service.wallet_state_manager.lock:
-                    # We assign a pseudo unique id to each pool wallet, so that each one gets its own deterministic
-                    # owner and auth keys. The public keys will go on the blockchain, and the private keys can be found
-                    # using the root SK and trying each index from zero. The indexes are not fully unique though,
-                    # because the PoolWallet is not created until the tx gets confirmed on chain. Therefore if we
-                    # make multiple pool wallets at the same time, they will have the same ID.
-                    max_pwi = 1
-                    for _, wallet in self.service.wallet_state_manager.wallets.items():
-                        if wallet.type() == WalletType.POOLING_WALLET:
-                            max_pwi += 1
-
-                    if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
-                        raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
-
-                    owner_pk: G1Element = self.service.wallet_state_manager.main_wallet.hardened_pubkey_for_path(
-                        # copied from chia.wallet.derive_keys. Could maybe be an exported constant in the future.
-                        [12381, 8444, 5, max_pwi]
-                    )
-
                     assert request.initial_target_state is not None  # mypy doesn't know about our __post_init__
                     initial_target_state = initial_pool_state_from_dict(
-                        request.initial_target_state, owner_pk, owner_puzzle_hash
+                        request.initial_target_state,
+                        self.service.wallet_state_manager.new_pool_wallet_pubkey(),
+                        await action_scope.get_puzzle_hash(self.service.wallet_state_manager),
                     )
                     assert initial_target_state is not None
 
