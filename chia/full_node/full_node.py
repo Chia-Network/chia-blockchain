@@ -366,9 +366,6 @@ class FullNode:
                 # blockchain is created in _start and in certain cases it may not exist here during _close
                 if self._blockchain is not None:
                     self.blockchain.shut_down()
-                # same for mempool_manager
-                if self._mempool_manager is not None:
-                    self.mempool_manager.shut_down()
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
