@@ -1648,7 +1648,13 @@ class TestBlockHeaderValidation:
                 await _validate_and_add_block(b, blocks[-1])
 
     @pytest.mark.anyio
-    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+    async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Monkey patch add_block_to_mmr so we don't throw there
+        monkeypatch.setattr(
+            "chia.consensus.blockchain_mmr.BlockchainMMRManager.add_block_to_mmr",
+            lambda *args, **kwargs: None,
+        )
+
         # 27
         blocks = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks[0])
