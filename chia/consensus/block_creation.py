@@ -30,6 +30,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -428,6 +429,8 @@ def unfinished_block_to_full_block(
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
+    header_mmr_root: bytes32 | None,
+    constants: ConsensusConstants,
 ) -> FullBlock:
     """
     Converts an unfinished block to a finished block. Includes all the infusion point VDFs as well as tweaking
@@ -485,9 +488,10 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_block.reward_chain_sp_signature,
         rc_ip_vdf,
         icc_ip_vdf,
-        None,
+        header_mmr_root,
         is_transaction_block,
     )
+
     if prev_block is None:
         new_foliage = unfinished_block.foliage.replace(reward_block_hash=reward_chain_block.get_hash())
     else:
@@ -519,3 +523,61 @@ def unfinished_block_to_full_block(
         new_generator_ref_list,
     )
     return ret
+
+
+def unfinished_block_to_full_block_with_mmr(
+    unfinished_block: UnfinishedBlock,
+    cc_ip_vdf: VDFInfo,
+    cc_ip_proof: VDFProof,
+    rc_ip_vdf: VDFInfo,
+    rc_ip_proof: VDFProof,
+    icc_ip_vdf: VDFInfo | None,
+    icc_ip_proof: VDFProof | None,
+    finished_sub_slots: list[EndOfSubSlotBundle],
+    prev_block: BlockRecord | None,
+    blocks: BlockRecordsProtocol,
+    total_iters_sp: uint128,
+    difficulty: uint64,
+    constants: ConsensusConstants,
+) -> FullBlock:
+    """
+    Wrapper around unfinished_block_to_full_block that automatically computes the MMR root.
+    This maintains backward compatibility while adding MMR support.
+    """
+    prev_header_hash = None
+    if prev_block is not None:
+        prev_header_hash = prev_block.header_hash
+
+    pre_sp_tx_height = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=unfinished_block.prev_header_hash,
+        sp_index=unfinished_block.reward_chain_block.signage_point_index,
+        first_in_sub_slot=len(finished_sub_slots) > 0,
+    )
+    # Before fork, use None for MMR root.
+    header_mmr_root = None
+    if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+        header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
+            prev_header_hash,
+            unfinished_block.reward_chain_block.signage_point_index,
+            len(finished_sub_slots) > 0,
+            blocks,
+        )
+
+    return unfinished_block_to_full_block(
+        unfinished_block,
+        cc_ip_vdf,
+        cc_ip_proof,
+        rc_ip_vdf,
+        rc_ip_proof,
+        icc_ip_vdf,
+        icc_ip_proof,
+        finished_sub_slots,
+        prev_block,
+        blocks,
+        total_iters_sp,
+        difficulty,
+        header_mmr_root,
+        constants,
+    )
