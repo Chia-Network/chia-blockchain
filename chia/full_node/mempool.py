@@ -144,7 +144,7 @@ class Mempool:
         self.mempool_info: MempoolInfo = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
 
-    def __del__(self) -> None:
+    def close(self) -> None:
         self._db_conn.close()
 
     def _row_to_item(self, row: sqlite3.Row) -> MempoolItem:

@@ -232,14 +232,23 @@ class FullNode:
 
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        single_threaded = self.config.get("single_threaded", False)
 
-        async with DBWrapper2.managed(
-            self.db_path,
-            db_version=db_version,
-            reader_count=self.config.get("db_readers", 4),
-            log_path=sql_log_path,
-            synchronous=db_sync,
-        ) as self._db_wrapper:
+        async with (
+            DBWrapper2.managed(
+                self.db_path,
+                db_version=db_version,
+                reader_count=self.config.get("db_readers", 4),
+                log_path=sql_log_path,
+                synchronous=db_sync,
+            ) as self._db_wrapper,
+            MempoolManager.managed(
+                get_coin_records=self.coin_store.get_coin_records,
+                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                consensus_constants=self.constants,
+                single_threaded=single_threaded,
+            ) as self._mempool_manager,
+        ):
             if self.db_wrapper.db_version != 2:
                 async with self.db_wrapper.reader_no_transaction() as conn:
                     async with conn.execute(
@@ -263,7 +272,6 @@ class FullNode:
             self.log.info("Initializing blockchain from disk")
             start_time = time.monotonic()
             reserved_cores = self.config.get("reserved_cores", 0)
-            single_threaded = self.config.get("single_threaded", False)
             log_coins = self.config.get("log_coins", False)
             multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
             self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
@@ -277,13 +285,6 @@ class FullNode:
                 reserved_cores=reserved_cores,
                 single_threaded=single_threaded,
                 log_coins=log_coins,
-            )
-
-            self._mempool_manager = MempoolManager(
-                get_coin_records=self.coin_store.get_coin_records,
-                get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
-                consensus_constants=self.constants,
-                single_threaded=single_threaded,
             )
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
