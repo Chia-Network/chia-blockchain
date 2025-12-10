@@ -39,10 +39,10 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
 
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=delegated_puzzle)
-        bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
+        bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=bls_with_taproot_member)
         memo = PuzzleHint(
-            bls_puzzle.puzzle.puzzle_hash(0),
-            bls_puzzle.puzzle.memo(0),
+            puzhash=bls_puzzle.puzzle.puzzle_hash(0),
+            memo=bls_puzzle.puzzle.memo(0),
         )
 
         assert bls_puzzle.memo() == Program.to(
@@ -78,8 +78,8 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         [],
                         bls_with_taproot_member.solve(),
                         DelegatedPuzzleAndSolution(
-                            delegated_puzzle,
-                            Program.to(
+                            puzzle=delegated_puzzle,
+                            solution=Program.to(
                                 [
                                     announcement.to_program(),
                                     announcement.corresponding_assertion().to_program(),
@@ -114,8 +114,8 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         [],
                         bls_with_taproot_member.solve(True),
                         DelegatedPuzzleAndSolution(
-                            delegated_puzzle,
-                            Program.to(
+                            puzzle=delegated_puzzle,
+                            solution=Program.to(
                                 [
                                     announcement.to_program(),
                                     announcement.corresponding_assertion().to_program(),
@@ -139,10 +139,10 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         illegal_taproot_puzzle = Program.to([1, [51, Program.to(1).get_tree_hash(), 1]])
         assert illegal_taproot_puzzle.run([]) == Program.to([[51, Program.to(1).get_tree_hash(), 1]])
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle)
-        bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
+        bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=bls_with_taproot_member)
         memo = PuzzleHint(
-            bls_puzzle.puzzle.puzzle_hash(0),
-            bls_puzzle.puzzle.memo(0),
+            puzhash=bls_puzzle.puzzle.puzzle_hash(0),
+            memo=bls_puzzle.puzzle.memo(0),
         )
 
         assert bls_puzzle.memo() == Program.to(
@@ -174,8 +174,8 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
                         [],
                         bls_with_taproot_member.solve(True),
                         DelegatedPuzzleAndSolution(
-                            delegated_puzzle,
-                            Program.to(
+                            puzzle=delegated_puzzle,
+                            solution=Program.to(
                                 [
                                     announcement.to_program(),
                                     announcement.corresponding_assertion().to_program(),
@@ -264,8 +264,8 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         )[0].coin
 
         memo = PuzzleHint(
-            singleton_member_puzzle.puzzle.puzzle_hash(0),
-            singleton_member_puzzle.puzzle.memo(0),
+            puzhash=singleton_member_puzzle.puzzle.puzzle_hash(0),
+            memo=singleton_member_puzzle.puzzle.memo(0),
         )
 
         assert singleton_member_puzzle.memo() == Program.to(
@@ -321,8 +321,8 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                             [singleton_innerpuz.get_tree_hash()]
                         ),  # singleton member puzzle only requires singleton's current innerpuz
                         DelegatedPuzzleAndSolution(
-                            delegated_puzzle,
-                            Program.to(
+                            puzzle=delegated_puzzle,
+                            solution=Program.to(
                                 [
                                     announcement.to_program(),
                                     announcement.corresponding_assertion().to_program(),
@@ -360,8 +360,8 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
             nonce=0, restrictions=[], puzzle=FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
         )
         memo = PuzzleHint(
-            bls_puzzle.puzzle.puzzle_hash(0),
-            bls_puzzle.puzzle.memo(0),
+            puzhash=bls_puzzle.puzzle.puzzle_hash(0),
+            memo=bls_puzzle.puzzle.memo(0),
         )
 
         assert bls_puzzle.memo() == Program.to(
@@ -396,8 +396,8 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                         [],
                         Program.to(0),
                         DelegatedPuzzleAndSolution(
-                            Program.to(0),  # not the fixed puzzle
-                            Program.to(
+                            puzzle=Program.to(0),  # not the fixed puzzle
+                            solution=Program.to(
                                 [
                                     announcement.to_program(),
                                     announcement.corresponding_assertion().to_program(),
@@ -429,8 +429,8 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                         [],
                         Program.to(0),
                         DelegatedPuzzleAndSolution(
-                            delegated_puzzle,  # the fixed puzzle
-                            Program.to(
+                            puzzle=delegated_puzzle,  # the fixed puzzle
+                            solution=Program.to(
                                 [
                                     announcement.to_program(),
                                     announcement.corresponding_assertion().to_program(),

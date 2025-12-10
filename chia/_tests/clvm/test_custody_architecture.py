@@ -43,13 +43,13 @@ ANY_PROGRAM = Program.to(None)
         # no restrictions
         [],
         # member validator
-        [UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM))],
+        [UnknownRestriction(RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))],
         # dpuz validator
-        [UnknownRestriction(RestrictionHint(False, BUNCH_OF_ZEROS, ANY_PROGRAM))],
+        [UnknownRestriction(RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))],
         # multiple restrictions of various types
         [
-            UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM)),
-            UnknownRestriction(RestrictionHint(False, BUNCH_OF_ZEROS, ANY_PROGRAM)),
+            UnknownRestriction(RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+            UnknownRestriction(RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
         ],
     ],
 )
@@ -57,35 +57,59 @@ ANY_PROGRAM = Program.to(None)
     "puzzle",
     [
         # Custody puzzle
-        UnknownPuzzle(PuzzleHint(BUNCH_OF_ZEROS, ANY_PROGRAM)),
+        UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
         # 1 of 2 (w/ & w/o restrictions)
         MofN(
-            1,
-            [
-                PuzzleWithRestrictions(1, [], UnknownPuzzle(PuzzleHint(BUNCH_OF_ZEROS, ANY_PROGRAM))),
+            m=1,
+            members=[
                 PuzzleWithRestrictions(
-                    2,
-                    [
-                        UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM)),
-                        UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM)),
+                    nonce=1, restrictions=[], puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
+                ),
+                PuzzleWithRestrictions(
+                    nonce=2,
+                    restrictions=[
+                        UnknownRestriction(
+                            RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                        ),
+                        UnknownRestriction(
+                            RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)
+                        ),
                     ],
-                    UnknownPuzzle(PuzzleHint(BUNCH_OF_ONES, ANY_PROGRAM)),
+                    puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
                 ),
             ],
         ),
         # 2 of 2 (further 1 of 1s)
         MofN(
-            2,
-            [
+            m=2,
+            members=[
                 PuzzleWithRestrictions(
-                    1,
-                    [],
-                    MofN(1, [PuzzleWithRestrictions(3, [], UnknownPuzzle(PuzzleHint(BUNCH_OF_ZEROS, ANY_PROGRAM)))]),
+                    nonce=1,
+                    restrictions=[],
+                    puzzle=MofN(
+                        m=1,
+                        members=[
+                            PuzzleWithRestrictions(
+                                nonce=3,
+                                restrictions=[],
+                                puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM)),
+                            )
+                        ],
+                    ),
                 ),
                 PuzzleWithRestrictions(
-                    4,
-                    [],
-                    MofN(1, [PuzzleWithRestrictions(5, [], UnknownPuzzle(PuzzleHint(BUNCH_OF_ONES, ANY_PROGRAM)))]),
+                    nonce=4,
+                    restrictions=[],
+                    puzzle=MofN(
+                        m=1,
+                        members=[
+                            PuzzleWithRestrictions(
+                                nonce=5,
+                                restrictions=[],
+                                puzzle=UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)),
+                            )
+                        ],
+                    ),
                 ),
             ],
         ),
@@ -130,15 +154,21 @@ def test_unknown_puzzle_behavior() -> None:
             return bytes32([nonce] * 32)
 
     # First a simple PuzzleWithRestrictions that is really just a Puzzle
-    unknown_puzzle_0 = UnknownPuzzle(PuzzleHint(BUNCH_OF_ZEROS, ANY_PROGRAM))
-    pwr = PuzzleWithRestrictions(0, [], unknown_puzzle_0)
+    unknown_puzzle_0 = UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_ZEROS, memo=ANY_PROGRAM))
+    pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=unknown_puzzle_0)
     assert pwr.unknown_puzzles == {BUNCH_OF_ZEROS: unknown_puzzle_0}
     known_puzzles = {BUNCH_OF_ZEROS: PlaceholderPuzzle()}
-    assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(0, [], PlaceholderPuzzle())
+    assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(
+        nonce=0, restrictions=[], puzzle=PlaceholderPuzzle()
+    )
 
     # Now we add some restrictions
-    unknown_restriction_1 = UnknownRestriction(RestrictionHint(True, BUNCH_OF_ONES, ANY_PROGRAM))
-    unknown_restriction_2 = UnknownRestriction(RestrictionHint(False, BUNCH_OF_TWOS, ANY_PROGRAM))
+    unknown_restriction_1 = UnknownRestriction(
+        RestrictionHint(member_not_dpuz=True, puzhash=BUNCH_OF_ONES, memo=ANY_PROGRAM)
+    )
+    unknown_restriction_2 = UnknownRestriction(
+        RestrictionHint(member_not_dpuz=False, puzhash=BUNCH_OF_TWOS, memo=ANY_PROGRAM)
+    )
     pwr = replace(pwr, restrictions=[unknown_restriction_1, unknown_restriction_2])
     assert pwr.unknown_puzzles == {
         BUNCH_OF_ZEROS: unknown_puzzle_0,
@@ -151,16 +181,19 @@ def test_unknown_puzzle_behavior() -> None:
         BUNCH_OF_TWOS: PlaceholderPuzzle(),
     }
     assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(
-        0, [PlaceholderPuzzle(), PlaceholderPuzzle()], PlaceholderPuzzle()
+        nonce=0, restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()], puzzle=PlaceholderPuzzle()
     )
 
     # Now we do test an MofN recursion
-    unknown_puzzle_3 = UnknownPuzzle(PuzzleHint(BUNCH_OF_THREES, ANY_PROGRAM))
+    unknown_puzzle_3 = UnknownPuzzle(PuzzleHint(puzhash=BUNCH_OF_THREES, memo=ANY_PROGRAM))
     pwr = replace(
         pwr,
         puzzle=MofN(
             m=1,
-            members=[PuzzleWithRestrictions(0, [], unknown_puzzle_0), PuzzleWithRestrictions(1, [], unknown_puzzle_3)],
+            members=[
+                PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=unknown_puzzle_0),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], puzzle=unknown_puzzle_3),
+            ],
         ),
     )
     assert pwr.unknown_puzzles == {
@@ -176,13 +209,13 @@ def test_unknown_puzzle_behavior() -> None:
         BUNCH_OF_THREES: PlaceholderPuzzle(),
     }
     assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(
-        0,
-        [PlaceholderPuzzle(), PlaceholderPuzzle()],
-        MofN(
+        nonce=0,
+        restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()],
+        puzzle=MofN(
             m=1,
             members=[
-                PuzzleWithRestrictions(0, [], PlaceholderPuzzle()),
-                PuzzleWithRestrictions(1, [], PlaceholderPuzzle()),
+                PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=PlaceholderPuzzle()),
+                PuzzleWithRestrictions(nonce=1, restrictions=[], puzzle=PlaceholderPuzzle()),
             ],
         ),
     )
@@ -242,7 +275,15 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(2, 6):
                 m_of_n = PuzzleWithRestrictions(
-                    0, [], MofN(m, [PuzzleWithRestrictions(n_i, restrictions, ACSMember()) for n_i in range(n)])
+                    nonce=0,
+                    restrictions=[],
+                    puzzle=MofN(
+                        m=m,
+                        members=[
+                            PuzzleWithRestrictions(nonce=n_i, restrictions=restrictions, puzzle=ACSMember())
+                            for n_i in range(n)
+                        ],
+                    ),
                 )
 
                 # Farm and find coin
@@ -259,11 +300,15 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                 # Test a spend of every combination of m of n
                 for indexes in itertools.combinations(range(n), m):
                     proven_spends = {
-                        PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_hash(
+                        PuzzleWithRestrictions(nonce=index, restrictions=restrictions, puzzle=ACSMember()).puzzle_hash(
                             _top_level=False
                         ): ProvenSpend(
-                            PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_reveal(_top_level=False),
-                            PuzzleWithRestrictions(index, restrictions, ACSMember()).solve(
+                            puzzle_reveal=PuzzleWithRestrictions(
+                                nonce=index, restrictions=restrictions, puzzle=ACSMember()
+                            ).puzzle_reveal(_top_level=False),
+                            solution=PuzzleWithRestrictions(
+                                nonce=index, restrictions=restrictions, puzzle=ACSMember()
+                            ).solve(
                                 [],
                                 [Program.to(None)] if with_restrictions else [],
                                 Program.to(
@@ -287,8 +332,8 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                             [],
                                             m_of_n.puzzle.solve(proven_spends),  # pylint: disable=no-member
                                             DelegatedPuzzleAndSolution(
-                                                Program.to(1),
-                                                Program.to(
+                                                puzzle=Program.to(1),
+                                                solution=Program.to(
                                                     [
                                                         announcement_2.to_program(),
                                                         announcement_1.corresponding_assertion().to_program(),
@@ -329,7 +374,9 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
     """
     async with sim_and_client() as (sim, client):
         pwr = PuzzleWithRestrictions(
-            0, [ACSMemberValidator(), ACSMemberValidator(), ACSDPuzValidator(), ACSDPuzValidator()], ACSMember()
+            nonce=0,
+            restrictions=[ACSMemberValidator(), ACSMemberValidator(), ACSDPuzValidator(), ACSDPuzValidator()],
+            puzzle=ACSMember(),
         )
 
         # Farm coin with puzzle inside
@@ -372,8 +419,8 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                                     ]
                                 ),
                                 DelegatedPuzzleAndSolution(
-                                    dpuz,
-                                    Program.to(
+                                    puzzle=dpuz,
+                                    solution=Program.to(
                                         [
                                             announcement_2.to_program(),
                                             announcement_1.corresponding_assertion().to_program(),

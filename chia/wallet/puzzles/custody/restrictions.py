@@ -69,7 +69,9 @@ class Force1of2wRestrictedVariable:
             member_not_dpuz, puzzle_hash, restriction_memo = single_memo.as_iter()
             restriction_hints.append(
                 RestrictionHint(
-                    member_not_dpuz is not Program.to(None), bytes32(puzzle_hash.as_atom()), restriction_memo
+                    member_not_dpuz=member_not_dpuz is not Program.to(None),
+                    puzhash=bytes32(puzzle_hash.as_atom()),
+                    memo=restriction_memo,
                 )
             )
         return Force1of2wRestrictedVariable(
@@ -122,6 +124,8 @@ class Force1of2wRestrictedVariable:
     def anticipated_pwr(
         self, nonce: int, left_side_pwr: PuzzleWithRestrictions, right_side_member: Puzzle
     ) -> PuzzleWithRestrictions:
-        anticipated_right_side_pwr = PuzzleWithRestrictions(nonce, self.right_side_restrictions, right_side_member)
+        anticipated_right_side_pwr = PuzzleWithRestrictions(
+            nonce=nonce, restrictions=self.right_side_restrictions, puzzle=right_side_member
+        )
         anticipated_m_of_n = MofN(m=1, members=[left_side_pwr, anticipated_right_side_pwr])
-        return PuzzleWithRestrictions(nonce, [], anticipated_m_of_n)
+        return PuzzleWithRestrictions(nonce=nonce, restrictions=[], puzzle=anticipated_m_of_n)

@@ -33,7 +33,7 @@ class Puzzle(Protocol):
     def puzzle_hash(self, nonce: int) -> bytes32: ...
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PuzzleHint:
     puzhash: bytes32
     memo: Program
@@ -45,8 +45,8 @@ class PuzzleHint:
     def from_program(cls, prog: Program) -> PuzzleHint:
         puzhash, memo = prog.as_iter()
         return PuzzleHint(
-            bytes32(puzhash.as_atom()),
-            memo,
+            puzhash=bytes32(puzhash.as_atom()),
+            memo=memo,
         )
 
 
@@ -76,7 +76,7 @@ class Restriction(Puzzle, Protocol[_T_MemberNotDPuz_co]):
     def member_not_dpuz(self) -> _T_MemberNotDPuz_co: ...
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class RestrictionHint:
     member_not_dpuz: bool
     puzhash: bytes32
@@ -89,9 +89,9 @@ class RestrictionHint:
     def from_program(cls, prog: Program) -> RestrictionHint:
         member_not_dpuz, puzhash, memo = prog.as_iter()
         return RestrictionHint(
-            member_not_dpuz != Program.to(None),
-            bytes32(puzhash.as_atom()),
-            memo,
+            member_not_dpuz=member_not_dpuz != Program.to(None),
+            puzhash=bytes32(puzhash.as_atom()),
+            memo=memo,
         )
 
 
@@ -114,7 +114,7 @@ class UnknownRestriction:
 
 
 # MofN puzzle drivers which are a fundamental component of the architecture
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class ProvenSpend:
     puzzle_reveal: Program
     solution: Program
@@ -144,7 +144,7 @@ class MofNMerkleTree(MerkleTree):  # Special subclass that can generate proofs f
         return self._m_of_n_proof(self.nodes, spends_to_prove)
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class MofNHint:
     m: int
     member_memos: list[Program]
@@ -156,12 +156,12 @@ class MofNHint:
     def from_program(cls, prog: Program) -> MofNHint:
         m, member_memos = prog.as_iter()
         return MofNHint(
-            m.as_int(),
-            list(member_memos.as_iter()),
+            m=m.as_int(),
+            member_memos=list(member_memos.as_iter()),
         )
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the architecture
     m: int
     members: list[PuzzleWithRestrictions]
@@ -214,14 +214,14 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 
 
 # A convenience object for hinting the two solution values that must always exist
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class DelegatedPuzzleAndSolution:
     puzzle: Program
     solution: Program
 
 
 # The top-level object inside every "outer" puzzle
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class PuzzleWithRestrictions:
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
     restrictions: list[Restriction[MemberOrDPuz]]
@@ -231,7 +231,9 @@ class PuzzleWithRestrictions:
     def memo(self) -> Program:
         restriction_hints: list[RestrictionHint] = [
             RestrictionHint(
-                restriction.member_not_dpuz, restriction.puzzle_hash(self.nonce), restriction.memo(self.nonce)
+                member_not_dpuz=restriction.member_not_dpuz,
+                puzhash=restriction.puzzle_hash(self.nonce),
+                memo=restriction.memo(self.nonce),
             )
             for restriction in self.restrictions
         ]
@@ -239,13 +241,13 @@ class PuzzleWithRestrictions:
         puzzle_hint: MofNHint | PuzzleHint
         if isinstance(self.puzzle, MofN):
             puzzle_hint = MofNHint(
-                self.puzzle.m,
-                [member.memo() for member in self.puzzle.members],  # pylint: disable=no-member
+                m=self.puzzle.m,
+                member_memos=[member.memo() for member in self.puzzle.members],
             )
         else:
             puzzle_hint = PuzzleHint(
-                self.puzzle.puzzle_hash(self.nonce),
-                self.puzzle.memo(self.nonce),
+                puzhash=self.puzzle.puzzle_hash(self.nonce),
+                memo=self.puzzle.memo(self.nonce),
             )
 
         return Program.to(
@@ -270,16 +272,16 @@ class PuzzleWithRestrictions:
         if further_branching:
             m_of_n_hint = MofNHint.from_program(puzzle_hint_prog)
             puzzle: Puzzle = MofN(
-                m_of_n_hint.m, [PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
+                m=m_of_n_hint.m, members=[PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
             )
         else:
             puzzle_hint = PuzzleHint.from_program(puzzle_hint_prog)
             puzzle = UnknownPuzzle(puzzle_hint)
 
         return PuzzleWithRestrictions(
-            nonce.as_int(),
-            [UnknownRestriction(hint) for hint in restriction_hints],
-            puzzle,
+            nonce=nonce.as_int(),
+            restrictions=[UnknownRestriction(hint) for hint in restriction_hints],
+            puzzle=puzzle,
         )
 
     @property
@@ -332,9 +334,9 @@ class PuzzleWithRestrictions:
             new_puzzle = self.puzzle
 
         return PuzzleWithRestrictions(
-            self.nonce,
-            new_restrictions,
-            new_puzzle,
+            nonce=self.nonce,
+            restrictions=new_restrictions,
+            puzzle=new_puzzle,
         )
 
     def puzzle_reveal(self, _top_level: bool = True) -> Program:

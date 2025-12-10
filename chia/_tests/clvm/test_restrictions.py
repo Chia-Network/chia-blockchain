@@ -195,7 +195,7 @@ class ConditionsBannedRestriction:
 async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         # What our puzzle must be
-        anticipated_left_side_pwr = PuzzleWithRestrictions(0, [], ACSMember())
+        anticipated_left_side_pwr = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=ACSMember())
         anticipated_restrictions: list[Restriction[MemberOrDPuz]] = [
             SelfDestructRestriction(),
             ConditionsBannedRestriction(),
@@ -306,8 +306,8 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
                         anticipated_m_of_n.solve(
                             {
                                 anticipated_right_side_pwr.puzzle_hash(_top_level=False): ProvenSpend(
-                                    anticipated_right_side_pwr.puzzle_reveal(_top_level=False),
-                                    anticipated_right_side_pwr.solve(
+                                    puzzle_reveal=anticipated_right_side_pwr.puzzle_reveal(_top_level=False),
+                                    solution=anticipated_right_side_pwr.solve(
                                         [Program.to(None)],
                                         [Program.to(None)],
                                         Program.to([]),  # This should pass ConditionsBannedRestriction
@@ -341,8 +341,8 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
                         anticipated_m_of_n.solve(
                             {
                                 anticipated_right_side_pwr.puzzle_hash(_top_level=False): ProvenSpend(
-                                    anticipated_right_side_pwr.puzzle_reveal(_top_level=False),
-                                    anticipated_right_side_pwr.solve(
+                                    puzzle_reveal=anticipated_right_side_pwr.puzzle_reveal(_top_level=False),
+                                    solution=anticipated_right_side_pwr.solve(
                                         [Program.to(None)],
                                         [Program.to(None)],
                                         Program.to(
@@ -373,8 +373,8 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
                         anticipated_m_of_n.solve(
                             {
                                 anticipated_right_side_pwr.puzzle_hash(_top_level=False): ProvenSpend(
-                                    anticipated_right_side_pwr.puzzle_reveal(_top_level=False),
-                                    anticipated_right_side_pwr.solve(
+                                    puzzle_reveal=anticipated_right_side_pwr.puzzle_reveal(_top_level=False),
+                                    solution=anticipated_right_side_pwr.solve(
                                         [Program.to(None)],
                                         [Program.to(None)],
                                         Program.to([]),  # This should pass ConditionsBannedRestriction
@@ -409,8 +409,8 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
                         anticipated_m_of_n.solve(
                             {
                                 anticipated_left_side_pwr.puzzle_hash(_top_level=False): ProvenSpend(
-                                    anticipated_left_side_pwr.puzzle_reveal(_top_level=False),
-                                    anticipated_left_side_pwr.solve(
+                                    puzzle_reveal=anticipated_left_side_pwr.puzzle_reveal(_top_level=False),
+                                    solution=anticipated_left_side_pwr.solve(
                                         [],
                                         [],
                                         Program.to([CreateCoin(some_puzzle_hash, uint64(0)).to_program()]),

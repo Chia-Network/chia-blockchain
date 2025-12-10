@@ -50,8 +50,8 @@ class ValidatorStackRestriction:
     ) -> DelegatedPuzzleAndSolution:
         for wrapper, wrapper_solution in zip(self.required_wrappers, wrapper_solutions):
             delegated_puzzle_and_solution = DelegatedPuzzleAndSolution(
-                ADD_DPUZ_WRAPPER.curry(wrapper.puzzle(UNUSED_NONCE), delegated_puzzle_and_solution.puzzle),
-                Program.to([wrapper_solution, delegated_puzzle_and_solution.solution]),
+                puzzle=ADD_DPUZ_WRAPPER.curry(wrapper.puzzle(UNUSED_NONCE), delegated_puzzle_and_solution.puzzle),
+                solution=Program.to([wrapper_solution, delegated_puzzle_and_solution.solution]),
             )
 
         return delegated_puzzle_and_solution
