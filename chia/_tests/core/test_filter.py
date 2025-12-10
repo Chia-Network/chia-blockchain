@@ -3,10 +3,16 @@ from __future__ import annotations
 import pytest
 from chiabip158 import PyBIP158
 
+from chia._tests.conftest import ConsensusMode
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_basic_filter_test(simulator_and_wallet):
     _full_nodes, wallets, bt = simulator_and_wallet
     wallet_node, _server_2 = wallets[0]
