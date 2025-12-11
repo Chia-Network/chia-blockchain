@@ -1,5 +1,6 @@
 {
   "conditions_banned": "e7e26a3fc3a8a35e3e9944e8107bf330e107e884afdb8c5003559b3882b6566b",
+  "fixed_create_coin": "9b180c90094b82658705d838a954ad31abeeccf513fcb75b9924caa8d795fd29",
   "self_destruct": "d0dc28ae70b9f9b5d49581a1914ae0844109234a712eda1381846fa358939ffb",
   "test_generator_deserialize": "52add794fc76e89512e4a063c383418bda084c8a78c74055abe80179e4a7832c",
   "test_multiple_generator_input_arguments": "156dafbddc3e1d3bfe1f2a84e48e5e46b287b8358bf65c3c091c93e855fbfc5b"

@@ -1,0 +1,23 @@
+(mod
+  (
+    ALLOWED_PH
+    Conditions
+  )
+
+  (defconstant CREATE_COIN 51)
+
+  (defun check_conditions (ALLOWED_PH conditions return)
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)
+            (if (= (f (r (f conditions))) ALLOWED_PH)
+                (check_conditions ALLOWED_PH (r conditions) return)
+                (x)
+            )
+            (check_conditions ALLOWED_PH (r conditions) return)
+        )
+        return
+    )
+  )
+
+  (check_conditions ALLOWED_PH Conditions Conditions)
+)

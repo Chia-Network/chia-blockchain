@@ -24,7 +24,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     UnknownRestriction,
 )
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
-from chia.wallet.puzzles.custody.restrictions import Force1of2wRestrictedVariable, Timelock
+from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Force1of2wRestrictedVariable, Timelock
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -154,6 +154,77 @@ async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
         assert Remark(Program.to(["foo"])) in conditions
         assert Remark(Program.to(["bar"])) in conditions
         assert Remark(Program.to(["bat"])) in conditions
+
+        # memo format assertion for coverage sake
+        assert restriction.memo(0) == Program.to([None])
+
+
+@pytest.mark.anyio
+async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        restriction = ValidatorStackRestriction(
+            required_wrappers=[FixedCreateCoinDestinations(allowed_ph=bytes32.zeros)]
+        )
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
+
+        # Farm and find coin
+        await sim.farm_block(pwr.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+
+        # Attempt to create a coin somewhere else
+        any_old_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=Program.to((1, [CreateCoin(bytes32([1] * 32), uint64(1)).to_program()])), solution=Program.to(None)
+        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
+        escape_attempt = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    pwr.puzzle_reveal(),
+                    pwr.solve(
+                        [], [Program.to([any_old_dpuz.puzzle.get_tree_hash()])], Program.to([[1, "bar"]]), any_old_dpuz
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(escape_attempt)
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # Now send it to the correct place
+        correct_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=Program.to(
+                (1, [CreateCoin(bytes32.zeros, uint64(1)).to_program(), Remark(Program.to("foo")).to_program()])
+            ),
+            solution=Program.to(None),
+        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(correct_dpuz, [Program.to(None)])
+        sb = cost_logger.add_cost(
+            "Minimal puzzle with restrictions w/ fixed create coin wrapper",
+            WalletSpendBundle(
+                [
+                    make_spend(
+                        coin,
+                        pwr.puzzle_reveal(),
+                        pwr.solve(
+                            [],
+                            [Program.to([correct_dpuz.puzzle.get_tree_hash()])],
+                            Program.to([Remark(Program.to("bar")).to_program()]),
+                            wrapped_dpuz,
+                        ),
+                    )
+                ],
+                G2Element(),
+            ),
+        )
+        result = await client.push_tx(sb)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        conditions = parse_conditions_non_consensus(
+            run(sb.coin_spends[0].puzzle_reveal, sb.coin_spends[0].solution).as_iter()
+        )
+        assert Remark(Program.to("foo")) in conditions
+        assert Remark(Program.to("bar")) in conditions
 
         # memo format assertion for coverage sake
         assert restriction.memo(0) == Program.to([None])

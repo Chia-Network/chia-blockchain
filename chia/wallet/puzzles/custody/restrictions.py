@@ -21,10 +21,14 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     RestrictionHint,
     UnknownRestriction,
 )
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.merkle_tree import hash_an_atom
 
 TIMELOCK_WRAPPER = Program.from_bytes(puzzle_mods.TIMELOCK)
 FORCE_1_OF_2_W_RESTRICTED_VARIABLE = Program.from_bytes(puzzle_mods.FORCE_1_OF_2_W_RESTRICTED_VARIABLE)
+FIXED_CREATE_COIN_DESTINATIONS = load_clvm_maybe_recompile(
+    "fixed_create_coin_destinations.clsp", package_or_requirement="chia.wallet.puzzles.custody"
+)
 
 
 @dataclass(frozen=True)
@@ -40,6 +44,24 @@ class Timelock:
 
     def puzzle(self, nonce: int) -> Program:
         return TIMELOCK_WRAPPER.curry(self.timelock)
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+
+
+@dataclass(kw_only=True, frozen=True)
+class FixedCreateCoinDestinations:
+    allowed_ph: bytes32
+
+    @property
+    def member_not_dpuz(self) -> bool:
+        return False
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(None)
+
+    def puzzle(self, nonce: int) -> Program:
+        return FIXED_CREATE_COIN_DESTINATIONS.curry(self.allowed_ph)
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
