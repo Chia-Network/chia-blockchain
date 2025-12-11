@@ -158,6 +158,15 @@ async def run_mempool_benchmark() -> None:
             bundles.append(tx)
         large_spend_bundles.append(bundles)
 
+    async def add_spend_bundles(spend_bundles: list[SpendBundle], mempool: MempoolManager, height: uint32) -> None:
+        for tx in spend_bundles:
+            spend_bundle_id = tx.name()
+            npc = await mempool.pre_validate_spendbundle(tx, spend_bundle_id)
+            assert npc is not None
+            info = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
+            assert info.status == MempoolInclusionStatus.SUCCESS
+            assert info.error is None
+
     start_height = height
     for single_threaded in [False, True]:
         if single_threaded:
@@ -175,15 +184,6 @@ async def run_mempool_benchmark() -> None:
             rec = fake_block_record(height, timestamp)
             await mempool.new_peak(rec, None)
 
-            async def add_spend_bundles(spend_bundles: list[SpendBundle]) -> None:
-                for tx in spend_bundles:
-                    spend_bundle_id = tx.name()
-                    npc = await mempool.pre_validate_spendbundle(tx, spend_bundle_id)
-                    assert npc is not None
-                    info = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
-                    assert info.status == MempoolInclusionStatus.SUCCESS
-                    assert info.error is None
-
             suffix = "st" if single_threaded else "mt"
 
             print("\nProfiling add_spend_bundle() with large bundles")
@@ -193,7 +193,7 @@ async def run_mempool_benchmark() -> None:
                 start = monotonic()
                 for peer in range(NUM_PEERS):
                     total_bundles += len(large_spend_bundles[peer])
-                    tasks.append(create_referenced_task(add_spend_bundles(large_spend_bundles[peer])))
+                    tasks.append(create_referenced_task(add_spend_bundles(large_spend_bundles[peer], mempool, height)))
                 await asyncio.gather(*tasks)
                 stop = monotonic()
             print(f"  time: {stop - start:0.4f}s")
@@ -216,7 +216,7 @@ async def run_mempool_benchmark() -> None:
                 start = monotonic()
                 for peer in range(NUM_PEERS):
                     total_bundles += len(spend_bundles[peer])
-                    tasks.append(create_referenced_task(add_spend_bundles(spend_bundles[peer])))
+                    tasks.append(create_referenced_task(add_spend_bundles(spend_bundles[peer], mempool, height)))
                 await asyncio.gather(*tasks)
                 stop = monotonic()
             print(f"  time: {stop - start:0.4f}s")
@@ -229,7 +229,9 @@ async def run_mempool_benchmark() -> None:
                 start = monotonic()
                 for peer in range(NUM_PEERS):
                     total_bundles += len(replacement_spend_bundles[peer])
-                    tasks.append(create_referenced_task(add_spend_bundles(replacement_spend_bundles[peer])))
+                    tasks.append(
+                        create_referenced_task(add_spend_bundles(replacement_spend_bundles[peer], mempool, height))
+                    )
                 await asyncio.gather(*tasks)
                 stop = monotonic()
             print(f"  time: {stop - start:0.4f}s")
