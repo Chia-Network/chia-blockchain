@@ -133,7 +133,7 @@ async def run_mempool_benchmark() -> None:
             # this coin will be spent in the next block
             most_recent_coin_id = coin.name()
 
-            stop = monotonic()
+        stop = monotonic()
 
     print(f"  time: {stop - start:0.4f}s")
     print(f"  per block: {(stop - start) / height * 1000:0.2f}ms")
