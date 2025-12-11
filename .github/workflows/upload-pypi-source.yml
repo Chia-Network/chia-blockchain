@@ -86,7 +86,7 @@ jobs:
       - name: Add safe git directory
         uses: chia-network/actions/git-mark-workspace-safe@main
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -152,7 +152,7 @@ jobs:
       - name: Add safe git directory
         uses: chia-network/actions/git-mark-workspace-safe@main
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -191,7 +191,7 @@ jobs:
         uses: chia-network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive

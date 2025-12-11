@@ -1,7 +1,5 @@
 {
   "conditions_banned": "e7e26a3fc3a8a35e3e9944e8107bf330e107e884afdb8c5003559b3882b6566b",
-  "nft_metadata_updater_default": "fe8a4b4e27a2e29a4d3fc7ce9d527adbcaccbab6ada3903ccf3ba9a769d2d78b",
-  "nft_metadata_updater_updateable": "0b1ffba1601777c06b78ab38636e9624f2f8da73be9b36e0ce17c8d8ef3bad9f",
   "self_destruct": "d0dc28ae70b9f9b5d49581a1914ae0844109234a712eda1381846fa358939ffb",
   "test_generator_deserialize": "52add794fc76e89512e4a063c383418bda084c8a78c74055abe80179e4a7832c",
   "test_multiple_generator_input_arguments": "156dafbddc3e1d3bfe1f2a84e48e5e46b287b8358bf65c3c091c93e855fbfc5b"
