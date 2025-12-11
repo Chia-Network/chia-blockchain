@@ -360,9 +360,6 @@ class PuzzleWithRestrictions:
         else:
             fed_inner_puzzle = restricted_inner_puzzle
 
-        # if len(self.restrictions) > 1:
-        #     breakpoint()
-
         return INDEX_WRAPPER.curry(self.nonce, fed_inner_puzzle)
 
     def puzzle_hash(self, _top_level: bool = True) -> bytes32:
