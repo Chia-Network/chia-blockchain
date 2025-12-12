@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
@@ -23,28 +24,29 @@ from chia.wallet.wallet_service import WalletService
 @pytest.fixture(scope="function")
 async def setup_node_and_rpc(
     two_wallet_nodes_services: tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools],
-) -> tuple[FullNodeRpcClient, FullNodeRpcApi]:
+) -> AsyncGenerator[tuple[FullNodeRpcClient, FullNodeRpcApi], None]:
     full_nodes, wallets, bt = two_wallet_nodes_services
     wallet = wallets[0]._node.wallet_state_manager.main_wallet
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
     full_node_api: FullNodeSimulator = full_node_apis[0]
     full_node_service_1 = full_nodes[0]
     assert full_node_service_1.rpc_server is not None
-    client = await FullNodeRpcClient.create(
+
+    async with FullNodeRpcClient.create_as_context(
         bt.config["self_hostname"],
         full_node_service_1.rpc_server.listen_port,
         full_node_service_1.root_path,
         full_node_service_1.config,
-    )
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
+    ) as client:
+        full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
-    for i in range(4):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        for i in range(4):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    return client, full_node_rpc_api
+        yield client, full_node_rpc_api
 
 
 @pytest.fixture(scope="function")
