@@ -116,6 +116,13 @@ def validate_unfinished_header_block(
             can_finish_se = False
             can_finish_epoch = False
 
+    pre_sp_tx_height = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=header_block.prev_header_hash,
+        sp_index=header_block.reward_chain_block.signage_point_index,
+        first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+    )
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: bytes32 | None = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
@@ -434,8 +441,11 @@ def validate_unfinished_header_block(
                         blocks.block_record(prev_b.prev_hash),
                         expected_vs.difficulty if can_finish_epoch else None,
                         expected_vs.ssi if can_finish_epoch else None,
+                        header_block.reward_chain_block.signage_point_index,
                         expected_vs.prev_ses_block,
                     )
+                    if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+                        assert expected_sub_epoch_summary.challenge_merkle_root is not None
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
                         log.error(f"{expected_sub_epoch_summary}")
@@ -446,6 +456,7 @@ def validate_unfinished_header_block(
                                 f"expected ses hash: {expected_hash} got {ses_hash} ",
                             ),
                         )
+
             elif new_sub_slot and not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
                 if can_finish_se or can_finish_epoch:
@@ -505,13 +516,7 @@ def validate_unfinished_header_block(
         cc_sp_hash,
         height,
         expected_vs.difficulty,
-        pre_sp_tx_block_height(
-            constants=constants,
-            blocks=blocks,
-            prev_b_hash=header_block.prev_header_hash,
-            sp_index=header_block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
-        ),
+        pre_sp_tx_height,
     )
     if required_iters is None:
         return None, ValidationError(Err.INVALID_POSPACE)
@@ -848,6 +853,7 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_vs: ValidationState,
     check_sub_epoch_summary: bool = True,
+    skip_commitment_validation: bool = False,
 ) -> tuple[uint64 | None, ValidationError | None]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
@@ -1066,5 +1072,34 @@ def validate_finished_header_block(
         header_block.foliage.foliage_transaction_block_hash is not None
     ) != header_block.reward_chain_block.is_transaction_block:
         return None, ValidationError(Err.INVALID_FOLIAGE_BLOCK_PRESENCE)
+
+    # 34. Validate header MMR commitment (skip for weight proof validation)
+
+    pre_sp_tx_height = pre_sp_tx_block_height(
+        constants=constants,
+        blocks=blocks,
+        prev_b_hash=header_block.prev_header_hash,
+        sp_index=header_block.reward_chain_block.signage_point_index,
+        first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+    )
+    if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+        prev_hash = header_block.foliage.prev_block_hash if header_block.height > 0 else None
+        sp_index = header_block.reward_chain_block.signage_point_index
+        starts_new_slot = len(header_block.finished_sub_slots) > 0
+
+        expected_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
+            prev_hash,
+            sp_index,
+            starts_new_slot,
+            blocks,
+        )
+        mmr_root = header_block.reward_chain_block.header_mmr_root
+
+        if mmr_root != expected_mmr_root:
+            expected_hash = None if expected_mmr_root is None else expected_mmr_root.hex()
+            log.error(
+                f"Invalid header MMR root at height {header_block.height}. Expected: {expected_hash}, Got: {mmr_root}"
+            )
+            return None, ValidationError(Err.INVALID_REWARD_BLOCK_HASH)
 
     return required_iters, None
