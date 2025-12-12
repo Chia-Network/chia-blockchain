@@ -279,127 +279,123 @@ class FullNode:
                 log_coins=log_coins,
             )
 
-            self._mempool_manager = MempoolManager(
+            async with MempoolManager.managed(
                 get_coin_records=self.coin_store.get_coin_records,
                 get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                 consensus_constants=self.constants,
                 single_threaded=single_threaded,
-            )
+            ) as self._mempool_manager:
+                # Transactions go into this queue from the server, and get sent to respond_transaction
+                self._transaction_queue = TransactionQueue(1000, self.log)
+                self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
 
-            # Transactions go into this queue from the server, and get sent to respond_transaction
-            self._transaction_queue = TransactionQueue(1000, self.log)
-            self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
+                self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
 
-            self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
+                if self.config.get("enable_profiler", False):
+                    create_referenced_task(profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
-            if self.config.get("enable_profiler", False):
-                create_referenced_task(profile_task(self.root_path, "node", self.log), known_unreferenced=True)
+                self.profile_block_validation = self.config.get("profile_block_validation", False)
+                if self.profile_block_validation:  # pragma: no cover
+                    # this is not covered by any unit tests as it's essentially test code
+                    # itself. It's exercised manually when investigating performance issues
+                    profile_dir = path_from_root(self.root_path, "block-validation-profile")
+                    profile_dir.mkdir(parents=True, exist_ok=True)
 
-            self.profile_block_validation = self.config.get("profile_block_validation", False)
-            if self.profile_block_validation:  # pragma: no cover
-                # this is not covered by any unit tests as it's essentially test code
-                # itself. It's exercised manually when investigating performance issues
-                profile_dir = path_from_root(self.root_path, "block-validation-profile")
-                profile_dir.mkdir(parents=True, exist_ok=True)
+                if self.config.get("enable_memory_profiler", False):
+                    create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
-            if self.config.get("enable_memory_profiler", False):
-                create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
-
-            time_taken = time.monotonic() - start_time
-            peak: BlockRecord | None = self.blockchain.get_peak()
-            if peak is None:
-                self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
-                if not await self.coin_store.is_empty():
-                    self.log.error(
-                        "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
-                        "This is a fatal error. The blockchain database may be corrupt"
+                time_taken = time.monotonic() - start_time
+                peak: BlockRecord | None = self.blockchain.get_peak()
+                if peak is None:
+                    self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
+                    if not await self.coin_store.is_empty():
+                        self.log.error(
+                            "Inconsistent blockchain DB file! Could not find peak block but found some coins! "
+                            "This is a fatal error. The blockchain database may be corrupt"
+                        )
+                        raise RuntimeError("corrupt blockchain DB")
+                else:
+                    self.log.info(
+                        f"Blockchain initialized to peak {peak.header_hash} height"
+                        f" {peak.height}, "
+                        f"time taken: {int(time_taken)}s"
                     )
-                    raise RuntimeError("corrupt blockchain DB")
-            else:
-                self.log.info(
-                    f"Blockchain initialized to peak {peak.header_hash} height"
-                    f" {peak.height}, "
-                    f"time taken: {int(time_taken)}s"
-                )
-                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                    pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
-                    # No pending transactions when starting up
-                    assert len(pending_tx.spend_bundle_ids) == 0
+                    async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                        pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), None)
+                        # No pending transactions when starting up
+                        assert len(pending_tx.spend_bundle_ids) == 0
 
-                    full_peak: FullBlock | None = await self.blockchain.get_full_peak()
-                    assert full_peak is not None
-                    state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
-                    # Must be called under priority_mutex
-                    ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                        full_peak, state_change_summary, None
+                        full_peak: FullBlock | None = await self.blockchain.get_full_peak()
+                        assert full_peak is not None
+                        state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+                        # Must be called under priority_mutex
+                        ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                            full_peak, state_change_summary, None
+                        )
+                    # Can be called outside of priority_mutex
+                    await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
+                if self.config["send_uncompact_interval"] != 0:
+                    sanitize_weight_proof_only = False
+                    if "sanitize_weight_proof_only" in self.config:
+                        sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
+                    assert self.config["target_uncompact_proofs"] != 0
+                    self.uncompact_task = create_referenced_task(
+                        self.broadcast_uncompact_blocks(
+                            self.config["send_uncompact_interval"],
+                            self.config["target_uncompact_proofs"],
+                            sanitize_weight_proof_only,
+                        )
                     )
-                # Can be called outside of priority_mutex
-                await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
-            if self.config["send_uncompact_interval"] != 0:
-                sanitize_weight_proof_only = False
-                if "sanitize_weight_proof_only" in self.config:
-                    sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
-                assert self.config["target_uncompact_proofs"] != 0
-                self.uncompact_task = create_referenced_task(
-                    self.broadcast_uncompact_blocks(
-                        self.config["send_uncompact_interval"],
-                        self.config["target_uncompact_proofs"],
-                        sanitize_weight_proof_only,
-                    )
-                )
-            if self.wallet_sync_task is None or self.wallet_sync_task.done():
-                self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
+                if self.wallet_sync_task is None or self.wallet_sync_task.done():
+                    self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
 
-            self.initialized = True
+                self.initialized = True
 
-            try:
-                async with contextlib.AsyncExitStack() as aexit_stack:
-                    if self.full_node_peers is not None:
-                        await aexit_stack.enter_async_context(self.full_node_peers.manage())
-                    yield
-            finally:
-                self._shut_down = True
-                if self._init_weight_proof is not None:
-                    self._init_weight_proof.cancel()
+                try:
+                    async with contextlib.AsyncExitStack() as aexit_stack:
+                        if self.full_node_peers is not None:
+                            await aexit_stack.enter_async_context(self.full_node_peers.manage())
+                        yield
+                finally:
+                    self._shut_down = True
+                    if self._init_weight_proof is not None:
+                        self._init_weight_proof.cancel()
 
-                # blockchain is created in _start and in certain cases it may not exist here during _close
-                if self._blockchain is not None:
-                    self.blockchain.shut_down()
-                # same for mempool_manager
-                if self._mempool_manager is not None:
-                    self.mempool_manager.shut_down()
-                if self.uncompact_task is not None:
-                    self.uncompact_task.cancel()
-                if self._transaction_queue_task is not None:
-                    self._transaction_queue_task.cancel()
-                cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-                for one_tx_task in self._tx_task_list:
-                    if not one_tx_task.done():
-                        cancel_task_safe(task=one_tx_task, log=self.log)
-                for one_sync_task in self._sync_task_list:
-                    if not one_sync_task.done():
-                        cancel_task_safe(task=one_sync_task, log=self.log)
-                for segment_task in self._segment_task_list:
-                    cancel_task_safe(segment_task, self.log)
-                for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
-                    cancel_task_safe(task, self.log)
-                if self._init_weight_proof is not None:
-                    await asyncio.wait([self._init_weight_proof])
-                for one_tx_task in self._tx_task_list:
-                    if one_tx_task.done():
-                        self.log.info(f"TX task {one_tx_task.get_name()} done")
-                    else:
-                        with contextlib.suppress(asyncio.CancelledError):
-                            self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
-                            await one_tx_task
-                for one_sync_task in self._sync_task_list:
-                    if one_sync_task.done():
-                        self.log.info(f"Long sync task {one_sync_task.get_name()} done")
-                    else:
-                        with contextlib.suppress(asyncio.CancelledError):
-                            self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
-                            await one_sync_task
-                await asyncio.gather(*self._segment_task_list, return_exceptions=True)
+                    # blockchain is created in _start and in certain cases it may not exist here during _close
+                    if self._blockchain is not None:
+                        self.blockchain.shut_down()
+                    if self.uncompact_task is not None:
+                        self.uncompact_task.cancel()
+                    if self._transaction_queue_task is not None:
+                        self._transaction_queue_task.cancel()
+                    cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+                    for one_tx_task in self._tx_task_list:
+                        if not one_tx_task.done():
+                            cancel_task_safe(task=one_tx_task, log=self.log)
+                    for one_sync_task in self._sync_task_list:
+                        if not one_sync_task.done():
+                            cancel_task_safe(task=one_sync_task, log=self.log)
+                    for segment_task in self._segment_task_list:
+                        cancel_task_safe(segment_task, self.log)
+                    for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+                        cancel_task_safe(task, self.log)
+                    if self._init_weight_proof is not None:
+                        await asyncio.wait([self._init_weight_proof])
+                    for one_tx_task in self._tx_task_list:
+                        if one_tx_task.done():
+                            self.log.info(f"TX task {one_tx_task.get_name()} done")
+                        else:
+                            with contextlib.suppress(asyncio.CancelledError):
+                                self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
+                                await one_tx_task
+                    for one_sync_task in self._sync_task_list:
+                        if one_sync_task.done():
+                            self.log.info(f"Long sync task {one_sync_task.get_name()} done")
+                        else:
+                            with contextlib.suppress(asyncio.CancelledError):
+                                self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
+                                await one_sync_task
+                    await asyncio.gather(*self._segment_task_list, return_exceptions=True)
 
     @property
     def block_store(self) -> BlockStore:
