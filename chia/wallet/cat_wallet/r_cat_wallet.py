@@ -162,7 +162,7 @@ class RCATWallet(CATWallet):
         cat_wallet: CATWallet,
         hidden_puzzle_hash: bytes32,
     ) -> bool:
-        if not cat_wallet.lineage_store.is_empty():
+        if not await cat_wallet.lineage_store.is_empty():
             cat_wallet.log.error("Received a revocable CAT to a CAT wallet that already has CATs")
             return False
         replace_self = cls()

@@ -462,9 +462,9 @@ class DNSServer:
                 try:
                     validated_peer = ip_address(peer)
                     if validated_peer.version == 4:
-                        self.reliable_peers_v4.append(validated_peer)
+                        self.reliable_peers_v4.append(IPv4Address(validated_peer))
                     elif validated_peer.version == 6:
-                        self.reliable_peers_v6.append(validated_peer)
+                        self.reliable_peers_v6.append(IPv6Address(validated_peer))
                 except ValueError:
                     log.error(f"Invalid peer: {peer}")
                     continue
