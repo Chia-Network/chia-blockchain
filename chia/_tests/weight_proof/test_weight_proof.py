@@ -98,15 +98,17 @@ async def _test_map_summaries(
 
 
 class TestWeightProof:
+    # This test requires at least two sub epoch summaries in the block chain,
+    # for some test chains, 400 blocks is not enough
     @pytest.mark.anyio
     async def test_weight_proof_map_summaries_1(
-        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
-            default_400_blocks, blockchain_constants
+            default_1000_blocks, blockchain_constants
         )
         await _test_map_summaries(
-            default_400_blocks, header_cache, height_to_hash, sub_blocks, summaries, blockchain_constants
+            default_1000_blocks, header_cache, height_to_hash, sub_blocks, summaries, blockchain_constants
         )
 
     @pytest.mark.anyio
