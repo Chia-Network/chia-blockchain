@@ -3518,6 +3518,6 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
 
     with pytest.raises(RuntimeError, match="corrupt blockchain DB"):
         # the blockchain is empty (without a peak)
-        # but there are (fake) coins in the coin store
+        # but there are coins in the coin store
         async with full_node.manage():
-            pass
+            pass  # pragma: no cover
