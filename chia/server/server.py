@@ -330,6 +330,7 @@ class ChiaServer:
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 stub_metadata_for_type=self.stub_metadata_for_type,
+                exempt_peer_networks=self.exempt_peer_networks,
             )
             await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -482,6 +483,7 @@ class ChiaServer:
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 stub_metadata_for_type=self.stub_metadata_for_type,
                 session=session,
+                exempt_peer_networks=self.exempt_peer_networks,
             )
             await connection.perform_handshake(self._network_id, server_port, self._local_type)
             await self.connection_added(connection, on_connect)
@@ -549,6 +551,12 @@ class ChiaServer:
                     f"Trying to ban trusted peer {connection.peer_info.host} for {ban_time}, but will not ban"
                 )
                 ban_time = 0
+            elif is_in_network(connection.peer_info.host, self.exempt_peer_networks):
+                self.log.warning(
+                    f"Trying to ban exempt peer {connection.peer_info.host} for {ban_time}, but will not ban"
+                )
+                ban_time = 0
+
         if ban_time > 0:
             self.ban_peer(connection.peer_info.host, ban_time)
 

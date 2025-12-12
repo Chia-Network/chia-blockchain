@@ -7,6 +7,7 @@ import time
 import traceback
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from ipaddress import IPv4Network, IPv6Network
 from typing import Any
 
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
@@ -36,7 +37,7 @@ from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, Times
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from chia.util.network import is_localhost
+from chia.util.network import is_in_network, is_localhost
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
 
@@ -125,6 +126,11 @@ class WSChiaConnection:
         repr=False,
     )
 
+    exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
+        default_factory=list,
+        repr=False,
+    )
+
     @classmethod
     def create(
         cls,
@@ -142,6 +148,7 @@ class WSChiaConnection:
         local_capabilities_for_handshake: list[tuple[uint16, str]],
         stub_metadata_for_type: dict[NodeType, ApiMetadata],
         session: ClientSession | None = None,
+        exempt_peer_networks: list[IPv4Network | IPv6Network] = [],
     ) -> WSChiaConnection:
         assert ws._writer is not None
         peername = ws._writer.transport.get_extra_info("peername")
@@ -174,6 +181,7 @@ class WSChiaConnection:
             received_message_callback=received_message_callback,
             stub_metadata_for_type=stub_metadata_for_type,
             session=session,
+            exempt_peer_networks=exempt_peer_networks,
         )
 
     def _get_extra_info(self, name: str) -> Any | None:
@@ -631,7 +639,9 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         )
         if limiter_msg is not None:
-            if not is_localhost(self.peer_info.host):
+            if not is_localhost(self.peer_info.host) and not is_in_network(
+                self.peer_info.host, self.exempt_peer_networks
+            ):
                 message_type = ProtocolMessageTypes(message.type)
                 last_time = self.log_rate_limit_last_time[message_type]
                 now = time.monotonic()
@@ -654,7 +664,8 @@ class WSChiaConnection:
                 return None
             else:
                 self.log.debug(
-                    f"Not rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                    f"Not rate limiting ourselves or exempt peers. "
+                    f"message type: {ProtocolMessageTypes(message.type).name}, "
                     f"peer: {self.peer_info.host}"
                 )
 
@@ -705,7 +716,11 @@ class WSChiaConnection:
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
             )
             if limiter_msg is not None:
-                if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_info.host):
+                if (
+                    self.local_type == NodeType.FULL_NODE
+                    and not is_localhost(self.peer_info.host)
+                    and not is_in_network(self.peer_info.host, self.exempt_peer_networks)
+                ):
                     details = ", ".join([f"{self.peer_info.host}", f"message: {message_type}", limiter_msg])
                     self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
