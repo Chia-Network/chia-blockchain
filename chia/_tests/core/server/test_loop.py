@@ -8,6 +8,7 @@ import random
 import subprocess
 import sys
 import threading
+import warnings
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
@@ -115,12 +116,14 @@ class ServeInThread:
 
     def _run(self) -> None:
         # TODO: yuck yuck, messes with a single global
-        original_event_loop_policy = asyncio.get_event_loop_policy()
-        asyncio.set_event_loop_policy(chia_policy.ChiaPolicy())
-        try:
-            asyncio.run(self.main())
-        finally:
-            asyncio.set_event_loop_policy(original_event_loop_policy)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            original_event_loop_policy = asyncio.get_event_loop_policy()
+            asyncio.set_event_loop_policy(chia_policy.ChiaPolicy())
+            try:
+                asyncio.run(self.main())
+            finally:
+                asyncio.set_event_loop_policy(original_event_loop_policy)
 
     async def main(self) -> None:
         self.server_task = create_referenced_task(
