@@ -181,6 +181,7 @@ class WSChiaConnection:
             received_message_callback=received_message_callback,
             stub_metadata_for_type=stub_metadata_for_type,
             session=session,
+            exempt_peer_networks=exempt_peer_networks,
         )
 
     def _get_extra_info(self, name: str) -> Any | None:
