@@ -5,6 +5,7 @@ import time
 import traceback
 from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass, field
+from functools import lru_cache
 from math import ceil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -12,7 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from chia.plotting.prover import ProverProtocol
 
-from chia_rs import G1Element
+from chia_rs import G1Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint64
 
@@ -25,6 +26,11 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 log = logging.getLogger(__name__)
 
 CURRENT_VERSION: int = 2
+
+
+@lru_cache
+def cached_master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
+    return master_sk_to_local_sk(master)
 
 
 @streamable
@@ -69,7 +75,7 @@ class CacheEntry:
             assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
             pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
 
-        local_sk = master_sk_to_local_sk(local_master_sk)
+        local_sk = cached_master_sk_to_local_sk(local_master_sk)
 
         plot_public_key: G1Element = generate_plot_public_key(
             local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None

@@ -12,6 +12,7 @@ import tempfile
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 from random import Random
 from typing import Any
@@ -65,6 +66,7 @@ from chia.consensus.signage_point import SignagePoint
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
+from chia.plotting.cache import cached_master_sk_to_local_sk
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.prover import PlotVersion, QualityProtocol, V1Prover, V2Prover, V2Quality
@@ -122,7 +124,6 @@ from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
-    master_sk_to_local_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
@@ -157,6 +158,11 @@ test_constants = DEFAULT_CONSTANTS.replace(
     MEMPOOL_BLOCK_BUFFER=uint8(6),
     PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(3),
 )
+
+
+@lru_cache
+def cached_master_sk_to_farmer_sk(master: PrivateKey) -> PrivateKey:
+    return master_sk_to_farmer_sk(master)
 
 
 def compute_additions_unchecked(sb: SpendBundle) -> list[Coin]:
@@ -470,7 +476,7 @@ class BlockTools:
                 assert sk is not None
                 self.pool_master_sk = sk
 
-            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+            self.farmer_pk = cached_master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
             if reward_ph is None:
@@ -489,7 +495,7 @@ class BlockTools:
                 self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
             self.pool_pubkeys: list[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
-            self.farmer_pubkeys: list[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
+            self.farmer_pubkeys: list[G1Element] = [cached_master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
             if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
                 raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
@@ -668,7 +674,7 @@ class BlockTools:
         """
         Returns the plot signature of the header data.
         """
-        farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
+        farmer_sk = cached_master_sk_to_farmer_sk(self.all_sks[0])
         for plot_info in self.plot_manager.plots.values():
             if plot_pk == plot_info.plot_public_key:
                 # Look up local_sk from plot to save locked memory
@@ -682,7 +688,7 @@ class BlockTools:
                 else:
                     assert isinstance(pool_pk_or_ph, bytes32)
                     include_taproot = True
-                local_sk = master_sk_to_local_sk(local_master_sk)
+                local_sk = cached_master_sk_to_local_sk(local_master_sk)
                 agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1(), include_taproot)
                 assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
@@ -1648,7 +1654,7 @@ class BlockTools:
                     farmer_public_key,
                     local_master_sk,
                 ) = parse_plot_info(plot_info.prover.get_memo())
-                local_sk = master_sk_to_local_sk(local_master_sk)
+                local_sk = cached_master_sk_to_local_sk(local_master_sk)
 
                 if isinstance(pool_public_key_or_puzzle_hash, G1Element):
                     include_taproot = False
