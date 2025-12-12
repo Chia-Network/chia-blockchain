@@ -1702,7 +1702,7 @@ class WalletStateManager:
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
                         try:
-                            dl_wallet = self.get_dl_wallet()
+                            dl_wallet = await self.get_dl_wallet()
                         except ValueError:
                             pass
                         else:
@@ -2014,12 +2014,7 @@ class WalletStateManager:
                                     and inner_puzhash is not None
                                     and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
                                 ):
-                                    try:
-                                        dl_wallet = self.get_dl_wallet()
-                                    except ValueError:
-                                        dl_wallet = await DataLayerWallet.create_new_dl_wallet(
-                                            self,
-                                        )
+                                    dl_wallet = await self.get_dl_wallet(create_if_not_found=True)
                                     await dl_wallet.track_new_launcher_id(
                                         child.coin.name(),
                                         peer,
@@ -2609,14 +2604,18 @@ class WalletStateManager:
 
         return puzzle_hash
 
-    def get_dl_wallet(self) -> DataLayerWallet:
+    async def get_dl_wallet(self, *, create_if_not_found: bool = False) -> DataLayerWallet:
         for wallet in self.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:
                 assert isinstance(wallet, DataLayerWallet), (
                     f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
                 )
                 return wallet
-        raise ValueError("DataLayerWallet not available")
+        if create_if_not_found:
+            async with self.lock:
+                return await DataLayerWallet.create_new_dl_wallet(self)
+        else:
+            raise ValueError("DataLayerWallet not available")
 
     async def get_or_create_vc_wallet(self) -> VCWallet:
         for _, wallet in self.wallets.items():
