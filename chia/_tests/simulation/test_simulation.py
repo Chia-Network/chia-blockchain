@@ -45,15 +45,15 @@ chiapos_version = importlib.metadata.version("chiapos")
 @pytest.fixture(scope="function")
 async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimulator]:
     with TempKeyring() as keychain:
-        b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
-        async with setup_full_node(
-            test_constants_modified,
-            "blockchain_test_3.db",
-            self_hostname,
-            b_tools,
-            db_version=2,
-        ) as service:
-            yield service._api
+        async with create_block_tools_async(constants=test_constants_modified, keychain=keychain) as b_tools:
+            async with setup_full_node(
+                test_constants_modified,
+                "blockchain_test_3.db",
+                self_hostname,
+                b_tools,
+                db_version=2,
+            ) as service:
+                yield service._api
 
 
 class FakeDNSResolver:
