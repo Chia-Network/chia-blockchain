@@ -3513,7 +3513,7 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
 
     await make_db(db_path, default_400_blocks)
     with contextlib.closing(sqlite3.connect(db_path)) as conn:
-        conn.execute("DROP TABLE current_peak")
+        conn.execute("DELETE FROM current_peak;")
         conn.commit()
 
     with pytest.raises(RuntimeError, match="corrupt blockchain DB"):
