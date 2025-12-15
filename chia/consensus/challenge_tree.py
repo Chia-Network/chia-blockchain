@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from chia_rs import BlockRecord, ConsensusConstants
+from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -32,44 +32,6 @@ class SlotChallengeData:
     block_count: uint32  # Number of blocks in this slot
 
 
-def get_challenge_for_block_record(
-    constants: ConsensusConstants,
-    blocks: BlockRecordsProtocol,
-    block: BlockRecord,
-) -> bytes32:
-    """
-    Get the challenge that a block was built against by walking back to find
-    the finished_challenge_slot_hashes.
-    """
-    if block.height == 0:
-        return constants.GENESIS_CHALLENGE
-
-    # Determine how many challenges to look for
-    # Overflow blocks use second-to-last challenge (belong to previous slot)
-    challenges_to_look_for = 2 if block.overflow else 1
-
-    reversed_challenge_hashes: list[bytes32] = []
-    curr = block
-
-    while len(reversed_challenge_hashes) < challenges_to_look_for:
-        if curr.first_in_sub_slot:
-            if curr.finished_challenge_slot_hashes is not None:
-                reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
-                if len(reversed_challenge_hashes) == challenges_to_look_for:
-                    break
-
-        if curr.height == 0:
-            if curr.finished_challenge_slot_hashes is not None and len(curr.finished_challenge_slot_hashes) > 0:
-                reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
-            break
-
-        curr = blocks.block_record(curr.prev_hash)
-
-    # Return the appropriate challenge
-    assert len(reversed_challenge_hashes) == challenges_to_look_for
-    return reversed_challenge_hashes[challenges_to_look_for - 1]
-
-
 def extract_slot_challenge_data(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
@@ -79,40 +41,48 @@ def extract_slot_challenge_data(
     """
     Extract slot-based challenge data from blocks in a sub-epoch range.
 
-    Groups blocks by their slot challenge (finished_challenge_slot_hashes)
-    and counts how many blocks are in each slot. Walks back through the blockchain
-    to find the actual challenge each block was built against.
-
-    Overflow blocks are counted in the slot their challenge belongs to, even if they
-    appear later in the blockchain (after the slot has moved forward).
-
+    Groups blocks by their slot challenge and counts blocks per slot.
     Returns:
         List of SlotChallengeData objects, one per slot in the sub-epoch, ordered by first appearance
     """
-    slot_counts: dict[bytes32, int] = {}
-    slot_order: list[bytes32] = []
+    slot_data: list[SlotChallengeData] = []
+    current_challenge: bytes32 = constants.GENESIS_CHALLENGE
+    prev_challenge: bytes32 = constants.GENESIS_CHALLENGE
+
     for height in range(sub_epoch_start, sub_epoch_end + 1):
         try:
             block = blocks.height_to_block_record(uint32(height))
-            slot_challenge = get_challenge_for_block_record(constants, blocks, block)
-            if slot_challenge not in slot_counts:
-                slot_order.append(slot_challenge)
-                slot_counts[slot_challenge] = 0
-            slot_counts[slot_challenge] += 1
+
+            # Update challenge state when we see a new slot
+            if block.first_in_sub_slot:
+                hashes = block.finished_challenge_slot_hashes
+                assert hashes is not None  # hashes cant be None if first in sub slot
+                if len(hashes) >= 2:
+                    # Multiple slots finished, prev is second-to-last, current is last
+                    prev_challenge = hashes[-2]
+                    current_challenge = hashes[-1]
+                else:
+                    # Single slot finished
+                    prev_challenge = current_challenge
+                    current_challenge = hashes[-1]
+
+            # Determine which challenge this block uses
+            block_challenge = prev_challenge if block.overflow else current_challenge
+
+            # Track slot data
+            if not slot_data or slot_data[-1].challenge_hash != block_challenge:
+                # New slot
+                slot_data.append(SlotChallengeData(challenge_hash=block_challenge, block_count=uint32(1)))
+            else:
+                # Same slot, increment count
+                slot_data[-1] = SlotChallengeData(
+                    challenge_hash=block_challenge,
+                    block_count=uint32(slot_data[-1].block_count + 1),
+                )
 
         except Exception as e:
             log.warning(f"Could not access block at height {height} for challenge extraction: {e}")
             continue
-
-    # Convert to list of SlotChallengeData in order of first appearance
-    slot_data: list[SlotChallengeData] = []
-    for challenge_hash in slot_order:
-        slot_data.append(
-            SlotChallengeData(
-                challenge_hash=challenge_hash,
-                block_count=uint32(slot_counts[challenge_hash]),
-            )
-        )
 
     return slot_data
 

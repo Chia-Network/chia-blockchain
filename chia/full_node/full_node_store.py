@@ -11,6 +11,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
+from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
@@ -518,6 +519,13 @@ class FullNodeStore:
             )
             if finish_se:
                 # this is the first slot in a new sub epoch, should include SES
+                post_hard_fork = post_hard_fork2(
+                    constants=self.constants,
+                    blocks=blocks,
+                    prev_b_hash=peak.prev_hash,
+                    sp_index=peak.signage_point_index,
+                    first_in_sub_slot=True,
+                )
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     self.constants,
                     blocks,
@@ -525,7 +533,7 @@ class FullNodeStore:
                     blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash),
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
-                    sp_index=peak.signage_point_index,
+                    post_hard_fork,
                 )
 
                 if eos.challenge_chain.subepoch_summary_hash is None:

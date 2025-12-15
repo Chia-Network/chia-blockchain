@@ -52,7 +52,7 @@ from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -1147,12 +1147,22 @@ class BlockTools:
             # include the hash in the next sub-slot
             sub_epoch_summary: SubEpochSummary | None = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
+                block_cache = BlockCache(blocks)
+                post_hard_fork = post_hard_fork2(
+                    constants=constants,
+                    blocks=block_cache,
+                    prev_b_hash=latest_block.prev_hash,
+                    sp_index=latest_block.signage_point_index,
+                    first_in_sub_slot=True,
+                )
+
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    BlockCache(blocks),
+                    block_cache,
                     latest_block.required_iters,
                     block_list[-1],
                     False,
+                    post_hard_fork,
                 )
             if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True

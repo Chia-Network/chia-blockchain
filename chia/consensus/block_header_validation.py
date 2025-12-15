@@ -441,11 +441,9 @@ def validate_unfinished_header_block(
                         blocks.block_record(prev_b.prev_hash),
                         expected_vs.difficulty if can_finish_epoch else None,
                         expected_vs.ssi if can_finish_epoch else None,
-                        header_block.reward_chain_block.signage_point_index,
+                        pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT,
                         expected_vs.prev_ses_block,
                     )
-                    if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
-                        assert expected_sub_epoch_summary.challenge_merkle_root is not None
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
                         log.error(f"{expected_sub_epoch_summary}")
