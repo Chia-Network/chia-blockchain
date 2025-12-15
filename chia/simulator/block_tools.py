@@ -10,11 +10,13 @@ import ssl
 import sys
 import tempfile
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 from random import Random
+from types import TracebackType
 from typing import Any
 
 import anyio
@@ -43,6 +45,7 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
+from typing_extensions import Self
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecordProtocol
@@ -265,7 +268,7 @@ class BlockTools:
 
         self._tempdir = None
         if root_path is None:
-            self._tempdir = tempfile.TemporaryDirectory()
+            self._tempdir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
@@ -380,6 +383,18 @@ class BlockTools:
             constants=self.constants,
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self._tempdir is not None:
+            self._tempdir.cleanup()
 
     def setup_new_gen(
         self,
@@ -2168,6 +2183,7 @@ create_block_tools_count = 0
 # listen port it uses is to write it to the config file.
 
 
+@asynccontextmanager
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Path | None = None,
@@ -2177,36 +2193,37 @@ async def create_block_tools_async(
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
     testrun_uid: str | None = None,
-) -> BlockTools:
+) -> AsyncIterator[BlockTools]:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
-    await bt.setup_keys()
-    await bt.setup_plots(
-        num_og_plots=num_og_plots,
-        num_pool_plots=num_pool_plots,
-        num_non_keychain_plots=num_non_keychain_plots,
-        testrun_uid=testrun_uid,
-    )
 
-    return bt
+    with BlockTools(constants, root_path, keychain, config_overrides=config_overrides) as bt:
+        await bt.setup_keys()
+        await bt.setup_plots(
+            num_og_plots=num_og_plots,
+            num_pool_plots=num_pool_plots,
+            num_non_keychain_plots=num_non_keychain_plots,
+            testrun_uid=testrun_uid,
+        )
+
+        yield bt
 
 
+@contextmanager
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Path | None = None,
     keychain: Keychain | None = None,
     config_overrides: dict[str, Any] | None = None,
-) -> BlockTools:
+) -> Iterator[BlockTools]:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
-
-    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
-    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
-    return bt
+    with BlockTools(constants, root_path, keychain, config_overrides=config_overrides) as bt:
+        asyncio.get_event_loop().run_until_complete(bt.setup_keys())
+        asyncio.get_event_loop().run_until_complete(bt.setup_plots())
+        yield bt
 
 
 def make_unfinished_block(
