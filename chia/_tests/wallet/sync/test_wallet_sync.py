@@ -1689,7 +1689,7 @@ async def test_long_sync_untrusted_break(
 
         assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
         assert (
-            f"Connection closed: {untrusted_conn.peer_info.host}, node id: {untrusted_full_node_server.node_id.hex()}"
+            f"Connection closed: {untrusted_conn.peer_info.host}, node id: {untrusted_full_node_server.node_id}"
             in caplog.text
         )
         # And that we only have a trusted peer left
