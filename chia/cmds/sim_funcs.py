@@ -253,18 +253,18 @@ async def generate_plots(config: dict[str, Any], root_path: Path, fingerprint: i
     os.environ["CHIA_ROOT"] = str(root_path)  # change env variable, to make it match what the daemon would set it to
 
     # create block tools and use local keychain
-    bt = BlockTools(
+    with BlockTools(
         test_constants,
         root_path,
         automated_testing=False,
         plot_dir=config["simulator"].get("plot_directory", "plots"),
         keychain=Keychain(),
-    )
-    await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-    existing_plots = await bt.setup_plots(
-        num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE, bitfield=bitfield
-    )
-    print(f"{'New plots generated.' if existing_plots else 'Using Existing Plots'}\n")
+    ) as bt:
+        await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
+        existing_plots = await bt.setup_plots(
+            num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE, bitfield=bitfield
+        )
+        print(f"{'New plots generated.' if existing_plots else 'Using Existing Plots'}\n")
 
 
 async def get_current_height(root_path: Path) -> int:

@@ -24,11 +24,11 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.anyio
 async def test_long_sync_from_zero(
-    five_nodes: list[FullNodeAPI], default_400_blocks: list[FullBlock], bt: BlockTools, self_hostname: str
+    five_nodes: list[FullNodeAPI], default_1000_blocks: list[FullBlock], bt: BlockTools, self_hostname: str
 ) -> None:
     # Must be larger than "sync_block_behind_threshold" in the config
-    num_blocks = len(default_400_blocks)
-    blocks: list[FullBlock] = default_400_blocks
+    blocks: list[FullBlock] = default_1000_blocks[:600]
+    num_blocks = len(blocks)
     full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
@@ -37,7 +37,7 @@ async def test_long_sync_from_zero(
     server_5 = full_node_5.full_node.server
 
     # If this constant is changed, update the tests to use more blocks
-    assert bt.constants.WEIGHT_PROOF_RECENT_BLOCKS < 400
+    assert bt.constants.WEIGHT_PROOF_RECENT_BLOCKS < num_blocks
 
     # Syncs up less than recent blocks
     for block in blocks[: bt.constants.WEIGHT_PROOF_RECENT_BLOCKS - 5]:
@@ -101,14 +101,14 @@ async def test_long_sync_from_zero(
     await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
 
     # Deep reorg, fall back from batch sync to long sync
-    blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
+    blocks_node_5 = bt.get_consecutive_blocks(250, block_list_input=blocks[:350], seed=b"node5")
     for block in blocks_node_5:
         await full_node_5.full_node.add_block(block)
     await server_5.start_client(
         PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_5.full_node.on_connect
     )
-    await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
-    await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)
+    await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 250 + 350 - 1)
+    await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 250 + 350 - 1)
 
 
 @pytest.mark.anyio
