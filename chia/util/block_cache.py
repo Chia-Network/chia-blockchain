@@ -9,9 +9,6 @@ from chia_rs.sized_ints import uint32
 from chia.consensus.blockchain_interface import MMRManagerProtocol
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 
-if TYPE_CHECKING:
-    pass
-
 
 # implements BlockRecordsProtocol
 class BlockCache:
