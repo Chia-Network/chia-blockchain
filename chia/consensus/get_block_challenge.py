@@ -143,3 +143,23 @@ def pre_sp_tx_block_height(
     if latest_tx_block is None:
         return uint32(0)
     return latest_tx_block.height
+
+
+def post_hard_fork2(
+    constants: ConsensusConstants,
+    blocks: BlockRecordsProtocol,
+    *,
+    prev_b_hash: bytes32,
+    sp_index: uint8,
+    first_in_sub_slot: bool,
+) -> bool:
+    return (
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=prev_b_hash,
+            sp_index=sp_index,
+            first_in_sub_slot=first_in_sub_slot,
+        )
+        >= constants.HARD_FORK2_HEIGHT
+    )

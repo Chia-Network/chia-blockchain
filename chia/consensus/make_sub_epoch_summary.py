@@ -15,7 +15,6 @@ from chia.consensus.difficulty_adjustment import (
     get_next_sub_slot_iters_and_difficulty,
     height_can_be_first_in_epoch,
 )
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
 
 log = logging.getLogger(__name__)
@@ -28,14 +27,13 @@ def make_sub_epoch_summary(
     prev_prev_block: BlockRecord,
     new_difficulty: uint64 | None,
     new_sub_slot_iters: uint64 | None,
-    sp_index: uint8,
+    make_challenge_root: bool = False,
     prev_ses_block: BlockRecord | None = None,
 ) -> SubEpochSummary:
     """
     Creates a sub-epoch-summary object, assuming that the first block in the new sub-epoch is at height
     "blocks_included_height". Prev_prev_b is the second to last block in the previous sub-epoch. On a new epoch,
     new_difficulty and new_sub_slot_iters are also added.
-
     Args:
         constants: consensus constants being used for this chain
         blocks: dictionary from header hash to SBR of all included SBR
@@ -67,22 +65,15 @@ def make_sub_epoch_summary(
     assert prev_ses_block.finished_reward_slot_hashes is not None
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
-    prev_tx_block = pre_sp_tx_block_height(
-        constants=constants,
-        blocks=blocks,
-        prev_b_hash=prev_prev_block.prev_hash,
-        sp_index=sp_index,
-        first_in_sub_slot=True,
-    )
-    if prev_tx_block >= constants.HARD_FORK2_HEIGHT:
+    if make_challenge_root:
         challenge_root = compute_challenge_merkle_root(constants, blocks, blocks_included_height)
-        log.debug(
+        log.info(
             f"make_sub_epoch_summary: height={blocks_included_height} >= fork_height={constants.HARD_FORK2_HEIGHT}, "
             f"computed challenge_root={challenge_root.hex()}"
         )
     else:
         challenge_root = None
-        log.debug(
+        log.info(
             f"make_sub_epoch_summary: height={blocks_included_height} < fork_height={constants.HARD_FORK2_HEIGHT}, "
             f"using None for challenge_root"
         )
@@ -105,6 +96,7 @@ def next_sub_epoch_summary(
     required_iters: uint64,
     block: UnfinishedBlock | FullBlock,
     can_finish_soon: bool = False,
+    with_challenge_root: bool = False,
 ) -> SubEpochSummary | None:
     """
     Returns the sub-epoch summary that can be included in the block after block. If it should include one. Block
@@ -224,11 +216,5 @@ def next_sub_epoch_summary(
         )
 
     return make_sub_epoch_summary(
-        constants,
-        blocks,
-        uint32(prev_b.height + 2),
-        prev_b,
-        next_difficulty,
-        next_sub_slot_iters,
-        sp_index=block.reward_chain_block.signage_point_index,
+        constants, blocks, uint32(prev_b.height + 2), prev_b, next_difficulty, next_sub_slot_iters, with_challenge_root
     )

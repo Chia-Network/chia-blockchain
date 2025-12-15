@@ -30,7 +30,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.prev_transaction_block import get_prev_transaction_block
 from chia.consensus.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -548,16 +548,15 @@ def unfinished_block_to_full_block_with_mmr(
     if prev_block is not None:
         prev_header_hash = prev_block.header_hash
 
-    pre_sp_tx_height = pre_sp_tx_block_height(
+    # Before fork, use None for MMR root.
+    header_mmr_root = None
+    if post_hard_fork2(
         constants=constants,
         blocks=blocks,
         prev_b_hash=unfinished_block.prev_header_hash,
         sp_index=unfinished_block.reward_chain_block.signage_point_index,
         first_in_sub_slot=len(finished_sub_slots) > 0,
-    )
-    # Before fork, use None for MMR root.
-    header_mmr_root = None
-    if pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
+    ):
         header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
             prev_header_hash,
             unfinished_block.reward_chain_block.signage_point_index,
