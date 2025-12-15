@@ -369,6 +369,8 @@ class MempoolManager:
 
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
+        log.info("Closing mempool DB connection")
+        self.mempool._db_conn.close()
 
     # TODO: remove this, use create_generator() instead
     def create_bundle_from_mempool(self, last_tb_header_hash: bytes32) -> tuple[SpendBundle, list[Coin]] | None:
@@ -974,6 +976,7 @@ class MempoolManager:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+            old_pool._db_conn.close()
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())
