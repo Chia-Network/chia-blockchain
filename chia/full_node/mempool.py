@@ -144,16 +144,8 @@ class Mempool:
         self.mempool_info: MempoolInfo = mempool_info
         self.fee_estimator: FeeEstimatorInterface = fee_estimator
 
-    def __del__(self) -> None:
-        try:
-            self._db_conn.close()
-        except sqlite3.ProgrammingError:
-            #
-            # ignore case where this cleanup happens in another thread
-            # TODO: this should probably be refactored to use context managers
-            # instead of relying on __del__
-            #
-            pass
+    def close(self) -> None:
+        self._db_conn.close()
 
     def _row_to_item(self, row: sqlite3.Row) -> MempoolItem:
         name = bytes32(row[0])

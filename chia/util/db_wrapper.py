@@ -120,10 +120,9 @@ def get_host_parameter_limit() -> int:
     # NOTE: This does not account for dynamically adjusted limits since it makes a
     #       separate db and connection.  If aiosqlite adds support we should use it.
     if sys.version_info >= (3, 11):
-        connection = sqlite3.connect(":memory:")
-
-        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
-        host_parameter_limit = connection.getlimit(limit_number)
+        with contextlib.closing(sqlite3.connect(":memory:")) as connection:
+            limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
+            host_parameter_limit = connection.getlimit(limit_number)
     # guessing based on defaults, seems you can't query
 
     # https://www.sqlite.org/changes.html#version_3_32_0

@@ -93,27 +93,32 @@ async def setup_two_nodes(
 
     config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        bt1 = await create_block_tools_async(
-            constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
-        )
-        async with setup_full_node(
-            consensus_constants,
-            "blockchain_test.db",
-            self_hostname,
-            bt1,
-            simulator=False,
-            db_version=db_version,
-        ) as service1:
-            async with setup_full_node(
+        async with (
+            create_block_tools_async(
+                constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
+            ) as bt1,
+            setup_full_node(
                 consensus_constants,
-                "blockchain_test_2.db",
+                "blockchain_test.db",
                 self_hostname,
-                await create_block_tools_async(
-                    constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
-                ),
+                bt1,
                 simulator=False,
                 db_version=db_version,
-            ) as service2:
+            ) as service1,
+        ):
+            async with (
+                create_block_tools_async(
+                    constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
+                ) as bt2,
+                setup_full_node(
+                    consensus_constants,
+                    "blockchain_test_2.db",
+                    self_hostname,
+                    bt2,
+                    simulator=False,
+                    db_version=db_version,
+                ) as service2,
+            ):
                 fn1 = service1._api
                 fn2 = service2._api
 
@@ -137,8 +142,10 @@ async def setup_n_nodes(
                         consensus_constants,
                         f"blockchain_test_{i}.db",
                         self_hostname,
-                        await create_block_tools_async(
-                            constants=consensus_constants, keychain=keychain, config_overrides=config_overrides
+                        await async_exit_stack.enter_async_context(
+                            create_block_tools_async(
+                                constants=consensus_constants, keychain=keychain, config_overrides=config_overrides
+                            )
                         ),
                         simulator=False,
                         db_version=db_version,
@@ -255,14 +262,18 @@ async def setup_simulators_and_wallets_inner(
         config_overrides["full_node.log_coins"] = True
     async with AsyncExitStack() as async_exit_stack:
         bt_tools: list[BlockTools] = [
-            await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
+            await async_exit_stack.enter_async_context(
+                create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
+            )
             for _ in range(simulator_count)
         ]
         if wallet_count > simulator_count:
             for _ in range(wallet_count - simulator_count):
                 bt_tools.append(
-                    await create_block_tools_async(
-                        consensus_constants, keychain=keychain2, config_overrides=config_overrides
+                    await async_exit_stack.enter_async_context(
+                        create_block_tools_async(
+                            consensus_constants, keychain=keychain2, config_overrides=config_overrides
+                        )
                     )
                 )
 
@@ -370,18 +381,23 @@ async def setup_full_system_inner(
     shared_b_tools: BlockTools,
 ) -> AsyncIterator[FullSystem]:
     config_overrides = {"full_node.max_sync_wait": 0, "full_node.log_coins": True}
-    if b_tools is None:
-        b_tools = await create_block_tools_async(
-            constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
-        )
-    if b_tools_1 is None:
-        b_tools_1 = await create_block_tools_async(
-            constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
-        )
 
     self_hostname = shared_b_tools.config["self_hostname"]
 
     async with AsyncExitStack() as async_exit_stack:
+        if b_tools is None:
+            b_tools = await async_exit_stack.enter_async_context(
+                create_block_tools_async(
+                    constants=consensus_constants, keychain=keychain1, config_overrides=config_overrides
+                )
+            )
+        if b_tools_1 is None:
+            b_tools_1 = await async_exit_stack.enter_async_context(
+                create_block_tools_async(
+                    constants=consensus_constants, keychain=keychain2, config_overrides=config_overrides
+                )
+            )
+
         vdf1_port = uint16(find_available_listen_port("vdf1"))
         vdf2_port = uint16(find_available_listen_port("vdf2"))
 

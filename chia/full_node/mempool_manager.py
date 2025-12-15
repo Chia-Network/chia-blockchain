@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
-from collections.abc import Awaitable, Callable, Collection
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
+from types import TracebackType
 from typing import TypeVar
 
 from chia_rs import (
@@ -25,6 +27,7 @@ from chia_rs import (
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 from chiabip158 import PyBIP158
+from typing_extensions import Self
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
@@ -367,8 +370,42 @@ class MempoolManager:
         )
         self.mempool: Mempool = Mempool(mempool_info, self.fee_estimator)
 
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def managed(
+        cls,
+        get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
+        get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[UnspentLineageInfo | None]],
+        consensus_constants: ConsensusConstants,
+        single_threaded: bool = False,
+        max_tx_clvm_cost: uint64 | None = None,
+    ) -> AsyncIterator[Self]:
+        self = cls(
+            get_coin_records,
+            get_unspent_lineage_info_for_puzzle_hash,
+            consensus_constants,
+            single_threaded=single_threaded,
+            max_tx_clvm_cost=max_tx_clvm_cost,
+        )
+        try:
+            yield self
+        finally:
+            self.shut_down()
+
     def shut_down(self) -> None:
         self.pool.shutdown(wait=True)
+        self.mempool.close()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.shut_down()
 
     # TODO: remove this, use create_generator() instead
     def create_bundle_from_mempool(self, last_tb_header_hash: bytes32) -> tuple[SpendBundle, list[Coin]] | None:
@@ -974,6 +1011,8 @@ class MempoolManager:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
+
+            old_pool.close()
 
         potential_txs = self._pending_cache.drain(new_peak.height)
         potential_txs.update(self._conflict_cache.drain())

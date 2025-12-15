@@ -93,43 +93,47 @@ async def run_mempool_benchmark() -> None:
 
     timestamp = uint64(1631794488)
 
-    mempool = MempoolManager(
+    with MempoolManager(
         get_coin_record, get_unspent_lineage_info_for_puzzle_hash, DEFAULT_CONSTANTS, single_threaded=True
-    )
+    ) as mempool:
+        print("\nrunning add_spend_bundle() + new_peak()")
 
-    print("\nrunning add_spend_bundle() + new_peak()")
+        start = monotonic()
+        most_recent_coin_id = make_hash(100)
+        for height in range(1, NUM_ITERS):
+            timestamp = uint64(timestamp + 19)
+            rec = fake_block_record(uint32(height), timestamp)
+            # the new block spends on coind, the most recently added one
+            # most_recent_coin_id
+            await mempool.new_peak(rec, [most_recent_coin_id])
 
-    start = monotonic()
-    most_recent_coin_id = make_hash(100)
-    for height in range(1, NUM_ITERS):
-        timestamp = uint64(timestamp + 19)
-        rec = fake_block_record(uint32(height), timestamp)
-        # the new block spends on coind, the most recently added one
-        # most_recent_coin_id
-        await mempool.new_peak(rec, [most_recent_coin_id])
+            # add 10 transactions to the mempool
+            for i in range(10):
+                coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, uint64(height * 100000 + i * 100))
+                sb = make_spend_bundle(coin, height)
+                # make this coin available via get_coin_record, which is called
+                # by mempool_manager
+                coin_records = {
+                    coin.name(): CoinRecord(coin, uint32(height // 2), uint32(0), False, uint64(timestamp // 2))
+                }
+                spend_bundle_id = sb.name()
+                sbc = await mempool.pre_validate_spendbundle(sb, spend_bundle_id)
+                assert sbc is not None
+                await mempool.add_spend_bundle(sb, sbc, spend_bundle_id, uint32(height))
 
-        # add 10 transactions to the mempool
-        for i in range(10):
-            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, uint64(height * 100000 + i * 100))
-            sb = make_spend_bundle(coin, height)
-            # make this coin available via get_coin_record, which is called
-            # by mempool_manager
-            coin_records = {
-                coin.name(): CoinRecord(coin, uint32(height // 2), uint32(0), False, uint64(timestamp // 2))
-            }
-            spend_bundle_id = sb.name()
-            sbc = await mempool.pre_validate_spendbundle(sb, spend_bundle_id)
-            assert sbc is not None
-            await mempool.add_spend_bundle(sb, sbc, spend_bundle_id, uint32(height))
+            if height % 100 == 0:
+                print(
+                    "height: ",
+                    height,
+                    " size: ",
+                    mempool.mempool.size(),
+                    " cost: ",
+                    mempool.mempool.total_mempool_cost(),
+                )
+            # this coin will be spent in the next block
+            most_recent_coin_id = coin.name()
 
-        if height % 100 == 0:
-            print(
-                "height: ", height, " size: ", mempool.mempool.size(), " cost: ", mempool.mempool.total_mempool_cost()
-            )
-        # this coin will be spent in the next block
-        most_recent_coin_id = coin.name()
-
-    stop = monotonic()
+        stop = monotonic()
 
     print(f"  time: {stop - start:0.4f}s")
     print(f"  per block: {(stop - start) / height * 1000:0.2f}ms")

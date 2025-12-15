@@ -55,33 +55,33 @@ async def farmer_harvester_with_filter_size_9(
     async def have_connections() -> bool:
         return len(await farmer_rpc_cl.get_connections()) > 0
 
-    local_b_tools = await create_block_tools_async(
+    async with create_block_tools_async(
         constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(9)), keychain=get_temp_keyring
-    )
-    new_config = local_b_tools._config
-    local_b_tools.change_config(new_config)
-    async with setup_farmer_solver_multi_harvester(
-        local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
-    ) as (harvesters, farmer_service, _):
-        harvester_service = harvesters[0]
-        assert farmer_service.rpc_server is not None
-        farmer_rpc_cl = await FarmerRpcClient.create(
-            self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
-        )
-        assert harvester_service.rpc_server is not None
-        harvester_rpc_cl = await HarvesterRpcClient.create(
-            self_hostname,
-            harvester_service.rpc_server.listen_port,
-            harvester_service.root_path,
-            harvester_service.config,
-        )
-        await time_out_assert(15, have_connections, True)
-        yield harvester_service, farmer_service._api
+    ) as local_b_tools:
+        new_config = local_b_tools._config
+        local_b_tools.change_config(new_config)
+        async with setup_farmer_solver_multi_harvester(
+            local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
+        ) as (harvesters, farmer_service, _):
+            harvester_service = harvesters[0]
+            assert farmer_service.rpc_server is not None
+            farmer_rpc_cl = await FarmerRpcClient.create(
+                self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
+            )
+            assert harvester_service.rpc_server is not None
+            harvester_rpc_cl = await HarvesterRpcClient.create(
+                self_hostname,
+                harvester_service.rpc_server.listen_port,
+                harvester_service.root_path,
+                harvester_service.config,
+            )
+            await time_out_assert(15, have_connections, True)
+            yield harvester_service, farmer_service._api
 
-    farmer_rpc_cl.close()
-    harvester_rpc_cl.close()
-    await farmer_rpc_cl.await_closed()
-    await harvester_rpc_cl.await_closed()
+            farmer_rpc_cl.close()
+            harvester_rpc_cl.close()
+            await farmer_rpc_cl.await_closed()
+            await harvester_rpc_cl.await_closed()
 
 
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])

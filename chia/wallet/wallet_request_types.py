@@ -2514,3 +2514,21 @@ class CRCATApprovePending(TransactionEndpointRequest):
 @dataclass(frozen=True)
 class CRCATApprovePendingResponse(TransactionEndpointResponse):
     pass
+
+
+@streamable
+@dataclass(frozen=True)
+class GetFarmedAmount(Streamable):
+    include_pool_rewards: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetFarmedAmountResponse(Streamable):
+    farmed_amount: uint64
+    pool_reward_amount: uint64
+    farmer_reward_amount: uint64
+    fee_amount: uint64
+    last_height_farmed: uint32
+    last_time_farmed: uint64
+    blocks_won: uint32
