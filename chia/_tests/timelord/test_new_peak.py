@@ -517,6 +517,7 @@ class TestNewPeak:
                     block_1.foliage,
                     next_sub_epoch_summary(bt.constants, b1, block_record_1.required_iters, block_1, True),
                     await get_rc_prev(b1, block_1),
+                    None,
                 )
             else:
                 spend_coin = None
@@ -542,6 +543,7 @@ class TestNewPeak:
                     block_1_diffrent_foliage.foliage,
                     next_sub_epoch_summary(bt.constants, b1, block_record_1.required_iters, block_1, True),
                     await get_rc_prev(b1, block_1),
+                    None,
                 )
 
             await timelord_api.new_unfinished_block_timelord(timelord_unf_block)
