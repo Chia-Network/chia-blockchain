@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
@@ -69,7 +68,7 @@ def extract_slot_challenge_data(
         assert len(reversed_challenge_hashes) == 2
         prev_challenge = reversed_challenge_hashes[1]
     # go throgh all blocks in sub-epoch counting blocks per slot challenge
-    for height in range(sub_epoch_start, sub_epoch_end + 1):
+    for height in range(sub_epoch_start, sub_epoch_end):
         try:
             block = blocks.height_to_block_record(uint32(height))
 
@@ -137,9 +136,9 @@ def build_challenge_merkle_tree(slot_data: list[SlotChallengeData]) -> bytes32:
 
 
 def compute_challenge_merkle_root(
-    constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     blocks_included_height: uint32,
+    prev_ses_height: uint32,
 ) -> bytes32:
     """
     Compute the merkle root of slot-based challenge data in the sub-epoch.
@@ -148,26 +147,8 @@ def compute_challenge_merkle_root(
     Returns:
         bytes32: merkle root of slot challenge data in the sub-epoch
     """
-    sub_epoch_end = blocks_included_height - 1
-
-    if sub_epoch_end == 0:
-        # First block is always the start of the first sub-epoch
-        sub_epoch_start = uint32(0)
-    else:
-        # Walk backwards to find the previous sub-epoch summary
-        curr = blocks.height_to_block_record(uint32(sub_epoch_end))
-        while curr.height > 0 and curr.sub_epoch_summary_included is None:
-            curr = blocks.block_record(curr.prev_hash)
-
-        # The previous sub-epoch ended at curr.height -1
-        if curr.sub_epoch_summary_included is not None:
-            sub_epoch_start = uint32(curr.height)
-        else:
-            # We reached genesis without finding a summary, so this starts at genesis
-            sub_epoch_start = uint32(0)
-
     # Extract slot challenge data from blocks
-    slot_data = extract_slot_challenge_data(blocks, sub_epoch_start, uint32(sub_epoch_end))
+    slot_data = extract_slot_challenge_data(blocks, prev_ses_height, blocks_included_height)
 
     # Build and return merkle root
     return build_challenge_merkle_tree(slot_data)
