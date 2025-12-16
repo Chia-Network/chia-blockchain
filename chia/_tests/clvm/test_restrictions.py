@@ -257,9 +257,7 @@ async def test_send_message_banned(cost_logger: CostLogger) -> None:
             ),
             solution=Program.to(None),
         )
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(
-            send_message_dpuz, [Program.to(None), Program.to(None)]
-        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(send_message_dpuz, [Program.to(None)])
         escape_attempt = WalletSpendBundle(
             [
                 make_spend(
