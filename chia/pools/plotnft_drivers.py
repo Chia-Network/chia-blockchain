@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
+from typing import Self
 
 from chia_rs.chia_rs import Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
@@ -9,7 +10,15 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
-from chia.wallet.conditions import CreateCoin, MessageParticipant, SendMessage
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    MessageParticipant,
+    ReserveFee,
+    SendMessage,
+)
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.custody.custody_architecture import (
     DelegatedPuzzleAndSolution,
@@ -258,6 +267,99 @@ class PlotNFT:
     coin: Coin
     singleton_lineage_proof: LineageProof
     puzzle: PlotNFTPuzzle
+
+    @staticmethod
+    def origin_coin_info(
+        origin_coins: list[Coin],
+        singleton_mod: Program = SINGLETON_MOD,
+        singleton_launcher: Program = SINGLETON_LAUNCHER,
+    ) -> tuple[Coin, Coin, SingletonStruct]:
+        origin_coin = origin_coins[0]
+
+        launcher_hash = singleton_launcher.get_tree_hash()
+        launcher_coin = Coin(origin_coin.name(), launcher_hash, uint64(1))
+        launcher_id = launcher_coin.name()
+        singleton_struct = SingletonStruct(
+            singleton_mod=singleton_mod, launcher_id=launcher_id, singleton_launcher=singleton_launcher
+        )
+
+        return origin_coin, launcher_coin, singleton_struct
+
+    @classmethod
+    def launch(
+        cls,
+        *,
+        origin_coins: list[Coin],
+        custody: SelfCustody | PoolingCustody,
+        memos: list[bytes],
+        fee: uint64 = uint64(0),
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        singleton_mod: Program = SINGLETON_MOD,
+        singleton_launcher: Program = SINGLETON_LAUNCHER,
+    ) -> tuple[list[Program], list[CoinSpend], Self]:
+        mod_hash = singleton_mod.get_tree_hash()
+        launcher_hash = singleton_launcher.get_tree_hash()
+        origin_coin, launcher_coin, singleton_struct = cls.origin_coin_info(
+            origin_coins, singleton_mod, singleton_launcher
+        )
+        launcher_id = launcher_coin.name()
+
+        plotnft_puzzle = PlotNFTPuzzle(singleton_struct=singleton_struct, inner_custody=custody)
+        rev_puzzle = Program.to(
+            (
+                1,
+                [
+                    CreateCoin(plotnft_puzzle.inner_custody.puzzle_hash(nonce=0), uint64(1), memos=memos).to_program(),
+                    CreateCoinAnnouncement(msg=b"").to_program(),
+                ],
+            )
+        )
+        full_rev_singleton_puzzle = puzzle_for_singleton(
+            launcher_id,
+            rev_puzzle,
+            singleton_mod=singleton_mod,
+            launcher_hash=launcher_hash,
+            singleton_mod_hash=mod_hash,
+        )
+        rev_coin = Coin(launcher_id, full_rev_singleton_puzzle.get_tree_hash(), uint64(1))
+        rev_coin_id = rev_coin.name()
+        launcher_solution = Program.to([full_rev_singleton_puzzle.get_tree_hash(), uint64(1), None])
+
+        conditions = [
+            CreateCoin(launcher_hash, uint64(1)),
+            CreateCoin(origin_coin.puzzle_hash, uint64(sum(c.amount for c in origin_coins) - fee - 1)),
+            ReserveFee(fee),
+            AssertCoinAnnouncement(asserted_id=launcher_id, asserted_msg=launcher_solution.get_tree_hash()),
+            AssertCoinAnnouncement(asserted_id=rev_coin_id, asserted_msg=b""),
+            *extra_conditions,
+        ]
+        launcher_spend = make_spend(
+            launcher_coin,
+            singleton_launcher,
+            launcher_solution,
+        )
+        rev_spend = make_spend(
+            rev_coin,
+            full_rev_singleton_puzzle,
+            solution_for_singleton(
+                LineageProof(parent_name=launcher_coin.parent_coin_info, amount=launcher_coin.amount),
+                uint64(1),
+                Program.to(None),
+            ),
+        )
+        return (
+            [condition.to_program() for condition in conditions],
+            [launcher_spend, rev_spend],
+            cls(
+                coin=Coin(rev_coin_id, plotnft_puzzle.puzzle_hash(), uint64(1)),
+                singleton_lineage_proof=LineageProof(
+                    parent_name=rev_coin.parent_coin_info,
+                    inner_puzzle_hash=rev_puzzle.get_tree_hash(),
+                    amount=rev_coin.amount,
+                ),
+                puzzle=plotnft_puzzle,
+            ),
+        )
 
     def singleton_action_spend(self, inner_solution: Program) -> CoinSpend:
         return make_spend(

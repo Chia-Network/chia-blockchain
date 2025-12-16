@@ -12,12 +12,10 @@ from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.pools.plotnft_drivers import (
     PlotNFT,
-    PlotNFTPuzzle,
     PoolingCustody,
     PoolReward,
     RewardPuzzle,
     SelfCustody,
-    SingletonStruct,
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -30,10 +28,6 @@ from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
-)
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    SINGLETON_LAUNCHER_HASH,
-    launch_conditions_and_coinsol,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -54,8 +48,7 @@ async def mint_plotnft(
 
     [fund_coin, _] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
-    launcher_coin = Coin(fund_coin.coin.name(), SINGLETON_LAUNCHER_HASH, uint64(1))
-    singleton_struct = SingletonStruct(launcher_id=launcher_coin.name())
+    origin_coin, _, singleton_struct = PlotNFT.origin_coin_info([fund_coin.coin])
 
     self_custody = SelfCustody(member=BLSWithTaprootMember(synthetic_key=user_sk.get_g1()))
     if desired_state in {"pooling", "waiting_room"}:
@@ -72,28 +65,17 @@ async def mint_plotnft(
     else:
         custody = self_custody
 
-    conditions, launcher_spend = launch_conditions_and_coinsol(
-        coin=fund_coin.coin,
-        inner_puzzle=custody.puzzle(nonce=0),
-        comment=[],
-        amount=uint64(1),
-    )
+    conditions, spends, plotnft = PlotNFT.launch(origin_coins=[origin_coin], custody=custody, memos=[])
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
-            [launcher_spend, make_spend(coin=fund_coin.coin, puzzle_reveal=ACS, solution=Program.to(conditions))],
+            [*spends, make_spend(coin=origin_coin, puzzle_reveal=ACS, solution=Program.to(conditions))],
             G2Element(),
         )
     )
     assert result == (MempoolInclusionStatus.SUCCESS, None)
     await sim.farm_block()
-
-    plotnft_puzzle = PlotNFTPuzzle(singleton_struct=singleton_struct, inner_custody=custody)
-    return PlotNFT(
-        coin=Coin(singleton_struct.launcher_id, plotnft_puzzle.puzzle_hash(), uint64(1)),
-        singleton_lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=launcher_coin.amount),
-        puzzle=plotnft_puzzle,
-    )
+    return plotnft
 
 
 # PlotNFT goes from self custody -> pooling -> waiting_room -> self custody
@@ -285,7 +267,9 @@ async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes3
 async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state="self_custody")
-        reward = await mint_reward(sim=sim, sim_client=sim_client, singleton_id=plotnft.coin.parent_coin_info)
+        reward = await mint_reward(
+            sim=sim, sim_client=sim_client, singleton_id=plotnft.puzzle.singleton_struct.launcher_id
+        )
 
         reward_dpuz_and_sol = DelegatedPuzzleAndSolution(
             puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
@@ -317,7 +301,9 @@ async def test_plotnft_pooling_claim(
 ) -> None:
     async with sim_and_client() as (sim, sim_client):
         plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state=desired_state)
-        reward = await mint_reward(sim=sim, sim_client=sim_client, singleton_id=plotnft.coin.parent_coin_info)
+        reward = await mint_reward(
+            sim=sim, sim_client=sim_client, singleton_id=plotnft.puzzle.singleton_struct.launcher_id
+        )
 
         coin_spends = plotnft.forward_pool_reward(reward=reward)
         result = await sim_client.push_tx(
