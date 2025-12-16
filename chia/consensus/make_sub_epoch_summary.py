@@ -66,7 +66,7 @@ def make_sub_epoch_summary(
 
     prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
     if make_challenge_root:
-        challenge_root = compute_challenge_merkle_root(constants, blocks, blocks_included_height)
+        challenge_root = compute_challenge_merkle_root(blocks, blocks_included_height, prev_ses_block.height)
         log.info(
             f"make_sub_epoch_summary: height={blocks_included_height} >= fork_height={constants.HARD_FORK2_HEIGHT}, "
             f"computed challenge_root={challenge_root.hex()}"
