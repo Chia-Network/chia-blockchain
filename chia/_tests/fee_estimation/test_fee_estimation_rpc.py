@@ -107,6 +107,7 @@ async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeR
         "num_spends": 0,
     }
 
+    # one_node_no_blocks is not an async generator, so we have to close the client ourselves
     client.close()
     await client.await_closed()
 
@@ -155,13 +156,9 @@ async def test_target_times_invalid_type(setup_node_and_rpc: tuple[FullNodeRpcCl
 
 @pytest.mark.anyio
 async def test_cost_invalid_type(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": "a lot"})
-
-    # shouldn't have to call this
-    client.close()
-    await client.await_closed()
 
 
 @pytest.mark.anyio
