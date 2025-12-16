@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import copy
 import logging
+from dataclasses import dataclass, field
 
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
@@ -12,39 +14,26 @@ from chia.consensus.mmr import MerkleMountainRange
 log = logging.getLogger(__name__)
 
 
+@dataclass(repr=False)
 class BlockchainMMRManager:
     """
     Manages MMR state for blockchain operations.
     Includes checkpointing for efficient rollback during reorgs.
     """
 
-    _mmr: MerkleMountainRange
+    _mmr: MerkleMountainRange = field(default_factory=MerkleMountainRange)
+    _last_header_hash: bytes32 | None = None
+    _last_height: uint32 | None = None
+    _checkpoints: dict[uint32, MerkleMountainRange] = field(default_factory=dict)
+    _checkpoint_interval: int = 1000
+    _max_checkpoints: int = 10
 
-    _checkpoints: dict[int, MerkleMountainRange]  # height -> MMR snapshot
-    _checkpoint_interval: int
-    _max_checkpoints: int
-
-    def __init__(
-        self, mmr: BlockchainMMRManager | None = None, checkpoint_interval: int = 1000, max_checkpoints: int = 10
-    ) -> None:
-        # Current MMR state
-        if mmr is not None:
-            self._mmr = mmr._mmr.copy()
-            self._last_header_hash: bytes32 | None = mmr._last_header_hash
-            self._last_height: uint32 | None = mmr._last_height
-            self._checkpoints = {h: mmr_snap.copy() for h, mmr_snap in mmr._checkpoints.items()}
-            self._checkpoint_interval = mmr._checkpoint_interval
-            self._max_checkpoints = mmr._max_checkpoints
-        else:
-            self._mmr: MerkleMountainRange = MerkleMountainRange()
-            self._last_header_hash = None
-            self._last_height = None
-            self._checkpoints: dict[int, MerkleMountainRange] = {}
-            self._checkpoint_interval = checkpoint_interval
-            self._max_checkpoints = max_checkpoints
+    def __repr__(self) -> str:
+        return f"BlockchainMMRManager(height={self._last_height}, root={self.get_current_mmr_root()!r})"
 
     def copy(self) -> BlockchainMMRManager:
-        return BlockchainMMRManager(self)
+        """Create a deep copy of this MMR manager."""
+        return copy.deepcopy(self)
 
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         """
@@ -55,11 +44,9 @@ class BlockchainMMRManager:
         # Only add blocks that are the next expected height
         if self._last_header_hash is not None and (prev_hash != self._last_header_hash):
             # Skip blocks that are out of order or duplicate
-            log.warning(
-                f"Skipping block height {height}, prev_hash mismatch "
-                f"(expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
+            raise ValueError(
+                f"prev_hash mismatch (expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
             )
-            return
         # genesis case is equivilant to normal case
         assert self._last_height is None or height == self._last_height + 1
         # Add block's header hash to the MMR
@@ -224,7 +211,7 @@ class BlockchainMMRManager:
         if best_checkpoint_height >= 0:
             # Start from checkpoint
             log.debug(f"Rolling back MMR from checkpoint at height {best_checkpoint_height} to {target_height}")
-            self._mmr = self._checkpoints[best_checkpoint_height].copy()
+            self._mmr = self._checkpoints[uint32(best_checkpoint_height)].copy()
             start_height = best_checkpoint_height + 1
         else:
             # No suitable checkpoint, start from genesis

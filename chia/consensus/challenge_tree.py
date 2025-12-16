@@ -52,7 +52,7 @@ def extract_slot_challenge_data(
     challenges_to_look_for = 1
     if curr.overflow:
         challenges_to_look_for = 2
-    # find challenge for fitst block in sub-epoch
+    # find challenge for first block in sub-epoch
     while curr.height >= 0:
         if curr.first_in_sub_slot:
             assert curr.finished_challenge_slot_hashes is not None
@@ -62,10 +62,15 @@ def extract_slot_challenge_data(
         if curr.height == 0:
             assert curr.finished_challenge_slot_hashes is not None
             assert len(curr.finished_challenge_slot_hashes) > 0
+            reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
             break
+        # Walk backwards through the chain
+        curr = blocks.block_record(curr.prev_hash)
+
+    # Verify we found enough challenges
+    assert len(reversed_challenge_hashes) >= challenges_to_look_for, ValueError
     current_challenge = reversed_challenge_hashes[0]
     if challenges_to_look_for == 2:
-        assert len(reversed_challenge_hashes) == 2
         prev_challenge = reversed_challenge_hashes[1]
     # go throgh all blocks in sub-epoch counting blocks per slot challenge
     for height in range(sub_epoch_start, sub_epoch_end):
