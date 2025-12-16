@@ -176,19 +176,21 @@ class Timelord:
             )
         else:
             self.main_loop = create_referenced_task(self._manage_discriminant_queue_sanitizer())
-        log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
-        try:
-            yield
-        finally:
-            self._shut_down = True
-            if self._executor_shutdown_tempfile is not None:
-                self._executor_shutdown_tempfile.close()
-            for task in self.process_communication_tasks:
-                task.cancel()
-            if self.main_loop is not None:
-                self.main_loop.cancel()
-            if self.bluebox_pool is not None:
-                self.bluebox_pool.shutdown()
+
+        async with self.vdf_server:
+            log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
+            try:
+                yield
+            finally:
+                self._shut_down = True
+                if self._executor_shutdown_tempfile is not None:
+                    self._executor_shutdown_tempfile.close()
+                for task in self.process_communication_tasks:
+                    task.cancel()
+                if self.main_loop is not None:
+                    self.main_loop.cancel()
+                if self.bluebox_pool is not None:
+                    self.bluebox_pool.shutdown()
 
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
