@@ -75,6 +75,9 @@ class SingletonMember(Puzzle):
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
+    def solve(self, singleton_inner_puzzle_hash: bytes32) -> Program:
+        return Program.to([singleton_inner_puzzle_hash])
+
 
 @dataclass(kw_only=True, frozen=True)
 class FixedPuzzleMember(Puzzle):
@@ -88,3 +91,6 @@ class FixedPuzzleMember(Puzzle):
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
+
+    def solve(self) -> Program:
+        return Program.to([])

@@ -9,11 +9,12 @@ from chia_rs.sized_ints import uint64
 
 from chia._tests.clvm.test_custody_architecture import ACSMember
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
+from chia.pools.plotnft_drivers import SendMessageBanned
 from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.wallet.conditions import CreateCoin, Remark, parse_conditions_non_consensus
+from chia.wallet.conditions import CreateCoin, MessageParticipant, Remark, SendMessage, parse_conditions_non_consensus
 from chia.wallet.puzzles.custody.custody_architecture import (
     DelegatedPuzzleAndSolution,
     MemberOrDPuz,
@@ -225,6 +226,84 @@ async def test_fixed_create_coin_wrapper(cost_logger: CostLogger) -> None:
         )
         assert Remark(Program.to("foo")) in conditions
         assert Remark(Program.to("bar")) in conditions
+
+        # memo format assertion for coverage sake
+        assert restriction.memo(0) == Program.to([None])
+
+
+@pytest.mark.anyio
+async def test_send_message_banned(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        restriction = ValidatorStackRestriction(required_wrappers=[SendMessageBanned()])
+        pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
+
+        # Farm and find coin
+        await sim.farm_block(pwr.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+
+        # Attempt to send a message
+        send_message_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=Program.to(
+                (
+                    1,
+                    [
+                        SendMessage(
+                            bytes32.zeros,
+                            sender=MessageParticipant(parent_id_committed=bytes32.zeros),
+                            receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
+                        ).to_program()
+                    ],
+                )
+            ),
+            solution=Program.to(None),
+        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(
+            send_message_dpuz, [Program.to(None), Program.to(None)]
+        )
+        escape_attempt = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    pwr.puzzle_reveal(),
+                    pwr.solve(
+                        [],
+                        [Program.to([send_message_dpuz.puzzle.get_tree_hash()])],
+                        Program.to(None),
+                        wrapped_dpuz,
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(escape_attempt)
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # Now send it to the correct place
+        self_destruct_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=Program.to(None),
+            solution=Program.to(None),
+        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(self_destruct_dpuz, [Program.to(None)])
+        sb = cost_logger.add_cost(
+            "Minimal puzzle with restrictions w/ send message banned wrapper",
+            WalletSpendBundle(
+                [
+                    make_spend(
+                        coin,
+                        pwr.puzzle_reveal(),
+                        pwr.solve(
+                            [],
+                            [Program.to([self_destruct_dpuz.puzzle.get_tree_hash()])],
+                            Program.to(None),
+                            wrapped_dpuz,
+                        ),
+                    )
+                ],
+                G2Element(),
+            ),
+        )
+        result = await client.push_tx(sb)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
         assert restriction.memo(0) == Program.to([None])
