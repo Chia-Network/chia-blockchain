@@ -5,6 +5,7 @@ import contextlib
 import dataclasses
 import logging
 import random
+import sqlite3
 import time
 from collections.abc import Awaitable, Coroutine
 from typing import Any
@@ -39,6 +40,7 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
+from chia._tests.core.test_db_validation import make_db
 from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
@@ -54,7 +56,7 @@ from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.full_node import WalletUpdate
+from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -103,6 +105,7 @@ from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.path import path_from_root
 from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.estimate_fees import estimate_fees
@@ -2448,31 +2451,30 @@ async def test_invalid_capability_can_connect(
 @pytest.mark.anyio
 async def test_node_start_with_existing_blocks(db_version: int) -> None:
     with TempKeyring(populate=True) as keychain:
-        block_tools = await create_block_tools_async(keychain=keychain)
+        async with create_block_tools_async(keychain=keychain) as block_tools:
+            blocks_per_cycle = 5
+            expected_height = 0
 
-        blocks_per_cycle = 5
-        expected_height = 0
+            for cycle in range(2):
+                async with setup_full_node(
+                    consensus_constants=block_tools.constants,
+                    db_name="node_restart_test.db",
+                    self_hostname=block_tools.config["self_hostname"],
+                    local_bt=block_tools,
+                    simulator=True,
+                    db_version=db_version,
+                    reuse_db=True,
+                ) as service:
+                    simulator_api = service._api
+                    assert isinstance(simulator_api, FullNodeSimulator)
+                    await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
 
-        for cycle in range(2):
-            async with setup_full_node(
-                consensus_constants=block_tools.constants,
-                db_name="node_restart_test.db",
-                self_hostname=block_tools.config["self_hostname"],
-                local_bt=block_tools,
-                simulator=True,
-                db_version=db_version,
-                reuse_db=True,
-            ) as service:
-                simulator_api = service._api
-                assert isinstance(simulator_api, FullNodeSimulator)
-                await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
+                    expected_height += blocks_per_cycle
+                    assert simulator_api.full_node._blockchain is not None
+                    block_record = simulator_api.full_node._blockchain.get_peak()
 
-                expected_height += blocks_per_cycle
-                assert simulator_api.full_node._blockchain is not None
-                block_record = simulator_api.full_node._blockchain.get_peak()
-
-                assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
-                assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
+                    assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
+                    assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
 
 
 @pytest.mark.anyio
@@ -3492,3 +3494,29 @@ async def test_new_tx_zero_cost(
     await ws_con_2.send_message(msg)
     # Make sure the first full node has banned the second.
     await time_out_assert(3, lambda: full_node_2_ip in server_1.banned_peers)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullBlock]) -> None:
+    full_node = await FullNode.create(
+        bt.config["full_node"],
+        root_path=bt.root_path,
+        consensus_constants=bt.constants,
+    )
+
+    config = bt.config["full_node"]
+    db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+    db_path = path_from_root(bt.root_path, db_path_replaced)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    await make_db(db_path, default_400_blocks)
+    with contextlib.closing(sqlite3.connect(db_path)) as conn:
+        conn.execute("DELETE FROM current_peak;")
+        conn.commit()
+
+    with pytest.raises(RuntimeError, match="corrupt blockchain DB"):
+        # the blockchain is empty (without a peak)
+        # but there are coins in the coin store
+        async with full_node.manage():
+            pass  # pragma: no cover

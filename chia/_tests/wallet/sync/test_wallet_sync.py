@@ -1639,7 +1639,7 @@ async def test_bad_peak_mismatch(
 async def test_long_sync_untrusted_break(
     setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
     default_1000_blocks: list[FullBlock],
-    default_400_blocks: list[FullBlock],
+    default_1500_blocks: list[FullBlock],
     self_hostname: str,
     caplog: pytest.LogCaptureFixture,
     use_delta_sync: bool,
@@ -1679,9 +1679,8 @@ async def test_long_sync_untrusted_break(
         untrusted_peers = sum(not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values())
         return trusted_peers == 1 and untrusted_peers == 0
 
-    await add_blocks_in_batches(default_400_blocks, trusted_full_node_api.full_node)
-
-    await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
+    await add_blocks_in_batches(default_1500_blocks[:600], trusted_full_node_api.full_node)
+    await add_blocks_in_batches(default_1000_blocks[:600], untrusted_full_node_api.full_node)
 
     with patch_request_handler(api=untrusted_full_node_api, handler=register_for_ph_updates):
         # Connect to the untrusted peer and wait until the long sync started
@@ -1690,7 +1689,7 @@ async def test_long_sync_untrusted_break(
         with caplog.at_level(logging.INFO):
             # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
             await wallet_server.start_client(PeerInfo(self_hostname, trusted_full_node_server.get_port()), None)
-            await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+            await time_out_assert(600, wallet_height_at_least, True, wallet_node, 599)
             assert time_out_assert(10, synced_to_trusted)
             assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
             assert "Connected to a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text

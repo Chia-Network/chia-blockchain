@@ -214,28 +214,28 @@ def test_current_block_height_new_block_then_new_height() -> None:
 
 @pytest.mark.anyio
 async def test_mm_new_peak_changes_fee_estimator_block_height() -> None:
-    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
-    block2 = create_test_block_record(height=uint32(2))
-    await mempool_manager.new_peak(block2, None)
-    assert mempool_manager.mempool.fee_estimator.block_height == uint32(2)  # type: ignore[attr-defined]
+    async with instantiate_mempool_manager(zero_calls_get_coin_records) as mempool_manager:
+        block2 = create_test_block_record(height=uint32(2))
+        await mempool_manager.new_peak(block2, None)
+        assert mempool_manager.mempool.fee_estimator.block_height == uint32(2)  # type: ignore[attr-defined]
 
 
 @pytest.mark.anyio
 async def test_mm_calls_new_block_height() -> None:
-    mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
-    new_block_height_called = False
+    async with instantiate_mempool_manager(zero_calls_get_coin_records) as mempool_manager:
+        new_block_height_called = False
 
-    def test_new_block_height_called(self: FeeEstimatorInterface, height: uint32) -> None:
-        nonlocal new_block_height_called
-        new_block_height_called = True
+        def test_new_block_height_called(self: FeeEstimatorInterface, height: uint32) -> None:
+            nonlocal new_block_height_called
+            new_block_height_called = True
 
-    # Replace new_block_height with test function
-    mempool_manager.fee_estimator.new_block_height = types.MethodType(  # type: ignore[method-assign]
-        test_new_block_height_called, mempool_manager.fee_estimator
-    )
-    block2 = create_test_block_record(height=uint32(2))
-    await mempool_manager.new_peak(block2, None)
-    assert new_block_height_called
+        # Replace new_block_height with test function
+        mempool_manager.fee_estimator.new_block_height = types.MethodType(  # type: ignore[method-assign]
+            test_new_block_height_called, mempool_manager.fee_estimator
+        )
+        block2 = create_test_block_record(height=uint32(2))
+        await mempool_manager.new_peak(block2, None)
+        assert new_block_height_called
 
 
 def test_add_tx_called() -> None:
