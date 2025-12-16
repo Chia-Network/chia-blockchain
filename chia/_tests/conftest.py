@@ -28,7 +28,6 @@ from pytest import MonkeyPatch
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.simulation.test_simulation import test_constants_modified
 from chia._tests.util.misc import (
     BenchmarkRunner,
     ComparableEnum,
@@ -99,6 +98,20 @@ from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet_node import Balance
+
+test_constants_modified = test_constants.replace(
+    DIFFICULTY_STARTING=uint64(2**8),
+    DISCRIMINANT_SIZE_BITS=uint16(1024),
+    SUB_EPOCH_BLOCKS=uint32(140),
+    WEIGHT_PROOF_THRESHOLD=uint8(2),
+    WEIGHT_PROOF_RECENT_BLOCKS=uint32(350),
+    MAX_SUB_SLOT_BLOCKS=uint32(50),
+    NUM_SPS_SUB_SLOT=uint8(32),  # Must be a power of 2
+    EPOCH_BLOCKS=uint32(280),
+    SUB_SLOT_ITERS_STARTING=uint64(2**20),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(5),
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(5),
+)
 
 
 @pytest.fixture(name="ether_setup", autouse=True)
@@ -231,12 +244,14 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
 
 
 @pytest.fixture(scope="session", name="bt")
-async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend, testrun_uid: str) -> BlockTools:
+async def block_tools_fixture(
+    get_keychain, blockchain_constants, anyio_backend, testrun_uid: str
+) -> AsyncIterator[BlockTools]:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    shared_block_tools = await create_block_tools_async(
+    async with create_block_tools_async(
         constants=blockchain_constants, keychain=get_keychain, testrun_uid=testrun_uid
-    )
-    return shared_block_tools
+    ) as shared_block_tools:
+        yield shared_block_tools
 
 
 # if you have a system that has an unusual hostname for localhost and you want
@@ -989,19 +1004,20 @@ def get_temp_keyring():
 
 @pytest.fixture(scope="function")
 async def get_b_tools_1(get_temp_keyring, testrun_uid: str):
-    return await create_block_tools_async(
+    async with create_block_tools_async(
         constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
-    )
+    ) as bt:
+        yield bt
 
 
 @pytest.fixture(scope="function")
 async def get_b_tools(get_temp_keyring, testrun_uid):
-    local_b_tools = await create_block_tools_async(
+    async with create_block_tools_async(
         constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
-    )
-    new_config = local_b_tools._config
-    local_b_tools.change_config(new_config)
-    return local_b_tools
+    ) as local_b_tools:
+        new_config = local_b_tools._config
+        local_b_tools.change_config(new_config)
+        yield local_b_tools
 
 
 @pytest.fixture(scope="function")
@@ -1318,23 +1334,27 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     )
 
     async with AsyncExitStack() as async_exit_stack:
-        bt = await create_block_tools_async(
-            zero_bit_plot_filter_consts,
-            keychain=get_temp_keyring,
-            testrun_uid=testrun_uid,
+        bt = await async_exit_stack.enter_async_context(
+            create_block_tools_async(
+                zero_bit_plot_filter_consts,
+                keychain=get_temp_keyring,
+                testrun_uid=testrun_uid,
+            )
         )
 
         config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
 
         bts = [
-            await create_block_tools_async(
-                zero_bit_plot_filter_consts,
-                keychain=get_temp_keyring,
-                num_og_plots=0,
-                num_pool_plots=0,
-                num_non_keychain_plots=0,
-                config_overrides=config_overrides,
-                testrun_uid=testrun_uid,
+            await async_exit_stack.enter_async_context(
+                create_block_tools_async(
+                    zero_bit_plot_filter_consts,
+                    keychain=get_temp_keyring,
+                    num_og_plots=0,
+                    num_pool_plots=0,
+                    num_non_keychain_plots=0,
+                    config_overrides=config_overrides,
+                    testrun_uid=testrun_uid,
+                )
             )
             for _ in range(2)
         ]

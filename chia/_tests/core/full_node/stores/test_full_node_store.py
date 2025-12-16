@@ -38,7 +38,8 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
             DISCRIMINANT_SIZE_BITS=uint16(32),
             SUB_SLOT_ITERS_STARTING=uint64(2**12),
         )
-        yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
+        async with create_block_tools_async(constants=patched_constants, keychain=keychain) as bt:
+            yield bt
 
 
 @pytest.fixture(scope="function")

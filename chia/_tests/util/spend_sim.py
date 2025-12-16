@@ -166,42 +166,42 @@ class SpendSim:
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
             self.hint_store = await HintStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(
-                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
-            )
             self.defaults = defaults
 
-            # Load the next data if there is any
-            async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY KEY)")
-                cursor = await conn.execute("SELECT * from block_data")
-                row = await cursor.fetchone()
-                await cursor.close()
-                if row is not None:
-                    store_data = SimStore.from_bytes(row[0])
-                    self.timestamp = store_data.timestamp
-                    self.block_height = store_data.block_height
-                    self.block_records = store_data.block_records
-                    self.blocks = store_data.blocks
-                    self.mempool_manager.peak = self.block_records[-1]
-                else:
-                    self.timestamp = uint64(1)
-                    self.block_height = uint32(0)
-                    self.block_records = []
-                    self.blocks = []
+            async with MempoolManager.managed(
+                self.coin_store.get_coin_records, self.coin_store.get_unspent_lineage_info_for_puzzle_hash, defaults
+            ) as self.mempool_manager:
+                # Load the next data if there is any
+                async with self.db_wrapper.writer_maybe_transaction() as conn:
+                    await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY KEY)")
+                    cursor = await conn.execute("SELECT * from block_data")
+                    row = await cursor.fetchone()
+                    await cursor.close()
+                    if row is not None:
+                        store_data = SimStore.from_bytes(row[0])
+                        self.timestamp = store_data.timestamp
+                        self.block_height = store_data.block_height
+                        self.block_records = store_data.block_records
+                        self.blocks = store_data.blocks
+                        self.mempool_manager.peak = self.block_records[-1]
+                    else:
+                        self.timestamp = uint64(1)
+                        self.block_height = uint32(0)
+                        self.block_records = []
+                        self.blocks = []
 
-            try:
-                yield self
-            finally:
-                with anyio.CancelScope(shield=True):
-                    async with self.db_wrapper.writer_maybe_transaction() as conn:
-                        c = await conn.execute("DELETE FROM block_data")
-                        await c.close()
-                        c = await conn.execute(
-                            "INSERT INTO block_data VALUES(?)",
-                            (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
-                        )
-                        await c.close()
+                try:
+                    yield self
+                finally:
+                    with anyio.CancelScope(shield=True):
+                        async with self.db_wrapper.writer_maybe_transaction() as conn:
+                            c = await conn.execute("DELETE FROM block_data")
+                            await c.close()
+                            c = await conn.execute(
+                                "INSERT INTO block_data VALUES(?)",
+                                (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
+                            )
+                            await c.close()
 
     async def new_peak(self, spent_coins_ids: list[bytes32] | None) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1], spent_coins_ids)

@@ -14,6 +14,7 @@ from chia.full_node.full_node_rpc_client import FullNodeRpcClient
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.util.network import is_localhost
+from chia.wallet.wallet_request_types import GetFarmedAmount, GetFarmedAmountResponse
 from chia.wallet.wallet_rpc_client import WalletRpcClient
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
@@ -54,9 +55,9 @@ async def get_wallets_stats(
     wallet_rpc_port: int | None,
     root_path: Path,
     include_pool_rewards: bool,
-) -> dict[str, Any] | None:
+) -> GetFarmedAmountResponse | None:
     async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, _):
-        return await wallet_client.get_farmed_amount(include_pool_rewards)
+        return await wallet_client.get_farmed_amount(GetFarmedAmount(include_pool_rewards))
 
 
 async def get_challenges(root_path: Path, farmer_rpc_port: int | None) -> list[dict[str, Any]] | None:
@@ -124,23 +125,23 @@ async def summary(
         print("Farming")
 
     if amounts is not None:
-        print(f"Total chia farmed: {amounts['farmed_amount'] / units['chia']}")
-        print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
+        print(f"Total chia farmed: {amounts.farmed_amount / units['chia']}")
+        print(f"User transaction fees: {amounts.fee_amount / units['chia']}")
         if include_pool_rewards:
-            print(f"Farmer rewards: {amounts['farmer_reward_amount'] / units['chia']}")
-            print(f"Pool rewards: {amounts['pool_reward_amount'] / units['chia']}")
-            print(f"Total rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
+            print(f"Farmer rewards: {amounts.farmer_reward_amount / units['chia']}")
+            print(f"Pool rewards: {amounts.pool_reward_amount / units['chia']}")
+            print(f"Total rewards: {(amounts.farmer_reward_amount + amounts.pool_reward_amount) / units['chia']}")
             if blockchain_state is not None and blockchain_state["peak"] is not None:
                 peak_height = blockchain_state["peak"].height
-                blocks_since_last_farm = peak_height - amounts["last_height_farmed"]
-                print(f"Current/Last height farmed: {peak_height}/{amounts['last_height_farmed']}")
+                blocks_since_last_farm = peak_height - amounts.last_height_farmed
+                print(f"Current/Last height farmed: {peak_height}/{amounts.last_height_farmed}")
                 print(f"Blocks since last farmed: {blocks_since_last_farm}")
                 print(
                     f"Time since last farmed: {format_minutes(int((blocks_since_last_farm * SECONDS_PER_BLOCK) / 60))}"
                 )
         else:
-            print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
-            print(f"Last height farmed: {amounts['last_height_farmed']}")
+            print(f"Block rewards: {(amounts.farmer_reward_amount + amounts.pool_reward_amount) / units['chia']}")
+            print(f"Last height farmed: {amounts.last_height_farmed}")
 
     class PlotStats:
         total_plot_size = 0

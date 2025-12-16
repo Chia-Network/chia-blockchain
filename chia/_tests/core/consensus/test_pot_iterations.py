@@ -142,4 +142,4 @@ def test_expected_plot_size_v1() -> None:
 def test_expected_plot_size_v2() -> None:
     for strength in [2, 3, 4, 5, 6, 7]:
         plot_size = _expected_plot_size(PlotParam.make_v2(strength), test_constants)
-        assert plot_size == 1_879_213_114
+        assert plot_size == 988_513_566

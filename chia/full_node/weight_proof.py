@@ -84,7 +84,7 @@ class WeightProofHandler:
             return None
 
         if tip_rec.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-            log.debug("chain to short for weight proof")
+            log.info(f"chain to short for weight proof. tip: {tip_rec.height}")
             return None
 
         async with self.lock:
@@ -124,6 +124,10 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
+        if len(summary_heights) <= 1:
+            log.error("not enough sub epochs. perhaps WEIGHT_PROOF_RECENT_BLOCKS is too small")
+            return None
+
         zero_hash = self.blockchain.height_to_hash(uint32(0))
         assert zero_hash is not None
         prev_ses_block = await self.blockchain.get_block_record_from_db(zero_hash)

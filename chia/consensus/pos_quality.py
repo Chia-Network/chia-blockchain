@@ -7,17 +7,6 @@ from chia_rs.sized_ints import uint64
 # This is not used in consensus, only for display purposes
 UI_ACTUAL_SPACE_CONSTANT_FACTOR = 0.78
 
-# TODO: todo_v2_plots these values prelimenary. When the plotter is complete,
-# replace this table with a closed form formula
-v2_plot_sizes: dict[int, uint64] = {
-    18: uint64(1_048_737),
-    20: uint64(4_824_084),
-    22: uint64(21_812_958),
-    24: uint64(97_318_160),
-    26: uint64(429_539_960),
-    28: uint64(1_879_213_114),
-}
-
 
 def _expected_plot_size(size: PlotParam, constants: ConsensusConstants) -> uint64:
     """
@@ -33,4 +22,7 @@ def _expected_plot_size(size: PlotParam, constants: ConsensusConstants) -> uint6
         k = size.size_v1
         return uint64(((2 * k) + 1) * (2 ** (k - 1)))
     else:
-        return v2_plot_sizes[constants.PLOT_SIZE_V2]
+        k = constants.PLOT_SIZE_V2
+        # TODO: todo_v2_plots this formula may change slightly before the
+        # final version of the plotter. Revisit this when the plotter is complete
+        return uint64((2**k) * (k + 1.46) / 8)
