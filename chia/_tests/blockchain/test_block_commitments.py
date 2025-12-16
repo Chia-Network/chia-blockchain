@@ -13,6 +13,7 @@ from chia._tests.core.node_height import node_height_exactly
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.protocols import full_node_protocol
 from chia.simulator.block_tools import test_constants
@@ -118,7 +119,7 @@ class TestCommitments:
                             subepoch_summary_hash=bytes32.zeros
                         )
                     )
-                    block_no_challenge_root = block.replace(finished_sub_slots=([slot]))
+                    block_no_challenge_root = block.replace(finished_sub_slots=[slot])
                     # changing the subepoch_summary_hash will cause INVALID_POSPACE error
                     # because it changes the block challenge
                     await _validate_and_add_block(
@@ -237,3 +238,41 @@ class TestSyncWithCommitments:
             assert peak_1.header_hash == peak_2.header_hash
 
             log.info(f"Successfully synced {len(blocks)} blocks with fork_height=500 between two nodes")
+
+
+def test_mmr_manager_deep_copy() -> None:
+    # Create original MMR manager
+    mmr1 = BlockchainMMRManager()
+
+    # Add some blocks to it
+    mmr1.add_block_to_mmr(bytes32([1] * 32), bytes32([0] * 32), uint32(0))
+    mmr1.add_block_to_mmr(bytes32([2] * 32), bytes32([1] * 32), uint32(1))
+    mmr1.add_block_to_mmr(bytes32([3] * 32), bytes32([2] * 32), uint32(2))
+
+    original_height = mmr1._last_height
+    original_root = mmr1.get_current_mmr_root()
+
+    # Create a copy
+    mmr2 = mmr1.copy()
+
+    # Verify initial state matches
+    assert mmr2._last_height == original_height
+    assert mmr2.get_current_mmr_root() == original_root
+    assert mmr2._checkpoint_interval == mmr1._checkpoint_interval
+    assert mmr2._max_checkpoints == mmr1._max_checkpoints
+
+    # Mutate the copy
+    mmr2.add_block_to_mmr(bytes32([4] * 32), bytes32([3] * 32), uint32(3))
+    mmr2.add_block_to_mmr(bytes32([5] * 32), bytes32([4] * 32), uint32(4))
+
+    # Verify original is unchanged (deep copy worked)
+    assert mmr1._last_height == original_height
+    assert mmr1.get_current_mmr_root() == original_root
+
+    # Verify copy has new state
+    assert mmr2._last_height == uint32(4)
+    assert mmr2.get_current_mmr_root() != original_root
+
+    # Verify they are truly independent objects
+    assert mmr1._mmr is not mmr2._mmr
+    assert mmr1._checkpoints is not mmr2._checkpoints
