@@ -33,7 +33,6 @@ class SlotChallengeData:
 
 
 def extract_slot_challenge_data(
-    constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     sub_epoch_start: uint32,
     sub_epoch_end: uint32,
@@ -46,9 +45,30 @@ def extract_slot_challenge_data(
         List of SlotChallengeData objects, one per slot in the sub-epoch, ordered by first appearance
     """
     slot_data: list[SlotChallengeData] = []
-    current_challenge: bytes32 = constants.GENESIS_CHALLENGE
-    prev_challenge: bytes32 = constants.GENESIS_CHALLENGE
+    current_challenge: bytes32 | None = None
+    prev_challenge: bytes32 | None = None
+    curr = blocks.height_to_block_record(uint32(sub_epoch_start))
+    reversed_challenge_hashes: list[bytes32] = []
 
+    challenges_to_look_for = 1
+    if curr.overflow:
+        challenges_to_look_for = 2
+    # find challenge for fitst block in sub-epoch
+    while curr.height >= 0:
+        if curr.first_in_sub_slot:
+            assert curr.finished_challenge_slot_hashes is not None
+            reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
+            if len(reversed_challenge_hashes) >= challenges_to_look_for:
+                break
+        if curr.height == 0:
+            assert curr.finished_challenge_slot_hashes is not None
+            assert len(curr.finished_challenge_slot_hashes) > 0
+            break
+    current_challenge = reversed_challenge_hashes[0]
+    if challenges_to_look_for == 2:
+        assert len(reversed_challenge_hashes) == 2
+        prev_challenge = reversed_challenge_hashes[1]
+    # go throgh all blocks in sub-epoch counting blocks per slot challenge
     for height in range(sub_epoch_start, sub_epoch_end + 1):
         try:
             block = blocks.height_to_block_record(uint32(height))
@@ -67,7 +87,11 @@ def extract_slot_challenge_data(
                     current_challenge = hashes[-1]
 
             # Determine which challenge this block uses
-            block_challenge = prev_challenge if block.overflow else current_challenge
+            if not block.overflow:
+                block_challenge = current_challenge
+            else:
+                assert prev_challenge is not None
+                block_challenge = prev_challenge
 
             # Track slot data
             if not slot_data or slot_data[-1].challenge_hash != block_challenge:
@@ -124,12 +148,26 @@ def compute_challenge_merkle_root(
     Returns:
         bytes32: merkle root of slot challenge data in the sub-epoch
     """
-    # Calculate the range of blocks in this sub-epoch
-    sub_epoch_start = ((blocks_included_height - 1) // constants.SUB_EPOCH_BLOCKS) * constants.SUB_EPOCH_BLOCKS
-    sub_epoch_end = blocks_included_height - 1  # Last block in sub-epoch
+    sub_epoch_end = blocks_included_height - 1
+
+    if sub_epoch_end == 0:
+        # First block is always the start of the first sub-epoch
+        sub_epoch_start = uint32(0)
+    else:
+        # Walk backwards to find the previous sub-epoch summary
+        curr = blocks.height_to_block_record(uint32(sub_epoch_end))
+        while curr.height > 0 and curr.sub_epoch_summary_included is None:
+            curr = blocks.block_record(curr.prev_hash)
+
+        # The previous sub-epoch ended at curr.height -1
+        if curr.sub_epoch_summary_included is not None:
+            sub_epoch_start = uint32(curr.height)
+        else:
+            # We reached genesis without finding a summary, so this starts at genesis
+            sub_epoch_start = uint32(0)
 
     # Extract slot challenge data from blocks
-    slot_data = extract_slot_challenge_data(constants, blocks, uint32(sub_epoch_start), uint32(sub_epoch_end))
+    slot_data = extract_slot_challenge_data(blocks, sub_epoch_start, uint32(sub_epoch_end))
 
     # Build and return merkle root
     return build_challenge_merkle_tree(slot_data)

@@ -59,7 +59,7 @@ class AugmentedBlockchain:
             return
 
         block_record = self._extra_blocks.pop(hh)[1]
-        self.mmr_manager.rollback_to_height(block_record.height, self)
+        self.mmr_manager.rollback_to_height(block_record.height - 1, self)
         if self._underlying.contains_block(block_record.header_hash, block_record.height):
             height_to_remove = block_record.height
             for h in range(height_to_remove, -1, -1):
