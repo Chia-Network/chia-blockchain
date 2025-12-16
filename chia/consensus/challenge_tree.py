@@ -10,12 +10,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from chia_rs import compute_merkle_set_root
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.util.hash import std_hash
-from chia.util.merkle_tree import MerkleTree
 
 log = logging.getLogger(__name__)
 
@@ -112,16 +112,16 @@ def extract_slot_challenge_data(
 
 def build_challenge_merkle_tree(slot_data: list[SlotChallengeData]) -> bytes32:
     """
-    Build deterministic merkle tree from slot challenge data.
+    Build deterministic merkle set from slot challenge data.
 
     Each merkle leaf contains: hash(challenge_hash || block_count)
-    The slot data is already in deterministic order (time-ordered by block height).
+    Uses compute_merkle_set_root for a deterministic, order-independent result.
     """
     if not slot_data:
         log.warning("No slot data provided for challenge merkle tree")
         return bytes32.zeros
 
-    # Create merkle tree leaves: hash(challenge_hash + block_count) for each slot
+    # Create merkle set leaves: hash(challenge_hash + block_count) for each slot
     merkle_leaves: list[bytes32] = []
     for slot in slot_data:
         # Create leaf: hash(challenge_hash || block_count)
@@ -130,9 +130,8 @@ def build_challenge_merkle_tree(slot_data: list[SlotChallengeData]) -> bytes32:
         leaf_hash = std_hash(leaf_data)
         merkle_leaves.append(leaf_hash)
 
-    # Build merkle tree
-    merkle_tree = MerkleTree(merkle_leaves)
-    return merkle_tree.calculate_root()
+    # Build merkle set (order-independent)
+    return bytes32(compute_merkle_set_root(merkle_leaves))
 
 
 def compute_challenge_merkle_root(
