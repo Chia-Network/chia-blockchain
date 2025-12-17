@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import random
 import time
 
@@ -14,10 +13,6 @@ from chia.consensus.mmr import MerkleMountainRange, get_height, get_peak_positio
 logger = logging.getLogger(__name__)
 
 
-def random_bytes32() -> bytes32:
-    return bytes32(os.urandom(32))
-
-
 def test_empty_mmr_root() -> None:
     mmr = MerkleMountainRange()
     assert mmr.get_root() is None  # Empty MMR returns None
@@ -27,7 +22,7 @@ def test_empty_mmr_root() -> None:
 
 def test_single_leaf() -> None:
     mmr = MerkleMountainRange()
-    leaf = random_bytes32()
+    leaf = bytes32.random()
     mmr.append(leaf)
     root = mmr.get_root()
     assert root is not None
@@ -39,7 +34,7 @@ def test_single_leaf() -> None:
 
 def test_multiple_leaves() -> None:
     mmr = MerkleMountainRange()
-    leaves = [random_bytes32() for _ in range(10)]
+    leaves = [bytes32.random() for _ in range(10)]
     for leaf in leaves:
         mmr.append(leaf)
     root = mmr.get_root()
@@ -61,7 +56,7 @@ def test_multiple_leaves() -> None:
 
 def test_duplicate_leaves() -> None:
     mmr = MerkleMountainRange()
-    leaf = random_bytes32()
+    leaf = bytes32.random()
     for _ in range(3):
         mmr.append(leaf)
     # All should be provable by index
@@ -79,7 +74,7 @@ def test_mmr_height() -> None:
     assert mmr.get_tree_height() == 0
 
     # Add leaves to create peaks of different heights
-    leaves = [random_bytes32() for _ in range(5)]
+    leaves = [bytes32.random() for _ in range(5)]
     heights = [0, 1, 1, 2, 2]  # Correct expected peak heights after each append
 
     for leaf, expected_height in zip(leaves, heights):
@@ -143,14 +138,14 @@ def test_flat_mmr_basic() -> None:
     assert mmr.get_root() is None
 
     # Add first leaf
-    leaf1 = random_bytes32()
+    leaf1 = bytes32.random()
     mmr.append(leaf1)
     assert mmr.size == 1
     assert len(mmr.nodes) == 1  # Just the leaf
     assert mmr.get_root() == leaf1  # Single leaf MMR root is the leaf itself
 
     # Add second leaf
-    leaf2 = random_bytes32()
+    leaf2 = bytes32.random()
     mmr.append(leaf2)
     assert mmr.size == 2
     assert len(mmr.nodes) == 3  # 2 leaves + 1 parent
@@ -186,7 +181,7 @@ def test_flat_mmr_height_calculation() -> None:
 def test_flat_mmr_copy() -> None:
     """Test MMR copy"""
     mmr = MerkleMountainRange()
-    leaves = [random_bytes32() for _ in range(10)]
+    leaves = [bytes32.random() for _ in range(10)]
     for leaf in leaves:
         mmr.append(leaf)
 
@@ -199,6 +194,159 @@ def test_flat_mmr_copy() -> None:
     assert mmr2.get_root() == original_root
 
     # Modify copy shouldn't affect original
-    mmr2.append(random_bytes32())
+    mmr2.append(bytes32.random())
     assert mmr2.size != mmr.size
     assert mmr.get_root() == original_root
+
+
+def test_mmr_pop_single() -> None:
+    """Test popping a single leaf from MMR"""
+    mmr = MerkleMountainRange()
+    leaf = bytes32.random()
+    mmr.append(leaf)
+    assert mmr.size == 1
+    assert len(mmr.nodes) == 1
+
+    # Pop the leaf
+    mmr.pop()
+    assert mmr.size == 0
+    assert len(mmr.nodes) == 0
+    assert mmr.get_root() is None
+
+
+def test_mmr_pop_multiple() -> None:
+    """Test popping multiple leaves"""
+    from chia.util.hash import std_hash
+
+    mmr = MerkleMountainRange()
+    leaf1 = bytes32.random()
+    leaf2 = bytes32.random()
+    leaf3 = bytes32.random()
+
+    mmr.append(leaf1)
+    mmr.append(leaf2)
+    mmr.append(leaf3)
+
+    assert mmr.size == 3
+    # After 3 leaves: [leaf1, leaf2, parent(1,2), leaf3]
+    assert len(mmr.nodes) == 4
+
+    # Pop leaf3
+    mmr.pop()
+    assert mmr.size == 2
+    # After pop: [leaf1, leaf2, parent(1,2)]
+    assert len(mmr.nodes) == 3
+    expected_root = std_hash(leaf1 + leaf2)
+    assert mmr.get_root() == expected_root
+
+    # Pop leaf2
+    mmr.pop()
+    assert mmr.size == 1
+    # After pop: [leaf1]
+    assert len(mmr.nodes) == 1
+    assert mmr.get_root() == leaf1
+
+
+def test_mmr_append_and_rewind() -> None:
+    """Test maintaining two MMRs, appending extra blocks to one, then rewinding"""
+    mmr1 = MerkleMountainRange()
+    mmr2 = MerkleMountainRange()
+
+    # Build up to a common point
+    common_leaves = [bytes32.random() for _ in range(10)]
+    for leaf in common_leaves:
+        mmr1.append(leaf)
+        mmr2.append(leaf)
+
+    # Both should be identical
+    assert mmr1.size == mmr2.size
+    assert len(mmr1.nodes) == len(mmr2.nodes)
+    assert mmr1.get_root() == mmr2.get_root()
+
+    # Add extra blocks to mmr2
+    extra_leaves = [bytes32.random() for _ in range(5)]
+    for leaf in extra_leaves:
+        mmr2.append(leaf)
+
+    # Now they should differ
+    assert mmr2.size == mmr1.size + 5
+    assert mmr2.get_root() != mmr1.get_root()
+
+    # Rewind mmr2 by popping 5 blocks
+    for _ in range(5):
+        mmr2.pop()
+
+    # Now they should be identical again
+    assert mmr1.size == mmr2.size
+    assert len(mmr1.nodes) == len(mmr2.nodes)
+    assert mmr1.get_root() == mmr2.get_root()
+    # Verify all nodes are identical
+    for i in range(len(mmr1.nodes)):
+        assert mmr1.nodes[i] == mmr2.nodes[i]
+
+
+def test_mmr_rewind_large_batch() -> None:
+    """Test rewinding large batches of blocks"""
+    mmr1 = MerkleMountainRange()
+    mmr2 = MerkleMountainRange()
+
+    # Build up baseline of 100 blocks
+    baseline_leaves = [bytes32.random() for _ in range(100)]
+    for leaf in baseline_leaves:
+        mmr1.append(leaf)
+        mmr2.append(leaf)
+
+    baseline_root = mmr1.get_root()
+
+    # Add 50 extra blocks to mmr2
+    extra_leaves = [bytes32.random() for _ in range(50)]
+    for leaf in extra_leaves:
+        mmr2.append(leaf)
+
+    assert mmr2.size == 150
+    assert mmr2.get_root() != baseline_root
+
+    # Rewind all 50 blocks
+    for _ in range(50):
+        mmr2.pop()
+
+    # Verify we're back to baseline
+    assert mmr2.size == 100
+    assert mmr2.get_root() == baseline_root
+    assert mmr1.get_root() == mmr2.get_root()
+
+
+def test_mmr_pop_nodes_calculation() -> None:
+    """Test that pop correctly calculates nodes to remove"""
+    mmr = MerkleMountainRange()
+
+    # First append: adds 1 node (just the leaf)
+    mmr.append(bytes32.random())
+    assert len(mmr.nodes) == 1
+
+    # Second append: adds 2 nodes (leaf + parent)
+    mmr.append(bytes32.random())
+    assert len(mmr.nodes) == 3
+
+    # Third append: adds 1 node (just the leaf)
+    mmr.append(bytes32.random())
+    assert len(mmr.nodes) == 4
+
+    # Fourth append: adds 3 nodes (leaf + parent + grandparent)
+    mmr.append(bytes32.random())
+    assert len(mmr.nodes) == 7
+
+    # Pop should remove 3 nodes (leaf + parent + grandparent)
+    mmr.pop()
+    assert len(mmr.nodes) == 4
+    assert mmr.size == 3
+
+    # Pop should remove 1 node (just the leaf)
+    mmr.pop()
+    assert len(mmr.nodes) == 3
+    assert mmr.size == 2
+
+    # Pop should remove 2 nodes (leaf + parent)
+    mmr.pop()
+    assert len(mmr.nodes) == 1
+    assert mmr.size == 1

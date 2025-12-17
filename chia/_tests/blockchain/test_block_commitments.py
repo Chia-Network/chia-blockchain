@@ -258,8 +258,6 @@ def test_mmr_manager_deep_copy() -> None:
     # Verify initial state matches
     assert mmr2._last_height == original_height
     assert mmr2.get_current_mmr_root() == original_root
-    assert mmr2._checkpoint_interval == mmr1._checkpoint_interval
-    assert mmr2._max_checkpoints == mmr1._max_checkpoints
 
     # Mutate the copy
     mmr2.add_block_to_mmr(bytes32([4] * 32), bytes32([3] * 32), uint32(3))
@@ -275,4 +273,3 @@ def test_mmr_manager_deep_copy() -> None:
 
     # Verify they are truly independent objects
     assert mmr1._mmr is not mmr2._mmr
-    assert mmr1._checkpoints is not mmr2._checkpoints

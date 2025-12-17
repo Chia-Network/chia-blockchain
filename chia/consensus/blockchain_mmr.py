@@ -18,15 +18,11 @@ log = logging.getLogger(__name__)
 class BlockchainMMRManager:
     """
     Manages MMR state for blockchain operations.
-    Includes checkpointing for efficient rollback during reorgs.
     """
 
     _mmr: MerkleMountainRange = field(default_factory=MerkleMountainRange)
     _last_header_hash: bytes32 | None = None
     _last_height: uint32 | None = None
-    _checkpoints: dict[uint32, MerkleMountainRange] = field(default_factory=dict)
-    _checkpoint_interval: int = 1000
-    _max_checkpoints: int = 10
 
     def __repr__(self) -> str:
         return f"BlockchainMMRManager(height={self._last_height}, root={self.get_current_mmr_root()!r})"
@@ -38,9 +34,7 @@ class BlockchainMMRManager:
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         """
         Add a block to the MMR in sequential order.
-        This should be called for blocks in height order to maintain MMR integrity.
         """
-
         # Only add blocks that are the next expected height
         if self._last_header_hash is not None and (prev_hash != self._last_header_hash):
             # Skip blocks that are out of order or duplicate
@@ -49,24 +43,13 @@ class BlockchainMMRManager:
                 f"(expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
             )
             return
-        # genesis case is equivilant to normal case
+        # genesis case is equivalent to normal case
         assert self._last_height is None or height == self._last_height + 1
         # Add block's header hash to the MMR
         self._mmr.append(header_hash)
         # Store minimal block info for validation
         self._last_header_hash = header_hash
         self._last_height = height
-
-        # Create checkpoint if we've reached a checkpoint interval
-        if height > 0 and height % self._checkpoint_interval == 0:
-            self._checkpoints[height] = self._mmr.copy()
-            log.debug(f"Created MMR checkpoint at height {height}")
-
-            # Clean up old checkpoints (keep only max_checkpoints to limit memory)
-            if len(self._checkpoints) > self._max_checkpoints:
-                oldest_checkpoint = min(self._checkpoints.keys())
-                del self._checkpoints[oldest_checkpoint]
-                log.debug(f"Removed old MMR checkpoint at height {oldest_checkpoint}")
 
         log.debug(f"Added block {height} to MMR, new root: {self._mmr.get_root()}")
 
@@ -76,9 +59,7 @@ class BlockchainMMRManager:
 
     def _build_mmr_to_block(self, target_block: BlockRecord, blocks: BlockRecordsProtocol) -> bytes32 | None:
         """
-        Build an MMR containing all blocks from genesis to target_block (inclusive).
-        Uses checkpoints or current MMR state when available to avoid rebuilding from genesis.
-        """
+        Build an MMR containing all blocks from genesis to target_block (inclusive)."""
         target_height = target_block.height
 
         # Fast path: if current MMR is already at target height, use it directly
@@ -87,28 +68,11 @@ class BlockchainMMRManager:
                 log.debug(f"Using current MMR state at height {target_height}")
                 return self._mmr.get_root()
 
-        # Try to find the best starting point (current MMR or checkpoint)
-        best_start_height = -1
-        best_mmr = None
+        # Build MMR from genesis to target
+        mmr = MerkleMountainRange()
+        log.debug(f"Building MMR from genesis to {target_height}")
 
-        # Check checkpoints - sort in descending order and take first match
-        for checkpoint_height in sorted(self._checkpoints.keys(), reverse=True):
-            if checkpoint_height <= target_height and checkpoint_height > best_start_height:
-                best_start_height = checkpoint_height
-                best_mmr = self._checkpoints[checkpoint_height].copy()
-                log.debug(f"Using checkpoint at height {checkpoint_height} as starting point")
-
-        # If we have a starting point, use it; otherwise start from genesis
-        if best_mmr is not None:
-            mmr = best_mmr
-            start_height = best_start_height + 1
-        else:
-            mmr = MerkleMountainRange()
-            start_height = 0
-            log.debug(f"Building MMR from genesis to {target_height}")
-
-        # Append remaining blocks from start_height to target_height
-        for height in range(start_height, target_height + 1):
+        for height in range(target_height + 1):
             block = blocks.height_to_block_record(uint32(height))
             mmr.append(block.header_hash)
 
@@ -187,18 +151,11 @@ class BlockchainMMRManager:
 
     def rollback_to_height(self, target_height: int, blocks: BlockRecordsProtocol) -> None:
         """
-        Efficiently rollback MMR to a specific height using checkpoints.
-
-        Args:
-            target_height: The height to rollback to
-            blocks: BlockRecordsProtocol to fetch blocks for rebuilding
+        rollback MMR to a specific height.
         """
         current_height = self._last_height if self._last_height is not None else -1
 
-        if target_height >= current_height:
-            # No rollback needed
-            return
-
+        assert target_height < current_height
         if target_height == 0:
             # Reset to genesis
             self._mmr = MerkleMountainRange()
@@ -206,35 +163,17 @@ class BlockchainMMRManager:
             self._last_height = None
             return
 
-        # Find the best checkpoint to start from
-        best_checkpoint_height = -1
-        for checkpoint_height in self._checkpoints.keys():
-            if checkpoint_height <= target_height and checkpoint_height > best_checkpoint_height:
-                best_checkpoint_height = checkpoint_height
+        # Pop blocks one by one until we reach target height
+        blocks_to_pop = current_height - target_height
+        log.debug(f"Rolling back MMR from height {current_height} to {target_height} ({blocks_to_pop} pops)")
 
-        if best_checkpoint_height >= 0:
-            # Start from checkpoint
-            log.debug(f"Rolling back MMR from checkpoint at height {best_checkpoint_height} to {target_height}")
-            self._mmr = self._checkpoints[uint32(best_checkpoint_height)].copy()
-            start_height = best_checkpoint_height + 1
-        else:
-            # No suitable checkpoint, start from genesis
-            log.debug(f"Rolling back MMR from genesis to height {target_height}")
-            self._mmr = MerkleMountainRange()
-            start_height = 0
+        for _ in range(blocks_to_pop):
+            self._mmr.pop()
+        try:
+            target_block = blocks.height_to_block_record(uint32(target_height))
+        except Exception as e:
+            log.exception(f"Could not find block at height {target_height} during MMR rollback: {e}")
 
-        # Rebuild from checkpoint/genesis to target height
-        self._last_header_hash = None
-        self._last_height = None
-        for height in range(start_height, target_height + 1):
-            try:
-                block_record = blocks.height_to_block_record(uint32(height))
-                self._mmr.append(block_record.header_hash)
-                self._last_header_hash = block_record.header_hash
-                self._last_height = uint32(height)
-            except Exception as e:
-                log.warning(f"Could not find block at height {height} during MMR rollback: {e}")
-                break
-
-        final_height = self._last_height if self._last_height is not None else -1
-        log.debug(f"MMR rollback completed. Now at height {final_height}")
+        self._last_header_hash = target_block.header_hash
+        self._last_height = uint32(target_height)
+        log.debug(f"MMR rolled back to height {self._last_height}")
