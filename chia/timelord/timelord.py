@@ -181,6 +181,9 @@ class Timelord:
             yield
         finally:
             self._shut_down = True
+            if self.vdf_server is not None:
+                self.vdf_server.close()
+                await self.vdf_server.wait_closed()
             if self._executor_shutdown_tempfile is not None:
                 self._executor_shutdown_tempfile.close()
             for task in self.process_communication_tasks:
