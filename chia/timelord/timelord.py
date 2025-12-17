@@ -181,9 +181,6 @@ class Timelord:
             yield
         finally:
             self._shut_down = True
-            if self.vdf_server is not None:
-                self.vdf_server.close()
-                await self.vdf_server.wait_closed()
             if self._executor_shutdown_tempfile is not None:
                 self._executor_shutdown_tempfile.close()
             for task in self.process_communication_tasks:
@@ -192,6 +189,14 @@ class Timelord:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
+            for _ip, _reader, writer in self.free_clients:
+                writer.close()
+                await writer.wait_closed()
+            for _ip, _reader, writer in self.chain_type_to_stream.values():
+                writer.close()
+                await writer.wait_closed()
+            if self.vdf_server is not None:
+                self.vdf_server.close()
 
     def get_connections(self, request_node_type: NodeType | None) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
