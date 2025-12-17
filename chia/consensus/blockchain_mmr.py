@@ -44,9 +44,11 @@ class BlockchainMMRManager:
         # Only add blocks that are the next expected height
         if self._last_header_hash is not None and (prev_hash != self._last_header_hash):
             # Skip blocks that are out of order or duplicate
-            raise ValueError(
-                f"prev_hash mismatch (expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
+            log.warning(
+                f"Skipping block height {height}, prev_hash mismatch "
+                f"(expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
             )
+            return
         # genesis case is equivilant to normal case
         assert self._last_height is None or height == self._last_height + 1
         # Add block's header hash to the MMR
@@ -200,6 +202,8 @@ class BlockchainMMRManager:
         if target_height == 0:
             # Reset to genesis
             self._mmr = MerkleMountainRange()
+            self._last_header_hash = None
+            self._last_height = None
             return
 
         # Find the best checkpoint to start from
@@ -228,8 +232,8 @@ class BlockchainMMRManager:
                 self._mmr.append(block_record.header_hash)
                 self._last_header_hash = block_record.header_hash
                 self._last_height = uint32(height)
-            except Exception:
-                log.warning(f"Could not find block at height {height} during MMR rollback")
+            except Exception as e:
+                log.warning(f"Could not find block at height {height} during MMR rollback: {e}")
                 break
 
         final_height = self._last_height if self._last_height is not None else -1

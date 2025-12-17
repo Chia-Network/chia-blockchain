@@ -502,11 +502,13 @@ async def fork_height2_0_1000_blocks(consensus_mode, get_keychain, anyio_backend
         HARD_FORK_HEIGHT=uint32(0),
         PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     )
-    bt_fork_zero = await create_block_tools_async(constants=constants, keychain=get_keychain, testrun_uid=testrun_uid)
-    version = "_fork_height_zero"
-    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-        version += "_hardfork"
-    return persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_zero, seed=b"fork_zero")
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_zero:
+        version = "_fork_height_zero"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_zero, seed=b"fork_zero")
 
 
 @pytest.fixture(scope="session")
@@ -520,12 +522,14 @@ async def fork_height2_500_1000_blocks(consensus_mode, get_keychain, anyio_backe
         HARD_FORK_HEIGHT=uint32(0),
         PLOT_V1_PHASE_OUT_EPOCH_BITS=uint8(8),
     )
-    bt_fork_500 = await create_block_tools_async(constants=constants, keychain=get_keychain, testrun_uid=testrun_uid)
-    version = "_fork_height_500"
-    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-        version += "_hardfork"
+    async with create_block_tools_async(
+        constants=constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as bt_fork_500:
+        version = "_fork_height_500"
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+            version += "_hardfork"
 
-    return persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_500, seed=b"fork_500")
+        yield persistent_blocks(1000, f"test_blocks_1000{version}.db", bt_fork_500, seed=b"fork_500")
 
 
 # If you add another test chain, don't forget to also add a "build_test_chains"
