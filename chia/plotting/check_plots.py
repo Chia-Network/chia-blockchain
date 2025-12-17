@@ -216,17 +216,18 @@ def check_plots(
                             proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         elif isinstance(pr, V2Prover):
                             assert isinstance(quality, V2Quality)
-                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                             full_proof = solve_proof(
                                 quality.get_partial_proof(),
                                 pr.get_id(),
                                 pr.get_strength(),
                                 DEFAULT_CONSTANTS.PLOT_SIZE_V2,
                             )
+                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
 
                         if proof_spent_time > 15000:
+                            action = "Finding" if isinstance(pr, V1Prover) else "Solving"
                             log.warning(
-                                f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
+                                f"\t{action} proof took: {proof_spent_time} ms. This should be below 15 seconds "
                                 f"to minimize risk of losing rewards. Filepath: {plot_path}"
                             )
                         else:
