@@ -65,7 +65,7 @@ async def mint_plotnft(
     else:
         custody = self_custody
 
-    conditions, spends, plotnft = PlotNFT.launch(origin_coins=[origin_coin], custody=custody, memos=[])
+    conditions, spends, plotnft = PlotNFT.launch(origin_coins=[origin_coin], custody=custody)
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
@@ -75,6 +75,10 @@ async def mint_plotnft(
     )
     assert result == (MempoolInclusionStatus.SUCCESS, None)
     await sim.farm_block()
+    assert (
+        PlotNFT.get_next_from_coin_spend(coin_spend=spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE)
+        == plotnft
+    )
     return plotnft
 
 

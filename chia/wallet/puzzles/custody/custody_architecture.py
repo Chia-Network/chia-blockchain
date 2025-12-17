@@ -226,6 +226,7 @@ class PuzzleWithRestrictions:
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
     restrictions: list[Restriction[MemberOrDPuz]]
     puzzle: Puzzle
+    additional_memos: Program | None = None
     spec_namespace: ClassVar[str] = "inner_puzzle_chip?"
 
     def memo(self) -> Program:
@@ -253,11 +254,12 @@ class PuzzleWithRestrictions:
         return Program.to(
             (
                 self.spec_namespace,
-                [
+                [  # TODO: this should be cons
                     self.nonce,
                     [hint.to_program() for hint in restriction_hints],
                     1 if isinstance(self.puzzle, MofN) else 0,
                     puzzle_hint.to_program(),
+                    self.additional_memos,
                 ],
             )
         )
@@ -266,7 +268,9 @@ class PuzzleWithRestrictions:
     def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
         if memo.atom is not None or memo.first() != Program.to(cls.spec_namespace):
             raise ValueError("Attempting to parse a memo that does not belong to this spec")
-        nonce, restriction_hints_prog, further_branching_prog, puzzle_hint_prog = memo.rest().as_iter()
+        nonce, restriction_hints_prog, further_branching_prog, puzzle_hint_prog, additional_memos = (
+            memo.rest().as_iter()
+        )
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
@@ -282,6 +286,7 @@ class PuzzleWithRestrictions:
             nonce=nonce.as_int(),
             restrictions=[UnknownRestriction(hint) for hint in restriction_hints],
             puzzle=puzzle,
+            additional_memos=additional_memos if additional_memos != Program.to(None) else None,
         )
 
     @property

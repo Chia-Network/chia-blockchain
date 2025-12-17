@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from typing import Self
+from typing import ClassVar, Self
 
+from chia_rs import G1Element
 from chia_rs.chia_rs import Coin, CoinSpend
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -18,6 +19,7 @@ from chia.wallet.conditions import (
     MessageParticipant,
     ReserveFee,
     SendMessage,
+    parse_conditions_non_consensus,
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.custody.custody_architecture import (
@@ -36,6 +38,7 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     puzzle_for_singleton,
     solution_for_singleton,
 )
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
     "claim_pool_rewards_dpuz.clsp", package_or_requirement="chia.pools"
@@ -83,10 +86,11 @@ class SelfCustody:
 
     def puzzle_with_restrictions(self) -> PuzzleWithRestrictions:
         return PuzzleWithRestrictions(
-            nonce=0,
-            restrictions=[],
-            puzzle=self.member,
+            nonce=0, restrictions=[], puzzle=self.member, additional_memos=self.memos(nonce=0)
         )
+
+    def memos(self, nonce: int) -> Program:
+        return Program.to([self.member.synthetic_key])
 
     def puzzle(self, nonce: int) -> Program:
         return self.puzzle_with_restrictions().puzzle_reveal()
@@ -199,7 +203,11 @@ class PoolingCustody:
                     self.pool_puzzle_with_restrictions(),
                 ],
             ),
+            additional_memos=self.memos(nonce=0),
         )
+
+    def memos(self, nonce: int) -> Program:
+        return Program.to([self.self_custody.member.synthetic_key, self.pool_puzzle_hash, self.timelock])
 
     def puzzle(self, nonce: int) -> Program:
         return self.puzzle_with_restrictions().puzzle_reveal()
@@ -267,20 +275,21 @@ class PlotNFT:
     coin: Coin
     singleton_lineage_proof: LineageProof
     puzzle: PlotNFTPuzzle
+    singleton_mod: ClassVar[Program] = SINGLETON_MOD
+    singleton_launcher: ClassVar[Program] = SINGLETON_LAUNCHER
 
-    @staticmethod
+    @classmethod
     def origin_coin_info(
+        cls,
         origin_coins: list[Coin],
-        singleton_mod: Program = SINGLETON_MOD,
-        singleton_launcher: Program = SINGLETON_LAUNCHER,
     ) -> tuple[Coin, Coin, SingletonStruct]:
         origin_coin = origin_coins[0]
 
-        launcher_hash = singleton_launcher.get_tree_hash()
+        launcher_hash = cls.singleton_launcher.get_tree_hash()
         launcher_coin = Coin(origin_coin.name(), launcher_hash, uint64(1))
         launcher_id = launcher_coin.name()
         singleton_struct = SingletonStruct(
-            singleton_mod=singleton_mod, launcher_id=launcher_id, singleton_launcher=singleton_launcher
+            singleton_mod=cls.singleton_mod, launcher_id=launcher_id, singleton_launcher=cls.singleton_launcher
         )
 
         return origin_coin, launcher_coin, singleton_struct
@@ -291,17 +300,12 @@ class PlotNFT:
         *,
         origin_coins: list[Coin],
         custody: SelfCustody | PoolingCustody,
-        memos: list[bytes],
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
-        singleton_mod: Program = SINGLETON_MOD,
-        singleton_launcher: Program = SINGLETON_LAUNCHER,
     ) -> tuple[list[Program], list[CoinSpend], Self]:
-        mod_hash = singleton_mod.get_tree_hash()
-        launcher_hash = singleton_launcher.get_tree_hash()
-        origin_coin, launcher_coin, singleton_struct = cls.origin_coin_info(
-            origin_coins, singleton_mod, singleton_launcher
-        )
+        mod_hash = cls.singleton_mod.get_tree_hash()
+        launcher_hash = cls.singleton_launcher.get_tree_hash()
+        origin_coin, launcher_coin, singleton_struct = cls.origin_coin_info(origin_coins)
         launcher_id = launcher_coin.name()
 
         plotnft_puzzle = PlotNFTPuzzle(singleton_struct=singleton_struct, inner_custody=custody)
@@ -309,7 +313,11 @@ class PlotNFT:
             (
                 1,
                 [
-                    CreateCoin(plotnft_puzzle.inner_custody.puzzle_hash(nonce=0), uint64(1), memos=memos).to_program(),
+                    CreateCoin(
+                        plotnft_puzzle.inner_custody.puzzle_hash(nonce=0),
+                        uint64(1),
+                        memo_blob=plotnft_puzzle.inner_custody.puzzle_with_restrictions().memo(),
+                    ).to_program(),
                     CreateCoinAnnouncement(msg=b"").to_program(),
                 ],
             )
@@ -317,7 +325,7 @@ class PlotNFT:
         full_rev_singleton_puzzle = puzzle_for_singleton(
             launcher_id,
             rev_puzzle,
-            singleton_mod=singleton_mod,
+            singleton_mod=cls.singleton_mod,
             launcher_hash=launcher_hash,
             singleton_mod_hash=mod_hash,
         )
@@ -335,7 +343,7 @@ class PlotNFT:
         ]
         launcher_spend = make_spend(
             launcher_coin,
-            singleton_launcher,
+            cls.singleton_launcher,
             launcher_solution,
         )
         rev_spend = make_spend(
@@ -358,6 +366,90 @@ class PlotNFT:
                     amount=rev_coin.amount,
                 ),
                 puzzle=plotnft_puzzle,
+            ),
+        )
+
+    @classmethod
+    def get_next_from_coin_spend(
+        cls,
+        *,
+        coin_spend: CoinSpend,
+        genesis_challenge: bytes32,
+        pre_uncurry: UncurriedPuzzle | None = None,
+    ) -> Self:
+        if pre_uncurry is None:
+            singleton = uncurry_puzzle(coin_spend.puzzle_reveal)
+        else:
+            singleton = pre_uncurry
+
+        if singleton.mod != cls.singleton_mod:
+            raise ValueError("Invalid singleton mod for next PlotNFT")
+        if singleton.args.at("frr") != cls.singleton_launcher.get_tree_hash():  # TODO: optimize
+            raise ValueError("Invalid singleton launcher for next PlotNFT")
+
+        singleton_struct = SingletonStruct(
+            singleton_mod=cls.singleton_mod,
+            singleton_launcher=cls.singleton_launcher,
+            launcher_id=bytes32(singleton.args.at("frf").as_atom()),
+        )
+
+        inner_puzzle = singleton.args.at("rf")
+        inner_conditions = parse_conditions_non_consensus(
+            run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
+        )
+        singleton_create_coin = next(condition for condition in inner_conditions if isinstance(condition, CreateCoin))
+        if singleton_create_coin.memo_blob is None:
+            raise ValueError("Invalid memoization of PlotNFT")
+        unknown_inner_puzzle = PuzzleWithRestrictions.from_memo(singleton_create_coin.memo_blob)
+        assert unknown_inner_puzzle.additional_memos is not None
+        self_custody = SelfCustody(
+            member=BLSWithTaprootMember(
+                synthetic_key=G1Element.from_bytes(unknown_inner_puzzle.additional_memos.at("f").as_atom())
+            )
+        )
+        if isinstance(unknown_inner_puzzle.puzzle, MofN):
+            unknown_inner_puzzle.fill_in_unknown_puzzles(
+                {SendMessageBanned().puzzle_hash(nonce=0): SendMessageBanned()}
+            )
+            pool_puzzle_hash = bytes32(unknown_inner_puzzle.additional_memos.at("rf").as_atom())
+            timelock = uint64(unknown_inner_puzzle.additional_memos.at("rrf").as_int())
+
+            custody: SelfCustody | PoolingCustody = PoolingCustody(
+                singleton_struct=singleton_struct,
+                self_custody=self_custody,
+                pool_puzzle_hash=pool_puzzle_hash,
+                reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
+                timelock=timelock,
+                exiting=ValidatorStackRestriction(
+                    required_wrappers=[Timelock(timelock), SendMessageBanned()]
+                ).puzzle_hash(nonce=0)
+                in unknown_inner_puzzle.unknown_puzzles,
+                genesis_challenge=genesis_challenge,
+            )
+        else:
+            custody = self_custody
+
+        return cls(
+            coin=Coin(
+                coin_spend.coin.name(),
+                puzzle_for_singleton(
+                    launcher_id=singleton_struct.launcher_id,
+                    inner_puz=custody.puzzle(nonce=0),
+                    # TODO: optimize
+                    singleton_mod=cls.singleton_mod,
+                    launcher_hash=cls.singleton_launcher.get_tree_hash(),
+                    singleton_mod_hash=cls.singleton_mod.get_tree_hash(),
+                ).get_tree_hash(),
+                coin_spend.coin.amount,
+            ),
+            singleton_lineage_proof=LineageProof(
+                parent_name=coin_spend.coin.parent_coin_info,
+                inner_puzzle_hash=inner_puzzle.get_tree_hash(),
+                amount=coin_spend.coin.amount,
+            ),
+            puzzle=PlotNFTPuzzle(
+                singleton_struct=singleton_struct,
+                inner_custody=custody,
             ),
         )
 

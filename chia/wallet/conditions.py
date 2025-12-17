@@ -229,26 +229,41 @@ class CreateCoin(Condition):
     puzzle_hash: bytes32
     amount: uint64
     memos: list[bytes] | None = None
+    memo_blob: Program | None = None
+
+    def __post_init__(self) -> None:
+        if self.memos is not None and self.memo_blob is not None:
+            raise ValueError("Cannot have both memos and memo_blob")
+        return super().__post_init__()
 
     def to_program(self) -> Program:
         condition_args = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
         if self.memos is not None:
             condition_args.append(self.memos)
+        elif self.memo_blob is not None:
+            condition_args.append(self.memo_blob)
         condition: Program = Program.to(condition_args)
         return condition
 
     @classmethod
     def from_program(cls, program: Program) -> Self:
         potential_memos: Program = program.at("rrr")
-        return cls(
-            bytes32(program.at("rf").as_atom()),
-            uint64(program.at("rrf").as_int()),
-            (
-                None
-                if potential_memos == Program.NIL
-                else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
-            ),
-        )
+        try:
+            return cls(
+                bytes32(program.at("rf").as_atom()),
+                uint64(program.at("rrf").as_int()),
+                (
+                    None
+                    if potential_memos == Program.NIL
+                    else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
+                ),
+            )
+        except ValueError:  # a bit of a hack to avoid doing the heavy lifting of switching the memo usage everywhere
+            return cls(
+                bytes32(program.at("rf").as_atom()),
+                uint64(program.at("rrf").as_int()),
+                memo_blob=potential_memos.at("f"),
+            )
 
     def as_condition_args(self) -> list[bytes32 | uint64 | list[bytes] | None]:
         return [self.puzzle_hash, self.amount, self.memos]
