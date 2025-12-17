@@ -56,7 +56,7 @@ def leaf_index_to_pos(leaf_index: int) -> int:
     Convert a leaf index (0-based) to its position in the flat MMR.
     Formula: 2*L - popcount(L)
     """
-    return 2 * leaf_index - bin(leaf_index).count("1")
+    return 2 * leaf_index - leaf_index.bit_count()
 
 
 # ------------------------------------------------------------------------------
@@ -70,9 +70,13 @@ class MerkleMountainRange(Streamable):
     """
 
     nodes: list[bytes32]
-    size: uint32
+    size: uint32  # Number of leaves in the MMR
 
-    def __init__(self, nodes: list[bytes32] | None = None, size: uint32 = uint32(0)) -> None:
+    def __init__(
+        self,
+        nodes: list[bytes32] | None = None,
+        size: uint32 = uint32(0),
+    ) -> None:
         self.nodes = [] if nodes is None else nodes
         self.size = size
 
@@ -113,6 +117,26 @@ class MerkleMountainRange(Streamable):
 
         self.size = uint32(self.size + 1)
         log.debug(f"Appended new leaf, MMR size is now {self.size}, total nodes: {len(self.nodes)}")
+
+    def pop(self) -> None:
+        """
+        Remove the last leaf and all parent nodes created by it.
+        """
+        if self.size == 0:
+            raise ValueError("Cannot pop from empty MMR")
+
+        leaf_index = self.size - 1
+
+        # The number of merges (parents) equals the number of trailing binary 1s in the index.
+        # To count them: XOR index with index+1, count the bits, then subtract 1.
+        trailing_ones = (leaf_index ^ (leaf_index + 1)).bit_count() - 1
+        nodes_to_remove = 1 + trailing_ones
+
+        for _ in range(nodes_to_remove):
+            self.nodes.pop()
+
+        self.size = uint32(self.size - 1)
+        log.debug(f"removed leaf, size is now {self.size} with {len(self.nodes)} nodes ")
 
     def get_root(self) -> bytes32 | None:
         """Get the MMR root by bagging the peaks."""
