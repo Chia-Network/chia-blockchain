@@ -19,6 +19,14 @@ log = logging.getLogger(__name__)
 def get_height(flat_index: int) -> int:
     """
     Calculate the height of a node in a flat MMR array.
+
+    Algorithm:
+    1. Convert to 1-based index `x`.
+    2. If `x` is a perfect peak (binary "all ones", 2^n - 1), return its height.
+    3. Otherwise, subtract the size of the left sibling subtree (2^k - 1) and repeat.
+       - k is the index of the Most Significant Bit (MSB) of x.
+
+    Returns: Height of the node (0 for leaves, 1+ for internal nodes)
     """
     x = flat_index + 1  # Work with 1-based for easier math
 
@@ -27,16 +35,31 @@ def get_height(flat_index: int) -> int:
         if (x & (x + 1)) == 0:
             return x.bit_length() - 1
 
-        # Not a peak, subtract left sibling mountain size
+        # Not a peak, subtract left sibling mountain size.
+        # k = x.bit_length() - 1
         msb_val = 1 << (x.bit_length() - 1)
+
+        # A perfect binary tree with this MSB has (2^k - 1) nodes
         subtree_size = msb_val - 1
+
+        # Jump left past the entire left sibling subtree
         x -= subtree_size
 
 
 def get_peak_positions(size: int) -> list[int]:
     """
-    Identify the indices of the mountain peaks.
-    Returns indices [Rightmost Peak (Smallest), ... Leftmost Peak (Tallest)]
+    Identify the indices of the mountain peaks in a flat MMR array.
+
+    An MMR consists of multiple perfect binary trees (mountains) of decreasing heights,
+    arranged left to right.
+
+    Algorithm:
+    1. Start at the rightmost position (always a peak)
+    2. Determine the height h of this peak using get_height()
+    3. Jump backward by this mountain size (2^(h+1) - 1) to find the next peak
+    4. Repeat until we reach the start of the array
+
+    Returns indices [Rightmost Peak (Smallest), ..., Leftmost Peak (Tallest)]
     """
     peaks = []
     idx = size - 1

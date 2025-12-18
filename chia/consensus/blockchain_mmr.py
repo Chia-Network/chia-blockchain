@@ -73,8 +73,9 @@ class BlockchainMMRManager:
         log.debug(f"Building MMR from genesis to {target_height}")
 
         for height in range(target_height + 1):
-            block = blocks.height_to_block_record(uint32(height))
-            mmr.append(block.header_hash)
+            header_hash = blocks.height_to_hash(uint32(height))
+            assert header_hash is not None
+            mmr.append(header_hash)
 
         return mmr.get_root()
 
@@ -169,11 +170,8 @@ class BlockchainMMRManager:
 
         for _ in range(blocks_to_pop):
             self._mmr.pop()
-        try:
-            target_block = blocks.height_to_block_record(uint32(target_height))
-        except Exception as e:
-            log.exception(f"Could not find block at height {target_height} during MMR rollback: {e}")
 
+        target_block = blocks.height_to_block_record(uint32(target_height))
         self._last_header_hash = target_block.header_hash
         self._last_height = uint32(target_height)
         log.debug(f"MMR rolled back to height {self._last_height}")
