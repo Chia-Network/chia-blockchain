@@ -114,4 +114,6 @@ def test_base_event_loop_has_methods() -> None:
                 assert str(inspect.signature(method)) == "()"
 
     finally:
+        if pausable_server is not None:
+            pausable_server.close()
         selector_event_loop.close()

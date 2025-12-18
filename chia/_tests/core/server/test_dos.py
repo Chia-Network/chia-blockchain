@@ -78,27 +78,26 @@ class TestDos:
 
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
-        session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
-
         ssl_context = server_2.ssl_client_context
-        ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-        )
-        assert not ws.closed
 
-        large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
-        with monkeypatch.context() as monkey_patch_context:
-            monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
-            await ws.send_bytes(large_msg)
+        async with (
+            ClientSession(timeout=timeout) as session,
+            session.ws_connect(
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            ) as ws,
+        ):
+            large_msg: bytes = bytes([0] * (60 * 1024 * 1024))
+            with monkeypatch.context() as monkey_patch_context:
+                monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
+                await ws.send_bytes(large_msg)
 
-            response: WSMessage = await ws.receive()
-            await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
+                response: WSMessage = await ws.receive()
+                await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
 
-        print(response)
-        assert response.type == WSMsgType.CLOSE
-        assert response.data == WSCloseCode.MESSAGE_TOO_BIG
-        await ws.close()
+            print(response)
+            assert response.type == WSMsgType.CLOSE
+            assert response.data == WSCloseCode.MESSAGE_TOO_BIG
 
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(
@@ -114,24 +113,25 @@ class TestDos:
         server_1.invalid_protocol_ban_seconds = int(10 + adjusted_timeout(1))
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
-        session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
-
         ssl_context = server_2.ssl_client_context
-        ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-        )
-        with monkeypatch.context() as monkey_patch_context:
-            monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
-            await ws.send_bytes(bytes([1] * 1024))
 
-            response: WSMessage = await ws.receive()
-            await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
+        async with (
+            ClientSession(timeout=timeout) as session,
+            session.ws_connect(
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            ) as ws,
+        ):
+            with monkeypatch.context() as monkey_patch_context:
+                monkey_patch_context.setattr(chia.server.server, "is_localhost", not_localhost)
+                await ws.send_bytes(bytes([1] * 1024))
 
-        print(response)
-        assert response.type == WSMsgType.CLOSE
-        assert response.data == WSCloseCode.PROTOCOL_ERROR
-        await ws.close()
+                response: WSMessage = await ws.receive()
+                await time_out_assert(10, lambda: self_hostname in server_1.banned_peers)
+
+            print(response)
+            assert response.type == WSMsgType.CLOSE
+            assert response.data == WSCloseCode.PROTOCOL_ERROR
 
     @pytest.mark.anyio
     async def test_invalid_protocol_handshake(
@@ -146,27 +146,25 @@ class TestDos:
         server_1.invalid_protocol_ban_seconds = 10
         # Use the server_2 ssl information to connect to server_1
         timeout = ClientTimeout(total=10)
-        session = ClientSession(timeout=timeout)
         url = f"wss://{self_hostname}:{server_1._port}/ws"
-
         ssl_context = server_2.ssl_client_context
-        ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
-        )
+        async with (
+            ClientSession(timeout=timeout) as session,
+            session.ws_connect(
+                url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            ) as ws,
+        ):
+            # Construct an otherwise valid handshake message
+            handshake: Handshake = Handshake("test", "0.0.32", "1.0.0.0", uint16(3456), uint8(1), [(uint16(1), "1")])
+            outbound_handshake: Message = Message(uint8(2), None, bytes(handshake))  # 2 is an invalid ProtocolType
+            await ws.send_bytes(bytes(outbound_handshake))
 
-        # Construct an otherwise valid handshake message
-        handshake: Handshake = Handshake("test", "0.0.32", "1.0.0.0", uint16(3456), uint8(1), [(uint16(1), "1")])
-        outbound_handshake: Message = Message(uint8(2), None, bytes(handshake))  # 2 is an invalid ProtocolType
-        await ws.send_bytes(bytes(outbound_handshake))
-
-        response: WSMessage = await ws.receive()
-        print(response)
-        assert response.type == WSMsgType.CLOSE
-        assert response.data == WSCloseCode.PROTOCOL_ERROR
-        assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))  # We want INVALID_HANDSHAKE and not UNKNOWN
-        await ws.close()
-        await session.close()
-        await asyncio.sleep(1)  # give some time for cleanup to work
+            response: WSMessage = await ws.receive()
+            print(response)
+            assert response.type == WSMsgType.CLOSE
+            assert response.data == WSCloseCode.PROTOCOL_ERROR
+            assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))  # We want INVALID_HANDSHAKE and not UNKNOWN
+            await asyncio.sleep(1)  # give some time for cleanup to work
 
     @pytest.mark.anyio
     async def test_spam_tx(
