@@ -190,12 +190,14 @@ class Timelord:
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
 
-            for chain in list(self.chain_type_to_stream.keys()):
-                await self._stop_chain(chain)
             for _ip, _reader, writer in self.free_clients:
+                writer.write(b"010")
+                await writer.drain()
                 writer.close()
                 await writer.wait_closed()
             for _ip, _reader, writer in self.chain_type_to_stream.values():
+                writer.write(b"010")
+                await writer.drain()
                 writer.close()
                 await writer.wait_closed()
             if self.vdf_server is not None:
