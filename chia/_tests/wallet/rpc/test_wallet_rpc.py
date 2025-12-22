@@ -1246,7 +1246,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
                 amount=uint64(4),
                 inner_address=addr_1,
                 memos=["the cat memo"],
-                additions=[],
+                additions=[Addition(amount=uint64(0), puzzle_hash=bytes32.zeros)],
             ),
             tx_config=wallet_environments.tx_config,
         )
@@ -1268,7 +1268,7 @@ async def test_cat_endpoints(wallet_environments: WalletTestFramework, wallet_ty
         await env_0.rpc_client.cat_spend(
             CATSpend(
                 wallet_id=cat_0_id,
-                additions=[],
+                additions=[Addition(amount=uint64(0), puzzle_hash=bytes32.zeros)],
                 extra_delta="1",
             ),
             tx_config=wallet_environments.tx_config,

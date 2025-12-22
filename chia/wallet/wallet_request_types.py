@@ -1503,6 +1503,22 @@ class Addition(Streamable):
     memos: list[str] | None = None
 
 
+def cat_discrepancy_validation(
+    extra_delta: str | None, tail_reveal: bytes | None, tail_solution: bytes | None
+) -> tuple[int, Program, Program] | None:
+    if extra_delta is None and tail_reveal is None and tail_solution is None:
+        return None
+    elif None in {extra_delta, tail_reveal, tail_solution}:
+        raise ValueError('Must specify "extra_delta", "tail_reveal" and "tail_solution" together.')
+    else:
+        # Curious that mypy doesn't see the elif and know that none of these are None
+        return (
+            int(extra_delta),  # type: ignore[arg-type]
+            Program.from_bytes(tail_reveal),  # type: ignore[arg-type]
+            Program.from_bytes(tail_solution),  # type: ignore[arg-type]
+        )
+
+
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class CATSpend(TransactionEndpointRequest):
@@ -1528,17 +1544,7 @@ class CATSpend(TransactionEndpointRequest):
 
     @property
     def cat_discrepancy(self) -> tuple[int, Program, Program] | None:
-        if self.extra_delta is None and self.tail_reveal is None and self.tail_solution is None:
-            return None
-        elif None in {self.extra_delta, self.tail_reveal, self.tail_solution}:
-            raise ValueError('Must specify "extra_delta", "tail_reveal" and "tail_solution" together.')
-        else:
-            # Curious that mypy doesn't see the elif and know that none of these are None
-            return (
-                int(self.extra_delta),  # type: ignore[arg-type]
-                Program.from_bytes(self.tail_reveal),  # type: ignore[arg-type]
-                Program.from_bytes(self.tail_solution),  # type: ignore[arg-type]
-            )
+        return cat_discrepancy_validation(self.extra_delta, self.tail_reveal, self.tail_solution)
 
 
 @streamable
@@ -1945,6 +1951,14 @@ class CreateSignedTransaction(TransactionEndpointRequest):
     morph_bytes: bytes | None = None
     coin_announcements: list[CSTCoinAnnouncement] = field(default_factory=list)
     puzzle_announcements: list[CSTPuzzleAnnouncement] = field(default_factory=list)
+    # cat specific
+    extra_delta: str | None = None  # str to support negative ints :(
+    tail_reveal: bytes | None = None
+    tail_solution: bytes | None = None
+    # Technically this value was meant to support many types here
+    # However, only one is supported right now and there are no plans to extend
+    # So, as a slight hack, we'll specify that only Clawback is supported
+    puzzle_decorator: list[ClawbackPuzzleDecoratorOverride] | None = None
 
     def __post_init__(self) -> None:
         if len(self.additions) < 1:
@@ -1977,6 +1991,10 @@ class CreateSignedTransaction(TransactionEndpointRequest):
             )
             for pa in self.puzzle_announcements
         )
+
+    @property
+    def cat_discrepancy(self) -> tuple[int, Program, Program] | None:
+        return cat_discrepancy_validation(self.extra_delta, self.tail_reveal, self.tail_solution)
 
 
 @streamable
