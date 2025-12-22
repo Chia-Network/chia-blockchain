@@ -992,7 +992,7 @@ class Timelord:
                     writer.write(iter_str.encode())
                     await writer.drain()
 
-            # Listen to the client until "STOP" is received.
+            # Listen to the client until 0-length proof is received.
             while True:
                 try:
                     data = await reader.readexactly(4)
@@ -1007,15 +1007,19 @@ class Timelord:
                         self.vdf_failures_count += 1
                     break
 
-                if data == b"STOP":
-                    log.debug(f"Stopped client running on ip {ip}.")
-                    async with self.lock:
-                        writer.write(b"ACK")
-                        await writer.drain()
-                    break
                 try:
-                    # This must be a proof, 4 bytes is length prefix
+                    # 4 bytes is length prefix
                     length = int.from_bytes(data, "big")
+
+                    # TODO: remove the magic stop length, retain just 0, after chiavdf is updated
+                    magic_stop_length = int.from_bytes(b"STOP", "big")
+                    if length in {0, magic_stop_length}:
+                        log.debug(f"Stopped client running on ip {ip}.")
+                        async with self.lock:
+                            writer.write(b"ACK")
+                            await writer.drain()
+                        break
+
                     proof = await reader.readexactly(length)
                     stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
                 except (
