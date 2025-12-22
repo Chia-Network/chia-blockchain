@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field, replace
+from functools import cached_property
 from typing import ClassVar, Self
 
 from chia_rs import G1Element
@@ -34,7 +35,9 @@ from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
+    SINGLETON_LAUNCHER_HASH,
     SINGLETON_MOD,
+    SINGLETON_MOD_HASH,
     puzzle_for_singleton,
     solution_for_singleton,
 )
@@ -74,10 +77,39 @@ def forward_to_pool_puzzle_hash_dpuz(pool_puzzle_hash: bytes32) -> Program:
 
 
 @dataclass(kw_only=True, frozen=True)
+class SingletonPuzzles:
+    singleton_mod: Program = field(default_factory=lambda: SINGLETON_MOD)
+    singleton_mod_hash_pre_computed: bytes32 | None = SINGLETON_MOD_HASH
+    singleton_launcher: Program = field(default_factory=lambda: SINGLETON_LAUNCHER)
+    singleton_launcher_hash_pre_computed: bytes32 | None = SINGLETON_LAUNCHER_HASH
+
+    @cached_property
+    def singleton_mod_hash(self) -> bytes32:
+        if self.singleton_mod_hash_pre_computed is not None:
+            return self.singleton_mod_hash_pre_computed
+        else:
+            return self.singleton_mod.get_tree_hash()
+
+    @cached_property
+    def singleton_launcher_hash(self) -> bytes32:
+        if self.singleton_launcher_hash_pre_computed is not None:
+            return self.singleton_launcher_hash_pre_computed
+        else:
+            return self.singleton_launcher.get_tree_hash()
+
+
+@dataclass(kw_only=True, frozen=True)
 class SingletonStruct:
     launcher_id: bytes32
-    singleton_mod: Program = field(default_factory=lambda: SINGLETON_MOD)
-    singleton_launcher: Program = field(default_factory=lambda: SINGLETON_LAUNCHER)
+    singleton_puzzles: SingletonPuzzles = SingletonPuzzles()
+
+    def to_program(self) -> Program:
+        return Program.to(
+            (
+                self.singleton_puzzles.singleton_mod_hash,
+                (self.launcher_id, self.singleton_puzzles.singleton_launcher_hash),
+            )
+        )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -135,13 +167,8 @@ class PoolingCustody:
     def claim_pool_reward_dpuz(self) -> Program:
         return CLAIM_POOL_REWARDS_DELEGATED_PUZZLE.curry(
             self.genesis_challenge[:16],
-            self.singleton_struct.singleton_mod.get_tree_hash(),  # TODO: optimize
-            Program.to(
-                (
-                    self.singleton_struct.singleton_mod.get_tree_hash(),
-                    (self.singleton_struct.launcher_id, self.singleton_struct.singleton_launcher.get_tree_hash()),
-                )
-            ).get_tree_hash(),  # TODO: optimize
+            self.singleton_struct.singleton_puzzles.singleton_mod_hash,
+            self.singleton_struct.to_program().get_tree_hash(),  # TODO: optimize
             self.reward_puzhash,
             forward_to_pool_puzzle_hash_dpuz(self.pool_puzzle_hash).get_tree_hash(),
         )
@@ -259,10 +286,9 @@ class PlotNFTPuzzle:
         return puzzle_for_singleton(
             launcher_id=self.singleton_struct.launcher_id,
             inner_puz=self.inner_custody.puzzle(nonce=0),
-            # TODO: optimize
-            launcher_hash=self.singleton_struct.singleton_launcher.get_tree_hash(),
-            singleton_mod=self.singleton_struct.singleton_mod,
-            singleton_mod_hash=self.singleton_struct.singleton_mod.get_tree_hash(),
+            launcher_hash=self.singleton_struct.singleton_puzzles.singleton_launcher_hash,
+            singleton_mod=self.singleton_struct.singleton_puzzles.singleton_mod,
+            singleton_mod_hash=self.singleton_struct.singleton_puzzles.singleton_mod_hash,
         )
 
     def puzzle_hash(self) -> bytes32:
@@ -302,8 +328,7 @@ class PlotNFT:
     coin: Coin
     singleton_lineage_proof: LineageProof
     puzzle: PlotNFTPuzzle
-    singleton_mod: ClassVar[Program] = SINGLETON_MOD
-    singleton_launcher: ClassVar[Program] = SINGLETON_LAUNCHER
+    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
     @property
     def config(self) -> PlotNFTConfig:
@@ -320,12 +345,10 @@ class PlotNFT:
     ) -> tuple[Coin, Coin, SingletonStruct]:
         origin_coin = origin_coins[0]
 
-        launcher_hash = cls.singleton_launcher.get_tree_hash()
+        launcher_hash = cls.singleton_puzzles.singleton_launcher_hash
         launcher_coin = Coin(origin_coin.name(), launcher_hash, uint64(1))
         launcher_id = launcher_coin.name()
-        singleton_struct = SingletonStruct(
-            singleton_mod=cls.singleton_mod, launcher_id=launcher_id, singleton_launcher=cls.singleton_launcher
-        )
+        singleton_struct = SingletonStruct(launcher_id=launcher_id, singleton_puzzles=cls.singleton_puzzles)
 
         return origin_coin, launcher_coin, singleton_struct
 
@@ -338,8 +361,8 @@ class PlotNFT:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> tuple[list[Program], list[CoinSpend], Self]:
-        mod_hash = cls.singleton_mod.get_tree_hash()
-        launcher_hash = cls.singleton_launcher.get_tree_hash()
+        mod_hash = cls.singleton_puzzles.singleton_mod_hash
+        launcher_hash = cls.singleton_puzzles.singleton_launcher_hash
         origin_coin, launcher_coin, singleton_struct = cls.origin_coin_info(origin_coins)
         launcher_id = launcher_coin.name()
 
@@ -360,7 +383,7 @@ class PlotNFT:
         full_rev_singleton_puzzle = puzzle_for_singleton(
             launcher_id,
             rev_puzzle,
-            singleton_mod=cls.singleton_mod,
+            singleton_mod=cls.singleton_puzzles.singleton_mod,
             launcher_hash=launcher_hash,
             singleton_mod_hash=mod_hash,
         )
@@ -378,7 +401,7 @@ class PlotNFT:
         ]
         launcher_spend = make_spend(
             launcher_coin,
-            cls.singleton_launcher,
+            cls.singleton_puzzles.singleton_launcher,
             launcher_solution,
         )
         rev_spend = make_spend(
@@ -418,15 +441,14 @@ class PlotNFT:
         else:
             singleton = pre_uncurry
 
-        if singleton.mod != cls.singleton_mod:
+        if singleton.mod != cls.singleton_puzzles.singleton_mod:
             raise ValueError("Invalid singleton mod for next PlotNFT")
-        if singleton.args.at("frr") != cls.singleton_launcher.get_tree_hash():  # TODO: optimize
+        if singleton.args.at("frr") != cls.singleton_puzzles.singleton_launcher_hash:
             raise ValueError("Invalid singleton launcher for next PlotNFT")
 
         singleton_struct = SingletonStruct(
-            singleton_mod=cls.singleton_mod,
-            singleton_launcher=cls.singleton_launcher,
             launcher_id=bytes32(singleton.args.at("frf").as_atom()),
+            singleton_puzzles=cls.singleton_puzzles,
         )
 
         inner_puzzle = singleton.args.at("rf")
@@ -507,10 +529,9 @@ class PlotNFT:
                 puzzle_for_singleton(
                     launcher_id=singleton_struct.launcher_id,
                     inner_puz=custody.puzzle(nonce=0),
-                    # TODO: optimize
-                    singleton_mod=cls.singleton_mod,
-                    launcher_hash=cls.singleton_launcher.get_tree_hash(),
-                    singleton_mod_hash=cls.singleton_mod.get_tree_hash(),
+                    singleton_mod=cls.singleton_puzzles.singleton_mod,
+                    launcher_hash=cls.singleton_puzzles.singleton_launcher_hash,
+                    singleton_mod_hash=cls.singleton_puzzles.singleton_mod_hash,
                 ).get_tree_hash(),
                 coin_spend.coin.amount,
             ),
@@ -531,9 +552,9 @@ class PlotNFT:
             puzzle_reveal=puzzle_for_singleton(
                 launcher_id=self.puzzle.singleton_struct.launcher_id,
                 inner_puz=self.puzzle.inner_custody.puzzle(nonce=0),  # TODO: optimize
-                singleton_mod=self.puzzle.singleton_struct.singleton_mod,
-                singleton_mod_hash=self.puzzle.singleton_struct.singleton_mod.get_tree_hash(),  # TODO: optimize
-                launcher_hash=self.puzzle.singleton_struct.singleton_launcher.get_tree_hash(),  # TODO: optimize
+                singleton_mod=self.puzzle.singleton_struct.singleton_puzzles.singleton_mod,
+                singleton_mod_hash=self.puzzle.singleton_struct.singleton_puzzles.singleton_mod_hash,
+                launcher_hash=self.puzzle.singleton_struct.singleton_puzzles.singleton_launcher_hash,
             ),
             solution=solution_for_singleton(
                 lineage_proof=self.singleton_lineage_proof,
