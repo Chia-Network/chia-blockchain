@@ -12,11 +12,10 @@ from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.pools.plotnft_drivers import (
     PlotNFT,
-    PlotNFTConfig,
-    PoolingCustody,
+    PoolConfig,
     PoolReward,
     RewardPuzzle,
-    SelfCustody,
+    UserConfig,
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -24,7 +23,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.wallet.conditions import AssertSecondsRelative, CreateCoin, MessageParticipant, SendMessage
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
-from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -50,21 +48,18 @@ async def mint_plotnft(
 
     [fund_coin, _] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
-    origin_coin, launcher_coin = PlotNFT.origin_coin_info([fund_coin.coin])
+    origin_coin, _ = PlotNFT.origin_coin_info([fund_coin.coin])
 
-    if desired_state in {"pooling", "waiting_room"}:
-        custody: PoolingCustody | SelfCustody = PoolingCustody(
-            launcher_id=launcher_coin.name(),
-            synthetic_pubkey=user_sk.get_g1(),
-            pool_puzzle_hash=POOL_PUZZLE_HASH,
-            timelock=uint64(1000),
-            exiting=desired_state == "waiting_room",
-            genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-        )
-    else:
-        custody = SelfCustody(member=BLSWithTaprootMember(synthetic_key=user_sk.get_g1()))
-
-    conditions, spends, plotnft = PlotNFT.launch(origin_coins=[origin_coin], custody=custody)
+    # TODO: test extra_conditions and fee
+    conditions, spends, plotnft = PlotNFT.launch(
+        origin_coins=[origin_coin],
+        user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+        pool_config=PoolConfig()
+        if desired_state == "self_custody"
+        else PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000)),
+        genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
+        exiting=desired_state == "waiting_room",
+    )
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
@@ -90,15 +85,10 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state="self_custody")
 
         # Join a pool
-        custody = PoolingCustody(
-            launcher_id=plotnft.puzzle.launcher_id,
-            synthetic_pubkey=plotnft.puzzle.config.self_custody_pubkey,
-            pool_puzzle_hash=POOL_PUZZLE_HASH,
-            timelock=uint64(1000),
-            exiting=False,
-            genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
+        dpuz_hash, coin_spends = plotnft.join_pool(
+            user_config=plotnft.puzzle.user_config,
+            pool_config=PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000)),
         )
-        dpuz_hash, coin_spends = plotnft.join_pool(custody)
         result = await sim_client.push_tx(
             cost_logger.add_cost(
                 "Self Custody -> Pooling",
@@ -115,11 +105,10 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         )
 
         # Attempt to leave without waiting room
-        assert isinstance(plotnft.puzzle.inner_custody, PoolingCustody)
         quick_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
         )
-        singing_info = plotnft.puzzle.inner_custody.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
+        singing_info = plotnft.puzzle.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(quick_exit_dpuz_and_solution)
         result = await sim_client.push_tx(
             WalletSpendBundle(
@@ -132,12 +121,12 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
         # # Attempt to make a message while leaving
-        waiting_room_custody = replace(custody, exiting=True)
+        waiting_room_custody = plotnft.puzzle.waiting_room_puzzle()
         message_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
             solution=Program.to(
                 [
-                    CreateCoin(waiting_room_custody.puzzle_hash(nonce=0), uint64(1)).to_program(),
+                    CreateCoin(waiting_room_custody.inner_puzzle_hash(), uint64(1)).to_program(),
                     SendMessage(
                         bytes32.zeros,
                         sender=MessageParticipant(parent_id_committed=bytes32.zeros),
@@ -146,7 +135,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                 ]
             ),
         )
-        singing_info = plotnft.puzzle.inner_custody.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
+        singing_info = plotnft.puzzle.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(message_dpuz_and_solution)
         result = await sim_client.push_tx(
             WalletSpendBundle(
@@ -162,10 +151,10 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         honest_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
             solution=Program.to(
-                [CreateCoin(puzzle_hash=waiting_room_custody.puzzle_hash(nonce=0), amount=uint64(1)).to_program()]
+                [CreateCoin(puzzle_hash=waiting_room_custody.inner_puzzle_hash(), amount=uint64(1)).to_program()]
             ),
         )
-        singing_info = plotnft.puzzle.inner_custody.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
+        singing_info = plotnft.puzzle.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(honest_exit_dpuz_and_solution)
         result = await sim_client.push_tx(
             cost_logger.add_cost(
@@ -182,31 +171,24 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-        assert plotnft.puzzle.inner_custody.self_custody.member.synthetic_key is not None
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=PlotNFTConfig(
-                self_custody_pubkey=plotnft.puzzle.inner_custody.self_custody.member.synthetic_key,
-                pool_puzzle_hash=plotnft.puzzle.inner_custody.pool_puzzle_hash,
-                timelock=plotnft.puzzle.inner_custody.timelock,
-            ),
+            previous_pool_config=plotnft.puzzle.config,
         )
 
         # Return to self-pooling
-        assert isinstance(plotnft.puzzle.inner_custody, PoolingCustody)
+        self_custody_puzzle = replace(plotnft.puzzle, pool_config=PoolConfig(), exiting=False)
         exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
             solution=Program.to(
                 [
-                    AssertSecondsRelative(seconds=plotnft.puzzle.inner_custody.timelock).to_program(),
-                    CreateCoin(
-                        puzzle_hash=plotnft.puzzle.inner_custody.self_custody.puzzle_hash(nonce=0), amount=uint64(1)
-                    ).to_program(),
+                    AssertSecondsRelative(seconds=plotnft.puzzle.timelock).to_program(),
+                    CreateCoin(puzzle_hash=self_custody_puzzle.inner_puzzle_hash(), amount=uint64(1)).to_program(),
                 ]
             ),
         )
-        singing_info = plotnft.puzzle.inner_custody.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
+        singing_info = plotnft.puzzle.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
         coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)
         timelocked_spend = WalletSpendBundle(
             coin_spends,
@@ -216,7 +198,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         )
         result = await sim_client.push_tx(timelocked_spend)
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED)
-        sim.pass_time(plotnft.puzzle.inner_custody.timelock)
+        sim.pass_time(plotnft.puzzle.timelock)
         await sim.farm_block()
         result = await sim_client.push_tx(cost_logger.add_cost("Waiting Room -> Self Custody", timelocked_spend))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -305,17 +287,11 @@ async def test_plotnft_pooling_claim(
         await sim.farm_block()
 
         # Make sure the pooling reward did what it was supposed to
-        assert isinstance(plotnft.puzzle.inner_custody, PoolingCustody)
-        assert len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.puzzle.inner_custody.pool_puzzle_hash)) == 1
+        assert len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.puzzle.pool_puzzle_hash)) == 1
 
         # Make sure we can find the plotnft
-        assert plotnft.puzzle.inner_custody.self_custody.member.synthetic_key is not None
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=PlotNFTConfig(
-                self_custody_pubkey=plotnft.puzzle.inner_custody.self_custody.member.synthetic_key,
-                pool_puzzle_hash=plotnft.puzzle.inner_custody.pool_puzzle_hash,
-                timelock=plotnft.puzzle.inner_custody.timelock,
-            ),
+            previous_pool_config=plotnft.puzzle.config,
         )

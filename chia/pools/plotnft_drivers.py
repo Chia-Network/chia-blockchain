@@ -113,61 +113,74 @@ class SingletonStruct:
 
 
 @dataclass(kw_only=True, frozen=True)
-class SelfCustody:
-    member: BLSWithTaprootMember
-
-    def puzzle_with_restrictions(self) -> PuzzleWithRestrictions:
-        return PuzzleWithRestrictions(
-            nonce=0, restrictions=[], puzzle=self.member, additional_memos=self.memos(nonce=0)
-        )
-
-    def memos(self, nonce: int) -> Program:
-        return Program.to([self.member.synthetic_key])
-
-    def puzzle(self, nonce: int) -> Program:
-        return self.puzzle_with_restrictions().puzzle_reveal()
-
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce=nonce).get_tree_hash()  # TODO: optimize
-
-
-@dataclass(kw_only=True, frozen=True)
-class PlotNFTConfig:
-    self_custody_pubkey: G1Element
+class PoolConfig:
     pool_puzzle_hash: bytes32 | None = None
     timelock: uint64 | None = None
 
+    def __post_init__(self) -> None:
+        if (self.pool_puzzle_hash is None and self.timelock is not None) or (
+            self.pool_puzzle_hash is not None and self.timelock is None
+        ):
+            raise ValueError("pool_puzzle_hash and timelock must be both None or both not None")
+
 
 @dataclass(kw_only=True, frozen=True)
-class PoolingCustody:
-    launcher_id: bytes32
+class UserConfig:
     synthetic_pubkey: G1Element
-    pool_puzzle_hash: bytes32
-    timelock: uint64
-    exiting: bool
+
+
+@dataclass(kw_only=True, frozen=True)
+class PlotNFTConfig(UserConfig, PoolConfig):
+    pass
+
+
+@dataclass(kw_only=True, frozen=True)
+class PlotNFTPuzzle:
+    launcher_id: bytes32
     genesis_challenge: bytes32
-    singleton_puzzles: SingletonPuzzles = SingletonPuzzles()
+    user_config: UserConfig
+    exiting: bool
+    pool_config: PoolConfig = PoolConfig()
+    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
     @property
     def singleton_struct(self) -> SingletonStruct:
         return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
 
     @property
-    def reward_puzhash(self) -> bytes32:
-        return RewardPuzzle(singleton_id=self.singleton_struct.launcher_id).puzzle_hash()
-
-    @property
     def config(self) -> PlotNFTConfig:
         return PlotNFTConfig(
-            self_custody_pubkey=self.synthetic_pubkey, pool_puzzle_hash=self.pool_puzzle_hash, timelock=self.timelock
+            synthetic_pubkey=self.user_config.synthetic_pubkey,
+            pool_puzzle_hash=self.pool_config.pool_puzzle_hash,
+            timelock=self.pool_config.timelock,
         )
 
     @property
-    def self_custody(self) -> SelfCustody:
-        return SelfCustody(member=BLSWithTaprootMember(synthetic_key=self.synthetic_pubkey))
+    def pooling(self) -> bool:
+        return self.pool_config != PoolConfig()
 
-    def waiting_room_puzzle(self) -> Program:
-        return dataclasses.replace(self, exiting=True).puzzle(nonce=0)
+    @property
+    def pool_puzzle_hash(self) -> bytes32:
+        if self.pool_config.pool_puzzle_hash is None:
+            raise ValueError("Plot NFT is not pooling, cannot retrieve pool puzzle hash")
+        return self.pool_config.pool_puzzle_hash
+
+    @property
+    def timelock(self) -> uint64:
+        if self.pool_config.timelock is None:
+            raise ValueError("Plot NFT is not pooling, cannot retrieve timelock")
+        return self.pool_config.timelock
+
+    @property
+    def bls_member(self) -> BLSWithTaprootMember:
+        return BLSWithTaprootMember(synthetic_key=self.user_config.synthetic_pubkey)
+
+    @property
+    def reward_puzhash(self) -> bytes32:
+        return RewardPuzzle(singleton_id=self.launcher_id).puzzle_hash()
+
+    def waiting_room_puzzle(self) -> Self:
+        return dataclasses.replace(self, exiting=True)
 
     def claim_pool_reward_dpuz(self) -> Program:
         return CLAIM_POOL_REWARDS_DELEGATED_PUZZLE.curry(
@@ -181,13 +194,13 @@ class PoolingCustody:
     def claim_pool_reward_dpuz_and_solution(self, reward: PoolReward) -> DelegatedPuzzleAndSolution:
         return DelegatedPuzzleAndSolution(
             puzzle=self.claim_pool_reward_dpuz(),
-            solution=Program.to([self.puzzle_hash(nonce=0), reward.height, reward.coin.amount]),
+            solution=Program.to([self.inner_puzzle_hash(), reward.height, reward.coin.amount]),
         )
 
     def user_restriction(self) -> ValidatorStackRestriction:
         return ValidatorStackRestriction(
             required_wrappers=[
-                FixedCreateCoinDestinations(allowed_ph=self.waiting_room_puzzle().get_tree_hash()),
+                FixedCreateCoinDestinations(allowed_ph=self.waiting_room_puzzle().inner_puzzle().get_tree_hash()),
                 SendMessageBanned(),
             ]
             if not self.exiting
@@ -205,7 +218,7 @@ class PoolingCustody:
         return PuzzleWithRestrictions(
             nonce=0,
             restrictions=[self.user_restriction()],
-            puzzle=self.self_custody.member,
+            puzzle=self.bls_member,
         )
 
     def user_proven_spend(self, premodified_dpuz: Program) -> dict[bytes32, ProvenSpend]:
@@ -215,7 +228,7 @@ class PoolingCustody:
                 solution=self.user_puzzle_with_restrictions().solve(
                     member_validator_solutions=[],
                     dpuz_validator_solutions=[self.user_restriction().solve(premodified_dpuz)],
-                    member_solution=self.self_custody.member.solve(),
+                    member_solution=self.bls_member.solve(),
                 ),
             )
         }
@@ -254,111 +267,59 @@ class PoolingCustody:
                     self.user_puzzle_with_restrictions(),
                     self.pool_puzzle_with_restrictions(),
                 ],
-            ),
-            additional_memos=self.memos(nonce=0),
+            )
+            if self.pooling
+            else self.bls_member,
+            additional_memos=self.additional_memos(),
         )
 
-    def memos(self, nonce: int) -> Program:
-        return Program.to([self.self_custody.member.synthetic_key, self.pool_puzzle_hash, self.timelock])
+    def memo(self) -> Program:
+        return self.puzzle_with_restrictions().memo()
 
-    def puzzle(self, nonce: int) -> Program:
+    def additional_memos(self) -> Program:
+        if self.pooling:
+            return Program.to([self.bls_member.synthetic_key, self.pool_puzzle_hash, self.timelock])
+        else:
+            return Program.to([self.bls_member.synthetic_key])
+
+    def inner_puzzle(self) -> Program:
         return self.puzzle_with_restrictions().puzzle_reveal()
 
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce=nonce).get_tree_hash()  # TODO: optimize
+    def inner_puzzle_hash(self) -> bytes32:
+        return self.inner_puzzle().get_tree_hash()  # TODO: optimize
 
-
-@dataclass(kw_only=True, frozen=True)
-class PlotNFTPuzzle:
-    launcher_id: bytes32
-    inner_custody: SelfCustody | PoolingCustody
-    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
-
-    @property
-    def singleton_struct(self) -> SingletonStruct:
-        return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
-
-    @property
-    def config(self) -> PlotNFTConfig:
-        if isinstance(self.inner_custody, PoolingCustody):
-            return self.inner_custody.config
-        else:
-            assert self.inner_custody.member.synthetic_key is not None
-            return PlotNFTConfig(self_custody_pubkey=self.inner_custody.member.synthetic_key)
-
-    @classmethod
-    def create_from_config(
-        cls, *, launcher_id: bytes32, config: PlotNFTConfig, genesis_challenge: bytes32, exiting: bool = False
-    ) -> Self:
-        if config.pool_puzzle_hash is None or config.timelock is None:
-            return cls(
-                launcher_id=launcher_id,
-                inner_custody=SelfCustody(member=BLSWithTaprootMember(synthetic_key=config.self_custody_pubkey)),
-            )
-        else:
-            return cls(
-                launcher_id=launcher_id,
-                inner_custody=PoolingCustody(
-                    launcher_id=launcher_id,
-                    synthetic_pubkey=config.self_custody_pubkey,
-                    pool_puzzle_hash=config.pool_puzzle_hash,
-                    timelock=config.timelock,
-                    exiting=exiting,
-                    genesis_challenge=genesis_challenge,
-                    singleton_puzzles=SingletonPuzzles(),
-                ),
-            )
-
-    def __post_init__(self) -> None:
-        if (
-            isinstance(self.inner_custody, PoolingCustody)
-            and self.inner_custody.singleton_struct != self.singleton_struct
-        ):
-            raise ValueError("Bad initialization of PlotNFTPuzzle, inner custody has different singleton information.")
-
-    @property
-    def bls_member(self) -> BLSWithTaprootMember:
-        if isinstance(self.inner_custody, PoolingCustody):
-            return self.inner_custody.self_custody.member
-        else:
-            return self.inner_custody.member
-
-    def puzzle(self) -> Program:
+    def puzzle(self, nonce: int) -> Program:
         return puzzle_for_singleton(
             launcher_id=self.singleton_struct.launcher_id,
-            inner_puz=self.inner_custody.puzzle(nonce=0),
             launcher_hash=self.singleton_struct.singleton_puzzles.singleton_launcher_hash,
             singleton_mod=self.singleton_struct.singleton_puzzles.singleton_mod,
             singleton_mod_hash=self.singleton_struct.singleton_puzzles.singleton_mod_hash,
+            inner_puz=self.puzzle_with_restrictions().puzzle_reveal(),
         )
 
-    def puzzle_hash(self) -> bytes32:
-        return self.puzzle().get_tree_hash()  # TODO: optimize
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()  # TODO: optimize
 
     def forward_pool_reward_inner_solution(self, reward: PoolReward) -> Program:
-        assert isinstance(self.inner_custody, PoolingCustody)
-        custody_pwr = self.inner_custody.puzzle_with_restrictions()
+        custody_pwr = self.puzzle_with_restrictions()
         assert isinstance(custody_pwr.puzzle, MofN)
         return custody_pwr.solve(
             member_validator_solutions=[],
             dpuz_validator_solutions=[],
-            member_solution=custody_pwr.puzzle.solve(self.inner_custody.pool_proven_spend()),
-            delegated_puzzle_and_solution=self.inner_custody.claim_pool_reward_dpuz_and_solution(reward),
+            member_solution=custody_pwr.puzzle.solve(self.pool_proven_spend()),
+            delegated_puzzle_and_solution=self.claim_pool_reward_dpuz_and_solution(reward),
         )
 
     def exit_to_from_waiting_room_inner_solution(
         self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution
     ) -> Program:
-        assert isinstance(self.inner_custody, PoolingCustody)
-        custody_pwr = self.inner_custody.puzzle_with_restrictions()
+        custody_pwr = self.puzzle_with_restrictions()
         assert isinstance(custody_pwr.puzzle, MofN)
         return custody_pwr.solve(
             member_validator_solutions=[],
             dpuz_validator_solutions=[],
-            member_solution=custody_pwr.puzzle.solve(
-                self.inner_custody.user_proven_spend(delegated_puzzle_and_solution.puzzle)
-            ),
-            delegated_puzzle_and_solution=self.inner_custody.user_restriction().modify_delegated_puzzle_and_solution(
+            member_solution=custody_pwr.puzzle.solve(self.user_proven_spend(delegated_puzzle_and_solution.puzzle)),
+            delegated_puzzle_and_solution=self.user_restriction().modify_delegated_puzzle_and_solution(
                 delegated_puzzle_and_solution, [Program.to([]), Program.to([])]
             ),
         )
@@ -388,7 +349,10 @@ class PlotNFT:
         cls,
         *,
         origin_coins: list[Coin],
-        custody: SelfCustody | PoolingCustody,
+        user_config: UserConfig,
+        genesis_challenge: bytes32,
+        pool_config: PoolConfig = PoolConfig(),
+        exiting: bool = True,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> tuple[list[Program], list[CoinSpend], Self]:
@@ -397,15 +361,21 @@ class PlotNFT:
         origin_coin, launcher_coin = cls.origin_coin_info(origin_coins)
         launcher_id = launcher_coin.name()
 
-        plotnft_puzzle = PlotNFTPuzzle(launcher_id=launcher_id, inner_custody=custody)
+        plotnft_puzzle = PlotNFTPuzzle(
+            launcher_id=launcher_id,
+            user_config=user_config,
+            pool_config=pool_config,
+            exiting=exiting,
+            genesis_challenge=genesis_challenge,
+        )
         rev_puzzle = Program.to(
             (
                 1,
                 [
                     CreateCoin(
-                        plotnft_puzzle.inner_custody.puzzle_hash(nonce=0),
+                        plotnft_puzzle.inner_puzzle_hash(),
                         uint64(1),
-                        memo_blob=plotnft_puzzle.inner_custody.puzzle_with_restrictions().memo(),
+                        memo_blob=plotnft_puzzle.puzzle_with_restrictions().memo(),
                     ).to_program(),
                     CreateCoinAnnouncement(msg=b"").to_program(),
                 ],
@@ -448,7 +418,7 @@ class PlotNFT:
             [condition.to_program() for condition in conditions],
             [launcher_spend, rev_spend],
             cls(
-                coin=Coin(rev_coin_id, plotnft_puzzle.puzzle_hash(), uint64(1)),
+                coin=Coin(rev_coin_id, plotnft_puzzle.puzzle_hash(nonce=0), uint64(1)),
                 singleton_lineage_proof=LineageProof(
                     parent_name=rev_coin.parent_coin_info,
                     inner_puzzle_hash=rev_puzzle.get_tree_hash(),
@@ -490,28 +460,26 @@ class PlotNFT:
             config = previous_pool_config
 
         if config is None and previous_pool_config is not None:
-            potential_self_custody = SelfCustody(
-                member=BLSWithTaprootMember(
-                    synthetic_key=previous_pool_config.self_custody_pubkey,
-                )
+            previous_puzzle_no_exit = PlotNFTPuzzle(
+                launcher_id=launcher_id,
+                genesis_challenge=genesis_challenge,
+                user_config=UserConfig(synthetic_pubkey=previous_pool_config.synthetic_pubkey),
+                pool_config=PoolConfig(
+                    pool_puzzle_hash=previous_pool_config.pool_puzzle_hash, timelock=previous_pool_config.timelock
+                ),
+                exiting=False,
             )
-            if potential_self_custody.puzzle_hash(nonce=0) == singleton_create_coin.puzzle_hash:
-                config = PlotNFTConfig(self_custody_pubkey=previous_pool_config.self_custody_pubkey)
-            elif previous_pool_config.pool_puzzle_hash is not None:
-                assert previous_pool_config.timelock is not None
-                potential_exiting_config = replace(
-                    PoolingCustody(
-                        launcher_id=launcher_id,
-                        synthetic_pubkey=previous_pool_config.self_custody_pubkey,
-                        pool_puzzle_hash=previous_pool_config.pool_puzzle_hash,
-                        timelock=previous_pool_config.timelock,
-                        exiting=True,
-                        genesis_challenge=genesis_challenge,
-                    )
-                )
-                if potential_exiting_config.puzzle_hash(nonce=0) == singleton_create_coin.puzzle_hash:
-                    config = previous_pool_config
-                    exiting = True
+            if (
+                replace(previous_puzzle_no_exit, pool_config=PoolConfig()).inner_puzzle_hash()
+                == singleton_create_coin.puzzle_hash
+            ):
+                config = replace(previous_pool_config, pool_puzzle_hash=None, timelock=None)
+                exiting = False
+            elif (
+                replace(previous_puzzle_no_exit, exiting=True).inner_puzzle_hash() == singleton_create_coin.puzzle_hash
+            ):
+                config = previous_pool_config
+                exiting = True
 
         if config is None:
             if singleton_create_coin.memo_blob is None:
@@ -532,35 +500,20 @@ class PlotNFT:
                 pool_puzzle_hash = None
                 timelock = None
 
-            config = PlotNFTConfig(self_custody_pubkey=pubkey, pool_puzzle_hash=pool_puzzle_hash, timelock=timelock)
+            config = PlotNFTConfig(synthetic_pubkey=pubkey, pool_puzzle_hash=pool_puzzle_hash, timelock=timelock)
 
-        if config.pool_puzzle_hash is not None:
-            assert config.timelock is not None
-            custody: SelfCustody | PoolingCustody = PoolingCustody(
-                launcher_id=launcher_id,
-                synthetic_pubkey=config.self_custody_pubkey,
-                pool_puzzle_hash=config.pool_puzzle_hash,
-                timelock=config.timelock,
-                exiting=exiting,
-                genesis_challenge=genesis_challenge,
-            )
-        else:
-            custody = SelfCustody(
-                member=BLSWithTaprootMember(
-                    synthetic_key=config.self_custody_pubkey,
-                )
-            )
+        plotnft_puzzle = PlotNFTPuzzle(
+            launcher_id=launcher_id,
+            user_config=UserConfig(synthetic_pubkey=config.synthetic_pubkey),
+            pool_config=PoolConfig(pool_puzzle_hash=config.pool_puzzle_hash, timelock=config.timelock),
+            exiting=exiting,
+            genesis_challenge=genesis_challenge,
+        )
 
         return cls(
             coin=Coin(
                 coin_spend.coin.name(),
-                puzzle_for_singleton(
-                    launcher_id=launcher_id,
-                    inner_puz=custody.puzzle(nonce=0),
-                    singleton_mod=cls.singleton_puzzles.singleton_mod,
-                    launcher_hash=cls.singleton_puzzles.singleton_launcher_hash,
-                    singleton_mod_hash=cls.singleton_puzzles.singleton_mod_hash,
-                ).get_tree_hash(),
+                plotnft_puzzle.puzzle(nonce=0).get_tree_hash(),
                 coin_spend.coin.amount,
             ),
             singleton_lineage_proof=LineageProof(
@@ -568,10 +521,7 @@ class PlotNFT:
                 inner_puzzle_hash=inner_puzzle.get_tree_hash(),
                 amount=coin_spend.coin.amount,
             ),
-            puzzle=PlotNFTPuzzle(
-                launcher_id=launcher_id,
-                inner_custody=custody,
-            ),
+            puzzle=plotnft_puzzle,
         )
 
     def singleton_action_spend(self, inner_solution: Program) -> CoinSpend:
@@ -579,7 +529,7 @@ class PlotNFT:
             coin=self.coin,
             puzzle_reveal=puzzle_for_singleton(
                 launcher_id=self.puzzle.singleton_struct.launcher_id,
-                inner_puz=self.puzzle.inner_custody.puzzle(nonce=0),  # TODO: optimize
+                inner_puz=self.puzzle.inner_puzzle(),  # TODO: optimize
                 singleton_mod=self.puzzle.singleton_struct.singleton_puzzles.singleton_mod,
                 singleton_mod_hash=self.puzzle.singleton_struct.singleton_puzzles.singleton_mod_hash,
                 launcher_hash=self.puzzle.singleton_struct.singleton_puzzles.singleton_launcher_hash,
@@ -592,7 +542,7 @@ class PlotNFT:
         )
 
     def forward_pool_reward(self, reward: PoolReward) -> list[CoinSpend]:
-        if not isinstance(self.puzzle.inner_custody, PoolingCustody):
+        if not self.puzzle.pooling:
             raise ValueError("Cannot forward pool reward while self pooling. Try `claim_pool_reward`")
         return [
             self.singleton_action_spend(inner_solution=self.puzzle.forward_pool_reward_inner_solution(reward)),
@@ -600,9 +550,9 @@ class PlotNFT:
                 coin=reward.coin,
                 puzzle_reveal=reward.puzzle.puzzle(),
                 solution=reward.puzzle.solve(
-                    self.puzzle.inner_custody.puzzle_hash(nonce=0),
+                    self.puzzle.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                        puzzle=forward_to_pool_puzzle_hash_dpuz(self.puzzle.inner_custody.pool_puzzle_hash),
+                        puzzle=forward_to_pool_puzzle_hash_dpuz(self.puzzle.pool_puzzle_hash),
                         solution=Program.to([reward.coin.amount]),
                     ),
                 ),
@@ -610,9 +560,9 @@ class PlotNFT:
         ]
 
     def exit_to_waiting_room(self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution) -> list[CoinSpend]:
-        if not isinstance(self.puzzle.inner_custody, PoolingCustody):
+        if not self.puzzle.pooling:
             raise ValueError("Cannot exit to waiting room while self pooling.")
-        if self.puzzle.inner_custody.exiting:
+        if self.puzzle.exiting:
             raise ValueError("Already exiting to waiting room, cannot exit again")
         return [
             self.singleton_action_spend(
@@ -621,9 +571,9 @@ class PlotNFT:
         ]
 
     def exit_waiting_room(self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution) -> list[CoinSpend]:
-        if not isinstance(self.puzzle.inner_custody, PoolingCustody):
+        if not self.puzzle.pooling:
             raise ValueError("Cannot exit waiting room while self pooling.")
-        if not self.puzzle.inner_custody.exiting:
+        if not self.puzzle.exiting:
             raise ValueError("Cannot exit waiting room while not in it")
         return [
             self.singleton_action_spend(
@@ -639,12 +589,10 @@ class PlotNFT:
                 (
                     1,
                     [
-                        CreateCoin(
-                            puzzle_hash=self.puzzle.inner_custody.puzzle_hash(nonce=0), amount=self.coin.amount
-                        ).to_program(),
+                        CreateCoin(puzzle_hash=self.puzzle.inner_puzzle_hash(), amount=self.coin.amount).to_program(),
                         SendMessage(
                             msg=reward_delegated_puzzle_and_solution.puzzle.get_tree_hash(),
-                            sender=MessageParticipant(puzzle_hash_committed=self.puzzle.puzzle_hash()),
+                            sender=MessageParticipant(puzzle_hash_committed=self.puzzle.puzzle_hash(nonce=0)),
                             receiver=MessageParticipant(coin_id_committed=reward.coin.name()),
                         ).to_program(),
                     ],
@@ -654,7 +602,7 @@ class PlotNFT:
         )
         return dpuz_and_solution.puzzle.get_tree_hash(), [
             self.singleton_action_spend(
-                inner_solution=self.puzzle.inner_custody.puzzle_with_restrictions().solve(
+                inner_solution=self.puzzle.puzzle_with_restrictions().solve(
                     member_validator_solutions=[],
                     dpuz_validator_solutions=[],
                     member_solution=self.puzzle.bls_member.solve(),
@@ -665,22 +613,30 @@ class PlotNFT:
                 coin=reward.coin,
                 puzzle_reveal=reward.puzzle.puzzle(),
                 solution=reward.puzzle.solve(
-                    self.puzzle.inner_custody.puzzle_hash(nonce=0),
+                    self.puzzle.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=reward_delegated_puzzle_and_solution,
                 ),
             ),
         ]
 
-    def join_pool(self, pooling_custody: PoolingCustody) -> tuple[bytes32, list[CoinSpend]]:
+    def join_pool(self, user_config: UserConfig, pool_config: PoolConfig) -> tuple[bytes32, list[CoinSpend]]:
+        plotnft_puzzle = PlotNFTPuzzle(
+            launcher_id=self.puzzle.launcher_id,
+            user_config=user_config,
+            pool_config=pool_config,
+            exiting=False,
+            genesis_challenge=self.puzzle.genesis_challenge,
+        )
+
         dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=Program.to(
                 (
                     1,
                     [
                         CreateCoin(
-                            pooling_custody.puzzle_hash(nonce=0),
+                            plotnft_puzzle.inner_puzzle_hash(),
                             amount=self.coin.amount,
-                            memo_blob=pooling_custody.puzzle_with_restrictions().memo(),
+                            memo_blob=plotnft_puzzle.memo(),
                         ).to_program()
                     ],
                 )
@@ -689,7 +645,7 @@ class PlotNFT:
         )
         return dpuz_and_solution.puzzle.get_tree_hash(), [
             self.singleton_action_spend(
-                inner_solution=self.puzzle.inner_custody.puzzle_with_restrictions().solve(
+                inner_solution=self.puzzle.puzzle_with_restrictions().solve(
                     member_validator_solutions=[],
                     dpuz_validator_solutions=[],
                     member_solution=self.puzzle.bls_member.solve(),
