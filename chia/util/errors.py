@@ -197,6 +197,9 @@ class Err(Enum):
     # the transactions generator uses overlong encoding of CLVM atoms in its
     # serialization
     INVALID_TRANSACTIONS_GENERATOR_ENCODING = 148
+    # if the merkle mountain range commitment to the previous chain is invalid,
+    # or present before hard fork 2
+    INVALID_MMR_ROOT = 149
 
 
 class ValidationError(Exception):
