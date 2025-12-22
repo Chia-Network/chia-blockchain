@@ -408,9 +408,6 @@ class PlotNFT:
             )
         )
         if isinstance(unknown_inner_puzzle.puzzle, MofN):
-            unknown_inner_puzzle.fill_in_unknown_puzzles(
-                {SendMessageBanned().puzzle_hash(nonce=0): SendMessageBanned()}
-            )
             pool_puzzle_hash = bytes32(unknown_inner_puzzle.additional_memos.at("rf").as_atom())
             timelock = uint64(unknown_inner_puzzle.additional_memos.at("rrf").as_int())
 

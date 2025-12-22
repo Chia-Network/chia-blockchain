@@ -342,6 +342,7 @@ class PuzzleWithRestrictions:
             nonce=self.nonce,
             restrictions=new_restrictions,
             puzzle=new_puzzle,
+            additional_memos=self.additional_memos,
         )
 
     def puzzle_reveal(self, _top_level: bool = True) -> Program:
