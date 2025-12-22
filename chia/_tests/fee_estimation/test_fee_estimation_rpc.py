@@ -87,7 +87,7 @@ async def test_empty_request(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNo
 
 @pytest.mark.anyio
 async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    _client, full_node_rpc_api = one_node_no_blocks
+    client, full_node_rpc_api = one_node_no_blocks
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": 1})
     del response["node_time_utc"]
     assert response == {
@@ -106,6 +106,10 @@ async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeR
         "mempool_fees": 0,
         "num_spends": 0,
     }
+
+    # one_node_no_blocks is not an async generator, so we have to close the client ourselves
+    client.close()
+    await client.await_closed()
 
 
 @pytest.mark.anyio
