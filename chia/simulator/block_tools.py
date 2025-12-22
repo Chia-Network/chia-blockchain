@@ -329,7 +329,7 @@ class BlockTools:
         self.constants = updated_constants
 
         # Initialize MMR manager for incremental MMR computation
-        self.mmr_manager = BlockchainMMRManager()
+        self.mmr_manager = BlockchainMMRManager(aggregate_from=updated_constants.HARD_FORK2_HEIGHT)
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
@@ -825,7 +825,7 @@ class BlockTools:
                 raise ValueError("Cannot specify plot_id for genesis block")
             initial_block_list_len = 0
             # Reset MMR manager for fresh block generation
-            self.mmr_manager = BlockchainMMRManager()
+            self.mmr_manager = BlockchainMMRManager(aggregate_from=constants.HARD_FORK2_HEIGHT)
             genesis = self.create_genesis_block(
                 constants,
                 seed,
@@ -841,7 +841,7 @@ class BlockTools:
             initial_block_list_len = len(block_list)
             num_empty_slots_added = uint32(0)  # Allows forcing empty slots in the beginning, for testing purposes
             # Reset MMR manager - will be populated after BlockRecords are created via load_block_list
-            self.mmr_manager = BlockchainMMRManager()
+            self.mmr_manager = BlockchainMMRManager(aggregate_from=constants.HARD_FORK2_HEIGHT)
 
         if num_blocks == 0:
             return block_list
