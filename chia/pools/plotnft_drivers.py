@@ -100,7 +100,7 @@ class SelfCustody:
 
 
 @dataclass(kw_only=True, frozen=True)
-class PoolConfig:
+class PlotNFTConfig:
     self_custody_pubkey: G1Element
     pool_puzzle_hash: bytes32 | None = None
     timelock: uint64 | None = None
@@ -109,12 +109,22 @@ class PoolConfig:
 @dataclass(kw_only=True, frozen=True)
 class PoolingCustody:
     singleton_struct: SingletonStruct
-    self_custody: SelfCustody
+    synthetic_pubkey: G1Element
     pool_puzzle_hash: bytes32
     reward_puzhash: bytes32
     timelock: uint64
     exiting: bool
     genesis_challenge: bytes32
+
+    @property
+    def config(self) -> PlotNFTConfig:
+        return PlotNFTConfig(
+            self_custody_pubkey=self.synthetic_pubkey, pool_puzzle_hash=self.pool_puzzle_hash, timelock=self.timelock
+        )
+
+    @property
+    def self_custody(self) -> SelfCustody:
+        return SelfCustody(member=BLSWithTaprootMember(synthetic_key=self.synthetic_pubkey))
 
     def waiting_room_puzzle(self) -> Program:
         return dataclasses.replace(self, exiting=True).puzzle(nonce=0)
@@ -285,6 +295,14 @@ class PlotNFT:
     singleton_mod: ClassVar[Program] = SINGLETON_MOD
     singleton_launcher: ClassVar[Program] = SINGLETON_LAUNCHER
 
+    @property
+    def config(self) -> PlotNFTConfig:
+        if isinstance(self.puzzle.inner_custody, PoolingCustody):
+            return self.puzzle.inner_custody.config
+        else:
+            assert self.puzzle.inner_custody.member.synthetic_key is not None
+            return PlotNFTConfig(self_custody_pubkey=self.puzzle.inner_custody.member.synthetic_key)
+
     @classmethod
     def origin_coin_info(
         cls,
@@ -383,7 +401,7 @@ class PlotNFT:
         coin_spend: CoinSpend,
         genesis_challenge: bytes32,
         pre_uncurry: UncurriedPuzzle | None = None,
-        previous_pool_config: PoolConfig | None = None,
+        previous_pool_config: PlotNFTConfig | None = None,
     ) -> Self:
         if pre_uncurry is None:
             singleton = uncurry_puzzle(coin_spend.puzzle_reveal)
@@ -418,13 +436,13 @@ class PlotNFT:
                 )
             )
             if potential_self_custody.puzzle_hash(nonce=0) == singleton_create_coin.puzzle_hash:
-                config = PoolConfig(self_custody_pubkey=previous_pool_config.self_custody_pubkey)
+                config = PlotNFTConfig(self_custody_pubkey=previous_pool_config.self_custody_pubkey)
             elif previous_pool_config.pool_puzzle_hash is not None:
                 assert previous_pool_config.timelock is not None
                 potential_exiting_config = replace(
                     PoolingCustody(
                         singleton_struct=singleton_struct,
-                        self_custody=potential_self_custody,
+                        synthetic_pubkey=previous_pool_config.self_custody_pubkey,
                         pool_puzzle_hash=previous_pool_config.pool_puzzle_hash,
                         reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
                         timelock=previous_pool_config.timelock,
@@ -455,18 +473,13 @@ class PlotNFT:
                 pool_puzzle_hash = None
                 timelock = None
 
-            config = PoolConfig(self_custody_pubkey=pubkey, pool_puzzle_hash=pool_puzzle_hash, timelock=timelock)
+            config = PlotNFTConfig(self_custody_pubkey=pubkey, pool_puzzle_hash=pool_puzzle_hash, timelock=timelock)
 
-        self_custody = SelfCustody(
-            member=BLSWithTaprootMember(
-                synthetic_key=config.self_custody_pubkey,
-            )
-        )
         if config.pool_puzzle_hash is not None:
             assert config.timelock is not None
             custody: SelfCustody | PoolingCustody = PoolingCustody(
                 singleton_struct=singleton_struct,
-                self_custody=self_custody,
+                synthetic_pubkey=config.self_custody_pubkey,
                 pool_puzzle_hash=config.pool_puzzle_hash,
                 reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
                 timelock=config.timelock,
@@ -474,7 +487,11 @@ class PlotNFT:
                 genesis_challenge=genesis_challenge,
             )
         else:
-            custody = self_custody
+            custody = SelfCustody(
+                member=BLSWithTaprootMember(
+                    synthetic_key=config.self_custody_pubkey,
+                )
+            )
 
         return cls(
             coin=Coin(

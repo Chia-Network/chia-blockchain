@@ -12,7 +12,7 @@ from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.pools.plotnft_drivers import (
     PlotNFT,
-    PoolConfig,
+    PlotNFTConfig,
     PoolingCustody,
     PoolReward,
     RewardPuzzle,
@@ -50,20 +50,18 @@ async def mint_plotnft(
 
     origin_coin, _, singleton_struct = PlotNFT.origin_coin_info([fund_coin.coin])
 
-    self_custody = SelfCustody(member=BLSWithTaprootMember(synthetic_key=user_sk.get_g1()))
     if desired_state in {"pooling", "waiting_room"}:
-        pooling_custody = PoolingCustody(
+        custody: PoolingCustody | SelfCustody = PoolingCustody(
             singleton_struct=singleton_struct,
-            self_custody=self_custody,
+            synthetic_pubkey=user_sk.get_g1(),
             pool_puzzle_hash=bytes32.zeros,
             reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
             timelock=uint64(1000),
             exiting=desired_state == "waiting_room",
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
         )
-        custody: PoolingCustody | SelfCustody = pooling_custody
     else:
-        custody = self_custody
+        custody = SelfCustody(member=BLSWithTaprootMember(synthetic_key=user_sk.get_g1()))
 
     conditions, spends, plotnft = PlotNFT.launch(origin_coins=[origin_coin], custody=custody)
 
@@ -89,11 +87,9 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state="self_custody")
 
         # Join a pool
-        self_custody = plotnft.puzzle.inner_custody
-        assert isinstance(self_custody, SelfCustody)
         custody = PoolingCustody(
             singleton_struct=plotnft.puzzle.singleton_struct,
-            self_custody=self_custody,
+            synthetic_pubkey=plotnft.config.self_custody_pubkey,
             pool_puzzle_hash=bytes32.zeros,
             reward_puzhash=RewardPuzzle(singleton_id=plotnft.puzzle.singleton_struct.launcher_id).puzzle_hash(),
             timelock=uint64(1000),
@@ -188,7 +184,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=PoolConfig(
+            previous_pool_config=PlotNFTConfig(
                 self_custody_pubkey=plotnft.puzzle.inner_custody.self_custody.member.synthetic_key,
                 pool_puzzle_hash=plotnft.puzzle.inner_custody.pool_puzzle_hash,
                 timelock=plotnft.puzzle.inner_custody.timelock,
@@ -202,7 +198,9 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             solution=Program.to(
                 [
                     AssertSecondsRelative(seconds=plotnft.puzzle.inner_custody.timelock).to_program(),
-                    CreateCoin(puzzle_hash=self_custody.puzzle_hash(nonce=0), amount=uint64(1)).to_program(),
+                    CreateCoin(
+                        puzzle_hash=plotnft.puzzle.inner_custody.self_custody.puzzle_hash(nonce=0), amount=uint64(1)
+                    ).to_program(),
                 ]
             ),
         )
@@ -226,11 +224,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=PoolConfig(
-                self_custody_pubkey=plotnft.puzzle.inner_custody.self_custody.member.synthetic_key,
-                pool_puzzle_hash=plotnft.puzzle.inner_custody.pool_puzzle_hash,
-                timelock=plotnft.puzzle.inner_custody.timelock,
-            ),
+            previous_pool_config=plotnft.config,
         )
         assert await sim_client.get_coin_record_by_name(plotnft.coin.name()) is not None
 
@@ -279,7 +273,7 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=PoolConfig(self_custody_pubkey=plotnft.puzzle.inner_custody.member.synthetic_key),
+            previous_pool_config=plotnft.config,
         )
 
 
@@ -317,7 +311,7 @@ async def test_plotnft_pooling_claim(
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=PoolConfig(
+            previous_pool_config=PlotNFTConfig(
                 self_custody_pubkey=plotnft.puzzle.inner_custody.self_custody.member.synthetic_key,
                 pool_puzzle_hash=plotnft.puzzle.inner_custody.pool_puzzle_hash,
                 timelock=plotnft.puzzle.inner_custody.timelock,
