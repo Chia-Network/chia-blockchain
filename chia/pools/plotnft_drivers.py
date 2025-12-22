@@ -241,6 +241,13 @@ class PlotNFTPuzzle:
     singleton_struct: SingletonStruct
     inner_custody: SelfCustody | PoolingCustody
 
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.inner_custody, PoolingCustody)
+            and self.inner_custody.singleton_struct != self.singleton_struct
+        ):
+            raise ValueError("Bad initialization of PlotNFTPuzzle, inner custody has different singleton information.")
+
     @property
     def bls_member(self) -> BLSWithTaprootMember:
         if isinstance(self.inner_custody, PoolingCustody):
