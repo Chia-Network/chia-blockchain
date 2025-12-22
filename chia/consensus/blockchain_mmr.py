@@ -57,22 +57,47 @@ class BlockchainMMRManager:
         """Get the current MMR root representing all blocks added so far"""
         return self._mmr.get_root()
 
-    def _build_mmr_to_block(self, target_block: BlockRecord, blocks: BlockRecordsProtocol) -> bytes32 | None:
+    def _build_mmr_to_block(
+        self, target_block: BlockRecord, blocks: BlockRecordsProtocol, fork_height: int | None
+    ) -> bytes32 | None:
         """
         Build an MMR containing all blocks from genesis to target_block (inclusive)."""
         target_height = target_block.height
 
-        # Fast path: if current MMR is already at target height, use it directly
-        if self._last_height is not None and self._last_height == target_height:
-            if self._last_header_hash == target_block.header_hash:
-                log.debug(f"Using current MMR state at height {target_height}")
-                return self._mmr.get_root()
+        # Case 1: Build from scratch (no fork or underlying MMR doesn't exist/reach fork point)
+        if fork_height is None or self._last_height is None or self._last_height < fork_height:
+            mmr = MerkleMountainRange()
+            log.debug(f"Building MMR from genesis to {target_height}")
 
-        # Build MMR from genesis to target
-        mmr = MerkleMountainRange()
-        log.debug(f"Building MMR from genesis to {target_height}")
+            for height in range(target_height + 1):
+                header_hash = blocks.height_to_hash(uint32(height))
+                assert header_hash is not None
+                mmr.append(header_hash)
 
-        for height in range(target_height + 1):
+            return mmr.get_root()
+
+        # Case 2: Fast path - current MMR already at target (main chain, no fork before target)
+        if (
+            self._last_height == target_height
+            and self._last_header_hash == target_block.header_hash
+            and fork_height == target_height
+        ):
+            log.debug(f"Using current MMR state at height {target_height} (no fork before target)")
+            return self._mmr.get_root()
+
+        # Case 3:  rollback to fork point and extend
+        # fork_height >= 0 AND self._last_height >= fork_height
+        log.debug(f"Reusing underlying MMR, will rollback to fork {fork_height}, then rebuild to {target_height}")
+        mmr = copy.deepcopy(self._mmr)
+
+        # Rollback to fork point if underlying MMR is beyond it
+        if self._last_height > fork_height:
+            blocks_to_pop = self._last_height - fork_height
+            for _ in range(blocks_to_pop):
+                mmr.pop()
+
+        # Now add blocks from fork point to target from augmented chain
+        for height in range(fork_height + 1, target_height + 1):
             header_hash = blocks.height_to_hash(uint32(height))
             assert header_hash is not None
             mmr.append(header_hash)
@@ -85,6 +110,7 @@ class BlockchainMMRManager:
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: BlockRecordsProtocol,
+        fork_height: int | None = None,
     ) -> bytes32 | None:
         """
         Compute MMR root for a block with sp/slot filtering.
@@ -100,7 +126,7 @@ class BlockchainMMRManager:
 
         if starts_new_slot:
             # New slot - all blocks up to and including prev_block are finalized
-            mmr_root = self._build_mmr_to_block(prev_block, blocks)
+            mmr_root = self._build_mmr_to_block(prev_block, blocks, fork_height)
             log.debug(f"New slot: Built MMR with all blocks up to height {prev_block.height}")
             return mmr_root
 
@@ -142,7 +168,7 @@ class BlockchainMMRManager:
             return None
 
         # Build MMR from genesis to cutoff block
-        mmr_root = self._build_mmr_to_block(cutoff_block, blocks)
+        mmr_root = self._build_mmr_to_block(cutoff_block, blocks, fork_height)
         log.debug(
             f"Built MMR for new block (sp={new_sp_index}) with finalized blocks "
             f"(cutoff at height {cutoff_block.height})"
