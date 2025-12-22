@@ -23,6 +23,7 @@ class BlockchainMMRManager:
     _mmr: MerkleMountainRange = field(default_factory=MerkleMountainRange)
     _last_header_hash: bytes32 | None = None
     _last_height: uint32 | None = None
+    aggregate_from: uint32 = field(default=uint32(0))  # Height from which to start aggregating blocks into MMR
 
     def __repr__(self) -> str:
         return f"BlockchainMMRManager(height={self._last_height}, root={self.get_current_mmr_root()!r})"
@@ -67,9 +68,9 @@ class BlockchainMMRManager:
         # Case 1: Build from scratch (no fork or underlying MMR doesn't exist/reach fork point)
         if fork_height is None or self._last_height is None or self._last_height < fork_height:
             mmr = MerkleMountainRange()
-            log.debug(f"Building MMR from genesis to {target_height}")
+            log.debug(f"Building MMR from height {self.aggregate_from} to {target_height}")
 
-            for height in range(target_height + 1):
+            for height in range(self.aggregate_from, target_height + 1):
                 header_hash = blocks.height_to_hash(uint32(height))
                 assert header_hash is not None
                 mmr.append(header_hash)
@@ -85,8 +86,7 @@ class BlockchainMMRManager:
             log.debug(f"Using current MMR state at height {target_height} (no fork before target)")
             return self._mmr.get_root()
 
-        # Case 3:  rollback to fork point and extend
-        # fork_height >= 0 AND self._last_height >= fork_height
+        # Case 3: rollback to fork point and extend
         log.debug(f"Reusing underlying MMR, will rollback to fork {fork_height}, then rebuild to {target_height}")
         mmr = copy.deepcopy(self._mmr)
 
@@ -96,8 +96,9 @@ class BlockchainMMRManager:
             for _ in range(blocks_to_pop):
                 mmr.pop()
 
-        # Now add blocks from fork point to target from augmented chain
-        for height in range(fork_height + 1, target_height + 1):
+        # Add blocks from fork point to target
+        start_height = max(fork_height + 1, self.aggregate_from)
+        for height in range(start_height, target_height + 1):
             header_hash = blocks.height_to_hash(uint32(height))
             assert header_hash is not None
             mmr.append(header_hash)
