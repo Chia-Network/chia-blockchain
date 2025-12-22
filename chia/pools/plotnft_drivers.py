@@ -111,10 +111,13 @@ class PoolingCustody:
     singleton_struct: SingletonStruct
     synthetic_pubkey: G1Element
     pool_puzzle_hash: bytes32
-    reward_puzhash: bytes32
     timelock: uint64
     exiting: bool
     genesis_challenge: bytes32
+
+    @property
+    def reward_puzhash(self) -> bytes32:
+        return RewardPuzzle(singleton_id=self.singleton_struct.launcher_id).puzzle_hash()
 
     @property
     def config(self) -> PlotNFTConfig:
@@ -444,7 +447,6 @@ class PlotNFT:
                         singleton_struct=singleton_struct,
                         synthetic_pubkey=previous_pool_config.self_custody_pubkey,
                         pool_puzzle_hash=previous_pool_config.pool_puzzle_hash,
-                        reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
                         timelock=previous_pool_config.timelock,
                         exiting=True,
                         genesis_challenge=genesis_challenge,
@@ -481,7 +483,6 @@ class PlotNFT:
                 singleton_struct=singleton_struct,
                 synthetic_pubkey=config.self_custody_pubkey,
                 pool_puzzle_hash=config.pool_puzzle_hash,
-                reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
                 timelock=config.timelock,
                 exiting=exiting,
                 genesis_challenge=genesis_challenge,
