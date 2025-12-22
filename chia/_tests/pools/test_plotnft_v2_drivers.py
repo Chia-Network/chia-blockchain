@@ -50,11 +50,11 @@ async def mint_plotnft(
 
     [fund_coin, _] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
-    origin_coin, _, singleton_struct = PlotNFT.origin_coin_info([fund_coin.coin])
+    origin_coin, launcher_coin = PlotNFT.origin_coin_info([fund_coin.coin])
 
     if desired_state in {"pooling", "waiting_room"}:
         custody: PoolingCustody | SelfCustody = PoolingCustody(
-            singleton_struct=singleton_struct,
+            launcher_id=launcher_coin.name(),
             synthetic_pubkey=user_sk.get_g1(),
             pool_puzzle_hash=POOL_PUZZLE_HASH,
             timelock=uint64(1000),
@@ -74,6 +74,8 @@ async def mint_plotnft(
     )
     assert result == (MempoolInclusionStatus.SUCCESS, None)
     await sim.farm_block()
+
+    # Test syncing from launcher
     assert (
         PlotNFT.get_next_from_coin_spend(coin_spend=spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE)
         == plotnft
@@ -89,8 +91,8 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         # Join a pool
         custody = PoolingCustody(
-            singleton_struct=plotnft.puzzle.singleton_struct,
-            synthetic_pubkey=plotnft.config.self_custody_pubkey,
+            launcher_id=plotnft.puzzle.launcher_id,
+            synthetic_pubkey=plotnft.puzzle.config.self_custody_pubkey,
             pool_puzzle_hash=POOL_PUZZLE_HASH,
             timelock=uint64(1000),
             exiting=False,
@@ -224,7 +226,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=plotnft.config,
+            previous_pool_config=plotnft.puzzle.config,
         )
         assert await sim_client.get_coin_record_by_name(plotnft.coin.name()) is not None
 
@@ -273,7 +275,7 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=plotnft.config,
+            previous_pool_config=plotnft.puzzle.config,
         )
 
 

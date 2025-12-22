@@ -140,12 +140,17 @@ class PlotNFTConfig:
 
 @dataclass(kw_only=True, frozen=True)
 class PoolingCustody:
-    singleton_struct: SingletonStruct
+    launcher_id: bytes32
     synthetic_pubkey: G1Element
     pool_puzzle_hash: bytes32
     timelock: uint64
     exiting: bool
     genesis_challenge: bytes32
+    singleton_puzzles: SingletonPuzzles = SingletonPuzzles()
+
+    @property
+    def singleton_struct(self) -> SingletonStruct:
+        return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
 
     @property
     def reward_puzhash(self) -> bytes32:
@@ -265,8 +270,44 @@ class PoolingCustody:
 
 @dataclass(kw_only=True, frozen=True)
 class PlotNFTPuzzle:
-    singleton_struct: SingletonStruct
+    launcher_id: bytes32
     inner_custody: SelfCustody | PoolingCustody
+    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
+
+    @property
+    def singleton_struct(self) -> SingletonStruct:
+        return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
+
+    @property
+    def config(self) -> PlotNFTConfig:
+        if isinstance(self.inner_custody, PoolingCustody):
+            return self.inner_custody.config
+        else:
+            assert self.inner_custody.member.synthetic_key is not None
+            return PlotNFTConfig(self_custody_pubkey=self.inner_custody.member.synthetic_key)
+
+    @classmethod
+    def create_from_config(
+        cls, *, launcher_id: bytes32, config: PlotNFTConfig, genesis_challenge: bytes32, exiting: bool = False
+    ) -> Self:
+        if config.pool_puzzle_hash is None or config.timelock is None:
+            return cls(
+                launcher_id=launcher_id,
+                inner_custody=SelfCustody(member=BLSWithTaprootMember(synthetic_key=config.self_custody_pubkey)),
+            )
+        else:
+            return cls(
+                launcher_id=launcher_id,
+                inner_custody=PoolingCustody(
+                    launcher_id=launcher_id,
+                    synthetic_pubkey=config.self_custody_pubkey,
+                    pool_puzzle_hash=config.pool_puzzle_hash,
+                    timelock=config.timelock,
+                    exiting=exiting,
+                    genesis_challenge=genesis_challenge,
+                    singleton_puzzles=SingletonPuzzles(),
+                ),
+            )
 
     def __post_init__(self) -> None:
         if (
@@ -330,27 +371,17 @@ class PlotNFT:
     puzzle: PlotNFTPuzzle
     singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
-    @property
-    def config(self) -> PlotNFTConfig:
-        if isinstance(self.puzzle.inner_custody, PoolingCustody):
-            return self.puzzle.inner_custody.config
-        else:
-            assert self.puzzle.inner_custody.member.synthetic_key is not None
-            return PlotNFTConfig(self_custody_pubkey=self.puzzle.inner_custody.member.synthetic_key)
-
     @classmethod
     def origin_coin_info(
         cls,
         origin_coins: list[Coin],
-    ) -> tuple[Coin, Coin, SingletonStruct]:
+    ) -> tuple[Coin, Coin]:
         origin_coin = origin_coins[0]
 
         launcher_hash = cls.singleton_puzzles.singleton_launcher_hash
         launcher_coin = Coin(origin_coin.name(), launcher_hash, uint64(1))
-        launcher_id = launcher_coin.name()
-        singleton_struct = SingletonStruct(launcher_id=launcher_id, singleton_puzzles=cls.singleton_puzzles)
 
-        return origin_coin, launcher_coin, singleton_struct
+        return origin_coin, launcher_coin
 
     @classmethod
     def launch(
@@ -363,10 +394,10 @@ class PlotNFT:
     ) -> tuple[list[Program], list[CoinSpend], Self]:
         mod_hash = cls.singleton_puzzles.singleton_mod_hash
         launcher_hash = cls.singleton_puzzles.singleton_launcher_hash
-        origin_coin, launcher_coin, singleton_struct = cls.origin_coin_info(origin_coins)
+        origin_coin, launcher_coin = cls.origin_coin_info(origin_coins)
         launcher_id = launcher_coin.name()
 
-        plotnft_puzzle = PlotNFTPuzzle(singleton_struct=singleton_struct, inner_custody=custody)
+        plotnft_puzzle = PlotNFTPuzzle(launcher_id=launcher_id, inner_custody=custody)
         rev_puzzle = Program.to(
             (
                 1,
@@ -446,10 +477,7 @@ class PlotNFT:
         if singleton.args.at("frr") != cls.singleton_puzzles.singleton_launcher_hash:
             raise ValueError("Invalid singleton launcher for next PlotNFT")
 
-        singleton_struct = SingletonStruct(
-            launcher_id=bytes32(singleton.args.at("frf").as_atom()),
-            singleton_puzzles=cls.singleton_puzzles,
-        )
+        launcher_id = bytes32(singleton.args.at("frf").as_atom())
 
         inner_puzzle = singleton.args.at("rf")
         inner_conditions = parse_conditions_non_consensus(
@@ -473,7 +501,7 @@ class PlotNFT:
                 assert previous_pool_config.timelock is not None
                 potential_exiting_config = replace(
                     PoolingCustody(
-                        singleton_struct=singleton_struct,
+                        launcher_id=launcher_id,
                         synthetic_pubkey=previous_pool_config.self_custody_pubkey,
                         pool_puzzle_hash=previous_pool_config.pool_puzzle_hash,
                         timelock=previous_pool_config.timelock,
@@ -509,7 +537,7 @@ class PlotNFT:
         if config.pool_puzzle_hash is not None:
             assert config.timelock is not None
             custody: SelfCustody | PoolingCustody = PoolingCustody(
-                singleton_struct=singleton_struct,
+                launcher_id=launcher_id,
                 synthetic_pubkey=config.self_custody_pubkey,
                 pool_puzzle_hash=config.pool_puzzle_hash,
                 timelock=config.timelock,
@@ -527,7 +555,7 @@ class PlotNFT:
             coin=Coin(
                 coin_spend.coin.name(),
                 puzzle_for_singleton(
-                    launcher_id=singleton_struct.launcher_id,
+                    launcher_id=launcher_id,
                     inner_puz=custody.puzzle(nonce=0),
                     singleton_mod=cls.singleton_puzzles.singleton_mod,
                     launcher_hash=cls.singleton_puzzles.singleton_launcher_hash,
@@ -541,7 +569,7 @@ class PlotNFT:
                 amount=coin_spend.coin.amount,
             ),
             puzzle=PlotNFTPuzzle(
-                singleton_struct=singleton_struct,
+                launcher_id=launcher_id,
                 inner_custody=custody,
             ),
         )
