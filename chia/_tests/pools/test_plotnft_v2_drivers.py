@@ -39,6 +39,8 @@ user_sk = calculate_synthetic_secret_key(
 )
 ACS = Program.to(1)
 ACS_PH = ACS.get_tree_hash()
+POOL_PUZZLE = Program.to("I'm a pool :)")
+POOL_PUZZLE_HASH = POOL_PUZZLE.get_tree_hash()
 
 
 async def mint_plotnft(
@@ -54,7 +56,7 @@ async def mint_plotnft(
         custody: PoolingCustody | SelfCustody = PoolingCustody(
             singleton_struct=singleton_struct,
             synthetic_pubkey=user_sk.get_g1(),
-            pool_puzzle_hash=bytes32.zeros,
+            pool_puzzle_hash=POOL_PUZZLE_HASH,
             reward_puzhash=RewardPuzzle(singleton_id=singleton_struct.launcher_id).puzzle_hash(),
             timelock=uint64(1000),
             exiting=desired_state == "waiting_room",
@@ -90,7 +92,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         custody = PoolingCustody(
             singleton_struct=plotnft.puzzle.singleton_struct,
             synthetic_pubkey=plotnft.config.self_custody_pubkey,
-            pool_puzzle_hash=bytes32.zeros,
+            pool_puzzle_hash=POOL_PUZZLE_HASH,
             reward_puzhash=RewardPuzzle(singleton_id=plotnft.puzzle.singleton_struct.launcher_id).puzzle_hash(),
             timelock=uint64(1000),
             exiting=False,
