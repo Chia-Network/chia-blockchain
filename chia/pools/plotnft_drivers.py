@@ -413,10 +413,15 @@ class PlotNFT(PlotNFTPuzzle):
         cls,
         *,
         coin_spend: CoinSpend,
-        genesis_challenge: bytes32,
+        genesis_challenge: bytes32 | None = None,
         pre_uncurry: UncurriedPuzzle | None = None,
         previous_plotnft_puzzle: PlotNFTPuzzle | None = None,
     ) -> Self:
+        if genesis_challenge is None and previous_plotnft_puzzle is None:
+            raise ValueError("Either genesis_challenge or previous_plotnft_puzzle must be provided")
+        if genesis_challenge is None:
+            assert previous_plotnft_puzzle is not None  # mypy I guess can't figure this out
+            genesis_challenge = previous_plotnft_puzzle.genesis_challenge
         if pre_uncurry is None:
             singleton = uncurry_puzzle(coin_spend.puzzle_reveal)
         else:
