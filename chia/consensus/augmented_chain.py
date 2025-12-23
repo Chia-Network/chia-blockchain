@@ -54,13 +54,6 @@ class AugmentedBlockchain:
             max_height = max(self._height_to_hash.keys())
             last_header_hash = self._height_to_hash[max_height]
 
-            # New block must be the next sequential block
-            if block_record.height != max_height + 1:
-                raise AugmentedBlockchainValidationError(
-                    f"Blocks must be added in sequential order. "
-                    f"Expected height {max_height + 1}, got {block_record.height}"
-                )
-
             # New block must chain to the last added block
             if block_record.prev_hash != last_header_hash:
                 raise AugmentedBlockchainValidationError(
