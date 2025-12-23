@@ -47,15 +47,16 @@ from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 from filelock import FileLock
 from typing_extensions import Self
 
-from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block_with_mmr
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.consensus.get_block_challenge import post_hard_fork2, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -253,6 +254,7 @@ class BlockTools:
     _block_cache_height_to_hash: dict[uint32, bytes32]
     _block_cache_difficulty: uint64
     _block_cache: dict[bytes32, BlockRecord]
+    mmr_manager: BlockchainMMRManager
 
     def __init__(
         self,
@@ -325,6 +327,9 @@ class BlockTools:
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = replace_str_to_bytes(constants, **overrides)
         self.constants = updated_constants
+
+        # Initialize MMR manager for incremental MMR computation
+        self.mmr_manager = BlockchainMMRManager(aggregate_from=updated_constants.HARD_FORK2_HEIGHT)
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
@@ -819,6 +824,8 @@ class BlockTools:
             if force_plot_id is not None:
                 raise ValueError("Cannot specify plot_id for genesis block")
             initial_block_list_len = 0
+            # Reset MMR manager for fresh block generation
+            self.mmr_manager = BlockchainMMRManager(aggregate_from=constants.HARD_FORK2_HEIGHT)
             genesis = self.create_genesis_block(
                 constants,
                 seed,
@@ -833,6 +840,8 @@ class BlockTools:
         else:
             initial_block_list_len = len(block_list)
             num_empty_slots_added = uint32(0)  # Allows forcing empty slots in the beginning, for testing purposes
+            # Reset MMR manager - will be populated after BlockRecords are created via load_block_list
+            self.mmr_manager = BlockchainMMRManager(aggregate_from=constants.HARD_FORK2_HEIGHT)
 
         if num_blocks == 0:
             return block_list
@@ -850,6 +859,11 @@ class BlockTools:
             blocks = self._block_cache
         else:
             height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
+
+        # Populate MMR from existing BlockRecords
+        for full_block in block_list:
+            block_record = blocks[full_block.header_hash]
+            self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -1031,6 +1045,7 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            mmr_manager=self.mmr_manager,
                             overflow_cc_challenge=None,
                             overflow_rc_challenge=None,
                         )
@@ -1073,6 +1088,11 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
+                        # Add block to MMR manager for proper MMR computation
+                        self.mmr_manager.add_block_to_mmr(
+                            block_record.header_hash, block_record.prev_hash, block_record.height
+                        )
+                        self.log.info(f"Created block {block_record.height} ov=False, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
@@ -1138,12 +1158,22 @@ class BlockTools:
             # include the hash in the next sub-slot
             sub_epoch_summary: SubEpochSummary | None = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
+                block_cache = BlockCache(blocks)
+                post_hard_fork = post_hard_fork2(
+                    constants=constants,
+                    blocks=block_cache,
+                    prev_b_hash=latest_block.prev_hash,
+                    sp_index=latest_block.signage_point_index,
+                    first_in_sub_slot=True,
+                )
+
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    BlockCache(blocks),
+                    block_cache,
                     latest_block.required_iters,
                     block_list[-1],
                     False,
+                    post_hard_fork,
                 )
             if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
@@ -1337,6 +1367,7 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            mmr_manager=self.mmr_manager,
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
@@ -1380,6 +1411,11 @@ class BlockTools:
 
                         blocks_added_this_sub_slot += 1
                         blocks[full_block.header_hash] = block_record
+                        # Add block to MMR manager for proper MMR computation
+                        self.mmr_manager.add_block_to_mmr(
+                            block_record.header_hash, block_record.prev_hash, block_record.height
+                        )
+                        self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
@@ -1507,7 +1543,7 @@ class BlockTools:
                         )
                         assert unfinished_block is not None
                         total_iters_sp = uint128(sub_slot_total_iters + sp_iters)
-                        return unfinished_block_to_full_block(
+                        return unfinished_block_to_full_block_with_mmr(
                             unfinished_block,
                             cc_ip_vdf,
                             cc_ip_proof,
@@ -1520,6 +1556,7 @@ class BlockTools:
                             BlockCache({}),
                             total_iters_sp,
                             constants.DIFFICULTY_STARTING,
+                            constants,
                         )
 
                 if signage_point_index == constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA - 1:
@@ -1572,7 +1609,7 @@ class BlockTools:
                             unfinished_block.reward_chain_block.signage_point_index,
                         )
                     )
-                    return unfinished_block_to_full_block(
+                    return unfinished_block_to_full_block_with_mmr(
                         unfinished_block,
                         cc_ip_vdf,
                         cc_ip_proof,
@@ -1585,6 +1622,7 @@ class BlockTools:
                         BlockCache({}),
                         total_iters_sp,
                         constants.DIFFICULTY_STARTING,
+                        constants,
                     )
             sub_slot_total_iters = uint128(sub_slot_total_iters + constants.SUB_SLOT_ITERS_STARTING)
 
@@ -1768,6 +1806,7 @@ def finish_block(
     latest_block: BlockRecord,
     sub_slot_iters: uint64,
     difficulty: uint64,
+    mmr_manager: BlockchainMMRManager,
     normalized_to_identity_cc_ip: bool = False,
 ) -> tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
@@ -1823,7 +1862,7 @@ def finish_block(
     sp_total_iters = uint128(
         sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     )
-    full_block: FullBlock = unfinished_block_to_full_block(
+    full_block: FullBlock = unfinished_block_to_full_block_with_mmr(
         unfinished_block,
         cc_ip_vdf,
         cc_ip_proof,
@@ -1833,9 +1872,10 @@ def finish_block(
         icc_ip_proof,
         finished_sub_slots,
         latest_block,
-        BlockCache(blocks),
+        BlockCache(blocks, mmr_manager=mmr_manager),
         sp_total_iters,
         difficulty,
+        constants,
     )
 
     block_record = block_to_block_record(
@@ -2022,6 +2062,7 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
+    mmr_manager: BlockchainMMRManager,
     overflow_cc_challenge: bytes32 | None = None,
     overflow_rc_challenge: bytes32 | None = None,
     normalized_to_identity_cc_ip: bool = False,
@@ -2081,6 +2122,7 @@ def get_full_block_and_block_record(
         prev_block,
         sub_slot_iters,
         difficulty,
+        mmr_manager,
         normalized_to_identity_cc_ip,
     )
 
