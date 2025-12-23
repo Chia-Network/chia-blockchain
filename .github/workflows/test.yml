@@ -237,7 +237,7 @@ jobs:
 
       # - name: Download Results
       #   if: false
-      #   uses: actions/download-artifact@v6
+      #   uses: actions/download-artifact@v7
       #   with:
       #     merge-multiple: true
       #     pattern: junit-data-*
@@ -263,7 +263,7 @@ jobs:
       #     if-no-files-found: error
 
       - name: Download Coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           merge-multiple: true
           pattern: coverage-data-*
