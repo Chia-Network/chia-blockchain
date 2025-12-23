@@ -48,6 +48,7 @@ async def _validate_and_add_block(
     expected_error: Err | None = None,
     skip_prevalidation: bool = False,
     fork_info: ForkInfo | None = None,
+    augmented_blockchain: AugmentedBlockchain | None = None,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -77,9 +78,11 @@ async def _validate_and_add_block(
             conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
         results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
+        # Reusing the same instance across validations matches production behavior
+        aug_blockchain = augmented_blockchain if augmented_blockchain is not None else AugmentedBlockchain(blockchain)
         future = await pre_validate_block(
             blockchain.constants,
-            AugmentedBlockchain(blockchain),
+            aug_blockchain,
             block,
             blockchain.pool,
             None,
@@ -154,6 +157,7 @@ async def _validate_and_add_block_multi_result(
     expected_result: list[AddBlockResult],
     skip_prevalidation: bool = False,
     fork_info: ForkInfo | None = None,
+    augmented_blockchain: AugmentedBlockchain | None = None,
 ) -> None:
     try:
         await _validate_and_add_block(
@@ -161,6 +165,7 @@ async def _validate_and_add_block_multi_result(
             block,
             skip_prevalidation=skip_prevalidation,
             fork_info=fork_info,
+            augmented_blockchain=augmented_blockchain,
         )
     except Exception as e:
         assert isinstance(e, AssertionError)
@@ -175,6 +180,7 @@ async def _validate_and_add_block_no_error(
     block: FullBlock,
     skip_prevalidation: bool = False,
     fork_info: ForkInfo | None = None,
+    augmented_blockchain: AugmentedBlockchain | None = None,
 ) -> None:
     # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
     # the blockchain
@@ -188,4 +194,5 @@ async def _validate_and_add_block_no_error(
         ],
         skip_prevalidation=skip_prevalidation,
         fork_info=fork_info,
+        augmented_blockchain=augmented_blockchain,
     )
