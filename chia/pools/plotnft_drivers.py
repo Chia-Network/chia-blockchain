@@ -33,7 +33,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
 )
 from chia.wallet.puzzles.custody.member_puzzles import BLSWithTaprootMember, FixedPuzzleMember, SingletonMember
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
-from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Timelock
+from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, SendMessageBanned, Timelock
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
     SINGLETON_LAUNCHER,
@@ -48,23 +48,6 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 CLAIM_POOL_REWARDS_DELEGATED_PUZZLE = load_clvm_maybe_recompile(
     "claim_pool_rewards_dpuz.clsp", package_or_requirement="chia.pools"
 )
-SEND_MESSAGE_BANNED = load_clvm_maybe_recompile("send_message_banned.clsp", package_or_requirement="chia.pools")
-
-
-@dataclass(kw_only=True, frozen=True)
-class SendMessageBanned:
-    @property
-    def member_not_dpuz(self) -> bool:
-        return False
-
-    def memo(self, nonce: int) -> Program:
-        return Program.to(None)
-
-    def puzzle(self, nonce: int) -> Program:
-        return SEND_MESSAGE_BANNED
-
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()  # TODO: optimize
 
 
 def forward_to_pool_puzzle_hash_dpuz(pool_puzzle_hash: bytes32, pool_memoization: Program) -> Program:
