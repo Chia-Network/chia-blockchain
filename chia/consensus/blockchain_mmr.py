@@ -59,10 +59,14 @@ class BlockchainMMRManager:
         return self._mmr.get_root()
 
     def _build_mmr_to_block(
-        self, target_block: BlockRecord, blocks: BlockRecordsProtocol, fork_height: int | None
+        self, target_block: BlockRecord, blocks: BlockRecordsProtocol, fork_height: uint32 | None
     ) -> bytes32 | None:
         """
-        Build an MMR containing all blocks from genesis to target_block (inclusive)."""
+        Build an MMR containing all blocks from genesis to target_block (inclusive).
+
+        Args:
+            fork_height: Height of last common block, or None for fork at/before genesis
+        """
         target_height = target_block.height
 
         # Case 1: Build from scratch (no fork or underlying MMR doesn't exist/reach fork point)
@@ -111,7 +115,7 @@ class BlockchainMMRManager:
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: BlockRecordsProtocol,
-        fork_height: int | None = None,
+        fork_height: uint32 | None = None,
     ) -> bytes32 | None:
         """
         Compute MMR root for a block with sp/slot filtering.
