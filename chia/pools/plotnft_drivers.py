@@ -317,11 +317,9 @@ class PlotNFTPuzzle:
 
 
 @dataclass(kw_only=True, frozen=True)
-class PlotNFT:
+class PlotNFT(PlotNFTPuzzle):
     coin: Coin
     singleton_lineage_proof: LineageProof
-    puzzle: PlotNFTPuzzle
-    singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
     @classmethod
     def launch(
@@ -402,7 +400,11 @@ class PlotNFT:
                     inner_puzzle_hash=rev_puzzle.get_tree_hash(),
                     amount=rev_coin.amount,
                 ),
-                puzzle=plotnft_puzzle,
+                launcher_id=launcher_id,
+                user_config=user_config,
+                pool_config=pool_config,
+                exiting=exiting,
+                genesis_challenge=genesis_challenge,
             ),
         )
 
@@ -486,18 +488,22 @@ class PlotNFT:
                 inner_puzzle_hash=inner_puzzle.get_tree_hash(),
                 amount=coin_spend.coin.amount,
             ),
-            puzzle=plotnft_puzzle,
+            launcher_id=launcher_id,
+            user_config=plotnft_puzzle.user_config,
+            pool_config=plotnft_puzzle.pool_config,
+            exiting=plotnft_puzzle.exiting,
+            genesis_challenge=genesis_challenge,
         )
 
     def singleton_action_spend(self, inner_solution: Program) -> CoinSpend:
         return make_spend(
             coin=self.coin,
             puzzle_reveal=puzzle_for_singleton(
-                launcher_id=self.puzzle.singleton_struct.launcher_id,
-                inner_puz=self.puzzle.inner_puzzle(),  # TODO: optimize
-                singleton_mod=self.puzzle.singleton_struct.singleton_puzzles.singleton_mod,
-                singleton_mod_hash=self.puzzle.singleton_struct.singleton_puzzles.singleton_mod_hash,
-                launcher_hash=self.puzzle.singleton_struct.singleton_puzzles.singleton_launcher_hash,
+                launcher_id=self.singleton_struct.launcher_id,
+                inner_puz=self.inner_puzzle(),  # TODO: optimize
+                singleton_mod=self.singleton_struct.singleton_puzzles.singleton_mod,
+                singleton_mod_hash=self.singleton_struct.singleton_puzzles.singleton_mod_hash,
+                launcher_hash=self.singleton_struct.singleton_puzzles.singleton_launcher_hash,
             ),
             solution=solution_for_singleton(
                 lineage_proof=self.singleton_lineage_proof,
@@ -507,17 +513,17 @@ class PlotNFT:
         )
 
     def forward_pool_reward(self, reward: PoolReward) -> list[CoinSpend]:
-        if not self.puzzle.pooling:
+        if not self.pooling:
             raise ValueError("Cannot forward pool reward while self pooling. Try `claim_pool_reward`")
         return [
-            self.singleton_action_spend(inner_solution=self.puzzle.forward_pool_reward_inner_solution(reward)),
+            self.singleton_action_spend(inner_solution=self.forward_pool_reward_inner_solution(reward)),
             make_spend(
                 coin=reward.coin,
                 puzzle_reveal=reward.puzzle.puzzle(),
                 solution=reward.puzzle.solve(
-                    self.puzzle.inner_puzzle_hash(),
+                    self.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                        puzzle=forward_to_pool_puzzle_hash_dpuz(self.puzzle.pool_puzzle_hash),
+                        puzzle=forward_to_pool_puzzle_hash_dpuz(self.pool_puzzle_hash),
                         solution=Program.to([reward.coin.amount]),
                     ),
                 ),
@@ -525,24 +531,24 @@ class PlotNFT:
         ]
 
     def exit_to_waiting_room(self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution) -> list[CoinSpend]:
-        if not self.puzzle.pooling:
+        if not self.pooling:
             raise ValueError("Cannot exit to waiting room while self pooling.")
-        if self.puzzle.exiting:
+        if self.exiting:
             raise ValueError("Already exiting to waiting room, cannot exit again")
         return [
             self.singleton_action_spend(
-                inner_solution=self.puzzle.exit_to_from_waiting_room_inner_solution(delegated_puzzle_and_solution)
+                inner_solution=self.exit_to_from_waiting_room_inner_solution(delegated_puzzle_and_solution)
             )
         ]
 
     def exit_waiting_room(self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution) -> list[CoinSpend]:
-        if not self.puzzle.pooling:
+        if not self.pooling:
             raise ValueError("Cannot exit waiting room while self pooling.")
-        if not self.puzzle.exiting:
+        if not self.exiting:
             raise ValueError("Cannot exit waiting room while not in it")
         return [
             self.singleton_action_spend(
-                inner_solution=self.puzzle.exit_to_from_waiting_room_inner_solution(delegated_puzzle_and_solution)
+                inner_solution=self.exit_to_from_waiting_room_inner_solution(delegated_puzzle_and_solution)
             )
         ]
 
@@ -554,10 +560,10 @@ class PlotNFT:
                 (
                     1,
                     [
-                        CreateCoin(puzzle_hash=self.puzzle.inner_puzzle_hash(), amount=self.coin.amount).to_program(),
+                        CreateCoin(puzzle_hash=self.inner_puzzle_hash(), amount=self.coin.amount).to_program(),
                         SendMessage(
                             msg=reward_delegated_puzzle_and_solution.puzzle.get_tree_hash(),
-                            sender=MessageParticipant(puzzle_hash_committed=self.puzzle.puzzle_hash(nonce=0)),
+                            sender=MessageParticipant(puzzle_hash_committed=self.puzzle_hash(nonce=0)),
                             receiver=MessageParticipant(coin_id_committed=reward.coin.name()),
                         ).to_program(),
                     ],
@@ -567,10 +573,10 @@ class PlotNFT:
         )
         return dpuz_and_solution.puzzle.get_tree_hash(), [
             self.singleton_action_spend(
-                inner_solution=self.puzzle.puzzle_with_restrictions().solve(
+                inner_solution=self.puzzle_with_restrictions().solve(
                     member_validator_solutions=[],
                     dpuz_validator_solutions=[],
-                    member_solution=self.puzzle.bls_member.solve(),
+                    member_solution=self.bls_member.solve(),
                     delegated_puzzle_and_solution=dpuz_and_solution,
                 )
             ),
@@ -578,7 +584,7 @@ class PlotNFT:
                 coin=reward.coin,
                 puzzle_reveal=reward.puzzle.puzzle(),
                 solution=reward.puzzle.solve(
-                    self.puzzle.inner_puzzle_hash(),
+                    self.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=reward_delegated_puzzle_and_solution,
                 ),
             ),
@@ -586,11 +592,11 @@ class PlotNFT:
 
     def join_pool(self, user_config: UserConfig, pool_config: PoolConfig) -> tuple[bytes32, list[CoinSpend]]:
         plotnft_puzzle = PlotNFTPuzzle(
-            launcher_id=self.puzzle.launcher_id,
+            launcher_id=self.launcher_id,
             user_config=user_config,
             pool_config=pool_config,
             exiting=False,
-            genesis_challenge=self.puzzle.genesis_challenge,
+            genesis_challenge=self.genesis_challenge,
         )
 
         dpuz_and_solution = DelegatedPuzzleAndSolution(
@@ -610,10 +616,10 @@ class PlotNFT:
         )
         return dpuz_and_solution.puzzle.get_tree_hash(), [
             self.singleton_action_spend(
-                inner_solution=self.puzzle.puzzle_with_restrictions().solve(
+                inner_solution=self.puzzle_with_restrictions().solve(
                     member_validator_solutions=[],
                     dpuz_validator_solutions=[],
-                    member_solution=self.puzzle.bls_member.solve(),
+                    member_solution=self.bls_member.solve(),
                     delegated_puzzle_and_solution=dpuz_and_solution,
                 )
             )
