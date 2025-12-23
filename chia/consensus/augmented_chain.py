@@ -10,6 +10,10 @@ from chia.consensus.blockchain_interface import BlocksProtocol
 from chia.util.errors import Err
 
 
+class AugmentedBlockchainValidationError(Exception):
+    pass
+
+
 class AugmentedBlockchain:
     """
     This class wraps a BlocksProtocol and forwards calls to it, when
@@ -41,7 +45,29 @@ class AugmentedBlockchain:
         return eb[1]
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
-        assert block.header_hash == block_record.header_hash
+        if block.header_hash != block_record.header_hash:
+            raise AugmentedBlockchainValidationError(
+                f"Block header hash mismatch: block={block.header_hash.hex()[:16]}, "
+                f"record={block_record.header_hash.hex()[:16]}"
+            )
+        if self._height_to_hash:
+            max_height = max(self._height_to_hash.keys())
+            last_header_hash = self._height_to_hash[max_height]
+
+            # New block must be the next sequential block
+            if block_record.height != max_height + 1:
+                raise AugmentedBlockchainValidationError(
+                    f"Blocks must be added in sequential order. "
+                    f"Expected height {max_height + 1}, got {block_record.height}"
+                )
+
+            # New block must chain to the last added block
+            if block_record.prev_hash != last_header_hash:
+                raise AugmentedBlockchainValidationError(
+                    f"New block's prev_hash must match last added block. "
+                    f"Expected {last_header_hash.hex()[:16]}, got {block_record.prev_hash.hex()[:16]}"
+                )
+
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
 
