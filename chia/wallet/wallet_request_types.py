@@ -1604,7 +1604,7 @@ class NFTMintNFTRequest(TransactionEndpointRequest):
     target_address: str | None = field(default_factory=default_raise)
     uris: list[str] = field(default_factory=default_raise)
     hash: bytes32 = field(default_factory=default_raise)
-    royalty_amount: uint16 = uint16(0)
+    royalty_percentage: uint16 = uint16(0)
     meta_uris: list[str] = field(default_factory=list)
     license_uris: list[str] = field(default_factory=list)
     edition_number: uint64 = uint64(1)
