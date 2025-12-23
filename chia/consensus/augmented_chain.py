@@ -42,11 +42,16 @@ class AugmentedBlockchain:
             return None
         return eb[1]
 
-    def _get_fork_height(self) -> int | None:
+    def _get_fork_height(self) -> uint32 | None:
+        """
+        Compute the fork point (last common block height) from augmented height_to_hash.
+        """
         if not self._height_to_hash:
             return None
         min_height = min(self._height_to_hash.keys())
-        return min_height - 1 if min_height > 0 else None
+        if min_height == 0:
+            return None  # no common blocks
+        return uint32(min_height - 1)
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         assert block.header_hash == block_record.header_hash
@@ -157,16 +162,8 @@ class AugmentedBlockchain:
         new_sp_index: int,
         starts_new_slot: bool,
     ) -> bytes32 | None:
-        fork_height = self._get_fork_height()
-        # If no augmented blocks (fork_height is None), delegate to underlying's already-built MMR
-        if fork_height is None:
-            return self._underlying.mmr_manager.get_mmr_root_for_block(
-                prev_header_hash, new_sp_index, starts_new_slot, self._underlying, fork_height=None
-            )
-        assert self._height_to_hash, "fork_height is not None but no augmented blocks exist"
-
         return self.mmr_manager.get_mmr_root_for_block(
-            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=fork_height
+            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._get_fork_height()
         )
 
     def get_current_mmr_root(self) -> bytes32 | None:

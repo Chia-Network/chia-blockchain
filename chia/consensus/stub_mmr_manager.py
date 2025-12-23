@@ -23,7 +23,7 @@ class StubMMRManager:
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: Any,
-        fork_height: int | None = None,
+        fork_height: uint32 | None = None,
     ) -> bytes32 | None:
         # Return empty bytes for test contexts
         return None
