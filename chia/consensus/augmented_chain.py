@@ -60,6 +60,11 @@ class AugmentedBlockchain:
                     f"New block's prev_hash must match last added block. "
                     f"Expected {last_header_hash.hex()[:16]}, got {block_record.prev_hash.hex()[:16]}"
                 )
+        elif not self._underlying.contains_block(block_record.prev_hash, uint32(block_record.height - 1)):
+            raise AugmentedBlockchainValidationError(
+                f"First added block's prev_hash must be contained in underlying peak."
+                f"Expected {block_record.prev_hash.hex()[:16]}, got {block_record.prev_hash.hex()[:16]}"
+            )
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
