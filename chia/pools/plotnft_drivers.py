@@ -130,11 +130,6 @@ class UserConfig:
 
 
 @dataclass(kw_only=True, frozen=True)
-class PlotNFTConfig(UserConfig, PoolConfig):
-    pass
-
-
-@dataclass(kw_only=True, frozen=True)
 class PlotNFTPuzzle:
     launcher_id: bytes32
     genesis_challenge: bytes32
@@ -146,14 +141,6 @@ class PlotNFTPuzzle:
     @property
     def singleton_struct(self) -> SingletonStruct:
         return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
-
-    @property
-    def config(self) -> PlotNFTConfig:
-        return PlotNFTConfig(
-            synthetic_pubkey=self.user_config.synthetic_pubkey,
-            pool_puzzle_hash=self.pool_config.pool_puzzle_hash,
-            timelock=self.pool_config.timelock,
-        )
 
     @property
     def pooling(self) -> bool:
@@ -435,7 +422,7 @@ class PlotNFT:
         coin_spend: CoinSpend,
         genesis_challenge: bytes32,
         pre_uncurry: UncurriedPuzzle | None = None,
-        previous_pool_config: PlotNFTConfig | None = None,
+        previous_plotnft_puzzle: PlotNFTPuzzle | None = None,
     ) -> Self:
         if pre_uncurry is None:
             singleton = uncurry_puzzle(coin_spend.puzzle_reveal)
@@ -454,34 +441,22 @@ class PlotNFT:
             run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
         )
         singleton_create_coin = next(condition for condition in inner_conditions if isinstance(condition, CreateCoin))
-        config = None
-        exiting = False
-        if singleton_create_coin.puzzle_hash == inner_puzzle.get_tree_hash() and previous_pool_config is not None:
-            config = previous_pool_config
+        plotnft_puzzle = None
+        if singleton_create_coin.puzzle_hash == inner_puzzle.get_tree_hash() and previous_plotnft_puzzle is not None:
+            plotnft_puzzle = previous_plotnft_puzzle
 
-        if config is None and previous_pool_config is not None:
-            previous_puzzle_no_exit = PlotNFTPuzzle(
-                launcher_id=launcher_id,
-                genesis_challenge=genesis_challenge,
-                user_config=UserConfig(synthetic_pubkey=previous_pool_config.synthetic_pubkey),
-                pool_config=PoolConfig(
-                    pool_puzzle_hash=previous_pool_config.pool_puzzle_hash, timelock=previous_pool_config.timelock
-                ),
-                exiting=False,
-            )
+        if plotnft_puzzle is None and previous_plotnft_puzzle is not None:
             if (
-                replace(previous_puzzle_no_exit, pool_config=PoolConfig()).inner_puzzle_hash()
+                replace(previous_plotnft_puzzle, pool_config=PoolConfig(), exiting=False).inner_puzzle_hash()
                 == singleton_create_coin.puzzle_hash
             ):
-                config = replace(previous_pool_config, pool_puzzle_hash=None, timelock=None)
-                exiting = False
+                plotnft_puzzle = replace(previous_plotnft_puzzle, pool_config=PoolConfig(), exiting=False)
             elif (
-                replace(previous_puzzle_no_exit, exiting=True).inner_puzzle_hash() == singleton_create_coin.puzzle_hash
+                replace(previous_plotnft_puzzle, exiting=True).inner_puzzle_hash() == singleton_create_coin.puzzle_hash
             ):
-                config = previous_pool_config
-                exiting = True
+                plotnft_puzzle = replace(previous_plotnft_puzzle, exiting=True)
 
-        if config is None:
+        if plotnft_puzzle is None:
             if singleton_create_coin.memo_blob is None:
                 raise ValueError("Invalid memoization of PlotNFT")
             unknown_inner_puzzle = PuzzleWithRestrictions.from_memo(singleton_create_coin.memo_blob)
@@ -499,16 +474,15 @@ class PlotNFT:
             else:
                 pool_puzzle_hash = None
                 timelock = None
+                exiting = False
 
-            config = PlotNFTConfig(synthetic_pubkey=pubkey, pool_puzzle_hash=pool_puzzle_hash, timelock=timelock)
-
-        plotnft_puzzle = PlotNFTPuzzle(
-            launcher_id=launcher_id,
-            user_config=UserConfig(synthetic_pubkey=config.synthetic_pubkey),
-            pool_config=PoolConfig(pool_puzzle_hash=config.pool_puzzle_hash, timelock=config.timelock),
-            exiting=exiting,
-            genesis_challenge=genesis_challenge,
-        )
+            plotnft_puzzle = PlotNFTPuzzle(
+                launcher_id=launcher_id,
+                user_config=UserConfig(synthetic_pubkey=pubkey),
+                pool_config=PoolConfig(pool_puzzle_hash=pool_puzzle_hash, timelock=timelock),
+                exiting=exiting,
+                genesis_challenge=genesis_challenge,
+            )
 
         return cls(
             coin=Coin(

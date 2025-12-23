@@ -174,7 +174,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=plotnft.puzzle.config,
+            previous_plotnft_puzzle=plotnft.puzzle,
         )
 
         # Return to self-pooling
@@ -208,7 +208,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=plotnft.puzzle.config,
+            previous_plotnft_puzzle=plotnft.puzzle,
         )
         assert await sim_client.get_coin_record_by_name(plotnft.coin.name()) is not None
 
@@ -257,7 +257,7 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=plotnft.puzzle.config,
+            previous_plotnft_puzzle=plotnft.puzzle,
         )
 
 
@@ -293,5 +293,5 @@ async def test_plotnft_pooling_claim(
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0],
             genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
-            previous_pool_config=plotnft.puzzle.config,
+            previous_plotnft_puzzle=plotnft.puzzle,
         )
