@@ -20,7 +20,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.wallet.conditions import CreateCoin, MessageParticipant, SendMessage
+from chia.wallet.conditions import CreateCoin, MessageParticipant, ReceiveMessage, SendMessage
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -45,22 +45,45 @@ async def mint_plotnft(
 ) -> PlotNFT:
     await sim.farm_block(ACS_PH)
 
-    [fund_coin, _] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
+    [fund_coin, fee_coin] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
-    # TODO: test extra_conditions and fee
     conditions, spends, plotnft = PlotNFT.launch(
-        origin_coins=[fund_coin.coin],
+        origin_coins=[fund_coin.coin, fee_coin.coin],
         user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
         pool_config=PoolConfig()
         if desired_state == "self_custody"
         else PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000)),
         genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
         exiting=desired_state == "waiting_room",
+        fee=uint64(fund_coin.coin.amount + fee_coin.coin.amount - 2),  # 1 mojo change
+        extra_conditions=(
+            SendMessage(
+                msg=bytes32.zeros,
+                sender=MessageParticipant(coin_id_committed=fund_coin.coin.name()),
+                receiver=MessageParticipant(coin_id_committed=fee_coin.coin.name()),
+            ),
+        ),
     )
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
-            [*spends, make_spend(coin=fund_coin.coin, puzzle_reveal=ACS, solution=Program.to(conditions))],
+            [
+                *spends,
+                make_spend(coin=fund_coin.coin, puzzle_reveal=ACS, solution=Program.to(conditions)),
+                make_spend(
+                    coin=fee_coin.coin,
+                    puzzle_reveal=ACS,
+                    solution=Program.to(
+                        [
+                            ReceiveMessage(
+                                msg=bytes32.zeros,
+                                sender=MessageParticipant(coin_id_committed=fund_coin.coin.name()),
+                                receiver=MessageParticipant(coin_id_committed=fee_coin.coin.name()),
+                            ).to_program()
+                        ]
+                    ),
+                ),
+            ],
             G2Element(),
         )
     )
@@ -72,6 +95,8 @@ async def mint_plotnft(
         PlotNFT.get_next_from_coin_spend(coin_spend=spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE)
         == plotnft
     )
+    # Make sure change is made
+    assert (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))[0].coin.amount == 1
     return plotnft
 
 
