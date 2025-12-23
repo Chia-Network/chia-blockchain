@@ -340,7 +340,7 @@ class PlotNFT(PlotNFTPuzzle):
         user_config: UserConfig,
         genesis_challenge: bytes32,
         pool_config: PoolConfig | None = None,
-        exiting: bool = True,
+        exiting: bool = False,
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> tuple[list[Program], list[CoinSpend], Self]:
