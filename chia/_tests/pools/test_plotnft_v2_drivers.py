@@ -50,9 +50,11 @@ async def mint_plotnft(
     conditions, spends, plotnft = PlotNFT.launch(
         origin_coins=[fund_coin.coin, fee_coin.coin],
         user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
-        pool_config=PoolConfig()
+        pool_config=None
         if desired_state == "self_custody"
-        else PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000)),
+        else PoolConfig(
+            pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000), pool_memoization=Program.to(["pool"])
+        ),
         genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
         exiting=desired_state == "waiting_room",
         fee=uint64(fund_coin.coin.amount + fee_coin.coin.amount - 2),  # 1 mojo change
@@ -109,7 +111,9 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         # Join a pool
         dpuz_hash, coin_spends = plotnft.join_pool(
             user_config=plotnft.user_config,
-            pool_config=PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000)),
+            pool_config=PoolConfig(
+                pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000), pool_memoization=Program.to(["pool"])
+            ),
         )
         result = await sim_client.push_tx(
             cost_logger.add_cost(
@@ -207,7 +211,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         )
         result = await sim_client.push_tx(timelocked_spend)
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED)
-        sim.pass_time(plotnft.timelock)
+        sim.pass_time(plotnft.guaranteed_pool_config.timelock)
         await sim.farm_block()
         result = await sim_client.push_tx(cost_logger.add_cost("Waiting Room -> Self Custody", timelocked_spend))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -284,7 +288,9 @@ async def test_plotnft_pooling_claim(
         await sim.farm_block()
 
         # Make sure the pooling reward did what it was supposed to
-        assert len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.pool_puzzle_hash)) == 1
+        assert (
+            len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.guaranteed_pool_config.pool_puzzle_hash)) == 1
+        )
 
         # Make sure we can find the plotnft
         plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
