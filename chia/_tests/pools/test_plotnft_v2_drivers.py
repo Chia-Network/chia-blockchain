@@ -48,11 +48,9 @@ async def mint_plotnft(
 
     [fund_coin, _] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
-    origin_coin, _ = PlotNFT.origin_coin_info([fund_coin.coin])
-
     # TODO: test extra_conditions and fee
     conditions, spends, plotnft = PlotNFT.launch(
-        origin_coins=[origin_coin],
+        origin_coins=[fund_coin.coin],
         user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
         pool_config=PoolConfig()
         if desired_state == "self_custody"
@@ -63,7 +61,7 @@ async def mint_plotnft(
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
-            [*spends, make_spend(coin=origin_coin, puzzle_reveal=ACS, solution=Program.to(conditions))],
+            [*spends, make_spend(coin=fund_coin.coin, puzzle_reveal=ACS, solution=Program.to(conditions))],
             G2Element(),
         )
     )

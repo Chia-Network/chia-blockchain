@@ -324,18 +324,6 @@ class PlotNFT:
     singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
     @classmethod
-    def origin_coin_info(
-        cls,
-        origin_coins: list[Coin],
-    ) -> tuple[Coin, Coin]:
-        origin_coin = origin_coins[0]
-
-        launcher_hash = cls.singleton_puzzles.singleton_launcher_hash
-        launcher_coin = Coin(origin_coin.name(), launcher_hash, uint64(1))
-
-        return origin_coin, launcher_coin
-
-    @classmethod
     def launch(
         cls,
         *,
@@ -347,9 +335,8 @@ class PlotNFT:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> tuple[list[Program], list[CoinSpend], Self]:
-        mod_hash = cls.singleton_puzzles.singleton_mod_hash
-        launcher_hash = cls.singleton_puzzles.singleton_launcher_hash
-        origin_coin, launcher_coin = cls.origin_coin_info(origin_coins)
+        origin_coin = origin_coins[0]
+        launcher_coin = Coin(origin_coin.name(), cls.singleton_puzzles.singleton_launcher_hash, uint64(1))
         launcher_id = launcher_coin.name()
 
         plotnft_puzzle = PlotNFTPuzzle(
@@ -376,15 +363,15 @@ class PlotNFT:
             launcher_id,
             rev_puzzle,
             singleton_mod=cls.singleton_puzzles.singleton_mod,
-            launcher_hash=launcher_hash,
-            singleton_mod_hash=mod_hash,
+            launcher_hash=cls.singleton_puzzles.singleton_launcher_hash,
+            singleton_mod_hash=cls.singleton_puzzles.singleton_mod_hash,
         )
         rev_coin = Coin(launcher_id, full_rev_singleton_puzzle.get_tree_hash(), uint64(1))
         rev_coin_id = rev_coin.name()
         launcher_solution = Program.to([full_rev_singleton_puzzle.get_tree_hash(), uint64(1), None])
 
         conditions = [
-            CreateCoin(launcher_hash, uint64(1)),
+            CreateCoin(cls.singleton_puzzles.singleton_launcher_hash, uint64(1)),
             CreateCoin(origin_coin.puzzle_hash, uint64(sum(c.amount for c in origin_coins) - fee - 1)),
             ReserveFee(fee),
             AssertCoinAnnouncement(asserted_id=launcher_id, asserted_msg=launcher_solution.get_tree_hash()),
