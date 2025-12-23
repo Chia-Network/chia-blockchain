@@ -78,7 +78,7 @@ async def _validate_and_add_block(
             conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
         results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
-        # Reusing the same instance across validations matches production behavior
+        # use augmented blockchain if provided
         aug_blockchain = augmented_blockchain if augmented_blockchain is not None else AugmentedBlockchain(blockchain)
         future = await pre_validate_block(
             blockchain.constants,

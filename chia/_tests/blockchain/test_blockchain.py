@@ -3255,7 +3255,6 @@ class TestReorgs:
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
         # Create one AugmentedBlockchain instance and reuse it across fork chain validations
-        # This matches production behavior where batches reuse the same instance
         aug_chain = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
@@ -3308,7 +3307,7 @@ class TestReorgs:
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         assert blocks_reorg_chain[reorg_point].is_transaction_block() is False
-        # Reuse one AugmentedBlockchain instance for the fork chain
+        # Create one AugmentedBlockchain instance and reuse it across fork chain validations
         aug_chain = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
@@ -3417,10 +3416,8 @@ class TestReorgs:
 
         first_peak = b.get_peak()
         fork_info2 = None
-        # Reuse one AugmentedBlockchain instance for orphan blocks only
-        # Once blocks become NEW_PEAK, don't reuse (underlying blockchain has changed)
+        # Create one AugmentedBlockchain instance and reuse it across fork chain validations
         aug_chain: AugmentedBlockchain | None = AugmentedBlockchain(b)
-        reorg_started = False
         for reorg_block in reorg_blocks:
             if (reorg_block.height % 100) == 0:
                 peak = b.get_peak()
@@ -3446,12 +3443,7 @@ class TestReorgs:
                     augmented_blockchain=aug_chain,
                 )
             elif reorg_block.weight > chain_1_weight:
-                # Don't reuse AugmentedBlockchain after blocks commit as NEW_PEAK
-                # Each NEW_PEAK changes the underlying blockchain
-                if reorg_started:
-                    aug_chain = None  # Create fresh instance for each NEW_PEAK block
-                else:
-                    reorg_started = True
+                aug_chain = None  # Create fresh instance for each NEW_PEAK block like the full node
                 await _validate_and_add_block(
                     b,
                     reorg_block,
