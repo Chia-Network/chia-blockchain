@@ -155,9 +155,13 @@ class PlotNFTPuzzle:
     def bls_member(self) -> BLSWithTaprootMember:
         return BLSWithTaprootMember(synthetic_key=self.user_config.synthetic_pubkey)
 
-    @property
     def reward_puzhash(self) -> bytes32:
         return RewardPuzzle(singleton_id=self.launcher_id).puzzle_hash()
+
+    def forward_pool_reward_dpuz(self) -> Program:
+        return forward_to_pool_puzzle_hash_dpuz(
+            self.guaranteed_pool_config.pool_puzzle_hash, self.guaranteed_pool_config.pool_memoization
+        )
 
     def waiting_room_puzzle(self) -> Self:
         return dataclasses.replace(self, exiting=True)
@@ -167,10 +171,8 @@ class PlotNFTPuzzle:
             self.genesis_challenge[:16],
             self.singleton_struct.singleton_puzzles.singleton_mod_hash,
             self.singleton_struct.to_program().get_tree_hash(),  # TODO: optimize
-            self.reward_puzhash,
-            forward_to_pool_puzzle_hash_dpuz(
-                self.guaranteed_pool_config.pool_puzzle_hash, self.guaranteed_pool_config.pool_memoization
-            ).get_tree_hash(),
+            self.reward_puzhash(),
+            self.forward_pool_reward_dpuz().get_tree_hash(),
         )
 
     def claim_pool_reward_dpuz_and_solution(self, reward: PoolReward) -> DelegatedPuzzleAndSolution:
@@ -540,9 +542,7 @@ class PlotNFT(PlotNFTPuzzle):
                 solution=reward.solve(
                     self.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
-                        puzzle=forward_to_pool_puzzle_hash_dpuz(
-                            self.guaranteed_pool_config.pool_puzzle_hash, self.guaranteed_pool_config.pool_memoization
-                        ),
+                        puzzle=self.forward_pool_reward_dpuz(),
                         solution=Program.to([reward.coin.amount]),
                     ),
                 ),
