@@ -45,13 +45,16 @@ class ValidatorStackRestriction:
             .get_tree_hash_precalc(ENFORCE_DPUZ_WRAPPERS_HASH)
         )
 
+    def solve(self, original_dpuz: Program) -> Program:
+        return Program.to([original_dpuz.get_tree_hash()])
+
     def modify_delegated_puzzle_and_solution(
         self, delegated_puzzle_and_solution: DelegatedPuzzleAndSolution, wrapper_solutions: list[Program]
     ) -> DelegatedPuzzleAndSolution:
         if len(wrapper_solutions) != len(self.required_wrappers):
             raise ValueError("Number of wrapper solutions does not match number of required wrappers")
 
-        for wrapper, wrapper_solution in zip(self.required_wrappers, wrapper_solutions):
+        for wrapper, wrapper_solution in zip(reversed(self.required_wrappers), reversed(wrapper_solutions)):
             delegated_puzzle_and_solution = DelegatedPuzzleAndSolution(
                 puzzle=ADD_DPUZ_WRAPPER.curry(wrapper.puzzle(UNUSED_NONCE), delegated_puzzle_and_solution.puzzle),
                 solution=Program.to([wrapper_solution, delegated_puzzle_and_solution.solution]),
