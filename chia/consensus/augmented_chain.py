@@ -61,7 +61,7 @@ class AugmentedBlockchain:
                     f"Expected {last_header_hash.hex()[:16]}, got {block_record.prev_hash.hex()[:16]}"
                 )
         elif block_record.height > 0:
-            if not self._underlying.contains_block(block_record.prev_hash, uint32(block_record.height - 1)):
+            if self._underlying.try_block_record(block_record.prev_hash) is None:
                 raise AugmentedBlockchainValidationError(
                     f"First added block's prev_hash must exist in underlying blockchain. "
                     f"Block height {block_record.height}, prev_hash {block_record.prev_hash.hex()[:16]} not found"

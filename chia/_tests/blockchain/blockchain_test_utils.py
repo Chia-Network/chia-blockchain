@@ -57,17 +57,19 @@ async def _validate_and_add_block(
     # add_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
+    # use augmented blockchain if provided otherwise new instance
+    aug_blockchain = augmented_blockchain if augmented_blockchain is not None else AugmentedBlockchain(blockchain)
     prev_b = None
     prev_ses_block = None
     if block.height > 0:
-        prev_b = await blockchain.get_block_record_from_db(block.prev_header_hash)
+        prev_b = await aug_blockchain.get_block_record_from_db(block.prev_header_hash)
         if prev_b is not None:  # some negative tests require this
             curr = prev_b
             while curr.height > 0 and curr.sub_epoch_summary_included is None:
-                curr = blockchain.block_record(curr.prev_hash)
+                curr = aug_blockchain.block_record(curr.prev_hash)
             prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
-    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
+    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, aug_blockchain)
     await check_block_store_invariant(blockchain)
 
     if skip_prevalidation:
@@ -78,8 +80,6 @@ async def _validate_and_add_block(
             conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True, 0, 0, 0, 0, 0)
         results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
-        # use augmented blockchain if provided
-        aug_blockchain = augmented_blockchain if augmented_blockchain is not None else AugmentedBlockchain(blockchain)
         future = await pre_validate_block(
             blockchain.constants,
             aug_blockchain,
