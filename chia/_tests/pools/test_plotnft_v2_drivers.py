@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Literal
 
 import pytest
@@ -21,7 +20,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.wallet.conditions import AssertSecondsRelative, CreateCoin, MessageParticipant, SendMessage
+from chia.wallet.conditions import CreateCoin, MessageParticipant, SendMessage
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -119,12 +118,11 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
         # # Attempt to make a message while leaving
-        waiting_room_custody = plotnft.waiting_room_puzzle()
         message_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
             solution=Program.to(
                 [
-                    CreateCoin(waiting_room_custody.inner_puzzle_hash(), uint64(1)).to_program(),
+                    plotnft.exit_to_waiting_room_condition().to_program(),
                     SendMessage(
                         bytes32.zeros,
                         sender=MessageParticipant(parent_id_committed=bytes32.zeros),
@@ -148,9 +146,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         # Leave honestly
         honest_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
-            solution=Program.to(
-                [CreateCoin(puzzle_hash=waiting_room_custody.inner_puzzle_hash(), amount=uint64(1)).to_program()]
-            ),
+            solution=Program.to([plotnft.exit_to_waiting_room_condition().to_program()]),
         )
         singing_info = plotnft.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
         coin_spends = plotnft.exit_to_waiting_room(honest_exit_dpuz_and_solution)
@@ -172,15 +168,9 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
 
         # Return to self-pooling
-        self_custody_puzzle = replace(plotnft, pool_config=PoolConfig(), exiting=False)
         exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
             puzzle=ACS,
-            solution=Program.to(
-                [
-                    AssertSecondsRelative(seconds=plotnft.timelock).to_program(),
-                    CreateCoin(puzzle_hash=self_custody_puzzle.inner_puzzle_hash(), amount=uint64(1)).to_program(),
-                ]
-            ),
+            solution=Program.to([cond.to_program() for cond in plotnft.exit_from_waiting_room_conditions()]),
         )
         singing_info = plotnft.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
         coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)

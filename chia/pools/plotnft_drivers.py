@@ -14,6 +14,7 @@ from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
+    AssertSecondsRelative,
     Condition,
     CreateCoin,
     CreateCoinAnnouncement,
@@ -314,6 +315,17 @@ class PlotNFTPuzzle:
                 delegated_puzzle_and_solution, [Program.to([]), Program.to([])]
             ),
         )
+
+    def exit_to_waiting_room_condition(self) -> CreateCoin:
+        return CreateCoin(self.waiting_room_puzzle().inner_puzzle_hash(), uint64(1))
+
+    def exit_from_waiting_room_conditions(self) -> list[Condition]:
+        return [
+            AssertSecondsRelative(seconds=self.timelock),
+            CreateCoin(
+                puzzle_hash=replace(self, pool_config=PoolConfig(), exiting=False).inner_puzzle_hash(), amount=uint64(1)
+            ),
+        ]
 
 
 @dataclass(kw_only=True, frozen=True)
