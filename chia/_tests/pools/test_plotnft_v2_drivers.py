@@ -223,9 +223,9 @@ async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes3
     await sim.farm_block(reward_puzzle.puzzle_hash())
     coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash())
     if coin_1.coin.amount > coin_2.coin.amount:
-        return PoolReward(coin=coin_1.coin, height=sim.block_height, puzzle=reward_puzzle)
+        return PoolReward(coin=coin_1.coin, height=sim.block_height, singleton_id=singleton_id)
     else:
-        return PoolReward(coin=coin_2.coin, height=sim.block_height, puzzle=reward_puzzle)
+        return PoolReward(coin=coin_2.coin, height=sim.block_height, singleton_id=singleton_id)
 
 
 # PlotNFT claims pooling rewards while self custody

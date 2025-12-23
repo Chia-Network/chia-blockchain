@@ -536,8 +536,8 @@ class PlotNFT(PlotNFTPuzzle):
             self.singleton_action_spend(inner_solution=self.forward_pool_reward_inner_solution(reward)),
             make_spend(
                 coin=reward.coin,
-                puzzle_reveal=reward.puzzle.puzzle(),
-                solution=reward.puzzle.solve(
+                puzzle_reveal=reward.puzzle(),
+                solution=reward.solve(
                     self.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
                         puzzle=forward_to_pool_puzzle_hash_dpuz(self.pool_puzzle_hash),
@@ -599,8 +599,8 @@ class PlotNFT(PlotNFTPuzzle):
             ),
             make_spend(
                 coin=reward.coin,
-                puzzle_reveal=reward.puzzle.puzzle(),
-                solution=reward.puzzle.solve(
+                puzzle_reveal=reward.puzzle(),
+                solution=reward.solve(
                     self.inner_puzzle_hash(),
                     delegated_puzzle_and_solution=reward_delegated_puzzle_and_solution,
                 ),
@@ -672,7 +672,6 @@ class RewardPuzzle:
 
 
 @dataclass(kw_only=True, frozen=True)
-class PoolReward:
+class PoolReward(RewardPuzzle):
     coin: Coin
     height: uint32
-    puzzle: RewardPuzzle
