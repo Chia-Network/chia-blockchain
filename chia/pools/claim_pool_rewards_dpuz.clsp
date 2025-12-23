@@ -1,0 +1,37 @@
+(mod (
+    GENESIS_PREFIX
+    SINGLETON_MOD_HASH
+    SINGLETON_STRUCT_HASH
+    REWARD_HASH
+    REWARD_MESSAGE
+    inner_puzzle_hash
+    reward_height
+    reward_amount
+  )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+
+  (defun-inline calculate_pool_parent_id (GENESIS_PREFIX reward_height)
+    (logior (ash GENESIS_PREFIX (q . 128)) (logand (- (lsh (q . 1) (q . 128)) (q . 1)) reward_height))
+  )
+
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH inner_puzzle_hash)
+    (curry_hashes SINGLETON_MOD_HASH
+      SINGLETON_STRUCT_HASH
+      inner_puzzle_hash
+    )
+  )
+
+  (list
+    (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH inner_puzzle_hash))
+    (list CREATE_COIN inner_puzzle_hash 1)
+    (list
+      SEND_MESSAGE
+      0x17  ; mode = puzzle sender, coin receiver -> 0x00 010 111
+      REWARD_MESSAGE
+      (coinid (calculate_pool_parent_id GENESIS_PREFIX reward_height) REWARD_HASH reward_amount)
+    )
+  )
+)
