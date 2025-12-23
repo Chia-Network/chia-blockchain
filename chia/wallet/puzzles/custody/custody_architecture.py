@@ -254,13 +254,13 @@ class PuzzleWithRestrictions:
         return Program.to(
             (
                 self.spec_namespace,
-                [  # TODO: this should be cons
+                (
                     self.nonce,
-                    [hint.to_program() for hint in restriction_hints],
-                    1 if isinstance(self.puzzle, MofN) else 0,
-                    puzzle_hint.to_program(),
-                    self.additional_memos,
-                ],
+                    (
+                        [hint.to_program() for hint in restriction_hints],
+                        (1 if isinstance(self.puzzle, MofN) else 0, (puzzle_hint.to_program(), self.additional_memos)),
+                    ),
+                ),
             )
         )
 
@@ -268,9 +268,11 @@ class PuzzleWithRestrictions:
     def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
         if memo.atom is not None or memo.first() != Program.to(cls.spec_namespace):
             raise ValueError("Attempting to parse a memo that does not belong to this spec")
-        nonce, restriction_hints_prog, further_branching_prog, puzzle_hint_prog, additional_memos = (
-            memo.rest().as_iter()
-        )
+        nonce = memo.at("rf")
+        restriction_hints_prog = memo.at("rrf")
+        further_branching_prog = memo.at("rrrf")
+        puzzle_hint_prog = memo.at("rrrrf")
+        additional_memos = memo.at("rrrrr")
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
