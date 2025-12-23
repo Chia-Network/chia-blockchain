@@ -138,6 +138,10 @@ class PlotNFTPuzzle:
     pool_config: PoolConfig = PoolConfig()
     singleton_puzzles: ClassVar[SingletonPuzzles] = SingletonPuzzles()
 
+    def __post_init__(self) -> None:
+        if self.pool_config == PoolConfig() and self.exiting:
+            raise ValueError("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
+
     @property
     def singleton_struct(self) -> SingletonStruct:
         return SingletonStruct(launcher_id=self.launcher_id, singleton_puzzles=self.singleton_puzzles)
