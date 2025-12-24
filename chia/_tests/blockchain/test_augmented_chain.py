@@ -11,7 +11,7 @@ from chia_rs.sized_ints import uint32
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.blockchain import create_blockchain
-from chia.consensus.augmented_chain import AugmentedBlockchain
+from chia.consensus.augmented_chain import AugmentedBlockchain, AugmentedBlockchainValidationError
 from chia.simulator.block_tools import BlockTools
 from chia.util.errors import Err
 
@@ -192,3 +192,73 @@ async def test_augmented_chain_contains_block(default_10000_blocks: list[FullBlo
                 assert abc._underlying.height_to_hash(block.height) == block.header_hash
                 # check augmented contains block
                 assert block.height not in abc._height_to_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_augmented_chain_sequential(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks[:10]
+    abc = AugmentedBlockchain(NullBlockchain())
+
+    # wrong header_hash in block_record
+    abc.add_extra_block(blocks[0], BR(blocks[0]))
+    mismatched_record = FakeBlockRecord(
+        height=uint32(1),
+        header_hash=blocks[2].header_hash,
+        prev_hash=blocks[0].header_hash,
+    )
+    with pytest.raises(AugmentedBlockchainValidationError, match="Block header hash mismatch"):
+        abc.add_extra_block(blocks[1], mismatched_record)  # type: ignore[arg-type]
+
+    abc.add_extra_block(blocks[1], BR(blocks[1]))
+
+    # out of order
+    with pytest.raises(AugmentedBlockchainValidationError, match="New block's prev_hash must match last added block"):
+        abc.add_extra_block(blocks[3], BR(blocks[3]))
+
+    # wrong prev_hash
+    wrong_prev_block = FakeBlockRecord(
+        height=uint32(2),
+        header_hash=blocks[2].header_hash,
+        prev_hash=blocks[0].header_hash,  # Points to block 0 instead of block 1
+    )
+
+    with pytest.raises(AugmentedBlockchainValidationError, match="New block's prev_hash must match last added block"):
+        abc.add_extra_block(blocks[2], wrong_prev_block)  # type: ignore[arg-type]
+
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+    assert len(abc._height_to_hash) == 3
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_augmented_chain_validation_first_block_prev_hash(
+    default_10000_blocks: list[FullBlock], bt: BlockTools
+) -> None:
+    blocks = default_10000_blocks[:50]
+    async with create_blockchain(bt.constants, 2) as (blockchain, _):
+        for block in blocks[:10]:
+            await _validate_and_add_block(blockchain, block)
+
+        # first block prev_hash not in underlying
+        abc = AugmentedBlockchain(blockchain)
+        fake_prev_hash = bytes32(b"0" * 32)
+        orphan_block = FakeBlockRecord(
+            height=uint32(100),
+            header_hash=blocks[20].header_hash,
+            prev_hash=fake_prev_hash,  # Doesn't exist in underlying
+        )
+
+        with pytest.raises(
+            AugmentedBlockchainValidationError, match="First added block's prev_hash must exist in underlying"
+        ):
+            abc.add_extra_block(blocks[20], orphan_block)  # type: ignore[arg-type]
+
+        abc2 = AugmentedBlockchain(blockchain)
+        correct_block = FakeBlockRecord(
+            height=uint32(10),
+            header_hash=blocks[10].header_hash,
+            prev_hash=blocks[9].header_hash,  # Block 9 is in underlying peak
+        )
+        abc2.add_extra_block(blocks[10], correct_block)  # type: ignore[arg-type]
+        assert len(abc2._height_to_hash) == 1
