@@ -918,6 +918,16 @@ class BlockTools:
                 target_list = {self.farmer_ph, self.pool_ph}
             assert transaction_data is None
 
+            if include_transactions != 2:
+                self.available_coins.clear()
+                wallet = self.get_farmer_wallet_tool()
+            else:
+                if self._internal_wallet is None:
+                    raise RuntimeError(
+                        "include_transactions=True requires setup_keys() to be called first to initialize the wallet"
+                    )
+                wallet = self._internal_wallet
+
             if len(self.available_coins) == 0:
                 for b in block_list:
                     for coin in b.get_included_reward_coins():
@@ -927,11 +937,6 @@ class BlockTools:
                 f"found {len(self.available_coins)} reward coins in existing chain."
                 " for simplicity, we assume the rewards are all unspent in the original chain"
             )
-            if self._internal_wallet is None:
-                raise RuntimeError(
-                    "include_transactions=True requires setup_keys() to be called first to initialize the wallet"
-                )
-            wallet = self._internal_wallet
             rng = Random()
             rng.seed(seed)
         else:
