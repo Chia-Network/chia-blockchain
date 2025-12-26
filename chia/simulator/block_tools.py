@@ -484,7 +484,7 @@ class BlockTools:
             assert wallet is not None
             assert rng is not None
             if not available_coins:
-                raise ValueError("Block fill mode requires at least one available coin to spend")
+                print("Warning: No coins being used on mode 2.")
             assert block_refs == [], "block references cannot be combined with block_generator"
             assert curr.height >= self.constants.HARD_FORK_HEIGHT  # we need new compression for BlockBuilder
             # function constants

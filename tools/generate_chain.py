@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import cProfile
-import random
 import sqlite3
 import sys
 import time
@@ -37,31 +36,18 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 @click.option("--length", type=int, default=None, required=False, help="the number of blocks to generate")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profile at the end")
 @click.option(
-    "--block-refs",
-    type=bool,
-    required=False,
-    default=True,
-    help="include a long list of block references in each transaction block",
-)
-@click.option(
     "--output", type=str, required=False, default=None, help="the filename to write the resulting sqlite database to"
 )
-def main(length: int, profile: bool, block_refs: bool, output: str | None) -> None:
+def main(length: int, profile: bool, output: str | None) -> None:
     if not length:
-        if block_refs:
-            # we won't have full reflist until after 512 transaction blocks
-            length = 1500
-        else:
-            # the cost of looking up coins will be deflated because there are so
-            # few, but a longer chain takes longer to make and test
-            length = 500
+        length = 500
 
     if length <= 0:
         print("the output blockchain must have at least length 1")
         sys.exit(1)
 
     if output is None:
-        output = f"stress-test-blockchain-{length}{'-refs' if block_refs else ''}.sqlite"
+        output = f"stress-test-blockchain-{length}.sqlite"
 
     root_path = Path("./test-chain").resolve()
     root_path.mkdir(parents=True, exist_ok=True)
@@ -119,13 +105,6 @@ def main(length: int, profile: bool, block_refs: bool, output: str | None) -> No
                 with enable_profiler(profile, b.height):
                     start_time = time.monotonic()
 
-                    block_references: list[uint32]
-                    if block_refs:
-                        block_references = random.sample(transaction_blocks, min(len(transaction_blocks), 512))
-                        random.shuffle(block_references)
-                    else:
-                        block_references = []
-
                     prev_num_blocks = len(blocks)
                     blocks = bt.get_consecutive_blocks(
                         1,
@@ -134,7 +113,6 @@ def main(length: int, profile: bool, block_refs: bool, output: str | None) -> No
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
                         include_transactions=2,
-                        block_refs=block_references,
                     )
                     prev_tx_block = b
                     prev_block = blocks[-2]
@@ -144,7 +122,7 @@ def main(length: int, profile: bool, block_refs: bool, output: str | None) -> No
                     transaction_blocks.append(height)
                     num_spends += bt.prev_num_spends
                     num_additions += bt.prev_num_additions
-                    num_unspent = num_unspent + num_additions - num_spends
+                    num_unspent = num_unspent + bt.prev_num_additions - bt.prev_num_spends
 
                     if b.transactions_info:
                         if b.transactions_info.cost > tc.MAX_BLOCK_COST_CLVM:
@@ -161,7 +139,6 @@ def main(length: int, profile: bool, block_refs: bool, output: str | None) -> No
                     print(
                         f"height: {b.height} "
                         f"spends: {num_spends} "
-                        f"refs: {len(block_references)} "
                         f"new coins: {num_additions} "
                         f"unspent: {num_unspent} "
                         f"difficulty: {b.weight - prev_block.weight} "
