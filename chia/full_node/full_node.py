@@ -2523,6 +2523,13 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
+        # MMR might be diffrent from the peak mmr depending on whether we have a new sub slot or new SP
+        header_mmr_root = self.blockchain.get_mmr_root_for_block(
+            block.prev_header_hash,
+            block.reward_chain_block.signage_point_index,
+            len(block.finished_sub_slots) > 0,
+        )
+
         timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,
             difficulty,
@@ -2530,7 +2537,7 @@ class FullNode:
             block.foliage,
             ses,
             rc_prev,
-            self.blockchain.get_current_mmr_root(),
+            header_mmr_root,
         )
 
         timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
