@@ -823,6 +823,26 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
 
     @pytest.mark.anyio
+    async def test_no_mmr_root(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(1)
+        await _validate_and_add_block(blockchain, blocks[0])
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=4)
+
+        block_bad = recursive_replace(blocks[-1], "reward_chain_block.header_mmr_root", bytes32.random())
+
+        header_block_bad = get_block_header(block_bad)
+        expected_vs = ValidationState(
+            empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
+        )
+        _, error = validate_finished_header_block(
+            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
+        )
+        assert error is not None
+        assert error.code == Err.INVALID_MMR_ROOT
+        await _validate_and_add_block(blockchain, block_bad, expected_result=AddBlockResult.INVALID_BLOCK)
+
+    @pytest.mark.anyio
     async def test_empty_sub_slots_epoch(
         self, empty_blockchain: Blockchain, default_400_blocks: list[FullBlock], bt: BlockTools
     ) -> None:
