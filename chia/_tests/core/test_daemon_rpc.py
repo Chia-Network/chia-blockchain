@@ -21,4 +21,4 @@ async def test_get_version_rpc(get_daemon, bt):
 
     assert response["data"]["success"]
     assert response["data"]["version"] == __version__
-    ws_server.stop()
+    await ws_server.stop()

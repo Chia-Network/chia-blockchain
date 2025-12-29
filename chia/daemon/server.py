@@ -1441,6 +1441,7 @@ def launch_plotter(
         startupinfo=startupinfo,
         creationflags=creationflags,
     )
+    outfile.close()  # subprocess.Popen opens the file handle internally, we should close it here
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
