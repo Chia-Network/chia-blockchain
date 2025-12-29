@@ -14,7 +14,7 @@ from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
-from chia._tests.conftest import test_constants_modified
+from chia._tests.conftest import ConsensusMode, test_constants_modified
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.util.setup_nodes import FullSystem, OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
@@ -191,6 +191,7 @@ class TestSimulation:
         self,
         two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
+        consensus_mode: ConsensusMode,
     ) -> None:
         num_blocks = 2
         full_nodes, wallets, _ = two_wallet_nodes
@@ -212,7 +213,9 @@ class TestSimulation:
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        block_reward = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
+        block_reward: int = calculate_base_farmer_reward(uint32(1))
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            block_reward += calculate_pool_reward(uint32(1))
         funds = block_reward
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
@@ -347,6 +350,7 @@ class TestSimulation:
         amount: int,
         coin_count: int,
         simulator_and_wallet: OldSimulatorsAndWallets,
+        consensus_mode: ConsensusMode,
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
 
@@ -369,7 +373,13 @@ class TestSimulation:
 
         # The expected number of coins were received.
         spendable_coins = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
-        assert len(spendable_coins) == coin_count
+
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            assert len(spendable_coins) == coin_count
+        else:
+            # In this case we only receive farmer rewards, each worth exactly
+            # 250 billion mojos. Rounding up
+            assert len(spendable_coins) == (amount + 250_000_000_000 - 1) // 250_000_000_000
 
     @pytest.mark.anyio
     async def test_wait_transaction_records_entered_mempool(

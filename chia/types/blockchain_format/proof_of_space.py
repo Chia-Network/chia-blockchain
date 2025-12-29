@@ -189,7 +189,6 @@ def verify_and_get_quality_string(
             constants.PLOT_SIZE_V2,
             pos.challenge,
             plot_param.strength_v2,
-            constants.QUALITY_PROOF_SCAN_FILTER,
             pos.proof,
         )
 

@@ -157,8 +157,8 @@ partial_proof = harvester_protocol.PartialProofsData(
     bytes32.fromhex("8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deaedac87125528721493f7a"),
     "plot-filename",
     [
-        PartialProof([uint64(256)] * 64),
-        PartialProof([uint64(257)] * 64),
+        PartialProof([uint64(256)] * 16),
+        PartialProof([uint64(257)] * 16),
     ],
     uint8(4),
     uint8(32),
@@ -1126,13 +1126,13 @@ respond_compact_proof_of_time = timelord_protocol.RespondCompactProofOfTime(
 
 # SOLVER PROTOCOL
 solver_info = solver_protocol.SolverInfo(
-    partial_proof=PartialProof([uint64(256)] * 64),
+    partial_proof=PartialProof([uint64(256)] * 16),
     plot_id=bytes32.fromhex("071bef40d098cfadc2614d8b57db924788f7f2ea0fde8cf4bfaeae2894caa442"),
     strength=uint8(5),
     size=uint8(28),
 )
 
 solver_response = solver_protocol.SolverResponse(
-    PartialProof([uint64(256)] * 64),
+    PartialProof([uint64(256)] * 16),
     b"full-proof",
 )

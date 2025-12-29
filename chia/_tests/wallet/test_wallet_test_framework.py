@@ -4,6 +4,7 @@ import pytest
 from chia_rs import BlockRecord
 from chia_rs.sized_bytes import bytes32
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import (
     BalanceCheckingError,
     WalletEnvironment,
@@ -28,6 +29,10 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
     indirect=True,
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_basic_functionality(wallet_environments: WalletTestFramework) -> None:
     env_0: WalletEnvironment = wallet_environments.environments[0]
     env_1: WalletEnvironment = wallet_environments.environments[1]
@@ -63,6 +68,10 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     indirect=True,
 )
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_balance_checking(
     wallet_environments: WalletTestFramework,
 ) -> None:

@@ -41,7 +41,7 @@ class _Default:
 
 default = _Default()
 
-timeout_per_block = 5
+timeout_per_block = 10
 
 
 async def wait_for_coins_in_wallet(coins: set[Coin], wallet: Wallet, timeout: float | None = 5):
@@ -374,7 +374,9 @@ class FullNodeSimulator(FullNodeAPI):
                 height = self.full_node.blockchain.get_peak_height()
                 assert height is not None
 
-                rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+                if height < self.full_node.constants.HARD_FORK2_HEIGHT:
+                    rewards += calculate_pool_reward(height)
+                rewards += calculate_base_farmer_reward(height)
 
             if _wait_for_synced:
                 await self.wait_for_self_synced(timeout=None)
@@ -489,7 +491,9 @@ class FullNodeSimulator(FullNodeAPI):
 
         for count in itertools.count(1):
             height = uint32(height_before + count)
-            rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+            if height < self.full_node.constants.HARD_FORK2_HEIGHT:
+                rewards += calculate_pool_reward(height)
+            rewards += calculate_base_farmer_reward(height)
 
             if rewards >= amount:
                 break

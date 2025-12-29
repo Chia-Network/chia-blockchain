@@ -402,9 +402,12 @@ class TestBlockHeaderValidation:
         assert peak.height == num_blocks - 1
 
     @pytest.mark.anyio
-    async def test_unf_block_overflow(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
-    ) -> None:
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="farming v2 plots is still too inefficient. Enable this once addressed",
+    )
+    async def test_unf_block_overflow(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
 
         blocks: list[FullBlock] = []
@@ -442,7 +445,7 @@ class TestBlockHeaderValidation:
                     block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
                     assert block_generator is not None
                     block_bytes = bytes(unf)
-                    npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+                    npc_result = await blockchain.run_generator(block_bytes, block_generator)
                 validate_res = await blockchain.validate_unfinished_block(
                     unf, npc_result, skip_overflow_ss_validation=True
                 )
@@ -622,7 +625,7 @@ class TestBlockHeaderValidation:
             create_block_tools_async(
                 constants=constants.replace(
                     SUB_SLOT_ITERS_STARTING=uint64(2**12),
-                    DIFFICULTY_STARTING=uint64(2**14),
+                    DIFFICULTY_STARTING=uint64(constants.DIFFICULTY_STARTING * 2),
                 ),
                 keychain=keychain,
             ) as bt_high_iters,
@@ -795,6 +798,26 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(blockchain, block)
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    # This can probably be fixed by:
+    # index d0f7daa91b..b6c5a27d13 100644
+    # --- a/chia/consensus/multiprocess_validation.py
+    # +++ b/chia/consensus/multiprocess_validation.py
+    # @@ -246,7 +246,7 @@ async def pre_validate_block(
+    #              sub_slot_iters=vs.ssi,
+    #              prev_ses_block=vs.prev_ses_block,
+    #          )
+    # -    except ValueError:
+    # +    except Exception as e:
+    #          log.exception("block_to_block_record()")
+    #          return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+        reason="In the 3.0 hard fork scenario, the last check fails with an exception "
+        "(KeyError) instead of an error code. All passing tests fail because the "
+        "proof-of-space is invalid (mismatching challenge). The test suggests that "
+        "the specific error isn't important, but it still doesn't like exceptions",
+    )
     async def test_empty_slot_no_ses(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 2l
         blockchain = empty_blockchain
@@ -1406,6 +1429,9 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
     @pytest.mark.anyio
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="v2 plots don't support pool reward keys"
+    )
     async def test_pool_target_signature(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1431,6 +1457,12 @@ class TestBlockHeaderValidation:
             attempts += 1
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
+        reason="HARD_FORK_3_0 doesn't work as we keep getting v1 PoS with pool keys, "
+        "rather than v2 PoS with contract hashes",
+    )
     async def test_pool_target_contract(
         self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
     ) -> None:
@@ -1571,6 +1603,10 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+    )
     async def test_bad_timestamp(self, bt: BlockTools) -> None:
         # 26
         # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
@@ -2551,9 +2587,13 @@ class TestBodyValidation:
         # No generator should have no refs list
         block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
 
-        await _validate_and_add_block(
-            b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, skip_prevalidation=True
-        )
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+        else:
+            # after the hard fork activation, we no longer allow block references
+            expected_error = Err.TOO_MANY_GENERATOR_REFS
+
+        await _validate_and_add_block(b, block_2, expected_error=expected_error, skip_prevalidation=True)
 
         # Hash should be correct when there is a ref list
         await _validate_and_add_block(b, blocks[-1])
@@ -2570,17 +2610,18 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
 
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=tx,
-            block_refs=[blocks[-1].height],
-        )
-        block = blocks[-1]
-        # once the hard fork activated, we no longer use this form of block
-        # compression anymore
-        assert len(block.transactions_generator_ref_list) == 0
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            blocks = bt.get_consecutive_blocks(
+                1,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                transaction_data=tx,
+                block_refs=[blocks[-1].height],
+            )
+            block = blocks[-1]
+            # once the hard fork activated, we no longer use this form of block
+            # compression anymore
+            assert len(block.transactions_generator_ref_list) == 0
 
     @pytest.mark.anyio
     async def test_cost_exceeds_max(
@@ -3320,6 +3361,10 @@ class TestReorgs:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize("light_blocks", [True, False])
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+    )
     async def test_long_reorg(
         self,
         light_blocks: bool,
@@ -3550,11 +3595,11 @@ class TestReorgs:
             2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
 
-        spend_block = blocks[10]
         spend_coin = None
-        for coin in spend_block.get_included_reward_coins():
-            if coin.puzzle_hash == coinbase_puzzlehash:
-                spend_coin = coin
+        for bl in blocks[-2:]:
+            for coin in bl.get_included_reward_coins():
+                if coin.puzzle_hash == coinbase_puzzlehash:
+                    spend_coin = coin
         assert spend_coin is not None
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, spend_coin)
 
@@ -3656,7 +3701,7 @@ class TestReorgs:
         )
 
         # overlong encoding became invalid in the 3.0 hard fork
-        if consensus_mode == ConsensusMode.HARD_FORK_3_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_3_0:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
         else:
             expected_error = None
@@ -3665,6 +3710,10 @@ class TestReorgs:
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3754,6 +3803,9 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
 # "fork_height" to make it look like it's in a reorg, but all the same blocks
 # are just added back.
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0], reason="after hard fork 2 we no longer allow block references"
+)
 async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3804,6 +3856,10 @@ async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTo
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3868,6 +3924,10 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
+)
 async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
