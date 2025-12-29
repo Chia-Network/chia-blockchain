@@ -2624,7 +2624,7 @@ class WalletRpcApi:
         log.debug("Got minting RPC request: %s", request)
         assert self.service.wallet_state_manager
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
-        if request.royalty_amount == 10000:
+        if request.royalty_percentage == 10000:
             raise ValueError("Royalty percentage cannot be 100%")
         if request.royalty_address is not None:
             royalty_puzhash = decode_puzzle_hash(request.royalty_address)
@@ -2660,7 +2660,7 @@ class WalletRpcApi:
             action_scope,
             target_puzhash,
             royalty_puzhash,
-            request.royalty_amount,
+            request.royalty_percentage,
             did_id,
             request.fee,
             extra_conditions=extra_conditions,
