@@ -7,6 +7,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -46,6 +47,13 @@ def block_to_block_record(
     if found_ses_hash:
         assert prev_b is not None
         assert len(block.finished_sub_slots) > 0
+        with_challenge_hash = post_hard_fork2(
+            constants=constants,
+            blocks=blocks,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            first_in_sub_slot=True,
+        )
         ses = make_sub_epoch_summary(
             constants,
             blocks,
@@ -53,6 +61,7 @@ def block_to_block_record(
             blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            with_challenge_hash,
             prev_ses_block,
         )
         if ses.get_hash() != found_ses_hash:
