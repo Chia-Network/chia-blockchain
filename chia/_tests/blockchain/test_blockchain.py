@@ -3254,17 +3254,27 @@ class TestReorgs:
 
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        # Create one AugmentedBlockchain instance and reuse it across fork chain validations
+        aug_chain = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ALREADY_HAVE_BLOCK,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
                 )
             elif reorg_block.height < 15:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
                 )
             elif reorg_block.height >= 15:
-                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info, augmented_blockchain=aug_chain)
         peak = b.get_peak()
         assert peak is not None
         assert peak.height == 16
@@ -3297,15 +3307,23 @@ class TestReorgs:
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         assert blocks_reorg_chain[reorg_point].is_transaction_block() is False
+        # Create one AugmentedBlockchain instance and reuse it across fork chain validations
+        aug_chain = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 10:
-                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, augmented_blockchain=aug_chain
+                )
             elif reorg_block.height < reorg_point:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
                 )
             elif reorg_block.height >= reorg_point:
-                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info, augmented_blockchain=aug_chain)
 
             if reorg_block.is_transaction_block():
                 reorg_last_tx_block = reorg_block.header_hash
@@ -3398,6 +3416,8 @@ class TestReorgs:
 
         first_peak = b.get_peak()
         fork_info2 = None
+        # Create one AugmentedBlockchain instance and reuse it across fork chain validations
+        aug_chain: AugmentedBlockchain | None = AugmentedBlockchain(b)
         for reorg_block in reorg_blocks:
             if (reorg_block.height % 100) == 0:
                 peak = b.get_peak()
@@ -3409,16 +3429,27 @@ class TestReorgs:
                 )
 
             if reorg_block.height < num_blocks_chain_2_start:
-                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
+                await _validate_and_add_block(
+                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, augmented_blockchain=aug_chain
+                )
             elif reorg_block.weight <= chain_1_weight:
                 if fork_info2 is None:
                     fork_info2 = ForkInfo(reorg_block.height - 1, reorg_block.height - 1, reorg_block.prev_header_hash)
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info2
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info2,
+                    augmented_blockchain=aug_chain,
                 )
             elif reorg_block.weight > chain_1_weight:
+                aug_chain = None  # Create fresh instance for each NEW_PEAK block like the full node
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info2
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.NEW_PEAK,
+                    fork_info=fork_info2,
+                    augmented_blockchain=aug_chain,
                 )
 
         # if these asserts fires, there was no reorg
@@ -3505,6 +3536,8 @@ class TestReorgs:
         # Reorg to alternate chain that is 1 height longer
         blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        # Reuse one AugmentedBlockchain instance for the first fork chain
+        aug_chain = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 15:
                 await _validate_and_add_block_multi_result(
@@ -3512,26 +3545,37 @@ class TestReorgs:
                     reorg_block,
                     expected_result=[AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
                     fork_info=fork_info,
+                    augmented_blockchain=aug_chain,
                 )
             elif reorg_block.height >= 15:
-                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info, augmented_blockchain=aug_chain)
 
         # Back to original chain
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, blocks, seed=b"3")
 
         # we start from the beginning to make sure fork_info is built correctly
         fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
+        # Reuse one AugmentedBlockchain instance for the second fork chain
+        aug_chain2 = AugmentedBlockchain(b)
         for reorg_block in blocks_reorg_chain_2:
             if reorg_block.height < 15:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ALREADY_HAVE_BLOCK,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain2,
                 )
             elif reorg_block.height < 16:
                 await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN, fork_info=fork_info
+                    b,
+                    reorg_block,
+                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
+                    fork_info=fork_info,
+                    augmented_blockchain=aug_chain2,
                 )
             else:
-                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info, augmented_blockchain=aug_chain2)
 
         peak = b.get_peak()
         assert peak is not None
@@ -3581,8 +3625,10 @@ class TestReorgs:
             await _validate_and_add_block(b, block)
         fork_block = blocks[11]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+        # Reuse one AugmentedBlockchain instance for the fork chain
+        aug_chain = AugmentedBlockchain(b)
         for block in blocks_fork[12:]:
-            await _validate_and_add_block_no_error(b, block, fork_info=fork_info)
+            await _validate_and_add_block_no_error(b, block, fork_info=fork_info, augmented_blockchain=aug_chain)
 
     @pytest.mark.anyio
     async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
