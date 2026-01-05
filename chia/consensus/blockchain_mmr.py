@@ -188,8 +188,8 @@ class BlockchainMMRManager:
         current_height = self._last_height if self._last_height is not None else -1
 
         assert target_height < current_height
-        if target_height == 0:
-            # Reset to genesis
+        if target_height < 0:
+            # Reset to before genesis (empty MMR)
             self._mmr = MerkleMountainRange()
             self._last_header_hash = None
             self._last_height = None
