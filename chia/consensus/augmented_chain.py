@@ -10,7 +10,7 @@ from chia.consensus.blockchain_interface import BlocksProtocol
 from chia.util.errors import Err
 
 
-class AugmentedBlockchainValidationError(Exception):
+class AugmentedBlockchainValidationError(AssertionError):
     pass
 
 
@@ -54,7 +54,6 @@ class AugmentedBlockchain:
             max_height = max(self._height_to_hash.keys())
             last_header_hash = self._height_to_hash[max_height]
 
-            # New block must chain to the last added block
             if block_record.prev_hash != last_header_hash:
                 raise AugmentedBlockchainValidationError(
                     f"New block's prev_hash must match last added block. "
