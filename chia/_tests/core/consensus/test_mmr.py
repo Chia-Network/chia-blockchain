@@ -8,7 +8,13 @@ import pytest
 from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 
-from chia.consensus.mmr import MerkleMountainRange, get_height, get_peak_positions, verify_mmr_inclusion
+from chia.consensus.mmr import (
+    MerkleMountainRange,
+    get_height,
+    get_peak_positions,
+    leaf_index_to_pos,
+    verify_mmr_inclusion,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -350,3 +356,100 @@ def test_mmr_pop_nodes_calculation() -> None:
     mmr.pop()
     assert len(mmr.nodes) == 1
     assert mmr.size == 1
+
+
+def test_leaf_index_and_peak_positions() -> None:
+    # 1 PEAK
+    #         6
+    #        / \
+    #       2   5
+    #      / \ / \
+    #     0  1 3  4
+    #
+
+    mmr_1_peak = MerkleMountainRange()
+    for i in range(4):
+        mmr_1_peak.append(bytes32.random())
+
+    assert leaf_index_to_pos(0) == 0
+    assert leaf_index_to_pos(1) == 1
+    assert leaf_index_to_pos(2) == 3
+    assert leaf_index_to_pos(3) == 4
+    peaks_1 = get_peak_positions(len(mmr_1_peak.nodes))
+    assert peaks_1 == [6]
+
+    # 2 PEAKS
+    #       2 (peak)      3 (peak)
+    #      / \
+    #     0   1
+    #
+    mmr_2_peaks = MerkleMountainRange()
+    for i in range(3):
+        mmr_2_peaks.append(bytes32.random())
+    assert leaf_index_to_pos(0) == 0
+    assert leaf_index_to_pos(1) == 1
+    assert leaf_index_to_pos(2) == 3
+    peaks_2 = get_peak_positions(len(mmr_2_peaks.nodes))
+    assert peaks_2 == [3, 2]
+
+    # 3 PEAKS
+    #        6 (peak)       9 (peak)     10 (peak)
+    #       / \            / \
+    #      2   5          7   8
+    #     / \ / \
+    #    0  1 3  4
+    #
+    mmr_3_peaks = MerkleMountainRange()
+    for i in range(7):
+        mmr_3_peaks.append(bytes32.random())
+    assert leaf_index_to_pos(0) == 0
+    assert leaf_index_to_pos(1) == 1
+    assert leaf_index_to_pos(2) == 3
+    assert leaf_index_to_pos(3) == 4
+    assert leaf_index_to_pos(4) == 7
+    assert leaf_index_to_pos(5) == 8
+    assert leaf_index_to_pos(6) == 10
+    peaks_3 = get_peak_positions(len(mmr_3_peaks.nodes))
+    assert peaks_3 == [10, 9, 6]
+
+
+def test_mmr_structure() -> None:
+    # 1 PEAK: 4 leaves
+    mmr_1 = MerkleMountainRange()
+    leaves_1 = [bytes32.random() for _ in range(4)]
+    for leaf in leaves_1:
+        mmr_1.append(leaf)
+
+    for i, leaf in enumerate(leaves_1):
+        expected_pos = leaf_index_to_pos(i)
+        assert mmr_1.nodes[expected_pos] == leaf
+
+    # 2 PEAKS: 3 leaves
+    mmr_2 = MerkleMountainRange()
+    leaves_2 = [bytes32.random() for _ in range(3)]
+    for leaf in leaves_2:
+        mmr_2.append(leaf)
+
+    for i, leaf in enumerate(leaves_2):
+        expected_pos = leaf_index_to_pos(i)
+        assert mmr_2.nodes[expected_pos] == leaf
+
+    # 3 PEAKS: 7 leaves
+    mmr_3 = MerkleMountainRange()
+    leaves_3 = [bytes32.random() for _ in range(7)]
+    for leaf in leaves_3:
+        mmr_3.append(leaf)
+
+    for i, leaf in enumerate(leaves_3):
+        expected_pos = leaf_index_to_pos(i)
+        assert mmr_3.nodes[expected_pos] == leaf
+
+    # 4 PEAKS: 15 leaves
+    mmr_4 = MerkleMountainRange()
+    leaves_4 = [bytes32.random() for _ in range(15)]
+    for leaf in leaves_4:
+        mmr_4.append(leaf)
+
+    for i, leaf in enumerate(leaves_4):
+        expected_pos = leaf_index_to_pos(i)
+        assert mmr_4.nodes[expected_pos] == leaf
