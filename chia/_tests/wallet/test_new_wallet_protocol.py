@@ -40,7 +40,7 @@ ALL_FILTER = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
 
 
 @asynccontextmanager
-async def doowoo(
+async def connect_to_simulator_context(
     one_node: OneNode, self_hostname: str, mempool_updates: bool = True
 ) -> AsyncGenerator[tuple[FullNodeSimulator, Queue[Message], WSChiaConnection], None]:
     [full_node_service], _, _ = one_node
@@ -570,7 +570,7 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
 
 @pytest.mark.anyio
 async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str) -> None:
-    async with doowoo(one_node, self_hostname) as (simulator, _, peer):
+    async with connect_to_simulator_context(one_node, self_hostname) as (simulator, _, peer):
         #
         # simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
