@@ -48,6 +48,7 @@ async def _validate_and_add_block(
     expected_error: Err | None = None,
     skip_prevalidation: bool = False,
     fork_info: ForkInfo | None = None,
+    augmented_blockchain: AugmentedBlockchain | None = None,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -56,17 +57,19 @@ async def _validate_and_add_block(
     # add_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
+    # use augmented blockchain if provided otherwise new instance
+    aug_blockchain = augmented_blockchain if augmented_blockchain is not None else AugmentedBlockchain(blockchain)
     prev_b = None
     prev_ses_block = None
     if block.height > 0:
-        prev_b = await blockchain.get_block_record_from_db(block.prev_header_hash)
+        prev_b = await aug_blockchain.get_block_record_from_db(block.prev_header_hash)
         if prev_b is not None:  # some negative tests require this
             curr = prev_b
             while curr.height > 0 and curr.sub_epoch_summary_included is None:
-                curr = blockchain.block_record(curr.prev_hash)
+                curr = aug_blockchain.block_record(curr.prev_hash)
             prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
-    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
+    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, aug_blockchain)
     await check_block_store_invariant(blockchain)
 
     if skip_prevalidation:
@@ -79,7 +82,7 @@ async def _validate_and_add_block(
     else:
         future = await pre_validate_block(
             blockchain.constants,
-            AugmentedBlockchain(blockchain),
+            aug_blockchain,
             block,
             blockchain.pool,
             None,
@@ -154,6 +157,7 @@ async def _validate_and_add_block_multi_result(
     expected_result: list[AddBlockResult],
     skip_prevalidation: bool = False,
     fork_info: ForkInfo | None = None,
+    augmented_blockchain: AugmentedBlockchain | None = None,
 ) -> None:
     try:
         await _validate_and_add_block(
@@ -161,6 +165,7 @@ async def _validate_and_add_block_multi_result(
             block,
             skip_prevalidation=skip_prevalidation,
             fork_info=fork_info,
+            augmented_blockchain=augmented_blockchain,
         )
     except Exception as e:
         assert isinstance(e, AssertionError)
@@ -175,6 +180,7 @@ async def _validate_and_add_block_no_error(
     block: FullBlock,
     skip_prevalidation: bool = False,
     fork_info: ForkInfo | None = None,
+    augmented_blockchain: AugmentedBlockchain | None = None,
 ) -> None:
     # adds a block and ensures that there is no error. However, does not ensure that block extended the peak of
     # the blockchain
@@ -188,4 +194,5 @@ async def _validate_and_add_block_no_error(
         ],
         skip_prevalidation=skip_prevalidation,
         fork_info=fork_info,
+        augmented_blockchain=augmented_blockchain,
     )
