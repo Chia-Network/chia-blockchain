@@ -1206,7 +1206,7 @@ async def test_nft_rpc_mint(wallet_environments: WalletTestFramework) -> None:
             license_uris=license_uris,
             edition_total=uint64(st),
             edition_number=uint64(sn),
-            royalty_amount=uint16(royalty_percentage),
+            royalty_percentage=uint16(royalty_percentage),
             push=True,
         ),
         tx_config=wallet_environments.tx_config,
