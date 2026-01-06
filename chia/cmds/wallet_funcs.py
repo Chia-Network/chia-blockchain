@@ -1329,7 +1329,7 @@ async def mint_nft(
                     edition_total=uint64(edition_total) if edition_total is not None else uint64(1),
                     edition_number=uint64(edition_number) if edition_number is not None else uint64(1),
                     fee=fee,
-                    royalty_amount=uint16(royalty_percentage),
+                    royalty_percentage=uint16(royalty_percentage),
                     did_id=did_id,
                     push=push,
                 ),

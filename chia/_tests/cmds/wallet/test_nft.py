@@ -114,7 +114,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                     request.edition_total,
                     request.edition_number,
                     request.fee,
-                    request.royalty_amount,
+                    request.royalty_percentage,
                     request.did_id,
                     request.push,
                     tx_config,
