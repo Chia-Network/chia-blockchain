@@ -571,9 +571,6 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
 @pytest.mark.anyio
 async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str) -> None:
     async with connect_to_simulator_context(one_node, self_hostname) as (simulator, _, peer):
-        #
-        # simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
-
         # Farm blocks 0-11 and make sure the last one is farmed
         await simulator.farm_blocks_to_puzzlehash(12)
 
