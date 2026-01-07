@@ -159,7 +159,9 @@ class Blockchain:
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
-        self.mmr_manager = BlockchainMMRManager(aggregate_from=consensus_constants.HARD_FORK2_HEIGHT)
+        self.mmr_manager = BlockchainMMRManager(
+            consensus_constants.GENESIS_CHALLENGE, aggregate_from=consensus_constants.HARD_FORK2_HEIGHT
+        )
         self._shut_down = False
         await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()

@@ -24,6 +24,7 @@ class BlockCache:
     def __init__(
         self,
         blocks: dict[bytes32, BlockRecord],
+        genesis_challenge: bytes32,
         mmr_manager: BlockchainMMRManager | None = None,
     ):
         self._block_records = blocks
@@ -31,7 +32,7 @@ class BlockCache:
         if mmr_manager is not None:
             self.mmr_manager = mmr_manager
         else:
-            self.mmr_manager = BlockchainMMRManager()
+            self.mmr_manager = BlockchainMMRManager(genesis_challenge)
 
     def add_block(self, block: BlockRecord) -> None:
         hh = block.header_hash

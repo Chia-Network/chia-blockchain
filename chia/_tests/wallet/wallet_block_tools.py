@@ -149,7 +149,7 @@ def load_block_list(
                 sub_slot_iters = full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         blocks[full_block.header_hash] = block_to_block_record(
             constants,
-            BlockCache(blocks),
+            BlockCache(blocks, constants.GENESIS_CHALLENGE),
             uint64(1),
             full_block,
             sub_slot_iters,
@@ -202,7 +202,9 @@ def finish_block(
         [],
     )
 
-    block_record = block_to_block_record(constants, BlockCache(blocks), uint64(1), full_block, uint64(1))
+    block_record = block_to_block_record(
+        constants, BlockCache(blocks, constants.GENESIS_CHALLENGE), uint64(1), full_block, uint64(1)
+    )
     return full_block, block_record
 
 

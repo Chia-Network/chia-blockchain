@@ -544,10 +544,6 @@ def unfinished_block_to_full_block_with_mmr(
     Wrapper around unfinished_block_to_full_block that automatically computes the MMR root.
     This maintains backward compatibility while adding MMR support.
     """
-    prev_header_hash = None
-    if prev_block is not None:
-        prev_header_hash = prev_block.header_hash
-
     # Before fork, use None for MMR root.
     header_mmr_root = None
     if post_hard_fork2(
@@ -558,7 +554,7 @@ def unfinished_block_to_full_block_with_mmr(
         first_in_sub_slot=len(finished_sub_slots) > 0,
     ):
         header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
-            prev_header_hash,
+            unfinished_block.prev_header_hash,
             unfinished_block.reward_chain_block.signage_point_index,
             len(finished_sub_slots) > 0,
             blocks,

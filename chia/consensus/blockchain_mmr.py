@@ -20,6 +20,7 @@ class BlockchainMMRManager:
     Manages MMR state for blockchain operations.
     """
 
+    genesis_challenge: bytes32
     _mmr: MerkleMountainRange = field(default_factory=MerkleMountainRange)
     _last_header_hash: bytes32 | None = None
     _last_height: uint32 | None = None
@@ -111,7 +112,7 @@ class BlockchainMMRManager:
 
     def get_mmr_root_for_block(
         self,
-        prev_header_hash: bytes32 | None,
+        prev_header_hash: bytes32,
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: BlockRecordsProtocol,
@@ -123,7 +124,7 @@ class BlockchainMMRManager:
         Works for both block validation and creation by computing finalized blocks
         relative to the given sp/slot parameters.
         """
-        if prev_header_hash is None:
+        if prev_header_hash == self.genesis_challenge:
             # Genesis block has empty MMR
             return None
 

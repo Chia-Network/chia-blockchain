@@ -12,7 +12,7 @@ class MMRManagerProtocol(Protocol):
 
     def get_mmr_root_for_block(
         self,
-        prev_header_hash: bytes32 | None,
+        prev_header_hash: bytes32,
         new_sp_index: int,
         starts_new_slot: bool,
         blocks: BlockRecordsProtocol,
