@@ -74,43 +74,38 @@ def extract_slot_challenge_data(
         prev_challenge = reversed_challenge_hashes[1]
     # go throgh all blocks in sub-epoch counting blocks per slot challenge
     for height in range(sub_epoch_start, sub_epoch_end):
-        try:
-            block = blocks.height_to_block_record(uint32(height))
+        block = blocks.height_to_block_record(uint32(height))
 
-            # Update challenge state when we see a new slot
-            if block.first_in_sub_slot:
-                hashes = block.finished_challenge_slot_hashes
-                assert hashes is not None  # hashes cant be None if first in sub slot
-                if len(hashes) >= 2:
-                    # Multiple slots finished, prev is second-to-last, current is last
-                    prev_challenge = hashes[-2]
-                    current_challenge = hashes[-1]
-                else:
-                    # Single slot finished
-                    prev_challenge = current_challenge
-                    current_challenge = hashes[-1]
-
-            # Determine which challenge this block uses
-            if not block.overflow:
-                block_challenge = current_challenge
+        # Update challenge state when we see a new slot
+        if block.first_in_sub_slot:
+            hashes = block.finished_challenge_slot_hashes
+            assert hashes is not None  # hashes cant be None if first in sub slot
+            if len(hashes) >= 2:
+                # Multiple slots finished, prev is second-to-last, current is last
+                prev_challenge = hashes[-2]
+                current_challenge = hashes[-1]
             else:
-                assert prev_challenge is not None
-                block_challenge = prev_challenge
+                # Single slot finished
+                prev_challenge = current_challenge
+                current_challenge = hashes[-1]
 
-            # Track slot data
-            if not slot_data or slot_data[-1].challenge_hash != block_challenge:
-                # New slot
-                slot_data.append(SlotChallengeData(challenge_hash=block_challenge, block_count=uint32(1)))
-            else:
-                # Same slot, increment count
-                slot_data[-1] = SlotChallengeData(
-                    challenge_hash=block_challenge,
-                    block_count=uint32(slot_data[-1].block_count + 1),
-                )
+        # Determine which challenge this block uses
+        if not block.overflow:
+            block_challenge = current_challenge
+        else:
+            assert prev_challenge is not None
+            block_challenge = prev_challenge
 
-        except Exception as e:
-            log.warning(f"Could not access block at height {height} for challenge extraction: {e}")
-            continue
+        # Track slot data
+        if not slot_data or slot_data[-1].challenge_hash != block_challenge:
+            # New slot
+            slot_data.append(SlotChallengeData(challenge_hash=block_challenge, block_count=uint32(1)))
+        else:
+            # Same slot, increment count
+            slot_data[-1] = SlotChallengeData(
+                challenge_hash=block_challenge,
+                block_count=uint32(slot_data[-1].block_count + 1),
+            )
 
     return slot_data
 
