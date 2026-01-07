@@ -540,7 +540,7 @@ class WeightProofHandler:
                     curr.finished_sub_slots,
                     block_record.overflow,
                     None if curr.height == 0 else blocks[curr.prev_header_hash],
-                    BlockCache(blocks),
+                    BlockCache(blocks, self.constants.GENESIS_CHALLENGE),
                     block_record.sp_total_iters(self.constants),
                     block_record.sp_iters(self.constants),
                 )
@@ -739,7 +739,7 @@ async def _challenge_block_vdfs(
         header_block.finished_sub_slots,
         block_rec.overflow,
         None if header_block.height == 0 else sub_blocks[header_block.prev_header_hash],
-        BlockCache(sub_blocks),
+        BlockCache(sub_blocks, constants.GENESIS_CHALLENGE),
         block_rec.sp_total_iters(constants),
         block_rec.sp_iters(constants),
     )
@@ -1217,7 +1217,7 @@ def validate_recent_blocks(
 ) -> tuple[bool, list[bytes]]:
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     summaries = summaries_from_bytes(summaries_bytes)
-    sub_blocks = BlockCache({})
+    sub_blocks = BlockCache({}, constants.GENESIS_CHALLENGE)
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
     ses_idx = len(summaries) - len(first_ses_idx)
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING

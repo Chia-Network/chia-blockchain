@@ -329,7 +329,9 @@ class BlockTools:
         self.constants = updated_constants
 
         # Initialize MMR manager for incremental MMR computation
-        self.mmr_manager = BlockchainMMRManager(aggregate_from=updated_constants.HARD_FORK2_HEIGHT)
+        self.mmr_manager = BlockchainMMRManager(
+            self.constants.GENESIS_CHALLENGE, aggregate_from=updated_constants.HARD_FORK2_HEIGHT
+        )
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
         self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
@@ -825,7 +827,9 @@ class BlockTools:
                 raise ValueError("Cannot specify plot_id for genesis block")
             initial_block_list_len = 0
             # Reset MMR manager for fresh block generation
-            self.mmr_manager = BlockchainMMRManager(aggregate_from=constants.HARD_FORK2_HEIGHT)
+            self.mmr_manager = BlockchainMMRManager(
+                self.constants.GENESIS_CHALLENGE, aggregate_from=constants.HARD_FORK2_HEIGHT
+            )
             genesis = self.create_genesis_block(
                 constants,
                 seed,
@@ -841,7 +845,9 @@ class BlockTools:
             initial_block_list_len = len(block_list)
             num_empty_slots_added = uint32(0)  # Allows forcing empty slots in the beginning, for testing purposes
             # Reset MMR manager - will be populated after BlockRecords are created via load_block_list
-            self.mmr_manager = BlockchainMMRManager(aggregate_from=constants.HARD_FORK2_HEIGHT)
+            self.mmr_manager = BlockchainMMRManager(
+                self.constants.GENESIS_CHALLENGE, aggregate_from=constants.HARD_FORK2_HEIGHT
+            )
 
         if num_blocks == 0:
             return block_list
@@ -946,7 +952,7 @@ class BlockTools:
 
                     signage_point: SignagePoint = get_signage_point(
                         constants,
-                        BlockCache(blocks),
+                        BlockCache(blocks, constants.GENESIS_CHALLENGE),
                         latest_block,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -962,7 +968,7 @@ class BlockTools:
 
                     prev_tx_height = pre_sp_tx_block_height(
                         constants=constants,
-                        blocks=BlockCache(blocks),
+                        blocks=BlockCache(blocks, constants.GENESIS_CHALLENGE),
                         prev_b_hash=latest_block.header_hash,
                         sp_index=uint8(signage_point_index),
                         first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
@@ -1158,7 +1164,7 @@ class BlockTools:
             # include the hash in the next sub-slot
             sub_epoch_summary: SubEpochSummary | None = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
-                block_cache = BlockCache(blocks)
+                block_cache = BlockCache(blocks, constants.GENESIS_CHALLENGE)
                 post_hard_fork = post_hard_fork2(
                     constants=constants,
                     blocks=block_cache,
@@ -1275,7 +1281,7 @@ class BlockTools:
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
                         constants,
-                        BlockCache(blocks),
+                        BlockCache(blocks, constants.GENESIS_CHALLENGE),
                         latest_block_eos,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -1293,7 +1299,7 @@ class BlockTools:
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
                     prev_tx_height = pre_sp_tx_block_height(
                         constants=constants,
-                        blocks=BlockCache(blocks),
+                        blocks=BlockCache(blocks, constants.GENESIS_CHALLENGE),
                         prev_b_hash=latest_block.header_hash,
                         sp_index=uint8(signage_point_index),
                         first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
@@ -1461,7 +1467,7 @@ class BlockTools:
             for signage_point_index in range(constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
-                    BlockCache({}),
+                    BlockCache({}, constants.GENESIS_CHALLENGE),
                     None,
                     sub_slot_total_iters,
                     uint8(signage_point_index),
@@ -1521,7 +1527,7 @@ class BlockTools:
                         self.get_pool_key_signature,
                         signage_point,
                         timestamp,
-                        BlockCache({}),
+                        BlockCache({}, constants.GENESIS_CHALLENGE),
                         seed=seed,
                         finished_sub_slots_input=finished_sub_slots,
                         compute_fees=compute_fee_test,
@@ -1553,7 +1559,7 @@ class BlockTools:
                             None,
                             finished_sub_slots,
                             None,
-                            BlockCache({}),
+                            BlockCache({}, constants.GENESIS_CHALLENGE),
                             total_iters_sp,
                             constants.DIFFICULTY_STARTING,
                             constants,
@@ -1619,7 +1625,7 @@ class BlockTools:
                         None,
                         finished_sub_slots,
                         None,
-                        BlockCache({}),
+                        BlockCache({}, constants.GENESIS_CHALLENGE),
                         total_iters_sp,
                         constants.DIFFICULTY_STARTING,
                         constants,
@@ -1872,14 +1878,18 @@ def finish_block(
         icc_ip_proof,
         finished_sub_slots,
         latest_block,
-        BlockCache(blocks, mmr_manager=mmr_manager),
+        BlockCache(blocks, constants.GENESIS_CHALLENGE, mmr_manager=mmr_manager),
         sp_total_iters,
         difficulty,
         constants,
     )
 
     block_record = block_to_block_record(
-        constants, BlockCache(blocks), required_iters, full_block, sub_slot_iters=sub_slot_iters
+        constants,
+        BlockCache(blocks, constants.GENESIS_CHALLENGE),
+        required_iters,
+        full_block,
+        sub_slot_iters=sub_slot_iters,
     )
     return full_block, block_record
 
@@ -1951,7 +1961,7 @@ def load_block_list(
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        cache = BlockCache(blocks)
+        cache = BlockCache(blocks, constants.GENESIS_CHALLENGE)
         prev_transaction_b_height = pre_sp_tx_block_height(
             constants=constants,
             blocks=cache,
@@ -2095,7 +2105,7 @@ def get_full_block_and_block_record(
         get_pool_signature,
         signage_point,
         uint64(timestamp),
-        BlockCache(blocks),
+        BlockCache(blocks, constants.GENESIS_CHALLENGE),
         seed,
         new_gen,
         prev_block,

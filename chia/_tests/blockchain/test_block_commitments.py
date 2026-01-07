@@ -242,7 +242,7 @@ class TestSyncWithCommitments:
 
 def test_mmr_manager_deep_copy() -> None:
     # Create original MMR manager
-    mmr1 = BlockchainMMRManager()
+    mmr1 = BlockchainMMRManager(test_constants.GENESIS_CHALLENGE)
 
     # Add some blocks to it
     mmr1.add_block_to_mmr(bytes32([1] * 32), bytes32([0] * 32), uint32(0))
