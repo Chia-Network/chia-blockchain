@@ -226,13 +226,13 @@ async def test_peer_queue_prioritization_fallback() -> None:
     tx2 = get_transaction_queue_entry(peer3, 1, peers_with_tx2)
     queue.put(tx2, peer3)
     # tx2 gets top priority with FPC 1.0
-    assert math.isclose(queue._queue_dict[peer3].queue[0][0], -1.0)
+    assert math.isclose(queue._normal_priority_queues[peer3].queue[0][0], -1.0)
     entry = await queue.pop()
     # NOTE: This whole test file uses `index` as an addition to
     # `TransactionQueueEntry` for easier testing, hence this type ignore here
     # and everywhere else.
     assert entry.index == 1  # type: ignore[attr-defined]
     # tx1 comes next due to lowest priority fallback
-    assert math.isinf(queue._queue_dict[peer3].queue[0][0])
+    assert math.isinf(queue._normal_priority_queues[peer3].queue[0][0])
     entry = await queue.pop()
     assert entry.index == 0  # type: ignore[attr-defined]
