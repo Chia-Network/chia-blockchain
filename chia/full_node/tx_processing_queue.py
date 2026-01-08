@@ -85,7 +85,7 @@ class TransactionQueue:
     _list_cursor: int  # this is which index
     _queue_length: asyncio.Semaphore
     _index_to_peer_map: list[bytes32]
-    _queue_dict: dict[bytes32, PriorityQueue[tuple[float, TransactionQueueEntry]]]
+    _normal_priority_queues: dict[bytes32, PriorityQueue[tuple[float, TransactionQueueEntry]]]
     _high_priority_queue: SimpleQueue[TransactionQueueEntry]
     peer_size_limit: int
     log: logging.Logger
@@ -94,7 +94,7 @@ class TransactionQueue:
         self._list_cursor = 0
         self._queue_length = asyncio.Semaphore(0)  # default is 1
         self._index_to_peer_map = []
-        self._queue_dict = {}
+        self._normal_priority_queues = {}
         self._high_priority_queue = SimpleQueue()  # we don't limit the number of high priority transactions
         self.peer_size_limit = peer_size_limit
         self.log = log
@@ -102,25 +102,27 @@ class TransactionQueue:
     def put(self, tx: TransactionQueueEntry, peer_id: bytes32 | None, high_priority: bool = False) -> None:
         if peer_id is None or high_priority:  # when it's local there is no peer_id.
             self._high_priority_queue.put(tx)
+            self._queue_length.release()
+            return
+        peer_queue = self._normal_priority_queues.get(peer_id)
+        if peer_queue is None:
+            peer_queue = PriorityQueue()
+            self._normal_priority_queues[peer_id] = peer_queue
+            self._index_to_peer_map.append(peer_id)
+        if peer_queue.qsize() >= self.peer_size_limit:
+            self.log.warning(f"Transaction queue full for peer {peer_id}")
+            raise TransactionQueueFull(f"Transaction queue full for peer {peer_id}")
+        tx_info = tx.peers_with_tx.get(peer_id)
+        if tx_info is not None and tx_info.advertised_cost > 0:
+            fpc = tx_info.advertised_fee / tx_info.advertised_cost
+            # PriorityQueue returns lowest first so we invert
+            priority = -fpc
         else:
-            if peer_id not in self._queue_dict:
-                self._queue_dict[peer_id] = PriorityQueue()
-                self._index_to_peer_map.append(peer_id)
-            if self._queue_dict[peer_id].qsize() < self.peer_size_limit:
-                tx_info = tx.peers_with_tx.get(peer_id)
-                if tx_info is not None and tx_info.advertised_cost > 0:
-                    fpc = tx_info.advertised_fee / tx_info.advertised_cost
-                    # PriorityQueue returns lowest first so we invert
-                    priority = -fpc
-                else:
-                    # This peer didn't advertise cost and fee information for
-                    # this transaction (it sent a `RespondTransaction` message
-                    # instead of a `NewTransaction` one).
-                    priority = float("inf")
-                self._queue_dict[peer_id].put((priority, tx))
-            else:
-                self.log.warning(f"Transaction queue full for peer {peer_id}")
-                raise TransactionQueueFull(f"Transaction queue full for peer {peer_id}")
+            # This peer didn't advertise cost and fee information for
+            # this transaction (it sent a `RespondTransaction` message
+            # instead of a `NewTransaction` one).
+            priority = float("inf")
+        peer_queue.put((priority, tx))
         self._queue_length.release()  # increment semaphore to indicate that we have a new item in the queue
 
     async def pop(self) -> TransactionQueueEntry:
@@ -129,7 +131,7 @@ class TransactionQueue:
             return self._high_priority_queue.get()
         result: TransactionQueueEntry | None = None
         while True:
-            peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
+            peer_queue = self._normal_priority_queues[self._index_to_peer_map[self._list_cursor]]
             if not peer_queue.empty():
                 _, result = peer_queue.get()
             self._list_cursor += 1
@@ -138,8 +140,8 @@ class TransactionQueue:
                 self._list_cursor = 0
                 new_peer_map = []
                 for peer_id in self._index_to_peer_map:
-                    if self._queue_dict[peer_id].empty():
-                        self._queue_dict.pop(peer_id)
+                    if self._normal_priority_queues[peer_id].empty():
+                        self._normal_priority_queues.pop(peer_id)
                     else:
                         new_peer_map.append(peer_id)
                 self._index_to_peer_map = new_peer_map
