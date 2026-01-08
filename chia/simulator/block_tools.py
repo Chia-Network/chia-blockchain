@@ -837,12 +837,6 @@ class BlockTools:
         if num_blocks == 0:
             return block_list
 
-        if block_list[-1].height >= constants.HARD_FORK2_HEIGHT and pool_reward_puzzle_hash is not None:
-            raise ValueError(
-                "block height is past hard fork 2 activation. v2 plots don't "
-                "support pool puzzle hashes, only contract hashes"
-            )
-
         blocks: dict[bytes32, BlockRecord]
         if block_list[-1].header_hash == self._block_cache_header:
             height_to_hash = self._block_cache_height_to_hash
