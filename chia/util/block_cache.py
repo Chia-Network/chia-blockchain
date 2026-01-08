@@ -24,14 +24,15 @@ class BlockCache:
     def __init__(
         self,
         blocks: dict[bytes32, BlockRecord],
-        genesis_challenge: bytes32,
-        mmr_manager: BlockchainMMRManager | None = None,
+        genesis_challenge: bytes32 | None = None,
+        mmr_manager: MMRManagerProtocol | None = None,
     ):
         self._block_records = blocks
         self._height_to_hash = {block.height: hh for hh, block in blocks.items()}
         if mmr_manager is not None:
             self.mmr_manager = mmr_manager
         else:
+            assert genesis_challenge is not None
             self.mmr_manager = BlockchainMMRManager(genesis_challenge)
 
     def add_block(self, block: BlockRecord) -> None:

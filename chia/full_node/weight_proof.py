@@ -37,6 +37,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
     validate_pospace_and_get_required_iters,
 )
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
@@ -1217,7 +1218,7 @@ def validate_recent_blocks(
 ) -> tuple[bool, list[bytes]]:
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     summaries = summaries_from_bytes(summaries_bytes)
-    sub_blocks = BlockCache({}, constants.GENESIS_CHALLENGE)
+    sub_blocks = BlockCache({}, mmr_manager=StubMMRManager())
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
     ses_idx = len(summaries) - len(first_ses_idx)
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING

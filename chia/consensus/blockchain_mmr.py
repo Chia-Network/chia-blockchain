@@ -37,16 +37,11 @@ class BlockchainMMRManager:
         """
         Add a block to the MMR in sequential order.
         """
-        # Only add blocks that are the next expected height
-        if self._last_header_hash is not None and (prev_hash != self._last_header_hash):
-            # Skip blocks that are out of order or duplicate
-            log.warning(
-                f"Skipping block height {height}, prev_hash mismatch "
-                f"(expected {self._last_header_hash.hex()[:16]}, got {prev_hash.hex()[:16]})"
-            )
+        if height < self.aggregate_from:
             return
-        # genesis case is equivalent to normal case
-        assert self._last_height is None or height == self._last_height + 1
+
+        # Only add blocks that are the next expected height
+        assert self._last_header_hash is None or (prev_hash == self._last_header_hash)
         # Add block's header hash to the MMR
         self._mmr.append(header_hash)
         # Store minimal block info for validation
@@ -70,8 +65,14 @@ class BlockchainMMRManager:
         """
         target_height = target_block.height
 
-        # Case 1: Build from scratch (no fork or underlying MMR doesn't exist/reach fork point)
-        if fork_height is None or self._last_height is None or self._last_height < fork_height:
+        # Case 1: Build from scratch
+        # (no fork / fork before aggregate_from / underlying MMR doesn't exist/reach fork point)
+        if (
+            fork_height is None
+            or self._last_height is None
+            or self._last_height < fork_height
+            or fork_height < self.aggregate_from
+        ):
             mmr = MerkleMountainRange()
             log.debug(f"Building MMR from height {self.aggregate_from} to {target_height}")
 
@@ -188,13 +189,14 @@ class BlockchainMMRManager:
         """
         current_height = self._last_height if self._last_height is not None else -1
 
-        assert target_height < current_height
         if target_height < 0:
             # Reset to before genesis (empty MMR)
             self._mmr = MerkleMountainRange()
             self._last_header_hash = None
             self._last_height = None
             return
+
+        assert target_height < current_height
 
         # Pop blocks one by one until we reach target height
         blocks_to_pop = current_height - target_height
