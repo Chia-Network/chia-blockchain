@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 
+import pytest
 from chia_rs import FullBlock, SubEpochSummary
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -123,6 +124,7 @@ def test_build_challenge_merkle_tree_multiple_slots() -> None:
     assert root1 == root2
 
 
+@pytest.mark.anyio
 async def test_compute_challenge_merkle_root_sub_epoch_boundaries(
     bt: BlockTools, default_1000_blocks: list[FullBlock]
 ) -> None:

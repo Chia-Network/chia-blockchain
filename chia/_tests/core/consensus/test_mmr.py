@@ -8,6 +8,8 @@ import pytest
 from chia_rs import FullBlock
 from chia_rs.sized_bytes import bytes32
 
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.mmr import (
     MerkleMountainRange,
     get_height,
@@ -15,6 +17,7 @@ from chia.consensus.mmr import (
     leaf_index_to_pos,
     verify_mmr_inclusion,
 )
+from chia.util.block_cache import BlockCache
 
 logger = logging.getLogger(__name__)
 
@@ -453,3 +456,71 @@ def test_mmr_structure() -> None:
     for i, leaf in enumerate(leaves_4):
         expected_pos = leaf_index_to_pos(i)
         assert mmr_4.nodes[expected_pos] == leaf
+
+
+def test_mmr_rollback_to_empty_when_already_empty() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    blocks = BlockCache({}, mmr_manager=mmr)
+    assert mmr._last_height is None
+    # check rollback to empty when already empty does not throw
+    mmr.rollback_to_height(-1, blocks)
+    assert mmr._last_height is None
+    assert mmr._last_header_hash is None
+    assert mmr.get_current_mmr_root() is None
+
+
+def test_mmr_genesis_block_handling() -> None:
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
+    blocks = BlockCache({}, mmr_manager=mmr)
+
+    # Test genesis block: prev_header_hash equals genesis_challenge
+    mmr_root = mmr.get_mmr_root_for_block(
+        prev_header_hash=DEFAULT_CONSTANTS.GENESIS_CHALLENGE,  # Genesis case
+        new_sp_index=0,
+        starts_new_slot=True,
+        blocks=blocks,
+        fork_height=None,
+    )
+
+    assert mmr_root is None, "Genesis block should have empty MMR (None root)"
+
+    # Verify the MMR state hasn't changed
+    assert mmr._last_height is None
+    assert mmr._last_header_hash is None
+    assert mmr.get_current_mmr_root() is None
+
+
+def test_mmr_aggregate_from_filtering() -> None:
+    """Test that add_block_to_mmr respects aggregate_from and skips blocks before it."""
+    from chia_rs.sized_ints import uint32
+
+    from chia.consensus.blockchain_mmr import BlockchainMMRManager
+    from chia.consensus.default_constants import DEFAULT_CONSTANTS
+
+    # Create MMR with aggregate_from = 500 (simulating HARD_FORK2_HEIGHT)
+    aggregate_from = uint32(500)
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
+
+    # Try adding blocks before aggregate_from - should be skipped
+    for height in range(500):
+        block_hash = bytes32([height % 256] + [0] * 31)
+        prev_hash = bytes32([(height - 1) % 256] + [0] * 31) if height > 0 else bytes32.zeros
+        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+
+    # MMR should still be empty (no blocks added)
+    assert mmr._last_height is None
+    assert mmr._last_header_hash is None
+    assert mmr.get_current_mmr_root() is None
+
+    # Now add blocks from aggregate_from onwards - should be added
+    for height in range(500, 505):
+        block_hash = bytes32([height % 256] + [0] * 31)
+        prev_hash = bytes32([(height - 1) % 256] + [0] * 31) if height > 500 else bytes32.zeros
+        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+
+    # MMR should now contain 5 blocks (500-504)
+    assert mmr._last_height == uint32(504)
+    assert mmr.get_current_mmr_root() is not None
+
+    # Verify the MMR has nodes for these 5 blocks
+    assert len(mmr._mmr.nodes) > 0

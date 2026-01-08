@@ -68,7 +68,7 @@ def extract_slot_challenge_data(
         curr = blocks.block_record(curr.prev_hash)
 
     # Verify we found enough challenges
-    assert len(reversed_challenge_hashes) >= challenges_to_look_for, ValueError
+    assert len(reversed_challenge_hashes) >= challenges_to_look_for
     current_challenge = reversed_challenge_hashes[0]
     if challenges_to_look_for == 2:
         prev_challenge = reversed_challenge_hashes[1]
