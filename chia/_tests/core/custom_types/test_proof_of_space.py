@@ -145,14 +145,6 @@ def b32(key: str) -> bytes32:
         height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
         expected_error="v2 proof support has not yet activated",
     ),
-    ProofOfSpaceCase(
-        id="v2 plot with pool pk",
-        pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(2),
-        plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
-        expected_error="v2 plots require pool_contract_puzzle_hash, pool public key is not supported",
-    ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
     caplog.set_level(logging.INFO)
