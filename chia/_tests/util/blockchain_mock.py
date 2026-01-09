@@ -7,6 +7,8 @@ from chia_rs import BlockRecord, HeaderBlock, SubEpochChallengeSegment, SubEpoch
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.types.blockchain_format.vdf import VDFInfo
 
 
@@ -16,6 +18,8 @@ class BlockchainMock:
         from chia.consensus.blockchain_interface import BlocksProtocol
 
         _protocol_check: ClassVar[BlocksProtocol] = cast("BlockchainMock", None)
+
+    mmr_manager: MMRManagerProtocol
 
     def __init__(
         self,
@@ -35,6 +39,7 @@ class BlockchainMock:
         self._height_to_hash = height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
         self._sub_epoch_segments: dict[bytes32, SubEpochSegments] = {}
+        self.mmr_manager = StubMMRManager()
         self.log = logging.getLogger(__name__)
 
     def get_peak(self) -> BlockRecord | None:
