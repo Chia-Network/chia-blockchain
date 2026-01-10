@@ -2164,6 +2164,7 @@ class FullNode:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
                             f"{block.height}: {Err(pre_validation_result.error).name}"
+                            f" extra: {pre_validation_result.extra_string}"
                         )
                 else:
                     if fork_info is None:
