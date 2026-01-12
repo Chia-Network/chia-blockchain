@@ -23,7 +23,7 @@ def get_height(flat_index: int) -> int:
     Algorithm:
     1. Convert to 1-based index `x`.
     2. If `x` is a perfect peak (binary "all ones", 2^n - 1), return its height.
-    3. Otherwise, subtract the size of the left sibling subtree (2^k - 1) and repeat.
+    3. Otherwise, subtract the node count of the left sibling subtree (2^k - 1) and repeat.
        - k is the index of the Most Significant Bit (MSB) of x.
 
     Returns: Height of the node (0 for leaves, 1+ for internal nodes)
@@ -35,45 +35,49 @@ def get_height(flat_index: int) -> int:
         if (x & (x + 1)) == 0:
             return x.bit_length() - 1
 
-        # Not a peak, subtract left sibling mountain size.
+        # Not a peak, subtract left sibling mountain node count.
         # k = x.bit_length() - 1
         msb_val = 1 << (x.bit_length() - 1)
 
         # A perfect binary tree with this MSB has (2^k - 1) nodes
-        subtree_size = msb_val - 1
+        subtree_node_count = msb_val - 1
 
         # Jump left past the entire left sibling subtree
-        x -= subtree_size
+        x -= subtree_node_count
 
 
-def get_peak_positions(size: int) -> list[int]:
+def get_peak_positions(node_count: int) -> list[int]:
     """
     Identify the indices of the mountain peaks in a flat MMR array.
 
     An MMR consists of multiple perfect binary trees (mountains) of decreasing heights,
     arranged left to right.
 
+    Args:
+        node_count: Total number of nodes in the MMR array
+
     Algorithm:
     1. Start at the rightmost position (always a peak)
     2. Determine the height h of this peak using get_height()
-    3. Jump backward by this mountain size (2^(h+1) - 1) to find the next peak
+    3. Jump backward by this mountain's node count (2^(h+1) - 1) to find the next peak
     4. Repeat until we reach the start of the array
 
     Returns indices [Rightmost Peak (Smallest), ..., Leftmost Peak (Tallest)]
     """
     peaks = []
-    idx = size - 1
+    idx = node_count - 1
 
     while idx >= 0:
         peaks.append(idx)
         height = get_height(idx)
-        # Size of this mountain = 2^(h+1) - 1
-        mountain_size = (1 << (height + 1)) - 1
-        idx -= mountain_size
+        # Number of nodes in this mountain = 2^(h+1) - 1
+        mountain_node_count = (1 << (height + 1)) - 1
+        idx -= mountain_node_count
 
     return peaks
 
 
+# leaf_index is 0-based; formula maps leaf index to flat MMR position
 def leaf_index_to_pos(leaf_index: int) -> int:
     """
     Convert a leaf index (0-based) to its position in the flat MMR.
@@ -93,15 +97,24 @@ class MerkleMountainRange(Streamable):
     """
 
     nodes: list[bytes32]
-    size: uint32  # Number of leaves in the MMR
+    leaf_count: uint32  # Number of leaves in the MMR
 
     def __init__(
         self,
         nodes: list[bytes32] | None = None,
-        size: uint32 = uint32(0),
+        leaf_count: uint32 = uint32(0),
     ) -> None:
         self.nodes = [] if nodes is None else nodes
-        self.size = size
+        self.leaf_count = leaf_count
+
+        # Validate that node count matches leaf_count
+        if leaf_count > 0:
+            expected_node_count = 2 * leaf_count - leaf_count.bit_count()
+            if len(self.nodes) != expected_node_count:
+                raise ValueError(
+                    f"Invalid MMR state: {leaf_count} leaves should have {expected_node_count} nodes, "
+                    f"but got {len(self.nodes)} nodes"
+                )
 
     def append(self, leaf: bytes32) -> None:
         nodes = self.nodes
@@ -112,11 +125,11 @@ class MerkleMountainRange(Streamable):
 
         # Merge upwards
         while True:
-            # Size of subtree at current height: 2^(h+1) - 1
-            subtree_size = (1 << (curr_height + 1)) - 1
+            # Node count of subtree at current height: 2^(h+1) - 1
+            subtree_node_count = (1 << (curr_height + 1)) - 1
 
-            # Potential left sibling is 'subtree_size' back
-            left_sibling_index = curr_index - subtree_size
+            # Potential left sibling is 'subtree_node_count' back
+            left_sibling_index = curr_index - subtree_node_count
 
             if left_sibling_index < 0:
                 break
@@ -138,30 +151,30 @@ class MerkleMountainRange(Streamable):
                 # Different heights means we started a new mountain - stop merging
                 break
 
-        self.size = uint32(self.size + 1)
-        log.debug(f"Appended new leaf, MMR size is now {self.size}, total nodes: {len(self.nodes)}")
+        self.leaf_count = uint32(self.leaf_count + 1)
+        log.debug(f"Appended new leaf, MMR leaf_count is now {self.leaf_count}, total nodes: {len(self.nodes)}")
 
     def pop(self) -> None:
         """
         Remove the last leaf and all parent nodes created by it.
         """
-        if self.size == 0:
+        if self.leaf_count == 0:
             raise ValueError("Cannot pop from empty MMR")
 
-        leaf_index = self.size - 1
+        leaf_index = self.leaf_count - 1
 
-        # The number of merges (parents) equals the number of trailing binary 1s in the index.
-        # To count them: XOR index with index+1, count the bits, then subtract 1.
+        # In an MMR, each set bit represents a peak. When appending a leaf, peaks of equal
+        # height are merged. This works like binary addition: each trailing '1' is unset
+        # and produces a merge, so the number of merges equals the trailing 1 count.
         trailing_ones = (leaf_index ^ (leaf_index + 1)).bit_count() - 1
         nodes_to_remove = 1 + trailing_ones
 
-        for _ in range(nodes_to_remove):
-            self.nodes.pop()
+        del self.nodes[-nodes_to_remove:]
 
-        self.size = uint32(self.size - 1)
-        log.debug(f"removed leaf, size is now {self.size} with {len(self.nodes)} nodes ")
+        self.leaf_count = uint32(self.leaf_count - 1)
+        log.debug(f"removed leaf, leaf_count is now {self.leaf_count} with {len(self.nodes)} nodes ")
 
-    def get_root(self) -> bytes32 | None:
+    def compute_root(self) -> bytes32 | None:
         """Get the MMR root by bagging the peaks."""
         peak_indices = get_peak_positions(len(self.nodes))
         if not peak_indices:
@@ -177,7 +190,7 @@ class MerkleMountainRange(Streamable):
         return current_hash
 
     def get_tree_height(self) -> int:
-        if self.size == 0:
+        if self.leaf_count == 0:
             return 0
         peak_indices = get_peak_positions(len(self.nodes))
         if not peak_indices:
@@ -185,13 +198,13 @@ class MerkleMountainRange(Streamable):
         return get_height(peak_indices[-1])
 
     def copy(self) -> MerkleMountainRange:
-        return MerkleMountainRange(list(self.nodes), uint32(self.size))
+        return MerkleMountainRange(list(self.nodes), uint32(self.leaf_count))
 
     def get_inclusion_proof_by_index(self, leaf_index: int) -> tuple[uint32, bytes, list[bytes32], bytes32] | None:
         """
         Generate inclusion proof for the N-th leaf.
         """
-        if leaf_index >= self.size:
+        if leaf_index >= self.leaf_count:
             return None
 
         # 1. Find start position
@@ -298,6 +311,8 @@ def verify_mmr_inclusion(
     sibling_start = 2 + num_flag_bytes
     for i in range(num_siblings):
         offset = sibling_start + i * 32
+        if offset + 32 > len(proof_bytes):
+            return False  # Malformed proof: insufficient bytes
         siblings.append(bytes32(proof_bytes[offset : offset + 32]))
 
     # Reconstruct Peak
