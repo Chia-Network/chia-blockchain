@@ -74,6 +74,16 @@ class TransactionQueueEntry:
 
 
 @dataclass
+class PeerTransactionsQueue:
+    # Peer's priority queue of the form (negative fee per cost, entry).
+    # We sort like this because PriorityQueue returns lowest first.
+    priority_queue: PriorityQueue[tuple[float, TransactionQueueEntry]] = field(default_factory=PriorityQueue)
+    # Peer's deficit in the context of deficit round robin algorithm. The unit
+    # here is in CLVM cost.
+    deficit: int = field(default=0, init=False)
+
+
+@dataclass
 class TransactionQueue:
     """
     This class replaces one queue by using a high priority queue for local transactions and separate queues for peers.
@@ -85,31 +95,37 @@ class TransactionQueue:
     _list_cursor: int  # this is which index
     _queue_length: asyncio.Semaphore
     _index_to_peer_map: list[bytes32]
-    _normal_priority_queues: dict[bytes32, PriorityQueue[tuple[float, TransactionQueueEntry]]]
+    _peers_transactions_queues: dict[bytes32, PeerTransactionsQueue]
     _high_priority_queue: SimpleQueue[TransactionQueueEntry]
     peer_size_limit: int
     log: logging.Logger
+    # Fallback cost for transactions without cost information
+    _max_tx_clvm_cost: uint64
+    # Each 100 pops we do a cleanup of empty peer queues
+    _cleanup_counter: int
 
-    def __init__(self, peer_size_limit: int, log: logging.Logger) -> None:
+    def __init__(self, peer_size_limit: int, log: logging.Logger, *, max_tx_clvm_cost: uint64) -> None:
         self._list_cursor = 0
         self._queue_length = asyncio.Semaphore(0)  # default is 1
         self._index_to_peer_map = []
-        self._normal_priority_queues = {}
+        self._peers_transactions_queues = {}
         self._high_priority_queue = SimpleQueue()  # we don't limit the number of high priority transactions
         self.peer_size_limit = peer_size_limit
         self.log = log
+        self._max_tx_clvm_cost = max_tx_clvm_cost
+        self._cleanup_counter = 0
 
     def put(self, tx: TransactionQueueEntry, peer_id: bytes32 | None, high_priority: bool = False) -> None:
         if peer_id is None or high_priority:  # when it's local there is no peer_id.
             self._high_priority_queue.put(tx)
             self._queue_length.release()
             return
-        peer_queue = self._normal_priority_queues.get(peer_id)
+        peer_queue = self._peers_transactions_queues.get(peer_id)
         if peer_queue is None:
-            peer_queue = PriorityQueue()
-            self._normal_priority_queues[peer_id] = peer_queue
+            peer_queue = PeerTransactionsQueue()
+            self._peers_transactions_queues[peer_id] = peer_queue
             self._index_to_peer_map.append(peer_id)
-        if peer_queue.qsize() >= self.peer_size_limit:
+        if self._peers_transactions_queues[peer_id].priority_queue.qsize() >= self.peer_size_limit:
             self.log.warning(f"Transaction queue full for peer {peer_id}")
             raise TransactionQueueFull(f"Transaction queue full for peer {peer_id}")
         tx_info = tx.peers_with_tx.get(peer_id)
@@ -122,28 +138,73 @@ class TransactionQueue:
             # this transaction (it sent a `RespondTransaction` message
             # instead of a `NewTransaction` one).
             priority = float("inf")
-        peer_queue.put((priority, tx))
+        peer_queue.priority_queue.put((priority, tx))
         self._queue_length.release()  # increment semaphore to indicate that we have a new item in the queue
+
+    def _cleanup_peer_queues(self) -> None:
+        """
+        Removes empty peer queues and updates the cursor accordingly.
+        """
+        new_peer_map = []
+        for idx, peer_id in enumerate(self._index_to_peer_map):
+            if self._peers_transactions_queues[peer_id].priority_queue.empty():
+                self._peers_transactions_queues.pop(peer_id, None)
+                if idx < self._list_cursor:
+                    self._list_cursor -= 1
+            else:
+                new_peer_map.append(peer_id)
+        self._index_to_peer_map = new_peer_map
+        if self._list_cursor >= len(self._index_to_peer_map):
+            self._list_cursor = 0
 
     async def pop(self) -> TransactionQueueEntry:
         await self._queue_length.acquire()
         if not self._high_priority_queue.empty():
             return self._high_priority_queue.get()
-        result: TransactionQueueEntry | None = None
         while True:
-            peer_queue = self._normal_priority_queues[self._index_to_peer_map[self._list_cursor]]
-            if not peer_queue.empty():
-                _, result = peer_queue.get()
-            self._list_cursor += 1
-            if self._list_cursor > len(self._index_to_peer_map) - 1:
-                # reset iterator
-                self._list_cursor = 0
-                new_peer_map = []
-                for peer_id in self._index_to_peer_map:
-                    if self._normal_priority_queues[peer_id].empty():
-                        self._normal_priority_queues.pop(peer_id)
-                    else:
-                        new_peer_map.append(peer_id)
-                self._index_to_peer_map = new_peer_map
-            if result is not None:
-                return result
+            # Map of peer ID to its top transaction's advertised cost. We want
+            # to service transactions fairly between peers, based on cost, so
+            # we need to find the lowest cost transaction among the top ones.
+            top_txs_advertised_costs: dict[bytes32, uint64] = {}
+            # Let's see if a peer can afford to send its top transaction
+            num_peers = len(self._index_to_peer_map)
+            assert num_peers != 0
+            start = self._list_cursor
+            for offset in range(num_peers):
+                peer_index = (start + offset) % num_peers
+                peer_id = self._index_to_peer_map[peer_index]
+                peer_queue = self._peers_transactions_queues[peer_id]
+                if peer_queue.priority_queue.empty():
+                    continue
+                # There is no peek method so we access the internal `queue`
+                _, entry = peer_queue.priority_queue.queue[0]
+                tx_info = entry.peers_with_tx.get(peer_id)
+                # If we don't know the cost information for this transaction
+                # we fallback to the highest cost.
+                if tx_info is not None:
+                    # At this point we have no transactions with zero cost
+                    assert tx_info.advertised_cost > 0
+                    top_tx_advertised_cost = tx_info.advertised_cost
+                else:
+                    top_tx_advertised_cost = self._max_tx_clvm_cost
+                top_txs_advertised_costs[peer_id] = top_tx_advertised_cost
+                if peer_queue.deficit >= top_tx_advertised_cost:
+                    # This peer can afford its top transaction
+                    _, entry = peer_queue.priority_queue.get()
+                    peer_queue.deficit -= top_tx_advertised_cost
+                    if peer_queue.priority_queue.empty():
+                        peer_queue.deficit = 0
+                    # Let's advance the cursor to the next peer
+                    self._list_cursor = (peer_index + 1) % num_peers
+                    # See if we need to perform the periodic cleanup
+                    self._cleanup_counter = (self._cleanup_counter + 1) % 100
+                    if self._cleanup_counter == 0:
+                        self._cleanup_peer_queues()
+                    return entry
+            # None of the peers could afford to send their top transactions, so
+            # let's add the lowest cost among transactions to all the deficit
+            # counters for the next iteration.
+            assert len(top_txs_advertised_costs) != 0
+            lowest_cost_among_txs = min(top_txs_advertised_costs.values())
+            for peer_id in top_txs_advertised_costs:
+                self._peers_transactions_queues[peer_id].deficit += lowest_cost_among_txs

@@ -13,9 +13,12 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64
 
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueue, TransactionQueueEntry, TransactionQueueFull
+from chia.simulator.block_tools import test_constants
 from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
+
+TEST_MAX_TX_CLVM_COST = uint64(test_constants.MAX_BLOCK_COST_CLVM // 2)
 
 
 @dataclass(frozen=True)
@@ -35,7 +38,7 @@ def get_transaction_queue_entry(
 
 @pytest.mark.anyio
 async def test_local_txs(seeded_random: random.Random) -> None:
-    transaction_queue = TransactionQueue(1000, log)
+    transaction_queue = TransactionQueue(1000, log, max_tx_clvm_cost=TEST_MAX_TX_CLVM_COST)
     # test 1 tx
     first_tx = get_transaction_queue_entry(None, 0)
     transaction_queue.put(first_tx, None)
@@ -60,7 +63,7 @@ async def test_local_txs(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_one_peer_and_await(seeded_random: random.Random) -> None:
-    transaction_queue = TransactionQueue(1000, log)
+    transaction_queue = TransactionQueue(1000, log, max_tx_clvm_cost=TEST_MAX_TX_CLVM_COST)
     num_txs = 100
     peer_id = bytes32.random(seeded_random)
 
@@ -94,7 +97,7 @@ async def test_one_peer_and_await(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_lots_of_peers(seeded_random: random.Random) -> None:
-    transaction_queue = TransactionQueue(1000, log)
+    transaction_queue = TransactionQueue(1000, log, max_tx_clvm_cost=TEST_MAX_TX_CLVM_COST)
     num_peers = 1000
     num_txs = 100
     total_txs = num_txs * num_peers
@@ -116,7 +119,7 @@ async def test_lots_of_peers(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_full_queue(seeded_random: random.Random) -> None:
-    transaction_queue = TransactionQueue(1000, log)
+    transaction_queue = TransactionQueue(1000, log, max_tx_clvm_cost=TEST_MAX_TX_CLVM_COST)
     num_peers = 100
     num_txs = 1000
     total_txs = num_txs * num_peers
@@ -138,7 +141,7 @@ async def test_full_queue(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_queue_cleanup_and_fairness(seeded_random: random.Random) -> None:
-    transaction_queue = TransactionQueue(1000, log)
+    transaction_queue = TransactionQueue(1000, log, max_tx_clvm_cost=TEST_MAX_TX_CLVM_COST)
     peer_a = bytes32.random(seeded_random)
     peer_b = bytes32.random(seeded_random)
     peer_c = bytes32.random(seeded_random)
@@ -201,7 +204,7 @@ async def test_peer_queue_prioritization_fallback() -> None:
     """
     Tests prioritization fallback, when `peer_id` is not in `peers_with_tx`.
     """
-    queue = TransactionQueue(42, log)
+    queue = TransactionQueue(42, log, max_tx_clvm_cost=TEST_MAX_TX_CLVM_COST)
     peer1 = bytes32.random()
     peer2 = bytes32.random()
     # We'll be using this peer to test the fallback, so we don't include it in
@@ -226,13 +229,94 @@ async def test_peer_queue_prioritization_fallback() -> None:
     tx2 = get_transaction_queue_entry(peer3, 1, peers_with_tx2)
     queue.put(tx2, peer3)
     # tx2 gets top priority with FPC 1.0
-    assert math.isclose(queue._normal_priority_queues[peer3].queue[0][0], -1.0)
+    assert math.isclose(queue._peers_transactions_queues[peer3].priority_queue.queue[0][0], -1.0)
     entry = await queue.pop()
     # NOTE: This whole test file uses `index` as an addition to
     # `TransactionQueueEntry` for easier testing, hence this type ignore here
     # and everywhere else.
     assert entry.index == 1  # type: ignore[attr-defined]
     # tx1 comes next due to lowest priority fallback
-    assert math.isinf(queue._normal_priority_queues[peer3].queue[0][0])
+    assert math.isinf(queue._peers_transactions_queues[peer3].priority_queue.queue[0][0])
     entry = await queue.pop()
     assert entry.index == 0  # type: ignore[attr-defined]
+
+
+@pytest.mark.anyio
+async def test_normal_queue_deficit_round_robin() -> None:
+    """
+    Covers the deficit round robin behavior of the normal transaction queue where
+    we cycle through peers and pick their top transactions when their deficit
+    counters allow them to afford it, and we ensure that their deficit counters
+    adapt accordingly.
+    This also covers the case where a peer's top transaction does not advertise
+    cost, so that falls back to `max_tx_clvm_cost`.
+    This also covers the cleanup behavior where peers with no remaining
+    transactions are removed periodically (each 100 pop) from the queue.
+    """
+    test_max_tx_clvm_cost = uint64(20)
+    queue = TransactionQueue(42, log, max_tx_clvm_cost=test_max_tx_clvm_cost)
+    peer1 = bytes32.random()
+    peer2 = bytes32.random()
+    peer3 = bytes32.random()
+    peer4 = bytes32.random()
+    test_fee = uint64(42)
+    # We give this one the highest cost
+    tx1 = get_transaction_queue_entry(peer1, 0, {peer1: PeerWithTx(str(peer1), test_fee, uint64(15))})
+    queue.put(tx1, peer1)
+    # And this one the lowest cost
+    tx2 = get_transaction_queue_entry(peer2, 1, {peer2: PeerWithTx(str(peer2), test_fee, uint64(5))})
+    queue.put(tx2, peer2)
+    # And this one a cost in between
+    tx3 = get_transaction_queue_entry(peer3, 2, {peer3: PeerWithTx(str(peer3), test_fee, uint64(10))})
+    queue.put(tx3, peer3)
+    # This one has no cost information so its top transaction's advertised cost
+    # falls back to `test_max_tx_clvm_cost`.
+    tx4 = get_transaction_queue_entry(peer4, 3, {})
+    queue.put(tx4, peer4)
+    # When we try to pop a transaction, none of the peers initially can
+    # afford to send their top transactions, so we add the lowest cost among
+    # transactions (5) to all the peers' deficit counters and try again. This
+    # makes peer2 able to send its transaction tx2.
+    entry = await queue.pop()
+    assert entry.index == 1  # type: ignore[attr-defined]
+    assert queue._list_cursor == 2
+    assert queue._peers_transactions_queues[peer1].deficit == 5
+    assert queue._peers_transactions_queues[peer2].deficit == 0
+    assert queue._peers_transactions_queues[peer3].deficit == 5
+    assert queue._peers_transactions_queues[peer4].deficit == 5
+    # Now peer3, peer4 and peer1 can't afford to send their top transactions so
+    # we add the lowest cost among transactions (10) to their deficit counters
+    # and try again. This makes peer3 able to send its transaction tx3.
+    entry = await queue.pop()
+    assert entry.index == 2  # type: ignore[attr-defined]
+    assert queue._list_cursor == 3
+    assert queue._peers_transactions_queues[peer1].deficit == 15
+    assert queue._peers_transactions_queues[peer2].deficit == 0
+    assert queue._peers_transactions_queues[peer3].deficit == 0
+    assert queue._peers_transactions_queues[peer4].deficit == 15
+    # Let's force cleanup to happen on the next pop
+    queue._cleanup_counter = 99
+    # Now peer4 can't afford to send its top transaction (20) but peer1 can
+    # send tx1 (15) so it does.
+    entry = await queue.pop()
+    assert entry.index == 0  # type: ignore[attr-defined]
+    # This pop triggers cleanup, so peer1, peer2 and peer3 are removed from
+    # the transaction queue (they have nothing left) and only peer4 remains.
+    for peer in [peer1, peer2, peer3]:
+        assert peer not in queue._index_to_peer_map
+        assert peer not in queue._peers_transactions_queues
+    assert len(queue._index_to_peer_map) == 1
+    assert peer4 in queue._index_to_peer_map
+    assert queue._list_cursor == 0
+    # At this point we didn't have to increment deficit counters because peer1
+    # could already afford to send its top transaction, so peer4's deficit
+    # counter stays the same.
+    assert queue._peers_transactions_queues[peer4].deficit == 15
+    # Finally, peer4 is tried but it can't send its top transaction, which has
+    # a fallback cost of `test_max_tx_clvm_cost` (20), so we add that to its
+    # deficit counter, making it 35, and upon retrying now it's able to send
+    # its transaction tx4.
+    entry = await queue.pop()
+    assert entry.index == 3  # type: ignore[attr-defined]
+    assert queue._peers_transactions_queues[peer4].deficit == 0
+    assert queue._list_cursor == 0

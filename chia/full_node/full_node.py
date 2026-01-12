@@ -286,7 +286,9 @@ class FullNode:
                 single_threaded=single_threaded,
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
-                self._transaction_queue = TransactionQueue(1000, self.log)
+                self._transaction_queue = TransactionQueue(
+                    1000, self.log, max_tx_clvm_cost=uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
+                )
                 self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
 
                 self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
