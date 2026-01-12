@@ -1072,6 +1072,8 @@ class BlockTools:
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+                        # Reset pending_ses when a new block is created
+                        pending_ses = False
 
                         if num_blocks <= 0 and not keep_going_until_tx_block:
                             self._block_cache_header = block_list[-1].header_hash
@@ -1148,7 +1150,7 @@ class BlockTools:
 
                 self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height + 1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
-                pending_ses = False
+                # Don't reset pending_ses to False here - it will be reset when a new block is created
                 ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
@@ -1379,6 +1381,8 @@ class BlockTools:
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+                        # Reset pending_ses when a new block is created
+                        pending_ses = False
 
                         if num_blocks <= 0 and not keep_going_until_tx_block:
                             self._block_cache_header = block_list[-1].header_hash
