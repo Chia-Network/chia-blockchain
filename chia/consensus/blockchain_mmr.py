@@ -48,11 +48,11 @@ class BlockchainMMRManager:
         self._last_header_hash = header_hash
         self._last_height = height
 
-        log.debug(f"Added block {height} to MMR, new root: {self._mmr.get_root()}")
+        log.debug(f"Added block {height} to MMR, new root: {self._mmr.compute_root()}")
 
     def get_current_mmr_root(self) -> bytes32 | None:
         """Get the current MMR root representing all blocks added so far"""
-        return self._mmr.get_root()
+        return self._mmr.compute_root()
 
     def _build_mmr_to_block(
         self, target_block: BlockRecord, blocks: BlockRecordsProtocol, fork_height: uint32 | None
@@ -81,7 +81,7 @@ class BlockchainMMRManager:
                 assert header_hash is not None
                 mmr.append(header_hash)
 
-            return mmr.get_root()
+            return mmr.compute_root()
 
         # Case 2: Fast path - current MMR already at target (main chain, no fork before target)
         if (
@@ -90,7 +90,7 @@ class BlockchainMMRManager:
             and fork_height == target_height
         ):
             log.debug(f"Using current MMR state at height {target_height} (no fork before target)")
-            return self._mmr.get_root()
+            return self._mmr.compute_root()
 
         # Case 3: rollback to fork point and extend
         log.debug(f"Reusing underlying MMR, will rollback to fork {fork_height}, then rebuild to {target_height}")
@@ -109,7 +109,7 @@ class BlockchainMMRManager:
             assert header_hash is not None
             mmr.append(header_hash)
 
-        return mmr.get_root()
+        return mmr.compute_root()
 
     def get_mmr_root_for_block(
         self,
@@ -189,8 +189,7 @@ class BlockchainMMRManager:
         """
         current_height = self._last_height if self._last_height is not None else -1
 
-        if target_height < 0:
-            # Reset to before genesis (empty MMR)
+        if target_height < 0 or target_height < self.aggregate_from:
             self._mmr = MerkleMountainRange()
             self._last_header_hash = None
             self._last_height = None

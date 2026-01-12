@@ -5,8 +5,9 @@ import random
 import time
 
 import pytest
-from chia_rs import FullBlock
+from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def test_empty_mmr_root() -> None:
     mmr = MerkleMountainRange()
-    assert mmr.get_root() is None  # Empty MMR returns None
+    assert mmr.compute_root() is None  # Empty MMR returns None
     # Note: get_inclusion_proof not yet implemented
     # assert mmr.get_inclusion_proof(random_bytes32()) is None
 
@@ -33,7 +34,7 @@ def test_single_leaf() -> None:
     mmr = MerkleMountainRange()
     leaf = bytes32.random()
     mmr.append(leaf)
-    root = mmr.get_root()
+    root = mmr.compute_root()
     assert root is not None
     proof = mmr.get_inclusion_proof_by_index(0)
     assert proof is not None
@@ -46,7 +47,7 @@ def test_multiple_leaves() -> None:
     leaves = [bytes32.random() for _ in range(10)]
     for leaf in leaves:
         mmr.append(leaf)
-    root = mmr.get_root()
+    root = mmr.compute_root()
     assert root is not None
     for idx, leaf in enumerate(leaves):
         proof = mmr.get_inclusion_proof_by_index(idx)
@@ -57,7 +58,7 @@ def test_multiple_leaves() -> None:
     mmr2 = MerkleMountainRange()
     for leaf in leaves:
         mmr2.append(leaf)
-    root2 = mmr2.get_root()
+    root2 = mmr2.compute_root()
     for i in range(10):
         assert mmr.nodes[i] == mmr2.nodes[i]
     assert root2 == root
@@ -73,7 +74,7 @@ def test_duplicate_leaves() -> None:
         proof = mmr.get_inclusion_proof_by_index(i)
         assert proof is not None
         peak_index, proof_bytes, other_peaks, peak = proof
-        root = mmr.get_root()
+        root = mmr.compute_root()
         assert root is not None
         assert verify_mmr_inclusion(root, leaf, peak_index, proof_bytes, other_peaks, peak)
 
@@ -104,7 +105,7 @@ async def test_mmr_block_inclusion_by_header_hash(default_1000_blocks: list[Full
         proof = mmr.get_inclusion_proof_by_index(idx)
         assert proof is not None
         peak_index, proof_bytes, other_peaks, peak = proof
-        root = mmr.get_root()
+        root = mmr.compute_root()
         assert root is not None
         assert verify_mmr_inclusion(root, hh, peak_index, proof_bytes, other_peaks, peak)
 
@@ -114,7 +115,7 @@ async def test_mmr_benchmark_default_10000_blocks(default_10000_blocks: list[Ful
     mmr = MerkleMountainRange()
     header_hashes = [block.header_hash for block in default_10000_blocks]
     t0 = time.time()
-    for idx, hh in enumerate(header_hashes):
+    for hh in header_hashes:
         mmr.append(hh)
 
     t1 = time.time()
@@ -129,7 +130,7 @@ async def test_mmr_benchmark_default_10000_blocks(default_10000_blocks: list[Ful
         proof_times.append(t_end - t_start)
         assert proof is not None
         peak_index, proof_bytes, other_peaks, peak = proof
-        root = mmr.get_root()
+        root = mmr.compute_root()
         assert root is not None
         assert verify_mmr_inclusion(root, hh, peak_index, proof_bytes, other_peaks, peak)
 
@@ -142,27 +143,27 @@ async def test_mmr_benchmark_default_10000_blocks(default_10000_blocks: list[Ful
 def test_flat_mmr_basic() -> None:
     """Test basic flat MMR operations"""
     mmr = MerkleMountainRange()
-    assert mmr.size == 0
+    assert mmr.leaf_count == 0
     assert len(mmr.nodes) == 0
-    assert mmr.get_root() is None
+    assert mmr.compute_root() is None
 
     # Add first leaf
     leaf1 = bytes32.random()
     mmr.append(leaf1)
-    assert mmr.size == 1
+    assert mmr.leaf_count == 1
     assert len(mmr.nodes) == 1  # Just the leaf
-    assert mmr.get_root() == leaf1  # Single leaf MMR root is the leaf itself
+    assert mmr.compute_root() == leaf1  # Single leaf MMR root is the leaf itself
 
     # Add second leaf
     leaf2 = bytes32.random()
     mmr.append(leaf2)
-    assert mmr.size == 2
+    assert mmr.leaf_count == 2
     assert len(mmr.nodes) == 3  # 2 leaves + 1 parent
     # Root should be hash(leaf1 || leaf2)
     from chia.util.hash import std_hash
 
     expected_root = std_hash(leaf1 + leaf2)
-    assert mmr.get_root() == expected_root
+    assert mmr.compute_root() == expected_root
 
 
 def test_flat_mmr_peak_positions() -> None:
@@ -194,18 +195,18 @@ def test_flat_mmr_copy() -> None:
     for leaf in leaves:
         mmr.append(leaf)
 
-    original_root = mmr.get_root()
+    original_root = mmr.compute_root()
 
     # Copy and verify
     mmr2 = mmr.copy()
-    assert mmr2.size == mmr.size
+    assert mmr2.leaf_count == mmr.leaf_count
     assert len(mmr2.nodes) == len(mmr.nodes)
-    assert mmr2.get_root() == original_root
+    assert mmr2.compute_root() == original_root
 
     # Modify copy shouldn't affect original
     mmr2.append(bytes32.random())
-    assert mmr2.size != mmr.size
-    assert mmr.get_root() == original_root
+    assert mmr2.leaf_count != mmr.leaf_count
+    assert mmr.compute_root() == original_root
 
 
 def test_mmr_pop_single() -> None:
@@ -213,14 +214,14 @@ def test_mmr_pop_single() -> None:
     mmr = MerkleMountainRange()
     leaf = bytes32.random()
     mmr.append(leaf)
-    assert mmr.size == 1
+    assert mmr.leaf_count == 1
     assert len(mmr.nodes) == 1
 
     # Pop the leaf
     mmr.pop()
-    assert mmr.size == 0
+    assert mmr.leaf_count == 0
     assert len(mmr.nodes) == 0
-    assert mmr.get_root() is None
+    assert mmr.compute_root() is None
 
 
 def test_mmr_pop_multiple() -> None:
@@ -236,24 +237,24 @@ def test_mmr_pop_multiple() -> None:
     mmr.append(leaf2)
     mmr.append(leaf3)
 
-    assert mmr.size == 3
+    assert mmr.leaf_count == 3
     # After 3 leaves: [leaf1, leaf2, parent(1,2), leaf3]
     assert len(mmr.nodes) == 4
 
     # Pop leaf3
     mmr.pop()
-    assert mmr.size == 2
+    assert mmr.leaf_count == 2
     # After pop: [leaf1, leaf2, parent(1,2)]
     assert len(mmr.nodes) == 3
     expected_root = std_hash(leaf1 + leaf2)
-    assert mmr.get_root() == expected_root
+    assert mmr.compute_root() == expected_root
 
     # Pop leaf2
     mmr.pop()
-    assert mmr.size == 1
+    assert mmr.leaf_count == 1
     # After pop: [leaf1]
     assert len(mmr.nodes) == 1
-    assert mmr.get_root() == leaf1
+    assert mmr.compute_root() == leaf1
 
 
 def test_mmr_append_and_rewind() -> None:
@@ -268,9 +269,9 @@ def test_mmr_append_and_rewind() -> None:
         mmr2.append(leaf)
 
     # Both should be identical
-    assert mmr1.size == mmr2.size
+    assert mmr1.leaf_count == mmr2.leaf_count
     assert len(mmr1.nodes) == len(mmr2.nodes)
-    assert mmr1.get_root() == mmr2.get_root()
+    assert mmr1.compute_root() == mmr2.compute_root()
 
     # Add extra blocks to mmr2
     extra_leaves = [bytes32.random() for _ in range(5)]
@@ -278,17 +279,17 @@ def test_mmr_append_and_rewind() -> None:
         mmr2.append(leaf)
 
     # Now they should differ
-    assert mmr2.size == mmr1.size + 5
-    assert mmr2.get_root() != mmr1.get_root()
+    assert mmr2.leaf_count == mmr1.leaf_count + 5
+    assert mmr2.compute_root() != mmr1.compute_root()
 
     # Rewind mmr2 by popping 5 blocks
     for _ in range(5):
         mmr2.pop()
 
     # Now they should be identical again
-    assert mmr1.size == mmr2.size
+    assert mmr1.leaf_count == mmr2.leaf_count
     assert len(mmr1.nodes) == len(mmr2.nodes)
-    assert mmr1.get_root() == mmr2.get_root()
+    assert mmr1.compute_root() == mmr2.compute_root()
     # Verify all nodes are identical
     for i in range(len(mmr1.nodes)):
         assert mmr1.nodes[i] == mmr2.nodes[i]
@@ -305,24 +306,24 @@ def test_mmr_rewind_large_batch() -> None:
         mmr1.append(leaf)
         mmr2.append(leaf)
 
-    baseline_root = mmr1.get_root()
+    baseline_root = mmr1.compute_root()
 
     # Add 50 extra blocks to mmr2
     extra_leaves = [bytes32.random() for _ in range(50)]
     for leaf in extra_leaves:
         mmr2.append(leaf)
 
-    assert mmr2.size == 150
-    assert mmr2.get_root() != baseline_root
+    assert mmr2.leaf_count == 150
+    assert mmr2.compute_root() != baseline_root
 
     # Rewind all 50 blocks
     for _ in range(50):
         mmr2.pop()
 
     # Verify we're back to baseline
-    assert mmr2.size == 100
-    assert mmr2.get_root() == baseline_root
-    assert mmr1.get_root() == mmr2.get_root()
+    assert mmr2.leaf_count == 100
+    assert mmr2.compute_root() == baseline_root
+    assert mmr1.compute_root() == mmr2.compute_root()
 
 
 def test_mmr_pop_nodes_calculation() -> None:
@@ -348,17 +349,17 @@ def test_mmr_pop_nodes_calculation() -> None:
     # Pop should remove 3 nodes (leaf + parent + grandparent)
     mmr.pop()
     assert len(mmr.nodes) == 4
-    assert mmr.size == 3
+    assert mmr.leaf_count == 3
 
     # Pop should remove 1 node (just the leaf)
     mmr.pop()
     assert len(mmr.nodes) == 3
-    assert mmr.size == 2
+    assert mmr.leaf_count == 2
 
     # Pop should remove 2 nodes (leaf + parent)
     mmr.pop()
     assert len(mmr.nodes) == 1
-    assert mmr.size == 1
+    assert mmr.leaf_count == 1
 
 
 def test_leaf_index_and_peak_positions() -> None:
@@ -524,3 +525,59 @@ def test_mmr_aggregate_from_filtering() -> None:
 
     # Verify the MMR has nodes for these 5 blocks
     assert len(mmr._mmr.nodes) > 0
+
+
+def test_mmr_init_validation() -> None:
+    mmr = MerkleMountainRange()
+    for _ in range(10):
+        mmr.append(bytes32.random())
+
+    mmr2 = MerkleMountainRange(list(mmr.nodes), mmr.leaf_count)
+    assert mmr2.leaf_count == mmr.leaf_count
+    assert len(mmr2.nodes) == len(mmr.nodes)
+    assert mmr2.compute_root() == mmr.compute_root()
+
+    # Invalid: 3 leaves should have 4 nodes, not 5
+    with pytest.raises(ValueError, match="Invalid MMR state"):
+        MerkleMountainRange([bytes32.random() for _ in range(5)], uint32(3))
+
+    # Invalid: 10 leaves should have 18 nodes (2*10 - popcount(10) = 20 - 2 = 18), not 10
+    with pytest.raises(ValueError, match="Invalid MMR state"):
+        MerkleMountainRange([bytes32.random() for _ in range(10)], uint32(10))
+
+
+def test_verify_mmr_inclusion_malformed_proof() -> None:
+    mmr_root = bytes32.random()
+    leaf = bytes32.random()
+    peak_index = uint32(0)
+    other_peaks: list[bytes32] = []
+    expected_peak = bytes32.random()
+
+    # Proof too short - claims 1 sibling but only has header
+    malformed_proof = (1).to_bytes(2, "big") + bytes([0])
+
+    result = verify_mmr_inclusion(mmr_root, leaf, peak_index, malformed_proof, other_peaks, expected_peak)
+    assert result is False, "Should reject proof with insufficient sibling data"
+
+
+def test_mmr_rollback_below_aggregate_from() -> None:
+    aggregate_from = uint32(500)
+    mmr = BlockchainMMRManager(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, aggregate_from=aggregate_from)
+
+    block_records: dict[bytes32, BlockRecord] = {}
+    for height in range(500, 505):
+        block_hash = bytes32([height % 256] + [0] * 31)
+        prev_hash = bytes32([(height - 1) % 256] + [0] * 31) if height > 500 else bytes32.zeros
+        mmr.add_block_to_mmr(block_hash, prev_hash, uint32(height))
+
+    blocks = BlockCache(block_records, mmr_manager=mmr)
+
+    assert mmr._last_height == uint32(504)
+    assert mmr.get_current_mmr_root() is not None
+
+    # Rollback to height 99 (below aggregate_from) - should clear MMR
+    mmr.rollback_to_height(99, blocks)
+
+    assert mmr._last_height is None
+    assert mmr._last_header_hash is None
+    assert mmr.get_current_mmr_root() is None

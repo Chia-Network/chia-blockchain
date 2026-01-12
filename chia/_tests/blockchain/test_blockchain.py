@@ -1651,7 +1651,8 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Monkey patch add_block_to_mmr so we don't throw there
+        # Monkey patch add_block_to_mmr otherwise we will throw an error in the mmr invariant
+        # assetion and not in the block header validation code
         monkeypatch.setattr(
             "chia.consensus.blockchain_mmr.BlockchainMMRManager.add_block_to_mmr",
             lambda *args, **kwargs: None,
