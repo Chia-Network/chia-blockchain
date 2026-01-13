@@ -19,6 +19,9 @@ async def get_flags(
     if block.height >= constants.HARD_FORK2_HEIGHT + constants.SUB_EPOCH_BLOCKS:
         return get_flags_for_height_and_constants(block.height, constants)
 
+    if block.prev_header_hash == constants.GENESIS_CHALLENGE:
+        return get_flags_for_height_and_constants(0, constants)
+
     sp_index = block.reward_chain_block.signage_point_index
     # For overflow blocks, the SP is in the previous sub-slot, so we need to cross
     # one extra slot boundary before we're past the SP's slot
