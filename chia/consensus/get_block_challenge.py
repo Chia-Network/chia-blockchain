@@ -7,6 +7,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
+from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -115,12 +116,19 @@ def pre_sp_tx_block(
     if prev_b_hash == constants.GENESIS_CHALLENGE:
         return None
     curr = blocks.block_record(prev_b_hash)
-    before_slot = first_in_sub_slot
+    # For overflow blocks, the SP is in the previous sub-slot, so we need to cross
+    # one extra slot boundary before we're past the SP's slot
+    overflow = is_overflow_block(constants, sp_index)
+    slots_crossed = 1 if first_in_sub_slot else 0
     while curr.height > 0:
-        if curr.is_transaction_block and (before_slot or curr.signage_point_index < sp_index):
+        if not overflow:
+            before_sp = curr.signage_point_index < sp_index or slots_crossed > 0
+        else:
+            before_sp = slots_crossed >= 2 or (slots_crossed == 1 and curr.signage_point_index < sp_index)
+        if curr.is_transaction_block and before_sp:
             break
         if curr.first_in_sub_slot:
-            before_slot = True
+            slots_crossed += 1
         curr = blocks.block_record(curr.prev_hash)
     return curr
 

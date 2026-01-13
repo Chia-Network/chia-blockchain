@@ -15,7 +15,6 @@ from chia_rs import (
     PlotParam,
     SpendBundle,
     SpendBundleConditions,
-    get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
     get_spends_for_trusted_block_with_conditions,
     run_block_generator2,
@@ -25,11 +24,11 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64, uint128
 
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
+from chia.full_node.hard_fork_utils import get_flags
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
@@ -490,14 +489,8 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": []}
 
-        prev_tx_height = pre_sp_tx_block_height(
-            constants=self.service.constants,
-            blocks=self.service.blockchain,
-            prev_b_hash=full_block.prev_header_hash,
-            sp_index=full_block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
-        )
-        flags = get_flags_for_height_and_constants(prev_tx_height, self.service.constants)
+        flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=full_block)
+
         spends = await asyncio.get_running_loop().run_in_executor(
             self.executor,
             get_spends_for_trusted_block,
@@ -521,14 +514,7 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
-        prev_tx_height = pre_sp_tx_block_height(
-            constants=self.service.constants,
-            blocks=self.service.blockchain,
-            prev_b_hash=full_block.prev_header_hash,
-            sp_index=full_block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
-        )
-        flags = get_flags_for_height_and_constants(prev_tx_height, self.service.constants)
+        flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=full_block)
         spends_with_conditions = await asyncio.get_running_loop().run_in_executor(
             self.executor,
             get_spends_for_trusted_block_with_conditions,
@@ -807,19 +793,13 @@ class FullNodeRpcApi:
         assert block_generator is not None
 
         try:
-            prev_tx_height = pre_sp_tx_block_height(
-                constants=self.service.constants,
-                blocks=self.service.blockchain,
-                prev_b_hash=block.prev_header_hash,
-                sp_index=block.reward_chain_block.signage_point_index,
-                first_in_sub_slot=len(block.finished_sub_slots) > 0,
-            )
+            flags = await get_flags(constants=self.service.constants, blocks=self.service.blockchain, block=block)
             puzzle, solution = get_puzzle_and_solution_for_coin(
                 block_generator.program,
                 block_generator.generator_refs,
                 self.service.constants.MAX_BLOCK_COST_CLVM,
                 coin_record.coin,
-                get_flags_for_height_and_constants(prev_tx_height, self.service.constants),
+                flags,
             )
             return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
         except Exception as e:
