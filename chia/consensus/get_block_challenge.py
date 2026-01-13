@@ -111,7 +111,7 @@ def pre_sp_tx_block(
     *,
     prev_b_hash: bytes32,
     sp_index: uint8,
-    first_in_sub_slot: bool,
+    finished_sub_slots: int,
 ) -> BlockRecord | None:
     if prev_b_hash == constants.GENESIS_CHALLENGE:
         return None
@@ -119,7 +119,7 @@ def pre_sp_tx_block(
     # For overflow blocks, the SP is in the previous sub-slot, so we need to cross
     # one extra slot boundary before we're past the SP's slot
     overflow = is_overflow_block(constants, sp_index)
-    slots_crossed = 1 if first_in_sub_slot else 0
+    slots_crossed = finished_sub_slots
     while curr.height > 0:
         if not overflow:
             before_sp = curr.signage_point_index < sp_index or slots_crossed > 0
@@ -139,14 +139,14 @@ def pre_sp_tx_block_height(
     *,
     prev_b_hash: bytes32,
     sp_index: uint8,
-    first_in_sub_slot: bool,
+    finished_sub_slots: int,
 ) -> uint32:
     latest_tx_block = pre_sp_tx_block(
         constants=constants,
         blocks=blocks,
         prev_b_hash=prev_b_hash,
         sp_index=sp_index,
-        first_in_sub_slot=first_in_sub_slot,
+        finished_sub_slots=finished_sub_slots,
     )
     if latest_tx_block is None:
         return uint32(0)
