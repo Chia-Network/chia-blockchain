@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast, final
 
 from chia_rs.chia_rs import G1Element
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.data_layer.singleton_record import SingletonRecord
 from chia.types.blockchain_format.coin import Coin
@@ -33,6 +34,7 @@ class _StreamableWalletSideEffects(Streamable):
     extra_spends: list[WalletSpendBundle]
     selected_coins: list[Coin]
     singleton_records: list[SingletonRecord]
+    plotnft_exiting_info: tuple[uint32, uint64] | None
     get_unused_derivation_record_result: StreambleGetUnusedDerivationRecordResult | None
 
 
@@ -43,6 +45,7 @@ class WalletSideEffects:
     extra_spends: list[WalletSpendBundle] = field(default_factory=list)
     selected_coins: list[Coin] = field(default_factory=list)
     singleton_records: list[SingletonRecord] = field(default_factory=list)
+    plotnft_exiting_info: tuple[uint32, uint64] | None = None
     get_unused_derivation_record_result: StreambleGetUnusedDerivationRecordResult | None = None
 
     def __bytes__(self) -> bytes:
@@ -164,6 +167,7 @@ async def new_wallet_action_scope(
         additional_signing_responses=self.side_effects.signing_responses,
         extra_spends=self.side_effects.extra_spends,
         singleton_records=self.side_effects.singleton_records,
+        plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
     )
     if push and self.side_effects.get_unused_derivation_record_result is not None:
         await self.side_effects.get_unused_derivation_record_result.to_standard().commit(wallet_state_manager)
