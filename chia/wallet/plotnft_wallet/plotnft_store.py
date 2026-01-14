@@ -71,8 +71,10 @@ class PlotNFTStore:
                 " spent_height int)"
             )
 
-            await conn.execute("CREATE TABLE finish_exiting_fee (wallet_id int PRIMARY KEY, fee blob)")
-            await conn.execute("CREATE TABLE finish_exiting_height (wallet_id int PRIMARY KEY, height int)")
+            await conn.execute("CREATE TABLE IF NOT EXISTS finish_exiting_fee (wallet_id int PRIMARY KEY, fee blob)")
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS finish_exiting_height (wallet_id int PRIMARY KEY, height int)"
+            )
 
         return self
 
