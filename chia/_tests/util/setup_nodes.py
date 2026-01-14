@@ -23,6 +23,7 @@ from chia.full_node.full_node_service import FullNodeService
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_service import HarvesterService
 from chia.introducer.introducer_api import IntroducerAPI
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -351,6 +352,19 @@ async def setup_farmer_solver_multi_harvester(
             for i in range(harvester_count)
         ]
 
+        # Ensure all harvesters are connected to the farmer
+        # this helps with proper test setup and with proper teardown
+        if start_services:
+            with anyio.fail_after(delay=adjusted_timeout(10)):
+                for backoff in backoff_times():
+                    all_connected = all(
+                        len(harvester_service._node.server.get_connections(NodeType.FARMER)) > 0
+                        for harvester_service in harvester_services
+                    )
+                    if all_connected:
+                        break
+
+                    await asyncio.sleep(backoff)
         yield harvester_services, farmer_service, block_tools
 
 

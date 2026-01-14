@@ -101,6 +101,7 @@ class FullNodeDiscovery:
     async def _close_common(self) -> None:
         self.is_closed = True
         cancel_task_safe(self.connect_peers_task, self.log)
+        await asyncio.sleep(1)  # Give some time for the connect task to exit and cleanup sockets
         cancel_task_safe(self.serialize_task, self.log)
         cancel_task_safe(self.cleanup_task, self.log)
         for t in self.pending_tasks:

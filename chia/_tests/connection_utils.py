@@ -99,6 +99,7 @@ async def add_dummy_connection_wsc(
         30,
         local_capabilities_for_handshake=default_capabilities[type] + additional_capabilities,
         stub_metadata_for_type=StubMetadataRegistry,
+        session=session,
     )
     await wsc.perform_handshake(server._network_id, dummy_port, type)
     if wsc.incoming_message_task is not None:
