@@ -167,6 +167,10 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
     members: list[PuzzleWithRestrictions]
 
     def __post_init__(self) -> None:
+        if self.m > self.n:
+            raise ValueError("M cannot be greater than N")
+        if self.m < 1:
+            raise ValueError("M must be greater than 0")
         if len(list(set(self._merkle_tree.nodes))) != len(self._merkle_tree.nodes):
             raise ValueError("Duplicate nodes not currently supported by MofN drivers")
 

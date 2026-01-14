@@ -1424,16 +1424,26 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_removals, response)
         return msg
 
-    @metadata.request()
-    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test: bool = False) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def send_transaction(
+        self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
+    ) -> Message | None:
         spend_name = request.transaction.name()
         if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
             self.full_node.mempool_manager.remove_seen(spend_name)
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
-
+        high_priority = self.is_trusted(peer)
         queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
-        self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
+        try:
+            self.full_node.transaction_queue.put(queue_entry, peer_id=peer.peer_node_id, high_priority=high_priority)
+        except TransactionQueueFull:
+            return make_msg(
+                ProtocolMessageTypes.transaction_ack,
+                wallet_protocol.TransactionAck(
+                    spend_name, uint8(MempoolInclusionStatus.FAILED), "Transaction queue full"
+                ),
+            )
         try:
             with anyio.fail_after(delay=45):
                 status, error = await queue_entry.done.wait()
