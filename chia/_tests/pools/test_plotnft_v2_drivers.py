@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Literal
 
 import pytest
-from chia_rs import G2Element, PrivateKey
+from chia_rs import CoinSpend, G2Element, PrivateKey
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
@@ -16,11 +16,18 @@ from chia.pools.plotnft_drivers import (
     RewardPuzzle,
     UserConfig,
 )
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.wallet.conditions import CreateCoin, MessageParticipant, ReceiveMessage, SendMessage
+from chia.wallet.conditions import (
+    AggSigMe,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    MessageParticipant,
+    SendMessage,
+    parse_conditions_non_consensus,
+)
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -40,47 +47,45 @@ POOL_PUZZLE = Program.to("I'm a pool :)")
 POOL_PUZZLE_HASH = POOL_PUZZLE.get_tree_hash()
 
 
+def sign_spend(coin_spends: list[CoinSpend], genesis_challenge: bytes32) -> G2Element:
+    for spend in coin_spends:
+        for condition in parse_conditions_non_consensus(run(spend.puzzle_reveal, spend.solution).as_iter()):
+            if isinstance(condition, AggSigMe):
+                return user_sk.sign(condition.msg + spend.coin.name() + genesis_challenge)
+    return G2Element()
+
+
 async def mint_plotnft(
     *, sim: SpendSim, sim_client: SimClient, desired_state: Literal["self_custody", "pooling", "waiting_room"]
 ) -> PlotNFT:
     await sim.farm_block(ACS_PH)
 
-    [fund_coin, fee_coin] = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
+    fund_coin, _ = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
 
     conditions, spends, plotnft = PlotNFT.launch(
-        origin_coins=[fund_coin.coin, fee_coin.coin],
+        origin_coins=[fund_coin.coin],
         user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
         pool_config=None
         if desired_state == "self_custody"
-        else PoolConfig(
-            pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000), pool_memoization=Program.to(["pool"])
-        ),
+        else PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])),
         genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
+        hint=bytes32.zeros,
         exiting=desired_state == "waiting_room",
-        fee=uint64(fund_coin.coin.amount + fee_coin.coin.amount - 2),  # 1 mojo change
-        extra_conditions=(
-            SendMessage(
-                msg=bytes32.zeros,
-                sender=MessageParticipant(coin_id_committed=fund_coin.coin.name()),
-                receiver=MessageParticipant(coin_id_committed=fee_coin.coin.name()),
-            ),
-        ),
     )
 
     result = await sim_client.push_tx(
         WalletSpendBundle(
             [
                 *spends,
-                make_spend(coin=fund_coin.coin, puzzle_reveal=ACS, solution=Program.to(conditions)),
                 make_spend(
-                    coin=fee_coin.coin,
+                    coin=fund_coin.coin,
                     puzzle_reveal=ACS,
                     solution=Program.to(
-                        [
-                            ReceiveMessage(
-                                msg=bytes32.zeros,
-                                sender=MessageParticipant(coin_id_committed=fund_coin.coin.name()),
-                                receiver=MessageParticipant(coin_id_committed=fee_coin.coin.name()),
+                        [condition.to_program() for condition in conditions]
+                        + [
+                            CreateCoin(
+                                puzzle_hash=plotnft.singleton_struct.singleton_puzzles.singleton_launcher_hash,
+                                amount=uint64(1),
                             ).to_program()
                         ]
                     ),
@@ -97,8 +102,6 @@ async def mint_plotnft(
         PlotNFT.get_next_from_coin_spend(coin_spend=spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE)
         == plotnft
     )
-    # Make sure change is made
-    assert (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))[0].coin.amount == 1
     return plotnft
 
 
@@ -109,18 +112,24 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state="self_custody")
 
         # Join a pool
-        dpuz_hash, coin_spends = plotnft.join_pool(
+        fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        coin_spends = plotnft.join_pool(
             user_config=plotnft.user_config,
             pool_config=PoolConfig(
-                pool_puzzle_hash=POOL_PUZZLE_HASH, timelock=uint64(1000), pool_memoization=Program.to(["pool"])
+                pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
             ),
+            extra_conditions=(fee_hook,),
         )
+        fee_coin = next(iter(await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))).coin
         result = await sim_client.push_tx(
             cost_logger.add_cost(
                 "Self Custody -> Pooling",
                 WalletSpendBundle(
-                    coin_spends,
-                    user_sk.sign(dpuz_hash + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
+                    [
+                        *coin_spends,
+                        make_spend(fee_coin, ACS, Program.to([fee_hook.corresponding_assertion().to_program()])),
+                    ],
+                    sign_spend(coin_spends, sim.defaults.GENESIS_CHALLENGE),
                 ),
             )
         )
@@ -210,9 +219,9 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
             ),
         )
         result = await sim_client.push_tx(timelocked_spend)
-        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED)
-        sim.pass_time(plotnft.guaranteed_pool_config.timelock)
-        await sim.farm_block()
+        assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
+        for _ in range(plotnft.guaranteed_pool_config.heightlock):
+            await sim.farm_block()
         result = await sim_client.push_tx(cost_logger.add_cost("Waiting Room -> Self Custody", timelocked_spend))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -242,15 +251,15 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
         reward_dpuz_and_sol = DelegatedPuzzleAndSolution(
             puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
         )
-        signing_target, coin_spends = plotnft.claim_pool_reward(
-            reward=reward, reward_delegated_puzzle_and_solution=reward_dpuz_and_sol
+        coin_spends = plotnft.claim_pool_rewards(
+            rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[reward_dpuz_and_sol]
         )
         result = await sim_client.push_tx(
             cost_logger.add_cost(
                 "Claim Pool Reward",
                 WalletSpendBundle(
                     coin_spends,
-                    user_sk.sign(signing_target + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
+                    sign_spend(coin_spends, sim.defaults.GENESIS_CHALLENGE),
                 ),
             )
         )

@@ -26,7 +26,7 @@
 
   (list
     (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH inner_puzzle_hash))
-    (list CREATE_COIN inner_puzzle_hash 1)
+    (list CREATE_COIN inner_puzzle_hash 1 (list SINGLETON_STRUCT_HASH))
     (list
       SEND_MESSAGE
       0x17  ; mode = puzzle sender, coin receiver -> 0x00 010 111
