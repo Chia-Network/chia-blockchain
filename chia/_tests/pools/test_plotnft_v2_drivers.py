@@ -47,11 +47,13 @@ POOL_PUZZLE = Program.to("I'm a pool :)")
 POOL_PUZZLE_HASH = POOL_PUZZLE.get_tree_hash()
 
 
-def sign_spend(coin_spends: list[CoinSpend], genesis_challenge: bytes32) -> G2Element:
+def sign_spend(coin_spends: list[CoinSpend], additional_data: bytes32) -> G2Element:
     for spend in coin_spends:
-        for condition in parse_conditions_non_consensus(run(spend.puzzle_reveal, spend.solution).as_iter()):
+        for condition in parse_conditions_non_consensus(
+            run(spend.puzzle_reveal, spend.solution).as_iter(), abstractions=False
+        ):
             if isinstance(condition, AggSigMe):
-                return user_sk.sign(condition.msg + spend.coin.name() + genesis_challenge)
+                return user_sk.sign(condition.msg + spend.coin.name() + additional_data)
     return G2Element()
 
 
@@ -129,7 +131,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
                         *coin_spends,
                         make_spend(fee_coin, ACS, Program.to([fee_hook.corresponding_assertion().to_program()])),
                     ],
-                    sign_spend(coin_spends, sim.defaults.GENESIS_CHALLENGE),
+                    sign_spend(coin_spends, sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
                 ),
             )
         )
@@ -259,7 +261,7 @@ async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
                 "Claim Pool Reward",
                 WalletSpendBundle(
                     coin_spends,
-                    sign_spend(coin_spends, sim.defaults.GENESIS_CHALLENGE),
+                    sign_spend(coin_spends, sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
                 ),
             )
         )
