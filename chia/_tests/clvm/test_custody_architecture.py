@@ -273,7 +273,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
         client,
     ):
         for m in range(1, 6):  # 1 - 5 inclusive
-            for n in range(2, 6):
+            for n in range(m, 6):
                 m_of_n = PuzzleWithRestrictions(
                     nonce=0,
                     restrictions=[],
