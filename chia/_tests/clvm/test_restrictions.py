@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.clvm.test_custody_architecture import ACSMember
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
@@ -11,13 +11,20 @@ from chia.types.blockchain_format.program import Program, run
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.wallet.conditions import CreateCoin, MessageParticipant, Remark, SendMessage, parse_conditions_non_consensus
+from chia.wallet.conditions import (
+    AssertHeightRelative,
+    CreateCoin,
+    MessageParticipant,
+    Remark,
+    SendMessage,
+    parse_conditions_non_consensus,
+)
 from chia.wallet.puzzles.custody.custody_architecture import (
     DelegatedPuzzleAndSolution,
     PuzzleWithRestrictions,
 )
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
-from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, SendMessageBanned, Timelock
+from chia.wallet.puzzles.custody.restrictions import FixedCreateCoinDestinations, Heightlock, SendMessageBanned
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -82,9 +89,9 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 
 
 @pytest.mark.anyio
-async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
+async def test_heightlock_wrapper(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        restriction = ValidatorStackRestriction(required_wrappers=[Timelock(uint64(100))])
+        restriction = ValidatorStackRestriction(required_wrappers=[Heightlock(heightlock=uint32(10))])
         pwr = PuzzleWithRestrictions(nonce=0, restrictions=[restriction], puzzle=ACSMember())
 
         # Farm and find coin
@@ -111,11 +118,12 @@ async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
 
         # Now actually put a timelock in the dpuz
         timelocked_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to((1, [[80, 100], [1, "foo"], [1, "bat"]])), solution=Program.to(None)
+            puzzle=Program.to((1, [AssertHeightRelative(height=uint32(10)).to_program(), [1, "foo"], [1, "bat"]])),
+            solution=Program.to(None),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(timelocked_dpuz, [Program.to(None)])
         sb = cost_logger.add_cost(
-            "Minimal puzzle with restrictions w/ timelock wrapper",
+            "Minimal puzzle with restrictions w/ heightlock wrapper",
             WalletSpendBundle(
                 [
                     make_spend(
@@ -133,12 +141,12 @@ async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
             ),
         )
         result = await client.push_tx(sb)
-        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED)
-
-        sim.pass_time(uint64(100))
-        await sim.farm_block()
+        assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
+        for _ in range(10):
+            await sim.farm_block()
         result = await client.push_tx(sb)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
 
         conditions = parse_conditions_non_consensus(
             run(sb.coin_spends[0].puzzle_reveal, sb.coin_spends[0].solution).as_iter()
