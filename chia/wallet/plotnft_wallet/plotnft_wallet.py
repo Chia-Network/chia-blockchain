@@ -53,6 +53,12 @@ class PlotNFT2Wallet:
         await wallet_state_manager.add_interested_puzzle_hashes(
             puzzle_hashes=[self.p2_singleton_puzzle_hash, self.hint], wallet_ids=[self.id()]
         )
+        await wallet_state_manager.user_store.create_wallet(
+            name=wallet_info.name,
+            wallet_type=wallet_info.type,
+            data=wallet_info.data,
+            id=wallet_info.id,
+        )
         return self
 
     @property
@@ -105,7 +111,7 @@ class PlotNFT2Wallet:
             action_scope=action_scope,
             fee=fee,
             coins=origin_coins,
-            extra_conditions=tuple(announcement_assertions, *extra_conditions),
+            extra_conditions=(*announcement_assertions, *extra_conditions),
             origin_id=coin_spends[0].coin.parent_coin_info,
         )
 
@@ -117,6 +123,8 @@ class PlotNFT2Wallet:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         rewards_to_claim = await self.wallet_state_manager.plotnft2_store.get_pool_rewards()
+        if len(rewards_to_claim) == 0:
+            raise ValueError("No rewards to claim")
         total_reward_amount = uint64(sum(reward.coin.amount for reward in rewards_to_claim))
         target_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         if fee > total_reward_amount:
@@ -143,7 +151,16 @@ class PlotNFT2Wallet:
                 )
                 if i == 0
                 else DelegatedPuzzleAndSolution(
-                    puzzle=Program.to((1, AssertCoinAnnouncement(asserted_id=reward.coin.name(), asserted_msg=b""))),
+                    puzzle=Program.to(
+                        (
+                            1,
+                            [
+                                AssertCoinAnnouncement(
+                                    asserted_id=rewards_to_claim[0].coin.name(), asserted_msg=b""
+                                ).to_program()
+                            ],
+                        )
+                    ),
                     solution=Program.to(None),
                 )
                 for i, reward in enumerate(rewards_to_claim)
@@ -364,24 +381,20 @@ class PlotNFT2Wallet:
 
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(
-            max(
-                0,
-                sum(
-                    cr.coin.amount
-                    for cr in await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
-                )
-                - 1,
+            sum(
+                cr.coin.amount
+                for cr in await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+                if cr.coin.amount != 1  # bit of a hack, but should work well enough to filter out the plotnft
             )
         )
 
     async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
-        return uint128(
-            max(
-                0,
-                await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id(), unspent_records)
-                - 1,
-            )
-        )
+        # bit of a hack, but should work well enough to filter out the plotnft
+        if unspent_records is None:
+            unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+        unspent_records = set(cr for cr in unspent_records if cr.coin.amount != 1)
+
+        return await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id(), unspent_records)
 
     async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.get_unconfirmed_balance(unspent_records=unspent_records)
@@ -393,15 +406,8 @@ class PlotNFT2Wallet:
         return await self.get_spendable_balance(records)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        if coin.amount != 1:
-            return False
-        elif (
-            await self.wallet_state_manager.plotnft2_store.launcher_exists(launcher_id=hint)
-            and await self.wallet_state_manager.plotnft2_store.get_plotnfts(coin_ids=[coin.name()]) != []
-        ):
-            return True
-        else:
-            return False
+        # We're choosing not to implement this for now as it shouldn't be necessary
+        return False
 
     # Wallet Protocol Stubs
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:

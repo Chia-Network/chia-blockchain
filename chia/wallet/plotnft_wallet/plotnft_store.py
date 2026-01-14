@@ -162,6 +162,11 @@ class PlotNFTStore:
             else:
                 return plot_nfts_selected
 
+    async def plotnft_exists(self, *, coin_id: bytes32) -> bool:
+        async with self.db_wrapper.reader() as conn:
+            cursor = await conn.execute("SELECT 1 FROM plotnft2s WHERE id = ? LIMIT 1", (coin_id,))
+            return cursor.fetchone() is not None
+
     async def get_pool_rewards(
         self,
         *,
@@ -174,7 +179,8 @@ class PlotNFTStore:
                 (
                     "SELECT * from pool_reward2s "
                     + ("WHERE " if coin_ids is not None or not include_spent else "")
-                    + (f"coin_id in ({', '.join(['?'] * len(coin_ids))}) AND " if coin_ids is not None else "")
+                    + (f"coin_id in ({', '.join(['?'] * len(coin_ids))}) " if coin_ids is not None else "")
+                    + ("AND " if coin_ids is not None and not include_spent else "")
                     + ("spent_height IS NULL " if not include_spent else "")
                     + "LIMIT ?"
                 ),
@@ -216,7 +222,7 @@ class PlotNFTStore:
     async def add_exiting_height(self, *, wallet_id: uint32, height: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                ("INSERT INTO finish_exiting_height (wallet_id, height) VALUES (?, ?)"),
+                ("INSERT OR REPLACE INTO finish_exiting_height (wallet_id, height) VALUES (?, ?)"),
                 (wallet_id, height),
             )
 
@@ -235,3 +241,4 @@ class PlotNFTStore:
     async def clear_exiting_info(self, wallet_id: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM finish_exiting_fee WHERE wallet_id = ?", (wallet_id,))
+            await conn.execute("DELETE FROM finish_exiting_height WHERE wallet_id = ?", (wallet_id,))
