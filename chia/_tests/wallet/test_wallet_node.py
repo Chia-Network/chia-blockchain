@@ -19,6 +19,7 @@ from chia.protocols import wallet_protocol
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
@@ -492,7 +493,7 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_1000_blocks: list[FullBlock]
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
@@ -512,7 +513,7 @@ async def test_get_balance(
     #       with that to a KeyError when applying the race cache if there are less than WEIGHT_PROOF_RECENT_BLOCKS
     #       blocks but we still have a peak stored in the DB. So we need to add enough blocks for a weight proof here to
     #       be able to restart the wallet in this test.
-    await add_blocks_in_batches(default_400_blocks, full_node_api.full_node)
+    await add_blocks_in_batches(default_1000_blocks[:600], full_node_api.full_node)
     # Initially there should be no sync and no balance
     assert not wallet_synced()
     assert await wallet_node.get_balance(wallet_id) == Balance()
@@ -624,7 +625,7 @@ async def test_transaction_send_cache(
     logged_spends = []
 
     async def send_transaction(
-        self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
+        self: Self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
     ) -> Message | None:
         logged_spends.append(request.transaction.name())
         return None

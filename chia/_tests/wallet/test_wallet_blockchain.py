@@ -22,22 +22,22 @@ async def test_wallet_blockchain(
 ) -> None:
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
-    await add_blocks_in_batches(default_1000_blocks[:600], full_node_api.full_node)
+    await add_blocks_in_batches(default_1000_blocks[:700], full_node_api.full_node)
     resp = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
-            uint32(default_1000_blocks[499].height + 1), default_1000_blocks[499].header_hash
+            uint32(default_1000_blocks[599].height + 1), default_1000_blocks[599].header_hash
         )
     )
     assert resp is not None
     resp_2 = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
-            uint32(default_1000_blocks[460].height + 1), default_1000_blocks[460].header_hash
+            uint32(default_1000_blocks[560].height + 1), default_1000_blocks[560].header_hash
         )
     )
     assert resp_2 is not None
     resp_3 = await full_node_api.request_proof_of_weight(
         full_node_protocol.RequestProofOfWeight(
-            uint32(default_1000_blocks[505].height + 1), default_1000_blocks[505].header_hash
+            uint32(default_1000_blocks[605].height + 1), default_1000_blocks[605].header_hash
         )
     )
     assert resp_3 is not None
@@ -59,18 +59,18 @@ async def test_wallet_blockchain(
         await chain.new_valid_weight_proof(weight_proof, records)
         peak_block = await chain.get_peak_block()
         assert peak_block is not None
-        assert peak_block.height == 499
+        assert peak_block.height == 599
         assert chain.get_latest_timestamp() > 0
 
         await chain.new_valid_weight_proof(weight_proof_short, records_short)
         peak_block = await chain.get_peak_block()
         assert peak_block is not None
-        assert peak_block.height == 499
+        assert peak_block.height == 599
 
         await chain.new_valid_weight_proof(weight_proof_long, records_long)
         peak_block = await chain.get_peak_block()
         assert peak_block is not None
-        assert peak_block.height == 505
+        assert peak_block.height == 605
 
         header_blocks: list[HeaderBlock] = []
         for block in default_1000_blocks:
@@ -81,24 +81,24 @@ async def test_wallet_blockchain(
         print(res, err)
         assert res == AddBlockResult.DISCONNECTED_BLOCK
 
-        res, err = await chain.add_block(header_blocks[400])
+        res, err = await chain.add_block(header_blocks[500])
         print(res, err)
         assert res == AddBlockResult.ALREADY_HAVE_BLOCK
 
-        res, err = await chain.add_block(header_blocks[507])
+        res, err = await chain.add_block(header_blocks[607])
         print(res, err)
         assert res == AddBlockResult.DISCONNECTED_BLOCK
 
         res, err = await chain.add_block(
-            header_blocks[506].replace(challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True))
+            header_blocks[606].replace(challenge_chain_ip_proof=VDFProof(uint8(2), b"123", True))
         )
         assert res == AddBlockResult.INVALID_BLOCK
 
         peak_block = await chain.get_peak_block()
         assert peak_block is not None
-        assert peak_block.height == 505
+        assert peak_block.height == 605
 
-        for header_block in header_blocks[506:]:
+        for header_block in header_blocks[606:]:
             res, err = await chain.add_block(header_block)
             assert res == AddBlockResult.NEW_PEAK
             peak_block = await chain.get_peak_block()

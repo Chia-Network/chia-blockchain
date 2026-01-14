@@ -5,6 +5,7 @@ import contextlib
 import dataclasses
 import logging
 import random
+import sqlite3
 import time
 from collections.abc import Awaitable, Coroutine
 from typing import Any
@@ -35,10 +36,11 @@ from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.conftest import ConsensusMode
-from chia._tests.connection_utils import add_dummy_connection, connect_and_get_peer
+from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc, connect_and_get_peer
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
+from chia._tests.core.test_db_validation import make_db
 from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
@@ -54,7 +56,7 @@ from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.consensus.signage_point import SignagePoint
-from chia.full_node.full_node import WalletUpdate
+from chia.full_node.full_node import FullNode, WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -103,6 +105,7 @@ from chia.util.casts import int_to_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.path import path_from_root
 from chia.util.recursive_replace import recursive_replace
 from chia.util.task_referencer import create_referenced_task
 from chia.wallet.estimate_fees import estimate_fees
@@ -1029,7 +1032,7 @@ async def test_new_transaction_and_mempool(
         assert estimate_fees(spend_bundle) == fee
         respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
-        await full_node_1.send_transaction(respond_transaction)
+        await full_node_1.send_transaction(respond_transaction, fake_peer)
 
         request = fnp.RequestTransaction(spend_bundle.get_hash())
         req = await full_node_1.request_transaction(request)
@@ -1080,7 +1083,7 @@ async def test_new_transaction_and_mempool(
     assert err is None
 
     # Resubmission through wallet is also fine
-    response_msg = await full_node_1.send_transaction(SendTransaction(successful_bundle), test=True)
+    response_msg = await full_node_1.send_transaction(SendTransaction(successful_bundle), fake_peer, test=True)
     assert response_msg is not None
     assert TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
 
@@ -2448,31 +2451,30 @@ async def test_invalid_capability_can_connect(
 @pytest.mark.anyio
 async def test_node_start_with_existing_blocks(db_version: int) -> None:
     with TempKeyring(populate=True) as keychain:
-        block_tools = await create_block_tools_async(keychain=keychain)
+        async with create_block_tools_async(keychain=keychain) as block_tools:
+            blocks_per_cycle = 5
+            expected_height = 0
 
-        blocks_per_cycle = 5
-        expected_height = 0
+            for cycle in range(2):
+                async with setup_full_node(
+                    consensus_constants=block_tools.constants,
+                    db_name="node_restart_test.db",
+                    self_hostname=block_tools.config["self_hostname"],
+                    local_bt=block_tools,
+                    simulator=True,
+                    db_version=db_version,
+                    reuse_db=True,
+                ) as service:
+                    simulator_api = service._api
+                    assert isinstance(simulator_api, FullNodeSimulator)
+                    await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
 
-        for cycle in range(2):
-            async with setup_full_node(
-                consensus_constants=block_tools.constants,
-                db_name="node_restart_test.db",
-                self_hostname=block_tools.config["self_hostname"],
-                local_bt=block_tools,
-                simulator=True,
-                db_version=db_version,
-                reuse_db=True,
-            ) as service:
-                simulator_api = service._api
-                assert isinstance(simulator_api, FullNodeSimulator)
-                await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
+                    expected_height += blocks_per_cycle
+                    assert simulator_api.full_node._blockchain is not None
+                    block_record = simulator_api.full_node._blockchain.get_peak()
 
-                expected_height += blocks_per_cycle
-                assert simulator_api.full_node._blockchain is not None
-                block_record = simulator_api.full_node._blockchain.get_peak()
-
-                assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
-                assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
+                    assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
+                    assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
 
 
 @pytest.mark.anyio
@@ -2948,7 +2950,13 @@ async def test_declare_proof_of_space_no_overflow(
         assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
         for i in range(10, 100):
             sb = await add_tx_to_mempool(
-                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+                full_node_api,
+                dummy_peer,
+                wallet,
+                blocks[-8],
+                coinbase_puzzlehash,
+                bytes32(i.to_bytes(32, "big")),
+                uint64(i),
             )
             blocks = bt.get_consecutive_blocks(
                 block_list_input=blocks,
@@ -2992,7 +3000,13 @@ async def test_declare_proof_of_space_overflow(
         assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
         for i in range(10, 100):
             sb = await add_tx_to_mempool(
-                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+                full_node_api,
+                dummy_peer,
+                wallet,
+                blocks[-8],
+                coinbase_puzzlehash,
+                bytes32(i.to_bytes(32, "big")),
+                uint64(i),
             )
 
             blocks = bt.get_consecutive_blocks(
@@ -3252,6 +3266,7 @@ async def declare_pos_unfinished_block(
 
 async def add_tx_to_mempool(
     full_node_api: FullNodeAPI,
+    dummy_peer: WSChiaConnection,
     wallet: WalletTool,
     spend_block: FullBlock,
     coinbase_puzzlehash: bytes32,
@@ -3267,7 +3282,7 @@ async def add_tx_to_mempool(
     assert spend_coin is not None
     spend_bundle = wallet.generate_signed_transaction(amount, receiver_puzzlehash, spend_coin)
     assert spend_bundle is not None
-    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
     assert (
         response_msg is not None
         and TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
@@ -3310,7 +3325,11 @@ def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) 
     ],
 )
 async def test_pending_tx_cache_retry_on_new_peak(
-    condition: ConditionOpcode, error: str, blockchain_constants: ConsensusConstants, caplog: pytest.LogCaptureFixture
+    condition: ConditionOpcode,
+    error: str,
+    blockchain_constants: ConsensusConstants,
+    caplog: pytest.LogCaptureFixture,
+    self_hostname: str,
 ) -> None:
     """
     Covers PendingTXCache items that are placed there due to unmet relative or
@@ -3342,7 +3361,9 @@ async def test_pending_tx_cache_retry_on_new_peak(
         sb = wallet.generate_signed_transaction(uint64(42), ph, coin, condition_dic)
         sb_name = sb.name()
         # Send the transaction
-        res = await full_node_api.send_transaction(SendTransaction(sb))
+        _, dummy_node_id = await add_dummy_connection(full_node_api.server, self_hostname, 12312)
+        dummy_peer = full_node_api.server.all_connections[dummy_node_id]
+        res = await full_node_api.send_transaction(SendTransaction(sb), dummy_peer)
         assert res is not None
         assert ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
         transaction_ack = TransactionAck.from_bytes(res.data)
@@ -3492,3 +3513,50 @@ async def test_new_tx_zero_cost(
     await ws_con_2.send_message(msg)
     # Make sure the first full node has banned the second.
     await time_out_assert(3, lambda: full_node_2_ip in server_1.banned_peers)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullBlock]) -> None:
+    full_node = await FullNode.create(
+        bt.config["full_node"],
+        root_path=bt.root_path,
+        consensus_constants=bt.constants,
+    )
+
+    config = bt.config["full_node"]
+    db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+    db_path = path_from_root(bt.root_path, db_path_replaced)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    await make_db(db_path, default_400_blocks)
+    with contextlib.closing(sqlite3.connect(db_path)) as conn:
+        conn.execute("DELETE FROM current_peak;")
+        conn.commit()
+
+    with pytest.raises(RuntimeError, match="corrupt blockchain DB"):
+        # the blockchain is empty (without a peak)
+        # but there are coins in the coin store
+        async with full_node.manage():
+            pass  # pragma: no cover
+
+
+@pytest.mark.anyio
+async def test_send_transaction_peer_tx_queue_full(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the case where a peer's transaction queue is full and it sends a
+    `SendTransaction` message. The full node should send the proper
+    `TransactionAck` response with a correct error.
+    """
+    full_node_api, server, _ = one_node_one_block
+    # Set limit to 0 to trigger queue full exception
+    full_node_api.full_node.transaction_queue.peer_size_limit = 0
+    spend_bundle = SpendBundle([], G2Element())
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
+    assert response_msg is not None
+    response = wallet_protocol.TransactionAck.from_bytes(response_msg.data)
+    assert MempoolInclusionStatus(response.status) == MempoolInclusionStatus.FAILED
+    assert response.error == "Transaction queue full"

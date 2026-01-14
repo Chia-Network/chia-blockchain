@@ -769,11 +769,6 @@ def validate_unfinished_header_block(
         assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
         assert header_block.foliage.foliage_block_data.pool_signature is not None
 
-        # v2 plots require pool contract puzzle hash, not pool pk
-        # TODO: todo_v2_plots add test coverage of this check
-        if header_block.reward_chain_block.proof_of_space.param().strength_v2 is not None:
-            return None, ValidationError(Err.INVALID_POOL_TARGET)
-
         if not AugSchemeMPL.verify(
             header_block.reward_chain_block.proof_of_space.pool_public_key,
             bytes(header_block.foliage.foliage_block_data.pool_target),

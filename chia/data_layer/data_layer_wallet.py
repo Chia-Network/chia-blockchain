@@ -210,7 +210,7 @@ class DataLayerWallet:
         return coin_states[0]
 
     # This is the entry point for non-owned singletons
-    async def track_new_launcher_id(
+    async def _track_new_launcher_id(
         self,
         launcher_id: bytes32,
         peer: WSChiaConnection,
@@ -862,6 +862,31 @@ class DataLayerWallet:
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)
         await self.wallet_state_manager.dl_store.delete_launcher(launcher_id)
+
+    async def track_new_launcher_id(
+        self,
+        launcher_id: bytes32,
+        peer: WSChiaConnection | None = None,
+        spend: CoinSpend | None = None,
+        height: uint32 | None = None,
+    ) -> None:
+        if peer is None:
+            peer_list = self.wallet_state_manager.wallet_node.get_full_node_peers_in_order()
+        else:
+            peer_list = [peer]
+        peer_length = len(peer_list)
+        for i, peer_to_try in enumerate(peer_list):
+            try:
+                await self._track_new_launcher_id(
+                    launcher_id,
+                    peer_to_try,
+                    spend,
+                    height,
+                )
+            except LauncherCoinNotFoundError as e:
+                if i == peer_length - 1:
+                    raise e  # raise the error if we've tried all peers
+                continue  # try some other peers, maybe someone has it
 
     ###########
     # UTILITY #
