@@ -444,7 +444,10 @@ class PlotNFT(PlotNFTPuzzle):
         inner_conditions = parse_conditions_non_consensus(
             run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
         )
-        singleton_create_coin = next(condition for condition in inner_conditions if isinstance(condition, CreateCoin))
+        create_coins = [condition for condition in inner_conditions if isinstance(condition, CreateCoin)]
+        if len(create_coins) != 1:
+            raise GetNextPlotNFTError("PlotNFTs must make exactly one new coin")
+        singleton_create_coin = create_coins[0]
 
         # Now we begin to examine the inner puzzle
         plotnft_puzzle = None
