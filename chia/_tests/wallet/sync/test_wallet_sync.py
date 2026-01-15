@@ -25,7 +25,12 @@ from chiabip158 import PyBIP158
 from colorlog import getLogger
 
 from chia._tests.conftest import ConsensusMode
-from chia._tests.connection_utils import connect_and_get_peer, disconnect_all, disconnect_all_and_reconnect
+from chia._tests.connection_utils import (
+    add_dummy_connection,
+    connect_and_get_peer,
+    disconnect_all,
+    disconnect_all_and_reconnect,
+)
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -676,7 +681,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
         ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
 
     full_node_api = full_nodes[0]
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
+    wallet_peer = await connect_and_get_peer(full_node_api.full_node.server, wallet_server, self_hostname)
 
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -698,7 +703,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), wallet_peer)
     await full_node_api.wait_transaction_records_entered_mempool([tx])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -918,7 +923,9 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    _, dummy_node_id = await add_dummy_connection(full_node_api.server, self_hostname, 12312)
+    dummy_peer = full_node_api.server.all_connections[dummy_node_id]
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
     await full_node_api.wait_transaction_records_entered_mempool([tx])
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -985,7 +992,7 @@ async def test_dusted_wallet(
                 )
             [tx] = action_scope.side_effects.transactions
             assert tx.spend_bundle is not None
-            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
             # advance the chain and sync both wallets
             await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1008,7 +1015,7 @@ async def test_dusted_wallet(
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
-        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
         # advance the chain and sync both wallets
         await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1061,7 +1068,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1105,7 +1112,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1169,7 +1176,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1210,7 +1217,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1259,7 +1266,7 @@ async def test_dusted_wallet(
                 )
             [tx] = action_scope.side_effects.transactions
             assert tx.spend_bundle is not None
-            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+            await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
             await full_node_api.wait_transaction_records_entered_mempool([tx])
             await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1278,7 +1285,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1313,7 +1320,7 @@ async def test_dusted_wallet(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+    await full_node_api.send_transaction(SendTransaction(tx.spend_bundle), dummy_peer)
 
     # advance the chain and sync both wallets
     await full_node_api.wait_transaction_records_entered_mempool([tx])
