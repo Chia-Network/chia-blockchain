@@ -54,7 +54,7 @@ class BLSWithTaprootMember(Puzzle):
     def solve(self, use_hidden_puzzle: bool = False) -> Program:
         if use_hidden_puzzle:
             if self.hidden_puzzle is None or self.public_key is None:
-                raise ValueError("Hidden puzzle and original key are unknown")
+                raise ValueError("Hidden puzzle or original key are unknown")
             return Program.to([self.public_key, self.hidden_puzzle])
         return Program.to([0])
 

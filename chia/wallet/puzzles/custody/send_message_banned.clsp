@@ -4,7 +4,7 @@
 
   (defun check_conditions (conditions return)
     (if conditions
-        (if (= (f (f conditions)) SEND_MESSAGE)
+        (if (= (f (f conditions)) 66)  ; SEND_MESSAGE
             (x)
             (check_conditions (r conditions) return)
         )
