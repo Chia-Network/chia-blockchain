@@ -196,6 +196,13 @@ class Blockchain:
         assert self.__height_map.contains_height(self._peak_height)
         assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
+        # Build MMR from canonical chain (height_map), starting from aggregate_from
+        # todo WPv2: persist MMR state to avoid rebuilding on startup
+        for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
+            header_hash = self.__height_map.get_hash(uint32(height))
+            block_record = self.block_record(header_hash)
+            self.mmr_manager.add_block_to_mmr(header_hash, block_record.prev_hash, block_record.height)
+
     def get_peak(self) -> BlockRecord | None:
         """
         Return the peak of the blockchain
@@ -455,11 +462,15 @@ class Blockchain:
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
+                self.mmr_manager.rollback_to_height(state_change_summary.fork_height, self)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
                     fetched_block_record.header_hash,
                     fetched_block_record.sub_epoch_summary_included,
+                )
+                self.mmr_manager.add_block_to_mmr(
+                    fetched_block_record.header_hash, fetched_block_record.prev_hash, fetched_block_record.height
                 )
 
             if state_change_summary is not None:
@@ -1003,7 +1014,6 @@ class Blockchain:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
         self.__heights_in_cache[sbr.height].remove(header_hash)
-        self.mmr_manager.rollback_to_height(sbr.height - 1, self)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         """
@@ -1014,8 +1024,6 @@ class Blockchain:
         if block_record.height not in self.__heights_in_cache.keys():
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
-
-        self.add_block_to_mmr(block_record)
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
