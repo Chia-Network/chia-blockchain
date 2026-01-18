@@ -39,6 +39,10 @@ class StubMMRManager:
         # No-op for stub manager
         pass
 
+    def get_aggrtegate_from(self) -> uint32:
+        # Stub returns 0 (aggregate from genesis)
+        return uint32(0)
+
     def copy(self) -> MMRManagerProtocol:
         # Return a new instance (stateless)
         return StubMMRManager()

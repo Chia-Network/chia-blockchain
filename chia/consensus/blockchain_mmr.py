@@ -33,6 +33,9 @@ class BlockchainMMRManager:
         """Create a deep copy of this MMR manager."""
         return copy.deepcopy(self)
 
+    def get_aggrtegate_from(self) -> uint32:
+        return self.aggregate_from
+
     def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
         """
         Add a block to the MMR in sequential order.
