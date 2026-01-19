@@ -4,7 +4,7 @@
     Conditions
   )
 
-  (defconstant CREATE_COIN 51)
+  (include condition_codes.clib)
 
   (defun check_conditions (ALLOWED_PH conditions return)
     (if conditions
