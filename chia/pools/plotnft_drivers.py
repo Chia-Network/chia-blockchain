@@ -476,7 +476,10 @@ class PlotNFT(PlotNFTPuzzle):
         if plotnft_puzzle is None:
             if singleton_create_coin.memo_blob is None:
                 raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
-            unknown_inner_puzzle = PuzzleWithRestrictions.from_memo(singleton_create_coin.memo_blob.rest())
+            try:
+                unknown_inner_puzzle = PuzzleWithRestrictions.from_memo(singleton_create_coin.memo_blob.rest())
+            except ValueError:
+                raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
             if unknown_inner_puzzle.additional_memos is None:
                 raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
             pubkey = G1Element.from_bytes(unknown_inner_puzzle.additional_memos.at("f").as_atom())
