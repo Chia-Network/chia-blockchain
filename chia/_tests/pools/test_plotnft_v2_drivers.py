@@ -38,6 +38,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 user_sk = calculate_synthetic_secret_key(
@@ -411,64 +412,89 @@ def test_plotnft_errors() -> None:
             genesis_challenge=bytes32.zeros,
         )
 
-    def wrap_inner_puz(inner_puz: Program) -> Program:
-        return PlotNFT.singleton_puzzles.singleton_mod.curry(
-            SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz
+    def wrap_inner_puz(inner_puz: Program) -> UncurriedPuzzle:
+        return UncurriedPuzzle(
+            mod=PlotNFT.singleton_puzzles.singleton_mod,
+            args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
         )
 
-    NIL_SOLUTION = Program.to([None, None, None])
+    FAUX_SPEND = make_spend(default_coin, Program.to(None), Program.to([None, None, None]))
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("PlotNFTs must make exactly one new coin")):
         PlotNFT.get_next_from_coin_spend(
-            coin_spend=make_spend(
-                default_coin,
-                wrap_inner_puz(
-                    Program.to(
-                        (
-                            1,
-                            [
-                                CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program(),
-                                CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)).to_program(),
-                            ],
-                        )
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program(),
+                            CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)).to_program(),
+                        ],
                     )
-                ),
-                NIL_SOLUTION,
+                )
             ),
             genesis_challenge=bytes32.zeros,
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
         PlotNFT.get_next_from_coin_spend(
-            coin_spend=make_spend(
-                default_coin,
-                wrap_inner_puz(Program.to((1, [CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program()]))),
-                NIL_SOLUTION,
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to((1, [CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program()]))
             ),
             genesis_challenge=bytes32.zeros,
         )
 
     with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
         PlotNFT.get_next_from_coin_spend(
-            coin_spend=make_spend(
-                default_coin,
-                wrap_inner_puz(
-                    Program.to(
-                        (
-                            1,
-                            [
-                                CreateCoin(
-                                    puzzle_hash=bytes32.zeros,
-                                    amount=uint64(1),
-                                    memo_blob=Program.to(
-                                        (PuzzleWithRestrictions.spec_namespace, [None, None, None, None])
-                                    ),
-                                ).to_program()
-                            ],
-                        )
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(
+                                puzzle_hash=bytes32.zeros,
+                                amount=uint64(1),
+                                memo_blob=Program.to(
+                                    (
+                                        bytes32.zeros,
+                                        ("not the namespace", [None, [[None, bytes32.zeros, None]], None, None]),
+                                    )
+                                ),
+                            ).to_program()
+                        ],
                     )
-                ),
-                NIL_SOLUTION,
+                )
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(
+                                puzzle_hash=bytes32.zeros,
+                                amount=uint64(1),
+                                memo_blob=Program.to(
+                                    (
+                                        bytes32.zeros,
+                                        (
+                                            PuzzleWithRestrictions.spec_namespace,
+                                            [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
+                                        ),
+                                    )
+                                ),
+                            ).to_program()
+                        ],
+                    )
+                )
             ),
             genesis_challenge=bytes32.zeros,
         )
