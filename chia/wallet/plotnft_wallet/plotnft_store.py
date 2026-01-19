@@ -136,7 +136,7 @@ class PlotNFTStore:
         else:
             return False
 
-    async def get_latest_plotnft(self) -> PlotNFT:
+    async def get_latest_plotnft(self, launcher_id: bytes32) -> PlotNFT:
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 """
@@ -161,11 +161,6 @@ class PlotNFTStore:
                 raise ValueError(f"coin IDs {symmetric_difference} not found in PlotNFTStore")
             else:
                 return plot_nfts_selected
-
-    async def plotnft_exists(self, *, coin_id: bytes32) -> bool:
-        async with self.db_wrapper.reader() as conn:
-            cursor = await conn.execute("SELECT 1 FROM plotnft2s WHERE id = ? LIMIT 1", (coin_id,))
-            return cursor.fetchone() is not None
 
     async def get_pool_rewards(
         self,

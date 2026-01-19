@@ -362,7 +362,7 @@ class PlotNFT2Wallet:
 
     async def new_peak(self, height: uint32) -> None:
         finish_height = await self.wallet_state_manager.plotnft2_store.get_exiting_height(wallet_id=self.id())
-        if finish_height is not None and finish_height < height + 2:  # 2 blocks for a little reorg safety
+        if finish_height is not None and finish_height <= height - 2:  # 2 blocks for a little reorg safety
             if await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_id=self.id()) != []:
                 self.log.info(f"Not finishing plotnft from wallet {self.id()} due to unconfirmed transactions")
                 return None
@@ -377,7 +377,7 @@ class PlotNFT2Wallet:
 
     # State
     async def get_current_plotnft(self) -> PlotNFT:
-        return await self.wallet_state_manager.plotnft2_store.get_latest_plotnft()
+        return await self.wallet_state_manager.plotnft2_store.get_latest_plotnft(self.plotnft_id)
 
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(
