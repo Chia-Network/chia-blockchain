@@ -301,7 +301,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
 
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
-        count=plotnft.guaranteed_pool_config.heightlock, guarantee_transaction_blocks=True
+        count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
     )
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
 
