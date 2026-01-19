@@ -345,7 +345,7 @@ async def test_plotnft_pooling_claim(
         coin_spends = plotnft.forward_pool_reward(reward=reward)
         result = await sim_client.push_tx(
             cost_logger.add_cost(
-                "Forward Pool Reward",
+                f"Forward Pool Reward ({desired_state})",
                 WalletSpendBundle(
                     coin_spends,
                     G2Element(),
