@@ -272,7 +272,6 @@ class PuzzleWithRestrictions:
     def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
         if memo.atom is not None or memo.first() != Program.to(cls.spec_namespace):
             raise ValueError("Attempting to parse a memo that does not belong to this spec")
-        breakpoint()
         nonce = memo.at("rf")
         restriction_hints_prog = memo.at("rrf")
         further_branching_prog = memo.at("rrrf")
