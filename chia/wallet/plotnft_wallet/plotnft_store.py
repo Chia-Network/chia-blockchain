@@ -165,6 +165,7 @@ class PlotNFTStore:
     async def get_pool_rewards(
         self,
         *,
+        plotnft_id: bytes32,
         coin_ids: list[bytes32] | None = None,
         max: int = DEFAULT_POOL_REWARDS_PER_CLAIM,
         include_spent: bool = False,
@@ -172,14 +173,12 @@ class PlotNFTStore:
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 (
-                    "SELECT * from pool_reward2s "
-                    + ("WHERE " if coin_ids is not None or not include_spent else "")
-                    + (f"coin_id in ({', '.join(['?'] * len(coin_ids))}) " if coin_ids is not None else "")
-                    + ("AND " if coin_ids is not None and not include_spent else "")
-                    + ("spent_height IS NULL " if not include_spent else "")
-                    + "LIMIT ?"
+                    "SELECT * from pool_reward2s WHERE singleton_id = ?"
+                    + (f" AND coin_id in ({', '.join(['?'] * len(coin_ids))})" if coin_ids is not None else "")
+                    + (" AND spent_height IS NULL" if not include_spent else "")
+                    + " LIMIT ?"
                 ),
-                (*coin_ids, max) if coin_ids is not None else (max,),
+                (plotnft_id, *coin_ids, max) if coin_ids is not None else (plotnft_id, max),
             )
             pool_rewards_selected = [
                 PoolReward(

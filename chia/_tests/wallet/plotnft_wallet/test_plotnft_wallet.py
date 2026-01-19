@@ -212,7 +212,9 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
             await plotnft_wallet.claim_rewards(action_scope=action_scope)
 
     plotnft = await plotnft_wallet.get_current_plotnft()
-    [pool_reward, _] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards()
+    [pool_reward, _] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards(
+        plotnft_id=plotnft_wallet.plotnft_id
+    )
     coin_spends = plotnft.forward_pool_reward(pool_reward)
     await env.rpc_client.push_tx(PushTX(WalletSpendBundle(coin_spends, G2Element())))
 
@@ -278,7 +280,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
             await plotnft_wallet.claim_rewards(action_scope=action_scope)
 
     plotnft = await plotnft_wallet.get_current_plotnft()
-    [pool_reward] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards()
+    [pool_reward] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards(plotnft_id=plotnft_wallet.plotnft_id)
     coin_spends = plotnft.forward_pool_reward(pool_reward)
     await env.rpc_client.push_tx(PushTX(WalletSpendBundle(coin_spends, G2Element())))
 

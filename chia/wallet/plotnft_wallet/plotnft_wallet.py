@@ -122,7 +122,7 @@ class PlotNFT2Wallet:
         fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
-        rewards_to_claim = await self.wallet_state_manager.plotnft2_store.get_pool_rewards()
+        rewards_to_claim = await self.wallet_state_manager.plotnft2_store.get_pool_rewards(plotnft_id=self.plotnft_id)
         if len(rewards_to_claim) == 0:
             raise ValueError("No rewards to claim")
         total_reward_amount = uint64(sum(reward.coin.amount for reward in rewards_to_claim))
