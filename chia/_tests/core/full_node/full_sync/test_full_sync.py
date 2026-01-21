@@ -484,7 +484,7 @@ async def test_bad_peak_cache_invalidation(
 
 @pytest.mark.anyio
 async def test_weight_proof_timeout_slow_connection(
-    two_nodes: list[FullNodeAPI],
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     default_1000_blocks: list[FullBlock],
     self_hostname: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -494,9 +494,7 @@ async def test_weight_proof_timeout_slow_connection(
     This test verifies that the websocket heartbeat is properly configured to be
     longer than weight_proof_timeout, preventing premature connection closure.
     """
-    full_node_1, full_node_2 = two_nodes
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
+    full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
 
     # Set a weight_proof_timeout that's longer than the old hardcoded heartbeat (60s)
     # but shorter than the new heartbeat (which should be weight_proof_timeout + 30)
