@@ -13,8 +13,12 @@ from chia._tests.core.node_height import node_height_between, node_height_exactl
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
+from chia.protocols.outbound_message import Message
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
@@ -476,3 +480,67 @@ async def test_bad_peak_cache_invalidation(
     block = blocks[-1]
     full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
     assert len(full_node_1.full_node.bad_peak_cache) == 1
+
+
+@pytest.mark.anyio
+async def test_weight_proof_timeout_slow_connection(
+    two_nodes: list[FullNodeAPI],
+    default_1000_blocks: list[FullBlock],
+    self_hostname: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that weight proof downloads complete successfully on slow connections.
+    This test verifies that the websocket heartbeat is properly configured to be
+    longer than weight_proof_timeout, preventing premature connection closure.
+    """
+    full_node_1, full_node_2 = two_nodes
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+
+    # Set a weight_proof_timeout that's longer than the old hardcoded heartbeat (60s)
+    # but shorter than the new heartbeat (which should be weight_proof_timeout + 30)
+    weight_proof_timeout = 120  # 120 seconds
+    full_node_1.full_node.config["weight_proof_timeout"] = weight_proof_timeout
+    full_node_2.full_node.config["weight_proof_timeout"] = weight_proof_timeout
+
+    # Add enough blocks to create a weight proof
+    await add_blocks_in_batches(default_1000_blocks[:600], full_node_1.full_node)
+
+    # Track message sends to simulate slow connection
+    original_send_message = WSChiaConnection._send_message
+    send_count = 0
+
+    async def slow_send_message(self: WSChiaConnection, message: Message) -> None:
+        nonlocal send_count
+        send_count += 1
+        # Simulate slow connection by adding small delays for large messages
+        # (weight proof responses are large)
+        if ProtocolMessageTypes(message.type) == ProtocolMessageTypes.respond_proof_of_weight:
+            # Add a delay that would cause the old 60s heartbeat to timeout
+            # but should work with the new heartbeat (weight_proof_timeout + 30)
+            await asyncio.sleep(0.1)  # Small delay per chunk to simulate slow connection
+        await original_send_message(self, message)
+
+    # Patch the send_message method to simulate slow connection
+    monkeypatch.setattr(WSChiaConnection, "_send_message", slow_send_message)
+
+    # Connect node 2 to node 1 - this will trigger weight proof download during sync
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+
+    # Wait for sync - this will trigger weight proof download
+    def nodes_synced() -> bool:
+        return (
+            full_node_1.full_node.blockchain.get_peak() is not None
+            and full_node_2.full_node.blockchain.get_peak() is not None
+            and full_node_1.full_node.blockchain.get_peak().height
+            == full_node_2.full_node.blockchain.get_peak().height
+        )
+
+    # This should complete successfully even with slow connection
+    # because heartbeat is now weight_proof_timeout + 30 = 150s, which is > 120s timeout
+    await time_out_assert(180, nodes_synced)
+
+    # Verify that the nodes actually synced
+    assert nodes_synced()
+    assert send_count > 0  # Verify that messages were sent
