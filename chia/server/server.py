@@ -303,10 +303,14 @@ class ChiaServer:
             self.log.warning(reason)
             raise web.HTTPForbidden(reason=reason)
         # Use weight_proof_timeout for heartbeat to prevent connection closure
-        # during slow weight proof downloads. Default to 360 seconds if not configured.
+        # during slow weight proof downloads. Only apply to FULL_NODE and WALLET
+        # node types that actually use weight proofs. Default to 360 seconds if not configured.
         # Add a buffer (30s) to ensure heartbeat is longer than weight_proof_timeout.
-        wp_timeout = self.config.get("weight_proof_timeout", 360)
-        heartbeat = max(60, wp_timeout + 30)
+        if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
+            wp_timeout = self.config.get("weight_proof_timeout", 360)
+            heartbeat = max(60, wp_timeout + 30)
+        else:
+            heartbeat = 60  # Default heartbeat for other node types
         ws = web.WebSocketResponse(max_msg_size=max_message_size, heartbeat=heartbeat)
         await ws.prepare(request)
         ssl_object = request.get_extra_info("ssl_object")
@@ -437,10 +441,14 @@ class ChiaServer:
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 # Use weight_proof_timeout for heartbeat to prevent connection closure
-                # during slow weight proof downloads. Default to 360 seconds if not configured.
+                # during slow weight proof downloads. Only apply to FULL_NODE and WALLET
+                # node types that actually use weight proofs. Default to 360 seconds if not configured.
                 # Add a buffer (30s) to ensure heartbeat is longer than weight_proof_timeout.
-                wp_timeout = self.config.get("weight_proof_timeout", 360)
-                heartbeat = max(60, wp_timeout + 30)
+                if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
+                    wp_timeout = self.config.get("weight_proof_timeout", 360)
+                    heartbeat = max(60, wp_timeout + 30)
+                else:
+                    heartbeat = 60  # Default heartbeat for other node types
                 ws = await session.ws_connect(
                     url,
                     autoclose=True,
