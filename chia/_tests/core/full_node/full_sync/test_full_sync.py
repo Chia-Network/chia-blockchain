@@ -530,11 +530,7 @@ async def test_weight_proof_timeout_slow_connection(
     def nodes_synced() -> bool:
         peak_1 = full_node_1.full_node.blockchain.get_peak()
         peak_2 = full_node_2.full_node.blockchain.get_peak()
-        return (
-            peak_1 is not None
-            and peak_2 is not None
-            and peak_1.height == peak_2.height
-        )
+        return peak_1 is not None and peak_2 is not None and peak_1.height == peak_2.height
 
     # This should complete successfully even with slow connection
     # because heartbeat is now weight_proof_timeout + 30 = 150s, which is > 120s timeout
