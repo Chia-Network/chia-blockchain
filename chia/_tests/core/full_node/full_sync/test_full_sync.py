@@ -530,11 +530,12 @@ async def test_weight_proof_timeout_slow_connection(
 
     # Wait for sync - this will trigger weight proof download
     def nodes_synced() -> bool:
+        peak_1 = full_node_1.full_node.blockchain.get_peak()
+        peak_2 = full_node_2.full_node.blockchain.get_peak()
         return (
-            full_node_1.full_node.blockchain.get_peak() is not None
-            and full_node_2.full_node.blockchain.get_peak() is not None
-            and full_node_1.full_node.blockchain.get_peak().height
-            == full_node_2.full_node.blockchain.get_peak().height
+            peak_1 is not None
+            and peak_2 is not None
+            and peak_1.height == peak_2.height
         )
 
     # This should complete successfully even with slow connection
