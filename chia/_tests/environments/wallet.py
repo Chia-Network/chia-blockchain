@@ -171,7 +171,7 @@ class WalletEnvironment:
                 ),
             }
             balance_response: dict[str, int] = (
-                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))
+                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id=wallet_id))
             ).wallet_balance.to_json_dict()
 
             if not expected_result.items() <= balance_response.items():
