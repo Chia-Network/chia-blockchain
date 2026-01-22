@@ -92,7 +92,7 @@ ignore = [
     "COM812",  # trailing commas: ~5000 errors
     "CPY001",  # copyright notices: ~900 errors
     "TC",  # type checking linting: ~1700 errors  # Too much reliance on runtime types to enable this
-    "T",  # using print: ~1300 errors  # might want to enable this but not for CLI or tools/
+    "T20",  # using print: ~1300 errors  # might want to enable this but not for CLI or tools/
     "TD",  # formatting of TODOs: ~800 errors
     "DOC",  # also docstrings: ~700 errors
     "ARG",  # unused arguments: ~500 errors
