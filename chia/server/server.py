@@ -307,7 +307,7 @@ class ChiaServer:
         # node types that actually use weight proofs. Default to 360 seconds if not configured.
         # Add a buffer (30s) to ensure heartbeat is longer than weight_proof_timeout.
         if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
-            wp_timeout = self.config.get("weight_proof_timeout", 360)
+            wp_timeout = float(self.config.get("weight_proof_timeout", 360))
             heartbeat = max(60, wp_timeout + 30)
         else:
             heartbeat = 60  # Default heartbeat for other node types
@@ -445,7 +445,7 @@ class ChiaServer:
                 # node types that actually use weight proofs. Default to 360 seconds if not configured.
                 # Add a buffer (30s) to ensure heartbeat is longer than weight_proof_timeout.
                 if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
-                    wp_timeout = self.config.get("weight_proof_timeout", 360)
+                    wp_timeout = float(self.config.get("weight_proof_timeout", 360))
                     heartbeat = max(60, wp_timeout + 30)
                 else:
                     heartbeat = 60  # Default heartbeat for other node types

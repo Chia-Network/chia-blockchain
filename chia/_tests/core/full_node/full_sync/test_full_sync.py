@@ -557,12 +557,22 @@ async def test_weight_proof_timeout_slow_connection(
     assert nodes_synced()
     assert send_count > 0  # Verify that messages were sent
 
+    # Verify that a weight proof message was actually sent during sync
+    # If no weight proof was requested, the test would fail later with a confusing error
+    assert weight_proof_start_time is not None, (
+        "No weight proof message (respond_proof_of_weight) was sent during sync. "
+        "The test requires a weight proof to verify the heartbeat fix works correctly."
+    )
+    assert weight_proof_end_time is not None, (
+        "Weight proof message transmission did not complete. "
+        "This indicates the weight proof response was not fully sent."
+    )
+
     # Verify that the sync process (which includes weight proof download) took longer than 60 seconds
     # This proves the heartbeat fix is working (old 60s heartbeat would have closed the connection)
     log.info(f"Sync process took {sync_duration:.2f} seconds")
-    if weight_proof_start_time is not None and weight_proof_end_time is not None:
-        weight_proof_duration = weight_proof_end_time - weight_proof_start_time
-        log.info(f"Weight proof message transmission took {weight_proof_duration:.2f} seconds")
+    weight_proof_duration = weight_proof_end_time - weight_proof_start_time
+    log.info(f"Weight proof message transmission took {weight_proof_duration:.2f} seconds")
 
     # The sync process should take longer than 60 seconds to verify the heartbeat fix works
     # This ensures that with the old 60s heartbeat, the connection would have been closed
