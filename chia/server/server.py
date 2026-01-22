@@ -293,6 +293,23 @@ class ChiaServer:
             self._port = int(self.webserver.listen_port)
             self.log.info(f"Started listening on port: {self._port}")
 
+    def _calculate_heartbeat(self) -> float:
+        """
+        Calculate the websocket heartbeat timeout based on node type and weight_proof_timeout config.
+
+        For FULL_NODE and WALLET node types that use weight proofs, the heartbeat is set to
+        weight_proof_timeout + 30 seconds (with a minimum of 60 seconds) to prevent connection
+        closure during slow weight proof downloads. Other node types use the default 60 seconds.
+
+        Returns:
+            The heartbeat timeout in seconds.
+        """
+        if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
+            wp_timeout = float(self.config.get("weight_proof_timeout", 360))
+            return max(60, wp_timeout + 30)
+        else:
+            return 60  # Default heartbeat for other node types
+
     async def incoming_connection(self, request: web.Request) -> web.StreamResponse:
         if getattr(self.node, "crawl", None) is not None:
             raise web.HTTPForbidden(reason="incoming connections not allowed for crawler")
@@ -302,15 +319,7 @@ class ChiaServer:
             reason = f"Peer {request.remote} is banned, refusing connection"
             self.log.warning(reason)
             raise web.HTTPForbidden(reason=reason)
-        # Use weight_proof_timeout for heartbeat to prevent connection closure
-        # during slow weight proof downloads. Only apply to FULL_NODE and WALLET
-        # node types that actually use weight proofs. Default to 360 seconds if not configured.
-        # Add a buffer (30s) to ensure heartbeat is longer than weight_proof_timeout.
-        if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
-            wp_timeout = float(self.config.get("weight_proof_timeout", 360))
-            heartbeat = max(60, wp_timeout + 30)
-        else:
-            heartbeat = 60  # Default heartbeat for other node types
+        heartbeat = self._calculate_heartbeat()
         ws = web.WebSocketResponse(max_msg_size=max_message_size, heartbeat=heartbeat)
         await ws.prepare(request)
         ssl_object = request.get_extra_info("ssl_object")
@@ -440,15 +449,7 @@ class ChiaServer:
             url = f"wss://{ip}:{target_node.port}/ws"
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
-                # Use weight_proof_timeout for heartbeat to prevent connection closure
-                # during slow weight proof downloads. Only apply to FULL_NODE and WALLET
-                # node types that actually use weight proofs. Default to 360 seconds if not configured.
-                # Add a buffer (30s) to ensure heartbeat is longer than weight_proof_timeout.
-                if self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}:
-                    wp_timeout = float(self.config.get("weight_proof_timeout", 360))
-                    heartbeat = max(60, wp_timeout + 30)
-                else:
-                    heartbeat = 60  # Default heartbeat for other node types
+                heartbeat = self._calculate_heartbeat()
                 ws = await session.ws_connect(
                     url,
                     autoclose=True,
