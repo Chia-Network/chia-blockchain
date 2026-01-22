@@ -508,20 +508,34 @@ async def test_weight_proof_timeout_slow_connection(
     # Track message sends to simulate slow connection
     original_send_message = WSChiaConnection._send_message
     send_count = 0
+    weight_proof_start_time: float | None = None
+    weight_proof_end_time: float | None = None
 
     async def slow_send_message(self: WSChiaConnection, message: Message) -> None:
-        nonlocal send_count
+        nonlocal send_count, weight_proof_start_time, weight_proof_end_time
         send_count += 1
-        # Simulate slow connection by adding small delays for large messages
-        # (weight proof responses are large)
+        # Simulate slow connection by adding delays for large messages
+        # (weight proof responses are large - simulate slow bandwidth)
         if ProtocolMessageTypes(message.type) == ProtocolMessageTypes.respond_proof_of_weight:
-            # Add a delay that would cause the old 60s heartbeat to timeout
-            # but should work with the new heartbeat (weight_proof_timeout + 30)
-            await asyncio.sleep(0.1)  # Small delay per chunk to simulate slow connection
+            if weight_proof_start_time is None:
+                weight_proof_start_time = time.time()
+            # Simulate slow connection: delay proportional to message size
+            # Weight proofs can be several MB, so simulate ~100KB/s bandwidth
+            # This ensures the download takes > 60 seconds for large weight proofs
+            message_size = len(message.data)
+            # Simulate 100KB/s bandwidth: delay = size / 100000
+            # For a 5MB weight proof, this would be ~50 seconds
+            # Add minimum 65 seconds to ensure we exceed 60s threshold
+            delay = max(65.0, message_size / 100000.0)
+            await asyncio.sleep(delay)
+            weight_proof_end_time = time.time()
         await original_send_message(self, message)
 
     # Patch the send_message method to simulate slow connection
     monkeypatch.setattr(WSChiaConnection, "_send_message", slow_send_message)
+
+    # Track the entire sync process time
+    sync_start_time = time.time()
 
     # Connect node 2 to node 1 - this will trigger weight proof download during sync
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
@@ -536,6 +550,22 @@ async def test_weight_proof_timeout_slow_connection(
     # because heartbeat is now weight_proof_timeout + 30 = 150s, which is > 120s timeout
     await time_out_assert(180, nodes_synced)
 
+    sync_end_time = time.time()
+    sync_duration = sync_end_time - sync_start_time
+
     # Verify that the nodes actually synced
     assert nodes_synced()
     assert send_count > 0  # Verify that messages were sent
+
+    # Verify that the sync process (which includes weight proof download) took longer than 60 seconds
+    # This proves the heartbeat fix is working (old 60s heartbeat would have closed the connection)
+    log.info(f"Sync process took {sync_duration:.2f} seconds")
+    if weight_proof_start_time is not None and weight_proof_end_time is not None:
+        weight_proof_duration = weight_proof_end_time - weight_proof_start_time
+        log.info(f"Weight proof message transmission took {weight_proof_duration:.2f} seconds")
+
+    # The sync process should take longer than 60 seconds to verify the heartbeat fix works
+    # This ensures that with the old 60s heartbeat, the connection would have been closed
+    assert sync_duration > 60.0, (
+        f"Sync process took {sync_duration:.2f}s, expected > 60s to verify heartbeat fix prevents connection closure"
+    )
