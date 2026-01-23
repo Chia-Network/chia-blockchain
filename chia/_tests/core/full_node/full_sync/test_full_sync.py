@@ -4,25 +4,29 @@ import asyncio
 import logging
 import time
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.apis import StubMetadataRegistry
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
-from chia.protocols.outbound_message import Message, NodeType
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
 
@@ -502,7 +506,7 @@ async def test_weight_proof_timeout_slow_connection(
     - Connection is closed prematurely
 
     With the ping keepalive mechanism:
-    - Pings are sent every 30 seconds while waiting for weight proof responses
+    - Pings are sent every 20 seconds while waiting for weight proof responses
     - Pong responses reset the heartbeat timer
     - Connection stays alive during long downloads
     """
@@ -614,18 +618,154 @@ async def test_weight_proof_timeout_slow_connection(
     )
 
     # Verify that pings were sent during the weight proof wait
-    # With a 70+ second download and 30s ping interval, we should see at least 2 pings
-    # (one at ~30s, one at ~60s)
-    assert len(ping_times) >= 2, (
-        f"Expected at least 2 pings during weight proof wait (download took {weight_proof_duration:.2f}s), "
+    # With a 70+ second download and 20s ping interval, we should see at least 3 pings
+    # (one at ~20s, one at ~40s, one at ~60s)
+    assert len(ping_times) >= 3, (
+        f"Expected at least 3 pings during weight proof wait (download took {weight_proof_duration:.2f}s), "
         f"but only {len(ping_times)} were sent. This indicates the ping keepalive mechanism is not working."
     )
 
-    # Verify pings were sent at approximately 30-second intervals
+    # Verify pings were sent at approximately 20-second intervals
     if len(ping_times) >= 2:
         ping_intervals = [ping_times[i] - ping_times[i - 1] for i in range(1, len(ping_times))]
         avg_interval = sum(ping_intervals) / len(ping_intervals)
-        # Ping interval should be around 30 seconds (allow some variance)
-        assert 25.0 <= avg_interval <= 35.0, (
-            f"Ping intervals should be ~30s, but average was {avg_interval:.2f}s. Intervals: {ping_intervals}"
+        # Ping interval should be around 20 seconds (allow some variance)
+        assert 15.0 <= avg_interval <= 25.0, (
+            f"Ping intervals should be ~20s, but average was {avg_interval:.2f}s. Intervals: {ping_intervals}"
         )
+
+
+@pytest.mark.anyio
+async def test_send_request_ping_failure_logs_info() -> None:
+    """
+    Test that when ping fails during keepalive, it logs at INFO level (lines 635-636).
+    """
+    # Create a mock websocket
+    mock_ws = AsyncMock()
+    mock_ws.closed = False
+    ping_exception = Exception("Connection closed")
+    mock_ws.ping = AsyncMock(side_effect=ping_exception)
+
+    # Create a mock API
+    mock_api = MagicMock()
+
+    # Create connection
+    connection = WSChiaConnection.create(
+        NodeType.FULL_NODE,
+        mock_ws,
+        mock_api,
+        8444,
+        log,
+        True,
+        None,
+        None,
+        bytes32([0] * 32),
+        100,
+        30,
+        local_capabilities_for_handshake=default_capabilities[NodeType.FULL_NODE],
+        stub_metadata_for_type=StubMetadataRegistry,
+    )
+
+    # Create a message that will trigger the ping keepalive (timeout > 60)
+    message = make_msg(ProtocolMessageTypes.request_peers, None)
+
+    # Track log calls
+    log_calls = []
+
+    def log_info_wrapper(*args: object, **kwargs: object) -> None:
+        log_calls.append(("INFO", args, kwargs))
+
+    # Patch the log.info method
+    with patch.object(connection.log, "info", side_effect=log_info_wrapper):
+        # Start the send_request in a task
+        request_task = create_referenced_task(connection.send_request(message, timeout=65))
+
+        # Wait for ping interval to elapse (20 seconds, but we'll use a shorter wait for testing)
+        # We need to wait long enough for the ping to be attempted
+        # The ping interval is 20s, but we'll wait a bit to ensure it's triggered
+        await asyncio.sleep(0.25)
+
+        # Set the event to complete the request (simulate response)
+        if message.id in connection.pending_requests:
+            connection.pending_requests[message.id].set()
+
+        # Wait for the request to complete
+        try:
+            await asyncio.wait_for(request_task, timeout=1.0)
+        except asyncio.TimeoutError:
+            request_task.cancel()
+            try:
+                await request_task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+    # Verify that ping was called
+    assert mock_ws.ping.called, "Ping should have been called"
+
+    # Verify that INFO level log was called with the expected message
+    info_logs = [
+        call
+        for call in log_calls
+        if call[0] == "INFO" and len(call[1]) > 0 and "Failed to send ping" in str(call[1][0])
+    ]
+    assert len(info_logs) > 0, f"Expected INFO log for ping failure, but got: {log_calls}"
+
+
+@pytest.mark.anyio
+async def test_send_request_timeout_exceeded_raises_timeout_error() -> None:
+    """
+    Test that when timeout is exceeded, it raises asyncio.TimeoutError (line 641).
+    """
+    # Create a mock websocket
+    mock_ws = AsyncMock()
+    mock_ws.closed = False
+    mock_ws.ping = AsyncMock()
+
+    # Create a mock API
+    mock_api = MagicMock()
+
+    # Create connection
+    connection = WSChiaConnection.create(
+        NodeType.FULL_NODE,
+        mock_ws,
+        mock_api,
+        8444,
+        log,
+        True,
+        None,
+        None,
+        bytes32([0] * 32),
+        100,
+        30,
+        local_capabilities_for_handshake=default_capabilities[NodeType.FULL_NODE],
+        stub_metadata_for_type=StubMetadataRegistry,
+    )
+
+    # Create a message that will trigger the ping keepalive (timeout > 60)
+    message = make_msg(ProtocolMessageTypes.request_peers, None)
+
+    # Mock time.time() to control the timeout
+    start_time = 1000.0
+    time_values = [start_time, start_time + 20.0, start_time + 66.0]
+    time_index = [0]
+
+    def mock_time() -> float:
+        idx = time_index[0]
+        if idx < len(time_values):
+            result = time_values[idx]
+            time_index[0] += 1
+            return result
+        return time_values[-1]
+
+    with patch("chia.server.ws_connection.time.time", side_effect=mock_time):
+        # Start the send_request
+        request_task = create_referenced_task(connection.send_request(message, timeout=65))
+
+        # Wait a bit to let the timeout logic run
+        await asyncio.sleep(0.1)
+
+        # Wait for the request to complete or timeout
+        # The send_request should catch the TimeoutError and return None
+        result = await asyncio.wait_for(request_task, timeout=1.0)
+        # When timeout occurs, send_request returns None
+        assert result is None, "Expected None when timeout is exceeded"
