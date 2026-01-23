@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
@@ -13,7 +14,7 @@ from chia._tests.core.node_height import node_height_between, node_height_exactl
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
-from chia.protocols.outbound_message import Message
+from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
@@ -491,13 +492,24 @@ async def test_weight_proof_timeout_slow_connection(
 ) -> None:
     """
     Test that weight proof downloads complete successfully on slow connections.
-    This test verifies that the websocket heartbeat is properly configured to be
-    longer than weight_proof_timeout, preventing premature connection closure.
+    This test verifies that periodic pings are sent while waiting for weight proof responses,
+    keeping the connection alive even when downloads take longer than the heartbeat timeout (60s).
+
+    Without the ping keepalive mechanism, this test would fail because:
+    - The heartbeat timeout is 60 seconds
+    - Weight proof downloads can take > 60 seconds on slow connections
+    - No messages are received during the download, so heartbeat timer expires
+    - Connection is closed prematurely
+
+    With the ping keepalive mechanism:
+    - Pings are sent every 30 seconds while waiting for weight proof responses
+    - Pong responses reset the heartbeat timer
+    - Connection stays alive during long downloads
     """
     full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
 
-    # Set a weight_proof_timeout that's longer than the old hardcoded heartbeat (60s)
-    # but shorter than the new heartbeat (which should be weight_proof_timeout + 30)
+    # Set a weight_proof_timeout that's longer than the heartbeat (60s)
+    # This ensures the download will take longer than the heartbeat timeout
     weight_proof_timeout = 120  # 120 seconds
     full_node_1.full_node.config["weight_proof_timeout"] = weight_proof_timeout
     full_node_2.full_node.config["weight_proof_timeout"] = weight_proof_timeout
@@ -525,8 +537,8 @@ async def test_weight_proof_timeout_slow_connection(
             message_size = len(message.data)
             # Simulate 100KB/s bandwidth: delay = size / 100000
             # For a 5MB weight proof, this would be ~50 seconds
-            # Add minimum 65 seconds to ensure we exceed 60s threshold
-            delay = max(65.0, message_size / 100000.0)
+            # Add minimum 70 seconds to ensure we exceed 60s heartbeat threshold
+            delay = max(70.0, message_size / 100000.0)
             await asyncio.sleep(delay)
             weight_proof_end_time = time.time()
         await original_send_message(self, message)
@@ -534,11 +546,33 @@ async def test_weight_proof_timeout_slow_connection(
     # Patch the send_message method to simulate slow connection
     monkeypatch.setattr(WSChiaConnection, "_send_message", slow_send_message)
 
+    # Track ping calls to verify they're being sent during weight proof wait
+    ping_times: list[float] = []
+    original_ping_methods: dict[object, Any] = {}
+
+    def track_ping_for_connection(connection: WSChiaConnection) -> None:
+        """Patch the websocket ping method to track calls."""
+        if connection.ws not in original_ping_methods:
+            original_ping_methods[connection.ws] = connection.ws.ping
+
+            async def tracked_ping(msg: bytes = b"") -> None:
+                ping_times.append(time.time())
+                await original_ping_methods[connection.ws](msg)
+
+            monkeypatch.setattr(connection.ws, "ping", tracked_ping)
+
     # Track the entire sync process time
     sync_start_time = time.time()
 
     # Connect node 2 to node 1 - this will trigger weight proof download during sync
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+
+    # Patch ping methods on all connections to track when pings are sent
+    # We need to do this after connections are established
+    await asyncio.sleep(0.5)  # Give connections time to establish
+    for connection in server_2.all_connections.values():
+        if connection.connection_type == NodeType.FULL_NODE:
+            track_ping_for_connection(connection)
 
     # Wait for sync - this will trigger weight proof download
     def nodes_synced() -> bool:
@@ -546,8 +580,8 @@ async def test_weight_proof_timeout_slow_connection(
         peak_2 = full_node_2.full_node.blockchain.get_peak()
         return peak_1 is not None and peak_2 is not None and peak_1.height == peak_2.height
 
-    # This should complete successfully even with slow connection
-    # because heartbeat is now weight_proof_timeout + 30 = 150s, which is > 120s timeout
+    # This should complete successfully even with slow connection and 60s heartbeat
+    # because pings are sent every 30s to keep the connection alive
     await time_out_assert(180, nodes_synced)
 
     sync_end_time = time.time()
@@ -561,21 +595,37 @@ async def test_weight_proof_timeout_slow_connection(
     # If no weight proof was requested, the test would fail later with a confusing error
     assert weight_proof_start_time is not None, (
         "No weight proof message (respond_proof_of_weight) was sent during sync. "
-        "The test requires a weight proof to verify the heartbeat fix works correctly."
+        "The test requires a weight proof to verify the ping keepalive fix works correctly."
     )
     assert weight_proof_end_time is not None, (
         "Weight proof message transmission did not complete. "
         "This indicates the weight proof response was not fully sent."
     )
 
-    # Verify that the sync process (which includes weight proof download) took longer than 60 seconds
-    # This proves the heartbeat fix is working (old 60s heartbeat would have closed the connection)
-    log.info(f"Sync process took {sync_duration:.2f} seconds")
     weight_proof_duration = weight_proof_end_time - weight_proof_start_time
+    log.info(f"Sync process took {sync_duration:.2f} seconds")
     log.info(f"Weight proof message transmission took {weight_proof_duration:.2f} seconds")
+    log.info(f"Pings sent during weight proof wait: {len(ping_times)}")
 
-    # The sync process should take longer than 60 seconds to verify the heartbeat fix works
-    # This ensures that with the old 60s heartbeat, the connection would have been closed
+    # Verify that the sync process (which includes weight proof download) took longer than 60 seconds
+    # This proves the ping keepalive is working (without pings, 60s heartbeat would have closed the connection)
     assert sync_duration > 60.0, (
-        f"Sync process took {sync_duration:.2f}s, expected > 60s to verify heartbeat fix prevents connection closure"
+        f"Sync process took {sync_duration:.2f}s, expected > 60s to verify ping keepalive prevents connection closure"
     )
+
+    # Verify that pings were sent during the weight proof wait
+    # With a 70+ second download and 30s ping interval, we should see at least 2 pings
+    # (one at ~30s, one at ~60s)
+    assert len(ping_times) >= 2, (
+        f"Expected at least 2 pings during weight proof wait (download took {weight_proof_duration:.2f}s), "
+        f"but only {len(ping_times)} were sent. This indicates the ping keepalive mechanism is not working."
+    )
+
+    # Verify pings were sent at approximately 30-second intervals
+    if len(ping_times) >= 2:
+        ping_intervals = [ping_times[i] - ping_times[i - 1] for i in range(1, len(ping_times))]
+        avg_interval = sum(ping_intervals) / len(ping_intervals)
+        # Ping interval should be around 30 seconds (allow some variance)
+        assert 25.0 <= avg_interval <= 35.0, (
+            f"Ping intervals should be ~30s, but average was {avg_interval:.2f}s. Intervals: {ping_intervals}"
+        )

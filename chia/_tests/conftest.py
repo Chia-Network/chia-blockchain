@@ -249,6 +249,17 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     return ret
 
 
+@pytest.fixture(scope="session")
+def testrun_uid(pytestconfig) -> str:
+    """Provide testrun_uid fixture, using xdist's if available, otherwise a default."""
+    # pytest-xdist provides this fixture when running in parallel
+    # If not available, use a default value
+    try:
+        return pytestconfig.option.testrun_uid if hasattr(pytestconfig.option, "testrun_uid") else "default"
+    except Exception:
+        return "default"
+
+
 @pytest.fixture(scope="session", name="bt")
 async def block_tools_fixture(
     get_keychain, blockchain_constants, anyio_backend, testrun_uid: str

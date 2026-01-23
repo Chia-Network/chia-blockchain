@@ -606,8 +606,39 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
+        # Detect if we're waiting for a weight proof response - these can take a long time
+        # and we need to send periodic pings to keep the connection alive
+        is_weight_proof_request = (
+            ProtocolMessageTypes(message_no_id.type) == ProtocolMessageTypes.request_proof_of_weight
+        )
+
         try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
+            if is_weight_proof_request and timeout > 60:
+                # For weight proof requests with long timeouts, send periodic pings
+                # to keep the connection alive while waiting for the large response.
+                # Pings are sent every 30 seconds, and pong responses will reset the heartbeat timer.
+                ping_interval = 30.0
+                start_time = time.time()
+                while not event.is_set() and (time.time() - start_time) < timeout:
+                    # Wait for either the event or the ping interval, whichever comes first
+                    try:
+                        await asyncio.wait_for(event.wait(), timeout=ping_interval)
+                        break  # Event was set, we got the response
+                    except asyncio.TimeoutError:
+                        # Ping interval elapsed, send a ping to keep connection alive
+                        if not self.closed and self.ws is not None and not self.ws.closed:
+                            try:
+                                await self.ws.ping()
+                            except Exception as e:
+                                self.log.debug(f"Failed to send ping while waiting for weight proof: {e}")
+                                # If ping fails, connection might be dead, but continue waiting
+                                # in case it's just a temporary issue
+                # Check if we timed out
+                if not event.is_set() and (time.time() - start_time) >= timeout:
+                    raise asyncio.TimeoutError
+            else:
+                # For other requests or short timeouts, use the normal wait
+                await asyncio.wait_for(event.wait(), timeout=timeout)
         except asyncio.TimeoutError:
             self.log.debug(f"Request timeout: {message}")
 
