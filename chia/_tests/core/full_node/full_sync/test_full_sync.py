@@ -17,6 +17,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.apis import StubMetadataRegistry
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
+from chia.protocols.full_node_protocol import RequestPeers
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
@@ -667,7 +668,7 @@ async def test_send_request_ping_failure_logs_info() -> None:
     )
 
     # Create a message that will trigger the ping keepalive (timeout > 60)
-    message = make_msg(ProtocolMessageTypes.request_peers, None)
+    message = make_msg(ProtocolMessageTypes.request_peers, RequestPeers())
 
     # Track log calls
     log_calls = []
@@ -742,7 +743,7 @@ async def test_send_request_timeout_exceeded_raises_timeout_error() -> None:
     )
 
     # Create a message that will trigger the ping keepalive (timeout > 60)
-    message = make_msg(ProtocolMessageTypes.request_peers, None)
+    message = make_msg(ProtocolMessageTypes.request_peers, RequestPeers())
 
     # Mock time.time() to control the timeout
     start_time = 1000.0
