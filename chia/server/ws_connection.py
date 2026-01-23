@@ -621,8 +621,12 @@ class WSChiaConnection:
                 start_time = time.time()
                 while not event.is_set() and (time.time() - start_time) < timeout:
                     # Wait for either the event or the ping interval, whichever comes first
+                    # Use min(ping_interval, remaining_time) to respect the overall timeout
+                    elapsed = time.time() - start_time
+                    remaining_time = timeout - elapsed
+                    wait_timeout = min(ping_interval, remaining_time)
                     try:
-                        await asyncio.wait_for(event.wait(), timeout=ping_interval)
+                        await asyncio.wait_for(event.wait(), timeout=wait_timeout)
                         break  # Event was set, we got the response
                     except asyncio.TimeoutError:
                         # Ping interval elapsed, send a ping to keep connection alive
