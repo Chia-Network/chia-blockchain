@@ -606,16 +606,15 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        # Detect if we're waiting for a weight proof response - these can take a long time
-        # and we need to send periodic pings to keep the connection alive
-        is_weight_proof_request = (
-            ProtocolMessageTypes(message_no_id.type) == ProtocolMessageTypes.request_proof_of_weight
-        )
+        # For requests with timeouts longer than the heartbeat, send periodic pings
+        # to keep the connection alive. The heartbeat timeout is 60 seconds for all connections.
+        # If a request timeout exceeds this, we need to send pings to prevent the connection
+        # from being closed due to heartbeat expiration while waiting for the response.
+        heartbeat_timeout = 60.0  # All connections use 60 second heartbeat
 
         try:
-            if is_weight_proof_request and timeout > 60:
-                # For weight proof requests with long timeouts, send periodic pings
-                # to keep the connection alive while waiting for the large response.
+            if timeout > heartbeat_timeout:
+                # For long-running requests, send periodic pings to keep the connection alive.
                 # Pings are sent every 30 seconds, and pong responses will reset the heartbeat timer.
                 ping_interval = 30.0
                 start_time = time.time()
@@ -634,7 +633,7 @@ class WSChiaConnection:
                             try:
                                 await self.ws.ping()
                             except Exception as e:
-                                self.log.debug(f"Failed to send ping while waiting for weight proof: {e}")
+                                self.log.debug(f"Failed to send ping while waiting for response: {e}")
                                 # If ping fails, connection might be dead, but continue waiting
                                 # in case it's just a temporary issue
                 # Check if we timed out
