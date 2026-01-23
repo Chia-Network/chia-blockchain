@@ -633,7 +633,7 @@ class WSChiaConnection:
                             try:
                                 await self.ws.ping()
                             except Exception as e:
-                                self.log.debug(f"Failed to send ping while waiting for response: {e}")
+                                self.log.info(f"Failed to send ping while waiting for response: {e}")
                                 # If ping fails, connection might be dead, but continue waiting
                                 # in case it's just a temporary issue
                 # Check if we timed out
