@@ -625,6 +625,10 @@ class WSChiaConnection:
                     # Send an immediate ping to reset the heartbeat timer
                     if not self.closed and self.ws is not None and not self.ws.closed:
                         try:
+                            self.log.debug(
+                                f"Sending initial ping to keep connection alive "
+                                f"(>{time_since_last_message:.1f}s since last message, timeout={timeout}s)"
+                            )
                             await self.ws.ping()
                         except Exception as e:
                             self.log.info(f"Failed to send initial ping while waiting for response: {e}")
@@ -642,6 +646,11 @@ class WSChiaConnection:
                         # Ping interval elapsed, send a ping to keep connection alive
                         if not self.closed and self.ws is not None and not self.ws.closed:
                             try:
+                                elapsed = time.time() - start_time
+                                self.log.debug(
+                                    f"Sending ping to keep connection alive "
+                                    f"(elapsed={elapsed:.1f}s, timeout={timeout}s, remaining={remaining_time:.1f}s)"
+                                )
                                 await self.ws.ping()
                             except Exception as e:
                                 self.log.info(f"Failed to send ping while waiting for response: {e}")
