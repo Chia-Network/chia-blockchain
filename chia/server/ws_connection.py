@@ -613,6 +613,12 @@ class WSChiaConnection:
         heartbeat_timeout = 60.0  # All connections use 60 second heartbeat
 
         try:
+            # Log when ping keepalive is triggered for debugging
+            if timeout > heartbeat_timeout:
+                self.log.debug(
+                    f"Ping keepalive enabled for request with timeout={timeout}s "
+                    f"(heartbeat={heartbeat_timeout}s, last_message={time.time() - self.last_message_time:.1f}s ago)"
+                )
             if timeout > heartbeat_timeout:
                 # For long-running requests, send periodic pings to keep the connection alive.
                 # Pings are sent every 20 seconds to ensure we're well within the 60-second heartbeat window.
