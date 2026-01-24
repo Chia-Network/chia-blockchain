@@ -530,6 +530,9 @@ class WSChiaConnection:
         except asyncio.CancelledError:
             self.log.debug("Inbound_handler task cancelled")
         except Exception as e:
+            self.log.error(f"Exception in inbound_handler: {e}", exc_info=True)
+            raise
+        except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
@@ -741,6 +744,9 @@ class WSChiaConnection:
 
     async def _read_one_message(self) -> Message | None:
         message: WSMessage = await self.ws.receive()
+        # Log all message types for debugging (especially PING/PONG)
+        if message.type in {WSMsgType.PING, WSMsgType.PONG}:
+            self.log.debug(f"Received {message.type.name} from {self.peer_info.host}")
 
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()
