@@ -625,19 +625,18 @@ class WSChiaConnection:
                 # Pong responses will reset the heartbeat timer on both sides.
                 ping_interval = 20.0
                 start_time = time.time()
-                # Check if we're already close to the heartbeat timeout - if so, send a ping immediately
-                time_since_last_message = time.time() - self.last_message_time
-                if time_since_last_message > heartbeat_timeout * 0.5:  # If > 30 seconds since last message
-                    # Send an immediate ping to reset the heartbeat timer
-                    if not self.closed and self.ws is not None and not self.ws.closed:
-                        try:
-                            self.log.debug(
-                                f"Sending initial ping to keep connection alive "
-                                f"(>{time_since_last_message:.1f}s since last message, timeout={timeout}s)"
-                            )
-                            await self.ws.ping()
-                        except Exception as e:
-                            self.log.info(f"Failed to send initial ping while waiting for response: {e}")
+                # Send an immediate ping when starting a long request to reset the heartbeat timer
+                # This ensures the connection stays alive from the start, not just after 30 seconds
+                if not self.closed and self.ws is not None and not self.ws.closed:
+                    try:
+                        time_since_last_message = time.time() - self.last_message_time
+                        self.log.debug(
+                            f"Sending initial ping to keep connection alive "
+                            f"({time_since_last_message:.1f}s since last message, timeout={timeout}s)"
+                        )
+                        await self.ws.ping()
+                    except Exception as e:
+                        self.log.info(f"Failed to send initial ping while waiting for response: {e}")
 
                 while not event.is_set() and (time.time() - start_time) < timeout:
                     # Wait for either the event or the ping interval, whichever comes first
