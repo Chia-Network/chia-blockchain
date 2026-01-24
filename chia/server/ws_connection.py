@@ -790,6 +790,13 @@ class WSChiaConnection:
                 self.log.debug(f"Not responding to PING: is_outbound={self.is_outbound}, closed={self.closed}")
             # Continue reading messages after responding to ping
             return None
+        elif message.type == WSMsgType.PONG:
+            # Server responded to our ping with pong - this is expected and good
+            # Update last_message_time to track connection activity
+            self.last_message_time = time.time()
+            self.log.debug(f"Received PONG from server {self.peer_info.host} (response to our ping)")
+            # Continue reading messages after handling pong
+            return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Message = Message.from_bytes(data)
