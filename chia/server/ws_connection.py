@@ -610,6 +610,10 @@ class WSChiaConnection:
         # to keep the connection alive. The heartbeat timeout is 60 seconds for all connections.
         # If a request timeout exceeds this, we need to send pings to prevent the connection
         # from being closed due to heartbeat expiration while waiting for the response.
+        # Note: Weight proof requests attempt to use a 360-second timeout, but without ping
+        # keepalive, the connection closes at 60 seconds due to heartbeat expiration, making
+        # the longer timeout ineffective. This ping keepalive mechanism allows the full timeout
+        # to be respected by keeping the connection alive during long waits.
         heartbeat_timeout = 60.0  # All connections use 60 second heartbeat
 
         try:
@@ -652,6 +656,7 @@ class WSChiaConnection:
                         if not self.closed and self.ws is not None and not self.ws.closed:
                             try:
                                 elapsed = time.time() - start_time
+                                remaining_time = timeout - elapsed
                                 self.log.info(
                                     f"Sending ping to keep connection alive "
                                     f"(elapsed={elapsed:.1f}s, timeout={timeout}s, remaining={remaining_time:.1f}s)"
@@ -763,19 +768,19 @@ class WSChiaConnection:
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.PING:
-            # Server sent a ping, respond with pong to keep connection alive
-            # This is critical for maintaining the connection during long waits
-            if not self.closed and self.ws is not None and not self.ws.closed:
+            # Client-side: Server sent a ping, respond with pong to keep connection alive
+            # This is critical for maintaining the connection during long waits.
+            # autoping=True sends pings but doesn't automatically respond to incoming pings.
+            if self.is_outbound and not self.closed and self.ws is not None and not self.ws.closed:
                 try:
-                    # ClientWebSocketResponse has pong() method, WebSocketResponse might not
-                    # Use getattr to safely check if pong method exists
+                    # ClientWebSocketResponse has pong() method
                     if hasattr(self.ws, "pong"):
                         pong_data = message.data if hasattr(message, "data") and message.data else b""
                         await self.ws.pong(pong_data)
                         self.last_message_time = time.time()
-                        self.log.debug(f"Responded to ping with pong from {self.peer_info.host}")
+                        self.log.info(f"Responded to server ping with pong from {self.peer_info.host}")
                 except Exception as e:
-                    self.log.debug(f"Failed to send pong in response to ping: {e}")
+                    self.log.info(f"Failed to send pong in response to server ping: {e}")
             # Continue reading messages after responding to ping
             return None
         elif message.type == WSMsgType.BINARY:
