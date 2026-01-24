@@ -434,8 +434,8 @@ class ChiaServer:
                 ws = await session.ws_connect(
                     url,
                     autoclose=True,
-                    autoping=True,
-                    heartbeat=60,
+                    autoping=False,  # Disable autoping to manually handle PING/PONG for reliable keepalive
+                    heartbeat=60,  # Still use heartbeat for connection monitoring
                     ssl=self.ssl_client_context,
                     max_msg_size=max_message_size,
                 )
