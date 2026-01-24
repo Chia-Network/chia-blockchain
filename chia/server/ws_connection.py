@@ -615,7 +615,7 @@ class WSChiaConnection:
         try:
             # Log when ping keepalive is triggered for debugging
             if timeout > heartbeat_timeout:
-                self.log.debug(
+                self.log.info(
                     f"Ping keepalive enabled for request with timeout={timeout}s "
                     f"(heartbeat={heartbeat_timeout}s, last_message={time.time() - self.last_message_time:.1f}s ago)"
                 )
@@ -630,7 +630,7 @@ class WSChiaConnection:
                 if not self.closed and self.ws is not None and not self.ws.closed:
                     try:
                         time_since_last_message = time.time() - self.last_message_time
-                        self.log.debug(
+                        self.log.info(
                             f"Sending initial ping to keep connection alive "
                             f"({time_since_last_message:.1f}s since last message, timeout={timeout}s)"
                         )
@@ -652,7 +652,7 @@ class WSChiaConnection:
                         if not self.closed and self.ws is not None and not self.ws.closed:
                             try:
                                 elapsed = time.time() - start_time
-                                self.log.debug(
+                                self.log.info(
                                     f"Sending ping to keep connection alive "
                                     f"(elapsed={elapsed:.1f}s, timeout={timeout}s, remaining={remaining_time:.1f}s)"
                                 )
