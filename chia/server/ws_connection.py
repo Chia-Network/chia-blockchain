@@ -719,9 +719,6 @@ class WSChiaConnection:
             f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_info.host} {self.peer_node_id}"
         )
         self.bytes_written += size
-        # Update last_message_time when sending messages to keep connection alive
-        # This is important for long-running operations like sending large weight proofs
-        self.last_message_time = time.time()
 
     async def _read_one_message(self) -> Message | None:
         message: WSMessage = await self.ws.receive()
@@ -751,12 +748,6 @@ class WSChiaConnection:
                 create_referenced_task(self.close(), known_unreferenced=True)
                 await asyncio.sleep(3)
                 return None
-        elif message.type == WSMsgType.PING:
-            # PING messages are control frames that keep the connection alive
-            # Update last_message_time to prevent connection closure during long operations
-            self.last_message_time = time.time()
-            # aiohttp automatically responds with PONG, so we just need to update the timestamp
-            return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Message = Message.from_bytes(data)
