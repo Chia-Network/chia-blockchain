@@ -775,11 +775,10 @@ class WSChiaConnection:
                 return None
         elif message.type == WSMsgType.PING:
             # Client-side: Server sent a ping, respond with pong to keep connection alive
-            # This is critical for maintaining the connection during long waits.
-            # autoping=True sends pings but doesn't automatically respond to incoming pings.
-            # Note: With autoping=True, aiohttp may handle PINGs internally, but we still need
-            # to explicitly respond to ensure pongs are sent reliably.
-            self.log.info(f"Received PING from server {self.peer_info.host}")
+            # With autoping=True, aiohttp should automatically respond to incoming PINGs,
+            # but we keep this handler as a fallback in case PINGs reach our receive loop.
+            # This ensures we always respond to server pings to prevent connection timeouts.
+            self.log.info(f"Received PING from server {self.peer_info.host} (autoping should handle this)")
             if self.is_outbound and not self.closed and self.ws is not None and not self.ws.closed:
                 try:
                     # ClientWebSocketResponse has pong() method
