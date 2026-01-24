@@ -762,6 +762,22 @@ class WSChiaConnection:
                 create_referenced_task(self.close(), known_unreferenced=True)
                 await asyncio.sleep(3)
                 return None
+        elif message.type == WSMsgType.PING:
+            # Server sent a ping, respond with pong to keep connection alive
+            # This is critical for maintaining the connection during long waits
+            if not self.closed and self.ws is not None and not self.ws.closed:
+                try:
+                    # ClientWebSocketResponse has pong() method, WebSocketResponse might not
+                    # Use getattr to safely check if pong method exists
+                    if hasattr(self.ws, "pong"):
+                        pong_data = message.data if hasattr(message, "data") and message.data else b""
+                        await self.ws.pong(pong_data)
+                        self.last_message_time = time.time()
+                        self.log.debug(f"Responded to ping with pong from {self.peer_info.host}")
+                except Exception as e:
+                    self.log.debug(f"Failed to send pong in response to ping: {e}")
+            # Continue reading messages after responding to ping
+            return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Message = Message.from_bytes(data)
