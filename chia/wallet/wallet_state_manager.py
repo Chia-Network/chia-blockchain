@@ -928,7 +928,8 @@ class WalletStateManager:
                 pre_uncurry=uncurried,
                 previous_plotnft_puzzle=previous_plotnft,
             )
-            if coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
+            matched_plotnft_wallet_id = self.get_wallet_id_for_plotnft_id(plotnft_id=next_plot_nft.launcher_id)
+            if matched_plotnft_wallet_id is None and coin_spend.coin.parent_coin_info == next_plot_nft.launcher_id:
                 matched_plotnft_wallet_id = uint32(len(self.wallets) + 1)
                 self.wallets[matched_plotnft_wallet_id] = await PlotNFT2Wallet.create(
                     wallet_state_manager=self,
@@ -940,9 +941,11 @@ class WalletStateManager:
                         data=next_plot_nft.launcher_id.hex(),
                     ),
                 )
+            if matched_plotnft_wallet_id is None:
+                raise ValueError(f"No wallet id for plotnft with id {next_plot_nft.launcher_id}")
             # the Streamable hint is in error so we need this type ignore
             return WalletIdentifier(  # type: ignore[return-value]
-                id=self.get_wallet_id_for_plotnft_id(plotnft_id=next_plot_nft.launcher_id),
+                id=matched_plotnft_wallet_id,
                 type=WalletType.PLOTNFT_2,
             ), next_plot_nft
         except GetNextPlotNFTError:
@@ -952,11 +955,11 @@ class WalletStateManager:
 
         return None, None
 
-    def get_wallet_id_for_plotnft_id(self, *, plotnft_id: bytes32) -> uint32:
+    def get_wallet_id_for_plotnft_id(self, *, plotnft_id: bytes32) -> uint32 | None:
         for id, wallet in self.wallets.items():
             if isinstance(wallet, PlotNFT2Wallet) and wallet.plotnft_id == plotnft_id:
                 return id
-        raise ValueError(f"No wallet id for plotnft with id {plotnft_id.hex()}")
+        return None
 
     @property
     def tx_config(self) -> TXConfig:
@@ -2469,6 +2472,7 @@ class WalletStateManager:
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
         await self.dl_store.rollback_to_block(height)
+        await self.plotnft2_store.rollback_to_block(height=uint32(height))
         reorged: list[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:

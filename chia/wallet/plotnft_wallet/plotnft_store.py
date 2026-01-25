@@ -67,7 +67,7 @@ class PlotNFTStore:
                 " puzzle_hash blob,"
                 " amount blob,"
                 " singleton_id blob,"
-                " height blob,"
+                " height int,"
                 " spent_height int)"
             )
 
@@ -113,7 +113,7 @@ class PlotNFTStore:
                     pool_reward.coin.puzzle_hash,
                     bytes(pool_reward.coin.amount),
                     pool_reward.singleton_id,
-                    bytes(pool_reward.height),
+                    pool_reward.height,
                     None,
                 ),
             )
@@ -125,29 +125,18 @@ class PlotNFTStore:
                 (spent_height, reward_id),
             )
 
-    async def launcher_exists(self, *, launcher_id: bytes32) -> bool:
-        async with self.db_wrapper.reader() as conn:
-            cursor = await conn.execute("SELECT COUNT(*) from plotnft2s where launcher_id=?", (launcher_id,))
-            row = await cursor.fetchone()
-            await cursor.close()
-        if row is not None:
-            count: int = row[0]
-            return count > 0
-        else:
-            return False
-
     async def get_latest_plotnft(self, launcher_id: bytes32) -> PlotNFT:
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 """
                 SELECT *
                 FROM plotnft2s
+                WHERE launcher_id=?
                 ORDER BY created_height DESC
                 LIMIT 1;
-                """
+                """,
+                (launcher_id,),
             )
-            if len(list(rows)) > 1:
-                raise RuntimeError("DB corruption, multiple head PlotNFTs detected")
             return _row_to_plotnft(next(iter(rows)), self.genesis_challenge)
 
     async def get_plotnfts(self, *, coin_ids: list[bytes32]) -> list[PlotNFT]:
@@ -186,7 +175,7 @@ class PlotNFTStore:
                         parent_coin_info=bytes32(row[1]), puzzle_hash=bytes32(row[2]), amount=uint64.from_bytes(row[3])
                     ),
                     singleton_id=bytes32(row[4]),
-                    height=uint32.from_bytes(row[5]),
+                    height=uint32(row[5]),
                 )
                 for row in rows
             ]
@@ -236,3 +225,8 @@ class PlotNFTStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM finish_exiting_fee WHERE wallet_id = ?", (wallet_id,))
             await conn.execute("DELETE FROM finish_exiting_height WHERE wallet_id = ?", (wallet_id,))
+
+    async def rollback_to_block(self, *, height: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM plotnft2s WHERE created_height > ?", (height,))
+            await conn.execute("DELETE FROM pool_reward2s WHERE height > ?", (height,))

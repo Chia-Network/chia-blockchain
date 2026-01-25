@@ -9,6 +9,7 @@ from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.pools.plotnft_drivers import PoolConfig
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
@@ -37,6 +38,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
 
     POOL_REWARD_AMOUNT = uint64(1_750_000_000_000)
 
+    # CREATION
     creation_fee = POOL_REWARD_AMOUNT + 1
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await PlotNFT2Wallet.create_new(
@@ -77,14 +79,52 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         uint32(env.wallet_aliases["plotnft"]), required_type=PlotNFT2Wallet
     )
 
+    # Reorg (creation)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": creation_fee + 1,
+                        "<=#spendable_balance": creation_fee + 1,
+                        "<=#max_send_amount": creation_fee + 1,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                        ">=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {"unspent_coin_count": -1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -(creation_fee + 1),
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {"unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+
+    # REWARDS GENERATED
     NUM_REWARDS_FARMED = 2
+    REWARDS_GAINED = POOL_REWARD_AMOUNT * NUM_REWARDS_FARMED
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
         count=NUM_REWARDS_FARMED, farm_to=plotnft_wallet.p2_singleton_puzzle_hash, guarantee_transaction_blocks=True
     )
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1)
-
-    REWARDS_GAINED = POOL_REWARD_AMOUNT * NUM_REWARDS_FARMED
     await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
     await env.change_balances(
         {
             "plotnft": {
@@ -98,6 +138,46 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     )
     await env.check_balances()
 
+    # Reorg (rewards generated)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 3), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await env.change_balances(
+        {
+            "plotnft": {
+                "confirmed_wallet_balance": -REWARDS_GAINED,
+                "unconfirmed_wallet_balance": -REWARDS_GAINED,
+                "max_send_amount": -REWARDS_GAINED,
+                "spendable_balance": -REWARDS_GAINED,
+                "unspent_coin_count": -NUM_REWARDS_FARMED,
+            }
+        }
+    )
+    await env.check_balances()
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(
+        count=NUM_REWARDS_FARMED, farm_to=plotnft_wallet.p2_singleton_puzzle_hash, guarantee_transaction_blocks=True
+    )
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1)
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await env.change_balances(
+        {
+            "plotnft": {
+                "confirmed_wallet_balance": REWARDS_GAINED,
+                "unconfirmed_wallet_balance": REWARDS_GAINED,
+                "max_send_amount": REWARDS_GAINED,
+                "spendable_balance": REWARDS_GAINED,
+                "unspent_coin_count": NUM_REWARDS_FARMED,
+            }
+        }
+    )
+    await env.check_balances()
+
+    # CLAIM REWARDS
     amount_to_succeed_in_claiming = 100
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         with pytest.raises(ValueError, match="Fee is greater than the total amount of rewards"):
@@ -146,6 +226,50 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ):
             await plotnft_wallet.claim_rewards(action_scope=action_scope)
 
+    # Reorg (claim rewards)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -amount_to_succeed_in_claiming,
+                        "unconfirmed_wallet_balance": -amount_to_succeed_in_claiming,
+                        "spendable_balance": -amount_to_succeed_in_claiming,
+                        "max_send_amount": -amount_to_succeed_in_claiming,
+                        "unspent_coin_count": -1,
+                    },
+                    "plotnft": {
+                        "confirmed_wallet_balance": REWARDS_GAINED,
+                        "pending_coin_removal_count": NUM_REWARDS_FARMED,
+                        "unspent_coin_count": NUM_REWARDS_FARMED,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": amount_to_succeed_in_claiming,
+                        "unconfirmed_wallet_balance": amount_to_succeed_in_claiming,
+                        "spendable_balance": amount_to_succeed_in_claiming,
+                        "max_send_amount": amount_to_succeed_in_claiming,
+                        "unspent_coin_count": 1,
+                    },
+                    "plotnft": {
+                        "confirmed_wallet_balance": -REWARDS_GAINED,
+                        "pending_coin_removal_count": -NUM_REWARDS_FARMED,
+                        "unspent_coin_count": -NUM_REWARDS_FARMED,
+                    },
+                },
+            )
+        ]
+    )
+
+    # JOIN POOL
     joining_fee = uint64(1_000)
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
@@ -185,6 +309,44 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ]
     )
 
+    # Reorg (join pool)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": joining_fee,
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                        ">=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -joining_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {"pending_coin_removal_count": -1},
+                },
+            )
+        ]
+    )
+
+    # RECEIVE REWARDS (while pooling)
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
         count=NUM_REWARDS_FARMED, farm_to=plotnft_wallet.p2_singleton_puzzle_hash, guarantee_transaction_blocks=True
     )
@@ -211,6 +373,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ):
             await plotnft_wallet.claim_rewards(action_scope=action_scope)
 
+    # LOSE REWARDS (while pooling)
     plotnft = await plotnft_wallet.get_current_plotnft()
     [pool_reward, _] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards(
         plotnft_id=plotnft_wallet.plotnft_id
@@ -235,6 +398,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ]
     )
 
+    # LEAVE POOL
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         leave_fee = uint64(1_000_000)
         finish_leaving_fee = uint64(1_000_000_000)
@@ -279,6 +443,48 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ):
             await plotnft_wallet.claim_rewards(action_scope=action_scope)
 
+    # Reorg (leave pool)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": leave_fee,
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                        ">=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -leave_fee,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            )
+        ]
+    )
+
+    # LOSE REWARDS (while leaving)
     plotnft = await plotnft_wallet.get_current_plotnft()
     [pool_reward] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards(plotnft_id=plotnft_wallet.plotnft_id)
     coin_spends = plotnft.forward_pool_reward(pool_reward)
@@ -301,6 +507,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ]
     )
 
+    # FINISH LEAVING
     plotnft = await plotnft_wallet.get_current_plotnft()
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(
         count=plotnft.guaranteed_pool_config.heightlock + 2, guarantee_transaction_blocks=True
@@ -339,6 +546,47 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         ]
     )
 
+    # Reorg (finish leaving)
+    height = wallet_environments.full_node.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await wallet_environments.full_node.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
+    )
+    await wallet_environments.full_node.wait_for_wallet_synced(env.node)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": finish_leaving_fee,
+                        "<=#spendable_balance": 0,
+                        "<=#max_send_amount": 0,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 1,
+                        ">=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -finish_leaving_fee,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "plotnft": {
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            )
+        ]
+    )
+
     # Resync start
     env.node._close()
     await env.node._await_closed()
@@ -354,4 +602,3 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
 
 
 # TODO: test halving
-# TODO: test reorgs
