@@ -6,10 +6,12 @@ import time
 
 import pytest
 from chia_rs import ConsensusConstants, FullBlock, SubEpochSummary
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint16, uint32, uint64
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
+from chia._tests.util.tcp_proxy import tcp_proxy
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -476,3 +478,332 @@ async def test_bad_peak_cache_invalidation(
     block = blocks[-1]
     full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
     assert len(full_node_1.full_node.bad_peak_cache) == 1
+
+
+# Configuration: Which consensus mode(s) to run this test on.
+# This test is resource-intensive (creates TCP proxy, builds large chain, slow network simulation),
+# so by default we only run it on the newest consensus mode to save time and resources.
+# To run on all consensus modes, change this to:
+#   [ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_2_6]
+# To run on a specific mode, use: [ConsensusMode.PLAIN] or [ConsensusMode.HARD_FORK_2_0], etc.
+ALLOWED_CONSENSUS_MODES_FOR_SLOW_WP_TEST = [ConsensusMode.SOFT_FORK_2_6]
+
+
+async def _request_weight_proof_through_proxy(
+    server_1: ChiaServer,
+    server_2: ChiaServer,
+    self_hostname: str,
+    peak_height: int,
+    peak_header_hash: bytes32,
+    bandwidth_bytes_per_sec: int,
+) -> tuple[full_node_protocol.RespondProofOfWeight | None, float, str | None]:
+    """
+    Helper to request a weight proof through a throttled TCP proxy.
+
+    Returns:
+        tuple of (response, download_time, error_message)
+        - response is the RespondProofOfWeight if successful, None if failed
+        - download_time is the time taken (or time until failure)
+        - error_message is None if successful, otherwise describes the failure
+    """
+    server_1_port = server_1.get_port()
+
+    async with tcp_proxy(
+        listen_host="127.0.0.1",
+        listen_port=0,
+        server_host=self_hostname,
+        server_port=server_1_port,
+        upload_bytes_per_sec=bandwidth_bytes_per_sec,
+        download_bytes_per_sec=bandwidth_bytes_per_sec,
+    ) as proxy:
+        proxy_port = proxy.proxy_port
+        bandwidth_mbps = bandwidth_bytes_per_sec * 8 / 1_000_000
+        log.info(
+            f"TCP proxy listening on port {proxy_port} at "
+            f"{bandwidth_bytes_per_sec:,} bytes/sec ({bandwidth_mbps:.1f} Mbps)"
+        )
+
+        # Connect through the proxy
+        log.info(f"Connecting to proxy port {proxy_port}...")
+        connected = await server_2.start_client(PeerInfo(self_hostname, proxy_port))
+        log.info(f"start_client returned: {connected}")
+        if not connected:
+            return None, 0.0, "Failed to connect through proxy"
+
+        # Find our specific connection by matching the proxy port
+        # This allows multiple parallel connections through different proxies
+        log.info(f"Looking for connection to proxy port {proxy_port}")
+        log.info(f"Available connections: {list(server_2.all_connections.keys())}")
+        connection = None
+        for conn in server_2.all_connections.values():
+            peer_port = conn.peer_info.port if conn.peer_info is not None else None
+            log.info(f"  Connection {conn.peer_node_id}: peer_info.port={peer_port}")
+            if conn.peer_info is not None and conn.peer_info.port == proxy_port:
+                connection = conn
+                break
+        if connection is None:
+            return None, 0.0, f"No connection found to proxy port {proxy_port}"
+
+        log.info("Found connection, requesting weight proof...")
+
+        # Request the weight proof (uses project default timeout)
+        request = full_node_protocol.RequestProofOfWeight(uint32(peak_height + 1), peak_header_hash)
+
+        start_time = time.time()
+        try:
+            wp_response = await connection.call_api(
+                FullNodeAPI.request_proof_of_weight,
+                request,
+            )
+            download_time = time.time() - start_time
+
+            if wp_response is None:
+                # call_api returns None when the websocket times out waiting for a response
+                # (the timeout is handled internally and doesn't raise an exception)
+                return None, download_time, "Weight proof response was None (websocket timeout)"
+
+            return wp_response, download_time, None
+
+        except asyncio.TimeoutError:
+            # This branch is unlikely to be hit since call_api handles timeout internally,
+            # but we keep it for safety in case of other async operations timing out
+            download_time = time.time() - start_time
+            return None, download_time, f"Timeout after {download_time:.2f}s"
+        except Exception as e:
+            download_time = time.time() - start_time
+            return None, download_time, f"Error: {type(e).__name__}: {e}"
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=ALLOWED_CONSENSUS_MODES_FOR_SLOW_WP_TEST,
+    reason="Test is resource-intensive; by default only runs on newest consensus mode.",
+)
+async def test_slow_weight_proof_download(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    default_2000_blocks_compact: list[FullBlock],
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Test weight proof download over throttled network connections.
+
+    This test uses a TCP proxy to simulate slow network conditions between two full nodes.
+    It validates that large messages (weight proofs) can be transferred correctly over
+    bandwidth-limited connections.
+
+    The TCP proxy (chia/_tests/util/tcp_proxy.py) is a reusable utility that can throttle
+    any TCP traffic between nodes. It can be used to validate various network-related
+    improvements including:
+
+    1. CHUNKED/STREAMING RESPONSES: If the websocket library is modified to send large
+       messages in chunks rather than as a single message, this test would verify that
+       all chunks arrive correctly and reassemble into a valid weight proof.
+
+    2. PROGRESS-BASED TIMEOUT RESET: If the library implements timeout reset on data
+       received (rather than a fixed timeout from request start), slower connections
+       would succeed as long as data keeps flowing. Adjust SLOW_BANDWIDTH_BYTES_PER_SEC
+       to test the boundary conditions.
+
+    3. HEARTBEAT/KEEPALIVE CHANGES: The proxy maintains the TCP connection while
+       throttling data, allowing testing of how heartbeat mechanisms interact with
+       slow data transfer.
+
+    Configuration (adjust these to test different scenarios):
+    - FAST_BANDWIDTH_BYTES_PER_SEC: Bandwidth where transfer should complete within default timeout
+    - SLOW_BANDWIDTH_BYTES_PER_SEC: Bandwidth where transfer behavior depends on implementation
+
+    Current behavior (before websocket improvements):
+    - Weight proof is sent as a single websocket message
+    - call_api() uses asyncio.wait_for() with the project's default timeout (60s)
+    - If the entire message doesn't arrive within timeout, the request fails
+
+    After implementing streaming/chunked responses:
+    - The slow bandwidth test should pass if timeout resets on each chunk received
+    - Download time will match expected time (message_size / bandwidth)
+    """
+    # ============================================================
+    # TEST CONFIGURATION
+    # Adjust these values to test different scenarios
+    # ============================================================
+
+    # Fast bandwidth: should always succeed (transfer time < default 60s timeout)
+    # 1.5 Mbps = 187,500 bytes/sec -> ~11s for 2 MB
+    # Note: 1.5 Mbps is equivalent to a T-1 line speed
+    FAST_BANDWIDTH_BYTES_PER_SEC = 187_500
+
+    # Slow bandwidth: tests timeout behavior under constrained conditions
+    # 0.2 Mbps = 25,000 bytes/sec -> ~81s for 2 MB
+    # This speed is intentionally set to require ~80 seconds for the weight proof
+    # download. We use a shorter chain (2000 blocks) with a smaller weight proof
+    # (~2 MB) for testing efficiency, while still ensuring the transfer time
+    # exceeds the 60s default timeout to trigger the timeout behavior.
+    # After implementing progress-based timeouts, this should succeed.
+    SLOW_BANDWIDTH_BYTES_PER_SEC = 25_000
+
+    # ============================================================
+    # TEST SETUP
+    # ============================================================
+    # Use two nodes:
+    # - full_node_1: Server node with blocks
+    # - full_node_2: Client node for both tests (cleaned up between tests)
+    full_node_1, full_node_2, server_1, server_2, _bt = two_nodes
+
+    # Use cached blocks (generated once and persisted to disk)
+    blocks = default_2000_blocks_compact
+    num_blocks = len(blocks)
+
+    log.info(f"Using {num_blocks} cached blocks")
+
+    # Add blocks to node 1 (the server)
+    start_time = time.time()
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+    add_blocks_time = time.time() - start_time
+    log.info(f"Added {num_blocks} blocks to node 1 in {add_blocks_time:.2f} seconds")
+
+    # Verify node 1 has the blocks
+    peak_1 = full_node_1.full_node.blockchain.get_peak()
+    assert peak_1 is not None
+    assert peak_1.height == num_blocks - 1
+    log.info(f"Node 1 peak height: {peak_1.height}")
+
+    # Get the weight proof to check its size
+    start_time = time.time()
+    assert full_node_1.full_node.weight_proof_handler is not None
+    weight_proof = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak_1.header_hash)
+    create_wp_time = time.time() - start_time
+    assert weight_proof is not None, "Failed to create weight proof"
+    log.info(f"Weight proof created in {create_wp_time:.2f}s")
+
+    # Serialize the weight proof to get its actual size
+    wp_message = full_node_protocol.RespondProofOfWeight(weight_proof, peak_1.header_hash)
+    wp_bytes = bytes(wp_message)
+    actual_wp_size = len(wp_bytes)
+    wp_size_mb = actual_wp_size / 1024 / 1024
+
+    # Calculate expected transfer times and Mbps values
+    expected_time_fast = actual_wp_size / FAST_BANDWIDTH_BYTES_PER_SEC
+    expected_time_slow = actual_wp_size / SLOW_BANDWIDTH_BYTES_PER_SEC
+    fast_mbps = FAST_BANDWIDTH_BYTES_PER_SEC * 8 / 1_000_000
+    slow_mbps = SLOW_BANDWIDTH_BYTES_PER_SEC * 8 / 1_000_000
+
+    log.info(f"Weight proof size: {actual_wp_size:,} bytes ({wp_size_mb:.2f} MB)")
+    log.info(
+        f"Fast bandwidth: {FAST_BANDWIDTH_BYTES_PER_SEC:,} bytes/sec ({fast_mbps:.1f} Mbps) "
+        f"-> expected {expected_time_fast:.1f}s"
+    )
+    log.info(
+        f"Slow bandwidth: {SLOW_BANDWIDTH_BYTES_PER_SEC:,} bytes/sec ({slow_mbps:.1f} Mbps) "
+        f"-> expected {expected_time_slow:.1f}s"
+    )
+
+    # ============================================================
+    # TEST 1: FAST BANDWIDTH (should succeed)
+    # This test verifies basic functionality - the proxy correctly
+    # forwards data and the weight proof transfers successfully
+    # when bandwidth is sufficient to complete within the default timeout.
+    # ============================================================
+    log.info("=" * 60)
+    log.info("TEST 1: Weight proof download at fast bandwidth (should succeed)")
+    log.info(f"  Bandwidth: {FAST_BANDWIDTH_BYTES_PER_SEC:,} bytes/sec ({fast_mbps:.1f} Mbps)")
+    log.info(f"  Expected time: {expected_time_fast:.1f}s")
+    log.info("=" * 60)
+
+    wp_response_1, download_time_1, error_1 = await _request_weight_proof_through_proxy(
+        server_1=server_1,
+        server_2=server_2,
+        self_hostname=self_hostname,
+        peak_height=peak_1.height,
+        peak_header_hash=peak_1.header_hash,
+        bandwidth_bytes_per_sec=FAST_BANDWIDTH_BYTES_PER_SEC,
+    )
+
+    log.info(f"TEST 1 Result: download_time={download_time_1:.2f}s, error={error_1}")
+
+    assert error_1 is None, f"TEST 1 FAILED: {error_1}"
+    assert wp_response_1 is not None, "TEST 1 FAILED: No response"
+    assert isinstance(wp_response_1, full_node_protocol.RespondProofOfWeight)
+    assert wp_response_1.wp is not None
+
+    # Validate the weight proof
+    assert full_node_2.full_node.weight_proof_handler is not None
+    validated, val_error, _fork_point = await full_node_2.full_node.weight_proof_handler.validate_weight_proof(
+        wp_response_1.wp
+    )
+    assert validated, f"TEST 1 weight proof validation failed: {val_error}"
+
+    log.info(f"TEST 1 PASSED: Downloaded and validated in {download_time_1:.2f} seconds")
+
+    # Clean up connections from TEST 1 before starting TEST 2
+    # This ensures server_1 is ready to accept a new connection from server_3
+    await server_2.close_all_connections()
+    await server_1.close_all_connections()
+
+    # ============================================================
+    # TEST 2: SLOW BANDWIDTH (behavior depends on implementation)
+    # Reuses full_node_2 after cleaning up connections from TEST 1.
+    #
+    # This test exercises the timeout behavior under constrained
+    # network conditions. The expected outcome depends on how
+    # timeouts are implemented:
+    #
+    # - FIXED TIMEOUT (current): Will fail if expected_time > default timeout
+    # - PROGRESS-BASED TIMEOUT: Will succeed as long as data flows
+    # - CHUNKED TRANSFER: May succeed with per-chunk timeouts
+    #
+    # Adjust SLOW_BANDWIDTH_BYTES_PER_SEC to test boundary conditions.
+    # ============================================================
+    log.info("=" * 60)
+    log.info("TEST 2: Weight proof download at slow bandwidth")
+    log.info(f"  Bandwidth: {SLOW_BANDWIDTH_BYTES_PER_SEC:,} bytes/sec ({slow_mbps:.1f} Mbps)")
+    log.info(f"  Expected time: {expected_time_slow:.1f}s")
+    log.info("=" * 60)
+
+    _wp_response_2, download_time_2, error_2 = await _request_weight_proof_through_proxy(
+        server_1=server_1,
+        server_2=server_2,
+        self_hostname=self_hostname,
+        peak_height=peak_1.height,
+        peak_header_hash=peak_1.header_hash,
+        bandwidth_bytes_per_sec=SLOW_BANDWIDTH_BYTES_PER_SEC,
+    )
+
+    log.info(f"TEST 2 Result: download_time={download_time_2:.2f}s, error={error_2}")
+
+    # Check if the RuntimeError about weight proof timeout appears in the logs
+    # This error comes from full_node.py when the weight proof doesn't arrive in time
+    runtime_error_in_logs = any(
+        "Weight proof did not arrive in time from peer" in record.message for record in caplog.records
+    )
+
+    # ============================================================
+    # Summary
+    # ============================================================
+    log.info("=" * 60)
+    log.info("SUMMARY:")
+    log.info(f"  Weight proof size:       {actual_wp_size:,} bytes ({wp_size_mb:.2f} MB)")
+    log.info(f"  TEST 1 (fast):           {download_time_1:.2f}s - PASSED")
+    if error_2 is None:
+        log.info(f"  TEST 2 (slow):           {download_time_2:.2f}s - PASSED")
+    else:
+        log.info(f"  TEST 2 (slow):           {download_time_2:.2f}s - FAILED ({error_2})")
+    log.info(f"  RuntimeError in logs:    {runtime_error_in_logs}")
+    log.info("=" * 60)
+
+    # TEST 2 assertion: fail with appropriate message based on what we observed
+    if error_2 is not None:
+        if runtime_error_in_logs:
+            # The websocket timed out and RuntimeError was logged - this is the bug we need to fix
+            assert False, (
+                f"TEST 2 FAILED: Weight proof download timed out after {download_time_2:.2f}s. "
+                f"RuntimeError 'Weight proof did not arrive in time from peer' was logged. "
+                f"Websocket improvements are needed to handle slow connections without timing out."
+            )
+        else:
+            # Got None response but no RuntimeError in logs - unexpected failure mode
+            assert False, (
+                f"TEST 2 FAILED: Weight proof response was None after {download_time_2:.2f}s, "
+                f"but RuntimeError 'Weight proof did not arrive in time from peer' was NOT found in logs. "
+                f"Error: {error_2}"
+            )
