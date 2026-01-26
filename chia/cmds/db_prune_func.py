@@ -191,24 +191,35 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
 
             if coins_to_unspend > 0:
                 print(f"  Resetting {coins_to_unspend} coin records that were spent above height {new_peak_height}...")
-                # Update in batches using rowid for better performance on large tables
-                update_batch_size = 500
-                updated_coins = 0
-                while updated_coins < coins_to_unspend:
-                    conn.execute(
-                        "UPDATE coin_record SET spent_index = 0 "
-                        "WHERE rowid IN (SELECT rowid FROM coin_record WHERE spent_index > ? LIMIT ?)",
-                        (new_peak_height, update_batch_size),
-                    )
-                    conn.commit()
-                    # Check how many are left
-                    with closing(
-                        conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index > ?", (new_peak_height,))
-                    ) as cursor:
-                        remaining = cursor.fetchone()[0]
-                    updated_coins = coins_to_unspend - remaining
-                    print(f"\r    Reset {updated_coins}/{coins_to_unspend} coin records...", end="", flush=True)
-                print(f"\r    Reset {updated_coins} coin records.                    ")
+                # Reset spent_index for coins spent above the new peak.
+                # If the coin is not a reward coin (coinbase=0) and its parent has
+                # the same puzzle_hash and amount and is spent, set spent_index to -1
+                # to preserve fast-forward singleton state. Otherwise set to 0.
+                # This matches the logic in coin_store.py rollback_to_block.
+                conn.execute(
+                    """
+                    UPDATE coin_record
+                    SET spent_index = CASE
+                        WHEN
+                            coinbase = 0 AND
+                            EXISTS (
+                                SELECT 1
+                                FROM coin_record AS parent
+                                WHERE
+                                    parent.coin_name = coin_record.coin_parent AND
+                                    parent.puzzle_hash = coin_record.puzzle_hash AND
+                                    parent.amount = coin_record.amount AND
+                                    parent.spent_index > 0
+                            )
+                        THEN -1
+                        ELSE 0
+                    END
+                    WHERE spent_index > ?
+                    """,
+                    (new_peak_height,),
+                )
+                conn.commit()
+                print(f"    Reset {coins_to_unspend} coin records.")
         except sqlite3.OperationalError:
             # coin_record table might not exist in minimal test databases
             pass
