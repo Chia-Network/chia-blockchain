@@ -679,8 +679,12 @@ class WSChiaConnection:
         time_without_progress = 0.0
 
         while time_without_progress < timeout:
+            # Use the smaller of check_interval or remaining timeout to ensure
+            # we don't wait longer than the caller's timeout allows
+            remaining_timeout = timeout - time_without_progress
+            wait_time = min(check_interval, remaining_timeout)
             try:
-                await asyncio.wait_for(event.wait(), timeout=check_interval)
+                await asyncio.wait_for(event.wait(), timeout=wait_time)
                 # Event was set, response received
                 break
             except asyncio.TimeoutError:
@@ -704,7 +708,7 @@ class WSChiaConnection:
                     time_without_progress = 0.0
                     self.log.debug(f"Request in progress, data being received: {message}")
                 else:
-                    time_without_progress += check_interval
+                    time_without_progress += wait_time
 
                 # Also check if the connection is still open
                 if self.closed:
