@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import int16, uint8, uint16, uint32
+from chia_rs.sized_ints import int16, uint8, uint32
 from packaging.version import Version
 
 from chia import __version__
@@ -21,17 +21,18 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.start_full_node import create_full_node_service
 from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
-from chia.protocols.outbound_message import NodeType, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from chia.server.ws_connection import Message, WSChiaConnection, error_response_version
+from chia.server.ws_connection import WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, Err
+from chia.util.task_referencer import create_referenced_task
 from chia.wallet.start_wallet import create_wallet_service
 
 
@@ -658,7 +659,7 @@ async def test_send_request_connection_closed_during_wait(
         await connection.close()
 
     # Start the close task
-    close_task = asyncio.create_task(close_after_delay())
+    close_task = create_referenced_task(close_after_delay())
 
     start_time = time.time()
     with patch.object(connection.outgoing_queue, "put", mock_put):
