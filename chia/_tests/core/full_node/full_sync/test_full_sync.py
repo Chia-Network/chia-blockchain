@@ -23,11 +23,6 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.anyio
-# todo_v2_plots fix this test and remove limit_consensus_modes
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-    reason="doesn't work for 3.0 hard fork after phase-out yet",
-)
 async def test_long_sync_from_zero(
     five_nodes: list[FullNodeAPI], default_1000_blocks: list[FullBlock], bt: BlockTools, self_hostname: str
 ) -> None:
