@@ -585,6 +585,34 @@ class WSChiaConnection:
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
+    def _get_aiohttp_protocol(self) -> Any:
+        """Get the underlying aiohttp ResponseHandler protocol.
+
+        The protocol is accessed through: ws._response._connection.protocol
+        This is the asyncio protocol that receives raw TCP data via data_received().
+
+        Returns None if not accessible.
+        """
+        try:
+            # Access the ClientResponse stored in the websocket
+            response = getattr(self.ws, "_response", None)
+            if response is None:
+                return None
+
+            # Access the Connection object (try both _connection and connection)
+            connection = getattr(response, "_connection", None)
+            if connection is None:
+                connection = getattr(response, "connection", None)
+            if connection is None:
+                return None
+
+            # Access the ResponseHandler protocol
+            protocol = getattr(connection, "protocol", None)
+            return protocol
+
+        except Exception:
+            return None
+
     def _install_bytes_received_counter(self) -> None:
         """Install a wrapper on the protocol's data_received to count incoming bytes.
 
@@ -593,11 +621,7 @@ class WSChiaConnection:
         The counter is stored as _chia_bytes_received on the protocol object.
         """
         try:
-            conn = getattr(self.ws, "_conn", None)
-            if conn is None:
-                return
-
-            protocol = getattr(conn, "_protocol", None)
+            protocol = self._get_aiohttp_protocol()
             if protocol is None:
                 return
 
@@ -618,9 +642,10 @@ class WSChiaConnection:
 
             # Replace data_received with wrapper
             protocol.data_received = counting_data_received
+            self.log.debug("Installed bytes received counter on protocol")
 
-        except Exception:
-            pass  # Silently fail - progress tracking is best-effort
+        except Exception as e:
+            self.log.debug(f"Failed to install bytes received counter: {e}")
 
     def _get_protocol_bytes_received(self) -> int:
         """Get the total bytes received through the websocket protocol.
@@ -629,11 +654,7 @@ class WSChiaConnection:
         counter was installed, or 0 if the counter is not available.
         """
         try:
-            conn = getattr(self.ws, "_conn", None)
-            if conn is None:
-                return 0
-
-            protocol = getattr(conn, "_protocol", None)
+            protocol = self._get_aiohttp_protocol()
             if protocol is None:
                 return 0
 

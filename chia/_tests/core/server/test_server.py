@@ -399,33 +399,33 @@ async def test_send_request_timeout_with_progress_simulation() -> None:
 
 
 @pytest.mark.anyio
-async def test_bytes_received_counter_no_conn(
+async def test_bytes_received_counter_no_response(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     self_hostname: str,
 ) -> None:
     """
-    Test _get_protocol_bytes_received returns 0 when websocket internals are not accessible.
+    Test _get_protocol_bytes_received returns 0 when websocket _response is not accessible.
     """
     _, _, server_1, server_2, _ = two_nodes
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
     connection = next(iter(server_2.all_connections.values()))
 
-    # Mock ws._conn to be None
+    # Mock ws._response to be None
     original_ws = connection.ws
     mock_ws = MagicMock()
-    mock_ws._conn = None
+    mock_ws._response = None
     connection.ws = mock_ws
 
     try:
-        # Should return 0 when _conn is None
+        # Should return 0 when _response is None
         result = connection._get_protocol_bytes_received()
-        assert result == 0, f"Expected 0 when _conn is None, got {result}"
+        assert result == 0, f"Expected 0 when _response is None, got {result}"
 
         # _install_bytes_received_counter should silently do nothing
         connection._install_bytes_received_counter()
         result = connection._get_protocol_bytes_received()
-        assert result == 0, f"Expected 0 after install attempt with no _conn, got {result}"
+        assert result == 0, f"Expected 0 after install attempt with no _response, got {result}"
     finally:
         connection.ws = original_ws
 
@@ -443,21 +443,23 @@ async def test_bytes_received_counter_no_protocol(
 
     connection = next(iter(server_2.all_connections.values()))
 
-    # Mock ws._conn._protocol to be None
+    # Mock ws._response._connection.protocol to be None
     original_ws = connection.ws
     mock_ws = MagicMock()
-    mock_conn = MagicMock()
-    mock_conn._protocol = None
-    mock_ws._conn = mock_conn
+    mock_response = MagicMock()
+    mock_connection = MagicMock()
+    mock_connection.protocol = None
+    mock_response._connection = mock_connection
+    mock_ws._response = mock_response
     connection.ws = mock_ws
 
     try:
         result = connection._get_protocol_bytes_received()
-        assert result == 0, f"Expected 0 when _protocol is None, got {result}"
+        assert result == 0, f"Expected 0 when protocol is None, got {result}"
 
         connection._install_bytes_received_counter()
         result = connection._get_protocol_bytes_received()
-        assert result == 0, f"Expected 0 after install attempt with no _protocol, got {result}"
+        assert result == 0, f"Expected 0 after install attempt with no protocol, got {result}"
     finally:
         connection.ws = original_ws
 
@@ -475,7 +477,8 @@ async def test_bytes_received_counter_installation_and_counting(
 
     connection = next(iter(server_2.all_connections.values()))
 
-    # Create a simple mock protocol (not MagicMock, to avoid auto-attribute creation)
+    # Create a simple mock structure (not MagicMock, to avoid auto-attribute creation)
+    # Structure: ws._response._connection.protocol
     original_ws = connection.ws
 
     class MockProtocol:
@@ -485,19 +488,23 @@ async def test_bytes_received_counter_installation_and_counting(
         def data_received(self, data: bytes) -> None:
             self.calls.append(data)
 
-    class MockConn:
+    class MockConnection:
         def __init__(self) -> None:
-            self._protocol = MockProtocol()
+            self.protocol = MockProtocol()
+
+    class MockResponse:
+        def __init__(self) -> None:
+            self._connection = MockConnection()
 
     class MockWs:
         def __init__(self) -> None:
-            self._conn = MockConn()
+            self._response = MockResponse()
 
     mock_ws = MockWs()
     connection.ws = mock_ws  # type: ignore[assignment]
 
     try:
-        mock_protocol = mock_ws._conn._protocol
+        mock_protocol = mock_ws._response._connection.protocol
 
         # Before installation, should return 0 (no _chia_bytes_received attribute)
         assert connection._get_protocol_bytes_received() == 0
@@ -547,8 +554,8 @@ async def test_bytes_received_counter_exception_handling(
     original_ws = connection.ws
     mock_ws = MagicMock()
 
-    # Make _conn property raise an exception
-    type(mock_ws)._conn = property(lambda self: (_ for _ in ()).throw(RuntimeError("Test error")))
+    # Make _response property raise an exception
+    type(mock_ws)._response = property(lambda self: (_ for _ in ()).throw(RuntimeError("Test error")))
     connection.ws = mock_ws
 
     try:
