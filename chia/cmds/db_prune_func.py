@@ -24,18 +24,6 @@ def db_prune_func(
     the block at (peak_height - blocks_back) the new peak when full_node restarts.
     It will refuse to run if the full_node service is currently running.
     """
-    # Check if full_node is running by trying to acquire its lock
-    full_node_lock_path = service_launch_lock_path(root_path, "chia_full_node")
-    try:
-        with Lockfile.create(full_node_lock_path, timeout=0.1):
-            # We got the lock, so full_node is not running
-            pass
-    except LockfileError:
-        raise RuntimeError(
-            "Cannot prune database while full_node is running. "
-            "Please stop the full_node service first with 'chia stop node'"
-        )
-
     if in_db_path is None:
         config: dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
         selected_network: str = config["selected_network"]
@@ -43,7 +31,17 @@ def db_prune_func(
         db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)
         in_db_path = path_from_root(root_path, db_path_replaced)
 
-    prune_db(in_db_path, blocks_back=blocks_back)
+    # Acquire the full_node lock and hold it for the entire prune operation.
+    # This prevents full_node from starting while we're modifying the database.
+    full_node_lock_path = service_launch_lock_path(root_path, "chia_full_node")
+    try:
+        with Lockfile.create(full_node_lock_path, timeout=0.1):
+            prune_db(in_db_path, blocks_back=blocks_back)
+    except LockfileError:
+        raise RuntimeError(
+            "Cannot prune database while full_node is running. "
+            "Please stop the full_node service first with 'chia stop node'"
+        )
 
 
 def prune_db(db_path: Path, *, blocks_back: int) -> None:
