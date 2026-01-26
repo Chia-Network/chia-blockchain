@@ -739,6 +739,15 @@ class WSChiaConnection:
                         f"(bytes_read={current_bytes_read}, protocol_bytes={current_protocol_bytes}): "
                         f"{ProtocolMessageTypes(message.type).name}"
                     )
+                    # Reset the websocket heartbeat timer to prevent PING/PONG timeout
+                    # during large message transfers. aiohttp only resets this when a
+                    # complete message is received, but we know data is flowing.
+                    try:
+                        reset_heartbeat = getattr(self.ws, "_reset_heartbeat", None)
+                        if reset_heartbeat is not None:
+                            reset_heartbeat()
+                    except Exception:
+                        pass  # Ignore errors - heartbeat reset is best-effort
                 else:
                     time_without_progress += wait_time
                     self.log.debug(
