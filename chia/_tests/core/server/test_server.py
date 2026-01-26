@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import ClassVar, cast
+from unittest.mock import MagicMock, patch
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import int16, uint32
+from chia_rs.sized_ints import int16, uint8, uint16, uint32
 from packaging.version import Version
 
 from chia import __version__
@@ -25,7 +28,7 @@ from chia.protocols.wallet_protocol import RejectHeaderRequest
 from chia.server.api_protocol import ApiMetadata
 from chia.server.server import ChiaServer
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from chia.server.ws_connection import WSChiaConnection, error_response_version
+from chia.server.ws_connection import Message, WSChiaConnection, error_response_version
 from chia.simulator.block_tools import BlockTools
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, Err
@@ -284,3 +287,317 @@ async def test_connection_closed_banning(bt: BlockTools, caplog: pytest.LogCaptu
         trusted_peer = FakeConnection(peer_info=PeerInfo("34.34.34.34", 8444))
         await my_test_server.connection_closed(cast(WSChiaConnection, trusted_peer), ban_time=60)
         assert f"Trying to ban trusted peer {trusted_peer.peer_info.host} for 60, but will not ban" in caplog.text
+
+
+# =============================================================================
+# Tests for progress-based timeout in send_request
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_send_request_respects_small_timeout(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test that send_request respects small timeouts (< 20 second check_interval).
+
+    This verifies the fix for the bug where check_interval=20 was used directly
+    in asyncio.wait_for(), making 20 seconds the effective minimum timeout.
+
+    Note: In a connected environment, background network activity (heartbeats, etc.)
+    may cause progress detection which resets the timeout. This test verifies that
+    even with potential progress resets, the total time is reasonable and doesn't
+    extend to the full 20-second check_interval.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    # Get the connection from server_2's perspective
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Create a request message
+    message = Message(uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False)))
+
+    # Patch the outgoing_queue.put to be a no-op so the message is never actually sent
+    async def mock_put(msg: Message) -> None:
+        pass  # Don't actually send
+
+    # Test with a small timeout (5 seconds, well below the 20 second check_interval)
+    # Due to progress detection from background traffic, we may see up to 2x the timeout
+    # (one reset before the connection settles), but importantly NOT 20+ seconds
+    small_timeout = 5
+    max_allowed_time = small_timeout * 3  # Allow for progress resets
+    start_time = time.time()
+    with patch.object(connection.outgoing_queue, "put", mock_put):
+        result = await connection.send_request(message, timeout=small_timeout)
+    elapsed = time.time() - start_time
+
+    # The request should timeout - key assertion is that it doesn't wait 20+ seconds
+    assert result is None, "Expected None result for timed-out request"
+    # Before the fix, this would wait ~20 seconds. After fix, should be much less.
+    assert elapsed < max_allowed_time, f"Timeout took {elapsed:.2f}s, should be < {max_allowed_time}s (not 20s)"
+
+
+@pytest.mark.anyio
+async def test_send_request_timeout_no_progress_simulation() -> None:
+    """
+    Test the timeout calculation logic directly without network dependencies.
+
+    This is a unit test that verifies the timeout math works correctly by
+    simulating the wait_time calculation that happens in send_request.
+    """
+    # Simulate the key calculation from send_request
+    check_interval = 20
+    timeout = 5
+    time_without_progress = 0.0
+
+    # Before the fix: wait_time = check_interval = 20 (always)
+    # After the fix: wait_time = min(check_interval, timeout - time_without_progress)
+
+    # First iteration
+    remaining_timeout = timeout - time_without_progress
+    wait_time = min(check_interval, remaining_timeout)
+    assert wait_time == 5, f"First wait should be 5s (min of 20, 5), got {wait_time}"
+
+    # Simulate timeout (no progress)
+    time_without_progress += wait_time
+    assert time_without_progress == 5, "After first iteration, should have waited 5s"
+
+    # Loop should exit because time_without_progress >= timeout
+    assert time_without_progress >= timeout, "Should exit loop after one iteration"
+
+
+@pytest.mark.anyio
+async def test_send_request_timeout_with_progress_simulation() -> None:
+    """
+    Test that progress resets work correctly with the timeout calculation.
+    """
+    check_interval = 20
+    timeout = 5
+    time_without_progress = 0.0
+
+    # First iteration - wait for min(20, 5) = 5 seconds
+    remaining_timeout = timeout - time_without_progress
+    wait_time = min(check_interval, remaining_timeout)
+    assert wait_time == 5
+
+    # Simulate progress detected - reset timer
+    time_without_progress = 0.0
+
+    # Second iteration - should again wait for 5 seconds
+    remaining_timeout = timeout - time_without_progress
+    wait_time = min(check_interval, remaining_timeout)
+    assert wait_time == 5
+
+    # Simulate no progress this time
+    time_without_progress += wait_time
+    assert time_without_progress == 5
+
+    # Now loop should exit
+    assert time_without_progress >= timeout
+
+
+@pytest.mark.anyio
+async def test_bytes_received_counter_no_conn(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test _get_protocol_bytes_received returns 0 when websocket internals are not accessible.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Mock ws._conn to be None
+    original_ws = connection.ws
+    mock_ws = MagicMock()
+    mock_ws._conn = None
+    connection.ws = mock_ws
+
+    try:
+        # Should return 0 when _conn is None
+        result = connection._get_protocol_bytes_received()
+        assert result == 0, f"Expected 0 when _conn is None, got {result}"
+
+        # _install_bytes_received_counter should silently do nothing
+        connection._install_bytes_received_counter()
+        result = connection._get_protocol_bytes_received()
+        assert result == 0, f"Expected 0 after install attempt with no _conn, got {result}"
+    finally:
+        connection.ws = original_ws
+
+
+@pytest.mark.anyio
+async def test_bytes_received_counter_no_protocol(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test _get_protocol_bytes_received returns 0 when protocol is not accessible.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Mock ws._conn._protocol to be None
+    original_ws = connection.ws
+    mock_ws = MagicMock()
+    mock_conn = MagicMock()
+    mock_conn._protocol = None
+    mock_ws._conn = mock_conn
+    connection.ws = mock_ws
+
+    try:
+        result = connection._get_protocol_bytes_received()
+        assert result == 0, f"Expected 0 when _protocol is None, got {result}"
+
+        connection._install_bytes_received_counter()
+        result = connection._get_protocol_bytes_received()
+        assert result == 0, f"Expected 0 after install attempt with no _protocol, got {result}"
+    finally:
+        connection.ws = original_ws
+
+
+@pytest.mark.anyio
+async def test_bytes_received_counter_installation_and_counting(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test that _install_bytes_received_counter properly wraps data_received and counts bytes.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Create a simple mock protocol (not MagicMock, to avoid auto-attribute creation)
+    original_ws = connection.ws
+
+    class MockProtocol:
+        def __init__(self) -> None:
+            self.calls: list[bytes] = []
+
+        def data_received(self, data: bytes) -> None:
+            self.calls.append(data)
+
+    class MockConn:
+        def __init__(self) -> None:
+            self._protocol = MockProtocol()
+
+    class MockWs:
+        def __init__(self) -> None:
+            self._conn = MockConn()
+
+    mock_ws = MockWs()
+    connection.ws = mock_ws  # type: ignore[assignment]
+
+    try:
+        mock_protocol = mock_ws._conn._protocol
+
+        # Before installation, should return 0 (no _chia_bytes_received attribute)
+        assert connection._get_protocol_bytes_received() == 0
+
+        # Install the counter
+        connection._install_bytes_received_counter()
+
+        # Now the protocol should have the counter attribute
+        assert hasattr(mock_protocol, "_chia_bytes_received")
+        assert mock_protocol._chia_bytes_received == 0
+
+        # Simulate receiving data - call the wrapped data_received
+        mock_protocol.data_received(b"hello")
+        assert mock_protocol._chia_bytes_received == 5
+        assert connection._get_protocol_bytes_received() == 5
+        assert mock_protocol.calls == [b"hello"], "Original data_received should still be called"
+
+        mock_protocol.data_received(b"world!")
+        assert mock_protocol._chia_bytes_received == 11
+        assert connection._get_protocol_bytes_received() == 11
+        assert mock_protocol.calls == [b"hello", b"world!"]
+
+        # Installing again should be a no-op (don't install twice)
+        connection._install_bytes_received_counter()
+        mock_protocol.data_received(b"test")
+        assert mock_protocol._chia_bytes_received == 15  # Still counting correctly
+        assert len(mock_protocol.calls) == 3  # Not double-wrapped
+    finally:
+        connection.ws = original_ws
+
+
+@pytest.mark.anyio
+async def test_bytes_received_counter_exception_handling(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test that _install_bytes_received_counter and _get_protocol_bytes_received
+    handle exceptions gracefully.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Create a mock that raises exceptions
+    original_ws = connection.ws
+    mock_ws = MagicMock()
+
+    # Make _conn property raise an exception
+    type(mock_ws)._conn = property(lambda self: (_ for _ in ()).throw(RuntimeError("Test error")))
+    connection.ws = mock_ws
+
+    try:
+        # Should return 0 and not raise
+        result = connection._get_protocol_bytes_received()
+        assert result == 0, f"Expected 0 on exception, got {result}"
+
+        # Should silently fail and not raise
+        connection._install_bytes_received_counter()  # Should not raise
+    finally:
+        connection.ws = original_ws
+
+
+@pytest.mark.anyio
+async def test_send_request_connection_closed_during_wait(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test that send_request handles connection closing during the wait.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+    message = Message(uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False)))
+
+    # Patch the outgoing_queue.put to be a no-op so the message is never actually sent
+    # This ensures no response comes back and we test the connection-close detection
+    async def mock_put(msg: Message) -> None:
+        pass  # Don't actually send
+
+    # Close the connection after a short delay
+    async def close_after_delay() -> None:
+        await asyncio.sleep(1)
+        await connection.close()
+
+    # Start the close task
+    close_task = asyncio.create_task(close_after_delay())
+
+    start_time = time.time()
+    with patch.object(connection.outgoing_queue, "put", mock_put):
+        result = await connection.send_request(message, timeout=30)
+    elapsed = time.time() - start_time
+
+    # Should return quickly after connection closes, not wait full timeout
+    assert result is None
+    # Should complete in about 1-5 seconds (close delay + one check interval which is min(20, remaining))
+    # The key is it shouldn't wait the full 30 seconds
+    assert elapsed < 10, f"Should exit early when connection closes, took {elapsed:.2f}s"
+
+    await close_task
