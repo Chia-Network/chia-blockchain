@@ -699,6 +699,13 @@ class WSChiaConnection:
         last_protocol_bytes = self._get_protocol_bytes_received()
         time_without_progress = 0.0
 
+        # Log initial state for debugging
+        protocol = self._get_aiohttp_protocol()
+        self.log.debug(
+            f"Starting request wait: protocol_accessible={protocol is not None}, "
+            f"initial_bytes_read={last_bytes_read}, initial_protocol_bytes={last_protocol_bytes}"
+        )
+
         while time_without_progress < timeout:
             # Use the smaller of check_interval or remaining timeout to ensure
             # we don't wait longer than the caller's timeout allows
@@ -727,17 +734,30 @@ class WSChiaConnection:
                 if progress_made:
                     # Data is being received, reset the timeout
                     time_without_progress = 0.0
-                    self.log.debug(f"Request in progress, data being received: {message}")
+                    self.log.info(
+                        f"Request in progress, data being received "
+                        f"(bytes_read={current_bytes_read}, protocol_bytes={current_protocol_bytes}): "
+                        f"{ProtocolMessageTypes(message.type).name}"
+                    )
                 else:
                     time_without_progress += wait_time
+                    self.log.debug(
+                        f"No progress detected after {wait_time:.1f}s "
+                        f"(bytes_read={current_bytes_read}, protocol_bytes={current_protocol_bytes}, "
+                        f"time_without_progress={time_without_progress:.1f}s)"
+                    )
 
                 # Also check if the connection is still open
                 if self.closed:
-                    self.log.debug(f"Connection closed while waiting for response: {message}")
+                    self.log.info(f"Connection closed while waiting for response: {message}")
                     break
 
         if not event.is_set():
-            self.log.debug(f"Request timeout: {message} (no progress for {time_without_progress:.1f}s)")
+            self.log.info(
+                f"Request timeout: {ProtocolMessageTypes(message.type).name} "
+                f"(no progress for {time_without_progress:.1f}s, "
+                f"bytes_read={self.bytes_read}, protocol_bytes={self._get_protocol_bytes_received()})"
+            )
 
         self.pending_requests.pop(message.id)
         result: Message | None = None

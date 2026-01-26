@@ -570,6 +570,70 @@ async def test_bytes_received_counter_exception_handling(
 
 
 @pytest.mark.anyio
+async def test_bytes_received_counter_real_connection(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Test that the bytes received counter works on a REAL aiohttp connection.
+
+    This test verifies that:
+    1. We can access the aiohttp protocol through the real attribute path
+    2. The counter can be installed on the real protocol
+    3. The counter actually increments when data is received
+
+    If this test fails, it means our attribute path is wrong for real connections.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Verify we can access the real aiohttp protocol
+    protocol = connection._get_aiohttp_protocol()
+
+    # Log what we found for debugging
+    ws = connection.ws
+    response = getattr(ws, "_response", "NOT_FOUND")
+    conn_obj = None
+    if response != "NOT_FOUND" and response is not None:
+        conn_obj = getattr(response, "_connection", None) or getattr(response, "connection", None)
+
+    # This is the key assertion - if this fails, our attribute path is wrong
+    if protocol is None:
+        # Provide detailed diagnostic information
+        pytest.fail(
+            f"Failed to access aiohttp protocol on real connection!\n"
+            f"  ws type: {type(ws).__name__}\n"
+            f"  ws._response: {response}\n"
+            f"  response._connection: {conn_obj}\n"
+            f"  This means the attribute path ws._response._connection.protocol is not valid.\n"
+            f"  The progress-based timeout will NOT work!"
+        )
+
+    # Verify we can install the counter
+    connection._install_bytes_received_counter()
+    assert hasattr(protocol, "_chia_bytes_received"), "Counter was not installed on protocol"
+
+    # Get initial count
+    initial_count = connection._get_protocol_bytes_received()
+
+    # Make a request that will cause data to be received
+    # Request a block that doesn't exist - will get a reject response
+    request = RequestBlock(uint32(999999), False)
+    response = await connection.call_api(FullNodeAPI.request_block, request, timeout=10)
+
+    # After receiving a response, the counter should have increased
+    final_count = connection._get_protocol_bytes_received()
+    assert final_count > initial_count, (
+        f"Protocol bytes counter did not increase after receiving data!\n"
+        f"  Initial: {initial_count}, Final: {final_count}\n"
+        f"  This means data_received is not being called on the wrapped protocol."
+    )
+
+
+@pytest.mark.anyio
 async def test_send_request_connection_closed_during_wait(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     self_hostname: str,
