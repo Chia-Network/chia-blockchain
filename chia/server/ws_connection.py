@@ -670,7 +670,7 @@ class WSChiaConnection:
 
         # Progress-based timeout: check for data activity every interval
         # If data is being received (buffer growing), reset the timeout
-        check_interval = 20  # Check every 20 seconds
+        check_interval = 30  # Check every 30 seconds
         last_bytes_read = self.bytes_read
 
         # Install byte counter to track incoming data at protocol level

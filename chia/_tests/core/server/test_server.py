@@ -300,15 +300,15 @@ async def test_send_request_respects_small_timeout(
     self_hostname: str,
 ) -> None:
     """
-    Test that send_request respects small timeouts (< 20 second check_interval).
+    Test that send_request respects small timeouts (< 30 second check_interval).
 
-    This verifies the fix for the bug where check_interval=20 was used directly
-    in asyncio.wait_for(), making 20 seconds the effective minimum timeout.
+    This verifies the fix for the bug where check_interval=30 was used directly
+    in asyncio.wait_for(), making 30 seconds the effective minimum timeout.
 
     Note: In a connected environment, background network activity (heartbeats, etc.)
     may cause progress detection which resets the timeout. This test verifies that
     even with potential progress resets, the total time is reasonable and doesn't
-    extend to the full 20-second check_interval.
+    extend to the full 30-second check_interval.
     """
     _, _, server_1, server_2, _ = two_nodes
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
@@ -323,7 +323,7 @@ async def test_send_request_respects_small_timeout(
     async def mock_put(msg: Message) -> None:
         pass  # Don't actually send
 
-    # Test with a small timeout (5 seconds, well below the 20 second check_interval)
+    # Test with a small timeout (5 seconds, well below the 30 second check_interval)
     # Due to progress detection from background traffic, we may see up to 2x the timeout
     # (one reset before the connection settles), but importantly NOT 20+ seconds
     small_timeout = 5
@@ -335,8 +335,8 @@ async def test_send_request_respects_small_timeout(
 
     # The request should timeout - key assertion is that it doesn't wait 20+ seconds
     assert result is None, "Expected None result for timed-out request"
-    # Before the fix, this would wait ~20 seconds. After fix, should be much less.
-    assert elapsed < max_allowed_time, f"Timeout took {elapsed:.2f}s, should be < {max_allowed_time}s (not 20s)"
+    # Before the fix, this would wait ~30 seconds. After fix, should be much less.
+    assert elapsed < max_allowed_time, f"Timeout took {elapsed:.2f}s, should be < {max_allowed_time}s (not 30s)"
 
 
 @pytest.mark.anyio
@@ -348,11 +348,11 @@ async def test_send_request_timeout_no_progress_simulation() -> None:
     simulating the wait_time calculation that happens in send_request.
     """
     # Simulate the key calculation from send_request
-    check_interval = 20
+    check_interval = 30
     timeout = 5
     time_without_progress = 0.0
 
-    # Before the fix: wait_time = check_interval = 20 (always)
+    # Before the fix: wait_time = check_interval = 30 (always)
     # After the fix: wait_time = min(check_interval, timeout - time_without_progress)
 
     # First iteration
@@ -373,11 +373,11 @@ async def test_send_request_timeout_with_progress_simulation() -> None:
     """
     Test that progress resets work correctly with the timeout calculation.
     """
-    check_interval = 20
+    check_interval = 30
     timeout = 5
     time_without_progress = 0.0
 
-    # First iteration - wait for min(20, 5) = 5 seconds
+    # First iteration - wait for min(30, 5) = 5 seconds
     remaining_timeout = timeout - time_without_progress
     wait_time = min(check_interval, remaining_timeout)
     assert wait_time == 5
