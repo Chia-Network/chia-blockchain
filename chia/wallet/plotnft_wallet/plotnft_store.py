@@ -140,6 +140,8 @@ class PlotNFTStore:
             return _row_to_plotnft(next(iter(rows)), self.genesis_challenge)
 
     async def get_plotnfts(self, *, coin_ids: list[bytes32]) -> list[PlotNFT]:
+        if coin_ids == []:
+            return []
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 f"SELECT * from plotnft2s where coin_id in ({', '.join(['?'] * len(coin_ids))})", coin_ids
@@ -159,6 +161,8 @@ class PlotNFTStore:
         max: int = DEFAULT_POOL_REWARDS_PER_CLAIM,
         include_spent: bool = False,
     ) -> list[PoolReward]:
+        if coin_ids == []:
+            return []
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(
                 (
