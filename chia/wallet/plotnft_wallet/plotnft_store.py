@@ -226,7 +226,7 @@ class PlotNFTStore:
             await conn.execute("DELETE FROM finish_exiting_fee WHERE wallet_id = ?", (wallet_id,))
             await conn.execute("DELETE FROM finish_exiting_height WHERE wallet_id = ?", (wallet_id,))
 
-    async def rollback_to_block(self, *, height: uint32) -> None:
+    async def rollback_to_block(self, *, height: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM plotnft2s WHERE created_height > ?", (height,))
             await conn.execute("DELETE FROM pool_reward2s WHERE height > ?", (height,))

@@ -2472,7 +2472,7 @@ class WalletStateManager:
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
         await self.dl_store.rollback_to_block(height)
-        await self.plotnft2_store.rollback_to_block(height=uint32(height))
+        await self.plotnft2_store.rollback_to_block(height=height)
         reorged: list[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
