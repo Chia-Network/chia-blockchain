@@ -14,8 +14,8 @@ from typing_extensions import Self
 
 log = logging.getLogger(__name__)
 
-# Default to 0.5 Mbps symmetrical (500,000 bits/sec = 62,500 bytes/sec)
-DEFAULT_BANDWIDTH_BYTES_PER_SEC = 62_500
+# Default to 1.5 Mbps symmetrical (1,500,000 bits/sec = 187,500 bytes/sec)
+DEFAULT_BANDWIDTH_BYTES_PER_SEC = 187_500
 
 
 @dataclass
@@ -293,15 +293,15 @@ async def tcp_proxy(
         listen_port: Port to listen on (0 for auto-assignment)
         server_host: Target server hostname
         server_port: Target server port
-        upload_bytes_per_sec: Upload bandwidth limit (client -> server), default 0.5 Mbps (62,500 bytes/s)
-        download_bytes_per_sec: Download bandwidth limit (server -> client), default 0.5 Mbps (62,500 bytes/s)
+        upload_bytes_per_sec: Upload bandwidth limit (client -> server), default 1.5 Mbps (187,500 bytes/s)
+        download_bytes_per_sec: Download bandwidth limit (server -> client), default 1.5 Mbps (187,500 bytes/s)
         latency_ms: Additional latency in milliseconds
 
     Yields:
         TCPProxy instance with the actual listen port available via proxy.proxy_port
 
     Example:
-        # Use default 0.5 Mbps symmetrical throttling
+        # Use default 1.5 Mbps symmetrical throttling
         async with tcp_proxy("127.0.0.1", 0, "127.0.0.1", 8444) as proxy:
             proxy_port = proxy.proxy_port
             # Connect to proxy_port instead of 8444
