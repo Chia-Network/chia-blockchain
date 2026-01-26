@@ -181,7 +181,7 @@ class PlotNFT2Wallet:
                         Coin(
                             parent_coin_info=rewards_to_claim[0].coin.name(),
                             puzzle_hash=target_ph,
-                            amount=total_reward_amount,
+                            amount=uint64(total_reward_amount - fee),
                         ),
                         Coin(
                             parent_coin_info=plotnft.coin.name(),
