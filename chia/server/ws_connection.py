@@ -585,8 +585,70 @@ class WSChiaConnection:
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
+    def _install_bytes_received_counter(self) -> None:
+        """Install a wrapper on the protocol's data_received to count incoming bytes.
+
+        This allows us to track the total bytes received through the websocket connection,
+        even when aiohttp uses Cython extensions that don't expose internal buffer state.
+        The counter is stored as _chia_bytes_received on the protocol object.
+        """
+        try:
+            conn = getattr(self.ws, "_conn", None)
+            if conn is None:
+                return
+
+            protocol = getattr(conn, "_protocol", None)
+            if protocol is None:
+                return
+
+            # Don't install twice
+            if hasattr(protocol, "_chia_bytes_received"):
+                return
+
+            # Initialize counter
+            protocol._chia_bytes_received = 0
+
+            # Save original data_received
+            original_data_received = protocol.data_received
+
+            # Create wrapper that counts bytes
+            def counting_data_received(data: bytes) -> None:
+                protocol._chia_bytes_received += len(data)
+                original_data_received(data)
+
+            # Replace data_received with wrapper
+            protocol.data_received = counting_data_received
+
+        except Exception:
+            pass  # Silently fail - progress tracking is best-effort
+
+    def _get_protocol_bytes_received(self) -> int:
+        """Get the total bytes received through the websocket protocol.
+
+        Returns the cumulative count of bytes passed to data_received since the
+        counter was installed, or 0 if the counter is not available.
+        """
+        try:
+            conn = getattr(self.ws, "_conn", None)
+            if conn is None:
+                return 0
+
+            protocol = getattr(conn, "_protocol", None)
+            if protocol is None:
+                return 0
+
+            return getattr(protocol, "_chia_bytes_received", 0)
+
+        except Exception:
+            return 0
+
     async def send_request(self, message_no_id: Message, timeout: int) -> Message | None:
-        """Sends a message and waits for a response."""
+        """Sends a message and waits for a response.
+
+        Uses a progress-based timeout: the timeout is reset whenever data is being
+        received on the connection, allowing large messages to be received over slow
+        connections as long as data keeps flowing.
+        """
         if self.closed:
             return None
 
@@ -606,10 +668,51 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
-        except asyncio.TimeoutError:
-            self.log.debug(f"Request timeout: {message}")
+        # Progress-based timeout: check for data activity every interval
+        # If data is being received (buffer growing), reset the timeout
+        check_interval = 20  # Check every 20 seconds
+        last_bytes_read = self.bytes_read
+
+        # Install byte counter to track incoming data at protocol level
+        self._install_bytes_received_counter()
+        last_protocol_bytes = self._get_protocol_bytes_received()
+        time_without_progress = 0.0
+
+        while time_without_progress < timeout:
+            try:
+                await asyncio.wait_for(event.wait(), timeout=check_interval)
+                # Event was set, response received
+                break
+            except asyncio.TimeoutError:
+                # Check if data is being received
+                current_bytes_read = self.bytes_read
+                current_protocol_bytes = self._get_protocol_bytes_received()
+
+                # Check if any progress was made
+                progress_made = False
+                if current_bytes_read > last_bytes_read:
+                    # Complete messages have been received
+                    progress_made = True
+                    last_bytes_read = current_bytes_read
+                if current_protocol_bytes > last_protocol_bytes:
+                    # Data is being received at the protocol level (partial message)
+                    progress_made = True
+                    last_protocol_bytes = current_protocol_bytes
+
+                if progress_made:
+                    # Data is being received, reset the timeout
+                    time_without_progress = 0.0
+                    self.log.debug(f"Request in progress, data being received: {message}")
+                else:
+                    time_without_progress += check_interval
+
+                # Also check if the connection is still open
+                if self.closed:
+                    self.log.debug(f"Connection closed while waiting for response: {message}")
+                    break
+
+        if not event.is_set():
+            self.log.debug(f"Request timeout after {time_without_progress:.1f}s without progress: {message}")
 
         self.pending_requests.pop(message.id)
         result: Message | None = None
