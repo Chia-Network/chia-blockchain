@@ -712,7 +712,7 @@ class WSChiaConnection:
                     break
 
         if not event.is_set():
-            self.log.debug(f"Request timeout after {time_without_progress:.1f}s without progress: {message}")
+            self.log.debug(f"Request timeout: {message} (no progress for {time_without_progress:.1f}s)")
 
         self.pending_requests.pop(message.id)
         result: Message | None = None
