@@ -296,7 +296,7 @@ async def test_pruned_node_can_receive_new_blocks(
 ) -> None:
     """
     Test that a pruned full_node can receive and process new blocks,
-    and that coin records are correctly maintained.
+    and that coin records match a reference node that processed all blocks from scratch.
 
     This test:
     1. Creates a full_node with 100 transaction blocks
@@ -304,11 +304,12 @@ async def test_pruned_node_can_receive_new_blocks(
     3. Prunes 20 blocks (new peak = 79)
     4. Restarts the node
     5. Manually adds blocks from 80-119
-    6. Verifies the node processes them correctly (peak = 119)
-    7. Verifies coin records are correctly accumulated
+    6. Creates a reference node and adds all 120 blocks from scratch
+    7. Verifies coin records match between pruned+resynced node and reference node
     """
     config_overrides = {"full_node.max_sync_wait": 0}
     db_name = "blockchain_prune_new_blocks.db"
+    db_name_reference = "blockchain_reference.db"
 
     with TempKeyring(populate=True) as keychain:
         async with create_block_tools_async(
@@ -375,11 +376,33 @@ async def test_pruned_node_can_receive_new_blocks(
                 assert final_peak is not None
                 assert final_peak.height == 119, f"Expected height 119, got {final_peak.height}"
 
-                # Verify we have coin records for all heights now
-                final_records = await get_all_coin_records(full_node2.coin_store, uint32(119))
-                log.info(f"Total coin records after adding all blocks: {len(final_records)}")
+                # Get coin records from the pruned+resynced node
+                pruned_records = await get_all_coin_records(full_node2.coin_store, uint32(119))
+                log.info(f"Pruned node has {len(pruned_records)} coin records after resync")
 
-                # We should have at least as many coins as before plus new ones
-                assert len(final_records) >= len(records_at_79), (
-                    f"Expected at least {len(records_at_79)} coins, got {len(final_records)}"
-                )
+                # Create a reference node and process all blocks from scratch
+                async with setup_full_node(
+                    blockchain_constants,
+                    db_name_reference,
+                    self_hostname,
+                    bt,
+                    simulator=False,
+                    db_version=2,
+                    reuse_db=True,
+                ) as service_reference:
+                    full_node_reference = service_reference._api.full_node
+
+                    # Add all 120 blocks from scratch
+                    for block in all_blocks:
+                        await full_node_reference.add_block(block)
+
+                    ref_peak = full_node_reference.blockchain.get_peak()
+                    assert ref_peak is not None and ref_peak.height == 119
+
+                    # Get coin records from the reference node
+                    reference_records = await get_all_coin_records(full_node_reference.coin_store, uint32(119))
+                    log.info(f"Reference node has {len(reference_records)} coin records")
+
+                    # Verify coin records match between pruned+resynced node and reference
+                    match, message = compare_coin_records(reference_records, pruned_records)
+                    assert match, f"Coin records do not match reference after prune+resync: {message}"
