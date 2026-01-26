@@ -163,11 +163,11 @@ class TestDbPrune:
                 assert get_block_count(conn) == initial_count
                 assert get_peak_height(conn) == initial_peak
 
-    def test_prune_blocks_back_equals_peak(self) -> None:
-        """Test pruning when blocks_back equals peak_height does nothing."""
+    def test_prune_blocks_back_greater_than_peak(self) -> None:
+        """Test pruning when blocks_back is greater than peak_height does nothing."""
         with TempFile() as db_file:
             peak_height = 100
-            blocks_back = 100
+            blocks_back = 101  # Greater than peak_height, can't prune below genesis
             create_test_db(db_file, peak_height, orphan_rate=0)
 
             with closing(sqlite3.connect(db_file)) as conn:
@@ -236,6 +236,16 @@ class TestDbPrune:
 
 
 class TestDbPruneErrors:
+    def test_prune_negative_blocks_back(self) -> None:
+        """Test pruning with negative blocks_back raises error."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+
+            with pytest.raises(RuntimeError) as excinfo:
+                prune_db(db_file, blocks_back=-5)
+            assert "blocks_back must be a non-negative integer" in str(excinfo.value)
+            assert "-5" in str(excinfo.value)
+
     def test_prune_missing_file(self) -> None:
         """Test pruning non-existent database raises error."""
         with pytest.raises(RuntimeError) as excinfo:
@@ -455,12 +465,13 @@ class TestDbPruneEdgeCases:
             blocks_back = 100  # This means new peak = 0
             create_test_db(db_file, peak_height, orphan_rate=0)
 
-            # blocks_back == peak_height means nothing to prune
             prune_db(db_file, blocks_back=blocks_back)
 
             with closing(sqlite3.connect(db_file)) as conn:
-                # Should still have all blocks since blocks_back >= peak_height
-                assert get_block_count(conn) == peak_height + 1
+                # Should have only the genesis block (height 0)
+                assert get_block_count(conn) == 1
+                assert get_max_height(conn) == 0
+                assert get_peak_height(conn) == 0
 
     def test_prune_to_height_one(self) -> None:
         """Test pruning to leave blocks 0 and 1."""

@@ -55,6 +55,9 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
     Also removes any orphan blocks at those heights and cleans up related data
     (coin records, hints) so the node can sync forward correctly.
     """
+    if blocks_back < 0:
+        raise RuntimeError(f"blocks_back must be a non-negative integer, got {blocks_back}")
+
     if not db_path.exists():
         raise RuntimeError(f"Database file does not exist: {db_path}")
 
@@ -90,8 +93,8 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
 
         print(f"Current peak height: {peak_height}")
 
-        if blocks_back >= peak_height:
-            print(f"blocks_back ({blocks_back}) >= peak_height ({peak_height}). Nothing to prune.")
+        if blocks_back > peak_height:
+            print(f"blocks_back ({blocks_back}) > peak_height ({peak_height}). Nothing to prune.")
             return
 
         new_peak_height = peak_height - blocks_back
