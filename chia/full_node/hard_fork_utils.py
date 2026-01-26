@@ -14,8 +14,6 @@ async def get_flags(
     blocks: BlocksProtocol,
     block: FullBlock,
 ) -> int:
-    if block.height < constants.HARD_FORK2_HEIGHT:
-        return get_flags_for_height_and_constants(block.height, constants)
     if block.height >= constants.HARD_FORK2_HEIGHT + constants.SUB_EPOCH_BLOCKS:
         return get_flags_for_height_and_constants(block.height, constants)
 
