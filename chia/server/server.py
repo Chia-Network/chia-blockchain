@@ -435,7 +435,10 @@ class ChiaServer:
                     url,
                     autoclose=True,
                     autoping=True,
-                    heartbeat=60,
+                    # Heartbeat must be long enough for large message transfers (e.g., weight proofs).
+                    # With heartbeat=300, PONG timeout is 150 seconds (heartbeat/2).
+                    # A weight proof can take 5+ minutes to transfer on slow connections.
+                    heartbeat=300,
                     ssl=self.ssl_client_context,
                     max_msg_size=max_message_size,
                 )
