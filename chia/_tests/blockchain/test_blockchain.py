@@ -1463,8 +1463,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     # todo_v2_plots fix this test and remove limit_consensus_modes
     @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
-        reason="HARD_FORK_3_0 and HARD_FORK_3_0_AFTER_PHASE_OUT doesn't work as we keep getting v1 PoS with pool keys, "
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="HARD_FORK_3_0_AFTER_PHASE_OUT doesn't work as we keep getting v1 PoS with pool keys, "
         "rather than v2 PoS with contract hashes",
     )
     async def test_pool_target_contract(
