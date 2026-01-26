@@ -734,7 +734,7 @@ class WSChiaConnection:
                 if progress_made:
                     # Data is being received, reset the timeout
                     time_without_progress = 0.0
-                    self.log.info(
+                    self.log.debug(
                         f"Request in progress, data being received "
                         f"(bytes_read={current_bytes_read}, protocol_bytes={current_protocol_bytes}): "
                         f"{ProtocolMessageTypes(message.type).name}"
