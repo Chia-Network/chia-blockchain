@@ -557,6 +557,10 @@ async def _request_weight_proof_through_proxy(
             )
             download_time = time.time() - start_time
 
+            # Close connection immediately after receiving response to prevent
+            # background sync from continuing and stalling the test
+            await connection.close()
+
             if wp_response is None:
                 # call_api returns None when the websocket times out waiting for a response
                 # (the timeout is handled internally and doesn't raise an exception)
@@ -568,9 +572,11 @@ async def _request_weight_proof_through_proxy(
             # This branch is unlikely to be hit since call_api handles timeout internally,
             # but we keep it for safety in case of other async operations timing out
             download_time = time.time() - start_time
+            await connection.close()
             return None, download_time, f"Timeout after {download_time:.2f}s"
         except Exception as e:
             download_time = time.time() - start_time
+            await connection.close()
             return None, download_time, f"Error: {type(e).__name__}: {e}"
 
 
@@ -682,6 +688,17 @@ async def test_slow_weight_proof_download(
     actual_wp_size = len(wp_bytes)
     wp_size_mb = actual_wp_size / 1024 / 1024
 
+    # Verify weight proof is large enough for this test to be meaningful
+    # If weight proofs get smaller in the future, the bandwidth/timeout values in this
+    # test will need to be adjusted to still trigger the timeout behavior we're testing.
+    MIN_WEIGHT_PROOF_SIZE_MB = 1.8
+    assert wp_size_mb > MIN_WEIGHT_PROOF_SIZE_MB, (
+        f"Weight proof size ({wp_size_mb:.2f} MB) is smaller than expected ({MIN_WEIGHT_PROOF_SIZE_MB} MB). "
+        f"If weight proofs have gotten smaller, adjust FAST_BANDWIDTH_BYTES_PER_SEC and "
+        f"SLOW_BANDWIDTH_BYTES_PER_SEC to ensure TEST 1 completes within the 60 second timeout and "
+        f"TEST 2 exceeds the timeout of 60 seconds."
+    )
+
     # Calculate expected transfer times and Mbps values
     expected_time_fast = actual_wp_size / FAST_BANDWIDTH_BYTES_PER_SEC
     expected_time_slow = actual_wp_size / SLOW_BANDWIDTH_BYTES_PER_SEC
@@ -760,7 +777,7 @@ async def test_slow_weight_proof_download(
     log.info(f"  Expected time: {expected_time_slow:.1f}s")
     log.info("=" * 60)
 
-    _wp_response_2, download_time_2, error_2 = await _request_weight_proof_through_proxy(
+    wp_response_2, download_time_2, error_2 = await _request_weight_proof_through_proxy(
         server_1=server_1,
         server_2=server_2,
         self_hostname=self_hostname,
@@ -791,19 +808,35 @@ async def test_slow_weight_proof_download(
     log.info(f"  RuntimeError in logs:    {runtime_error_in_logs}")
     log.info("=" * 60)
 
-    # TEST 2 assertion: fail with appropriate message based on what we observed
-    if error_2 is not None:
-        if runtime_error_in_logs:
-            # The websocket timed out and RuntimeError was logged - this is the bug we need to fix
-            assert False, (
-                f"TEST 2 FAILED: Weight proof download timed out after {download_time_2:.2f}s. "
-                f"RuntimeError 'Weight proof did not arrive in time from peer' was logged. "
-                f"Websocket improvements are needed to handle slow connections without timing out."
-            )
-        else:
-            # Got None response but no RuntimeError in logs - unexpected failure mode
-            assert False, (
-                f"TEST 2 FAILED: Weight proof response was None after {download_time_2:.2f}s, "
-                f"but RuntimeError 'Weight proof did not arrive in time from peer' was NOT found in logs. "
-                f"Error: {error_2}"
-            )
+    # TEST 2 assertions
+    if error_2 is None:
+        # Success! The weight proof was received despite the slow connection.
+        # This means the progress-based timeout is working correctly.
+        assert wp_response_2 is not None, "TEST 2: Response object was None but no error"
+        assert isinstance(wp_response_2, full_node_protocol.RespondProofOfWeight)
+        assert wp_response_2.wp is not None
+
+        # Validate the weight proof
+        (
+            validated_2,
+            val_error_2,
+            _fork_point_2,
+        ) = await full_node_2.full_node.weight_proof_handler.validate_weight_proof(wp_response_2.wp)
+        assert validated_2, f"TEST 2 weight proof validation failed: {val_error_2}"
+
+        log.info(f"TEST 2 PASSED: Weight proof downloaded and validated in {download_time_2:.2f}s")
+        log.info("  Progress-based timeout is working correctly!")
+    elif runtime_error_in_logs:
+        # The websocket timed out and RuntimeError was logged - this is the bug we need to fix
+        assert False, (
+            f"TEST 2 FAILED: Weight proof download timed out after {download_time_2:.2f}s. "
+            f"RuntimeError 'Weight proof did not arrive in time from peer' was logged. "
+            f"Websocket improvements are needed to handle slow connections without timing out."
+        )
+    else:
+        # Got None response but no RuntimeError in logs - unexpected failure mode
+        assert False, (
+            f"TEST 2 FAILED: Weight proof response was None after {download_time_2:.2f}s, "
+            f"but RuntimeError 'Weight proof did not arrive in time from peer' was NOT found in logs. "
+            f"Error: {error_2}"
+        )
