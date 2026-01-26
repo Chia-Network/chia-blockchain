@@ -36,8 +36,8 @@ def db_prune_func(
             "Please stop the full_node service first with 'chia stop node'"
         )
 
-    config: dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
     if in_db_path is None:
+        config: dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
         selected_network: str = config["selected_network"]
         db_pattern: str = config["database_path"]
         db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)
@@ -128,6 +128,14 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
             return
 
         print(f"Blocks to prune: {total_blocks_to_delete}")
+
+        # Update the current_peak FIRST for crash safety.
+        # If interrupted after this point, the database remains in a recoverable state
+        # with the peak pointing to a valid block. Orphan blocks/coins above the peak
+        # are harmless and can be cleaned up by re-running prune.
+        conn.execute("UPDATE current_peak SET hash = ? WHERE key = 0", (new_peak_hash,))
+        conn.commit()
+        print(f"Updated peak to height {new_peak_height}")
 
         # Clean up coin_record and hints tables if they exist
         # This is necessary for the node to sync forward correctly after pruning
@@ -252,11 +260,6 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
             print(f"\r  Deleted {deleted}/{total_blocks_to_delete} blocks...", end="", flush=True)
 
         print(f"\r  Deleted {deleted} blocks.                              ")
-
-        # Update the current_peak to point to the new peak
-        conn.execute("UPDATE current_peak SET hash = ? WHERE key = 0", (new_peak_hash,))
-        conn.commit()
-        print(f"Updated peak to height {new_peak_height}")
 
         # Get the new database info
         with closing(conn.execute("SELECT COUNT(*) FROM full_blocks")) as cursor:
