@@ -635,6 +635,40 @@ async def test_bytes_received_counter_real_connection(
 
 
 @pytest.mark.anyio
+async def test_send_request_response_received(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test that send_request exits the wait loop when a response is received.
+
+    This tests lines 715-716 of ws_connection.py where the event is set
+    (response received) and we break out of the progress-checking loop.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Create a request for a block that doesn't exist - will get a RejectBlock response
+    message = Message(uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False)))
+
+    # Send the request with a long timeout - but it should complete quickly
+    # because the server will respond with RejectBlock
+    start_time = time.time()
+    result = await connection.send_request(message, timeout=60)
+    elapsed = time.time() - start_time
+
+    # Should receive a response (RejectBlock) quickly, not wait for timeout
+    assert result is not None, "Expected a response (RejectBlock), got None"
+    assert result.type == ProtocolMessageTypes.reject_block.value, f"Expected reject_block, got {result.type}"
+
+    # The request should complete very quickly (well under 1 second typically)
+    # Definitely should not wait anywhere near the 60 second timeout
+    assert elapsed < 5, f"Response took too long: {elapsed:.2f}s (should be < 5s)"
+
+
+@pytest.mark.anyio
 async def test_send_request_connection_closed_during_wait(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     self_hostname: str,
