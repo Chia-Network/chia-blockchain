@@ -237,10 +237,15 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
             )
             conn.commit()
 
-            rows_deleted = conn.total_changes - deleted
-            if rows_deleted == 0:
+            # Check how many blocks remain to be deleted
+            with closing(
+                conn.execute("SELECT COUNT(*) FROM full_blocks WHERE height > ?", (new_peak_height,))
+            ) as cursor:
+                remaining = cursor.fetchone()[0]
+
+            deleted = total_blocks_to_delete - remaining
+            if remaining == 0:
                 break
-            deleted = conn.total_changes
             print(f"\r  Deleted {deleted}/{total_blocks_to_delete} blocks...", end="", flush=True)
 
         print(f"\r  Deleted {deleted} blocks.                              ")
