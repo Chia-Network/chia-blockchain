@@ -6,6 +6,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
+from chia.full_node import hard_fork_utils
 from chia.full_node.hard_fork_utils import get_flags
 from chia.simulator.block_tools import BlockTools, load_block_list, test_constants
 from chia.util.block_cache import BlockCache
@@ -50,6 +51,49 @@ async def test_get_flags_outside_transition_period(bt: BlockTools) -> None:
     assert block.height >= constants.HARD_FORK2_HEIGHT + constants.SUB_EPOCH_BLOCKS
     result = await get_flags(constants, mock_blocks, block)
     assert result == get_flags_for_height_and_constants(block.height, constants)
+
+
+@pytest.mark.anyio
+async def test_get_flags_before_transition_uses_prev_tx_height(bt: BlockTools, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure pre-transition flags use the latest tx block before signage point."""
+    block_list = bt.get_consecutive_blocks(
+        10,
+        block_list_input=[],
+        guarantee_transaction_block=True,
+    )
+    _, _, blocks = load_block_list(block_list, bt.constants)
+    mock_blocks = MockBlocksProtocol(blocks)
+    block = block_list[-1]
+
+    constants = test_constants.replace(
+        HARD_FORK_HEIGHT=uint32(block.height),
+        HARD_FORK2_HEIGHT=uint32(block.height + 1000),
+    )
+    assert block.height >= constants.HARD_FORK_HEIGHT
+    assert block.height < constants.HARD_FORK2_HEIGHT
+
+    expected_height = int(
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=mock_blocks,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        )
+    )
+    assert expected_height < int(constants.HARD_FORK_HEIGHT)
+
+    def fake_get_flags_for_height_and_constants(height: int, _constants: object) -> int:
+        return int(height)
+
+    monkeypatch.setattr(
+        hard_fork_utils,
+        "get_flags_for_height_and_constants",
+        fake_get_flags_for_height_and_constants,
+    )
+
+    result = await hard_fork_utils.get_flags(constants, mock_blocks, block)
+    assert result == expected_height
 
 
 @pytest.mark.anyio
