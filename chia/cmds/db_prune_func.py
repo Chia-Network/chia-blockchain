@@ -52,7 +52,8 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
 
     This removes blocks at height > (peak_height - blocks_back), making the block
     at (peak_height - blocks_back) the new peak when full_node is restarted.
-    Also removes any orphan blocks at those heights.
+    Also removes any orphan blocks at those heights and cleans up related data
+    (coin records, hints) so the node can sync forward correctly.
     """
     if not db_path.exists():
         raise RuntimeError(f"Database file does not exist: {db_path}")
@@ -117,15 +118,103 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
                 (new_peak_height,),
             )
         ) as cursor:
-            total_to_delete = cursor.fetchone()[0]
+            total_blocks_to_delete = cursor.fetchone()[0]
 
-        if total_to_delete == 0:
+        if total_blocks_to_delete == 0:
             print("No blocks to prune.")
             return
 
-        print(f"Blocks to prune: {total_to_delete}")
+        print(f"Blocks to prune: {total_blocks_to_delete}")
+
+        # Clean up coin_record and hints tables if they exist
+        # This is necessary for the node to sync forward correctly after pruning
+        try:
+            print("Cleaning up coin records and hints...")
+
+            # 1. Delete hints for coins that will be deleted (must do this BEFORE deleting coins)
+            try:
+                with closing(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM hints WHERE coin_id IN "
+                        "(SELECT coin_name FROM coin_record WHERE confirmed_index > ?)",
+                        (new_peak_height,),
+                    )
+                ) as cursor:
+                    hints_to_delete = cursor.fetchone()[0]
+                if hints_to_delete > 0:
+                    print(f"  Deleting {hints_to_delete} hints for coins above height {new_peak_height}...")
+                    conn.execute(
+                        "DELETE FROM hints WHERE coin_id IN "
+                        "(SELECT coin_name FROM coin_record WHERE confirmed_index > ?)",
+                        (new_peak_height,),
+                    )
+                    conn.commit()
+            except sqlite3.OperationalError:
+                # hints table might not exist in all databases
+                pass
+
+            # 2. Delete coins that were created (confirmed) at heights above new_peak_height
+            with closing(
+                conn.execute("SELECT COUNT(*) FROM coin_record WHERE confirmed_index > ?", (new_peak_height,))
+            ) as cursor:
+                coins_to_delete = cursor.fetchone()[0]
+
+            if coins_to_delete > 0:
+                print(f"  Deleting {coins_to_delete} coin records created above height {new_peak_height}...")
+                # Delete in batches for large databases using rowid
+                coin_batch_size = 1000
+                deleted_coins = 0
+                while True:
+                    conn.execute(
+                        "DELETE FROM coin_record WHERE rowid IN "
+                        "(SELECT rowid FROM coin_record WHERE confirmed_index > ? LIMIT ?)",
+                        (new_peak_height, coin_batch_size),
+                    )
+                    conn.commit()
+                    # Check how many are left
+                    with closing(
+                        conn.execute("SELECT COUNT(*) FROM coin_record WHERE confirmed_index > ?", (new_peak_height,))
+                    ) as cursor:
+                        remaining = cursor.fetchone()[0]
+                    deleted_coins = coins_to_delete - remaining
+                    if remaining == 0:
+                        break
+                    print(f"\r    Deleted {deleted_coins}/{coins_to_delete} coin records...", end="", flush=True)
+                print(f"\r    Deleted {deleted_coins} coin records.                    ")
+
+            # 3. Reset spent_index for coins that were spent at heights above new_peak_height
+            #    (they need to become unspent again)
+            with closing(
+                conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index > ?", (new_peak_height,))
+            ) as cursor:
+                coins_to_unspend = cursor.fetchone()[0]
+
+            if coins_to_unspend > 0:
+                print(f"  Resetting {coins_to_unspend} coin records that were spent above height {new_peak_height}...")
+                # Update in batches using rowid for better performance on large tables
+                update_batch_size = 500
+                updated_coins = 0
+                while updated_coins < coins_to_unspend:
+                    conn.execute(
+                        "UPDATE coin_record SET spent_index = 0 "
+                        "WHERE rowid IN (SELECT rowid FROM coin_record WHERE spent_index > ? LIMIT ?)",
+                        (new_peak_height, update_batch_size),
+                    )
+                    conn.commit()
+                    # Check how many are left
+                    with closing(
+                        conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index > ?", (new_peak_height,))
+                    ) as cursor:
+                        remaining = cursor.fetchone()[0]
+                    updated_coins = coins_to_unspend - remaining
+                    print(f"\r    Reset {updated_coins}/{coins_to_unspend} coin records...", end="", flush=True)
+                print(f"\r    Reset {updated_coins} coin records.                    ")
+        except sqlite3.OperationalError:
+            # coin_record table might not exist in minimal test databases
+            pass
 
         # Delete blocks in batches to show progress
+        print("Deleting blocks...")
         batch_size = 1000
         deleted = 0
 
@@ -141,9 +230,9 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
             if rows_deleted == 0:
                 break
             deleted = conn.total_changes
-            print(f"\rDeleted {deleted}/{total_to_delete} blocks...", end="", flush=True)
+            print(f"\r  Deleted {deleted}/{total_blocks_to_delete} blocks...", end="", flush=True)
 
-        print(f"\rDeleted {deleted} blocks.                              ")
+        print(f"\r  Deleted {deleted} blocks.                              ")
 
         # Update the current_peak to point to the new peak
         conn.execute("UPDATE current_peak SET hash = ? WHERE key = 0", (new_peak_hash,))
@@ -161,8 +250,17 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
             min_height = row[0]
             max_height = row[1]
 
+        try:
+            with closing(conn.execute("SELECT COUNT(*) FROM coin_record")) as cursor:
+                remaining_coins = cursor.fetchone()[0]
+            coin_count_msg = f"Remaining coin records: {remaining_coins}"
+        except sqlite3.OperationalError:
+            coin_count_msg = ""
+
         print(f"Remaining blocks in database: {remaining_blocks}")
         print(f"Main chain height range: {min_height} to {max_height}")
+        if coin_count_msg:
+            print(coin_count_msg)
         print("\nPruning complete. Run 'VACUUM' on the database to reclaim disk space if desired.")
         print("You can do this with: chia db backup")
         print("Then replace the original database with the backup.")
