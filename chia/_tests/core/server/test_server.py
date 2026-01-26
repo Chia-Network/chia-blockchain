@@ -617,6 +617,44 @@ async def test_get_aiohttp_protocol_connection_fallback(
 
 
 @pytest.mark.anyio
+async def test_get_aiohttp_protocol_both_connections_none(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Test _get_aiohttp_protocol returns None when both _connection and connection are None.
+
+    This tests line 607 of ws_connection.py where we return None after trying
+    both response._connection and response.connection.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+    original_ws = connection.ws
+
+    # Create mock where both _connection and connection are None
+    class MockResponse:
+        def __init__(self) -> None:
+            self._connection = None  # _connection is None
+            self.connection = None  # connection is also None
+
+    class MockWs:
+        def __init__(self) -> None:
+            self._response = MockResponse()
+
+    mock_ws = MockWs()
+    connection.ws = mock_ws  # type: ignore[assignment]
+
+    try:
+        # Should return None since both connection attributes are None
+        protocol = connection._get_aiohttp_protocol()
+        assert protocol is None, "Should return None when both _connection and connection are None"
+    finally:
+        connection.ws = original_ws
+
+
+@pytest.mark.anyio
 async def test_install_bytes_received_counter_wrapping_exception(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     self_hostname: str,
@@ -871,6 +909,9 @@ async def test_send_request_connection_closed_during_wait(
 ) -> None:
     """
     Test that send_request handles connection closing during the wait.
+
+    This tests lines 761-762 of ws_connection.py where we detect that the
+    connection closed during the wait loop and exit early.
     """
     _, _, server_1, server_2, _ = two_nodes
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
@@ -893,13 +934,15 @@ async def test_send_request_connection_closed_during_wait(
 
     start_time = time.time()
     with patch.object(connection.outgoing_queue, "put", mock_put):
-        result = await connection.send_request(message, timeout=30)
+        # Use a small timeout (3s) so wait_time = min(check_interval=30, 3) = 3
+        # This ensures we check self.closed after 3 seconds, detecting the close
+        # that happened at 1 second
+        result = await connection.send_request(message, timeout=3)
     elapsed = time.time() - start_time
 
-    # Should return quickly after connection closes, not wait full timeout
+    # Should return after the first check interval (3s) when it detects connection closed
     assert result is None
-    # Should complete in about 1-5 seconds (close delay + one check interval which is min(20, remaining))
-    # The key is it shouldn't wait the full 30 seconds
-    assert elapsed < 10, f"Should exit early when connection closes, took {elapsed:.2f}s"
+    # Should complete in about 3-4 seconds (timeout wait + overhead)
+    assert elapsed < 6, f"Should exit when connection close is detected, took {elapsed:.2f}s"
 
     await close_task
