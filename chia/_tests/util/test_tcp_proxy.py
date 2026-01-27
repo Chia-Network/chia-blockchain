@@ -209,9 +209,16 @@ class TestProxyConnectionErrorHandling:
                         break
                     writer.write(data)
                     await writer.drain()
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                # Expected when connection is reset
+                pass
             finally:
-                writer.close()
-                await writer.wait_closed()
+                try:
+                    writer.close()
+                    await writer.wait_closed()
+                except (ConnectionResetError, BrokenPipeError, OSError):
+                    # Connection may already be reset, ignore
+                    pass
 
         echo_server = await asyncio.start_server(handle_echo, self_hostname, 0)
         echo_port = echo_server.sockets[0].getsockname()[1]
@@ -271,9 +278,16 @@ class TestProxyConnectionErrorHandling:
                         break
                     writer.write(data)
                     await writer.drain()
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                # Expected when client closes connection
+                pass
             finally:
-                writer.close()
-                await writer.wait_closed()
+                try:
+                    writer.close()
+                    await writer.wait_closed()
+                except (ConnectionResetError, BrokenPipeError, OSError):
+                    # Connection may already be reset, ignore
+                    pass
 
         echo_server = await asyncio.start_server(handle_echo, self_hostname, 0)
         echo_port = echo_server.sockets[0].getsockname()[1]
