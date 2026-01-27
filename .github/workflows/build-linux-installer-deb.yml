@@ -36,10 +36,6 @@ permissions:
   id-token: write
   contents: write
 
-env:
-  # Temporary: restrict CI to Linux ARM64 runners for this branch/PR.
-  ARM_ONLY: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' && 'true' || 'false' }}
-
 jobs:
   version:
     if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
