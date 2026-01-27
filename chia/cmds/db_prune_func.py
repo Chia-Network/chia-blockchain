@@ -259,6 +259,28 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
 
         print(f"\r  Deleted {deleted} blocks.                              ")
 
+        # Clean up sub_epoch_segments_v3 table - delete entries for blocks that no longer exist
+        # This is important because stale segment data can affect weight proof validation
+        # and fork point calculation during sync
+        try:
+            with closing(
+                conn.execute(
+                    "SELECT COUNT(*) FROM sub_epoch_segments_v3 WHERE ses_block_hash NOT IN "
+                    "(SELECT header_hash FROM full_blocks)"
+                )
+            ) as cursor:
+                orphan_segments = cursor.fetchone()[0]
+            if orphan_segments > 0:
+                print(f"Cleaning up {orphan_segments} orphaned sub-epoch segment entries...")
+                conn.execute(
+                    "DELETE FROM sub_epoch_segments_v3 WHERE ses_block_hash NOT IN "
+                    "(SELECT header_hash FROM full_blocks)"
+                )
+                conn.commit()
+        except sqlite3.OperationalError:
+            # sub_epoch_segments_v3 table might not exist in all databases
+            pass
+
         # Get the new database info
         with closing(conn.execute("SELECT COUNT(*) FROM full_blocks")) as cursor:
             remaining_blocks = cursor.fetchone()[0]
