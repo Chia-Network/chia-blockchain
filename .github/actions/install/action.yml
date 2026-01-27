@@ -53,7 +53,7 @@ runs:
         command -v cargo && cargo --version || echo "cargo missing"
         command -v rustc && rustc --version || echo "rustc missing"
 
-    - name: Ensure compiler toolchain (Linux ARM64)
+    - name: Ensure compiler + Rust toolchain (Linux ARM64)
       if: runner.os == 'linux' && runner.arch == 'ARM64'
       shell: bash
       run: |
@@ -61,10 +61,8 @@ runs:
         set -o nounset
         set -o pipefail
 
-        if command -v cc >/dev/null 2>&1; then
-          exit 0
-        fi
-
+        # Use system package manager for build deps, but prefer a modern Rust toolchain via rustup
+        # since distro-packaged cargo/rustc can lag (e.g. missing Rust 2024 edition support).
         SUDO=""
         if command -v sudo >/dev/null 2>&1; then
           SUDO="sudo"
@@ -72,17 +70,38 @@ runs:
 
         if command -v apt-get >/dev/null 2>&1; then
           ${SUDO} apt-get --yes update
-          ${SUDO} apt-get install --yes --no-install-recommends build-essential pkg-config libssl-dev rustc cargo
+          ${SUDO} apt-get install --yes --no-install-recommends build-essential pkg-config libssl-dev curl ca-certificates
         elif command -v dnf >/dev/null 2>&1; then
-          ${SUDO} dnf install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel rust cargo
+          ${SUDO} dnf install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel curl ca-certificates
         elif command -v yum >/dev/null 2>&1; then
-          ${SUDO} yum install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel rust cargo
+          ${SUDO} yum install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel curl ca-certificates
         else
           echo "No supported package manager found; cannot install compiler toolchain." >&2
           exit 1
         fi
 
+        if ! command -v cc >/dev/null 2>&1; then
+          echo "C compiler (cc) is still missing after installing build deps." >&2
+          exit 1
+        fi
+
+        # clvm-rs uses Rust 2024 edition; require a sufficiently new cargo.
+        REQUIRED_RUST_MINOR=85
+        CARGO_MINOR=0
+        if command -v cargo >/dev/null 2>&1; then
+          CARGO_VER="$(cargo --version | awk '{print $2}')"
+          CARGO_MINOR="${CARGO_VER#*.}"
+          CARGO_MINOR="${CARGO_MINOR%%.*}"
+        fi
+
+        if ! command -v cargo >/dev/null 2>&1 || [ "${CARGO_MINOR}" -lt "${REQUIRED_RUST_MINOR}" ]; then
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "${HOME}/.cargo/bin" >> "${GITHUB_PATH}"
+        fi
+
         cc --version
+        cargo --version
+        rustc --version
 
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
