@@ -19,11 +19,15 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  # Temporary: restrict CI to Linux ARM64 runners for this branch/PR.
+  ARM_ONLY: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' && 'true' || 'false' }}
+
 jobs:
   trigger:
     if: github.repository_owner == 'Chia-Network'
     name: Trigger building a new dev tag for the chia-docker image
-    runs-on: ubuntu-latest
+    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
       - name: Test for secrets access
         id: check_secrets

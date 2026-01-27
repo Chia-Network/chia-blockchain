@@ -24,9 +24,14 @@ defaults:
   run:
     shell: bash
 
+env:
+  # Temporary: restrict CI to Linux ARM64 runners for this branch/PR.
+  ARM_ONLY: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' && 'true' || 'false' }}
+
 jobs:
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    if: env.ARM_ONLY != 'true' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm')
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
@@ -152,6 +157,7 @@ jobs:
 
   test_scripts_in_docker:
     name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    if: env.ARM_ONLY != 'true' || matrix.arch.matrix == 'arm'
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:

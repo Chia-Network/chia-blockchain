@@ -24,9 +24,13 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  # Temporary: restrict CI to Linux ARM64 runners for this branch/PR.
+  ARM_ONLY: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' && 'true' || 'false' }}
+
 jobs:
   mypy:
-    if: github.repository_owner == 'Chia-Network'
+    if: github.repository_owner == 'Chia-Network' && (env.ARM_ONLY != 'true' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm'))
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -119,7 +123,7 @@ jobs:
             matrix: linux
             emoji: 🐧
             runs-on:
-              intel: ubuntu-latest
+              intel: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
               arm: ubuntu-24.04-arm
         arch:
           - name: Intel
@@ -175,7 +179,7 @@ jobs:
   upload_source_dist:
     if: github.repository_owner == 'Chia-Network'
     name: Lint and Upload source distribution
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 30
     needs:
       - mypy
@@ -184,7 +188,6 @@ jobs:
       matrix:
         python:
           - major_dot_minor: "3.12"
-        os: [ubuntu-latest]
 
     steps:
       - name: Add safe git directory

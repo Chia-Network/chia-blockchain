@@ -11,10 +11,14 @@ on: [pull_request]
 permissions:
   contents: read
 
+env:
+  # Temporary: restrict CI to Linux ARM64 runners for this branch/PR.
+  ARM_ONLY: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' && 'true' || 'false' }}
+
 jobs:
   dependency-review:
     if: github.repository_owner == 'Chia-Network'
-    runs-on: ubuntu-latest
+    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v6

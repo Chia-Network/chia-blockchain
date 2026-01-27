@@ -77,10 +77,14 @@ concurrency:
   group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
+env:
+  # Temporary: restrict CI to Linux ARM64 runners for this branch/PR.
+  ARM_ONLY: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' && 'true' || 'false' }}
+
 jobs:
   configure:
     name: Configure matrix
-    runs-on: ubuntu-latest
+    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout code
@@ -114,7 +118,7 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos-intel:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-intel
+    if: env.ARM_ONLY != 'true' && (github.event_name != 'workflow_dispatch' || inputs.run-macos-intel)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -130,7 +134,7 @@ jobs:
       arch-emoji: 🌀
       collect-junit: false
   macos-arm:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
+    if: env.ARM_ONLY != 'true' && (github.event_name != 'workflow_dispatch' || inputs.run-macos-arm)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -146,7 +150,7 @@ jobs:
       arch-emoji: 💪
       collect-junit: false
   ubuntu-intel:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-linux-intel
+    if: env.ARM_ONLY != 'true' && (github.event_name != 'workflow_dispatch' || inputs.run-linux-intel)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -162,7 +166,7 @@ jobs:
       arch-emoji: 🌀
       collect-junit: false
   ubuntu-arm:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-linux-arm
+    if: env.ARM_ONLY == 'true' || github.event_name != 'workflow_dispatch' || inputs.run-linux-arm
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -178,7 +182,7 @@ jobs:
       arch-emoji: 💪
       collect-junit: false
   windows:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-windows
+    if: env.ARM_ONLY != 'true' && (github.event_name != 'workflow_dispatch' || inputs.run-windows)
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -195,7 +199,7 @@ jobs:
       collect-junit: false
 
   coverage:
-    if: always() && github.repository_owner == 'Chia-Network'
+    if: env.ARM_ONLY != 'true' && always() && github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
