@@ -6,8 +6,11 @@ from pathlib import Path
 
 import pytest
 from chia_rs.sized_bytes import bytes32
+from click.testing import CliRunner
 
 from chia._tests.util.temp_file import TempFile
+from chia.cmds.cmd_classes import ChiaCliContext
+from chia.cmds.db import db_prune_cmd
 from chia.cmds.db_prune_func import db_prune_func, prune_db
 from chia.util.lock import Lockfile
 
@@ -560,3 +563,111 @@ class TestDbPruneEdgeCases:
                     conn.execute("SELECT COUNT(*) FROM full_blocks WHERE height = 70 AND in_main_chain = 0")
                 ) as cursor:
                     assert cursor.fetchone()[0] == 1
+
+
+class TestDbPruneCli:
+    """Tests for the CLI command wrapper in db.py."""
+
+    def test_cli_prune_success(self, tmp_path: Path) -> None:
+        """Test CLI command successfully prunes database."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        run_path = root_path / "run"
+        run_path.mkdir()
+
+        # Create a database file
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=500, orphan_rate=0)
+
+        # Create a minimal config
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_file = config_path / "config.yaml"
+        config_file.write_text(
+            """
+full_node:
+  selected_network: mainnet
+  database_path: db/blockchain_v2_mainnet.sqlite
+"""
+        )
+
+        # Set up proper ChiaCliContext
+        ctx = ChiaCliContext(root_path=root_path)
+
+        runner = CliRunner()
+        result = runner.invoke(db_prune_cmd, ["100"], obj=ctx.to_click())
+
+        assert result.exit_code == 0
+        assert "Pruning complete" in result.output
+
+        # Verify pruning happened
+        with closing(sqlite3.connect(db_file)) as conn:
+            assert get_peak_height(conn) == 400
+
+    def test_cli_prune_with_db_option(self, tmp_path: Path) -> None:
+        """Test CLI command with --db option to specify database path."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        run_path = root_path / "run"
+        run_path.mkdir()
+
+        # Create a database file in a custom location
+        custom_db_file = tmp_path / "custom_db.sqlite"
+        create_test_db(custom_db_file, peak_height=200, orphan_rate=0)
+
+        # Create a minimal config (won't be used since we specify --db)
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_file = config_path / "config.yaml"
+        config_file.write_text(
+            """
+full_node:
+  selected_network: mainnet
+  database_path: db/blockchain_v2_mainnet.sqlite
+"""
+        )
+
+        # Set up proper ChiaCliContext
+        ctx = ChiaCliContext(root_path=root_path)
+
+        runner = CliRunner()
+        result = runner.invoke(db_prune_cmd, ["50", "--db", str(custom_db_file)], obj=ctx.to_click())
+
+        assert result.exit_code == 0
+        assert "Pruning complete" in result.output
+
+        # Verify pruning happened on the custom db
+        with closing(sqlite3.connect(custom_db_file)) as conn:
+            assert get_peak_height(conn) == 150
+
+    def test_cli_prune_error_prints_failed(self, tmp_path: Path) -> None:
+        """Test CLI command prints FAILED on RuntimeError."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        run_path = root_path / "run"
+        run_path.mkdir()
+
+        # Create a minimal config pointing to a non-existent db
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_file = config_path / "config.yaml"
+        config_file.write_text(
+            """
+full_node:
+  selected_network: mainnet
+  database_path: db/blockchain_v2_mainnet.sqlite
+"""
+        )
+
+        # Set up proper ChiaCliContext
+        ctx = ChiaCliContext(root_path=root_path)
+
+        runner = CliRunner()
+        result = runner.invoke(db_prune_cmd, ["100"], obj=ctx.to_click())
+
+        # Should not crash, but print FAILED
+        assert result.exit_code == 0  # Click doesn't set exit code for caught exceptions
+        assert "FAILED" in result.output
+        assert "Database file does not exist" in result.output
