@@ -1061,3 +1061,133 @@ async def test_send_request_connection_closed_during_wait(
 
     # Reset closed flag for cleanup
     connection.closed = False
+
+
+@pytest.mark.anyio
+async def test_install_bytes_received_counter_setter_exception_coverage(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Explicitly test that the setter exception path (line 699, referenced as line 683) is executed.
+
+    This test verifies that when _install_bytes_received_counter tries to set
+    protocol.data_received and the setter raises an exception, the exception is caught.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+    original_ws = connection.ws
+
+    # Create mock where setter raises exception (to explicitly cover the setter exception path)
+    class BadProtocolSetter:
+        def __init__(self) -> None:
+            self._data_received = lambda data: None
+
+        @property
+        def data_received(self) -> Callable[[bytes], None]:
+            return self._data_received
+
+        @data_received.setter
+        def data_received(self, value: object) -> None:
+            # This line (699) should be executed when _install_bytes_received_counter
+            # tries to set protocol.data_received = counting_data_received
+            raise RuntimeError("Cannot set data_received")  # Line 699 (referenced as line 683)
+
+    class MockConnectionSetter:
+        def __init__(self) -> None:
+            self.protocol = BadProtocolSetter()
+
+    class MockResponseSetter:
+        def __init__(self) -> None:
+            self._connection = MockConnectionSetter()
+
+    class MockWsSetter:
+        def __init__(self) -> None:
+            self._response = MockResponseSetter()
+
+    mock_ws_setter = MockWsSetter()
+    connection.ws = mock_ws_setter  # type: ignore[assignment]
+
+    try:
+        with caplog.at_level(logging.DEBUG):
+            # This should trigger the setter exception when it tries to set protocol.data_received
+            # The exception should be caught and logged (line 648 of ws_connection.py)
+            connection._install_bytes_received_counter()  # Should not raise
+
+        # Verify the exception was caught and logged
+        assert any("Failed to install bytes received counter" in record.message for record in caplog.records)
+        assert any("Cannot set data_received" in record.message for record in caplog.records)
+
+        # Counter should not be installed due to setter exception
+        assert connection._get_protocol_bytes_received() == 0
+    finally:
+        connection.ws = original_ws
+
+
+@pytest.mark.anyio
+async def test_send_request_heartbeat_reset_exception_line_855_coverage(
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    self_hostname: str,
+) -> None:
+    """
+    Explicitly test that line 855 (assert reset_call_count > 0) is executed.
+
+    This test verifies that the assertion on line 855 is covered when
+    reset_heartbeat is called and the exception is caught.
+    """
+    _, _, server_1, server_2, _ = two_nodes
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+
+    connection = next(iter(server_2.all_connections.values()))
+
+    # Track if our raising reset was called
+    reset_call_count = 0
+
+    def raising_reset() -> None:
+        nonlocal reset_call_count
+        reset_call_count += 1
+        raise RuntimeError("Test: heartbeat reset failed")
+
+    # Patch outgoing_queue.put to prevent the message from being sent
+    async def mock_put(msg: Message) -> None:
+        pass
+
+    # We'll simulate progress by incrementing bytes_read during the wait
+    original_bytes_read = connection.bytes_read
+
+    async def simulate_progress() -> None:
+        """Simulate data being received to trigger progress detection."""
+        await asyncio.sleep(0.5)
+        connection.bytes_read = original_bytes_read + 1000
+
+    message = Message(uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False)))
+
+    # Patch getattr at module level to intercept _reset_heartbeat lookup
+    original_getattr = builtins.getattr
+
+    def patched_getattr(obj: object, name: str, *args: object) -> object:
+        if name == "_reset_heartbeat" and obj is connection.ws:
+            return raising_reset
+        return original_getattr(obj, name, *args)
+
+    progress_task = create_referenced_task(simulate_progress())
+
+    try:
+        with (
+            patch.object(connection.outgoing_queue, "put", mock_put),
+            patch("chia.server.ws_connection.getattr", patched_getattr),
+        ):
+            result = await connection.send_request(message, timeout=2)
+
+        await progress_task
+
+        # The request should return None (timed out) but not crash
+        assert result is None
+        # LINE 854: Comment line
+        # LINE 855: This assertion should be executed and pass
+        assert reset_call_count > 0, "reset_heartbeat should have been called when progress was detected"
+    finally:
+        connection.bytes_read = original_bytes_read
