@@ -72,9 +72,16 @@ runs:
           ${SUDO} apt-get --yes update
           ${SUDO} apt-get install --yes --no-install-recommends build-essential pkg-config libssl-dev curl ca-certificates
         elif command -v dnf >/dev/null 2>&1; then
-          ${SUDO} dnf install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel curl ca-certificates
+          ${SUDO} dnf install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel ca-certificates
+          if ! command -v curl >/dev/null 2>&1; then
+            # Some distros (e.g. Rocky/Amazon) ship curl-minimal which conflicts with curl.
+            ${SUDO} dnf install -y curl-minimal || ${SUDO} dnf install -y curl
+          fi
         elif command -v yum >/dev/null 2>&1; then
-          ${SUDO} yum install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel curl ca-certificates
+          ${SUDO} yum install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel ca-certificates
+          if ! command -v curl >/dev/null 2>&1; then
+            ${SUDO} yum install -y curl-minimal || ${SUDO} yum install -y curl
+          fi
         else
           echo "No supported package manager found; cannot install compiler toolchain." >&2
           exit 1
