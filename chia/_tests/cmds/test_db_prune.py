@@ -45,6 +45,53 @@ def make_block_table(conn: sqlite3.Connection) -> None:
     )
 
 
+def make_coin_record_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS coin_record("
+        "coin_name blob PRIMARY KEY,"
+        "confirmed_index bigint,"
+        "spent_index bigint,"
+        "coinbase int,"
+        "puzzle_hash blob,"
+        "coin_parent blob,"
+        "amount blob)"
+    )
+
+
+def make_hints_table(conn: sqlite3.Connection) -> None:
+    conn.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob)")
+
+
+def make_sub_epoch_segments_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(ses_block_hash blob PRIMARY KEY,challenge_segments blob)"
+    )
+
+
+def add_coin_record(
+    conn: sqlite3.Connection,
+    coin_name: bytes32,
+    confirmed_index: int,
+    spent_index: int,
+    coinbase: int,
+    puzzle_hash: bytes32,
+    coin_parent: bytes32,
+    amount: int,
+) -> None:
+    conn.execute(
+        "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?)",
+        (coin_name, confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount.to_bytes(8, "big")),
+    )
+
+
+def add_hint(conn: sqlite3.Connection, coin_id: bytes32, hint: bytes32) -> None:
+    conn.execute("INSERT INTO hints VALUES(?, ?)", (coin_id, hint))
+
+
+def add_sub_epoch_segment(conn: sqlite3.Connection, ses_block_hash: bytes32) -> None:
+    conn.execute("INSERT INTO sub_epoch_segments_v3 VALUES(?, ?)", (ses_block_hash, b"segment_data"))
+
+
 def add_block(
     conn: sqlite3.Connection, header_hash: bytes32, prev_hash: bytes32, height: int, in_main_chain: bool
 ) -> None:
@@ -563,6 +610,287 @@ class TestDbPruneEdgeCases:
                     conn.execute("SELECT COUNT(*) FROM full_blocks WHERE height = 70 AND in_main_chain = 0")
                 ) as cursor:
                     assert cursor.fetchone()[0] == 1
+
+
+class TestDbPruneWithCoinRecords:
+    """Tests for pruning with coin records, hints, and sub-epoch segments."""
+
+    def test_prune_with_hints(self) -> None:
+        """Test pruning deletes hints for coins above the new peak height."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            new_peak = peak_height - blocks_back  # 70
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+                make_hints_table(conn)
+
+                # Create blocks
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+
+                make_peak(conn, height_to_hash[peak_height])
+
+                # Add coins and hints at various heights
+                # Coins below new_peak (should be preserved)
+                for i in range(5):
+                    coin_name = rand_hash()
+                    add_coin_record(conn, coin_name, 50, 0, 1, rand_hash(), rand_hash(), 1000)
+                    add_hint(conn, coin_name, rand_hash())
+
+                # Coins above new_peak (should be deleted along with their hints)
+                coins_above: list[bytes32] = []
+                for i in range(10):
+                    coin_name = rand_hash()
+                    coins_above.append(coin_name)
+                    add_coin_record(conn, coin_name, 80, 0, 1, rand_hash(), rand_hash(), 1000)
+                    add_hint(conn, coin_name, rand_hash())
+
+                conn.commit()
+
+                # Verify initial state
+                with closing(conn.execute("SELECT COUNT(*) FROM hints")) as cursor:
+                    assert cursor.fetchone()[0] == 15
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                # Hints for coins above new_peak should be deleted
+                with closing(conn.execute("SELECT COUNT(*) FROM hints")) as cursor:
+                    assert cursor.fetchone()[0] == 5
+                # Coins above new_peak should be deleted
+                with closing(
+                    conn.execute("SELECT COUNT(*) FROM coin_record WHERE confirmed_index > ?", (new_peak,))
+                ) as cursor:
+                    assert cursor.fetchone()[0] == 0
+
+    def test_prune_resets_spent_coins(self) -> None:
+        """Test pruning resets spent_index for coins spent above the new peak height."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            # new_peak will be 70
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+
+                # Create blocks
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+
+                make_peak(conn, height_to_hash[peak_height])
+
+                # Add coins that were spent at height > new_peak (should have spent_index reset)
+                spent_coins: list[bytes32] = []
+                for i in range(5):
+                    coin_name = rand_hash()
+                    spent_coins.append(coin_name)
+                    # Confirmed at height 50, spent at height 80 (above new_peak)
+                    add_coin_record(conn, coin_name, 50, 80, 1, rand_hash(), rand_hash(), 1000)
+
+                # Add coins spent below new_peak (should remain spent)
+                for i in range(3):
+                    coin_name = rand_hash()
+                    add_coin_record(conn, coin_name, 30, 60, 1, rand_hash(), rand_hash(), 1000)
+
+                conn.commit()
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                # Coins spent above new_peak should have spent_index reset to 0
+                for coin_name in spent_coins:
+                    with closing(
+                        conn.execute("SELECT spent_index FROM coin_record WHERE coin_name = ?", (coin_name,))
+                    ) as cursor:
+                        row = cursor.fetchone()
+                        assert row is not None
+                        assert row[0] == 0, f"Expected spent_index=0, got {row[0]}"
+
+                # Coins spent below new_peak should remain spent
+                with closing(conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index = 60")) as cursor:
+                    assert cursor.fetchone()[0] == 3
+
+    def test_prune_with_sub_epoch_segments(self) -> None:
+        """Test pruning cleans up orphaned sub_epoch_segments_v3 entries."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            # new_peak will be 70
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_sub_epoch_segments_table(conn)
+
+                # Create blocks
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+
+                make_peak(conn, height_to_hash[peak_height])
+
+                # Add sub_epoch_segments for blocks that will remain
+                for height in [10, 30, 50, 70]:
+                    add_sub_epoch_segment(conn, height_to_hash[height])
+
+                # Add sub_epoch_segments for blocks that will be deleted (orphaned)
+                for height in [80, 90, 100]:
+                    add_sub_epoch_segment(conn, height_to_hash[height])
+
+                conn.commit()
+
+                # Verify initial state
+                with closing(conn.execute("SELECT COUNT(*) FROM sub_epoch_segments_v3")) as cursor:
+                    assert cursor.fetchone()[0] == 7
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                # Orphaned sub_epoch_segments should be deleted
+                with closing(conn.execute("SELECT COUNT(*) FROM sub_epoch_segments_v3")) as cursor:
+                    assert cursor.fetchone()[0] == 4
+
+    def test_prune_zero_blocks_back(self) -> None:
+        """Test pruning with blocks_back=0 does nothing (no blocks to prune)."""
+        with TempFile() as db_file:
+            peak_height = 100
+            create_test_db(db_file, peak_height, orphan_rate=0)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                initial_count = get_block_count(conn)
+                initial_peak = get_peak_height(conn)
+
+            prune_db(db_file, blocks_back=0)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                # Nothing should change
+                assert get_block_count(conn) == initial_count
+                assert get_peak_height(conn) == initial_peak
+
+
+class TestDbPruneErrorCases:
+    """Additional error case tests for coverage."""
+
+    def test_prune_empty_version_row(self) -> None:
+        """Test pruning database with empty version row raises error."""
+        with TempFile() as db_file:
+            with closing(sqlite3.connect(db_file)) as conn:
+                conn.execute("CREATE TABLE database_version(version int)")
+                # Don't insert any row - table exists but is empty
+                conn.commit()
+
+            with pytest.raises(RuntimeError) as excinfo:
+                prune_db(db_file, blocks_back=300)
+            assert "Database is missing version field" in str(excinfo.value)
+
+    def test_prune_no_main_chain_block_at_target(self) -> None:
+        """Test pruning when no main chain block exists at target height."""
+        with TempFile() as db_file:
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+
+                # Create main chain blocks, but skip height 70 in main chain
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(101):
+                    header_hash = rand_hash()
+                    # Make height 70 NOT in main chain
+                    in_main_chain = height != 70
+                    add_block(conn, header_hash, prev, height, in_main_chain)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+
+                make_peak(conn, height_to_hash[100])
+                conn.commit()
+
+            # Try to prune to height 70, but there's no main chain block there
+            with pytest.raises(RuntimeError) as excinfo:
+                prune_db(db_file, blocks_back=30)
+            assert "Cannot find main chain block at height 70" in str(excinfo.value)
+
+
+class TestDbPruneLargeDatabase:
+    """Tests for large databases that trigger batch processing."""
+
+    def test_prune_many_blocks_shows_progress(self) -> None:
+        """Test pruning >1000 blocks shows progress output."""
+        with TempFile() as db_file:
+            peak_height = 1500
+            blocks_back = 1200  # More than batch_size of 1000
+            create_test_db(db_file, peak_height, orphan_rate=0)
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            new_peak = peak_height - blocks_back
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == new_peak
+                assert get_block_count(conn) == new_peak + 1
+
+    def test_prune_many_coins_shows_progress(self) -> None:
+        """Test pruning >1000 coins shows progress output."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            new_peak = peak_height - blocks_back  # 70
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+
+                # Create blocks
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+
+                make_peak(conn, height_to_hash[peak_height])
+
+                # Add >1000 coins above new_peak to trigger batch deletion progress
+                for i in range(1500):
+                    coin_name = rand_hash()
+                    add_coin_record(conn, coin_name, 80, 0, 1, rand_hash(), rand_hash(), 1000)
+
+                conn.commit()
+
+                # Verify we have the coins
+                with closing(
+                    conn.execute("SELECT COUNT(*) FROM coin_record WHERE confirmed_index > ?", (new_peak,))
+                ) as cursor:
+                    assert cursor.fetchone()[0] == 1500
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                # All coins above new_peak should be deleted
+                with closing(
+                    conn.execute("SELECT COUNT(*) FROM coin_record WHERE confirmed_index > ?", (new_peak,))
+                ) as cursor:
+                    assert cursor.fetchone()[0] == 0
 
 
 class TestDbPruneCli:
