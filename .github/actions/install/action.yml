@@ -95,8 +95,14 @@ runs:
         fi
 
         if ! command -v cargo >/dev/null 2>&1 || [ "${CARGO_MINOR}" -lt "${REQUIRED_RUST_MINOR}" ]; then
-          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
-          echo "${HOME}/.cargo/bin" >> "${GITHUB_PATH}"
+          export CARGO_HOME="${HOME}/.cargo"
+          export RUSTUP_HOME="${HOME}/.rustup"
+          mkdir -p "${CARGO_HOME}" "${RUSTUP_HOME}"
+
+          # Ensure cargo/rustc are available in THIS step as well as future steps.
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+          export PATH="${CARGO_HOME}/bin:${PATH}"
+          echo "${CARGO_HOME}/bin" >> "${GITHUB_PATH}"
         fi
 
         cc --version
