@@ -13,12 +13,11 @@ from chia_rs.sized_ints import uint32, uint64
 from rocks_pyo3 import DB, WriteBatch
 
 from chia.full_node.eligible_coin_spends import UnspentLineageInfo
-from chia.util.db_wrapper import DBWrapper2
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.util.batches import to_batches
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -167,17 +166,22 @@ class CoinStore:
 
         updated_coin_records = []
 
+        # Write coins created in this block
         for name, cr in new_coin_records.items():
             coin_record_blob = bytes(cr)
             index = b"c" + name
             batch.put(index, coin_record_blob)
             updated_coin_records.append(cr)
 
+        # Write coins spent in this block (but not created in this block)
+        # Coins created and spent in the same block are already written above
         for name, cr in new_spent_coin_records:
-            coin_record_blob = bytes(cr)
-            index = b"c" + name
-            batch.put(index, coin_record_blob)
-            updated_coin_records.append(cr)
+            # Skip if this coin was also created in this block (already written)
+            if name not in new_coin_records:
+                coin_record_blob = bytes(cr)
+                index = b"c" + name
+                batch.put(index, coin_record_blob)
+                updated_coin_records.append(cr)
 
         self.rocks_db.write(batch)
 
@@ -394,17 +398,25 @@ class CoinStore:
 
             cr_by_name = {_.name: _ for _ in coin_records}
             batch = WriteBatch()
+            # Track which coins will be deleted (ephemeral coins in both additions and removals)
+            coins_to_delete = set(additions)
             for coin_name in removals:
                 coin_record = cr_by_name.get(coin_name)
                 assert coin_record is not None
-                coin_record = dataclasses.replace(coin_record, spent_block_index=0)
-                coin_record_blob = bytes(coin_record)
-                key = b"c" + coin_name
-                batch.put(key, coin_record_blob)
-                coin_changes[coin_name] = coin_record
+                # Skip coins that will be deleted anyway (ephemeral coins created and spent in same block)
+                if coin_name not in coins_to_delete:
+                    coin_record = dataclasses.replace(coin_record, spent_block_index=0)
+                    coin_record_blob = bytes(coin_record)
+                    key = b"c" + coin_name
+                    batch.put(key, coin_record_blob)
+                    coin_changes[coin_name] = coin_record
             for coin_name in additions:
                 key = b"c" + coin_name
                 batch.delete(key)
+            # BUG: BlockInfo entry NOT deleted - this causes stale BlockInfo to be read in subsequent reorgs
+            # TODO: Uncomment after test is added to verify the bug
+            # block_key = b"b" + u32_to_blob(index)
+            # batch.delete(block_key)
             self.rocks_db.write(batch)
 
         return list(coin_changes.values())

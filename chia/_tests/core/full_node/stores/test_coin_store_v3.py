@@ -67,6 +67,8 @@ async def temp_dbs(db_version: int = 2) -> AsyncIterator[tuple[DB, DBWrapper2]]:
     with TemporaryDirectory() as tmp_dir:
         async with DBConnection(db_version) as db_wrapper:
             rocks_db = DB(tmp_dir)
+            # Set the rocks_db in db_wrapper so CoinStore can use it
+            db_wrapper._rocks_db = rocks_db
             try:
                 yield rocks_db, db_wrapper
             finally:
@@ -920,3 +922,167 @@ async def ztest_get_unspent_lineage_info_for_puzzle_hash(case: UnspentLineageInf
             )
         else:
             assert result is None
+
+
+@pytest.mark.anyio
+async def test_reorg_stale_blockinfo_bug(db_version: int, bt: BlockTools) -> None:
+    """
+    Test to reproduce the bug where stale BlockInfo entries cause incorrect coin deletions
+    during multiple reorgs.
+
+    Scenario:
+    1. Block N: Create ephemeral coin X (created and spent in same block)
+    2. Reorg 1: Rollback to N-1 (coin X deleted, but BlockInfo N remains)
+    3. Block N': Create different coin Y at same height
+    4. Reorg 2: Rollback to N-1 again
+    5. Bug: Stale BlockInfo N causes incorrect behavior
+    """
+    wallet_a = WALLET_A
+    reward_ph = wallet_a.get_new_puzzlehash()
+
+    async with temp_dbs() as dbs:
+        rocks_db, db_wrapper = dbs
+        coin_store = await CoinStore.create(db_wrapper)
+
+        # Step 1: Create block 10 with an ephemeral coin (created and spent in same block)
+        blocks = bt.get_consecutive_blocks(
+            10,
+            [],
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
+
+        # Process blocks 0-9
+        for block in blocks:
+            if block.is_transaction_block():
+                assert block.foliage_transaction_block is not None
+                await coin_store.new_block(
+                    block.height,
+                    block.foliage_transaction_block.timestamp,
+                    block.get_included_reward_coins(),
+                    [],
+                    [],
+                )
+
+        # Create block 10 with a transaction that creates and spends a coin in the same block
+        coin_to_spend = None
+        for block in blocks:
+            if block.is_transaction_block():
+                for coin in block.get_included_reward_coins():
+                    if coin.puzzle_hash == reward_ph:
+                        coin_to_spend = coin
+                        break
+                if coin_to_spend:
+                    break
+
+        assert coin_to_spend is not None
+        # Create a spend that creates an ephemeral coin (created and spent in same block)
+        ephemeral_ph = wallet_a.get_new_puzzlehash()
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(100), ephemeral_ph, coin_to_spend)
+
+        # Block 10: Create ephemeral coin
+        block_10 = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+            transaction_data=spend_bundle,
+        )[0]
+
+        assert block_10.is_transaction_block()
+        assert block_10.foliage_transaction_block is not None
+        assert block_10.transactions_generator is not None
+
+        block_gen = BlockGenerator(block_10.transactions_generator, [])
+        npc_result = get_name_puzzle_conditions(
+            block_gen,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=uint32(0),
+            constants=bt.constants,
+        )
+        tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
+
+        # Process block 10 - this creates the ephemeral coin
+        await coin_store.new_block(
+            block_10.height,
+            block_10.foliage_transaction_block.timestamp,
+            block_10.get_included_reward_coins(),
+            tx_additions,
+            tx_removals,
+        )
+
+        # Verify ephemeral coin exists
+        ephemeral_coin_name = tx_additions[0].name() if tx_additions else None
+        if ephemeral_coin_name:
+            coin_record = await coin_store.get_coin_record(ephemeral_coin_name)
+            assert coin_record is not None
+            assert coin_record.confirmed_block_index == 10
+            assert coin_record.spent_block_index == 10  # Ephemeral - spent in same block
+
+        # Step 2: Reorg 1 - Rollback to height 9
+        # This should delete the ephemeral coin, but BlockInfo 10 remains (BUG)
+        rolled_back = await coin_store.rollback_to_block(9)
+        print(f"Rolled back {len(rolled_back)} coins")
+
+        # Verify ephemeral coin is deleted
+        if ephemeral_coin_name:
+            coin_record = await coin_store.get_coin_record(ephemeral_coin_name)
+            assert coin_record is None, "Ephemeral coin should be deleted after rollback"
+
+        # Step 3: Create block 10' with a different coin
+        # This overwrites BlockInfo 10, but if there's a bug, stale data might persist
+        block_10_prime = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )[0]
+
+        assert block_10_prime.is_transaction_block()
+        assert block_10_prime.foliage_transaction_block is not None
+
+        # Process new block 10'
+        await coin_store.new_block(
+            block_10_prime.height,
+            block_10_prime.foliage_transaction_block.timestamp,
+            block_10_prime.get_included_reward_coins(),
+            [],
+            [],
+        )
+
+        # Step 4: Reorg 2 - Rollback to height 9 again
+        # BUG: If BlockInfo 10 wasn't deleted in first rollback, this could cause issues
+        rolled_back_2 = await coin_store.rollback_to_block(9)
+        print(f"Second rollback: {len(rolled_back_2)} coins")
+
+        # Step 5: Verify no incorrect deletions happened
+        # All coins from block 10' should still exist (or be properly deleted)
+        # The bug would manifest as coins being deleted that shouldn't be,
+        # or coins having wrong confirmed_block_index values
+
+        # Check that we can still process blocks correctly after multiple reorgs
+        block_10_final = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )[0]
+
+        assert block_10_final.is_transaction_block()
+        assert block_10_final.foliage_transaction_block is not None
+
+        await coin_store.new_block(
+            block_10_final.height,
+            block_10_final.foliage_transaction_block.timestamp,
+            block_10_final.get_included_reward_coins(),
+            [],
+            [],
+        )
+
+        # Verify the database is in a consistent state
+        # This test passes if no exceptions are raised and coins have correct heights
+        for coin in block_10_final.get_included_reward_coins():
+            coin_record = await coin_store.get_coin_record(coin.name())
+            assert coin_record is not None
+            assert coin_record.confirmed_block_index == 10, f"Coin should have confirmed_block_index=10, got {coin_record.confirmed_block_index}"

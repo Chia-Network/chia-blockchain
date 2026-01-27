@@ -646,6 +646,10 @@ class MempoolManager:
         removal_amount: int = 0
         removal_records = await get_coin_records(removal_names)
         for record in removal_records:
+            if record is None:
+                # Coin record is missing - this indicates data inconsistency
+                # The check below will handle this by returning UNKNOWN_UNSPENT
+                continue
             removal_record_dict[record.coin.name()] = record
 
         for name in removal_names:
@@ -932,6 +936,9 @@ class MempoolManager:
                     removals.add(s.coin.name())
 
             for record in await self.get_coin_records(removals):
+                if record is None:
+                    # Coin record is missing - skip it
+                    continue
                 name = record.coin.name()
                 coin_records[name] = record
 
