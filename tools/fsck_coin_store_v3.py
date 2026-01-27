@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import logging
 import sys
 import time
@@ -26,7 +27,8 @@ from pathlib import Path
 from typing import Optional
 
 from chia_rs.sized_bytes import bytes32
-from rocks_pyo3 import DB
+from chia_rs.sized_ints import uint32
+from rocks_pyo3 import DB, WriteBatch
 
 from chia.full_node.coin_store_v3 import BlockInfo, blob_to_int, u32_to_blob
 from chia.types.coin_record import CoinRecord
@@ -449,6 +451,119 @@ async def fsck_coin_store(rocks_db: DB, max_height: Optional[int] = None) -> Fsc
     return results
 
 
+async def rollback_to_height(rocks_db: DB, target_height: int) -> None:
+    """
+    Rollback the coin store to a specific height.
+
+    This will:
+    1. Delete all block info entries above target_height
+    2. Delete all coins created at heights above target_height
+    3. Reset spent_block_index for coins spent at heights above target_height
+
+    Args:
+        rocks_db: The RocksDB instance
+        target_height: Height to rollback to (inclusive - this height will remain)
+    """
+    log.warning(f"Starting rollback to height {target_height}...")
+    log.warning("This operation cannot be undone! Make sure you have a backup.")
+
+    # Find all blocks above target_height
+    log.info("Finding blocks to rollback...")
+    blocks_to_rollback: list[int] = []
+    last_block_index = b"b" + bytes.fromhex("ffffffffffffffff")
+    iterator = rocks_db.iterate_from(last_block_index, "reverse")
+
+    for key, value in iterator:
+        if key[:1] != b"b":
+            break
+        try:
+            height = blob_to_int(key[1:])
+            if height > target_height:
+                blocks_to_rollback.append(height)
+            else:
+                break  # We've reached target_height or below
+        except Exception as e:
+            log.error(f"Error parsing block at key {key.hex()}: {e}")
+
+    if not blocks_to_rollback:
+        log.info("No blocks to rollback - database is already at or below target height")
+        return
+
+    max_height = max(blocks_to_rollback)
+    min_height = min(blocks_to_rollback)
+    log.info(f"Found {len(blocks_to_rollback)} blocks to rollback (heights {max_height} to {min_height})")
+
+    # Collect all block infos for blocks to rollback
+    log.info("Collecting block information...")
+    block_infos_to_rollback: dict[int, BlockInfo] = {}
+    for height in blocks_to_rollback:
+        key = b"b" + u32_to_blob(height)
+        blob = rocks_db.get(key)
+        if blob is None:
+            log.warning(f"Height {height}: Block info not found, skipping")
+            continue
+        try:
+            block_info = BlockInfo.from_bytes(blob)
+            block_infos_to_rollback[height] = block_info
+        except Exception as e:
+            log.error(f"Height {height}: Failed to parse block info: {e}")
+
+    # Collect all coins that need to be modified
+    log.info("Collecting coins to modify...")
+    coins_to_delete: set[bytes32] = set()  # Coins created in rolled-back blocks
+    coins_to_unspend: dict[bytes32, CoinRecord] = {}  # Coins spent in rolled-back blocks
+
+    for height in sorted(blocks_to_rollback, reverse=True):
+        if height not in block_infos_to_rollback:
+            continue
+        block_info = block_infos_to_rollback[height]
+
+        # Coins created in this block should be deleted
+        for coin_name in block_info.created_coins:
+            coins_to_delete.add(coin_name)
+
+        # Coins spent in this block should have spent_block_index reset
+        if block_info.spent_coins:
+            coin_keys = [b"c" + name for name in block_info.spent_coins]
+            coin_blobs = rocks_db.multi_get(coin_keys)
+            for coin_name, blob in zip(block_info.spent_coins, coin_blobs):
+                if blob is None:
+                    continue
+                try:
+                    coin_record = CoinRecord.from_bytes(blob)
+                    # Only unspend if it was spent at this height
+                    if coin_record.spent_block_index == height:
+                        coin_record = dataclasses.replace(coin_record, spent_block_index=uint32(0))
+                        coins_to_unspend[coin_name] = coin_record
+                except Exception as e:
+                    log.error(f"Error parsing coin {coin_name.hex()}: {e}")
+
+    log.info(f"Will delete {len(coins_to_delete)} coins and unspend {len(coins_to_unspend)} coins")
+
+    # Perform the rollback
+    log.info("Performing rollback...")
+    batch = WriteBatch()
+
+    # Delete block info entries
+    for height in blocks_to_rollback:
+        key = b"b" + u32_to_blob(height)
+        batch.delete(key)
+
+    # Delete coins created in rolled-back blocks
+    for coin_name in coins_to_delete:
+        key = b"c" + coin_name
+        batch.delete(key)
+
+    # Reset spent_block_index for coins spent in rolled-back blocks
+    for coin_name, coin_record in coins_to_unspend.items():
+        coin_record_blob = bytes(coin_record)
+        key = b"c" + coin_name
+        batch.put(key, coin_record_blob)
+
+    rocks_db.write(batch)
+    log.info(f"Rollback complete! Database rolled back to height {target_height}")
+
+
 def print_results(results: FsckResults) -> None:
     """Print a summary of fsck results."""
     print("\n" + "=" * 80)
@@ -548,6 +663,12 @@ async def amain() -> None:
         help="Maximum block height to check (default: all)",
     )
     parser.add_argument(
+        "--rollback-to-height",
+        type=int,
+        default=None,
+        help="Rollback database to specified height (inclusive). WARNING: This cannot be undone!",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -582,6 +703,25 @@ async def amain() -> None:
         sys.exit(1)
 
     try:
+        # If rollback requested, do that instead of fsck
+        if args.rollback_to_height is not None:
+            if args.rollback_to_height < 0:
+                log.error("Rollback height must be >= 0")
+                sys.exit(1)
+            log.warning("=" * 80)
+            log.warning("ROLLBACK MODE - This will modify your database!")
+            log.warning("=" * 80)
+            # Use asyncio.to_thread to avoid blocking in async context
+            response = await asyncio.to_thread(
+                input, f"Are you sure you want to rollback to height {args.rollback_to_height}? (yes/no): "
+            )
+            if response.lower() != "yes":
+                log.info("Rollback cancelled")
+                sys.exit(0)
+            await rollback_to_height(rocks_db, args.rollback_to_height)
+            log.info("Rollback completed successfully")
+            return
+
         results = await fsck_coin_store(rocks_db, max_height=args.max_height)
         print_results(results)
 
