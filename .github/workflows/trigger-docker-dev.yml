@@ -27,7 +27,7 @@ jobs:
   trigger:
     if: github.repository_owner == 'Chia-Network'
     name: Trigger building a new dev tag for the chia-docker image
-    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ ((github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
       - name: Test for secrets access
         id: check_secrets

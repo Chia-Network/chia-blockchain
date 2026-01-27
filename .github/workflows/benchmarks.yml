@@ -33,7 +33,7 @@ env:
 jobs:
   setup:
     name: Setup
-    if: env.ARM_ONLY != 'true'
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -52,7 +52,7 @@ jobs:
 
   build:
     name: Benchmarks
-    if: env.ARM_ONLY != 'true'
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ${{ github.repository_owner == 'Chia-Network' && 'benchmark' || 'ubuntu-latest' }}
     needs:
       - setup

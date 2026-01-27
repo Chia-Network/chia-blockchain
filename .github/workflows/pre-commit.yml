@@ -19,7 +19,7 @@ env:
 jobs:
   pre-commit:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
-    if: env.ARM_ONLY != 'true' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm')
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm') }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:

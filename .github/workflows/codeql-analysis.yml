@@ -35,7 +35,7 @@ jobs:
   analyze:
     if: github.repository_owner == 'Chia-Network'
     name: Analyze
-    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ ((github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
 
     strategy:
       fail-fast: false

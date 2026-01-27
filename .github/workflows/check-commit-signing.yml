@@ -21,7 +21,7 @@ env:
 jobs:
   check-commit-signing:
     name: Check commit signing
-    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ ((github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 5
 
     steps:

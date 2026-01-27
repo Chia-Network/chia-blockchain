@@ -30,7 +30,7 @@ env:
 
 jobs:
   mypy:
-    if: github.repository_owner == 'Chia-Network' && (env.ARM_ONLY != 'true' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm'))
+    if: github.repository_owner == 'Chia-Network' && ((github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm'))
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -123,7 +123,7 @@ jobs:
             matrix: linux
             emoji: 🐧
             runs-on:
-              intel: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+              intel: ${{ ((github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
               arm: ubuntu-24.04-arm
         arch:
           - name: Intel
@@ -179,7 +179,7 @@ jobs:
   upload_source_dist:
     if: github.repository_owner == 'Chia-Network'
     name: Lint and Upload source distribution
-    runs-on: ${{ env.ARM_ONLY == 'true' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ ((github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 30
     needs:
       - mypy

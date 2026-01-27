@@ -42,14 +42,14 @@ env:
 
 jobs:
   version:
-    if: env.ARM_ONLY != 'true'
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     uses: ./.github/workflows/reflow-version.yml
     with:
       release_type: ${{ inputs.release_type }}
 
   build:
     name: Build ${{ matrix.os.name }} DMG
-    if: env.ARM_ONLY != 'true'
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - version
@@ -234,7 +234,7 @@ jobs:
 
   publish:
     name: 📦 Publish Installers
-    if: env.ARM_ONLY != 'true'
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
       concurrency-name: macos
@@ -292,7 +292,7 @@ jobs:
 
   test:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
-    if: env.ARM_ONLY != 'true'
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
       - version
