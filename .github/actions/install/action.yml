@@ -39,6 +39,51 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # ARM64 runners often need to build `clvm-rs` (via maturin) from source; ensure a C toolchain exists.
+    - name: ARM64 diagnostics (Linux)
+      if: runner.os == 'linux' && runner.arch == 'ARM64'
+      shell: bash
+      run: |
+        set -o xtrace
+        uname -a
+        cat /etc/os-release || true
+        python3 --version || true
+        command -v cc && cc --version || echo "cc missing"
+        command -v gcc && gcc --version || echo "gcc missing"
+        command -v cargo && cargo --version || echo "cargo missing"
+        command -v rustc && rustc --version || echo "rustc missing"
+
+    - name: Ensure compiler toolchain (Linux ARM64)
+      if: runner.os == 'linux' && runner.arch == 'ARM64'
+      shell: bash
+      run: |
+        set -o errexit
+        set -o nounset
+        set -o pipefail
+
+        if command -v cc >/dev/null 2>&1; then
+          exit 0
+        fi
+
+        SUDO=""
+        if command -v sudo >/dev/null 2>&1; then
+          SUDO="sudo"
+        fi
+
+        if command -v apt-get >/dev/null 2>&1; then
+          ${SUDO} apt-get --yes update
+          ${SUDO} apt-get install --yes --no-install-recommends build-essential pkg-config libssl-dev rustc cargo
+        elif command -v dnf >/dev/null 2>&1; then
+          ${SUDO} dnf install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel rust cargo
+        elif command -v yum >/dev/null 2>&1; then
+          ${SUDO} yum install -y gcc gcc-c++ make pkgconf-pkg-config openssl-devel rust cargo
+        else
+          echo "No supported package manager found; cannot install compiler toolchain." >&2
+          exit 1
+        fi
+
+        cc --version
+
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
       shell: bash
