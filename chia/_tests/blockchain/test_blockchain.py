@@ -296,9 +296,7 @@ class TestBlockHeaderValidation:
         assert peak.height == len(blocks) - 1
 
     @pytest.mark.anyio
-    async def test_unfinished_blocks(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
-    ) -> None:
+    async def test_unfinished_blocks(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(3)
         for block in blocks[:-1]:
@@ -322,8 +320,13 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:  # pragma: no cover
             block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
-            block_bytes = bytes(unf)
-            npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+            npc_result = get_name_puzzle_conditions(
+                block_generator,
+                unf.transactions_info.cost,
+                mempool_mode=False,
+                height=block.height,
+                constants=bt.constants,
+            )
 
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         err = validate_res.error
@@ -350,8 +353,13 @@ class TestBlockHeaderValidation:
         if unf.transactions_generator is not None:  # pragma: no cover
             block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
-            block_bytes = bytes(unf)
-            npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+            npc_result = get_name_puzzle_conditions(
+                block_generator,
+                unf.transactions_info.cost,
+                mempool_mode=False,
+                height=block.height,
+                constants=bt.constants,
+            )
         validate_res = await blockchain.validate_unfinished_block(unf, npc_result, False)
         assert validate_res.error is None
 
@@ -402,9 +410,7 @@ class TestBlockHeaderValidation:
         assert peak.height == num_blocks - 1
 
     @pytest.mark.anyio
-    async def test_unf_block_overflow(
-        self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
-    ) -> None:
+    async def test_unf_block_overflow(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
 
         blocks: list[FullBlock] = []
@@ -441,8 +447,13 @@ class TestBlockHeaderValidation:
                 if block.transactions_generator is not None:  # pragma: no cover
                     block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
                     assert block_generator is not None
-                    block_bytes = bytes(unf)
-                    npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
+                    npc_result = get_name_puzzle_conditions(
+                        block_generator,
+                        unf.transactions_info.cost,
+                        mempool_mode=False,
+                        height=block.height,
+                        constants=bt.constants,
+                    )
                 validate_res = await blockchain.validate_unfinished_block(
                     unf, npc_result, skip_overflow_ss_validation=True
                 )
