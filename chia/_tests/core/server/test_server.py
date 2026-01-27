@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 import logging
 import time
 from collections.abc import Callable
@@ -756,52 +757,64 @@ async def test_send_request_heartbeat_reset_exception(
     self_hostname: str,
 ) -> None:
     """
-    Test that the heartbeat reset exception handling code path works correctly.
+    Test that send_request handles heartbeat reset exceptions gracefully.
 
-    This tests lines 749-750 of ws_connection.py where we catch exceptions
-    during the _reset_heartbeat call and silently ignore them.
-
-    We test this by patching getattr to return a raising function when
-    _reset_heartbeat is requested, which isolates our code path from
-    aiohttp's internal heartbeat mechanism.
+    This tests lines 749-750 of ws_connection.py. We force the progress detection
+    path by simulating incoming data, then verify the heartbeat reset exception
+    is caught and ignored.
     """
     _, _, server_1, server_2, _ = two_nodes
     await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
     connection = next(iter(server_2.all_connections.values()))
 
-    # Track if our exception path was triggered
-    exception_raised = False
+    # Track if our raising reset was called
+    reset_call_count = 0
 
-    # Store the original getattr
-    original_getattr = getattr
+    def raising_reset() -> None:
+        nonlocal reset_call_count
+        reset_call_count += 1
+        raise RuntimeError("Test: heartbeat reset failed")
+
+    # Patch outgoing_queue.put to prevent the message from being sent
+    async def mock_put(msg: Message) -> None:
+        pass
+
+    # We'll simulate progress by incrementing bytes_read during the wait
+    original_bytes_read = connection.bytes_read
+
+    async def simulate_progress() -> None:
+        """Simulate data being received to trigger progress detection."""
+        await asyncio.sleep(0.5)
+        connection.bytes_read = original_bytes_read + 1000
+
+    message = Message(uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False)))
+
+    # Patch getattr at module level to intercept _reset_heartbeat lookup
+    original_getattr = builtins.getattr
 
     def patched_getattr(obj: object, name: str, *args: object) -> object:
-        nonlocal exception_raised
-        # Only intercept when getting _reset_heartbeat from the websocket
         if name == "_reset_heartbeat" and obj is connection.ws:
-
-            def raising_reset() -> None:
-                nonlocal exception_raised
-                exception_raised = True
-                raise RuntimeError("Test exception in heartbeat reset")
-
             return raising_reset
         return original_getattr(obj, name, *args)
 
-    # Patch getattr in the ws_connection module
-    with patch("chia.server.ws_connection.getattr", patched_getattr):
-        # Make a request - this should succeed despite the exception in reset_heartbeat
-        message = Message(
-            uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False))
-        )
-        result = await connection.send_request(message, timeout=10)
+    progress_task = create_referenced_task(simulate_progress())
 
-        # The request should complete (with a RejectBlock response)
-        assert result is not None, "Request should succeed despite heartbeat reset exception"
+    try:
+        with (
+            patch.object(connection.outgoing_queue, "put", mock_put),
+            patch("chia.server.ws_connection.getattr", patched_getattr),
+        ):
+            result = await connection.send_request(message, timeout=2)
 
-    # Note: exception_raised may or may not be True depending on whether progress was detected
-    # The important thing is that if it was raised, the request still succeeded
+        await progress_task
+
+        # The request should return None (timed out) but not crash
+        assert result is None
+        # Verify our raising reset was called (progress was detected, exception caught)
+        assert reset_call_count > 0, "reset_heartbeat should have been called when progress was detected"
+    finally:
+        connection.bytes_read = original_bytes_read
 
 
 @pytest.mark.anyio
@@ -920,29 +933,28 @@ async def test_send_request_connection_closed_during_wait(
     message = Message(uint8(ProtocolMessageTypes.request_block.value), None, bytes(RequestBlock(uint32(999999), False)))
 
     # Patch the outgoing_queue.put to be a no-op so the message is never actually sent
-    # This ensures no response comes back and we test the connection-close detection
     async def mock_put(msg: Message) -> None:
-        pass  # Don't actually send
+        pass
 
-    # Close the connection after a short delay
-    async def close_after_delay() -> None:
-        await asyncio.sleep(1)
-        await connection.close()
+    # Set closed flag directly after a delay (simpler than calling close())
+    async def set_closed_after_delay() -> None:
+        await asyncio.sleep(0.5)
+        connection.closed = True
 
-    # Start the close task
-    close_task = create_referenced_task(close_after_delay())
+    close_task = create_referenced_task(set_closed_after_delay())
 
     start_time = time.time()
     with patch.object(connection.outgoing_queue, "put", mock_put):
-        # Use a small timeout (3s) so wait_time = min(check_interval=30, 3) = 3
-        # This ensures we check self.closed after 3 seconds, detecting the close
-        # that happened at 1 second
-        result = await connection.send_request(message, timeout=3)
+        # Use a small timeout so wait_time = min(check_interval=30, 2) = 2
+        result = await connection.send_request(message, timeout=2)
     elapsed = time.time() - start_time
 
-    # Should return after the first check interval (3s) when it detects connection closed
-    assert result is None
-    # Should complete in about 3-4 seconds (timeout wait + overhead)
-    assert elapsed < 6, f"Should exit when connection close is detected, took {elapsed:.2f}s"
-
     await close_task
+
+    # Should return None since connection was "closed"
+    assert result is None
+    # Should complete in about 2 seconds (first timeout check)
+    assert elapsed < 5, f"Should exit when connection close is detected, took {elapsed:.2f}s"
+
+    # Reset closed flag for cleanup
+    connection.closed = False
