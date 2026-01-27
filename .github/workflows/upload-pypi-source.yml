@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   mypy:
-    if: github.repository_owner == 'Chia-Network' && ((github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm'))
+    if: github.repository_owner == 'Chia-Network' && (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f'
     name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
@@ -106,6 +106,48 @@ jobs:
         run: |
           ${{ matrix.check.command }}
 
+  mypy_arm_only:
+    if: github.repository_owner == 'Chia-Network' && (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f'
+    name: 🐧 💪 mypy - Linux ARM64 ${{ matrix.python.major_dot_minor }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - major_dot_minor: "3.10"
+          - major_dot_minor: "3.11"
+          - major_dot_minor: "3.12"
+          - major_dot_minor: "3.13"
+
+    steps:
+      - uses: chia-network/actions/clean-workspace@main
+
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: chia-network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Check with mypy
+        run: |
+          echo "MYPY VERSION IS: $(mypy --version)"
+          python manage-mypy.py build-mypy-ini
+          mypy
+
   check:
     if: github.repository_owner == 'Chia-Network'
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
@@ -172,8 +214,64 @@ jobs:
         run: |
           ${{ matrix.check.command }}
 
+  check_arm_only:
+    if: github.repository_owner == 'Chia-Network' && (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f'
+    name: 🐧 ${{ matrix.check.name }} - Linux ARM64 ${{ matrix.python.major_dot_minor }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - major_dot_minor: "3.12"
+        check:
+          - name: ruff
+            command: ruff format --check --diff .
+          - name: generated protocol tests
+            command: |
+              python3 -m chia._tests.util.build_network_protocol_files
+              git diff --exit-code
+          - name: poetry
+            command: |
+              .penv/bin/poetry check
+          - name: actionlint
+            command: |
+              bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+              echo ==== shellcheck version
+              shellcheck --version
+              echo ==== actionlint version
+              ./actionlint --version
+              echo ==== running actionlint
+              ./actionlint -color -shellcheck shellcheck
+
+    steps:
+      - uses: chia-network/actions/clean-workspace@main
+
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: chia-network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Check with ${{ matrix.check.name }}
+        run: |
+          ${{ matrix.check.command }}
+
   upload_source_dist:
-    if: github.repository_owner == 'Chia-Network'
+    if: github.repository_owner == 'Chia-Network' && (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f'
     name: Lint and Upload source distribution
     runs-on: ${{ ((github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 30
@@ -223,3 +321,44 @@ jobs:
         with:
           packages-dir: dist/
           skip-existing: true
+
+  upload_source_dist_arm_only:
+    if: github.repository_owner == 'Chia-Network' && (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f'
+    name: Lint and Upload source distribution (ARM-only)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    needs:
+      - mypy_arm_only
+      - check_arm_only
+
+    steps:
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: Chia-Network/actions/setup-python@main
+        name: Install Python
+        with:
+          python-version: "3.12"
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: "3.12"
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Build source distribution
+        run: |
+          python -m build --outdir dist .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: dist
+          path: ./dist

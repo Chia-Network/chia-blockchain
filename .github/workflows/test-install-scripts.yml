@@ -27,7 +27,7 @@ defaults:
 jobs:
   test_scripts:
     name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
-    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm') }}
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
@@ -153,7 +153,7 @@ jobs:
 
   test_scripts_in_docker:
     name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
-    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' || matrix.arch.matrix == 'arm' }}
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:
@@ -231,6 +231,173 @@ jobs:
           # we leave it to the user to install the appropriate version of python,
           # so we need to install python here in order for the test to succeed.
           pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.13.5-1-x86_64.pkg.tar.zst
+
+      - name: Prepare Debian
+        if: ${{ matrix.distribution.type == 'debian' }}
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get --yes update
+          apt-get install --yes git lsb-release python3-venv
+
+      - name: Prepare Fedora
+        if: ${{ matrix.distribution.type == 'fedora' }}
+        run: |
+          yum install --assumeyes git python
+
+      - name: Set rocky8 repo
+        if: ${{ matrix.distribution.name == 'rockylinux:8' }}
+        run: |
+          sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/Rocky-*.repo
+
+      - name: Set rocky9 repo
+        if: ${{ matrix.distribution.name == 'rockylinux:9' }}
+        run: |
+          sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
+
+      - name: Prepare Rocky
+        if: ${{ matrix.distribution.type == 'rocky' }}
+        run: |
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
+
+      - name: Prepare Ubuntu
+        if: ${{ matrix.distribution.type == 'ubuntu' }}
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get --yes update
+          apt-get install --yes git lsb-release
+          MINIMUM=3.10
+          if ! apt-get satisfy --yes "python3-venv (>= ${MINIMUM})"
+          then
+            apt-get install --yes python${MINIMUM}-venv
+          fi
+
+      - name: Add safe git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # after installing git so we use that copy
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/install
+        with:
+          development: true
+          do-system-installs: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Run chia --help
+        run: |
+          chia --help
+
+  test_scripts_arm_only:
+    name: Native 🐧 💪 ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    if: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' }}
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - major-dot-minor: "3.12"
+        development:
+          - name: Non-dev
+            value: false
+          - name: Dev
+            value: true
+        editable:
+          - name: Non-edit
+            value: false
+            matrix: non-editable
+          - name: Edit
+            value: true
+            matrix: editable
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Python environment
+        uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major-dot-minor }}
+
+      - name: Setup Node per .nvmrc in GUI
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: chia-blockchain-gui/.nvmrc
+
+      - name: Remove GUI submodule for gui script testing
+        env:
+          GUI_DIRECTORY: chia-blockchain-gui
+        run: |
+          [ -d "${GUI_DIRECTORY}" ]
+          rm -rf "${GUI_DIRECTORY}"
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major-dot-minor }}
+          development: ${{ matrix.development.value }}
+          editable: ${{ matrix.editable.value }}
+          do-system-installs: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Run chia --help
+        run: |
+          chia --help
+
+  test_scripts_in_docker_arm_only:
+    name: Docker ${{ matrix.distribution.name }} ARM64
+    if: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' }}
+    runs-on: ubuntu-24.04-arm
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        distribution:
+          - name: amazonlinux:2023
+            type: amazon
+            url: "docker://amazonlinux:2023"
+          - name: debian:bookworm
+            type: debian
+            url: "docker://debian:bookworm"
+          - name: debian:trixie
+            type: debian
+            url: "docker://debian:trixie"
+          - name: fedora:41
+            type: fedora
+            url: "docker://fedora:41"
+          - name: fedora:42
+            type: fedora
+            url: "docker://fedora:42"
+          - name: rockylinux:8
+            type: rocky
+            url: "docker://rockylinux:8"
+          - name: rockylinux:9
+            type: rocky
+            url: "docker://rockylinux:9"
+          - name: ubuntu:jammy (22.04)
+            type: ubuntu
+            url: "docker://ubuntu:jammy"
+          - name: ubuntu:noble (24.04)
+            type: ubuntu
+            url: "docker://ubuntu:noble"
+
+    steps:
+      - name: Prepare Amazon Linux
+        if: ${{ matrix.distribution.type == 'amazon' }}
+        run: |
+          dnf update -y
+          dnf search python3.12
+          dnf install git python3.12 -y
 
       - name: Prepare Debian
         if: ${{ matrix.distribution.type == 'debian' }}

@@ -15,7 +15,7 @@ concurrency:
 jobs:
   pre-commit:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
-    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' || (matrix.os.matrix == 'linux' && matrix.arch.matrix == 'arm') }}
+    if: ${{ (github.head_ref || github.ref_name) != 'cursor/actions-arm-runner-failures-840f' }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
@@ -56,6 +56,50 @@ jobs:
               matrix: macos
             arch:
               matrix: intel
+
+    steps:
+      - name: Clean workspace
+        uses: Chia-Network/actions/clean-workspace@main
+
+      - uses: Chia-Network/actions/git-mark-workspace-safe@main
+
+      - name: disable git autocrlf
+        run: |
+          git config --global core.autocrlf false
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.major_dot_minor }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - env:
+          CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
+          CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS: "true"
+        run: pre-commit run --all-files --verbose
+
+  pre-commit-arm-only:
+    name: Linux ARM64 ${{ matrix.python.major_dot_minor }}
+    if: ${{ (github.head_ref || github.ref_name) == 'cursor/actions-arm-runner-failures-840f' }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - major_dot_minor: "3.10"
+          - major_dot_minor: "3.11"
+          - major_dot_minor: "3.12"
+          - major_dot_minor: "3.13"
 
     steps:
       - name: Clean workspace
