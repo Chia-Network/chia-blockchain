@@ -945,12 +945,8 @@ class WalletRpcApi:
         :param request: optionally pass in `enable` as bool to enable/disable resync
         :return:
         """
-        assert self.service.wallet_state_manager is not None
-        fingerprint = self.service.logged_in_fingerprint
-        if fingerprint is not None:
-            self.service.set_resync_on_startup(fingerprint, request.enable)
-        else:
-            raise ValueError("You need to login into wallet to use this RPC call")
+        assert self.service.logged_in_fingerprint is not None
+        self.service.set_resync_on_startup(self.service.logged_in_fingerprint, request.enable)
         return Empty()
 
     @marshal
@@ -963,8 +959,9 @@ class WalletRpcApi:
 
     @marshal
     async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
-        height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        return GetHeightInfoResponse(height=height)
+        return GetHeightInfoResponse(
+            height=await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        )
 
     @marshal
     async def push_tx(self, request: PushTX) -> Empty:
@@ -1022,10 +1019,7 @@ class WalletRpcApi:
         :param request: None
         :return:
         """
-        auto_claim_settings = AutoClaimSettings.from_json_dict(
-            self.service.wallet_state_manager.config.get("auto_claim", {})
-        )
-        return auto_claim_settings
+        return AutoClaimSettings.from_json_dict(self.service.wallet_state_manager.config.get("auto_claim", {}))
 
     ##########################################################################################
     # Wallet Management
@@ -1097,7 +1091,6 @@ class WalletRpcApi:
                         request.name,
                     )
                     asset_id = cat_wallet.get_asset_id()
-                self.service.wallet_state_manager.state_changed("wallet_created")
                 return CreateNewWalletResponse(
                     unsigned_transactions=[],
                     transactions=[],
@@ -1305,11 +1298,12 @@ class WalletRpcApi:
                 )
                 assert len(coin_state_list) == 1
                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
-                tr = dataclasses.replace(tr, spend_bundle=WalletSpendBundle([coin_spend], G2Element()))
+                spend_bundle = WalletSpendBundle([coin_spend], G2Element())
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
-        assert tr.spend_bundle is not None
-        return GetTransactionMemoResponse(transaction_memos={transaction_id: compute_memos(tr.spend_bundle)})
+        else:
+            spend_bundle = tr.spend_bundle
+        return GetTransactionMemoResponse(transaction_memos={transaction_id: compute_memos(spend_bundle)})
 
     @tx_endpoint(push=False)
     @marshal
@@ -1392,12 +1386,13 @@ class WalletRpcApi:
 
     @marshal
     async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
-            request.wallet_id, confirmed=request.confirmed, type_filter=request.type_filter
-        )
         return GetTransactionCountResponse(
             wallet_id=request.wallet_id,
-            count=uint16(count),
+            count=uint16(
+                await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+                    request.wallet_id, confirmed=request.confirmed, type_filter=request.type_filter
+                )
+            ),
         )
 
     @marshal
@@ -1406,8 +1401,6 @@ class WalletRpcApi:
         Returns a new address
         """
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
-        selected = self.service.config["selected_network"]
-        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
         if wallet.type() in {WalletType.STANDARD_WALLET, WalletType.CAT, WalletType.CRCAT, WalletType.RCAT}:
             async with self.service.wallet_state_manager.new_action_scope(
                 DEFAULT_TX_CONFIG, push=request.save_derivations
@@ -1415,7 +1408,7 @@ class WalletRpcApi:
                 raw_puzzle_hash = await action_scope.get_puzzle_hash(
                     self.service.wallet_state_manager, override_reuse_puzhash_with=not request.new_address
                 )
-            address = encode_puzzle_hash(raw_puzzle_hash, prefix)
+            address = self.service.wallet_state_manager.encode_puzzle_hash(raw_puzzle_hash)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
 
@@ -1875,15 +1868,17 @@ class WalletRpcApi:
 
     @marshal
     async def cat_set_name(self, request: CATSetName) -> CATSetNameResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
-        await wallet.set_name(request.name)
+        await self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet).set_name(
+            request.name
+        )
         return CATSetNameResponse(wallet_id=request.wallet_id)
 
     @marshal
     async def cat_get_name(self, request: CATGetName) -> CATGetNameResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
-        name: str = wallet.get_name()
-        return CATGetNameResponse(wallet_id=request.wallet_id, name=name)
+        return CATGetNameResponse(
+            wallet_id=request.wallet_id,
+            name=self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet).get_name(),
+        )
 
     @marshal
     async def get_stray_cats(self, request: Empty) -> GetStrayCATsResponse:
@@ -1892,8 +1887,12 @@ class WalletRpcApi:
         :param request: RPC request
         :return: A list of unacknowledged CATs
         """
-        cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
-        return GetStrayCATsResponse(stray_cats=[StrayCAT.from_json_dict(cat) for cat in cats])
+        return GetStrayCATsResponse(
+            stray_cats=[
+                StrayCAT.from_json_dict(cat)
+                for cat in await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
+            ]
+        )
 
     @tx_endpoint(push=True)
     @marshal
@@ -1945,9 +1944,12 @@ class WalletRpcApi:
 
     @marshal
     async def cat_get_asset_id(self, request: CATGetAssetID) -> CATGetAssetIDResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=CATWallet)
-        asset_id = wallet.get_asset_id()
-        return CATGetAssetIDResponse(asset_id=asset_id, wallet_id=request.wallet_id)
+        return CATGetAssetIDResponse(
+            asset_id=self.service.wallet_state_manager.get_wallet(
+                id=request.wallet_id, required_type=CATWallet
+            ).get_asset_id(),
+            wallet_id=request.wallet_id,
+        )
 
     @marshal
     async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
@@ -2096,9 +2098,9 @@ class WalletRpcApi:
 
     @marshal
     async def get_offer(self, request: GetOffer) -> GetOfferResponse:
-        trade_mgr = self.service.wallet_state_manager.trade_manager
-
-        trade_record: TradeRecord | None = await trade_mgr.get_trade_by_id(request.trade_id)
+        trade_record: TradeRecord | None = await self.service.wallet_state_manager.trade_manager.get_trade_by_id(
+            request.trade_id
+        )
         if trade_record is None:
             raise ValueError(f"No trade with trade id: {request.trade_id.hex()}")
 
@@ -2111,9 +2113,7 @@ class WalletRpcApi:
 
     @marshal
     async def get_all_offers(self, request: GetAllOffers) -> GetAllOffersResponse:
-        trade_mgr = self.service.wallet_state_manager.trade_manager
-
-        all_trades = await trade_mgr.trade_store.get_trades_between(
+        all_trades = await self.service.wallet_state_manager.trade_manager.trade_store.get_trades_between(
             request.start,
             request.end,
             sort_key=request.sort_key,
@@ -2138,9 +2138,11 @@ class WalletRpcApi:
 
     @marshal
     async def get_offers_count(self, request: Empty) -> GetOffersCountResponse:
-        trade_mgr = self.service.wallet_state_manager.trade_manager
-
-        (total, my_offers_count, taken_offers_count) = await trade_mgr.trade_store.get_trades_count()
+        (
+            total,
+            my_offers_count,
+            taken_offers_count,
+        ) = await self.service.wallet_state_manager.trade_manager.trade_store.get_trades_count()
 
         return GetOffersCountResponse(
             total=uint16(total), my_offers_count=uint16(my_offers_count), taken_offers_count=uint16(taken_offers_count)
@@ -2154,9 +2156,8 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> CancelOfferResponse:
-        wsm = self.service.wallet_state_manager
         async with self.service.wallet_state_manager.lock:
-            await wsm.trade_manager.cancel_pending_offers(
+            await self.service.wallet_state_manager.trade_manager.cancel_pending_offers(
                 [request.trade_id],
                 action_scope,
                 fee=request.fee,
@@ -2217,14 +2218,17 @@ class WalletRpcApi:
 
     @marshal
     async def did_set_wallet_name(self, request: DIDSetWalletName) -> DIDSetWalletNameResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        await wallet.set_name(request.name)
+        await self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet).set_name(
+            request.name
+        )
         return DIDSetWalletNameResponse(wallet_id=request.wallet_id)
 
     @marshal
     async def did_get_wallet_name(self, request: DIDGetWalletName) -> DIDGetWalletNameResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        return DIDGetWalletNameResponse(wallet_id=request.wallet_id, name=wallet.get_name())
+        return DIDGetWalletNameResponse(
+            wallet_id=request.wallet_id,
+            name=self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet).get_name(),
+        )
 
     @tx_endpoint(push=False)
     @marshal
@@ -2234,9 +2238,9 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> DIDMessageSpendResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-
-        await wallet.create_message_spend(
+        await self.service.wallet_state_manager.get_wallet(
+            id=request.wallet_id, required_type=DIDWallet
+        ).create_message_spend(
             action_scope,
             extra_conditions=(
                 *extra_conditions,
@@ -2306,19 +2310,16 @@ class WalletRpcApi:
     ) -> DIDUpdateMetadataResponse:
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         async with self.service.wallet_state_manager.lock:
-            update_success = await wallet.update_metadata(request.metadata)
             # Update coin with new ID info
-            if update_success:
-                await wallet.create_update_spend(action_scope, request.fee, extra_conditions=extra_conditions)
-                # tx_endpoint wrapper will take care of these default values
-                return DIDUpdateMetadataResponse(
-                    unsigned_transactions=[],
-                    transactions=[],
-                    wallet_id=request.wallet_id,
-                    spend_bundle=WalletSpendBundle([], G2Element()),
-                )
-            else:
-                raise ValueError(f"Couldn't update metadata with input: {request.metadata}")
+            await wallet.update_metadata(request.metadata)
+            await wallet.create_update_spend(action_scope, request.fee, extra_conditions=extra_conditions)
+            # tx_endpoint wrapper will take care of these default values
+            return DIDUpdateMetadataResponse(
+                unsigned_transactions=[],
+                transactions=[],
+                wallet_id=request.wallet_id,
+                spend_bundle=WalletSpendBundle([], G2Element()),
+            )
 
     @marshal
     async def did_get_did(self, request: DIDGetDID) -> DIDGetDIDResponse:
@@ -2342,9 +2343,10 @@ class WalletRpcApi:
 
     @marshal
     async def did_get_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
+        # opportunity to raise
+        self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         return DIDGetPubkeyResponse(
-            pubkey=(await wallet.wallet_state_manager.get_unused_derivation_record(request.wallet_id)).pubkey
+            pubkey=(await self.service.wallet_state_manager.get_unused_derivation_record(request.wallet_id)).pubkey
         )
 
     @marshal
@@ -2367,8 +2369,12 @@ class WalletRpcApi:
 
     @marshal
     async def did_create_backup_file(self, request: DIDCreateBackupFile) -> DIDCreateBackupFileResponse:
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
-        return DIDCreateBackupFileResponse(wallet_id=request.wallet_id, backup_data=did_wallet.create_backup())
+        return DIDCreateBackupFileResponse(
+            wallet_id=request.wallet_id,
+            backup_data=self.service.wallet_state_manager.get_wallet(
+                id=request.wallet_id, required_type=DIDWallet
+            ).create_backup(),
+        )
 
     @tx_endpoint(push=True)
     @marshal
@@ -2378,10 +2384,11 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> DIDTransferDIDResponse:
-        did_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=DIDWallet)
         puzzle_hash: bytes32 = decode_puzzle_hash(request.inner_address)
         async with self.service.wallet_state_manager.lock:
-            await did_wallet.transfer_did(
+            await self.service.wallet_state_manager.get_wallet(
+                id=request.wallet_id, required_type=DIDWallet
+            ).transfer_did(
                 puzzle_hash,
                 request.fee,
                 action_scope,
@@ -3076,11 +3083,10 @@ class WalletRpcApi:
         ):
             raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
 
-        owner_pubkey = pool_wallet_info.current.owner_pubkey
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
             request.target_puzzlehash,
-            owner_pubkey,
+            pool_wallet_info.current.owner_pubkey,
             request.pool_url,
             request.relative_lock_height,
         )
