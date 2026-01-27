@@ -6,7 +6,7 @@ from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.blockchain_interface import BlocksProtocol
+from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
 from chia.util.errors import Err
 
 
@@ -32,17 +32,30 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    mmr_manager: MMRManagerProtocol
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self.mmr_manager = underlying.mmr_manager.copy()
 
     def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         eb = self._extra_blocks.get(header_hash)
         if eb is None:
             return None
         return eb[1]
+
+    def _get_fork_height(self) -> uint32 | None:
+        """
+        Compute the fork point (last common block height) from augmented height_to_hash.
+        """
+        if not self._height_to_hash:
+            return None
+        min_height = min(self._height_to_hash.keys())
+        if min_height == 0:
+            return None  # no common blocks
+        return uint32(min_height - 1)
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         if block.header_hash != block_record.header_hash:
@@ -166,3 +179,16 @@ class AugmentedBlockchain:
             else:
                 ret.extend(await self._underlying.prev_block_hash([hh]))
         return ret
+
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(
+            prev_header_hash, new_sp_index, starts_new_slot, self, fork_height=self._get_fork_height()
+        )
+
+    def get_current_mmr_root(self) -> bytes32 | None:
+        return self.mmr_manager.get_current_mmr_root()

@@ -28,6 +28,8 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_height_map import BlockHeightMap
+from chia.consensus.blockchain_interface import MMRManagerProtocol
+from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -106,6 +108,7 @@ class Blockchain:
     coin_store: CoinStoreProtocol
     # Store
     block_store: BlockStore
+    mmr_manager: MMRManagerProtocol
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -156,6 +159,9 @@ class Blockchain:
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
+        self.mmr_manager = BlockchainMMRManager(
+            consensus_constants.GENESIS_CHALLENGE, aggregate_from=consensus_constants.HARD_FORK2_HEIGHT
+        )
         self._shut_down = False
         await self._load_chain_from_store(height_map)
         self._seen_compact_proofs = set()
@@ -173,7 +179,11 @@ class Blockchain:
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
-        for block in block_records.values():
+
+        # Sort blocks by height to build MMR properly
+        sorted_blocks = sorted(block_records.values(), key=lambda b: b.height)
+
+        for block in sorted_blocks:
             self.add_block_record(block)
 
         if len(block_records) == 0:
@@ -185,6 +195,13 @@ class Blockchain:
         self._peak_height = self.block_record(peak).height
         assert self.__height_map.contains_height(self._peak_height)
         assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
+
+        # Build MMR from canonical chain (height_map), starting from aggregate_from
+        # todo WPv2: persist MMR state to avoid rebuilding on startup
+        for height in range(self.mmr_manager.get_aggrtegate_from(), self._peak_height + 1):
+            header_hash = self.__height_map.get_hash(uint32(height))
+            block_record = self.block_record(header_hash)
+            self.mmr_manager.add_block_to_mmr(header_hash, block_record.prev_hash, block_record.height)
 
     def get_peak(self) -> BlockRecord | None:
         """
@@ -445,11 +462,15 @@ class Blockchain:
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
+                self.mmr_manager.rollback_to_height(state_change_summary.fork_height, self)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
                     fetched_block_record.header_hash,
                     fetched_block_record.sub_epoch_summary_included,
+                )
+                self.mmr_manager.add_block_to_mmr(
+                    fetched_block_record.header_hash, fetched_block_record.prev_hash, fetched_block_record.height
                 )
 
             if state_change_summary is not None:
@@ -988,6 +1009,7 @@ class Blockchain:
 
         return (await self.block_store.get_block_record(header_hash)) is not None
 
+    # can only called on the heighest block
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
@@ -1087,3 +1109,17 @@ class Blockchain:
             generators.update(await self.block_store.get_generators_at(remaining_refs))
 
         return generators
+
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+
+    def get_current_mmr_root(self) -> bytes32 | None:
+        return self.mmr_manager.get_current_mmr_root()
+
+    def add_block_to_mmr(self, block_record: BlockRecord) -> None:
+        self.mmr_manager.add_block_to_mmr(block_record.header_hash, block_record.prev_hash, block_record.height)

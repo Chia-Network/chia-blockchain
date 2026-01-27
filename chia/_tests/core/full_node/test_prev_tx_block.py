@@ -12,14 +12,14 @@ def test_prev_tx_block_none() -> None:
     # If prev_b is None, should return 0
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}),
+        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(0),
         first_in_sub_slot=False,
     ) == uint32(0)
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}),
+        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(1),
         first_in_sub_slot=True,
@@ -40,7 +40,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=test_constants,
-            blocks=BlockCache(blocks),
+            blocks=BlockCache(blocks, test_constants.GENESIS_CHALLENGE),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             first_in_sub_slot=len(block.finished_sub_slots) > 0,
@@ -53,7 +53,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=test_constants,
-            blocks=BlockCache(blocks),
+            blocks=BlockCache(blocks, test_constants.GENESIS_CHALLENGE),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             first_in_sub_slot=len(block.finished_sub_slots) > 0,
@@ -66,7 +66,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
     assert (
         pre_sp_tx_block_height(
             constants=test_constants,
-            blocks=BlockCache(blocks),
+            blocks=BlockCache(blocks, test_constants.GENESIS_CHALLENGE),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
             first_in_sub_slot=len(block.finished_sub_slots) > 0,
@@ -92,7 +92,7 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
     assert latest_tx_before_sp is not None
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache(blocks),
+        blocks=BlockCache(blocks, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
         first_in_sub_slot=len(block.finished_sub_slots) > 0,
