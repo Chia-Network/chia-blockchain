@@ -510,7 +510,7 @@ def validate_unfinished_header_block(
             blocks=blocks,
             prev_b_hash=header_block.prev_header_hash,
             sp_index=header_block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+            finished_sub_slots=len(header_block.finished_sub_slots),
         ),
     )
     if required_iters is None:

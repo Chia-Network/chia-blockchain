@@ -38,13 +38,13 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
+from chia.full_node.hard_fork_utils import get_flags
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -1270,15 +1270,7 @@ class FullNodeAPI:
             # in this case we've already made sure `block` does have a
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
-
-            prev_tx_height = pre_sp_tx_block_height(
-                constants=self.full_node.constants,
-                blocks=self.full_node.blockchain,
-                prev_b_hash=block.prev_header_hash,
-                sp_index=block.reward_chain_block.signage_point_index,
-                first_in_sub_slot=len(block.finished_sub_slots) > 0,
-            )
-            flags = get_flags_for_height_and_constants(prev_tx_height, self.full_node.constants)
+            flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
             additions, removals = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
                 additions_and_removals,

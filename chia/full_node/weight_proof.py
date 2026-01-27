@@ -1339,7 +1339,7 @@ def _validate_pospace_recent_chain(
             blocks=blocks,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         ),
     )
     if required_iters is None:
