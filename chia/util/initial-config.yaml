@@ -96,6 +96,7 @@ logging: &logging
   log_syslog: False # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost" # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514 # UDP port of the remote or local Unix syslog
+  log_systemd: False # If True, outputs to systemd-journal
 
 seeder:
   # The fake full node used for crawling will run on this port.

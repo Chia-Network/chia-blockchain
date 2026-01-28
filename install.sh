@@ -167,6 +167,11 @@ fi
 
 ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
 
+if [ -S /run/systemd/journal/socket ] && command -v pkg-config >/dev/null 2>&1 && pkg-config --exists libsystemd; then
+  echo "Systemd journal detected, enabling systemd logging support..."
+  EXTRAS="${EXTRAS} --extras systemd"
+fi
+
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
 # shellcheck disable=SC2086
 .penv/bin/poetry sync ${EXTRAS}
