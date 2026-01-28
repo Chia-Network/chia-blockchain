@@ -53,12 +53,13 @@ class PlotNFT2Wallet:
         await wallet_state_manager.add_interested_puzzle_hashes(
             puzzle_hashes=[self.p2_singleton_puzzle_hash, self.hint], wallet_ids=[self.id()]
         )
-        await wallet_state_manager.user_store.create_wallet(
-            name=wallet_info.name,
-            wallet_type=wallet_info.type,
-            data=wallet_info.data,
-            id=wallet_info.id,
-        )
+        if await wallet_state_manager.user_store.get_wallet_by_id(wallet_info.id) is None:
+            await wallet_state_manager.user_store.create_wallet(
+                name=wallet_info.name,
+                wallet_type=wallet_info.type,
+                data=wallet_info.data,
+                id=wallet_info.id,
+            )
         return self
 
     @property

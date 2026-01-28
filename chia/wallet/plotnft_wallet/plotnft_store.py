@@ -192,7 +192,7 @@ class PlotNFTStore:
     async def add_exiting_fee(self, *, wallet_id: uint32, fee: uint64) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                ("INSERT INTO finish_exiting_fee (wallet_id, fee) VALUES (?, ?)"),
+                ("INSERT OR REPLACE INTO finish_exiting_fee (wallet_id, fee) VALUES (?, ?)"),
                 (wallet_id, bytes(fee)),
             )
 
