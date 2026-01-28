@@ -398,7 +398,9 @@ full_node:
         with Lockfile.create(lock_path):
             with pytest.raises(RuntimeError) as excinfo:
                 db_prune_func(root_path, blocks_back=300)
-            assert "Cannot prune database while full_node is running" in str(excinfo.value)
+            error_msg = str(excinfo.value)
+            assert "Cannot prune database while full_node is running" in error_msg
+            assert "Please stop the full_node service first with 'chia stop node'" in error_msg
 
     def test_prune_full_node_not_running(self, tmp_path: Path) -> None:
         """Test that pruning succeeds when full_node is not running."""
@@ -433,6 +435,61 @@ full_node:
             assert get_peak_height(conn) == 400
             assert get_max_height(conn) == 400
             assert get_block_count(conn) == 401
+
+    def test_db_prune_func_negative_blocks_back(self, tmp_path: Path) -> None:
+        """Test that db_prune_func raises error for negative blocks_back."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        run_path = root_path / "run"
+        run_path.mkdir()
+
+        # Create a database file
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=100, orphan_rate=0)
+
+        # Create a minimal config pointing to the db
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_file = config_path / "config.yaml"
+        config_file.write_text(
+            """
+full_node:
+  selected_network: mainnet
+  database_path: db/blockchain_v2_mainnet.sqlite
+"""
+        )
+
+        # Should raise RuntimeError for negative blocks_back
+        with pytest.raises(RuntimeError) as excinfo:
+            db_prune_func(root_path, blocks_back=-5)
+        assert "blocks_back must be a non-negative integer" in str(excinfo.value)
+        assert "-5" in str(excinfo.value)
+
+    def test_db_prune_func_missing_database(self, tmp_path: Path) -> None:
+        """Test that db_prune_func raises error for missing database from config."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        run_path = root_path / "run"
+        run_path.mkdir()
+
+        # Create a minimal config pointing to a non-existent db
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_file = config_path / "config.yaml"
+        config_file.write_text(
+            """
+full_node:
+  selected_network: mainnet
+  database_path: db/blockchain_v2_mainnet.sqlite
+"""
+        )
+
+        # Should raise RuntimeError for missing database
+        with pytest.raises(RuntimeError) as excinfo:
+            db_prune_func(root_path, blocks_back=100)
+        assert "Database file does not exist" in str(excinfo.value)
 
 
 class TestDbPruneBlockCounts:
