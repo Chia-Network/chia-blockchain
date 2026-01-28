@@ -9,7 +9,7 @@ import logging
 import pytest
 from chia_rs import CoinRecord, ConsensusConstants
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.core.node_height import node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
@@ -66,31 +66,42 @@ def compare_coin_records(records1: dict[bytes32, CoinRecord], records2: dict[byt
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "num_blocks,blocks_back,compare_height",
+    [
+        (200, 50, 149),  # many coins: exercises compare_coin_records branch checks (>= 3 records)
+        (2, 1, 0),      # few coins at height <= 0: exercises else branch (< 3 records)
+    ],
+)
 async def test_full_node_starts_after_prune(
     self_hostname: str,
     blockchain_constants: ConsensusConstants,
+    num_blocks: int,
+    blocks_back: int,
+    compare_height: int,
 ) -> None:
     """
     Test that a full_node can start correctly after its database has been pruned,
     and that coin records are preserved correctly below the prune height.
 
     This test:
-    1. Creates a full_node with 200 transaction blocks
+    1. Creates a full_node with num_blocks transaction blocks
     2. Stops the node
-    3. Prunes 50 blocks from the peak (new peak = 149)
+    3. Prunes blocks_back blocks from the peak
     4. Restarts the full_node
     5. Verifies it starts with the correct peak height
-    6. Verifies coin records are intact for heights <= 149
+    6. Verifies coin records are intact for heights <= compare_height
     """
     config_overrides = {"full_node.max_sync_wait": 0}
-    db_name = "blockchain_prune_test.db"
+    db_name = f"blockchain_prune_test_{num_blocks}_{blocks_back}.db"
+    expected_peak_after_prune = num_blocks - 1 - blocks_back
 
     with TempKeyring(populate=True) as keychain:
         async with create_block_tools_async(
             constants=blockchain_constants, keychain=keychain, config_overrides=config_overrides
         ) as bt:
             # Generate test blocks with transactions to create coin records
-            blocks = bt.get_consecutive_blocks(200, guarantee_transaction_block=True)
+            blocks = bt.get_consecutive_blocks(num_blocks, guarantee_transaction_block=True)
 
             # First, create the node and add blocks to build a blockchain
             async with setup_full_node(
@@ -111,19 +122,85 @@ async def test_full_node_starts_after_prune(
                 # Verify we have the expected peak
                 peak = full_node.blockchain.get_peak()
                 assert peak is not None
-                assert peak.height == 199
+                assert peak.height == num_blocks - 1
 
                 # Store coin records before pruning for comparison
-                records_before_prune = await get_all_coin_records(full_node.coin_store, uint32(149))
+                records_before_prune = await get_all_coin_records(
+                    full_node.coin_store, uint32(compare_height)
+                )
                 num_coins_before = len(records_before_prune)
-                log.info(f"Coin records at height <= 149 before prune: {num_coins_before}")
+                log.info(f"Coin records at height <= {compare_height} before prune: {num_coins_before}")
+
+                # Exercise compare_coin_records length-mismatch branch (skip when no records)
+                if records_before_prune:
+                    match, msg = compare_coin_records(records_before_prune, {})
+                    assert not match
+                    assert "Different number of coin records" in msg
+
+                # Exercise remaining compare_coin_records branches (need at least 3 records)
+                if len(records_before_prune) >= 3:
+                    items = list(records_before_prune.items())
+                    (n1, r1), (n2, r2), (n3, r3) = items[0], items[1], items[2]
+
+                    # Branch: coin missing from second set (same length, different keys)
+                    recs1 = {n1: r1, n2: r2}
+                    recs2 = {n1: r1, n3: r3}
+                    match, msg = compare_coin_records(recs1, recs2)
+                    assert not match
+                    assert "missing from second set" in msg
+
+                    # Branch: different coin data (same key, different record's coin)
+                    recs1 = {n1: r1}
+                    recs2 = {n1: r2}  # r2 has different coin
+                    match, msg = compare_coin_records(recs1, recs2)
+                    assert not match
+                    assert "has different coin data" in msg
+
+                    # Branch: different confirmed_block_index
+                    r1_alt_conf = CoinRecord(
+                        r1.coin,
+                        uint32(99999),
+                        r1.spent_block_index,
+                        r1.coinbase,
+                        uint64(0),
+                    )
+                    recs1 = {n1: r1}
+                    recs2 = {n1: r1_alt_conf}
+                    match, msg = compare_coin_records(recs1, recs2)
+                    assert not match
+                    assert "confirmed at different heights" in msg
+
+                    # Branch: different spent_block_index
+                    r1_alt_spent = CoinRecord(
+                        r1.coin,
+                        r1.confirmed_block_index,
+                        uint32(88888),
+                        r1.coinbase,
+                        uint64(0),
+                    )
+                    recs2 = {n1: r1_alt_spent}
+                    match, msg = compare_coin_records(recs1, recs2)
+                    assert not match
+                    assert "spent at different heights" in msg
+
+                    # Branch: different coinbase
+                    r1_alt_coinbase = CoinRecord(
+                        r1.coin,
+                        r1.confirmed_block_index,
+                        r1.spent_block_index,
+                        not r1.coinbase,
+                        uint64(0),
+                    )
+                    recs2 = {n1: r1_alt_coinbase}
+                    match, msg = compare_coin_records(recs1, recs2)
+                    assert not match
+                    assert "different coinbase flag" in msg
 
             # Node is now stopped. Prune the database.
             db_path = bt.root_path / db_name
             assert db_path.exists(), f"Database file not found: {db_path}"
 
-            # Prune 50 blocks - new peak should be at height 149
-            prune_db(db_path, blocks_back=50)
+            prune_db(db_path, blocks_back=blocks_back)
 
             # Restart the node with the pruned database
             async with setup_full_node(
@@ -140,11 +217,15 @@ async def test_full_node_starts_after_prune(
                 # Verify the node started with the correct pruned peak
                 peak2 = full_node2.blockchain.get_peak()
                 assert peak2 is not None
-                assert peak2.height == 149, f"Expected peak height 149, got {peak2.height}"
+                assert peak2.height == expected_peak_after_prune, (
+                    f"Expected peak height {expected_peak_after_prune}, got {peak2.height}"
+                )
 
-                # Verify coin records at heights <= 149 are preserved
-                records_after_prune = await get_all_coin_records(full_node2.coin_store, uint32(149))
-                log.info(f"Coin records at height <= 149 after prune: {len(records_after_prune)}")
+                # Verify coin records at heights <= compare_height are preserved
+                records_after_prune = await get_all_coin_records(
+                    full_node2.coin_store, uint32(compare_height)
+                )
+                log.info(f"Coin records at height <= {compare_height} after prune: {len(records_after_prune)}")
 
                 # Compare coin records
                 match, message = compare_coin_records(records_before_prune, records_after_prune)
