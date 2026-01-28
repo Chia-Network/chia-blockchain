@@ -3502,6 +3502,18 @@ files = [
 ]
 
 [[package]]
+name = "systemd-python"
+version = "235"
+description = "Python interface for libsystemd"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"systemd\""
+files = [
+    {file = "systemd-python-235.tar.gz", hash = "sha256:4e57f39797fd5d9e2d22b8806a252d7c0106c936039d1e71c8c6b8008e695c0a"},
+]
+
+[[package]]
 name = "tach"
 version = "0.32.0"
 description = "A Python tool to maintain a modular package architecture."
@@ -4017,9 +4029,10 @@ reference = "chia"
 [extras]
 dev = ["aiohttp_cors", "build", "coverage", "diff-cover", "lxml", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-rerunfailures", "pytest-xdist", "ruff", "tach", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
+systemd = ["systemd-python"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "3a9572ac6d414f58ba7c6ffb40cd7f32c04de6950eef629d8478eeb232df01cc"
+content-hash = "8342f70e980f74a7f35522c56bab5fca8abbf0b1faf4ef47130ac56801e561a8"
