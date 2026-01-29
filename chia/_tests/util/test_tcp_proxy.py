@@ -7,8 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="temporarily skip util tcp_proxy tests on Windows")
-
 from chia._tests.util.tcp_proxy import (
     BandwidthThrottle,
     TCPProxy,
@@ -16,6 +14,8 @@ from chia._tests.util.tcp_proxy import (
     proxy_connection,
     tcp_proxy,
 )
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="temporarily skip util tcp_proxy tests on Windows")
 
 
 class TestThrottleConfig:
