@@ -235,7 +235,7 @@ def prune_db(
         def _progress_callback() -> int:
             progress_count[0] += 1
             if progress_count[0] % 10 == 0:
-                print(".", flush=True)
+                print(".", end="", flush=True)
             return 0
 
         conn.execute("BEGIN IMMEDIATE")

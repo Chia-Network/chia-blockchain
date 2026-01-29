@@ -1268,9 +1268,7 @@ full_node:
             "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
         )
         ctx = ChiaCliContext(root_path=root_path)
-        result = CliRunner().invoke(
-            db_prune_cmd, ["50", "--no-integrity-check"], obj=ctx.to_click()
-        )
+        result = CliRunner().invoke(db_prune_cmd, ["50", "--no-integrity-check"], obj=ctx.to_click())
         assert result.exit_code == 0
         assert "Skipping integrity check" in result.output
         assert "Pruning complete" in result.output
@@ -1292,9 +1290,7 @@ full_node:
             "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
         )
         ctx = ChiaCliContext(root_path=root_path)
-        result = CliRunner().invoke(
-            db_prune_cmd, ["50", "--full-integrity-check"], obj=ctx.to_click()
-        )
+        result = CliRunner().invoke(db_prune_cmd, ["50", "--full-integrity-check"], obj=ctx.to_click())
         assert result.exit_code == 0
         assert "Running full integrity check" in result.output
         assert "Pruning complete" in result.output
