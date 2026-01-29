@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from contextlib import closing
 from pathlib import Path
 from typing import Any
@@ -10,12 +11,17 @@ from chia.util.config import load_config
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.path import path_from_root
 
+# Number of spots to sample in the DB when doing a fast integrity check.
+_INTEGRITY_CHECK_SAMPLES = 10
+
 
 def db_prune_func(
     root_path: Path,
     in_db_path: Path | None = None,
     *,
     blocks_back: int = 300,
+    skip_integrity_check: bool = False,
+    full_integrity_check: bool = False,
 ) -> None:
     """
     Prune the blockchain database by removing blocks from the peak.
@@ -37,7 +43,12 @@ def db_prune_func(
     try:
         with Lockfile.create(full_node_lock_path, timeout=0.1):
             try:
-                prune_db(in_db_path, blocks_back=blocks_back)
+                prune_db(
+                    in_db_path,
+                    blocks_back=blocks_back,
+                    skip_integrity_check=skip_integrity_check,
+                    full_integrity_check=full_integrity_check,
+                )
             except RuntimeError:
                 raise
             except sqlite3.Error as e:
@@ -51,7 +62,83 @@ def db_prune_func(
         )
 
 
-def prune_db(db_path: Path, *, blocks_back: int) -> None:
+def _run_sampled_integrity_check(conn: sqlite3.Connection) -> None:
+    """
+    Run a fast sampled integrity check by reading from 10 different spots
+    in the database. Catches obvious corruption without a full PRAGMA integrity_check.
+    """
+    # Queries that each read one row from different tables/positions.
+    # All use LIMIT 1; small OFFSETs are fast. Optional tables (hints, sub_epoch_segments_v3)
+    # may not exist in minimal DBs and are skipped.
+    checks: list[tuple[str, str]] = [
+        ("database_version", "SELECT * FROM database_version LIMIT 1"),
+        ("current_peak", "SELECT hash FROM current_peak WHERE key = 0"),
+        ("full_blocks (start)", "SELECT 1 FROM full_blocks LIMIT 1"),
+        ("full_blocks (offset 1)", "SELECT 1 FROM full_blocks LIMIT 1 OFFSET 1"),
+        ("full_blocks (offset 2)", "SELECT 1 FROM full_blocks LIMIT 1 OFFSET 2"),
+        ("full_blocks (offset 3)", "SELECT 1 FROM full_blocks LIMIT 1 OFFSET 3"),
+        ("full_blocks (offset 4)", "SELECT 1 FROM full_blocks LIMIT 1 OFFSET 4"),
+        ("full_blocks (offset 5)", "SELECT 1 FROM full_blocks LIMIT 1 OFFSET 5"),
+        ("coin_record", "SELECT 1 FROM coin_record LIMIT 1"),
+        ("hints or full_blocks", "SELECT 1 FROM hints LIMIT 1"),
+    ]
+    assert len(checks) == _INTEGRITY_CHECK_SAMPLES
+
+    print(
+        f"Running sampled integrity check ({_INTEGRITY_CHECK_SAMPLES} spots)...",
+        flush=True,
+    )
+    for name, sql in checks:
+        try:
+            with closing(conn.execute(sql)) as cursor:
+                cursor.fetchone()
+        except sqlite3.OperationalError as e:
+            # Table might not exist for optional checks (e.g. hints)
+            if "no such table" in str(e).lower() or "no such column" in str(e).lower():
+                if "hints" in sql:
+                    # Fallback: one more full_blocks read so we still sample 10 spots
+                    with closing(conn.execute("SELECT 1 FROM full_blocks LIMIT 1 OFFSET 6")) as cursor:
+                        cursor.fetchone()
+                continue
+            raise RuntimeError(f"Database integrity check failed at {name}: {e}") from e
+    print(" ok", flush=True)
+
+
+def _run_full_integrity_check(conn: sqlite3.Connection) -> None:
+    """
+    Run PRAGMA integrity_check over the entire database. Slow on large DBs;
+    prints progress dots every 30 seconds so the user sees activity.
+    """
+    done = threading.Event()
+
+    def _progress_dots() -> None:
+        while not done.wait(timeout=30):
+            print(".", end="", flush=True)
+
+    print(
+        "Running full integrity check (this may take a long time on large databases)...",
+        flush=True,
+    )
+    progress_thread = threading.Thread(target=_progress_dots, daemon=True)
+    progress_thread.start()
+    try:
+        with closing(conn.execute("PRAGMA integrity_check")) as cursor:
+            result = cursor.fetchone()[0]
+            if result != "ok":
+                raise RuntimeError(f"Database integrity check failed: {result}")
+    finally:
+        done.set()
+        progress_thread.join(timeout=1)
+    print(" ok", flush=True)
+
+
+def prune_db(
+    db_path: Path,
+    *,
+    blocks_back: int,
+    skip_integrity_check: bool = False,
+    full_integrity_check: bool = False,
+) -> None:
     """
     Prune the database by removing the most recent blocks_back blocks from the peak.
 
@@ -69,10 +156,12 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
     print(f"Opening database: {db_path}")
 
     with closing(sqlite3.connect(db_path)) as conn:
-        with closing(conn.execute("PRAGMA integrity_check")) as cursor:
-            result = cursor.fetchone()[0]
-            if result != "ok":
-                raise RuntimeError(f"Database integrity check failed: {result}")
+        if skip_integrity_check:
+            print("Skipping integrity check (--no-integrity-check).", flush=True)
+        elif full_integrity_check:
+            _run_full_integrity_check(conn)
+        else:
+            _run_sampled_integrity_check(conn)
 
         # Check database version
         try:

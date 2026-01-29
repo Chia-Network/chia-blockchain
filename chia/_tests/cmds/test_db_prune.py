@@ -447,7 +447,7 @@ class TestDbPruneSingleTransaction:
             assert "Pruning complete" in out
 
     def test_prune_integrity_check_failure(self) -> None:
-        """Test that prune_db raises when PRAGMA integrity_check returns non-ok."""
+        """Test that prune_db raises when full PRAGMA integrity_check returns non-ok."""
         with TempFile() as db_file:
             create_test_db(db_file, peak_height=100, orphan_rate=0)
             original_connect = sqlite3.connect
@@ -482,9 +482,56 @@ class TestDbPruneSingleTransaction:
                 side_effect=IntegrityFailWrapper,
             ):
                 with pytest.raises(RuntimeError) as excinfo:
-                    prune_db(db_file, blocks_back=10)
+                    prune_db(db_file, blocks_back=10, full_integrity_check=True)
                 assert "Database integrity check failed" in str(excinfo.value)
                 assert "corrupt" in str(excinfo.value)
+
+    def test_prune_skip_integrity_check_succeeds(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that prune_db with skip_integrity_check=True skips check and prunes."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+            prune_db(db_file, blocks_back=30, skip_integrity_check=True)
+            out = capsys.readouterr().out
+            assert "Skipping integrity check" in out
+            assert "Pruning complete" in out
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == 70
+
+    def test_prune_default_runs_sampled_check(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that default prune runs sampled integrity check (not full)."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+            prune_db(db_file, blocks_back=10)
+            out = capsys.readouterr().out
+            assert "Running sampled integrity check" in out
+            assert "Pruning complete" in out
+
+    def test_prune_full_integrity_check_succeeds(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that prune_db with full_integrity_check=True runs full check and prunes."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+            prune_db(db_file, blocks_back=20, full_integrity_check=True)
+            out = capsys.readouterr().out
+            assert "Running full integrity check" in out
+            assert "Pruning complete" in out
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == 80
+
+    def test_prune_sampled_integrity_check_failure_raises(self) -> None:
+        """Test that when sampled integrity check raises, prune_db propagates it."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+
+            def sampled_check_raises(conn: sqlite3.Connection) -> None:
+                raise RuntimeError("Database integrity check failed at full_blocks: malformed")
+
+            with patch(
+                "chia.cmds.db_prune_func._run_sampled_integrity_check",
+                side_effect=sampled_check_raises,
+            ):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=10)
+                assert "Database integrity check failed" in str(excinfo.value)
 
     def test_prune_progress_callback_prints_dots(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test that progress handler prints dots during long operations (line 149)."""
@@ -1204,6 +1251,54 @@ full_node:
 
         # Verify pruning happened on the custom db
         with closing(sqlite3.connect(custom_db_file)) as conn:
+            assert get_peak_height(conn) == 150
+
+    def test_cli_prune_no_integrity_check(self, tmp_path: Path) -> None:
+        """Test CLI --no-integrity-check skips integrity check and prunes."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=200, orphan_rate=0)
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        ctx = ChiaCliContext(root_path=root_path)
+        result = CliRunner().invoke(
+            db_prune_cmd, ["50", "--no-integrity-check"], obj=ctx.to_click()
+        )
+        assert result.exit_code == 0
+        assert "Skipping integrity check" in result.output
+        assert "Pruning complete" in result.output
+        with closing(sqlite3.connect(db_file)) as conn:
+            assert get_peak_height(conn) == 150
+
+    def test_cli_prune_full_integrity_check(self, tmp_path: Path) -> None:
+        """Test CLI --full-integrity-check runs full check and prunes."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=200, orphan_rate=0)
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        ctx = ChiaCliContext(root_path=root_path)
+        result = CliRunner().invoke(
+            db_prune_cmd, ["50", "--full-integrity-check"], obj=ctx.to_click()
+        )
+        assert result.exit_code == 0
+        assert "Running full integrity check" in result.output
+        assert "Pruning complete" in result.output
+        with closing(sqlite3.connect(db_file)) as conn:
             assert get_peak_height(conn) == 150
 
     def test_cli_prune_error_prints_failed(self, tmp_path: Path) -> None:

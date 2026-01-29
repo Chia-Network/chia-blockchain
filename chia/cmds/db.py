@@ -95,13 +95,33 @@ def db_backup_cmd(ctx: click.Context, db_backup_file: str | None, no_indexes: bo
 )
 @click.argument("blocks_back", type=int, default=300, required=False)
 @click.option("--db", "in_db_path", default=None, type=click.Path(), help="Specifies which database file to prune")
+@click.option(
+    "--no-integrity-check",
+    is_flag=True,
+    default=False,
+    help="Skip integrity check (fastest; use only if the database is known good).",
+)
+@click.option(
+    "--full-integrity-check",
+    is_flag=True,
+    default=False,
+    help="Run full PRAGMA integrity_check (thorough but slow on very large DBs).",
+)
 @click.pass_context
-def db_prune_cmd(ctx: click.Context, blocks_back: int, in_db_path: str | None) -> None:
+def db_prune_cmd(
+    ctx: click.Context,
+    blocks_back: int,
+    in_db_path: str | None,
+    no_integrity_check: bool,
+    full_integrity_check: bool,
+) -> None:
     try:
         db_prune_func(
             ChiaCliContext.set_default(ctx).root_path,
             None if in_db_path is None else Path(in_db_path),
             blocks_back=blocks_back,
+            skip_integrity_check=no_integrity_check,
+            full_integrity_check=full_integrity_check,
         )
     except RuntimeError as e:
         print(f"FAILED: {e}")
