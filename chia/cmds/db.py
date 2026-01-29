@@ -87,7 +87,12 @@ def db_backup_cmd(ctx: click.Context, db_backup_file: str | None, no_indexes: bo
         print(f"FAILED: {e}")
 
 
-@db_cmd.command("prune", help="prune blocks from the peak, rolling back the chain by the specified number of blocks")
+@db_cmd.command(
+    "prune",
+    help="Prune blocks from the peak, rolling back the chain by the specified number "
+    "of blocks. It is best to make a backup of the database or rely on the database "
+    "torrent to recover the database.",
+)
 @click.argument("blocks_back", type=int, default=300, required=False)
 @click.option("--db", "in_db_path", default=None, type=click.Path(), help="Specifies which database file to prune")
 @click.pass_context

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping, Sequence
 from contextlib import closing
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 from chia_rs.sized_bytes import bytes32
@@ -10,7 +13,7 @@ from click.testing import CliRunner
 
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.cmd_classes import ChiaCliContext
-from chia.cmds.db import db_prune_cmd
+from chia.cmds.db import db_cmd, db_prune_cmd
 from chia.cmds.db_prune_func import db_prune_func, prune_db
 from chia.util.lock import Lockfile
 
@@ -371,6 +374,171 @@ class TestDbPruneErrors:
             with pytest.raises(RuntimeError) as excinfo:
                 prune_db(db_file, blocks_back=300)
             assert "Database is missing current_peak" in str(excinfo.value)
+
+
+class TestDbPruneSingleTransaction:
+    """Tests for single-transaction behavior and rollback on error."""
+
+    def test_prune_rollback_on_commit_failure(self) -> None:
+        """Test that prune_db rolls back and leaves DB unchanged when commit fails."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            create_test_db(db_file, peak_height, orphan_rate=0)
+
+            original_connect = sqlite3.connect
+
+            class CommitRaisesWrapper:
+                """Wraps a real connection but commit() raises to simulate failure."""
+
+                def __init__(self, path: str | Path) -> None:
+                    self._conn = original_connect(path)
+
+                def commit(self) -> None:
+                    raise sqlite3.OperationalError("simulated disk full")
+
+                def __getattr__(self, name: str) -> object:
+                    return getattr(self._conn, name)
+
+            def connect_commit_raises(path: str | Path) -> CommitRaisesWrapper:
+                return CommitRaisesWrapper(path)
+
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=connect_commit_raises):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=blocks_back)
+                assert "Prune failed" in str(excinfo.value)
+                assert "simulated disk full" in str(excinfo.value)
+
+            # Database should be unchanged (transaction rolled back)
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == peak_height
+                assert get_block_count(conn) == peak_height + 1
+
+    def test_prune_shows_all_step_messages(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that prune prints step messages (UI step 1) in order."""
+        with TempFile() as db_file:
+            peak_height = 50
+            blocks_back = 20
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+                make_hints_table(conn)
+                make_sub_epoch_segments_table(conn)
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+                make_peak(conn, height_to_hash[peak_height])
+                conn.commit()
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            out = capsys.readouterr().out
+            assert "Updating peak..." in out
+            assert "Deleting hints..." in out
+            assert "Deleting coin records..." in out
+            assert "Resetting spent coin records..." in out
+            assert "Deleting blocks..." in out
+            assert "Cleaning up sub-epoch segments..." in out
+            assert "Pruning complete" in out
+
+    def test_prune_integrity_check_failure(self) -> None:
+        """Test that prune_db raises when PRAGMA integrity_check returns non-ok."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+            original_connect = sqlite3.connect
+
+            class IntegrityFailCursor:
+                def fetchone(self) -> tuple[str, ...]:
+                    return ("corrupt",)
+
+                def close(self) -> None:
+                    pass
+
+            class IntegrityFailWrapper:
+                def __init__(self, path: str | Path) -> None:
+                    self._conn = original_connect(path)
+
+                def execute(
+                    self,
+                    sql: str,
+                    parameters: Sequence[Any] | Mapping[str, Any] = (),
+                    *args: Any,
+                    **kwargs: Any,
+                ) -> IntegrityFailCursor | object:
+                    if sql == "PRAGMA integrity_check":
+                        return IntegrityFailCursor()
+                    return self._conn.execute(sql, parameters, *args, **kwargs)
+
+                def __getattr__(self, name: str) -> object:
+                    return getattr(self._conn, name)
+
+            with patch(
+                "chia.cmds.db_prune_func.sqlite3.connect",
+                side_effect=IntegrityFailWrapper,
+            ):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=10)
+                assert "Database integrity check failed" in str(excinfo.value)
+                assert "corrupt" in str(excinfo.value)
+
+    def test_prune_progress_callback_prints_dots(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that progress handler prints dots during long operations (line 149)."""
+        with TempFile() as db_file:
+            # Large prune so DELETE runs enough VDBE instructions to trigger progress callback
+            peak_height = 8000
+            blocks_back = 7000
+            create_test_db(db_file, peak_height, orphan_rate=0)
+            prune_db(db_file, blocks_back=blocks_back)
+            out = capsys.readouterr().out
+            # Progress handler prints "." every 10 callbacks (every 100k VDBE instructions)
+            assert "." in out
+
+
+class TestDbPruneFuncErrorHandling:
+    """Tests for db_prune_func error handling (lines 43-46)."""
+
+    def test_db_prune_func_sqlite_error_wraps_as_runtime(self, tmp_path: Path) -> None:
+        """Test db_prune_func wraps sqlite3.Error from prune_db as RuntimeError."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=100, orphan_rate=0)
+
+        def prune_db_raises_sqlite(*args: object, **kwargs: object) -> None:
+            raise sqlite3.OperationalError("disk full")
+
+        with patch("chia.cmds.db_prune_func.prune_db", side_effect=prune_db_raises_sqlite):
+            with pytest.raises(RuntimeError) as excinfo:
+                db_prune_func(root_path, in_db_path=db_file, blocks_back=10)
+            assert "Database error during prune" in str(excinfo.value)
+            assert "disk full" in str(excinfo.value)
+
+    def test_db_prune_func_generic_exception_wraps_as_runtime(self, tmp_path: Path) -> None:
+        """Test db_prune_func wraps generic Exception from prune_db as RuntimeError."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=100, orphan_rate=0)
+
+        def prune_db_raises_value_error(*args: object, **kwargs: object) -> None:
+            raise ValueError("unexpected oops")
+
+        with patch("chia.cmds.db_prune_func.prune_db", side_effect=prune_db_raises_value_error):
+            with pytest.raises(RuntimeError) as excinfo:
+                db_prune_func(root_path, in_db_path=db_file, blocks_back=10)
+            assert "Unexpected error during prune" in str(excinfo.value)
+            assert "unexpected oops" in str(excinfo.value)
 
 
 class TestDbPruneFuncWithLock:
@@ -888,13 +1056,13 @@ class TestDbPruneErrorCases:
 
 
 class TestDbPruneLargeDatabase:
-    """Tests for large databases that trigger batch processing."""
+    """Tests for large databases (single transaction with UI progress)."""
 
-    def test_prune_many_blocks_shows_progress(self) -> None:
-        """Test pruning >1000 blocks shows progress output."""
+    def test_prune_many_blocks_shows_progress(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test pruning >1000 blocks shows step messages and completes."""
         with TempFile() as db_file:
             peak_height = 1500
-            blocks_back = 1200  # More than batch_size of 1000
+            blocks_back = 1200
             create_test_db(db_file, peak_height, orphan_rate=0)
 
             prune_db(db_file, blocks_back=blocks_back)
@@ -903,9 +1071,13 @@ class TestDbPruneLargeDatabase:
             with closing(sqlite3.connect(db_file)) as conn:
                 assert get_peak_height(conn) == new_peak
                 assert get_block_count(conn) == new_peak + 1
+            out = capsys.readouterr().out
+            assert "Updating peak..." in out
+            assert "Deleting blocks..." in out
+            assert "Pruning complete" in out
 
-    def test_prune_many_coins_shows_progress(self) -> None:
-        """Test pruning >1000 coins shows progress output."""
+    def test_prune_many_coins_shows_progress(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test pruning >1000 coins shows step messages and completes."""
         with TempFile() as db_file:
             peak_height = 100
             blocks_back = 30
@@ -927,7 +1099,7 @@ class TestDbPruneLargeDatabase:
 
                 make_peak(conn, height_to_hash[peak_height])
 
-                # Add >1000 coins above new_peak to trigger batch deletion progress
+                # Add >1000 coins above new_peak
                 for i in range(1500):
                     coin_name = rand_hash()
                     add_coin_record(conn, coin_name, 80, 0, 1, rand_hash(), rand_hash(), 1000)
@@ -948,6 +1120,9 @@ class TestDbPruneLargeDatabase:
                     conn.execute("SELECT COUNT(*) FROM coin_record WHERE confirmed_index > ?", (new_peak,))
                 ) as cursor:
                     assert cursor.fetchone()[0] == 0
+            out = capsys.readouterr().out
+            assert "Deleting coin records..." in out
+            assert "Pruning complete" in out
 
 
 class TestDbPruneCli:
@@ -1056,3 +1231,138 @@ full_node:
         assert result.exit_code == 0  # Click doesn't set exit code for caught exceptions
         assert "FAILED" in result.output
         assert "Database file does not exist" in result.output
+
+
+class TestDbCmdCoverage:
+    """Tests for db.py coverage: db_cmd (line 16), upgrade/validate/backup success and FAILED."""
+
+    def test_db_cmd_invokable(self, tmp_path: Path) -> None:
+        """Test db_cmd() callback runs when group is invoked with subcommand (line 16)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=50, orphan_rate=0)
+        ctx = ChiaCliContext(root_path=root_path)
+        # Invoke the group (db_cmd) with a subcommand so the group callback runs
+        result = CliRunner().invoke(db_cmd, ["prune", "10"], obj=ctx.to_click())
+        assert result.exit_code == 0
+        assert "Pruning complete" in result.output
+
+    def test_db_upgrade_cmd_success_path(self, tmp_path: Path) -> None:
+        """Test db upgrade command success path (lines 43-49)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        ctx = ChiaCliContext(root_path=root_path)
+        with patch("chia.cmds.db.db_upgrade_func") as mock_upgrade:
+            result = CliRunner().invoke(
+                db_cmd, ["upgrade", "--input", "/nonexistent", "--output", "/nonexistent"], obj=ctx.to_click()
+            )
+            mock_upgrade.assert_called_once()
+            assert result.exit_code == 0
+            assert "FAILED" not in result.output
+
+    def test_db_upgrade_cmd_prints_failed_on_runtime_error(self, tmp_path: Path) -> None:
+        """Test db upgrade command prints FAILED on RuntimeError (lines 50-51)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        ctx = ChiaCliContext(root_path=root_path)
+        with patch("chia.cmds.db.db_upgrade_func", side_effect=RuntimeError("upgrade failed")):
+            result = CliRunner().invoke(db_cmd, ["upgrade"], obj=ctx.to_click())
+            assert result.exit_code == 0
+            assert "FAILED" in result.output
+            assert "upgrade failed" in result.output
+
+    def test_db_validate_cmd_success_path(self, tmp_path: Path) -> None:
+        """Test db validate command success path (lines 65-70)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        db_file = root_path / "db" / "blockchain_v2_mainnet.sqlite"
+        db_file.parent.mkdir()
+        create_test_db(db_file, peak_height=10, orphan_rate=0)
+        ctx = ChiaCliContext(root_path=root_path)
+        with patch("chia.cmds.db.db_validate_func") as mock_validate:
+            result = CliRunner().invoke(db_cmd, ["validate", "--db", str(db_file)], obj=ctx.to_click())
+            mock_validate.assert_called_once()
+            assert result.exit_code == 0
+            assert "FAILED" not in result.output
+
+    def test_db_validate_cmd_prints_failed_on_runtime_error(self, tmp_path: Path) -> None:
+        """Test db validate command prints FAILED on RuntimeError (lines 71-72)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        ctx = ChiaCliContext(root_path=root_path)
+        with patch("chia.cmds.db.db_validate_func", side_effect=RuntimeError("validate failed")):
+            result = CliRunner().invoke(db_cmd, ["validate"], obj=ctx.to_click())
+            assert result.exit_code == 0
+            assert "FAILED" in result.output
+            assert "validate failed" in result.output
+
+    def test_db_backup_cmd_success_path(self, tmp_path: Path) -> None:
+        """Test db backup command success path (lines 80-85)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=10, orphan_rate=0)
+        backup_file = tmp_path / "backup.sqlite"
+        ctx = ChiaCliContext(root_path=root_path)
+        result = CliRunner().invoke(db_cmd, ["backup", "--backup_file", str(backup_file)], obj=ctx.to_click())
+        assert result.exit_code == 0
+        assert "FAILED" not in result.output
+        assert backup_file.exists()
+
+    def test_db_backup_cmd_prints_failed_on_runtime_error(self, tmp_path: Path) -> None:
+        """Test db backup command prints FAILED on RuntimeError (lines 86-87)."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        ctx = ChiaCliContext(root_path=root_path)
+        with patch("chia.cmds.db.db_backup_func", side_effect=RuntimeError("backup failed")):
+            result = CliRunner().invoke(db_cmd, ["backup"], obj=ctx.to_click())
+            assert result.exit_code == 0
+            assert "FAILED" in result.output
+            assert "backup failed" in result.output
