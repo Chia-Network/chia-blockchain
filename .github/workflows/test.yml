@@ -221,7 +221,7 @@ jobs:
             matrix: "3.12"
 
     steps:
-      - uses: re-actors/alls-green@release/v1.2
+      - uses: re-actors/alls-green@v1.2.2
         id: alls-green
         with:
           jobs: ${{ toJSON(needs) }}
