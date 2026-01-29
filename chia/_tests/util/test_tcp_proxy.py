@@ -709,17 +709,17 @@ class TestProxyConnectionErrorHandling:
         async def handle_echo(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
             try:
                 while True:
-                    data = await reader.read(100)
-                    if not data:
+                    data = await reader.read(100)  # pragma: no cover
+                    if not data:  # pragma: no cover
                         break
-                    writer.write(data)
-                    await writer.drain()
+                    writer.write(data)  # pragma: no cover
+                    await writer.drain()  # pragma: no cover
             except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
                 # Expected when connection is reset
                 pass
             finally:
                 try:
-                    writer.close()
+                    writer.close()  # pragma: no cover
                 except Exception:  # pragma: no cover
                     pass
                 # Do not await writer.wait_closed() - can raise in selector callback when peer resets
@@ -786,8 +786,8 @@ class TestProxyConnectionErrorHandling:
                         data = await reader.read(100)
                     except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
                         break
-                    if not data:
-                        break
+                    if not data:  # pragma: no cover
+                        break  # pragma: no cover
                     try:
                         writer.write(data)
                         await writer.drain()
@@ -897,7 +897,7 @@ class TestProxyConnectionErrorHandling:
                     try:
                         client_writer.close()
                         await client_writer.wait_closed()
-                    except (ConnectionResetError, BrokenPipeError, OSError):
+                    except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
                         pass
         finally:
             dummy_server.close()

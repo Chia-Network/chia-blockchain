@@ -1149,8 +1149,8 @@ async def test_weight_proof_timeout_error(
 
         start_time = time.time()
         try:
-            _wp_response = await connection.call_api(FullNodeAPI.request_proof_of_weight, request)
-            _download_time = time.time() - start_time
+            _wp_response = await connection.call_api(FullNodeAPI.request_proof_of_weight, request)  # pragma: no cover
+            _download_time = time.time() - start_time  # pragma: no cover
             await connection.close()  # pragma: no cover - call_api is mocked to raise
             assert False, "Should have raised TimeoutError"  # pragma: no cover - call_api is mocked to raise
         except asyncio.TimeoutError:
@@ -1217,8 +1217,8 @@ async def test_weight_proof_general_exception(
 
         start_time = time.time()
         try:
-            _wp_response = await connection.call_api(FullNodeAPI.request_proof_of_weight, request)
-            _download_time = time.time() - start_time
+            _wp_response = await connection.call_api(FullNodeAPI.request_proof_of_weight, request)  # pragma: no cover
+            _download_time = time.time() - start_time  # pragma: no cover
             await connection.close()  # pragma: no cover - call_api is mocked to raise
             assert False, "Should have raised ValueError"  # pragma: no cover - call_api is mocked to raise
         except ValueError:
