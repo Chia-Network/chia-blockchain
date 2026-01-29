@@ -840,11 +840,11 @@ async def test_slow_weight_proof_download(
 
         log.info(f"TEST 2 PASSED: Weight proof downloaded and validated in {download_time_2:.2f}s")
         log.info("  Progress-based timeout is working correctly!")
-    elif runtime_error_in_logs:  # pragma: no cover - same logic covered in test_slow_weight_proof_download_error_path_lines_829_831
+    elif (
+        runtime_error_in_logs
+    ):  # pragma: no cover - same logic covered in test_slow_weight_proof_download_error_path_lines_829_831
         # The websocket timed out and RuntimeError was logged - this is the bug we need to fix
-        assert (
-            False
-        ), (
+        assert False, (
             f"TEST 2 FAILED: Weight proof download timed out after {download_time_2:.2f}s. "
             f"RuntimeError 'Weight proof did not arrive in time from peer' was logged. "
             f"Websocket improvements are needed to handle slow connections without timing out."
