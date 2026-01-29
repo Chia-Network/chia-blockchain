@@ -70,7 +70,7 @@ def compare_coin_records(records1: dict[bytes32, CoinRecord], records2: dict[byt
     "num_blocks,blocks_back,compare_height",
     [
         (200, 50, 149),  # many coins: exercises compare_coin_records branch checks (>= 3 records)
-        (2, 1, 0),      # few coins at height <= 0: exercises else branch (< 3 records)
+        (2, 1, 0),  # few coins at height <= 0: exercises else branch (< 3 records)
     ],
 )
 async def test_full_node_starts_after_prune(
@@ -125,9 +125,7 @@ async def test_full_node_starts_after_prune(
                 assert peak.height == num_blocks - 1
 
                 # Store coin records before pruning for comparison
-                records_before_prune = await get_all_coin_records(
-                    full_node.coin_store, uint32(compare_height)
-                )
+                records_before_prune = await get_all_coin_records(full_node.coin_store, uint32(compare_height))
                 num_coins_before = len(records_before_prune)
                 log.info(f"Coin records at height <= {compare_height} before prune: {num_coins_before}")
 
@@ -222,9 +220,7 @@ async def test_full_node_starts_after_prune(
                 )
 
                 # Verify coin records at heights <= compare_height are preserved
-                records_after_prune = await get_all_coin_records(
-                    full_node2.coin_store, uint32(compare_height)
-                )
+                records_after_prune = await get_all_coin_records(full_node2.coin_store, uint32(compare_height))
                 log.info(f"Coin records at height <= {compare_height} after prune: {len(records_after_prune)}")
 
                 # Compare coin records
