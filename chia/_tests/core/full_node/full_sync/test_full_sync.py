@@ -1001,7 +1001,7 @@ async def test_weight_proof_none_response(
         # Verify the error handling (covers line 567)
         assert wp_response is None
         assert error == "Weight proof response was None (websocket timeout)"
-        assert download_time > 0.0
+        assert download_time >= 0.0  # may be 0.0 when mock returns immediately (e.g. Windows)
     finally:
         # Restore original method
         monkeypatch.setattr(WSChiaConnection, "call_api", original_call_api)
