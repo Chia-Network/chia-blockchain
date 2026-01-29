@@ -292,6 +292,49 @@ class TestProxyConnectionUnit:
         assert client_writer.wait_closed.call_count >= 1
 
     @pytest.mark.anyio
+    async def test_proxy_connection_socket_options_branches(self) -> None:
+        """Cover client and server socket option branches (lines 96-102, 109-115)."""
+        client_reader = AsyncMock(spec=asyncio.StreamReader)
+        client_reader.read = AsyncMock(return_value=b"")
+
+        client_sock = MagicMock()
+        client_writer = AsyncMock(spec=asyncio.StreamWriter)
+        client_writer.get_extra_info = MagicMock(return_value=client_sock)
+        client_writer.write = MagicMock()
+        client_writer.drain = AsyncMock()
+        client_writer.close = MagicMock()
+        client_writer.wait_closed = AsyncMock()
+
+        server_reader = AsyncMock(spec=asyncio.StreamReader)
+        server_reader.read = AsyncMock(return_value=b"")
+
+        server_sock = MagicMock()
+        server_writer = AsyncMock(spec=asyncio.StreamWriter)
+        server_writer.get_extra_info = MagicMock(return_value=server_sock)
+        server_writer.write = MagicMock()
+        server_writer.drain = AsyncMock()
+        server_writer.close = MagicMock()
+        server_writer.wait_closed = AsyncMock()
+
+        config = ThrottleConfig(upload_bytes_per_sec=1000, download_bytes_per_sec=1000)
+
+        with patch(
+            "chia._tests.util.tcp_proxy.asyncio.open_connection", AsyncMock(return_value=(server_reader, server_writer))
+        ):
+            await proxy_connection(
+                client_reader,
+                client_writer,
+                "127.0.0.1",
+                9999,
+                config,
+            )
+
+        # Client socket options (lines 97-102)
+        assert client_sock.setsockopt.call_count == 2
+        # Server socket options (lines 111-115)
+        assert server_sock.setsockopt.call_count == 2
+
+    @pytest.mark.anyio
     async def test_proxy_connection_forward_exception_paths(self) -> None:
         """Cover exception and finally in forward tasks (lines 135-139, 145-146, 155-159, 165-166)."""
         client_reader = AsyncMock(spec=asyncio.StreamReader)
@@ -671,14 +714,14 @@ class TestProxyConnectionErrorHandling:
                         break
                     writer.write(data)
                     await writer.drain()
-            except (ConnectionResetError, BrokenPipeError, OSError):
+            except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
                 # Expected when connection is reset
-                pass  # pragma: no cover
+                pass
             finally:
                 try:
                     writer.close()
-                except Exception:
-                    pass  # pragma: no cover
+                except Exception:  # pragma: no cover
+                    pass
                 # Do not await writer.wait_closed() - can raise in selector callback when peer resets
 
         echo_server = await asyncio.start_server(handle_echo, self_hostname, 0)
@@ -701,8 +744,8 @@ class TestProxyConnectionErrorHandling:
                 try:
                     client_writer.write(b"test data")
                     await client_writer.drain()
-                except (ConnectionResetError, BrokenPipeError, OSError):
-                    pass  # pragma: no cover
+                except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                    pass
 
                 # Close the server connection to trigger exception in forward_client_to_server
                 echo_server.close()
@@ -712,8 +755,8 @@ class TestProxyConnectionErrorHandling:
                 try:
                     client_writer.write(b"more data")
                     await client_writer.drain()
-                except (ConnectionResetError, BrokenPipeError, OSError):
-                    pass  # pragma: no cover
+                except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                    pass
 
                 # Wait a bit for the exception to be handled by the proxy
                 await asyncio.sleep(0.2)
@@ -722,8 +765,8 @@ class TestProxyConnectionErrorHandling:
                 try:
                     client_writer.close()
                     await client_writer.wait_closed()
-                except (ConnectionResetError, BrokenPipeError, OSError):
-                    pass  # pragma: no cover
+                except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                    pass
 
         finally:
             echo_server.close()
@@ -741,20 +784,20 @@ class TestProxyConnectionErrorHandling:
                 while True:
                     try:
                         data = await reader.read(100)
-                    except (ConnectionResetError, BrokenPipeError, OSError):
-                        break  # pragma: no cover
+                    except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                        break
                     if not data:
-                        break  # pragma: no cover
+                        break
                     try:
                         writer.write(data)
                         await writer.drain()
-                    except (ConnectionResetError, BrokenPipeError, OSError):
-                        break  # pragma: no cover
+                    except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                        break
             finally:
                 try:
                     writer.close()
-                except Exception:
-                    pass  # pragma: no cover
+                except Exception:  # pragma: no cover
+                    pass
                 # Do not await writer.wait_closed() - can raise in selector callback when peer resets
 
         echo_server = await asyncio.start_server(handle_echo, self_hostname, 0)
@@ -777,15 +820,15 @@ class TestProxyConnectionErrorHandling:
                 try:
                     client_writer.write(b"hello")
                     await client_writer.drain()
-                except (ConnectionResetError, BrokenPipeError, OSError):
-                    pass  # pragma: no cover
+                except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                    pass
 
                 # Close client connection to trigger exception in forward_server_to_client
                 try:
                     client_writer.close()
                     await client_writer.wait_closed()
-                except (ConnectionResetError, BrokenPipeError, OSError):
-                    pass  # pragma: no cover
+                except (ConnectionResetError, BrokenPipeError, OSError):  # pragma: no cover
+                    pass
 
                 # Wait a bit for the exception to be handled by the proxy
                 await asyncio.sleep(0.2)
@@ -813,8 +856,8 @@ class TestProxyConnectionErrorHandling:
                 )
                 # If connection succeeds (unlikely), try to write
                 # This will trigger an error when proxy tries to connect to non-existent server
-                client_writer.write(b"test")
-                await client_writer.drain()
+                client_writer.write(b"test")  # pragma: no cover
+                await client_writer.drain()  # pragma: no cover
                 await asyncio.sleep(0.1)  # Give time for exception handling
                 client_writer.close()
                 await client_writer.wait_closed()

@@ -840,11 +840,11 @@ async def test_slow_weight_proof_download(
 
         log.info(f"TEST 2 PASSED: Weight proof downloaded and validated in {download_time_2:.2f}s")
         log.info("  Progress-based timeout is working correctly!")
-    elif runtime_error_in_logs:
+    elif runtime_error_in_logs:  # pragma: no cover - same logic covered in test_slow_weight_proof_download_error_path_lines_829_831
         # The websocket timed out and RuntimeError was logged - this is the bug we need to fix
         assert (
             False
-        ), (  # pragma: no cover - same logic covered in test_slow_weight_proof_download_error_path_lines_829_831
+        ), (
             f"TEST 2 FAILED: Weight proof download timed out after {download_time_2:.2f}s. "
             f"RuntimeError 'Weight proof did not arrive in time from peer' was logged. "
             f"Websocket improvements are needed to handle slow connections without timing out."
@@ -1151,8 +1151,8 @@ async def test_weight_proof_timeout_error(
         try:
             _wp_response = await connection.call_api(FullNodeAPI.request_proof_of_weight, request)
             _download_time = time.time() - start_time
-            await connection.close()
-            assert False, "Should have raised TimeoutError"  # pragma: no cover
+            await connection.close()  # pragma: no cover - call_api is mocked to raise
+            assert False, "Should have raised TimeoutError"  # pragma: no cover - call_api is mocked to raise
         except asyncio.TimeoutError:
             # This covers lines 571-576: TimeoutError exception handling
             _download_time = time.time() - start_time
@@ -1219,8 +1219,8 @@ async def test_weight_proof_general_exception(
         try:
             _wp_response = await connection.call_api(FullNodeAPI.request_proof_of_weight, request)
             _download_time = time.time() - start_time
-            await connection.close()
-            assert False, "Should have raised ValueError"  # pragma: no cover
+            await connection.close()  # pragma: no cover - call_api is mocked to raise
+            assert False, "Should have raised ValueError"  # pragma: no cover - call_api is mocked to raise
         except ValueError:
             # This covers lines 577-580: General Exception handling
             _download_time = time.time() - start_time
@@ -1488,7 +1488,7 @@ async def test_slow_weight_proof_download_error_path_lines_829_831(
     # This will execute lines 807, 829, and 831
     if error_2 is None:
         # Success path - not what we're testing
-        assert False, "Should have error to test error path"
+        assert False, "Should have error to test error path"  # pragma: no cover
     elif runtime_error_in_logs:
         # LINE 829: This elif branch will be executed
         # LINE 831: This assert False will be executed and raise AssertionError
@@ -1572,10 +1572,10 @@ async def test_slow_weight_proof_download_error_path_line_838(
     # This will execute lines 807 and 838
     if error_2 is None:
         # Success path - not what we're testing
-        assert False, "Should have error to test error path"
+        assert False, "Should have error to test error path"  # pragma: no cover
     elif runtime_error_in_logs:
         # This branch should not be taken
-        assert False, "Should not have runtime_error_in_logs"
+        assert False, "Should not have runtime_error_in_logs"  # pragma: no cover
     else:
         # LINE 838: This else branch will be executed
         # The assert False will be executed and raise AssertionError

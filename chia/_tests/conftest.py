@@ -973,6 +973,12 @@ async def get_b_tools_1(get_temp_keyring):
         yield bt
 
 
+@pytest.mark.anyio
+async def test_get_b_tools_1_fixture(get_b_tools_1: BlockTools) -> None:
+    """Exercise get_b_tools_1 fixture so its body is covered."""
+    assert get_b_tools_1 is not None
+
+
 @pytest.fixture(scope="function")
 async def get_b_tools(get_temp_keyring):
     async with create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring) as local_b_tools:
