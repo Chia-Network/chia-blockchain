@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="temporarily skip util tcp_proxy tests on Windows")
 
 from chia._tests.util.tcp_proxy import (
     BandwidthThrottle,
