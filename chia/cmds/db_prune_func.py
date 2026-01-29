@@ -177,26 +177,13 @@ def prune_db(db_path: Path, *, blocks_back: int) -> None:
                 pass  # coin_record table might not exist in minimal DBs
 
             # Reset spent_index for coins spent above new peak (make them unspent).
+            # Use 0 for unspent; the schema uses 0 (not -1) as the canonical unspent value.
             print("Resetting spent coin records...")
             try:
                 conn.execute(
                     """
                     UPDATE coin_record
-                    SET spent_index = CASE
-                        WHEN
-                            coinbase = 0 AND
-                            EXISTS (
-                                SELECT 1
-                                FROM coin_record AS parent
-                                WHERE
-                                    parent.coin_name = coin_record.coin_parent AND
-                                    parent.puzzle_hash = coin_record.puzzle_hash AND
-                                    parent.amount = coin_record.amount AND
-                                    parent.spent_index > 0
-                            )
-                        THEN -1
-                        ELSE 0
-                    END
+                    SET spent_index = 0
                     WHERE spent_index > ?
                     """,
                     (new_peak_height,),

@@ -925,8 +925,12 @@ class TestDbPruneWithCoinRecords:
                 for i in range(5):
                     coin_name = rand_hash()
                     spent_coins.append(coin_name)
-                    # Confirmed at height 50, spent at height 80 (above new_peak)
+                    # Confirmed at height 50, spent at height 80 (above new_peak); coinbase=1
                     add_coin_record(conn, coin_name, 50, 80, 1, rand_hash(), rand_hash(), 1000)
+                # Non-coinbase coin spent above new_peak (exercises reset for coinbase=0)
+                non_coinbase_spent_above = rand_hash()
+                spent_coins.append(non_coinbase_spent_above)
+                add_coin_record(conn, non_coinbase_spent_above, 50, 80, 0, rand_hash(), rand_hash(), 1000)
 
                 # Add coins spent below new_peak (should remain spent)
                 for i in range(3):
