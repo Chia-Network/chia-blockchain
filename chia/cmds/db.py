@@ -6,6 +6,7 @@ import click
 
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.db_backup_func import db_backup_func
+from chia.cmds.db_prune_func import db_prune_func
 from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
 
@@ -81,6 +82,21 @@ def db_backup_cmd(ctx: click.Context, db_backup_file: str | None, no_indexes: bo
             ChiaCliContext.set_default(ctx).root_path,
             None if db_backup_file is None else Path(db_backup_file),
             no_indexes=no_indexes,
+        )
+    except RuntimeError as e:
+        print(f"FAILED: {e}")
+
+
+@db_cmd.command("prune", help="prune blocks from the peak, rolling back the chain by the specified number of blocks")
+@click.argument("blocks_back", type=int, default=300, required=False)
+@click.option("--db", "in_db_path", default=None, type=click.Path(), help="Specifies which database file to prune")
+@click.pass_context
+def db_prune_cmd(ctx: click.Context, blocks_back: int, in_db_path: str | None) -> None:
+    try:
+        db_prune_func(
+            ChiaCliContext.set_default(ctx).root_path,
+            None if in_db_path is None else Path(in_db_path),
+            blocks_back=blocks_back,
         )
     except RuntimeError as e:
         print(f"FAILED: {e}")
