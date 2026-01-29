@@ -321,7 +321,7 @@ reward_chain_block = RewardChainBlock(
     g2_element,
     vdf_info,
     vdf_info,
-    None,
+    None,  # header_mmr_root - None for test
     False,
 )
 
@@ -1059,7 +1059,7 @@ sub_epoch_summary = SubEpochSummary(
     uint8(4),
     uint64(14666749803532899046),
     uint64(10901191956946573440),
-    None,
+    None,  # challenge_merkle_root (pre-fork)
 )
 
 new_peak_timelord = timelord_protocol.NewPeakTimelord(
@@ -1085,6 +1085,7 @@ new_unfinished_block_timelord = timelord_protocol.NewUnfinishedBlockTimelord(
     foliage,
     sub_epoch_summary,
     bytes32(bytes.fromhex("0f90296b605904a794e4e98852e3b22e0d9bee2fa07abb12df6cecbdb778e1e5")),
+    None,
 )
 
 new_infusion_point_vdf = timelord_protocol.NewInfusionPointVDF(

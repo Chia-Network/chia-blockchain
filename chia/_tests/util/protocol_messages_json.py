@@ -2719,6 +2719,7 @@ new_unfinished_block_timelord_json: dict[str, Any] = {
         "challenge_merkle_root": None,
     },
     "rc_prev": "0x0f90296b605904a794e4e98852e3b22e0d9bee2fa07abb12df6cecbdb778e1e5",
+    "header_mmr_root": None,
 }
 
 new_infusion_point_vdf_json: dict[str, Any] = {

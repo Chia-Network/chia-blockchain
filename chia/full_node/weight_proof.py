@@ -37,6 +37,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
     validate_pospace_and_get_required_iters,
 )
+from chia.consensus.stub_mmr_manager import StubMMRManager
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
@@ -540,7 +541,7 @@ class WeightProofHandler:
                     curr.finished_sub_slots,
                     block_record.overflow,
                     None if curr.height == 0 else blocks[curr.prev_header_hash],
-                    BlockCache(blocks),
+                    BlockCache(blocks, self.constants.GENESIS_CHALLENGE),
                     block_record.sp_total_iters(self.constants),
                     block_record.sp_iters(self.constants),
                 )
@@ -719,7 +720,13 @@ def _create_sub_epoch_data(
     #  New work difficulty and iterations per sub-slot
     sub_slot_iters = sub_epoch_summary.new_sub_slot_iters
     new_difficulty = sub_epoch_summary.new_difficulty
-    return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty, None)
+    return SubEpochData(
+        reward_chain_hash,
+        previous_sub_epoch_overflows,
+        sub_slot_iters,
+        new_difficulty,
+        sub_epoch_summary.challenge_merkle_root,
+    )
 
 
 async def _challenge_block_vdfs(
@@ -733,7 +740,7 @@ async def _challenge_block_vdfs(
         header_block.finished_sub_slots,
         block_rec.overflow,
         None if header_block.height == 0 else sub_blocks[header_block.prev_header_hash],
-        BlockCache(sub_blocks),
+        BlockCache(sub_blocks, constants.GENESIS_CHALLENGE),
         block_rec.sp_total_iters(constants),
         block_rec.sp_iters(constants),
     )
@@ -883,7 +890,7 @@ def _map_sub_epoch_summaries(
             data.num_blocks_overflow,
             data.new_difficulty,
             data.new_sub_slot_iters,
-            None,
+            data.challenge_merkle_root,
         )
 
         if idx < len(sub_epoch_data) - 1:
@@ -917,7 +924,7 @@ def _validate_summaries_weight(
 ) -> bool:
     num_over = summaries[-1].num_blocks_overflow
     ses_end_height = (len(summaries) - 1) * constants.SUB_EPOCH_BLOCKS + num_over - 1
-    curr = None
+    curr: HeaderBlock | None = None
     for block in weight_proof.recent_chain_data:
         if block.reward_chain_block.height == ses_end_height:
             curr = block
@@ -1211,7 +1218,7 @@ def validate_recent_blocks(
 ) -> tuple[bool, list[bytes]]:
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     summaries = summaries_from_bytes(summaries_bytes)
-    sub_blocks = BlockCache({})
+    sub_blocks = BlockCache({}, mmr_manager=StubMMRManager())
     first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
     ses_idx = len(summaries) - len(first_ses_idx)
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
@@ -1265,7 +1272,13 @@ def validate_recent_blocks(
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 expected_vs = ValidationState(ssi, diff, None)
                 caluclated_required_iters, error = validate_finished_header_block(
-                    constants, sub_blocks, block, False, expected_vs, ses_blocks > 2
+                    constants,
+                    sub_blocks,
+                    block,
+                    False,
+                    expected_vs,
+                    ses_blocks > 2,
+                    skip_commitment_validation=True,
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
@@ -1282,6 +1295,8 @@ def validate_recent_blocks(
             validated_block_count += 1
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
+        # Convert to new format for block record creation
+
         block_record = header_block_to_sub_block_record(
             constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
         )

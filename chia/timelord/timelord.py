@@ -672,7 +672,7 @@ class Timelord:
                         block.reward_chain_block.reward_chain_sp_signature,
                         rc_info,
                         icc_info,
-                        None,  # header_mmr_root
+                        block.header_mmr_root,  # MMR root from full node
                         is_transaction_block,
                     )
                     if self.last_state.state_type == StateType.FIRST_SUB_SLOT:
