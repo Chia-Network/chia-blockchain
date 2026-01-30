@@ -969,7 +969,9 @@ def get_temp_keyring():
 
 @pytest.fixture(scope="function")
 async def get_b_tools_1(get_temp_keyring):
-    async with create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring) as bt:  # pragma: no cover
+    async with create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring
+    ) as bt:  # pragma: no cover
         yield bt  # pragma: no cover - covered when test runs; may not appear in CI merged coverage
 
 
