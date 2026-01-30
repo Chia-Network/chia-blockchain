@@ -204,6 +204,7 @@ class TCPProxy:
         self.server: asyncio.Server | None = None
         self.server_task: asyncio.Task[None] | None = None
         self._actual_port: int | None = None
+        self._active_connections: set[asyncio.Task[None]] = set()
 
     @property
     def proxy_port(self) -> int:
@@ -224,11 +225,17 @@ class TCPProxy:
             """Handle a new client connection."""
             client_addr = writer.get_extra_info("peername")
             log.debug(f"Proxy accepted connection from {client_addr}")
+            task = asyncio.current_task()
+            if task is not None:
+                self._active_connections.add(task)
             try:
-                await proxy_connection(reader, writer, self.server_host, self.server_port, self.config)
-            except Exception as e:
-                log.debug(f"Error proxying connection from {client_addr}: {e}")
+                try:
+                    await proxy_connection(reader, writer, self.server_host, self.server_port, self.config)
+                except Exception as e:
+                    log.debug(f"Error proxying connection from {client_addr}: {e}")
             finally:
+                if task is not None:
+                    self._active_connections.discard(task)
                 log.debug(f"Proxy closed connection from {client_addr}")
 
         # Use reuse_address=True to allow immediate reuse of the address/port
@@ -256,9 +263,19 @@ class TCPProxy:
 
     async def stop(self) -> None:
         """Stop the proxy server."""
+        # Cancel all active connection handlers so they don't block wait_closed()
+        tasks = list(self._active_connections)
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
         if self.server:
             self.server.close()
-            await self.server.wait_closed()
+            try:
+                await asyncio.wait_for(self.server.wait_closed(), timeout=2.0)
+            except asyncio.TimeoutError:
+                log.warning("Server did not close within timeout")
             log.info("TCP proxy stopped")
 
     async def __aenter__(self) -> Self:

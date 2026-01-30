@@ -712,7 +712,7 @@ class TestProxyConnectionErrorHandling:
     ) -> None:
         """Test exception handling in forward_client_to_server (covers lines 138-139, 145-146)."""
 
-        # Create a simple echo server (avoid wait_closed() - can raise in selector callback when peer resets)
+        # Create a simple echo server (close + wait_closed with timeout to avoid hangs on Windows)
         async def handle_echo(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
             try:  # pragma: no cover
                 while True:  # pragma: no cover
@@ -725,11 +725,11 @@ class TestProxyConnectionErrorHandling:
                 # Expected when connection is reset
                 pass
             finally:
-                try:  # pragma: no cover
-                    writer.close()  # pragma: no cover
-                except Exception:  # pragma: no cover
-                    pass
-                # Do not await writer.wait_closed() - can raise in selector callback when peer resets
+                try:
+                    writer.close()
+                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+                except (Exception, asyncio.TimeoutError):
+                    pass  # Already closed or timeout
 
         echo_server = await asyncio.start_server(handle_echo, self_hostname, 0)
         echo_port = echo_server.sockets[0].getsockname()[1]
@@ -803,9 +803,9 @@ class TestProxyConnectionErrorHandling:
             finally:
                 try:
                     writer.close()
-                except Exception:  # pragma: no cover
-                    pass
-                # Do not await writer.wait_closed() - can raise in selector callback when peer resets
+                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+                except (Exception, asyncio.TimeoutError):
+                    pass  # Already closed or timeout
 
         echo_server = await asyncio.start_server(handle_echo, self_hostname, 0)
         echo_port = echo_server.sockets[0].getsockname()[1]
