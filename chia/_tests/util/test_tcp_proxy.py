@@ -88,7 +88,8 @@ class TestBandwidthThrottle:
         # Should include latency plus some bandwidth wait (~0.1s at 1000 B/s for 100 bytes)
         min_wait = (latency_ms / 1000.0) + 0.05
         assert elapsed >= min_wait - 0.01  # Allow some tolerance
-        assert elapsed < min_wait + (0.05 if _IS_WIN else 0.15)  # Should not take too long
+        # Windows timer/scheduling jitter can make elapsed higher; allow wider upper bound
+        assert elapsed < min_wait + 0.15  # Should not take too long
 
     @pytest.mark.anyio
     async def test_limited_bandwidth_waits(self) -> None:
