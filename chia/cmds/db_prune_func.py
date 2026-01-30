@@ -327,7 +327,15 @@ def prune_db(
 
             conn.commit()
 
-            # Summary (read after commit).
+        except Exception as e:
+            conn.rollback()
+            raise RuntimeError(f"Prune failed: {e}")
+        finally:
+            conn.set_progress_handler(None, 0)
+
+        # Summary (read after commit). Outside the try so a post-commit failure does not
+        # report "Prune failed" and cause the user to retry (which would prune again).
+        try:
             with closing(conn.execute("SELECT COUNT(*) FROM full_blocks")) as cursor:
                 remaining_blocks = cursor.fetchone()[0]
             with closing(
@@ -350,9 +358,5 @@ def prune_db(
             print("\nPruning complete. Run 'VACUUM' on the database to reclaim disk space if desired.")
             print("You can do this with: chia db backup")
             print("Then replace the original database with the backup.")
-
         except Exception as e:
-            conn.rollback()
-            raise RuntimeError(f"Prune failed: {e}")
-        finally:
-            conn.set_progress_handler(None, 0)
+            print(f"\nPruning complete. (Summary unavailable: {e})", flush=True)

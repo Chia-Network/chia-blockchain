@@ -14,7 +14,12 @@ from click.testing import CliRunner
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.cmd_classes import ChiaCliContext
 from chia.cmds.db import db_cmd, db_prune_cmd
-from chia.cmds.db_prune_func import db_prune_func, prune_db
+from chia.cmds.db_prune_func import (
+    _run_full_integrity_check,
+    _run_sampled_integrity_check,
+    db_prune_func,
+    prune_db,
+)
 from chia.util.lock import Lockfile
 
 
@@ -615,6 +620,104 @@ class TestDbPruneOperationalErrorFix:
             with closing(sqlite3.connect(db_file)) as conn:
                 assert get_peak_height(conn) == peak_height - blocks_back
                 assert get_block_count(conn) == peak_height - blocks_back + 1
+
+
+class TestDbPruneFuncUncoveredLines:
+    """Tests for coverage of previously uncovered lines in db_prune_func.py."""
+
+    def test_sampled_integrity_check_non_table_error_raises(self) -> None:
+        """Cover line 117: _run_sampled_integrity_check raises when check fails with non-missing-table error."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=10, orphan_rate=0)
+            with closing(sqlite3.connect(db_file)) as real_conn:
+                call_count = 0
+
+                class ConnWrapper:
+                    def __getattr__(self, name: str) -> object:
+                        return getattr(real_conn, name)
+
+                    def execute(
+                        self,
+                        sql: str,
+                        parameters: Sequence[Any] | Mapping[str, Any] = (),
+                        *args: Any,
+                        **kwargs: Any,
+                    ) -> object:
+                        nonlocal call_count
+                        call_count += 1
+                        if call_count == 3:
+                            raise sqlite3.OperationalError("database disk image is malformed")
+                        return real_conn.execute(sql, parameters, *args, **kwargs)
+
+                with pytest.raises(RuntimeError) as excinfo:
+                    _run_sampled_integrity_check(ConnWrapper())  # type: ignore[arg-type]
+                assert "Database integrity check failed" in str(excinfo.value)
+                assert "malformed" in str(excinfo.value)
+
+    def test_sampled_integrity_check_hints_missing_fallback(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover line 114-116: when hints table is missing, fallback to full_blocks OFFSET 6."""
+        with TempFile() as db_file:
+            # DB with version, current_peak, full_blocks (need 7+ rows for OFFSET 6) but NO hints
+            create_test_db(db_file, peak_height=10, orphan_rate=0)
+            with closing(sqlite3.connect(db_file)) as conn:
+                _run_sampled_integrity_check(conn)
+            out = capsys.readouterr().out
+            assert "Running sampled integrity check" in out
+            assert " ok" in out
+
+    def test_full_integrity_check_prints_ok(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover line 146 (print ' ok'): _run_full_integrity_check prints ' ok' on success."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=5, orphan_rate=0)
+            with closing(sqlite3.connect(db_file)) as conn:
+                _run_full_integrity_check(conn)
+            out = capsys.readouterr().out
+            assert "Running full integrity check" in out
+            assert " ok" in out
+
+    def test_prune_missing_full_blocks_table(self) -> None:
+        """Cover line 201: prune_db raises when full_blocks table is missing."""
+        with TempFile() as db_file:
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_peak(conn, rand_hash())
+                conn.commit()
+            with pytest.raises(RuntimeError) as excinfo:
+                prune_db(db_file, blocks_back=10, skip_integrity_check=True)
+            assert "Database is missing full_blocks table" in str(excinfo.value)
+
+    def test_prune_no_blocks_to_prune_genesis_only(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover line 243-244: when total_blocks_to_delete is 0, print 'No blocks to prune.' and return."""
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=0, orphan_rate=0)  # only genesis
+            prune_db(db_file, blocks_back=0)
+            out = capsys.readouterr().out
+            assert "No blocks to prune." in out
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_block_count(conn) == 1
+                assert get_peak_height(conn) == 0
+
+    def test_prune_optional_coin_record_and_sub_epoch_missing(self) -> None:
+        """Cover lines 287, 309, 325: prune succeeds when coin_record and sub_epoch_segments_v3 are missing."""
+        with TempFile() as db_file:
+            # DB with version, blocks, peak, hints (so we pass hints delete) but NO coin_record, NO sub_epoch_segments
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_hints_table(conn)
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(101):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+                make_peak(conn, height_to_hash[100])
+                conn.commit()
+            prune_db(db_file, blocks_back=30)
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == 70
+                assert get_block_count(conn) == 71
 
 
 class TestDbPruneFuncErrorHandling:
