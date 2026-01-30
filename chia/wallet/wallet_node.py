@@ -23,16 +23,19 @@ from chia.consensus.blockchain import AddBlockResult
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from chia.protocols.fee_estimate import FeeEstimateGroup
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinStateUpdate,
     NewPeakWallet,
+    RequestFeeEstimates,
     RegisterForCoinUpdates,
     RequestBlockHeader,
     RequestChildren,
     RespondBlockHeader,
     RespondChildren,
+    RespondFeeEstimates,
     RespondToCoinUpdates,
     SendTransaction,
 )
@@ -1100,6 +1103,14 @@ class WalletNode:
             if timestamp is not None:
                 return timestamp
         raise PeerRequestException("Error fetching timestamp from all peers")
+
+    async def request_fee_estimates(self, peer: WSChiaConnection, time_targets: list[uint64]) -> FeeEstimateGroup:
+        response: RespondFeeEstimates | None = await peer.call_api(
+            FullNodeAPI.request_fee_estimates, RequestFeeEstimates(time_targets)
+        )
+        if response is None or not isinstance(response, RespondFeeEstimates):
+            raise PeerRequestException("Failed to get fee estimates from full node")
+        return response.estimates
 
     async def new_peak_wallet(self, new_peak: NewPeakWallet, peer: WSChiaConnection) -> None:
         if self._wallet_state_manager is None:

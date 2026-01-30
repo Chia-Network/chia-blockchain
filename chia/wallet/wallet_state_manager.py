@@ -3044,6 +3044,15 @@ class WalletStateManager:
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
+    async def get_fee_estimate(self, last_x_blocks: int = 10) -> uint64:
+        peer = self.wallet_node.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No full node peer available")
+        fee_estimate_response = await self.wallet_node.request_fee_estimate(peer, last_x_blocks)
+        if fee_estimate_response is None:
+            raise ValueError("Failed to get fee estimate from full node")
+        return fee_estimate_response.fee_estimate
+
     async def manual_did_search(self, coin_id: bytes32, latest: bool = True) -> ManualDIDSearchResults:
         peer = self.wallet_node.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, latest)
