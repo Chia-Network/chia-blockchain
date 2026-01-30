@@ -61,6 +61,7 @@ def db_prune_func(
                     in_db_path,
                     blocks_back=blocks_back,
                     skip_integrity_check=True,  # already done above if applicable
+                    integrity_check_already_done=not skip_integrity_check,
                     full_integrity_check=full_integrity_check,
                 )
             except RuntimeError:
@@ -98,10 +99,7 @@ def _run_sampled_integrity_check(conn: sqlite3.Connection) -> None:
     ]
     assert len(checks) == _INTEGRITY_CHECK_SAMPLES
 
-    print(
-        f"Running sampled integrity check ({_INTEGRITY_CHECK_SAMPLES} spots)...",
-        flush=True,
-    )
+    print("Performing a brief integrity check.", flush=True)
     for name, sql in checks:
         try:
             with closing(conn.execute(sql)) as cursor:
@@ -129,10 +127,7 @@ def _run_full_integrity_check(conn: sqlite3.Connection) -> None:
         while not done.wait(timeout=30):
             print(".", end="", flush=True)
 
-    print(
-        "Running full integrity check (this may take a long time on large databases)...",
-        flush=True,
-    )
+    print("Performing full integrity check.", flush=True)
     progress_thread = threading.Thread(target=_progress_dots, daemon=True)
     progress_thread.start()
     try:
@@ -151,6 +146,7 @@ def prune_db(
     *,
     blocks_back: int,
     skip_integrity_check: bool = False,
+    integrity_check_already_done: bool = False,
     full_integrity_check: bool = False,
 ) -> None:
     """
@@ -207,7 +203,8 @@ def prune_db(
                 _run_full_integrity_check(conn)
             else:
                 _run_sampled_integrity_check(conn)
-        else:
+        elif not integrity_check_already_done:
+            # User passed --no-integrity-check; only then do we say we're skipping.
             print("Skipping integrity check.", flush=True)
 
         if blocks_back > peak_height:

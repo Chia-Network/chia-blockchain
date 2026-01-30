@@ -510,7 +510,7 @@ class TestDbPruneSingleTransaction:
             create_test_db(db_file, peak_height=100, orphan_rate=0)
             prune_db(db_file, blocks_back=10)
             out = capsys.readouterr().out
-            assert "Running sampled integrity check" in out
+            assert "Performing a brief integrity check" in out
             assert "Pruning complete" in out
 
     def test_prune_full_integrity_check_succeeds(self, capsys: pytest.CaptureFixture[str]) -> None:
@@ -519,7 +519,7 @@ class TestDbPruneSingleTransaction:
             create_test_db(db_file, peak_height=100, orphan_rate=0)
             prune_db(db_file, blocks_back=20, full_integrity_check=True)
             out = capsys.readouterr().out
-            assert "Running full integrity check" in out
+            assert "Performing full integrity check" in out
             assert "Pruning complete" in out
             with closing(sqlite3.connect(db_file)) as conn:
                 assert get_peak_height(conn) == 80
@@ -824,7 +824,7 @@ class TestDbPruneFuncUncoveredLines:
             with closing(sqlite3.connect(db_file)) as conn:
                 _run_sampled_integrity_check(conn)
             out = capsys.readouterr().out
-            assert "Running sampled integrity check" in out
+            assert "Performing a brief integrity check" in out
             assert " ok" in out
 
     def test_full_integrity_check_prints_ok(self, capsys: pytest.CaptureFixture[str]) -> None:
@@ -834,7 +834,7 @@ class TestDbPruneFuncUncoveredLines:
             with closing(sqlite3.connect(db_file)) as conn:
                 _run_full_integrity_check(conn)
             out = capsys.readouterr().out
-            assert "Running full integrity check" in out
+            assert "Performing full integrity check" in out
             assert " ok" in out
 
     def test_full_integrity_check_progress_dots(self, capsys: pytest.CaptureFixture[str]) -> None:
@@ -853,7 +853,7 @@ class TestDbPruneFuncUncoveredLines:
                 with patch.object(threading.Event, "wait", patched_wait):
                     _run_full_integrity_check(conn)
             out = capsys.readouterr().out
-            assert "Running full integrity check" in out
+            assert "Performing full integrity check" in out
             assert "." in out
             assert " ok" in out
 
@@ -1709,7 +1709,7 @@ full_node:
         ctx = ChiaCliContext(root_path=root_path)
         result = CliRunner().invoke(db_prune_cmd, ["50", "--full-integrity-check"], obj=ctx.to_click())
         assert result.exit_code == 0
-        assert "Running full integrity check" in result.output
+        assert "Performing full integrity check" in result.output
         assert "Pruning complete" in result.output
         with closing(sqlite3.connect(db_file)) as conn:
             assert get_peak_height(conn) == 150
