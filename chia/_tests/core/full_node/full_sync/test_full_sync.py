@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-import uuid
 from typing import Any
 
 import pytest
@@ -24,12 +23,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="session")
-def testrun_uid() -> str:
-    """Unique id for this test run (used for lock files and isolation)."""
-    return uuid.uuid4().hex  # pragma: no cover - session fixture, run once per session
 
 
 @pytest.mark.anyio

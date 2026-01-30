@@ -12,6 +12,7 @@ import os
 import random
 import sysconfig
 import tempfile
+import uuid
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import AsyncExitStack
 from typing import Any
@@ -249,10 +250,20 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     return ret
 
 
+@pytest.fixture(scope="session")
+def testrun_uid() -> str:
+    """Unique id for this test run (used for lock files and isolation)."""
+    return uuid.uuid4().hex
+
+
 @pytest.fixture(scope="session", name="bt")
-async def block_tools_fixture(get_keychain, blockchain_constants, anyio_backend) -> AsyncIterator[BlockTools]:
+async def block_tools_fixture(
+    get_keychain, blockchain_constants, anyio_backend, testrun_uid: str
+) -> AsyncIterator[BlockTools]:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    async with create_block_tools_async(constants=blockchain_constants, keychain=get_keychain) as shared_block_tools:
+    async with create_block_tools_async(
+        constants=blockchain_constants, keychain=get_keychain, testrun_uid=testrun_uid
+    ) as shared_block_tools:
         yield shared_block_tools
 
 
@@ -968,9 +979,9 @@ def get_temp_keyring():
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools_1(get_temp_keyring):
+async def get_b_tools_1(get_temp_keyring, testrun_uid: str):
     async with create_block_tools_async(
-        constants=test_constants_modified, keychain=get_temp_keyring
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
     ) as bt:  # pragma: no cover
         yield bt  # pragma: no cover - covered when test runs; may not appear in CI merged coverage
 
@@ -983,8 +994,10 @@ async def test_get_b_tools_1_fixture(get_b_tools_1: BlockTools) -> None:
 
 
 @pytest.fixture(scope="function")
-async def get_b_tools(get_temp_keyring):
-    async with create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring) as local_b_tools:
+async def get_b_tools(get_temp_keyring, testrun_uid: str):
+    async with create_block_tools_async(
+        constants=test_constants_modified, keychain=get_temp_keyring, testrun_uid=testrun_uid
+    ) as local_b_tools:
         new_config = local_b_tools._config
         local_b_tools.change_config(new_config)
         yield local_b_tools
@@ -1295,6 +1308,7 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     tmp_path: Path,
     get_temp_keyring: Keychain,
+    testrun_uid: str,
 ) -> AsyncIterator[
     tuple[
         FarmerService,
@@ -1314,6 +1328,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             create_block_tools_async(
                 zero_bit_plot_filter_consts,
                 keychain=get_temp_keyring,
+                testrun_uid=testrun_uid,
             )
         )
 
@@ -1328,6 +1343,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
                     num_pool_plots=0,
                     num_non_keychain_plots=0,
                     config_overrides=config_overrides,
+                    testrun_uid=testrun_uid,
                 )
             )
             for _ in range(2)
