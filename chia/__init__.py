@@ -10,7 +10,7 @@ try:
 except (PackageNotFoundError, KeyError):
     __version__ = "unknown"
 
-if __version__ == None:
+if __version__ is None:
     __version__ = "unknown"
 
 try:
