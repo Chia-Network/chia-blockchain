@@ -91,7 +91,6 @@ class TestBandwidthThrottle:
         assert elapsed < min_wait + (0.05 if _IS_WIN else 0.15)  # Should not take too long
 
     @pytest.mark.anyio
-    @pytest.mark.skipif(_IS_WIN, reason="Windows timer resolution causes unreliable asyncio.sleep timing")
     async def test_limited_bandwidth_waits(self) -> None:
         """Test wait_for_bandwidth when bytes_allowed < num_bytes (covers lines 68-73)."""
         bytes_per_sec = 1000
@@ -101,7 +100,8 @@ class TestBandwidthThrottle:
         elapsed = asyncio.get_event_loop().time() - start_time
         expected_wait = 100 / bytes_per_sec  # 0.1s
         assert elapsed >= expected_wait * 0.8  # Allow some tolerance
-        assert elapsed < expected_wait + 0.25
+        # Windows timer resolution can cause extra jitter; allow wider upper bound
+        assert elapsed < expected_wait + (0.4 if _IS_WIN else 0.25)
 
     @pytest.mark.anyio
     async def test_limited_bandwidth_uses_allowance(self) -> None:
@@ -876,9 +876,21 @@ class TestProxyConnectionErrorHandling:
     @pytest.mark.anyio
     async def test_proxy_connection_write_drain_when_connected(self, self_hostname: str) -> None:
         """Cover connection-succeeds path: connect to proxy with real backend, then write/drain."""
-        # Minimal server that accepts and does nothing (so proxy can connect to backend)
+
+        # Backend must close its writer so proxy's forward_server_to_client sees EOF and exits.
+        # Otherwise on Windows, cancelling the proxy task may not interrupt the blocked read.
+        async def accept_and_close(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            try:
+                pass  # accept only
+            finally:
+                try:
+                    writer.close()
+                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+                except (Exception, asyncio.TimeoutError):
+                    pass
+
         dummy_server = await asyncio.start_server(
-            lambda r, w: None,
+            accept_and_close,
             self_hostname,
             0,
         )
@@ -914,9 +926,21 @@ class TestProxyConnectionErrorHandling:
     @pytest.mark.anyio
     async def test_handle_client_exception_handling(self, self_hostname: str, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test exception handling in handle_client (covers lines 229-230)."""
-        # Create a server that will cause errors
+
+        # Backend must close its writer so proxy's forward_server_to_client sees EOF and exits.
+        # Otherwise on Windows, cancelling the proxy task may not interrupt the blocked read.
+        async def accept_and_close(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            try:
+                pass  # accept only
+            finally:
+                try:
+                    writer.close()
+                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+                except (Exception, asyncio.TimeoutError):
+                    pass
+
         error_server = await asyncio.start_server(
-            lambda r, w: None,  # Handler that does nothing
+            accept_and_close,
             self_hostname,
             0,
         )
