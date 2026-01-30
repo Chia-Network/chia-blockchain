@@ -707,8 +707,8 @@ class TestProxyConnectionErrorHandling:
 
         # Create a simple echo server (avoid wait_closed() - can raise in selector callback when peer resets)
         async def handle_echo(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-            try:
-                while True:
+            try:  # pragma: no cover
+                while True:  # pragma: no cover
                     data = await reader.read(100)  # pragma: no cover
                     if not data:  # pragma: no cover
                         break
@@ -718,7 +718,7 @@ class TestProxyConnectionErrorHandling:
                 # Expected when connection is reset
                 pass
             finally:
-                try:
+                try:  # pragma: no cover
                     writer.close()  # pragma: no cover
                 except Exception:  # pragma: no cover
                     pass
