@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -25,6 +25,7 @@ from chia_rs.sized_ints import uint16
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
+from packaging.version import InvalidVersion, Version
 from typing_extensions import final
 
 from chia.protocols.outbound_message import Message, NodeType
@@ -41,6 +42,11 @@ from chia.util.errors import Err, ProtocolError
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
+else:
+    FullNode = object
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -334,6 +340,30 @@ class ChiaServer:
             )
             await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
+
+            # Full nodes shouldn't accept peer connections from old versions
+            # post hard fork 2.
+            if self._local_type == NodeType.FULL_NODE:
+                full_node: FullNode = self.node
+                peak_height = full_node.blockchain.get_peak_height()
+                if peak_height is not None and peak_height >= full_node.constants.HARD_FORK2_HEIGHT:
+                    try:
+                        peer_version = Version(connection.version)
+                        if peer_version < Version("3.0.0"):
+                            self.log.warning(
+                                f"Disconnecting peer {connection.peer_info.host} (version {connection.version}) "
+                                f"due to version < 3.0.0 after hard fork 2 activation."
+                            )
+                            await connection.close(error=Err.INVALID_HANDSHAKE)
+                            raise web.HTTPForbidden(reason="version < 3.0.0 after hard fork activation")
+                    except InvalidVersion:
+                        # It's reasonable to assume it's old and disconnect
+                        self.log.warning(
+                            f"Disconnecting peer {connection.peer_info.host} due to invalid version "
+                            f"'{connection.version}' after hard fork 2 activation."
+                        )
+                        await connection.close(error=Err.INVALID_HANDSHAKE)
+                        raise web.HTTPForbidden(reason="Invalid version after hard fork activation")
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
