@@ -15,6 +15,12 @@ from chia.util.path import path_from_root
 _INTEGRITY_CHECK_SAMPLES = 10
 
 
+def _is_missing_table_or_column(e: sqlite3.OperationalError) -> bool:
+    """Return True if the error indicates a missing table or column (optional schema)."""
+    msg = str(e).lower()
+    return "no such table" in msg or "no such column" in msg
+
+
 def db_prune_func(
     root_path: Path,
     in_db_path: Path | None = None,
@@ -37,8 +43,16 @@ def db_prune_func(
         db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)
         in_db_path = path_from_root(root_path, db_path_replaced)
 
-    # Acquire the full_node lock and hold it for the entire prune operation.
-    # This prevents full_node from starting while we're modifying the database.
+    # Run read-only integrity check before acquiring the lock so we don't hold the
+    # lock for hours with --full-integrity-check on very large databases.
+    if not skip_integrity_check and in_db_path.exists():
+        with closing(sqlite3.connect(in_db_path)) as conn:
+            if full_integrity_check:
+                _run_full_integrity_check(conn)
+            else:
+                _run_sampled_integrity_check(conn)
+
+    # Acquire the full_node lock and hold it for the prune mutations only.
     full_node_lock_path = service_launch_lock_path(root_path, "chia_full_node")
     try:
         with Lockfile.create(full_node_lock_path, timeout=0.1):
@@ -46,7 +60,7 @@ def db_prune_func(
                 prune_db(
                     in_db_path,
                     blocks_back=blocks_back,
-                    skip_integrity_check=skip_integrity_check,
+                    skip_integrity_check=True,  # already done above if applicable
                     full_integrity_check=full_integrity_check,
                 )
             except RuntimeError:
@@ -94,7 +108,7 @@ def _run_sampled_integrity_check(conn: sqlite3.Connection) -> None:
                 cursor.fetchone()
         except sqlite3.OperationalError as e:
             # Table might not exist for optional checks (e.g. hints)
-            if "no such table" in str(e).lower() or "no such column" in str(e).lower():
+            if _is_missing_table_or_column(e):
                 if "hints" in sql:
                     # Fallback: one more full_blocks read so we still sample 10 spots
                     with closing(conn.execute("SELECT 1 FROM full_blocks LIMIT 1 OFFSET 6")) as cursor:
@@ -156,14 +170,8 @@ def prune_db(
     print(f"Opening database: {db_path}")
 
     with closing(sqlite3.connect(db_path)) as conn:
-        if skip_integrity_check:
-            print("Skipping integrity check (--no-integrity-check).", flush=True)
-        elif full_integrity_check:
-            _run_full_integrity_check(conn)
-        else:
-            _run_sampled_integrity_check(conn)
-
-        # Check database version
+        # Validate required schema first so minimal DBs fail with clear RuntimeError
+        # before we run the integrity check (which touches full_blocks).
         try:
             with closing(conn.execute("SELECT * FROM database_version")) as cursor:
                 row = cursor.fetchone()
@@ -174,7 +182,6 @@ def prune_db(
         except sqlite3.OperationalError:
             raise RuntimeError("Database is missing version table")
 
-        # Get the peak height
         try:
             with closing(conn.execute("SELECT hash FROM current_peak WHERE key = 0")) as cursor:
                 row = cursor.fetchone()
@@ -184,13 +191,24 @@ def prune_db(
         except sqlite3.OperationalError:
             raise RuntimeError("Database is missing current_peak table")
 
-        with closing(conn.execute("SELECT height FROM full_blocks WHERE header_hash = ?", (peak_hash,))) as cursor:
-            row = cursor.fetchone()
-            if row is None:
-                raise RuntimeError("Database is missing the peak block")
-            peak_height = row[0]
+        try:
+            with closing(conn.execute("SELECT height FROM full_blocks WHERE header_hash = ?", (peak_hash,))) as cursor:
+                row = cursor.fetchone()
+                if row is None:
+                    raise RuntimeError("Database is missing the peak block")
+                peak_height = row[0]
+        except sqlite3.OperationalError:
+            raise RuntimeError("Database is missing full_blocks table")
 
         print(f"Current peak height: {peak_height}")
+
+        if not skip_integrity_check:
+            if full_integrity_check:
+                _run_full_integrity_check(conn)
+            else:
+                _run_sampled_integrity_check(conn)
+        else:
+            print("Skipping integrity check.", flush=True)
 
         if blocks_back > peak_height:
             print(f"blocks_back ({blocks_back}) > peak_height ({peak_height}). Nothing to prune.")
@@ -252,8 +270,10 @@ def prune_db(
                     "DELETE FROM hints WHERE coin_id IN (SELECT coin_name FROM coin_record WHERE confirmed_index > ?)",
                     (new_peak_height,),
                 )
-            except sqlite3.OperationalError:
-                pass  # hints table might not exist
+            except sqlite3.OperationalError as e:
+                if not _is_missing_table_or_column(e):
+                    raise
+                # hints table might not exist
 
             # Delete coin records confirmed above new peak.
             print("Deleting coin records...")
@@ -262,11 +282,18 @@ def prune_db(
                     "DELETE FROM coin_record WHERE confirmed_index > ?",
                     (new_peak_height,),
                 )
-            except sqlite3.OperationalError:
-                pass  # coin_record table might not exist in minimal DBs
+            except sqlite3.OperationalError as e:
+                if not _is_missing_table_or_column(e):
+                    raise
+                # coin_record table might not exist in minimal DBs
 
             # Reset spent_index for coins spent above new peak (make them unspent).
-            # Use 0 for unspent; the schema uses 0 (not -1) as the canonical unspent value.
+            # Use 0 for unspent: coin_store treats any spent_index <= 0 as unspent and
+            # normalizes to 0 in CoinRecord (see coin_store row handling). The -1
+            # fast-forward singleton hint is an optimization only; it is recalculated
+            # on the next rollback_to_block() or when new_block() adds coins. Using
+            # 0 does not cause UNKNOWN_UNSPENT during resync; get_coin_records() looks
+            # up by coin_name and returns these coins as unspent.
             print("Resetting spent coin records...")
             try:
                 conn.execute(
@@ -277,8 +304,10 @@ def prune_db(
                     """,
                     (new_peak_height,),
                 )
-            except sqlite3.OperationalError:
-                pass
+            except sqlite3.OperationalError as e:
+                if not _is_missing_table_or_column(e):
+                    raise
+                # coin_record table might not exist in minimal DBs
 
             # Delete blocks above new peak.
             print("Deleting blocks...")
@@ -291,8 +320,10 @@ def prune_db(
                     "DELETE FROM sub_epoch_segments_v3 WHERE ses_block_hash NOT IN "
                     "(SELECT header_hash FROM full_blocks)"
                 )
-            except sqlite3.OperationalError:
-                pass  # table might not exist
+            except sqlite3.OperationalError as e:
+                if not _is_missing_table_or_column(e):
+                    raise
+                # table might not exist
 
             conn.commit()
 

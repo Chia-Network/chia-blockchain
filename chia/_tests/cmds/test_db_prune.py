@@ -312,7 +312,7 @@ class TestDbPruneErrors:
                 make_version(conn, 1)
 
             with pytest.raises(RuntimeError) as excinfo:
-                prune_db(db_file, blocks_back=300)
+                prune_db(db_file, blocks_back=300, skip_integrity_check=True)
             assert "Database has the wrong version (1 expected 2)" in str(excinfo.value)
 
     def test_prune_version_3(self) -> None:
@@ -322,7 +322,7 @@ class TestDbPruneErrors:
                 make_version(conn, 3)
 
             with pytest.raises(RuntimeError) as excinfo:
-                prune_db(db_file, blocks_back=300)
+                prune_db(db_file, blocks_back=300, skip_integrity_check=True)
             assert "Database has the wrong version (3 expected 2)" in str(excinfo.value)
 
     def test_prune_missing_version_table(self) -> None:
@@ -544,6 +544,77 @@ class TestDbPruneSingleTransaction:
             out = capsys.readouterr().out
             # Progress handler prints "." every 10 callbacks (every 100k VDBE instructions)
             assert "." in out
+
+
+class TestDbPruneOperationalErrorFix:
+    """Tests that non-table OperationalErrors during optional steps propagate and cause rollback."""
+
+    def test_prune_non_table_operational_error_during_hints_delete_rolls_back(self) -> None:
+        """When DELETE FROM hints raises a non-table OperationalError (e.g. disk I/O), prune rolls back."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+                make_hints_table(conn)
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+                make_peak(conn, height_to_hash[peak_height])
+                conn.commit()
+
+            original_connect = sqlite3.connect
+
+            class HintsDeleteRaisesWrapper:
+                """Connection wrapper that raises OperationalError on DELETE FROM hints (non-table error)."""
+
+                def __init__(self, path: str | Path) -> None:
+                    self._conn = original_connect(path)
+
+                def execute(
+                    self,
+                    sql: str,
+                    parameters: Sequence[Any] | Mapping[str, Any] = (),
+                    *args: Any,
+                    **kwargs: Any,
+                ) -> object:
+                    if "DELETE FROM hints" in sql and "coin_id IN" in sql:
+                        raise sqlite3.OperationalError("database is locked")
+                    return self._conn.execute(sql, parameters, *args, **kwargs)
+
+                def __getattr__(self, name: str) -> object:
+                    return getattr(self._conn, name)
+
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=HintsDeleteRaisesWrapper):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=blocks_back)
+                assert "Prune failed" in str(excinfo.value)
+                assert "database is locked" in str(excinfo.value)
+
+            # Database should be unchanged (transaction rolled back)
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == peak_height
+                assert get_block_count(conn) == peak_height + 1
+
+    def test_prune_no_such_table_optional_step_succeeds(self) -> None:
+        """When optional table (e.g. hints) is missing, prune still succeeds (only 'no such table' ignored)."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            # DB with full_blocks and current_peak but no hints/coin_record (create_test_db style)
+            create_test_db(db_file, peak_height, orphan_rate=0)
+
+            prune_db(db_file, blocks_back=blocks_back)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == peak_height - blocks_back
+                assert get_block_count(conn) == peak_height - blocks_back + 1
 
 
 class TestDbPruneFuncErrorHandling:
@@ -1076,7 +1147,7 @@ class TestDbPruneErrorCases:
                 conn.commit()
 
             with pytest.raises(RuntimeError) as excinfo:
-                prune_db(db_file, blocks_back=300)
+                prune_db(db_file, blocks_back=300, skip_integrity_check=True)
             assert "Database is missing version field" in str(excinfo.value)
 
     def test_prune_no_main_chain_block_at_target(self) -> None:
