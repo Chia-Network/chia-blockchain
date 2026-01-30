@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Mapping, Sequence
+import threading
+import time
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import closing
 from pathlib import Path
 from typing import Any
@@ -607,6 +609,163 @@ class TestDbPruneOperationalErrorFix:
                 assert get_peak_height(conn) == peak_height
                 assert get_block_count(conn) == peak_height + 1
 
+    def test_prune_non_table_operational_error_during_coin_record_delete_rolls_back(self) -> None:
+        """When DELETE FROM coin_record raises a non-table OperationalError, prune rolls back (cover line 287)."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+                make_hints_table(conn)
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+                make_peak(conn, height_to_hash[peak_height])
+                conn.commit()
+
+            original_connect = sqlite3.connect
+
+            class CoinRecordDeleteRaisesWrapper:
+                """Raises OperationalError on DELETE FROM coin_record (non-table error)."""
+
+                def __init__(self, path: str | Path) -> None:
+                    self._conn = original_connect(path)
+
+                def execute(
+                    self,
+                    sql: str,
+                    parameters: Sequence[Any] | Mapping[str, Any] = (),
+                    *args: Any,
+                    **kwargs: Any,
+                ) -> object:
+                    if "DELETE FROM coin_record" in sql and "confirmed_index" in sql:
+                        raise sqlite3.OperationalError("database is locked")
+                    return self._conn.execute(sql, parameters, *args, **kwargs)
+
+                def __getattr__(self, name: str) -> object:
+                    return getattr(self._conn, name)
+
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=CoinRecordDeleteRaisesWrapper):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=blocks_back)
+                assert "Prune failed" in str(excinfo.value)
+                assert "database is locked" in str(excinfo.value)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == peak_height
+                assert get_block_count(conn) == peak_height + 1
+
+    def test_prune_non_table_operational_error_during_coin_record_update_rolls_back(self) -> None:
+        """When UPDATE coin_record (spent_index) raises non-table OperationalError, prune rolls back (line 309)."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+                make_hints_table(conn)
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+                make_peak(conn, height_to_hash[peak_height])
+                conn.commit()
+
+            original_connect = sqlite3.connect
+
+            class CoinRecordUpdateRaisesWrapper:
+                """Raises OperationalError on UPDATE coin_record SET spent_index (non-table error)."""
+
+                def __init__(self, path: str | Path) -> None:
+                    self._conn = original_connect(path)
+
+                def execute(
+                    self,
+                    sql: str,
+                    parameters: Sequence[Any] | Mapping[str, Any] = (),
+                    *args: Any,
+                    **kwargs: Any,
+                ) -> object:
+                    if "UPDATE coin_record" in sql and "spent_index" in sql:
+                        raise sqlite3.OperationalError("database is locked")
+                    return self._conn.execute(sql, parameters, *args, **kwargs)
+
+                def __getattr__(self, name: str) -> object:
+                    return getattr(self._conn, name)
+
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=CoinRecordUpdateRaisesWrapper):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=blocks_back)
+                assert "Prune failed" in str(excinfo.value)
+                assert "database is locked" in str(excinfo.value)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == peak_height
+                assert get_block_count(conn) == peak_height + 1
+
+    def test_prune_non_table_operational_error_during_sub_epoch_segments_delete_rolls_back(self) -> None:
+        """When DELETE FROM sub_epoch_segments_v3 raises non-table OperationalError, prune rolls back (line 325)."""
+        with TempFile() as db_file:
+            peak_height = 100
+            blocks_back = 30
+            with closing(sqlite3.connect(db_file)) as conn:
+                make_version(conn, 2)
+                make_block_table(conn)
+                make_coin_record_table(conn)
+                make_hints_table(conn)
+                make_sub_epoch_segments_table(conn)
+                prev = rand_hash()
+                height_to_hash: dict[int, bytes32] = {}
+                for height in range(peak_height + 1):
+                    header_hash = rand_hash()
+                    add_block(conn, header_hash, prev, height, True)
+                    height_to_hash[height] = header_hash
+                    prev = header_hash
+                make_peak(conn, height_to_hash[peak_height])
+                conn.commit()
+
+            original_connect = sqlite3.connect
+
+            class SubEpochSegmentsDeleteRaisesWrapper:
+                """Raises OperationalError on DELETE FROM sub_epoch_segments_v3 (non-table error)."""
+
+                def __init__(self, path: str | Path) -> None:
+                    self._conn = original_connect(path)
+
+                def execute(
+                    self,
+                    sql: str,
+                    parameters: Sequence[Any] | Mapping[str, Any] = (),
+                    *args: Any,
+                    **kwargs: Any,
+                ) -> object:
+                    if "DELETE FROM sub_epoch_segments_v3" in sql:
+                        raise sqlite3.OperationalError("database is locked")
+                    return self._conn.execute(sql, parameters, *args, **kwargs)
+
+                def __getattr__(self, name: str) -> object:
+                    return getattr(self._conn, name)
+
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=SubEpochSegmentsDeleteRaisesWrapper):
+                with pytest.raises(RuntimeError) as excinfo:
+                    prune_db(db_file, blocks_back=blocks_back)
+                assert "Prune failed" in str(excinfo.value)
+                assert "database is locked" in str(excinfo.value)
+
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == peak_height
+                assert get_block_count(conn) == peak_height + 1
+
     def test_prune_no_such_table_optional_step_succeeds(self) -> None:
         """When optional table (e.g. hints) is missing, prune still succeeds (only 'no such table' ignored)."""
         with TempFile() as db_file:
@@ -649,8 +808,11 @@ class TestDbPruneFuncUncoveredLines:
                             raise sqlite3.OperationalError("database disk image is malformed")
                         return real_conn.execute(sql, parameters, *args, **kwargs)
 
+                wrapper = ConnWrapper()
+                # Exercise __getattr__ (delegate to real_conn for non-execute attributes)
+                assert callable(getattr(wrapper, "commit"))
                 with pytest.raises(RuntimeError) as excinfo:
-                    _run_sampled_integrity_check(ConnWrapper())  # type: ignore[arg-type]
+                    _run_sampled_integrity_check(wrapper)  # type: ignore[arg-type]
                 assert "Database integrity check failed" in str(excinfo.value)
                 assert "malformed" in str(excinfo.value)
 
@@ -675,6 +837,51 @@ class TestDbPruneFuncUncoveredLines:
             assert "Running full integrity check" in out
             assert " ok" in out
 
+    def test_full_integrity_check_progress_dots(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover line 130: _progress_dots prints a dot when wait times out."""
+        original_wait = threading.Event.wait
+
+        def patched_wait(self: threading.Event, timeout: float | None = None) -> bool:
+            if timeout == 30:
+                time.sleep(0.02)  # let main thread run
+                return original_wait(self, 0)  # return True if set, else False (timeout)
+            return original_wait(self, timeout)
+
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=5, orphan_rate=0)
+            with closing(sqlite3.connect(db_file)) as conn:
+                with patch.object(threading.Event, "wait", patched_wait):
+                    _run_full_integrity_check(conn)
+            out = capsys.readouterr().out
+            assert "Running full integrity check" in out
+            assert "." in out
+            assert " ok" in out
+
+    def test_prune_progress_callback_print_dot(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover line 256: _progress_callback prints '.' every 10 invocations."""
+        original_connect = sqlite3.connect
+
+        class ProgressWrapper:
+            """Connection wrapper that uses n=1 for progress so callback runs often."""
+
+            def __init__(self, path: str | Path) -> None:
+                self._conn = original_connect(path)
+
+            def set_progress_handler(self, handler: Callable[[], int | None] | None, n: int) -> None:
+                self._conn.set_progress_handler(handler, 1 if n == 10000 else n)
+
+            def __getattr__(self, name: str) -> object:
+                return getattr(self._conn, name)
+
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=100, orphan_rate=0)
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=ProgressWrapper):
+                prune_db(db_file, blocks_back=30)
+            out = capsys.readouterr().out
+            assert "." in out
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == 70
+
     def test_prune_missing_full_blocks_table(self) -> None:
         """Cover line 201: prune_db raises when full_blocks table is missing."""
         with TempFile() as db_file:
@@ -696,6 +903,42 @@ class TestDbPruneFuncUncoveredLines:
             with closing(sqlite3.connect(db_file)) as conn:
                 assert get_block_count(conn) == 1
                 assert get_peak_height(conn) == 0
+
+    def test_prune_summary_failure_prints_complete(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover lines 361-362: when summary block fails, print 'Pruning complete. (Summary unavailable: ...)'."""
+        original_connect = sqlite3.connect
+
+        class SummaryRaisesWrapper:
+            """Raises on first summary-block execute so post-commit except (lines 361-362) runs."""
+
+            def __init__(self, path: str | Path) -> None:
+                self._conn = original_connect(path)
+
+            def execute(
+                self,
+                sql: str,
+                parameters: Sequence[Any] | Mapping[str, Any] = (),
+                *args: Any,
+                **kwargs: Any,
+            ) -> object:
+                # Summary block's first query (no WHERE, no params; unique to summary)
+                if "SELECT COUNT(*) FROM full_blocks" in sql and "WHERE" not in sql and not parameters:
+                    raise RuntimeError("simulated summary failure")
+                return self._conn.execute(sql, parameters, *args, **kwargs)
+
+            def __getattr__(self, name: str) -> object:
+                return getattr(self._conn, name)
+
+        with TempFile() as db_file:
+            create_test_db(db_file, peak_height=50, orphan_rate=0)
+            with patch("chia.cmds.db_prune_func.sqlite3.connect", side_effect=SummaryRaisesWrapper):
+                prune_db(db_file, blocks_back=20)
+            out = capsys.readouterr().out
+            assert "Pruning complete" in out
+            assert "Summary unavailable" in out
+            assert "simulated summary failure" in out
+            with closing(sqlite3.connect(db_file)) as conn:
+                assert get_peak_height(conn) == 30
 
     def test_prune_optional_coin_record_and_sub_epoch_missing(self) -> None:
         """Cover lines 287, 309, 325: prune succeeds when coin_record and sub_epoch_segments_v3 are missing."""
