@@ -837,6 +837,28 @@ class TestDbPruneFuncUncoveredLines:
             assert "Performing full integrity check" in out
             assert " ok" in out
 
+    def test_db_prune_func_full_integrity_check_path(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        """Cover line 128: db_prune_func with full_integrity_check=True runs _run_full_integrity_check."""
+        root_path = tmp_path / "chia_root"
+        root_path.mkdir()
+        (root_path / "run").mkdir()
+        db_path = root_path / "db"
+        db_path.mkdir()
+        db_file = db_path / "blockchain_v2_mainnet.sqlite"
+        create_test_db(db_file, peak_height=20, orphan_rate=0)
+        config_path = root_path / "config"
+        config_path.mkdir()
+        config_path.joinpath("config.yaml").write_text(
+            "full_node:\n  selected_network: mainnet\n  database_path: db/blockchain_v2_mainnet.sqlite\n"
+        )
+        db_prune_func(root_path, blocks_back=5, full_integrity_check=True)
+        out = capsys.readouterr().out
+        assert "Performing full integrity check" in out
+        assert " ok" in out
+        assert "Pruning complete" in out
+        with closing(sqlite3.connect(db_file)) as conn:
+            assert get_peak_height(conn) == 15
+
     def test_full_integrity_check_progress_dots(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Cover line 130: _progress_dots prints a dot when wait times out."""
         original_wait = threading.Event.wait

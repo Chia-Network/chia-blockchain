@@ -109,8 +109,13 @@ def _run_sampled_integrity_check(conn: sqlite3.Connection) -> None:
             if _is_missing_table_or_column(e):
                 if "hints" in sql:
                     # Fallback: one more full_blocks read so we still sample 10 spots
-                    with closing(conn.execute("SELECT 1 FROM full_blocks LIMIT 1 OFFSET 6")) as cursor:
-                        cursor.fetchone()
+                    try:
+                        with closing(conn.execute("SELECT 1 FROM full_blocks LIMIT 1 OFFSET 6")) as cursor:
+                            cursor.fetchone()
+                    except sqlite3.OperationalError as fallback_e:
+                        raise RuntimeError(
+                            f"Database integrity check failed at {name}: {e}; fallback check also failed: {fallback_e}"
+                        ) from fallback_e
                 continue
             raise RuntimeError(f"Database integrity check failed at {name}: {e}") from e
     print(" ok", flush=True)
