@@ -854,6 +854,8 @@ class TestDbPruneFuncUncoveredLines:
                         return real_conn.execute(sql, parameters, *args, **kwargs)
 
                 wrapper = FallbackRaisesWrapper()
+                # Exercise __getattr__ (line 843) so delegation to real_conn is covered
+                assert callable(getattr(wrapper, "commit"))
                 with pytest.raises(RuntimeError) as excinfo:
                     _run_sampled_integrity_check(wrapper)  # type: ignore[arg-type]
                 assert "Database integrity check failed" in str(excinfo.value)
