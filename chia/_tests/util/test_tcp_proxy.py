@@ -15,7 +15,10 @@ from chia._tests.util.tcp_proxy import (
     tcp_proxy,
 )
 
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="temporarily skip util tcp_proxy tests on Windows")
+# Shorter waits on Windows to speed up tests (socket/async behavior still valid)
+_IS_WIN = sys.platform == "win32"
+_SLEEP_AFTER_EXCEPTION = 0.05 if _IS_WIN else 0.2  # wait for proxy to handle exception
+_SLEEP_SHORT = 0.02 if _IS_WIN else 0.1  # give time for exception handling
 
 
 class TestThrottleConfig:
@@ -54,13 +57,14 @@ class TestBandwidthThrottle:
     @pytest.mark.anyio
     async def test_unlimited_bandwidth_with_latency(self) -> None:
         """Test unlimited bandwidth (bytes_per_sec=0) with latency (covers lines 52-54)."""
-        throttle = BandwidthThrottle(bytes_per_sec=0, latency_ms=50.0)
+        latency_ms = 15.0 if _IS_WIN else 50.0  # shorter on Windows to speed up tests
+        throttle = BandwidthThrottle(bytes_per_sec=0, latency_ms=latency_ms)
         start_time = asyncio.get_event_loop().time()
         await throttle.wait_for_bandwidth(1000)
         elapsed = asyncio.get_event_loop().time() - start_time
-        # Should wait for latency (50ms = 0.05s)
-        assert elapsed >= 0.04  # Allow some tolerance
-        assert elapsed < 0.1  # Should not take too long
+        min_wait = (latency_ms - 5) / 1000.0
+        assert elapsed >= min_wait  # Allow some tolerance
+        assert elapsed < min_wait + 0.06  # Should not take too long
 
     @pytest.mark.anyio
     async def test_unlimited_bandwidth_without_latency(self) -> None:
@@ -75,26 +79,29 @@ class TestBandwidthThrottle:
     @pytest.mark.anyio
     async def test_latency_application(self) -> None:
         """Test that latency is applied after bandwidth wait (covers line 79)."""
-        throttle = BandwidthThrottle(bytes_per_sec=1000, latency_ms=20.0)
+        latency_ms = 10.0 if _IS_WIN else 20.0  # shorter on Windows to speed up tests
+        throttle = BandwidthThrottle(bytes_per_sec=1000, latency_ms=latency_ms)
         # First call should apply latency
         start_time = asyncio.get_event_loop().time()
         await throttle.wait_for_bandwidth(100)
         elapsed = asyncio.get_event_loop().time() - start_time
-        # Should include latency (20ms = 0.02s) plus some bandwidth wait
-        # On CI, timing can be less precise, so allow more tolerance
-        assert elapsed >= 0.015  # Allow some tolerance
-        assert elapsed < 0.2  # Should not take too long (increased for CI timing variations)
+        # Should include latency plus some bandwidth wait (~0.1s at 1000 B/s for 100 bytes)
+        min_wait = (latency_ms / 1000.0) + 0.05
+        assert elapsed >= min_wait - 0.01  # Allow some tolerance
+        assert elapsed < min_wait + (0.05 if _IS_WIN else 0.15)  # Should not take too long
 
     @pytest.mark.anyio
     async def test_limited_bandwidth_waits(self) -> None:
         """Test wait_for_bandwidth when bytes_allowed < num_bytes (covers lines 68-73)."""
-        throttle = BandwidthThrottle(bytes_per_sec=1000, latency_ms=0.0)
+        # Higher rate on Windows so wait is shorter (~0.02s for 100 bytes at 5000 B/s)
+        bytes_per_sec = 5000 if _IS_WIN else 1000
+        throttle = BandwidthThrottle(bytes_per_sec=bytes_per_sec, latency_ms=0.0)
         start_time = asyncio.get_event_loop().time()
-        # Request more than initial allowance; should wait ~0.1s for 100 bytes at 1000 B/s
         await throttle.wait_for_bandwidth(100)
         elapsed = asyncio.get_event_loop().time() - start_time
-        assert elapsed >= 0.05
-        assert elapsed < 0.3
+        expected_wait = 100 / bytes_per_sec
+        assert elapsed >= expected_wait * 0.8  # Allow some tolerance
+        assert elapsed < expected_wait + (0.05 if _IS_WIN else 0.25)
 
     @pytest.mark.anyio
     async def test_limited_bandwidth_uses_allowance(self) -> None:
@@ -759,7 +766,7 @@ class TestProxyConnectionErrorHandling:
                     pass
 
                 # Wait a bit for the exception to be handled by the proxy
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(_SLEEP_AFTER_EXCEPTION)
 
                 # Clean up (may raise if connection already reset)
                 try:
@@ -831,7 +838,7 @@ class TestProxyConnectionErrorHandling:
                     pass
 
                 # Wait a bit for the exception to be handled by the proxy
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(_SLEEP_AFTER_EXCEPTION)
 
         finally:
             echo_server.close()
@@ -850,15 +857,16 @@ class TestProxyConnectionErrorHandling:
             proxy_port = proxy.proxy_port
 
             # Try to connect - should fail but handle exception gracefully
+            connect_timeout = 0.3 if _IS_WIN else 0.5
             try:
                 _client_reader, client_writer = await asyncio.wait_for(
-                    asyncio.open_connection(self_hostname, proxy_port), timeout=0.5
+                    asyncio.open_connection(self_hostname, proxy_port), timeout=connect_timeout
                 )
                 # If connection succeeds (unlikely), try to write
                 # This will trigger an error when proxy tries to connect to non-existent server
                 client_writer.write(b"test")  # pragma: no cover
                 await client_writer.drain()  # pragma: no cover
-                await asyncio.sleep(0.1)  # Give time for exception handling
+                await asyncio.sleep(_SLEEP_SHORT)  # Give time for exception handling
                 client_writer.close()
                 await client_writer.wait_closed()
             except (ConnectionRefusedError, OSError, asyncio.TimeoutError, ConnectionResetError):
@@ -887,12 +895,12 @@ class TestProxyConnectionErrorHandling:
 
                 _client_reader, client_writer = await asyncio.wait_for(
                     asyncio.open_connection(self_hostname, proxy_port),
-                    timeout=2.0,
+                    timeout=1.0 if _IS_WIN else 2.0,
                 )
                 try:
                     client_writer.write(b"test")
                     await client_writer.drain()
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(_SLEEP_SHORT)
                 finally:
                     try:
                         client_writer.close()
@@ -930,7 +938,7 @@ class TestProxyConnectionErrorHandling:
                 await client_writer.wait_closed()
 
                 # Wait for exception to be handled
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(_SLEEP_SHORT)
 
         finally:
             error_server.close()
