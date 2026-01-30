@@ -93,16 +93,17 @@ class TestBandwidthThrottle:
     @pytest.mark.anyio
     async def test_limited_bandwidth_waits(self) -> None:
         """Test wait_for_bandwidth when bytes_allowed < num_bytes (covers lines 68-73)."""
-        # On Windows use a high rate so wait is minimal (~0.001s) to avoid event-loop hang with short sleeps
-        bytes_per_sec = 100_000 if _IS_WIN else 1000
+        # Use 1000 B/s on all platforms so expected wait is 0.1s for 100 bytes - above Windows
+        # timer resolution (~15.6ms); short sleeps (<16ms) can hang or be unreliable on Windows.
+        bytes_per_sec = 1000
         throttle = BandwidthThrottle(bytes_per_sec=bytes_per_sec, latency_ms=0.0)
         start_time = asyncio.get_event_loop().time()
-        # Timeout prevents indefinite hang on Windows if asyncio.sleep blocks
         await asyncio.wait_for(throttle.wait_for_bandwidth(100), timeout=5.0)
         elapsed = asyncio.get_event_loop().time() - start_time
-        expected_wait = 100 / bytes_per_sec
+        expected_wait = 100 / bytes_per_sec  # 0.1s
         assert elapsed >= expected_wait * 0.8  # Allow some tolerance
-        assert elapsed < expected_wait + (0.05 if _IS_WIN else 0.25)
+        # On Windows allow generous upper bound for timer resolution (~15.6ms) and scheduling
+        assert elapsed < expected_wait + (0.5 if _IS_WIN else 0.25)
 
     @pytest.mark.anyio
     async def test_limited_bandwidth_uses_allowance(self) -> None:
