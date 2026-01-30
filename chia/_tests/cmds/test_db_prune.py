@@ -827,6 +827,39 @@ class TestDbPruneFuncUncoveredLines:
             assert "Performing a brief integrity check" in out
             assert " ok" in out
 
+    def test_sampled_integrity_check_hints_missing_fallback_also_fails(self) -> None:
+        """Cover lines 115-116: when hints table is missing and fallback full_blocks query also fails."""
+        with TempFile() as db_file:
+            # DB with version, current_peak, full_blocks, coin_record but NO hints
+            create_test_db(db_file, peak_height=10, orphan_rate=0)
+            with closing(sqlite3.connect(db_file)) as real_conn:
+                make_coin_record_table(real_conn)
+                real_conn.commit()
+
+                class FallbackRaisesWrapper:
+                    """Raises OperationalError on the fallback query only."""
+
+                    def __getattr__(self, name: str) -> object:
+                        return getattr(real_conn, name)
+
+                    def execute(
+                        self,
+                        sql: str,
+                        parameters: Sequence[Any] | Mapping[str, Any] = (),
+                        *args: Any,
+                        **kwargs: Any,
+                    ) -> object:
+                        if "SELECT 1 FROM full_blocks LIMIT 1 OFFSET 6" in sql:
+                            raise sqlite3.OperationalError("no such table: full_blocks")
+                        return real_conn.execute(sql, parameters, *args, **kwargs)
+
+                wrapper = FallbackRaisesWrapper()
+                with pytest.raises(RuntimeError) as excinfo:
+                    _run_sampled_integrity_check(wrapper)  # type: ignore[arg-type]
+                assert "Database integrity check failed" in str(excinfo.value)
+                assert "fallback check also failed" in str(excinfo.value)
+                assert "no such table: full_blocks" in str(excinfo.value)
+
     def test_full_integrity_check_prints_ok(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Cover line 146 (print ' ok'): _run_full_integrity_check prints ' ok' on success."""
         with TempFile() as db_file:
@@ -860,13 +893,19 @@ class TestDbPruneFuncUncoveredLines:
             assert get_peak_height(conn) == 15
 
     def test_full_integrity_check_progress_dots(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """Cover line 130: _progress_dots prints a dot when wait times out."""
+        """Cover lines 130, 133: _progress_dots prints a dot when wait times out."""
         original_wait = threading.Event.wait
+        first_30s_timeout = True
 
         def patched_wait(self: threading.Event, timeout: float | None = None) -> bool:
+            nonlocal first_30s_timeout
             if timeout == 30:
-                time.sleep(0.02)  # let main thread run
-                return original_wait(self, 0)  # return True if set, else False (timeout)
+                # Force at least one timeout so the loop body (line 133) runs and prints "."
+                if first_30s_timeout:
+                    first_30s_timeout = False
+                    time.sleep(0.02)
+                    return False  # timeout -> loop runs, prints dot
+                return original_wait(self, 0)
             return original_wait(self, timeout)
 
         with TempFile() as db_file:
