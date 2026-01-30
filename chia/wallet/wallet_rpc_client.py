@@ -106,6 +106,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -274,6 +275,9 @@ class WalletRpcClient(RpcClient):
 
     async def get_height_info(self) -> GetHeightInfoResponse:
         return GetHeightInfoResponse.from_json_dict(await self.fetch("get_height_info", {}))
+
+    async def get_fee_estimate(self) -> GetFeeEstimateResponse:
+        return GetFeeEstimateResponse.from_json_dict(await self.fetch("get_fee_estimate", {}))
 
     async def push_tx(self, request: PushTX) -> None:
         await self.fetch("push_tx", request.to_json_dict())

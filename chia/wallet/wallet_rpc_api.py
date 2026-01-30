@@ -190,6 +190,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -1005,7 +1006,8 @@ class WalletRpcApi:
     async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
         return GetTimestampForHeightResponse(timestamp=await self.service.get_timestamp_for_height(request.height))
 
-    async def get_fee_estimate(self, request: dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_fee_estimate(self, request: Empty) -> GetFeeEstimateResponse:
         """
         Fetch fee estimates from a connected full node peer via the wallet <-> full node protocol.
         """
@@ -1020,16 +1022,14 @@ class WalletRpcApi:
         fee_estimate_group = await self.service.request_fee_estimates(peer, time_targets)
 
         if fee_estimate_group.error is not None:
-            return {"error": fee_estimate_group.error}
+            raise ValueError(fee_estimate_group.error)
         if len(fee_estimate_group.estimates) == 0:
-            return {"error": "No fee estimates returned from full node"}
+            raise ValueError("No fee estimates returned from full node")
 
         # Fee rates are in mojos per 1 clvm_cost.
         fee_per_cost: int = int(fee_estimate_group.estimates[0].estimated_fee_rate.mojos_per_clvm_cost)
 
-        return {
-            "fee_per_cost": fee_per_cost,
-        }
+        return GetFeeEstimateResponse(fee_per_cost=uint64(fee_per_cost))
 
     @marshal
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
