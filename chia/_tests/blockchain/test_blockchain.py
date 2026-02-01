@@ -402,11 +402,6 @@ class TestBlockHeaderValidation:
         assert peak.height == num_blocks - 1
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="farming v2 plots is still too inefficient. Enable this once addressed",
-    )
     async def test_unf_block_overflow(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
 
@@ -1461,12 +1456,6 @@ class TestBlockHeaderValidation:
             assert attempts < 300
 
     @pytest.mark.anyio
-    # todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
-        reason="HARD_FORK_3_0_AFTER_PHASE_OUT doesn't work as we keep getting v1 PoS with pool keys, "
-        "rather than v2 PoS with contract hashes",
-    )
     async def test_pool_target_contract(
         self, empty_blockchain: Blockchain, bt: BlockTools, seeded_random: random.Random
     ) -> None:
@@ -3383,9 +3372,6 @@ class TestReorgs:
     @pytest.mark.anyio
     @pytest.mark.parametrize("light_blocks", [True, False])
     # todo_v2_plots fix this test and remove limit_consensus_modes
-    @pytest.mark.limit_consensus_modes(
-        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
-    )
     async def test_long_reorg(
         self,
         light_blocks: bool,
@@ -3763,16 +3749,6 @@ class TestReorgs:
 
 
 @pytest.mark.anyio
-# todo_v2_plots fix this test and remove limit_consensus_modes
-@pytest.mark.limit_consensus_modes(
-    allowed=[
-        ConsensusMode.PLAIN,
-        ConsensusMode.HARD_FORK_2_0,
-        ConsensusMode.SOFT_FORK_2_6,
-        ConsensusMode.HARD_FORK_3_0,
-    ],
-    reason="doesn't work for 3.0 hard fork, after phase-out, yet",
-)
 async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3847,9 +3823,11 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
             # same height as peak decide by iterations
             peak = b.get_peak()
             assert peak is not None
-            # same height as peak should be ADDED_AS_ORPHAN if  block.total_iters >= peak.total_iters
-            assert block.total_iters < peak.total_iters
-            expected = AddBlockResult.NEW_PEAK
+            # same height as peak should be ADDED_AS_ORPHAN if block.total_iters >= peak.total_iters
+            if block.total_iters < peak.total_iters:
+                expected = AddBlockResult.NEW_PEAK
+            else:
+                expected = AddBlockResult.ADDED_AS_ORPHAN
         else:
             expected = AddBlockResult.NEW_PEAK
         await _validate_and_add_block(b, block, expected_result=expected, fork_info=fork_info)
