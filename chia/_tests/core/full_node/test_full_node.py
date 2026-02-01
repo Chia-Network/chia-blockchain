@@ -2120,25 +2120,6 @@ async def test_compact_protocol(
 
 
 @pytest.mark.anyio
-# TODO: todo_v2_plots this test is failing for HARD_FORK_3_0 for some reason.
-# Investigate, fix and remove this limit_consensus_modes()
-# this is the failure:
-# chia/_tests/core/full_node/test_full_node.py:2184: in test_compact_protocol_invalid_messages
-#     assert wrong_vdf_proof != correct_vdf_proof
-# E   assert VDFProof {
-#        witness_type: 0,
-#        witness: 040000...000,
-#        normalized_to_identity: true
-#     } !=
-#     VDFProof {
-#        witness_type: 0,
-#        witness: 040000...000,
-#        normalized_to_identity: true
-#     }
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
-    reason="investigate test failure",
-)
 async def test_compact_protocol_invalid_messages(
     setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     self_hostname: str,
@@ -2155,11 +2136,20 @@ async def test_compact_protocol_invalid_messages(
     assert peak.height == 1
     # (wrong_vdf_info, wrong_vdf_proof) pair verifies, but it's not present in the blockchain at all.
     block = blocks_2[2]
+    # Try the challenge_chain_ip_vdf first
+    wrong_challenge = block.reward_chain_block.challenge_chain_ip_vdf.challenge
+    wrong_iters = block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations
+
+    # If iterations is 1 the proof  may collide Use cc_sp_vdf instead if available.
+    if wrong_iters <= 1 and block.reward_chain_block.challenge_chain_sp_vdf is not None:
+        wrong_challenge = block.reward_chain_block.challenge_chain_sp_vdf.challenge
+        wrong_iters = block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
+
     wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        wrong_challenge,
+        wrong_iters,
         True,
     )
     timelord_protocol_invalid_messages: list[timelord_protocol.RespondCompactProofOfTime] = []
