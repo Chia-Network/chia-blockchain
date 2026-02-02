@@ -10,9 +10,6 @@ try:
 except (PackageNotFoundError, KeyError):
     __version__ = "unknown"
 
-if __version__ is None:
-    __version__ = "unknown"
-
 try:
     assert False
 except AssertionError:
