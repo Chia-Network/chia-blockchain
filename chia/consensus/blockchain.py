@@ -279,7 +279,7 @@ class Blockchain:
                 blocks=self,
                 prev_b_hash=block.prev_header_hash,
                 sp_index=block.reward_chain_block.signage_point_index,
-                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+                finished_sub_slots=len(block.finished_sub_slots),
             )
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
             additions, removals = additions_and_removals(
@@ -715,7 +715,7 @@ class Blockchain:
             blocks=self,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
 
         # With hard fork 2 we ban transactions_generator_ref_list.
