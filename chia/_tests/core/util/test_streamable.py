@@ -267,8 +267,10 @@ def test_convert_primitive_failures(input_dict: dict[str, Any], error: Any) -> N
             StreamableFromDict1,
             {"a": "asdf", "b": "2", "c": G1Element()},
             ConversionError,
-            "Failed to convert 'asdf' from type str to uint8: ValueError: invalid literal "
-            "for int() with base 10: 'asdf'",
+            (
+                "Failed to convert 'asdf' from type str to uint8: ValueError: invalid literal "
+                "for int() with base 10: 'asdf'"
+            ),
         ],
         [StreamableFromDict1, {"a": 1, "b": "2"}, ParameterMissingError, "1 field missing for StreamableFromDict1: c"],
         [StreamableFromDict1, {"a": 1}, ParameterMissingError, "2 fields missing for StreamableFromDict1: b, c"],
