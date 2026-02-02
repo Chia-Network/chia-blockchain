@@ -29,6 +29,7 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
 )
 from chia.pools.pool_wallet import PoolWallet
+from chia.protocols.fee_estimate import FeeEstimate
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.server import ChiaServer
@@ -3044,14 +3045,14 @@ class WalletStateManager:
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
-    async def get_fee_estimate(self, last_x_blocks: int = 10) -> uint64:
+    async def get_fee_estimate(self, future_block: uint64 = uint64(1)) -> list[FeeEstimate]:
         peer = self.wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("No full node peer available")
-        fee_estimate_response = await self.wallet_node.request_fee_estimate(peer, last_x_blocks)
+        fee_estimate_response = await self.wallet_node.request_fee_estimates(peer, [future_block])
         if fee_estimate_response is None:
             raise ValueError("Failed to get fee estimate from full node")
-        return fee_estimate_response.fee_estimate
+        return fee_estimate_response.estimates
 
     async def manual_did_search(self, coin_id: bytes32, latest: bool = True) -> ManualDIDSearchResults:
         peer = self.wallet_node.get_full_node_peer()
