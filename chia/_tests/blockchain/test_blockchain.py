@@ -3452,6 +3452,7 @@ class TestReorgs:
         fork_info2 = None
         # Create one AugmentedBlockchain instance and reuse it across fork chain validations
         aug_chain: AugmentedBlockchain | None = AugmentedBlockchain(b)
+
         for reorg_block in reorg_blocks:
             if (reorg_block.height % 100) == 0:
                 peak = b.get_peak()
@@ -3466,22 +3467,23 @@ class TestReorgs:
                 await _validate_and_add_block(
                     b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, augmented_blockchain=aug_chain
                 )
-            elif reorg_block.weight <= chain_1_weight:
+            else:
                 if fork_info2 is None:
                     fork_info2 = ForkInfo(reorg_block.height - 1, reorg_block.height - 1, reorg_block.prev_header_hash)
+                peak = b.get_peak()
+                assert peak is not None
+                if reorg_block.weight > peak.weight or (
+                    reorg_block.weight == peak.weight and reorg_block.total_iters < peak.total_iters
+                ):
+                    expected_result = AddBlockResult.NEW_PEAK
+                    aug_chain = None
+                else:
+                    expected_result = AddBlockResult.ADDED_AS_ORPHAN
+                # Create fresh instance for each NEW_PEAK block like the full node
                 await _validate_and_add_block(
                     b,
                     reorg_block,
-                    expected_result=AddBlockResult.ADDED_AS_ORPHAN,
-                    fork_info=fork_info2,
-                    augmented_blockchain=aug_chain,
-                )
-            elif reorg_block.weight > chain_1_weight:
-                aug_chain = None  # Create fresh instance for each NEW_PEAK block like the full node
-                await _validate_and_add_block(
-                    b,
-                    reorg_block,
-                    expected_result=AddBlockResult.NEW_PEAK,
+                    expected_result=expected_result,
                     fork_info=fork_info2,
                     augmented_blockchain=aug_chain,
                 )
@@ -3532,10 +3534,13 @@ class TestReorgs:
                 print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
-            elif block.weight < chain_2_weight:
-                expect = AddBlockResult.ADDED_AS_ORPHAN
             else:
-                expect = AddBlockResult.NEW_PEAK
+                peak = b.get_peak()
+                assert peak is not None
+                if block.weight > peak.weight or (block.weight == peak.weight and block.total_iters < peak.total_iters):
+                    expect = AddBlockResult.NEW_PEAK
+                else:
+                    expect = AddBlockResult.ADDED_AS_ORPHAN
             await _validate_and_add_block(b, block, fork_info=fork_info, expected_result=expect)
 
         # if these asserts fires, there was no reorg back to the original chain
