@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import Program as SerializedProgram
 from chia_rs import (
+    CoinSpend,
     SpendBundleConditions,
     SpendConditions,
     get_spends_for_trusted_block,
     get_spends_for_trusted_block_with_conditions,
 )
+from chia_rs import Program as SerializedProgram
+from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.generator_tools import tx_removals_and_additions
@@ -110,11 +112,31 @@ def test_get_spends_for_block(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block(
         test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
     )
-    assert conditions["block_spends"] == []
+    assert conditions["block_spends"] == [
+        CoinSpend(
+            Coin(
+                bytes32.fromhex("0101010101010101010101010101010101010101010101010101010101010101"),
+                bytes32.fromhex("6c04a09251046f8dd47efe681af7e47f6e61e68fb2f9ad47c5031ec3e36c5564"),
+                uint64(123),
+            ),
+            SerializedProgram.fromhex("80"),
+            SerializedProgram.fromhex("ff80ffff018080"),
+        )
+    ]
 
 
 def test_get_spends_for_block_with_conditions(caplog: pytest.LogCaptureFixture) -> None:
     conditions = get_spends_for_trusted_block_with_conditions(
         test_constants, TEST_GENERATOR.program, TEST_GENERATOR.generator_refs, 100
     )
-    assert conditions == []
+    assert len(conditions) == 1
+    assert conditions[0]["coin_spend"] == CoinSpend(
+        Coin(
+            bytes32.fromhex("0101010101010101010101010101010101010101010101010101010101010101"),
+            bytes32.fromhex("6c04a09251046f8dd47efe681af7e47f6e61e68fb2f9ad47c5031ec3e36c5564"),
+            uint64(123),
+        ),
+        SerializedProgram.fromhex("80"),
+        SerializedProgram.fromhex("ff80ffff018080"),
+    )
+    assert len(conditions[0]["conditions"]) == 1024

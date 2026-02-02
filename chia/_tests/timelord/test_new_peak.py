@@ -158,7 +158,6 @@ class TestNewPeak:
             ConsensusMode.PLAIN,
             ConsensusMode.HARD_FORK_2_0,
             ConsensusMode.SOFT_FORK_2_6,
-            ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
         ],
         reason="test builds a synthetic unfinished block for HF3.0",
     )

@@ -1641,7 +1641,11 @@ async def test_unfinished_block_with_replaced_generator(
                 pos.pool_public_key,
                 pos.pool_contract_puzzle_hash,
                 public_key,
-                pos.version_and_size,
+                pos.version,
+                pos.plot_index,
+                pos.meta_group,
+                pos.strength,
+                pos.size,
                 pos.proof,
             )
 
@@ -2153,13 +2157,14 @@ async def test_compact_protocol_invalid_messages(
         wrong_challenge = block.reward_chain_block.challenge_chain_sp_vdf.challenge
         wrong_iters = block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
 
-    wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
+    wrong_vdf_info, _ = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
         wrong_challenge,
         wrong_iters,
         True,
     )
+    wrong_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
     timelord_protocol_invalid_messages: list[timelord_protocol.RespondCompactProofOfTime] = []
     full_node_protocol_invalid_messages: list[fnp.RespondCompactVDF] = []
     for block in blocks_2[:2]:
@@ -2171,7 +2176,6 @@ async def test_compact_protocol_invalid_messages(
                 sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
                 True,
             )
-            assert wrong_vdf_proof != correct_vdf_proof
             timelord_protocol_invalid_messages.append(
                 timelord_protocol.RespondCompactProofOfTime(
                     vdf_info,
@@ -2198,7 +2202,6 @@ async def test_compact_protocol_invalid_messages(
                     sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
                     True,
                 )
-                assert wrong_vdf_proof != correct_vdf_proof
                 timelord_protocol_invalid_messages.append(
                     timelord_protocol.RespondCompactProofOfTime(
                         vdf_info,
@@ -2226,14 +2229,10 @@ async def test_compact_protocol_invalid_messages(
                 block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
                 True,
             )
-            sp_vdf_proof = wrong_vdf_proof
-            if wrong_vdf_proof == correct_vdf_proof:
-                # This can actually happen...
-                sp_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
             timelord_protocol_invalid_messages.append(
                 timelord_protocol.RespondCompactProofOfTime(
                     vdf_info,
-                    sp_vdf_proof,
+                    wrong_vdf_proof,
                     block.header_hash,
                     block.height,
                     uint8(CompressibleVDFField.CC_SP_VDF),
@@ -2245,7 +2244,7 @@ async def test_compact_protocol_invalid_messages(
                     block.header_hash,
                     uint8(CompressibleVDFField.CC_SP_VDF),
                     vdf_info,
-                    sp_vdf_proof,
+                    wrong_vdf_proof,
                 )
             )
 
