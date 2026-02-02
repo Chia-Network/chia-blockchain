@@ -429,7 +429,8 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-# NOTE: HF3.0 can fail this log assertion because height 1-2 are non-tx,
+# todo_v2_plots
+# NOTE: HARD_FORK_3_0 can fail this log assertion because height 1-2 are non-tx,
 # so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
 # clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
 # this test expects a certine chain state
@@ -471,10 +472,6 @@ async def test_get_timestamp_for_height_from_peer(
     cache.clear_after_height(0)
     assert await get_timestamp(peak.height) == timestamp_at_peak
     # Test block cache usage
-    # NOTE: HF3.0 can fail this log assertion because height 1-2 are non-tx,
-    # so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
-    # clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
-    # and never logs "cache miss for height 0".
     cache.clear_after_height(0)
     with caplog.at_level(logging.DEBUG):
         await get_timestamp(1)
