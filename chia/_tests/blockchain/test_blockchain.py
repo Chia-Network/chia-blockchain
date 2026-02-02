@@ -3371,7 +3371,6 @@ class TestReorgs:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize("light_blocks", [True, False])
-    # todo_v2_plots fix this test and remove limit_consensus_modes
     async def test_long_reorg(
         self,
         light_blocks: bool,
