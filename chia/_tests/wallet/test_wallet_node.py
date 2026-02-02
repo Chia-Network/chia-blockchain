@@ -25,6 +25,7 @@ from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.generator_tools import get_block_header
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
+from chia.protocols.fee_estimate import FeeEstimateGroup
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.api_protocol import Self
@@ -541,6 +542,24 @@ async def test_get_timestamp_for_height_from_peer_backtracks_to_tx_block_determi
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0])
+@pytest.mark.standard_block_tools
+async def test_request_fee_estimates(simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    full_node_peer = next(iter(wallet_server.all_connections.values()))
+
+    now_utc = int(time.time())
+    time_targets = [uint64(now_utc)]
+    estimates: FeeEstimateGroup = await wallet_node.request_fee_estimates(full_node_peer, time_targets)
+
+    assert estimates.error is None
+    assert len(estimates.estimates) == 1
+    assert estimates.estimates[0].time_target == uint64(now_utc)
+    assert estimates.estimates[0].error is None
+    assert int(estimates.estimates[0].estimated_fee_rate.mojos_per_clvm_cost) >= 0
+
+
 @pytest.mark.anyio
 async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulatorsAndWallets) -> None:
     _, [(node, _)], _ = simulator_and_wallet
