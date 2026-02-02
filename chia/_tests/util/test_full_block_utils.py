@@ -255,9 +255,6 @@ def get_full_blocks() -> Iterator[FullBlock]:
 
 
 @pytest.mark.anyio
-@pytest.mark.skip(
-    "Very slow test with limited usefulness: was used to ensure the cheap parser for FullBlock matched the regular one"
-)
 async def test_parser():
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
@@ -283,7 +280,6 @@ async def test_parser():
 
 
 @pytest.mark.anyio
-@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_header_block():
     for block in get_full_blocks():
         hb: HeaderBlock = get_block_header(block)

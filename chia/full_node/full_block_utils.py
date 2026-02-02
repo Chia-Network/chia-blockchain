@@ -139,7 +139,15 @@ def skip_reward_chain_block(buf: memoryview) -> memoryview:
     buf = skip_optional(buf, skip_vdf_info)  # reward_chain_sp_vdf
     buf = skip_g2_element(buf)  # reward_chain_sp_signature
     buf = skip_vdf_info(buf)  # reward_chain_ip_vdf
-    buf = skip_optional(buf, skip_vdf_info)  # infused_challenge_chain_ip_vdf
+
+    discriminant = buf[0]
+    buf = buf[1:]
+    has_vdf_info = (discriminant & 1) != 0
+    has_mmr_root = (discriminant & 2) != 0
+    if has_vdf_info:
+        buf = skip_vdf_info(buf)  # infused_challenge_chain_ip_vdf
+    if has_mmr_root:
+        buf = skip_bytes32(buf)  # header_mmr_root
     return skip_bool(buf)  # is_transaction_block
 
 
