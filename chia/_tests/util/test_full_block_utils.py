@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 import random
 from collections.abc import Iterator
 
@@ -42,6 +43,11 @@ test_g1s: list[G1Element] = [rand_g1() for _ in range(10)]
 test_hashes: list[bytes32] = [rand_hash() for _ in range(100)]
 test_vdfs: list[VDFInfo] = [rand_vdf() for _ in range(100)]
 test_vdf_proofs: list[VDFProof] = [rand_vdf_proof() for _ in range(100)]
+
+
+def _is_macos_intel() -> bool:
+    """True when running on macOS with an Intel CPU (x86_64). Used to skip slow test params."""
+    return platform.system() == "Darwin" and platform.machine() in {"x86_64", "i386"}
 
 
 def g2() -> G2Element:
@@ -262,6 +268,7 @@ def get_full_blocks(shard: int) -> Iterator[FullBlock]:
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("shard", [0, 1, 2, 3])
+@pytest.mark.skipif(_is_macos_intel(), reason="Very slow on macOS Intel")
 async def test_parser(shard: int) -> None:
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
@@ -294,6 +301,7 @@ async def test_parser(shard: int) -> None:
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("shard", [0, 1, 2, 3])
+@pytest.mark.skipif(_is_macos_intel(), reason="Very slow on macOS Intel")
 async def test_header_block(shard: int) -> None:
     for block in get_full_blocks(shard):
         hb: HeaderBlock = get_block_header(block, ([], []) if block.is_transaction_block() else None)
