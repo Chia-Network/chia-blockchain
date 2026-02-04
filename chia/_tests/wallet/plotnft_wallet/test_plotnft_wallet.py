@@ -277,6 +277,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
             pool_config=PoolConfig(
                 pool_puzzle_hash=bytes32.zeros, heightlock=uint32(5), pool_memoization=Program.to(None)
             ),
+            pool_url="https://daurl.com",
             action_scope=action_scope,
             fee=joining_fee,
         )
@@ -307,6 +308,10 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
                 },
             )
         ]
+    )
+    assert (
+        await env.wallet_state_manager.plotnft2_store.get_latest_remark(plotnft_wallet.plotnft_id)
+        == "https://daurl.com"
     )
 
     # Reorg (join pool)
@@ -379,7 +384,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
         plotnft_id=plotnft_wallet.plotnft_id
     )
     coin_spends = plotnft.forward_pool_reward(pool_reward)
-    await env.rpc_client.push_tx(PushTX(WalletSpendBundle(coin_spends, G2Element())))
+    await env.rpc_client.push_tx(PushTX(spend_bundle=WalletSpendBundle(coin_spends, G2Element())))
 
     await wallet_environments.process_pending_states(
         [
@@ -488,7 +493,7 @@ async def test_plotnft_lifecycle(wallet_environments: WalletTestFramework, self_
     plotnft = await plotnft_wallet.get_current_plotnft()
     [pool_reward] = await env.wallet_state_manager.plotnft2_store.get_pool_rewards(plotnft_id=plotnft_wallet.plotnft_id)
     coin_spends = plotnft.forward_pool_reward(pool_reward)
-    await env.rpc_client.push_tx(PushTX(WalletSpendBundle(coin_spends, G2Element())))
+    await env.rpc_client.push_tx(PushTX(spend_bundle=WalletSpendBundle(coin_spends, G2Element())))
 
     await wallet_environments.process_pending_states(
         [

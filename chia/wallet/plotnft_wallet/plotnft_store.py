@@ -30,6 +30,7 @@ def _row_to_plotnft(row: Row, genesis_challenge: bytes32) -> PlotNFT:
         else None,
         genesis_challenge=genesis_challenge,
         exiting=False if row[10] == 0 else True,
+        remarks=[row[11]] if row[11] is not None else [],
     )
 
 
@@ -57,6 +58,7 @@ class PlotNFTStore:
                 " timelock blob,"
                 " pool_memoization blob,"
                 " exiting boolean,"
+                " remark string,"
                 " created_height int)"
             )
 
@@ -83,8 +85,8 @@ class PlotNFTStore:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO plotnft2s "
                 "(coin_id, parent_coin_id, puzzle_hash, amount, lineage_proof, launcher_id, synthetic_pubkey, "
-                "pool_puzzle_hash, timelock, pool_memoization, exiting, created_height) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "pool_puzzle_hash, timelock, pool_memoization, exiting, remark, created_height) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     plotnft.coin.name(),
                     plotnft.coin.parent_coin_info,
@@ -97,6 +99,9 @@ class PlotNFTStore:
                     bytes(plotnft.pool_config.heightlock) if plotnft.pool_config is not None else b"",
                     bytes(plotnft.pool_config.pool_memoization) if plotnft.pool_config is not None else b"",
                     plotnft.exiting,
+                    str(plotnft.remarks[0].rest.atom, "utf8")
+                    if len(plotnft.remarks) > 0 and plotnft.remarks[0].rest.atom is not None
+                    else None,
                     created_height,
                 ),
             )
@@ -138,6 +143,21 @@ class PlotNFTStore:
                 (launcher_id,),
             )
             return _row_to_plotnft(next(iter(rows)), self.genesis_challenge)
+
+    async def get_latest_remark(self, launcher_id: bytes32) -> str:
+        async with self.db_wrapper.reader() as conn:
+            rows = await conn.execute_fetchall(
+                """
+                SELECT remark
+                FROM plotnft2s
+                WHERE launcher_id=?
+                AND remark IS NOT NULL
+                ORDER BY created_height DESC
+                LIMIT 1;
+                """,
+                (launcher_id,),
+            )
+            return str(next(iter(rows))[0])
 
     async def get_plotnfts(self, *, coin_ids: list[bytes32]) -> list[PlotNFT]:
         if coin_ids == []:

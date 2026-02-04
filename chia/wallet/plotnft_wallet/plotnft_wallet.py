@@ -13,7 +13,7 @@ from typing_extensions import Self, Unpack
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement
+from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -202,14 +202,16 @@ class PlotNFT2Wallet:
         pool_config: PoolConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
+        pool_url: str,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         plotnft = await self.get_current_plotnft()
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        url_remark = Remark(rest=Program.to(pool_url))
         coin_spends = plotnft.join_pool(
             user_config=plotnft.user_config,
             pool_config=pool_config,
-            extra_conditions=(*extra_conditions, fee_hook),
+            extra_conditions=(*extra_conditions, fee_hook, url_remark),
         )
         await self.xch_wallet.create_tandem_xch_tx(
             fee=fee,
