@@ -30,6 +30,7 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     MessageParticipant,
+    Remark,
     SendMessage,
     parse_conditions_non_consensus,
 )
@@ -135,12 +136,13 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
 
         # Join a pool
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        url_remark = Remark(rest=Program.to("url"))
         coin_spends = plotnft.join_pool(
             user_config=plotnft.user_config,
             pool_config=PoolConfig(
                 pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
             ),
-            extra_conditions=(fee_hook,),
+            extra_conditions=(fee_hook, url_remark),
         )
         fee_coin = next(iter(await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))).coin
         result = await sim_client.push_tx(
@@ -160,6 +162,7 @@ async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
         plotnft = PlotNFT.get_next_from_coin_spend(
             coin_spend=coin_spends[0], genesis_challenge=sim.defaults.GENESIS_CHALLENGE
         )
+        assert plotnft.remarks == [url_remark]
 
         with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while not in it")):
             plotnft.exit_waiting_room(

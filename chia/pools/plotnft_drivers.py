@@ -20,6 +20,7 @@ from chia.wallet.conditions import (
     CreateCoin,
     CreateCoinAnnouncement,
     MessageParticipant,
+    Remark,
     SendMessage,
     parse_conditions_non_consensus,
 )
@@ -329,6 +330,7 @@ class GetNextPlotNFTError(Exception):
 class PlotNFT(PlotNFTPuzzle):
     coin: Coin
     singleton_lineage_proof: LineageProof
+    remarks: list[Remark] = field(default_factory=list)
 
     @classmethod
     def launch(
@@ -445,6 +447,7 @@ class PlotNFT(PlotNFTPuzzle):
             run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
         )
         create_coins = [condition for condition in inner_conditions if isinstance(condition, CreateCoin)]
+        remarks = [condition for condition in inner_conditions if isinstance(condition, Remark)]
         if len(create_coins) != 1:
             raise GetNextPlotNFTError("PlotNFTs must make exactly one new coin")
         singleton_create_coin = create_coins[0]
@@ -524,6 +527,7 @@ class PlotNFT(PlotNFTPuzzle):
             pool_config=plotnft_puzzle.pool_config,
             exiting=plotnft_puzzle.exiting,
             genesis_challenge=genesis_challenge,
+            remarks=remarks,
         )
 
     def singleton_action_spend(self, inner_solution: Program) -> CoinSpend:
