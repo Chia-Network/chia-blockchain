@@ -113,7 +113,7 @@ def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None
         if "PLOT_SIZE_V2" not in overrides:
             overrides["PLOT_SIZE_V2"] = 28
         if "SOFT_FORK8_HEIGHT" not in overrides:
-            overrides["SOFT_FORK8_HEIGHT"] = 3720000
+            overrides["SOFT_FORK8_HEIGHT"] = 3755000
     if network_id == "testneta":
         if "HARD_FORK_HEIGHT" not in overrides:
             overrides["HARD_FORK_HEIGHT"] = 3693395
