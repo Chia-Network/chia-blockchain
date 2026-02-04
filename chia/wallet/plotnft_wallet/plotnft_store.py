@@ -144,6 +144,14 @@ class PlotNFTStore:
             )
             return _row_to_plotnft(next(iter(rows)), self.genesis_challenge)
 
+    async def get_plotnft_created_height(self, *, coin_id: bytes32) -> uint32:
+        async with self.db_wrapper.reader() as conn:
+            rows = await conn.execute_fetchall("SELECT created_height from plotnft2s where coin_id = ?", (coin_id,))
+            if len(list(rows)) == 0:
+                raise ValueError(f"coin ID {coin_id} not found in PlotNFTStore")
+            row = next(iter(rows))
+            return uint32(row[0])
+
     async def get_latest_remark(self, launcher_id: bytes32) -> str:
         async with self.db_wrapper.reader() as conn:
             rows = await conn.execute_fetchall(

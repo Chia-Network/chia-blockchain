@@ -1845,6 +1845,7 @@ class PWJoinPool(TransactionEndpointRequest):
     pool_url: str
     target_puzzlehash: bytes32
     relative_lock_height: uint32
+    pool_memoization: Program | None = None
 
 
 @streamable
@@ -1859,6 +1860,7 @@ class PWJoinPoolResponse(TransactionEndpointResponse):
 @dataclass(kw_only=True, frozen=True)
 class PWSelfPool(TransactionEndpointRequest):
     wallet_id: uint32
+    finish_leaving_fee: uint64 | None = None
 
 
 @streamable

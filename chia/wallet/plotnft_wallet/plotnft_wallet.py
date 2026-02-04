@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, ClassVar, cast, final
 from chia_rs import G2Element
 from chia_rs.chia_rs import Coin, G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 from typing_extensions import Self, Unpack
 
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
+from chia.pools.pool_wallet_info import PoolSingletonState, PoolState, PoolWalletInfo
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -422,11 +423,50 @@ class PlotNFT2Wallet:
     async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
         return await self.get_spendable_balance(records)
 
+    async def get_current_state(self) -> PoolWalletInfo:  # backwards compat with previous pool wallet
+        plotnft = await self.get_current_plotnft()
+        if plotnft.pool_config is None:
+            singleton_state = PoolSingletonState.SELF_POOLING
+            rewards_claim_ph = self.rewards_claim_puzhash
+        else:
+            rewards_claim_ph = plotnft.pool_config.pool_puzzle_hash
+            if plotnft.exiting:
+                singleton_state = PoolSingletonState.LEAVING_POOL
+            else:
+                singleton_state = PoolSingletonState.FARMING_TO_POOL
+        return PoolWalletInfo(
+            current=PoolState(
+                version=uint8(2),
+                state=uint8(singleton_state.value),
+                target_puzzle_hash=rewards_claim_ph,
+                owner_pubkey=plotnft.user_config.synthetic_pubkey,
+                pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(plotnft.launcher_id),
+                relative_lock_height=plotnft.pool_config.heightlock if plotnft.pool_config is not None else uint32(0),
+            ),
+            target=PoolState(
+                version=uint8(2),
+                state=uint8(PoolSingletonState.FARMING_TO_POOL.value),
+                target_puzzle_hash=self.rewards_claim_puzhash,
+                owner_pubkey=plotnft.user_config.synthetic_pubkey,
+                pool_url=None,
+                relative_lock_height=uint32(0),
+            )
+            if plotnft.exiting
+            else None,
+            launcher_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
+            launcher_id=plotnft.launcher_id,
+            p2_singleton_puzzle_hash=RewardPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash(),
+            tip_singleton_coin_id=plotnft.coin.name(),
+            singleton_block_height=await self.wallet_state_manager.plotnft2_store.get_plotnft_created_height(
+                coin_id=plotnft.coin.name()
+            ),
+        )
+
+    # Wallet Protocol Stubs
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         # We're choosing not to implement this for now as it shouldn't be necessary
         return False
 
-    # Wallet Protocol Stubs
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("puzzle_hash_for_pk is not implemented for PlotNFT2Wallet")
 
