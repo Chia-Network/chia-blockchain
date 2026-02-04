@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import platform
 import random
 import sqlite3
 import time
@@ -113,6 +114,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+
+def _is_macos_intel() -> bool:
+    """True when running on macOS with an Intel CPU (x86_64). Used to skip slow test params."""
+    return platform.system() == "Darwin" and platform.machine() in {"x86_64", "i386"}
 
 
 def find_reward_coin(b: FullBlock, puzzle_hash: bytes32) -> Coin:
@@ -2571,6 +2577,7 @@ async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBloc
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.skipif(_is_macos_intel(), reason="Very slow on macOS Intel (1500-block reorg)")
 async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -2649,7 +2656,19 @@ async def test_long_reorg(
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.parametrize("chain_length", [0, 100])
-@pytest.mark.parametrize("fork_point", [500, 1500])
+@pytest.mark.parametrize(
+    "fork_point",
+    [
+        500,
+        pytest.param(
+            1500,
+            marks=pytest.mark.skipif(
+                _is_macos_intel(),
+                reason="fork_point=1500 is very slow on macOS Intel; run with fork_point=500",
+            ),
+        ),
+    ],
+)
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
 async def test_long_reorg_nodes(
     light_blocks: bool,

@@ -236,7 +236,7 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
 
         if selected_fingerprint is not None:
             try:
-                await wallet_client.log_in(LogIn(uint32(selected_fingerprint)))
+                await wallet_client.log_in(LogIn(fingerprint=uint32(selected_fingerprint)))
             except ValueError as e:
                 raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {e.args[0]}")
 
