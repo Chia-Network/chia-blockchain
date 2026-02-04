@@ -256,7 +256,7 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     assert base_command.rpc_info.client_info is not None
 
     async def not_synced() -> GetSyncStatusResponse:
-        return GetSyncStatusResponse(False, False)
+        return GetSyncStatusResponse(synced=False, syncing=False)
 
     base_command.rpc_info.client_info.client.get_sync_status = not_synced  # type: ignore[method-assign]
     await base_command.run()

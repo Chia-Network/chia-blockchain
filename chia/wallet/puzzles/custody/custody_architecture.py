@@ -307,7 +307,7 @@ class PuzzleWithRestrictions:
         elif isinstance(self.puzzle, MofN):
             unknown_puzzles = {
                 uph: up
-                for puz_w_restriction in self.puzzle.members  # pylint: disable=no-member
+                for puz_w_restriction in self.puzzle.members
                 for uph, up in puz_w_restriction.unknown_puzzles.items()
             }
         else:

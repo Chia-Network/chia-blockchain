@@ -41,7 +41,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: tuple[TestRpcC
                 (request.target, request.message, request.amount, request.fee, request.push, timelock_info),
             )
 
-            return SendNotificationResponse([STD_UTX], [STD_TX], tx=STD_TX)
+            return SendNotificationResponse(unsigned_transactions=[STD_UTX], transactions=[STD_TX], tx=STD_TX)
 
     inst_rpc_client = NotificationsSendRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -82,7 +82,7 @@ def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcCl
         async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
             self.add_to_log("get_notifications", (request,))
             return GetNotificationsResponse(
-                [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
+                notifications=[Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
             )
 
     inst_rpc_client = NotificationsGetRpcClient()
@@ -104,7 +104,9 @@ def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcCl
         "amount: 1000000000",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"get_notifications": [(GetNotifications([get_bytes32(1)], uint32(10), uint32(10)),)]}
+    expected_calls: logType = {
+        "get_notifications": [(GetNotifications(ids=[get_bytes32(1)], start=uint32(10), end=uint32(10)),)]
+    }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import re
 from dataclasses import dataclass, field, replace
 from typing import Literal
 
@@ -208,7 +209,13 @@ def test_unknown_puzzle_behavior() -> None:
         BUNCH_OF_TWOS: PlaceholderPuzzle(),
         BUNCH_OF_THREES: PlaceholderPuzzle(),
     }
-    assert pwr.fill_in_unknown_puzzles(known_puzzles) == PuzzleWithRestrictions(
+    filled_in_partial = pwr.fill_in_unknown_puzzles(
+        {BUNCH_OF_ZEROS: PlaceholderPuzzle(), BUNCH_OF_ONES: PlaceholderPuzzle()}
+    )
+    filled_in = filled_in_partial.fill_in_unknown_puzzles(
+        {BUNCH_OF_TWOS: PlaceholderPuzzle(), BUNCH_OF_THREES: PlaceholderPuzzle()}
+    )
+    assert filled_in == PuzzleWithRestrictions(
         nonce=0,
         restrictions=[PlaceholderPuzzle(), PlaceholderPuzzle()],
         puzzle=MofN(
@@ -219,6 +226,7 @@ def test_unknown_puzzle_behavior() -> None:
             ],
         ),
     )
+    assert filled_in.unknown_puzzles == {}
 
 
 # (mod (delegated_puzzle . rest) rest)
@@ -229,7 +237,7 @@ ACS_MEMBER_PH = ACS_MEMBER.get_tree_hash()
 @dataclass(frozen=True)
 class ACSMember:
     def memo(self, nonce: int) -> Program:
-        return Program.to(None)
+        raise NotImplementedError  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         # (r (c (q . nonce) ACS_MEMBER_PH))
@@ -351,6 +359,22 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                     await sim.farm_block()
                     await sim.rewind(block_height)
 
+        # couple of error cases
+        with pytest.raises(ValueError, match=re.escape("M cannot be greater than N")):
+            MofN(m=50, members=[])
+
+        with pytest.raises(ValueError, match=re.escape("M must be greater than 0")):
+            MofN(m=0, members=[])
+
+        with pytest.raises(ValueError, match=re.escape("Duplicate nodes not currently supported by MofN drivers")):
+            MofN(
+                m=2,
+                members=[
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=ACSMember()),
+                    PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=ACSMember()),
+                ],
+            )
+
 
 @dataclass(frozen=True)
 class ACSMemberValidator:
@@ -435,3 +459,14 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
             )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+
+def test_pwr_errors() -> None:
+    PuzzleWithRestrictions.from_memo(  # sanity check
+        Program.to((PuzzleWithRestrictions.spec_namespace, [0, [], None, [bytes32.zeros, None]]))
+    )
+    with pytest.raises(ValueError, match=re.escape("Attempting to parse a memo that does not belong to this spec")):
+        PuzzleWithRestrictions.from_memo(Program.to("atom"))
+
+    with pytest.raises(ValueError, match=re.escape("Attempting to parse a memo that does not belong to this spec")):
+        PuzzleWithRestrictions.from_memo(Program.to(("not the namespace", None)))

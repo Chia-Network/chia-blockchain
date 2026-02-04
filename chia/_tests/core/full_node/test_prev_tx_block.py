@@ -15,14 +15,14 @@ def test_prev_tx_block_none() -> None:
         blocks=BlockCache({}),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(0),
-        first_in_sub_slot=False,
+        finished_sub_slots=0,
     ) == uint32(0)
     assert pre_sp_tx_block_height(
         constants=test_constants,
         blocks=BlockCache({}),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(1),
-        first_in_sub_slot=True,
+        finished_sub_slots=1,
     ) == uint32(0)
 
 
@@ -43,7 +43,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
             blocks=BlockCache(blocks),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
         == latest_tx_before_sp.height
     )
@@ -56,7 +56,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
             blocks=BlockCache(blocks),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
         == latest_tx_before_sp.height
     )
@@ -69,7 +69,7 @@ def test_prev_tx_block_blockrecord_tx(bt: BlockTools) -> None:
             blocks=BlockCache(blocks),
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
         == latest_tx_before_sp.height
     )
@@ -95,7 +95,7 @@ def test_prev_tx_block_blockrecord_not_tx(bt: BlockTools) -> None:
         blocks=BlockCache(blocks),
         prev_b_hash=block.prev_header_hash,
         sp_index=block.reward_chain_block.signage_point_index,
-        first_in_sub_slot=len(block.finished_sub_slots) > 0,
+        finished_sub_slots=len(block.finished_sub_slots),
     ) == uint32(latest_tx_before_sp.height)
 
 

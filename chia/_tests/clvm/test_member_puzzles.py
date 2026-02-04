@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
 from chia_rs.sized_ints import uint64
@@ -202,6 +204,22 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         bls_with_taproot_member_synthetic = BLSWithTaprootMember(synthetic_key=synthetic_public_key)
         assert bls_with_taproot_member.puzzle(0) == bls_with_taproot_member_synthetic.puzzle(0)
 
+        # test some errors
+        with pytest.raises(
+            ValueError, match=re.escape("Must specify either the synthetic key or public key and hidden puzzle")
+        ):
+            BLSWithTaprootMember(public_key=sk.public_key())
+
+        with pytest.raises(
+            ValueError, match=re.escape("Hidden puzzle must be specified to sign with synthetic secret key")
+        ):
+            BLSWithTaprootMember(synthetic_key=sk.public_key()).sign_with_synthetic_secret_key(
+                original_secret_key=sk, message=b""
+            )
+
+        with pytest.raises(ValueError, match=re.escape("Hidden puzzle or original key are unknown")):
+            BLSWithTaprootMember(synthetic_key=sk.public_key()).solve(use_hidden_puzzle=True)
+
 
 @pytest.mark.anyio
 async def test_singleton_member(cost_logger: CostLogger) -> None:
@@ -218,9 +236,8 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         ].coin
 
         launcher_coin = Coin(coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
-        singleton_member_puzzle = PuzzleWithRestrictions(
-            nonce=0, restrictions=[], puzzle=SingletonMember(singleton_id=launcher_coin.name())
-        )
+        singleton_member = SingletonMember(singleton_id=launcher_coin.name())
+        singleton_member_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=singleton_member)
 
         singleton_struct = (
             SINGLETON_TOP_LAYER_MOD.get_tree_hash(),
@@ -317,9 +334,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                     singleton_member_puzzle.solve(
                         [],
                         [],
-                        Program.to(
-                            [singleton_innerpuz.get_tree_hash()]
-                        ),  # singleton member puzzle only requires singleton's current innerpuz
+                        singleton_member.solve(singleton_inner_puzzle_hash=singleton_innerpuz.get_tree_hash()),
                         DelegatedPuzzleAndSolution(
                             puzzle=delegated_puzzle,
                             solution=Program.to(
@@ -356,9 +371,8 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
         delegated_puzzle = Program.to(1)
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
 
-        bls_puzzle = PuzzleWithRestrictions(
-            nonce=0, restrictions=[], puzzle=FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
-        )
+        fixed_puzzle_member = FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
+        bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=fixed_puzzle_member)
         memo = PuzzleHint(
             puzhash=bls_puzzle.puzzle.puzzle_hash(0),
             memo=bls_puzzle.puzzle.memo(0),
@@ -427,7 +441,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
                     bls_puzzle.solve(
                         [],
                         [],
-                        Program.to(0),
+                        fixed_puzzle_member.solve(),
                         DelegatedPuzzleAndSolution(
                             puzzle=delegated_puzzle,  # the fixed puzzle
                             solution=Program.to(

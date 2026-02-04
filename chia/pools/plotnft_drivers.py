@@ -444,7 +444,10 @@ class PlotNFT(PlotNFTPuzzle):
         inner_conditions = parse_conditions_non_consensus(
             run(inner_puzzle, Program.from_serialized(coin_spend.solution).at("rrf")).as_iter()
         )
-        singleton_create_coin = next(condition for condition in inner_conditions if isinstance(condition, CreateCoin))
+        create_coins = [condition for condition in inner_conditions if isinstance(condition, CreateCoin)]
+        if len(create_coins) != 1:
+            raise GetNextPlotNFTError("PlotNFTs must make exactly one new coin")
+        singleton_create_coin = create_coins[0]
 
         # Now we begin to examine the inner puzzle
         plotnft_puzzle = None
@@ -473,8 +476,12 @@ class PlotNFT(PlotNFTPuzzle):
         if plotnft_puzzle is None:
             if singleton_create_coin.memo_blob is None:
                 raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
-            unknown_inner_puzzle = PuzzleWithRestrictions.from_memo(singleton_create_coin.memo_blob.rest())
-            assert unknown_inner_puzzle.additional_memos is not None
+            try:
+                unknown_inner_puzzle = PuzzleWithRestrictions.from_memo(singleton_create_coin.memo_blob.rest())
+            except ValueError:
+                raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
+            if unknown_inner_puzzle.additional_memos is None:
+                raise GetNextPlotNFTError("Invalid memoization of PlotNFT")
             pubkey = G1Element.from_bytes(unknown_inner_puzzle.additional_memos.at("f").as_atom())
             if isinstance(unknown_inner_puzzle.puzzle, MofN):
                 pool_puzzle_hash = bytes32(unknown_inner_puzzle.additional_memos.at("rf").as_atom())
