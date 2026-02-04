@@ -129,10 +129,16 @@ def get_foliage_block_data() -> Iterator[FoliageBlockData]:
         )
 
 
+# there are 4 shards, each representing a subset of all combinations of Foliage
+# objects.
 def get_foliage(shard: int) -> Iterator[Foliage]:
     assert shard >= 0
     assert shard < 4
     for foliage_block_data in get_foliage_block_data():
+        # rather than generating these 4 combinations, serially, as part of the
+        # generator output, we pin these based on which shard we're on.
+        # these two fields, tx block hash and tc block signature are both optional,
+        # so we cover all 4 combinations where they are set or not.
         foliage_transaction_block_hash = None if (shard & 1) == 0 else hsh()
         foliage_transaction_block_signature = None if (shard & 2) == 0 else g2()
         yield Foliage(
@@ -234,6 +240,12 @@ def get_ref_list() -> Iterator[list[uint32]]:
     yield [uint32(0xFFFFFFFF)]
 
 
+# This generator creates (essentially) all combinations of fields set and unset
+# (including invalid combinations) of FullBlock. It's broken down into multiple
+# generators that in turn generate all combinations of sub objects. Since there
+# are many combinations, tests that use this take a long time. To allow tests
+# running in parallel, the outer loop (creating all combinations of foliage) is
+# split into 4 shards that allow the tests to run in parallel, 4-ways.
 def get_full_blocks(shard: int) -> Iterator[FullBlock]:
     random.seed(123456789)
 
