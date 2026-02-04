@@ -254,4 +254,4 @@ class PlotNFTStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM plotnft2s WHERE created_height > ?", (height,))
             await conn.execute("DELETE FROM pool_reward2s WHERE height > ?", (height,))
-            await conn.execute("UPDATE pool_reward2s SET spent_height = 0 WHERE spent_height > ?", (height,))
+            await conn.execute("UPDATE pool_reward2s SET spent_height = NULL WHERE spent_height > ?", (height,))
