@@ -265,8 +265,8 @@ class CreateCoin(Condition):
                 memo_blob=potential_memos.at("f"),
             )
 
-    def as_condition_args(self) -> list[bytes32 | uint64 | list[bytes] | None]:
-        return [self.puzzle_hash, self.amount, self.memos]
+    def as_condition_args(self) -> list[bytes32 | uint64 | list[bytes] | Program | None]:
+        return [self.puzzle_hash, self.amount, self.memos if self.memos is not None else self.memo_blob]
 
 
 @final
