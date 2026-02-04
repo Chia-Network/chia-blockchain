@@ -21,10 +21,6 @@ HEIGHTLOCK_WRAPPER = load_clvm_maybe_recompile("heightlock.clsp", package_or_req
 class Heightlock:
     heightlock: uint32
 
-    @property
-    def member_not_dpuz(self) -> bool:
-        return False
-
     def memo(self, nonce: int) -> Program:
         return Program.to(None)
 
@@ -39,10 +35,6 @@ class Heightlock:
 class FixedCreateCoinDestinations:
     allowed_ph: bytes32
 
-    @property
-    def member_not_dpuz(self) -> bool:
-        return False
-
     def memo(self, nonce: int) -> Program:
         return Program.to(None)
 
@@ -55,10 +47,6 @@ class FixedCreateCoinDestinations:
 
 @dataclass(kw_only=True, frozen=True)
 class SendMessageBanned:
-    @property
-    def member_not_dpuz(self) -> bool:
-        return False
-
     def memo(self, nonce: int) -> Program:
         return Program.to(None)
 

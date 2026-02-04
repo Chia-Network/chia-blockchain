@@ -152,9 +152,9 @@ def test_get_transaction(capsys: object, get_test_cli_clients: tuple[TestRpcClie
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 3,
         "get_cat_name": [(1,)],
         "get_transaction": [
-            (GetTransaction(bytes32.from_hexstr(bytes32_hexstr)),),
-            (GetTransaction(bytes32.from_hexstr(bytes32_hexstr)),),
-            (GetTransaction(bytes32.from_hexstr(bytes32_hexstr)),),
+            (GetTransaction(transaction_id=bytes32.from_hexstr(bytes32_hexstr)),),
+            (GetTransaction(transaction_id=bytes32.from_hexstr(bytes32_hexstr)),),
+            (GetTransaction(transaction_id=bytes32.from_hexstr(bytes32_hexstr)),),
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -193,7 +193,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                 )
                 l_tx_rec.append(tx_rec)
 
-            return GetTransactionsResponse(l_tx_rec, request.wallet_id)
+            return GetTransactionsResponse(transactions=l_tx_rec, wallet_id=request.wallet_id)
 
         async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
             self.add_to_log("get_coin_records", (request,))
@@ -242,8 +242,30 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     expected_calls: logType = {
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "get_transactions": [
-            (GetTransactions(uint32(1), uint32(2), uint32(4), SortKey.RELEVANCE.name, True, None, None, None),),
-            (GetTransactions(uint32(1), uint32(2), uint32(4), SortKey.RELEVANCE.name, True, None, None, None),),
+            (
+                GetTransactions(
+                    wallet_id=uint32(1),
+                    start=uint32(2),
+                    end=uint32(4),
+                    sort_key=SortKey.RELEVANCE.name,
+                    reverse=True,
+                    to_address=None,
+                    type_filter=None,
+                    confirmed=None,
+                ),
+            ),
+            (
+                GetTransactions(
+                    wallet_id=uint32(1),
+                    start=uint32(2),
+                    end=uint32(4),
+                    sort_key=SortKey.RELEVANCE.name,
+                    reverse=True,
+                    to_address=None,
+                    type_filter=None,
+                    confirmed=None,
+                ),
+            ),
         ],
         "get_coin_records": [
             (GetCoinRecords(coin_id_filter=HashFilter.include([expected_coin_id])),),
@@ -280,12 +302,12 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 ),
             ]
             if request.type is not None and WalletType(request.type) is WalletType.CAT:
-                return GetWalletsResponse([wallet_list[1]])
-            return GetWalletsResponse(wallet_list)
+                return GetWalletsResponse(wallets=[wallet_list[1]])
+            return GetWalletsResponse(wallets=wallet_list)
 
         async def get_height_info(self) -> GetHeightInfoResponse:
             self.add_to_log("get_height_info", ())
-            return GetHeightInfoResponse(uint32(10))
+            return GetHeightInfoResponse(height=uint32(10))
 
         async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
             self.add_to_log("get_wallet_balance", (request,))
@@ -296,7 +318,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             else:
                 amount = uint128(1)
             return GetWalletBalanceResponse(
-                BalanceResponse(
+                wallet_balance=BalanceResponse(
                     wallet_id=request.wallet_id,
                     wallet_type=uint8(0),  # Doesn't matter
                     confirmed_wallet_balance=amount,
@@ -307,7 +329,9 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
         async def get_nft_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
             self.add_to_log("get_nft_wallet_did", (request.wallet_id,))
-            return NFTGetWalletDIDResponse("did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c")
+            return NFTGetWalletDIDResponse(
+                did_id="did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c"
+            )
 
         async def get_connections(
             self, node_type: NodeType | None = None
@@ -415,7 +439,9 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 memos={get_bytes32(3): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
             )
-            return SendTransactionResponse([STD_UTX], [STD_TX], tx_rec, name)
+            return SendTransactionResponse(
+                unsigned_transactions=[STD_UTX], transactions=[STD_TX], transaction=tx_rec, transaction_id=name
+            )
 
         async def cat_spend(
             self,
@@ -440,7 +466,9 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                     timelock_info,
                 ),
             )
-            return CATSpendResponse([STD_UTX], [STD_TX], STD_TX, STD_TX.name)
+            return CATSpendResponse(
+                unsigned_transactions=[STD_UTX], transactions=[STD_TX], transaction=STD_TX, transaction_id=STD_TX.name
+            )
 
     inst_rpc_client = SendWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -529,7 +557,10 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 test_condition_valid_times,
             )
         ],
-        "get_transaction": [(GetTransaction(get_bytes32(2)),), (GetTransaction(get_bytes32(2)),)],
+        "get_transaction": [
+            (GetTransaction(transaction_id=get_bytes32(2)),),
+            (GetTransaction(transaction_id=get_bytes32(2)),),
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -542,8 +573,12 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
         async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
             self.add_to_log("get_next_address", (request.wallet_id, request.new_address))
             if request.new_address:
-                return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(3), "xch"))
-            return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(4), "xch"))
+                return GetNextAddressResponse(
+                    wallet_id=request.wallet_id, address=encode_puzzle_hash(get_bytes32(3), "xch")
+                )
+            return GetNextAddressResponse(
+                wallet_id=request.wallet_id, address=encode_puzzle_hash(get_bytes32(4), "xch")
+            )
 
     inst_rpc_client = GetAddressWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -644,7 +679,7 @@ def test_get_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRp
     class GetDerivationIndexRpcClient(TestWalletRpcClient):
         async def get_current_derivation_index(self) -> GetCurrentDerivationIndexResponse:
             self.add_to_log("get_current_derivation_index", ())
-            return GetCurrentDerivationIndexResponse(uint32(520))
+            return GetCurrentDerivationIndexResponse(index=uint32(520))
 
     inst_rpc_client = GetDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -692,7 +727,7 @@ def test_update_derivation_index(capsys: object, get_test_cli_clients: tuple[Tes
     class UpdateDerivationIndexRpcClient(TestWalletRpcClient):
         async def extend_derivation_index(self, request: ExtendDerivationIndex) -> ExtendDerivationIndexResponse:
             self.add_to_log("extend_derivation_index", (request.index,))
-            return ExtendDerivationIndexResponse(request.index)
+            return ExtendDerivationIndexResponse(index=request.index)
 
     inst_rpc_client = UpdateDerivationIndexRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -839,7 +874,9 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 valid_times=ConditionValidTimes(),
             )
 
-            return CreateOfferForIDsResponse([STD_UTX], [STD_TX], created_offer, trade_offer)
+            return CreateOfferForIDsResponse(
+                unsigned_transactions=[STD_UTX], transactions=[STD_TX], offer=created_offer, trade_record=trade_offer
+            )
 
     inst_rpc_client = MakeOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -886,25 +923,25 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "nft_calculate_royalties": [
             (
                 NFTCalculateRoyalties(
-                    [
+                    royalty_assets=[
                         RoyaltyAsset(
-                            "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft",
-                            "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
-                            uint16(1000),
+                            asset="nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft",
+                            royalty_address="xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
+                            royalty_percentage=uint16(1000),
                         )
                     ],
-                    [
+                    fungible_assets=[
                         FungibleAsset(
-                            "XCH",
-                            uint64(10000000000000),
+                            asset="XCH",
+                            amount=uint64(10000000000000),
                         ),
                         FungibleAsset(
-                            "test3",
-                            uint64(100000),
+                            asset="test3",
+                            amount=uint64(100000),
                         ),
                         FungibleAsset(
-                            "test4",
-                            uint64(100000),
+                            asset="test4",
+                            amount=uint64(100000),
                         ),
                     ],
                 ),
@@ -1001,7 +1038,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                     ),
                 )
                 records.append(trade_offer)
-            return GetAllOffersResponse([], records)
+            return GetAllOffersResponse(offers=[], trade_records=records)
 
     inst_rpc_client = GetOffersRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -1072,10 +1109,10 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 (request.parsed_offer, tx_config, request.solver, request.fee, request.push, timelock_info),
             )
             return TakeOfferResponse(
-                [STD_UTX],
-                [STD_TX],
-                request.parsed_offer,
-                TradeRecord(
+                unsigned_transactions=[STD_UTX],
+                transactions=[STD_TX],
+                offer=request.parsed_offer,
+                trade_record=TradeRecord(
                     confirmed_at_index=uint32(0),
                     accepted_at_time=uint64(123456789),
                     created_at_time=uint64(12345678),
@@ -1094,9 +1131,9 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
             self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
             if request.asset_id == cat_offered_id:
-                return CATAssetIDToNameResponse(uint32(2), "offered cat")
+                return CATAssetIDToNameResponse(wallet_id=uint32(2), name="offered cat")
             elif request.asset_id == cat_requested_id:
-                return CATAssetIDToNameResponse(uint32(3), "requested cat")
+                return CATAssetIDToNameResponse(wallet_id=uint32(3), name="requested cat")
             else:
                 return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
@@ -1173,8 +1210,8 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             self.add_to_log("get_offer", (request.trade_id, request.file_contents))
             offer = Offer.from_bech32(test_offer_file_bech32)
             return GetOfferResponse(
-                test_offer_file_bech32,
-                TradeRecord(
+                offer=test_offer_file_bech32,
+                trade_record=TradeRecord(
                     confirmed_at_index=uint32(0),
                     accepted_at_time=uint64(0),
                     created_at_time=uint64(12345678),
@@ -1200,7 +1237,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             self.add_to_log(
                 "cancel_offer", (request.trade_id, tx_config, request.fee, request.secure, request.push, timelock_info)
             )
-            return CancelOfferResponse([STD_UTX], [STD_TX])
+            return CancelOfferResponse(unsigned_transactions=[STD_UTX], transactions=[STD_TX])
 
     inst_rpc_client = CancelOfferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

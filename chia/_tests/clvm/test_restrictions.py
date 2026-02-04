@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
@@ -72,7 +74,7 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
                         pwr.puzzle_reveal(),
                         pwr.solve(
                             [],
-                            [Program.to([any_old_dpuz.puzzle.get_tree_hash()])],
+                            [restriction.solve(original_dpuz=any_old_dpuz.puzzle)],
                             Program.to([[1, "bar"]]),
                             wrapped_dpuz,
                         ),
@@ -86,6 +88,12 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
 
         # memo format assertion for coverage sake
         assert restriction.memo(0) == Program.to([None, None])
+
+        # error check
+        with pytest.raises(
+            ValueError, match=re.escape("Number of wrapper solutions does not match number of required wrappers")
+        ):
+            restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(["only one"])])
 
 
 @pytest.mark.anyio
