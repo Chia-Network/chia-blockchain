@@ -211,6 +211,9 @@ async def wallet_environments(
                             if trusted_full_node
                             else {}
                         ),
+                        "reuse_public_key_for_change": {
+                            str(service._node.logged_in_fingerprint): tx_config.reuse_puzhash
+                        },
                         **config_overrides,
                     }
                     service._node.wallet_state_manager.config = service._node.config

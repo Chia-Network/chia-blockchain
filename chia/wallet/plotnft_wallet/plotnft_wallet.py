@@ -13,8 +13,10 @@ from typing_extensions import Self, Unpack
 from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, RewardPuzzle, SingletonStruct, UserConfig
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoin, CreateCoinAnnouncement, Remark
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -60,6 +62,15 @@ class PlotNFT2Wallet:
                 data=wallet_info.data,
                 id=wallet_info.id,
             )
+        async with wallet_state_manager.new_action_scope(
+            tx_config=wallet_state_manager.tx_config, push=True
+        ) as action_scope:
+            if wallet_state_manager.config["plotnft2_claim_address"] is None:
+                claim_address = encode_puzzle_hash(
+                    await action_scope.get_puzzle_hash(wallet_state_manager),
+                    AddressType.XCH.hrp(wallet_state_manager.config),
+                )
+                wallet_state_manager.config["plotnft2_claim_address"] = claim_address
         return self
 
     @property
@@ -73,6 +84,10 @@ class PlotNFT2Wallet:
     @property
     def p2_singleton_puzzle_hash(self) -> bytes32:
         return RewardPuzzle(singleton_id=self.plotnft_id).puzzle_hash()
+
+    @property
+    def rewards_claim_puzhash(self) -> bytes32:
+        return decode_puzzle_hash(self.wallet_state_manager.config["plotnft2_claim_address"])
 
     @classmethod
     def type(cls) -> WalletType:
@@ -127,7 +142,6 @@ class PlotNFT2Wallet:
         if len(rewards_to_claim) == 0:
             raise ValueError("No rewards to claim")
         total_reward_amount = uint64(sum(reward.coin.amount for reward in rewards_to_claim))
-        target_ph = await action_scope.get_puzzle_hash(self.wallet_state_manager)
         if fee > total_reward_amount:
             raise ValueError("Fee is greater than the total amount of rewards")
 
@@ -139,7 +153,7 @@ class PlotNFT2Wallet:
                     puzzle=self.xch_wallet.make_solution(
                         primaries=[
                             CreateCoin(
-                                puzzle_hash=target_ph,
+                                puzzle_hash=self.rewards_claim_puzhash,
                                 amount=uint64(total_reward_amount - fee),
                             ),
                         ],
@@ -174,14 +188,14 @@ class PlotNFT2Wallet:
             interface.side_effects.transactions.append(
                 self.wallet_state_manager.new_outgoing_transaction(
                     wallet_id=self.id(),
-                    puzzle_hash=target_ph,
+                    puzzle_hash=self.rewards_claim_puzhash,
                     amount=total_reward_amount,
                     fee=fee,
                     spend_bundle=spend_bundle,
                     additions=[
                         Coin(
                             parent_coin_info=rewards_to_claim[0].coin.name(),
-                            puzzle_hash=target_ph,
+                            puzzle_hash=self.rewards_claim_puzhash,
                             amount=uint64(total_reward_amount - fee),
                         ),
                         Coin(
