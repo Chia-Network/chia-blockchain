@@ -3768,7 +3768,7 @@ class TestReorgs:
 
 
 @pytest.mark.anyio
-async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> None:
+async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
     WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
@@ -3847,6 +3847,9 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
                 expected = AddBlockResult.NEW_PEAK
             else:
                 expected = AddBlockResult.ADDED_AS_ORPHAN
+            # we are checking that are desierd case got executed, hard to create with the new pos2 plots
+            if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+                assert expected == AddBlockResult.NEW_PEAK
         else:
             expected = AddBlockResult.NEW_PEAK
         await _validate_and_add_block(b, block, expected_result=expected, fork_info=fork_info)
