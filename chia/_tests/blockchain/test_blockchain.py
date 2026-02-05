@@ -3847,7 +3847,7 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools, conse
                 expected = AddBlockResult.NEW_PEAK
             else:
                 expected = AddBlockResult.ADDED_AS_ORPHAN
-            # we are checking that are desierd case got executed, hard to create with the new pos2 plots
+            # todo_v2_plots we are checking that are desierd case got executed, hard to create with the new pos2 plots
             if consensus_mode < ConsensusMode.HARD_FORK_3_0:
                 assert expected == AddBlockResult.NEW_PEAK
         else:
