@@ -429,10 +429,11 @@ def test_timestamp_in_sync(root_path_populated_with_config: Path, testing: bool,
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
-# todo_v2_plots fix this test and remove limit_consensus_modes
-# it's failing on line:
-# assert f"get_timestamp_for_height_from_peer cache miss for height {i}" in caplog.text
-# on height 0
+# todo_v2_plots
+# NOTE: HARD_FORK_3_0 can fail this log assertion because height 1-2 are non-tx,
+# so earlier timestamp lookups backtrack to height 0 and cache _timestamps[0].
+# clear_after_height(0) keeps height 0, so get_timestamp(1) returns early
+# this test expects a certine chain state
 @pytest.mark.limit_consensus_modes(
     allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="doesn't work for 3.0 hard fork yet"
 )
