@@ -17,7 +17,7 @@ from chia.util.hash import std_hash
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
     DelegatedPuzzleAndSolution,
-    PuzzleHint,
+    MemberHint,
     PuzzleWithRestrictions,
 )
 from chia.wallet.puzzles.custody.member_puzzles import (
@@ -42,7 +42,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
 
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=delegated_puzzle)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=bls_with_taproot_member)
-        memo = PuzzleHint(
+        memo = MemberHint(
             puzhash=bls_puzzle.puzzle.puzzle_hash(0),
             memo=bls_puzzle.puzzle.memo(0),
         )
@@ -142,7 +142,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         assert illegal_taproot_puzzle.run([]) == Program.to([[51, Program.to(1).get_tree_hash(), 1]])
         bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=bls_with_taproot_member)
-        memo = PuzzleHint(
+        memo = MemberHint(
             puzhash=bls_puzzle.puzzle.puzzle_hash(0),
             memo=bls_puzzle.puzzle.memo(0),
         )
@@ -280,7 +280,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
             )
         )[0].coin
 
-        memo = PuzzleHint(
+        memo = MemberHint(
             puzhash=singleton_member_puzzle.puzzle.puzzle_hash(0),
             memo=singleton_member_puzzle.puzzle.memo(0),
         )
@@ -373,7 +373,7 @@ async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
 
         fixed_puzzle_member = FixedPuzzleMember(fixed_puzzle_hash=delegated_puzzle_hash)
         bls_puzzle = PuzzleWithRestrictions(nonce=0, restrictions=[], puzzle=fixed_puzzle_member)
-        memo = PuzzleHint(
+        memo = MemberHint(
             puzhash=bls_puzzle.puzzle.puzzle_hash(0),
             memo=bls_puzzle.puzzle.memo(0),
         )
