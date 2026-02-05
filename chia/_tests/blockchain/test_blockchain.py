@@ -3384,6 +3384,7 @@ class TestReorgs:
         default_10000_blocks: list[FullBlock],
         test_long_reorg_blocks: list[FullBlock],
         test_long_reorg_blocks_light: list[FullBlock],
+        consensus_mode: ConsensusMode,
     ) -> None:
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
@@ -3475,15 +3476,21 @@ class TestReorgs:
             else:
                 if fork_info2 is None:
                     fork_info2 = ForkInfo(reorg_block.height - 1, reorg_block.height - 1, reorg_block.prev_header_hash)
-                peak = b.get_peak()
-                assert peak is not None
-                if reorg_block.weight > peak.weight or (
-                    reorg_block.weight == peak.weight and reorg_block.total_iters < peak.total_iters
-                ):
-                    expected_result = AddBlockResult.NEW_PEAK
-                    aug_chain = None
+                if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+                    expected_result = (
+                        AddBlockResult.ADDED_AS_ORPHAN
+                        if reorg_block.weight <= chain_1_weight
+                        else AddBlockResult.NEW_PEAK
+                    )
                 else:
-                    expected_result = AddBlockResult.ADDED_AS_ORPHAN
+                    peak = b.get_peak()
+                    assert peak is not None
+                    is_new_peak = reorg_block.weight > peak.weight or (
+                        reorg_block.weight == peak.weight and reorg_block.total_iters < peak.total_iters
+                    )
+                    expected_result = AddBlockResult.NEW_PEAK if is_new_peak else AddBlockResult.ADDED_AS_ORPHAN
+                if expected_result == AddBlockResult.NEW_PEAK:
+                    aug_chain = None
                 # Create fresh instance for each NEW_PEAK block like the full node
                 await _validate_and_add_block(
                     b,
@@ -3539,13 +3546,15 @@ class TestReorgs:
                 print(f"original chain: {block.height:4} weight: {block.weight:7} peak: {str(peak.header_hash)[:6]}")
             if block.height <= chain_1_height:
                 expect = AddBlockResult.ALREADY_HAVE_BLOCK
+            elif consensus_mode < ConsensusMode.HARD_FORK_3_0:
+                expect = AddBlockResult.ADDED_AS_ORPHAN if block.weight < chain_2_weight else AddBlockResult.NEW_PEAK
             else:
                 peak = b.get_peak()
                 assert peak is not None
-                if block.weight > peak.weight or (block.weight == peak.weight and block.total_iters < peak.total_iters):
-                    expect = AddBlockResult.NEW_PEAK
-                else:
-                    expect = AddBlockResult.ADDED_AS_ORPHAN
+                is_new_peak = block.weight > peak.weight or (
+                    block.weight == peak.weight and block.total_iters < peak.total_iters
+                )
+                expect = AddBlockResult.NEW_PEAK if is_new_peak else AddBlockResult.ADDED_AS_ORPHAN
             await _validate_and_add_block(b, block, fork_info=fork_info, expected_result=expect)
 
         # if these asserts fires, there was no reorg back to the original chain
