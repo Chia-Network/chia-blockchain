@@ -285,11 +285,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
         if self.rpc_api.service.server is None:
-            raise RpcError(
-                RpcErrorCodes.GLOBAL_CONNECTIONS_NOT_SET,
-                "Global connections is not set",
-                structured_message="Global connections is not set",
-            )
+            raise RpcError.simple(RpcErrorCodes.GLOBAL_CONNECTIONS_NOT_SET, "Global connections is not set")
         con_info: list[dict[str, Any]]
         con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
         return {"connections": con_info}

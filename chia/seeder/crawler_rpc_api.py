@@ -63,11 +63,7 @@ class CrawlerRpcApi:
     async def get_ips_after_timestamp(self, _request: dict[str, Any]) -> EndpointResult:
         after = _request.get("after", None)
         if after is None:
-            raise RpcError(
-                RpcErrorCodes.AFTER_REQUIRED,
-                "`after` is required and must be a unix timestamp",
-                structured_message="`after` is required and must be a unix timestamp",
-            )
+            raise RpcError.simple(RpcErrorCodes.AFTER_REQUIRED, "`after` is required and must be a unix timestamp")
 
         offset = _request.get("offset", 0)
         limit = _request.get("limit", 10000)

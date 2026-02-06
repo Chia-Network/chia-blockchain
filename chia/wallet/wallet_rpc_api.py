@@ -2088,11 +2088,7 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> CreateOfferForIDsResponse:
         if action_scope.config.push:
-            raise RpcError(
-                RpcErrorCodes.CANNOT_PUSH_INCOMPLETE_SPEND,
-                "Cannot push an incomplete spend",
-                structured_message="Cannot push an incomplete spend",
-            )
+            raise RpcError.simple(RpcErrorCodes.CANNOT_PUSH_INCOMPLETE_SPEND, "Cannot push an incomplete spend")
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: dict[bytes32, PuzzleInfo] = {}
@@ -2970,10 +2966,9 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> NFTMintBulkResponse:
         if action_scope.config.push:
-            raise RpcError(
+            raise RpcError.simple(  # pragma: no cover
                 RpcErrorCodes.NFT_MINT_PUSH_UNAVAILABLE,
-                "Automatic pushing of nft minting transactions not yet available",  # pragma: no cover
-                structured_message="Automatic pushing of nft minting transactions not yet available",
+                "Automatic pushing of nft minting transactions not yet available",
             )
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_address in {None, ""}:
@@ -3728,10 +3723,8 @@ class WalletRpcApi:
 
         vc_proofs: VCProofs | None = await vc_wallet.store.get_proofs_for_root(request.root)
         if vc_proofs is None:
-            raise RpcError(
-                RpcErrorCodes.NO_PROOFS_FOR_ROOT,
-                "no proofs found for specified root",  # pragma: no cover
-                structured_message="no proofs found for specified root",
+            raise RpcError.simple(  # pragma: no cover
+                RpcErrorCodes.NO_PROOFS_FOR_ROOT, "no proofs found for specified root"
             )
         return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)
 
