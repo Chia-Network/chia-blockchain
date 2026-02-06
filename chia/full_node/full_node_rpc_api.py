@@ -1167,7 +1167,15 @@ class FullNodeRpcApi:
         else:
             cost = self._get_spendbundle_type_cost(request["spend_type"])
             cost *= request.get("spend_count", 1)
-        return uint64(cost)
+        try:
+            return uint64(cost)
+        except (ValueError, TypeError) as e:
+            raise RpcError(
+                RpcErrorCodes.INVALID_COST,
+                f"Invalid cost value: {cost!r}",
+                data={"cost": str(cost)},
+                structured_message="Invalid cost value",
+            ) from e
 
     def _validate_target_times(self, request: dict[str, Any]) -> None:
         if "target_times" not in request:
