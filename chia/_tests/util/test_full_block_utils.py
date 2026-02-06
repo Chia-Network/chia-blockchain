@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import platform
 import random
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 
 import pytest
 from chia_rs import (
@@ -16,6 +17,7 @@ from chia_rs import (
     HeaderBlock,
     InfusedChallengeChainSubSlot,
     PoolTarget,
+    Program,
     ProofOfSpace,
     RewardChainBlock,
     RewardChainSubSlot,
@@ -43,6 +45,11 @@ test_vdfs: list[VDFInfo] = [rand_vdf() for _ in range(100)]
 test_vdf_proofs: list[VDFProof] = [rand_vdf_proof() for _ in range(100)]
 
 
+def _is_macos_intel() -> bool:
+    """True when running on macOS with an Intel CPU (x86_64). Used to skip slow test params."""
+    return platform.system() == "Darwin" and platform.machine() in {"x86_64", "i386"}
+
+
 def g2() -> G2Element:
     return random.sample(test_g2s, 1)[0]
 
@@ -63,7 +70,7 @@ def vdf_proof() -> VDFProof:
     return random.sample(test_vdf_proofs, 1)[0]
 
 
-def get_proof_of_space() -> Generator[ProofOfSpace, None, None]:
+def get_proof_of_space() -> Iterator[ProofOfSpace]:
     for pool_pk in [g1(), None]:
         for plot_hash in [hsh(), None]:
             for pos_version in [0, 0x80]:
@@ -77,35 +84,36 @@ def get_proof_of_space() -> Generator[ProofOfSpace, None, None]:
                 )
 
 
-def get_reward_chain_block(height: uint32) -> Generator[RewardChainBlock, None, None]:
+def get_reward_chain_block(height: uint32) -> Iterator[RewardChainBlock]:
     for has_transactions in [True, False]:
         for challenge_chain_sp_vdf in [vdf(), None]:
             for reward_chain_sp_vdf in [vdf(), None]:
                 for infused_challenge_chain_ip_vdf in [vdf(), None]:
-                    for proof_of_space in get_proof_of_space():
-                        weight = uint128(random.randint(0, 1000000000))
-                        iters = uint128(123456)
-                        sp_index = uint8(0)
-                        yield RewardChainBlock(
-                            weight,
-                            uint32(height),
-                            iters,
-                            sp_index,
-                            hsh(),  # pos_ss_cc_challenge_hash
-                            proof_of_space,
-                            challenge_chain_sp_vdf,
-                            g2(),  # challenge_chain_sp_signature
-                            vdf(),  # challenge_chain_ip_vdf
-                            reward_chain_sp_vdf,
-                            g2(),  # reward_chain_sp_signature
-                            vdf(),  # reward_chain_ip_vdf
-                            infused_challenge_chain_ip_vdf,
-                            None,  # header_mmr_root
-                            has_transactions,
-                        )
+                    for mmr_root in [hsh(), None]:
+                        for proof_of_space in get_proof_of_space():
+                            weight = uint128(random.randint(0, 1000000000))
+                            iters = uint128(123456)
+                            sp_index = uint8(0)
+                            yield RewardChainBlock(
+                                weight,
+                                uint32(height),
+                                iters,
+                                sp_index,
+                                hsh(),  # pos_ss_cc_challenge_hash
+                                proof_of_space,
+                                challenge_chain_sp_vdf,
+                                g2(),  # challenge_chain_sp_signature
+                                vdf(),  # challenge_chain_ip_vdf
+                                reward_chain_sp_vdf,
+                                g2(),  # reward_chain_sp_signature
+                                vdf(),  # reward_chain_ip_vdf
+                                infused_challenge_chain_ip_vdf,
+                                mmr_root,
+                                has_transactions,
+                            )
 
 
-def get_foliage_block_data() -> Generator[FoliageBlockData, None, None]:
+def get_foliage_block_data() -> Iterator[FoliageBlockData]:
     for pool_signature in [g2(), None]:
         pool_target = PoolTarget(
             hsh(),  # puzzle_hash
@@ -121,21 +129,29 @@ def get_foliage_block_data() -> Generator[FoliageBlockData, None, None]:
         )
 
 
-def get_foliage() -> Generator[Foliage, None, None]:
+# there are 4 shards, each representing a subset of all combinations of Foliage
+# objects.
+def get_foliage(shard: int) -> Iterator[Foliage]:
+    assert shard >= 0
+    assert shard < 4
     for foliage_block_data in get_foliage_block_data():
-        for foliage_transaction_block_hash in [hsh(), None]:
-            for foliage_transaction_block_signature in [g2(), None]:
-                yield Foliage(
-                    hsh(),  # prev_block_hash
-                    hsh(),  # reward_block_hash
-                    foliage_block_data,
-                    g2(),  # foliage_block_data_signature
-                    foliage_transaction_block_hash,
-                    foliage_transaction_block_signature,
-                )
+        # rather than generating these 4 combinations, serially, as part of the
+        # generator output, we pin these based on which shard we're on.
+        # these two fields, tx block hash and tc block signature are both optional,
+        # so we cover all 4 combinations where they are set or not.
+        foliage_transaction_block_hash = None if (shard & 1) == 0 else hsh()
+        foliage_transaction_block_signature = None if (shard & 2) == 0 else g2()
+        yield Foliage(
+            hsh(),  # prev_block_hash
+            hsh(),  # reward_block_hash
+            foliage_block_data,
+            g2(),  # foliage_block_data_signature
+            foliage_transaction_block_hash,
+            foliage_transaction_block_signature,
+        )
 
 
-def get_foliage_transaction_block() -> Generator[FoliageTransactionBlock | None, None, None]:
+def get_foliage_transaction_block() -> Iterator[FoliageTransactionBlock | None]:
     yield None
     timestamp = uint64(1631794488)
     yield FoliageTransactionBlock(
@@ -148,7 +164,9 @@ def get_foliage_transaction_block() -> Generator[FoliageTransactionBlock | None,
     )
 
 
-def get_transactions_info(height: uint32, foliage_transaction_block: FoliageTransactionBlock | None):
+def get_transactions_info(
+    height: uint32, foliage_transaction_block: FoliageTransactionBlock | None
+) -> Iterator[TransactionsInfo | None]:
     if not foliage_transaction_block:
         yield None
     else:
@@ -165,7 +183,7 @@ def get_transactions_info(height: uint32, foliage_transaction_block: FoliageTran
         )
 
 
-def get_challenge_chain_sub_slot() -> Generator[ChallengeChainSubSlot, None, None]:
+def get_challenge_chain_sub_slot() -> Iterator[ChallengeChainSubSlot]:
     for infused_chain_sub_slot_hash in [hsh(), None]:
         for sub_epoch_summary_hash in [hsh(), None]:
             for new_sub_slot_iters in [uint64(random.randint(0, 4000000000)), None]:
@@ -179,7 +197,7 @@ def get_challenge_chain_sub_slot() -> Generator[ChallengeChainSubSlot, None, Non
                     )
 
 
-def get_reward_chain_sub_slot() -> Generator[RewardChainSubSlot, None, None]:
+def get_reward_chain_sub_slot() -> Iterator[RewardChainSubSlot]:
     for infused_challenge_chain_sub_slot_hash in [hsh(), None]:
         yield RewardChainSubSlot(
             vdf(),  # end_of_slot_vdf
@@ -189,7 +207,7 @@ def get_reward_chain_sub_slot() -> Generator[RewardChainSubSlot, None, None]:
         )
 
 
-def get_sub_slot_proofs() -> Generator[SubSlotProofs, None, None]:
+def get_sub_slot_proofs() -> Iterator[SubSlotProofs]:
     for infused_challenge_chain_slot_proof in [vdf_proof(), None]:
         yield SubSlotProofs(
             vdf_proof(),  # challenge_chain_slot_proof
@@ -198,7 +216,7 @@ def get_sub_slot_proofs() -> Generator[SubSlotProofs, None, None]:
         )
 
 
-def get_end_of_sub_slot() -> Generator[EndOfSubSlotBundle, None, None]:
+def get_end_of_sub_slot() -> Iterator[EndOfSubSlotBundle]:
     for challenge_chain in get_challenge_chain_sub_slot():
         for infused_challenge_chain in [InfusedChallengeChainSubSlot(vdf()), None]:
             for reward_chain in get_reward_chain_sub_slot():
@@ -211,24 +229,29 @@ def get_end_of_sub_slot() -> Generator[EndOfSubSlotBundle, None, None]:
                     )
 
 
-def get_finished_sub_slots() -> Generator[list[EndOfSubSlotBundle], None, None]:
+def get_finished_sub_slots() -> Iterator[list[EndOfSubSlotBundle]]:
     yield []
     yield [s for s in get_end_of_sub_slot()]
 
 
-def get_ref_list() -> Generator[list[uint32], None, None]:
+def get_ref_list() -> Iterator[list[uint32]]:
     yield []
     yield [uint32(1), uint32(2), uint32(3), uint32(4)]
-    yield [uint32(256)]
     yield [uint32(0xFFFFFFFF)]
 
 
-def get_full_blocks() -> Iterator[FullBlock]:
+# This generator creates (essentially) all combinations of fields set and unset
+# (including invalid combinations) of FullBlock. It's broken down into multiple
+# generators that in turn generate all combinations of sub objects. Since there
+# are many combinations, tests that use this take a long time. To allow tests
+# running in parallel, the outer loop (creating all combinations of foliage) is
+# split into 4 shards that allow the tests to run in parallel, 4-ways.
+def get_full_blocks(shard: int) -> Iterator[FullBlock]:
     random.seed(123456789)
 
     generator = SerializedProgram.from_bytes(bytes.fromhex("ff01820539"))
 
-    for foliage in get_foliage():
+    for foliage in get_foliage(shard):
         for foliage_transaction_block in get_foliage_transaction_block():
             height = uint32(random.randint(0, 1000000))
             for reward_chain_block in get_reward_chain_block(height):
@@ -238,54 +261,61 @@ def get_full_blocks() -> Iterator[FullBlock]:
                             for infused_challenge_chain_ip_proof in [vdf_proof(), None]:
                                 for finished_sub_slots in get_finished_sub_slots():
                                     for refs_list in get_ref_list():
-                                        yield FullBlock(
-                                            finished_sub_slots,
-                                            reward_chain_block,
-                                            challenge_chain_sp_proof,
-                                            vdf_proof(),  # challenge_chain_ip_proof
-                                            reward_chain_sp_proof,
-                                            vdf_proof(),  # reward_chain_ip_proof
-                                            infused_challenge_chain_ip_proof,
-                                            foliage,
-                                            foliage_transaction_block,
-                                            transactions_info,
-                                            generator,  # transactions_generator
-                                            refs_list,  # transactions_generator_ref_list
-                                        )
+                                        for gen in [None, generator]:
+                                            yield FullBlock(
+                                                finished_sub_slots,
+                                                reward_chain_block,
+                                                challenge_chain_sp_proof,
+                                                vdf_proof(),  # challenge_chain_ip_proof
+                                                reward_chain_sp_proof,
+                                                vdf_proof(),  # reward_chain_ip_proof
+                                                infused_challenge_chain_ip_proof,
+                                                foliage,
+                                                foliage_transaction_block,
+                                                transactions_info,
+                                                gen,  # transactions_generator
+                                                refs_list,  # transactions_generator_ref_list
+                                            )
 
 
 @pytest.mark.anyio
-@pytest.mark.skip(
-    "Very slow test with limited usefulness: was used to ensure the cheap parser for FullBlock matched the regular one"
-)
-async def test_parser():
+@pytest.mark.parametrize("shard", [0, 1, 2, 3])
+@pytest.mark.skipif(_is_macos_intel(), reason="Very slow on macOS Intel")
+async def test_parser(shard: int) -> None:
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
     # generator_from_block() successfully parses out the generator object
     # correctly
-    for block in get_full_blocks():
-        block_bytes = bytes(block)
+    for block in get_full_blocks(shard):
+        block_bytes = memoryview(bytes(block))
         height, is_tx_block = get_height_and_tx_status_from_block(block_bytes)
         assert height == block.height
-        assert is_tx_block == (block.transactions_info is not None)
+        assert is_tx_block == block.is_transaction_block()
         gen = generator_from_block(block_bytes)
         if gen is None:
             assert block.transactions_generator is None
         else:
             assert block.transactions_generator is not None
-            assert gen == bytes(block.transactions_generator)
+            assert Program.from_bytes(gen) == block.transactions_generator
         bi = block_info_from_block(block_bytes)
-        assert block.transactions_generator == bi.transactions_generator
+        if block.transactions_generator is None:
+            assert bi.transactions_generator is None
+        else:
+            assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash
         assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
         # this doubles the run-time of this test, with questionable utility
-        # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
+        if gen is None:
+            assert FullBlock.from_bytes(block_bytes).transactions_generator is None
+        else:
+            assert Program.from_bytes(gen) == FullBlock.from_bytes(block_bytes).transactions_generator
 
 
 @pytest.mark.anyio
-@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
-async def test_header_block():
-    for block in get_full_blocks():
-        hb: HeaderBlock = get_block_header(block)
+@pytest.mark.parametrize("shard", [0, 1, 2, 3])
+@pytest.mark.skipif(_is_macos_intel(), reason="Very slow on macOS Intel")
+async def test_header_block(shard: int) -> None:
+    for block in get_full_blocks(shard):
+        hb: HeaderBlock = get_block_header(block, ([], []) if block.is_transaction_block() else None)
         hb_bytes = header_block_from_block(memoryview(bytes(block)))
         assert HeaderBlock.from_bytes(hb_bytes) == hb
