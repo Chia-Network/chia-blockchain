@@ -51,10 +51,10 @@ class TestRpcApi:
     def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/log": self.log,
-            "/raise_structured_error": self.raise_structured_error,
+            "/raise_rpc_error": self.raise_rpc_error,
         }
 
-    async def raise_structured_error(self, request: dict[str, Any]) -> EndpointResult:
+    async def raise_rpc_error(self, request: dict[str, Any]) -> EndpointResult:
         raise RpcError(
             "TEST_ERROR_KEY",
             "Test message for backwards compatibility, foo is bar",
@@ -211,7 +211,7 @@ async def test_reset_log_level(
 @pytest.mark.anyio
 async def test_structured_error_response_shape(client: Client) -> None:
     """RPC error response includes legacy 'error' and 'structuredError' with expected shape."""
-    body = await client.request_allow_failure("raise_structured_error", json={})
+    body = await client.request_allow_failure("raise_rpc_error", json={})
     assert body["success"] is False
     assert body["error"] == "Test message for backwards compatibility, foo is bar"
     assert "structuredError" in body
@@ -233,10 +233,10 @@ async def test_websocket_structured_error_response(server: RpcServer[TestRpcApi]
 
     mock_ws = MockWebSocket()
 
-    # Send a payload that will trigger the raise_structured_error endpoint
+    # Send a payload that will trigger the raise_rpc_error endpoint
     payload = json.dumps(
         {
-            "command": "raise_structured_error",
+            "command": "raise_rpc_error",
             "data": {},
             "ack": False,
             "request_id": "test-ws-123",
