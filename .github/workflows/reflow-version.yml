@@ -45,7 +45,7 @@ jobs:
           elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
             TAG_TYPE=rc
           fi
-          echo "tag-type=${TAG_TYPE}" | tee -a "$$GITHUB_OUTPUT"
+          echo "tag-type=${TAG_TYPE}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Create installer version number
         id: version-number

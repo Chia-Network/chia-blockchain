@@ -1026,7 +1026,7 @@ class BlockTools:
                         blocks=BlockCache(blocks),
                         prev_b_hash=latest_block.header_hash,
                         sp_index=uint8(signage_point_index),
-                        first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
+                        finished_sub_slots=len(finished_sub_slots_at_ip),
                     )
 
                     qualified_proofs: list[tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
@@ -1343,7 +1343,7 @@ class BlockTools:
                         blocks=BlockCache(blocks),
                         prev_b_hash=latest_block.header_hash,
                         sp_index=uint8(signage_point_index),
-                        first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
+                        finished_sub_slots=len(finished_sub_slots_at_ip),
                     )
 
                     qualified_proofs = self.get_pospaces_for_challenge(
@@ -1994,7 +1994,7 @@ def load_block_list(
             blocks=cache,
             prev_b_hash=full_block.prev_header_hash,
             sp_index=full_block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
+            finished_sub_slots=len(full_block.finished_sub_slots),
         )
         required_iters = validate_pospace_and_get_required_iters(
             constants,

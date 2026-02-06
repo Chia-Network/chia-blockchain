@@ -221,14 +221,14 @@ async def async_split(
         return []
 
     if number_of_coins is None:
-        response = await client_info.client.get_coin_records_by_names(GetCoinRecordsByNames([target_coin_id]))
+        response = await client_info.client.get_coin_records_by_names(GetCoinRecordsByNames(names=[target_coin_id]))
         if len(response.coin_records) == 0:
             print("Could not find target coin.")
             return []
         assert amount_per_coin is not None
         number_of_coins = int(response.coin_records[0].coin.amount // amount_per_coin.convert_amount(mojo_per_unit))
     elif amount_per_coin is None:
-        response = await client_info.client.get_coin_records_by_names(GetCoinRecordsByNames([target_coin_id]))
+        response = await client_info.client.get_coin_records_by_names(GetCoinRecordsByNames(names=[target_coin_id]))
         if len(response.coin_records) == 0:
             print("Could not find target coin.")
             return []
