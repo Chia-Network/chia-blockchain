@@ -237,7 +237,7 @@ async def test_validate_fee_estimate_cost_err(
             print(var)
             request[var] = val
         with pytest.raises(
-            ValueError, match=re.escape("Request must contain exactly one of ['spend_bundle', 'cost', 'spend_type']")
+            RpcError, match=re.escape("Request must contain exactly one of ['spend_bundle', 'cost', 'spend_type']")
         ):
             _ = await full_node_rpc_api.get_fee_estimate(request)
 
