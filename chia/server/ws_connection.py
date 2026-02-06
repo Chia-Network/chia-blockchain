@@ -585,8 +585,91 @@ class WSChiaConnection:
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
+    def _get_aiohttp_protocol(self) -> Any:
+        """Get the underlying aiohttp ResponseHandler protocol.
+
+        The protocol is accessed through: ws._response._connection.protocol
+        This is the asyncio protocol that receives raw TCP data via data_received().
+
+        Returns None if not accessible.
+        """
+        try:
+            # Access the ClientResponse stored in the websocket
+            response = getattr(self.ws, "_response", None)
+            if response is None:
+                return None
+
+            # Access the Connection object (try both _connection and connection)
+            connection = getattr(response, "_connection", None)
+            if connection is None:
+                connection = getattr(response, "connection", None)
+            if connection is None:
+                return None
+
+            # Access the ResponseHandler protocol
+            protocol = getattr(connection, "protocol", None)
+            return protocol
+
+        except Exception:
+            return None
+
+    def _install_bytes_received_counter(self) -> None:
+        """Install a wrapper on the protocol's data_received to count incoming bytes.
+
+        This allows us to track the total bytes received through the websocket connection,
+        even when aiohttp uses Cython extensions that don't expose internal buffer state.
+        The counter is stored as _chia_bytes_received on the protocol object.
+        """
+        try:
+            protocol = self._get_aiohttp_protocol()
+            if protocol is None:
+                return
+
+            # Don't install twice
+            if hasattr(protocol, "_chia_bytes_received"):
+                return
+
+            # Initialize counter
+            protocol._chia_bytes_received = 0
+
+            # Save original data_received
+            original_data_received = protocol.data_received
+
+            # Create wrapper that counts bytes
+            def counting_data_received(data: bytes) -> None:
+                protocol._chia_bytes_received += len(data)
+                original_data_received(data)
+
+            # Replace data_received with wrapper
+            protocol.data_received = counting_data_received
+            self.log.debug("Installed bytes received counter on protocol")
+
+        except Exception as e:
+            self.log.debug(f"Failed to install bytes received counter: {e}")
+
+    def _get_protocol_bytes_received(self) -> int:
+        """Get the total bytes received through the websocket protocol.
+
+        Returns the cumulative count of bytes passed to data_received since the
+        counter was installed, or 0 if the counter is not available.
+        """
+        try:
+            protocol = self._get_aiohttp_protocol()
+            if protocol is None:
+                return 0
+
+            return getattr(protocol, "_chia_bytes_received", 0)
+
+        except Exception:
+            return 0
+
     async def send_request(self, message_no_id: Message, timeout: int) -> Message | None:
-        """Sends a message and waits for a response."""
+        """Sends a message and waits for a response.
+
+        Uses a progress-based timeout: the timeout is reset whenever data is being
+        received on the connection, allowing large messages to be received over slow
+        connections as long as data keeps flowing.
+        """
         if self.closed:
             return None
 
@@ -606,10 +689,84 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
-        except asyncio.TimeoutError:
-            self.log.debug(f"Request timeout: {message}")
+        # Progress-based timeout: check for data activity every interval
+        # If data is being received (buffer growing), reset the timeout
+        check_interval = 30  # Check every 30 seconds
+        last_bytes_read = self.bytes_read
+
+        # Install byte counter to track incoming data at protocol level
+        self._install_bytes_received_counter()
+        last_protocol_bytes = self._get_protocol_bytes_received()
+        time_without_progress = 0.0
+
+        # Log initial state for debugging
+        protocol = self._get_aiohttp_protocol()
+        self.log.debug(
+            f"Starting request wait: protocol_accessible={protocol is not None}, "
+            f"initial_bytes_read={last_bytes_read}, initial_protocol_bytes={last_protocol_bytes}"
+        )
+
+        while time_without_progress < timeout:
+            # Use the smaller of check_interval or remaining timeout to ensure
+            # we don't wait longer than the caller's timeout allows
+            remaining_timeout = timeout - time_without_progress
+            wait_time = min(check_interval, remaining_timeout)
+            try:
+                await asyncio.wait_for(event.wait(), timeout=wait_time)
+                # Event was set, response received
+                break
+            except asyncio.TimeoutError:
+                # Check if data is being received
+                current_bytes_read = self.bytes_read
+                current_protocol_bytes = self._get_protocol_bytes_received()
+
+                # Check if any progress was made
+                progress_made = False
+                if current_bytes_read > last_bytes_read:
+                    # Complete messages have been received
+                    progress_made = True
+                    last_bytes_read = current_bytes_read
+                if current_protocol_bytes > last_protocol_bytes:
+                    # Data is being received at the protocol level (partial message)
+                    progress_made = True
+                    last_protocol_bytes = current_protocol_bytes
+
+                if progress_made:
+                    # Data is being received, reset the timeout
+                    time_without_progress = 0.0
+                    self.log.debug(
+                        f"Request in progress, data being received "
+                        f"(bytes_read={current_bytes_read}, protocol_bytes={current_protocol_bytes}): "
+                        f"{ProtocolMessageTypes(message.type).name}"
+                    )
+                    # Reset the websocket heartbeat timer to prevent PING/PONG timeout
+                    # during large message transfers. aiohttp only resets this when a
+                    # complete message is received, but we know data is flowing.
+                    try:
+                        reset_heartbeat = getattr(self.ws, "_reset_heartbeat", None)
+                        if reset_heartbeat is not None:
+                            reset_heartbeat()
+                    except Exception:
+                        pass  # Ignore errors - heartbeat reset is best-effort
+                else:
+                    time_without_progress += wait_time
+                    self.log.debug(
+                        f"No progress detected after {wait_time:.1f}s "
+                        f"(bytes_read={current_bytes_read}, protocol_bytes={current_protocol_bytes}, "
+                        f"time_without_progress={time_without_progress:.1f}s)"
+                    )
+
+                # Also check if the connection is still open
+                if self.closed:
+                    self.log.info(f"Connection closed while waiting for response: {message}")
+                    break
+
+        if not event.is_set():
+            self.log.info(
+                f"Request timeout: {ProtocolMessageTypes(message.type).name} "
+                f"(no progress for {time_without_progress:.1f}s, "
+                f"bytes_read={self.bytes_read}, protocol_bytes={self._get_protocol_bytes_received()})"
+            )
 
         self.pending_requests.pop(message.id)
         result: Message | None = None
