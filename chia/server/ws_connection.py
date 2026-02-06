@@ -149,6 +149,7 @@ class WSChiaConnection:
         stub_metadata_for_type: dict[NodeType, ApiMetadata],
         session: ClientSession | None = None,
         exempt_peer_networks: list[IPv4Network | IPv6Network] = [],
+        version: str = __version__,
     ) -> WSChiaConnection:
         assert ws._writer is not None
         peername = ws._writer.transport.get_extra_info("peername")
@@ -182,6 +183,7 @@ class WSChiaConnection:
             stub_metadata_for_type=stub_metadata_for_type,
             session=session,
             exempt_peer_networks=exempt_peer_networks,
+            version=version,
         )
 
     def _get_extra_info(self, name: str) -> Any | None:
@@ -210,7 +212,7 @@ class WSChiaConnection:
                 Handshake(
                     network_id,
                     protocol_version[local_type],
-                    __version__,
+                    self.version,
                     uint16(server_port),
                     uint8(local_type.value),
                     self.local_capabilities_for_handshake,

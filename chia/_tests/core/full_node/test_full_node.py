@@ -3579,3 +3579,34 @@ async def test_send_transaction_peer_tx_queue_full(
     response = wallet_protocol.TransactionAck.from_bytes(response_msg.data)
     assert MempoolInclusionStatus(response.status) == MempoolInclusionStatus.FAILED
     assert response.error == "Transaction queue full"
+
+
+@pytest.mark.parametrize(
+    "post_hardfork, peer_version, staying_connected",
+    [
+        (False, "", True),
+        (False, "2.9.0", True),
+        (False, "3.0.0", True),
+        (True, "", False),
+        (True, "2.9.0", False),
+        (True, "3.0.0", True),
+    ],
+)
+@pytest.mark.anyio
+async def test_hard_fork_version_enforcement(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    post_hardfork: bool,
+    peer_version: str,
+    staying_connected: bool,
+) -> None:
+    """
+    Covers the case where peers connecting to a full node after the hard fork
+    with a version before "3.0.0" get disconnected.
+    """
+    full_node_api, server, _ = one_node_one_block
+    if post_hardfork:
+        full_node_api.full_node.constants = full_node_api.full_node.constants.replace(HARD_FORK2_HEIGHT=uint32(0))
+    _, peer_id = await add_dummy_connection_wsc(server, self_hostname, 42, NodeType.FULL_NODE, version=peer_version)
+    assert len(server.all_connections) == (1 if staying_connected else 0)
+    assert (peer_id in server.all_connections) is staying_connected
