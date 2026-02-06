@@ -772,7 +772,10 @@ class WalletRpcApi:
             return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
             original_error = f"{type(e).__name__}: {e}"
-            msg = f"Error getting keys. If the issue persists, restart all services. Original error: {original_error}"
+            msg = (
+                "Error while getting keys.  If the issue persists, restart all services."
+                f"  Original error: {original_error}"
+            )
             raise RpcError(
                 RpcErrorCodes.FAILED_TO_GET_KEYS,
                 msg,
@@ -2087,7 +2090,7 @@ class WalletRpcApi:
         if action_scope.config.push:
             raise RpcError(
                 RpcErrorCodes.CANNOT_PUSH_INCOMPLETE_SPEND,
-                "Cannot push an incomplete spend",  # pragma: no cover
+                "Cannot push an incomplete spend",
                 structured_message="Cannot push an incomplete spend",
             )
 
