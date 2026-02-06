@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import json
 import logging
 import ssl
 import sys
@@ -13,6 +14,7 @@ import aiohttp
 import pytest
 from chia_rs.sized_ints import uint16
 
+from chia.rpc.rpc_errors import RpcError
 from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServer, RpcServiceProtocol
 from chia.ssl.create_ssl import create_all_ssl
 from chia.util.config import load_config
@@ -49,7 +51,20 @@ class TestRpcApi:
     def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/log": self.log,
+            "/raise_rpc_error": self.raise_rpc_error,
+            "/raise_generic_error": self.raise_generic_error,
         }
+
+    async def raise_rpc_error(self, request: dict[str, Any]) -> EndpointResult:
+        raise RpcError(
+            "TEST_ERROR_KEY",
+            "Test message for backwards compatibility, foo is bar",
+            data={"foo": "bar"},
+            structured_message="Test message for backwards compatibility",
+        )
+
+    async def raise_generic_error(self, request: dict[str, Any]) -> EndpointResult:
+        raise ValueError("a non-RPC generic error")
 
     async def log(self, request: dict[str, Any]) -> EndpointResult:
         message = request["message"]
@@ -89,6 +104,20 @@ class Client:
         assert json["success"], json
 
         return json
+
+    async def request_allow_failure(self, endpoint: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        if json is None:
+            json = {}
+
+        async with self.session.post(
+            self.url.rstrip("/") + "/" + endpoint.lstrip("/"),
+            json=json,
+            ssl=self.ssl_context,
+        ) as response:
+            response.raise_for_status()
+            body: dict[str, Any] = await response.json()
+        assert body is not None
+        return body
 
     async def log(self, level: str, message: str) -> None:
         await self.request("log", json={"message": message, "level": level})
@@ -181,3 +210,196 @@ async def test_reset_log_level(
 
     await client.request("reset_log_level")
     assert number_to_name_level_map[root_logger.level] == configured_level
+
+
+@pytest.mark.anyio
+async def test_structured_error_response_shape(client: Client) -> None:
+    """RPC error response includes legacy 'error' and 'structuredError' with expected shape."""
+    body = await client.request_allow_failure("raise_rpc_error", json={})
+    assert body["success"] is False
+    assert body["error"] == "Test message for backwards compatibility, foo is bar"
+    assert "structuredError" in body
+    structured = body["structuredError"]
+    assert structured["code"] == "TEST_ERROR_KEY"
+    assert structured["message"] == "Test message for backwards compatibility"
+    assert structured["data"] == {"foo": "bar"}
+
+
+@pytest.mark.anyio
+async def test_websocket_structured_error_response(server: RpcServer[TestRpcApi]) -> None:
+    """WebSocket error handling includes structuredError in response."""
+    # Create a mock WebSocket that captures sent messages
+    sent_messages: list[str] = []
+
+    class MockWebSocket:
+        async def send_str(self, data: str) -> None:
+            sent_messages.append(data)
+
+    mock_ws = MockWebSocket()
+
+    # Send a payload that will trigger the raise_rpc_error endpoint
+    payload = json.dumps(
+        {
+            "command": "raise_rpc_error",
+            "data": {},
+            "ack": False,
+            "request_id": "test-ws-123",
+            "destination": "test",
+            "origin": "test",
+        }
+    )
+
+    await server.safe_handle(mock_ws, payload)  # type: ignore[arg-type]
+
+    assert len(sent_messages) == 1
+    response = json.loads(sent_messages[0])
+    assert response["data"]["success"] is False
+    assert response["data"]["error"] == "Test message for backwards compatibility, foo is bar"
+    assert "structuredError" in response["data"]
+    structured = response["data"]["structuredError"]
+    assert structured["code"] == "TEST_ERROR_KEY"
+    assert structured["message"] == "Test message for backwards compatibility"
+    assert structured["data"] == {"foo": "bar"}
+
+
+@pytest.mark.anyio
+async def test_websocket_unknown_command(server: RpcServer[TestRpcApi]) -> None:
+    """WebSocket returns UNKNOWN_COMMAND structured error for unrecognized commands."""
+    sent_messages: list[str] = []
+
+    class MockWebSocket:
+        async def send_str(self, data: str) -> None:
+            sent_messages.append(data)
+
+    mock_ws = MockWebSocket()
+    payload = json.dumps(
+        {
+            "command": "nonexistent_command_xyz",
+            "data": {},
+            "ack": False,
+            "request_id": "test-unknown-cmd",
+            "destination": "test",
+            "origin": "test",
+        }
+    )
+
+    await server.safe_handle(mock_ws, payload)  # type: ignore[arg-type]
+
+    assert len(sent_messages) == 1
+    response = json.loads(sent_messages[0])
+    assert response["data"]["success"] is False
+    structured = response["data"]["structuredError"]
+    assert structured["code"] == "UNKNOWN_COMMAND"
+    assert structured["data"]["command"] == "nonexistent_command_xyz"
+
+
+@pytest.mark.anyio
+async def test_websocket_non_rpc_error(server: RpcServer[TestRpcApi]) -> None:
+    """Non-RpcError exception through WebSocket produces UNKNOWN code in structuredError."""
+    sent_messages: list[str] = []
+
+    class MockWebSocket:
+        async def send_str(self, data: str) -> None:
+            sent_messages.append(data)
+
+    mock_ws = MockWebSocket()
+    payload = json.dumps(
+        {
+            "command": "raise_generic_error",
+            "data": {},
+            "ack": False,
+            "request_id": "test-generic-err",
+            "destination": "test",
+            "origin": "test",
+        }
+    )
+
+    await server.safe_handle(mock_ws, payload)  # type: ignore[arg-type]
+
+    assert len(sent_messages) == 1
+    response = json.loads(sent_messages[0])
+    assert response["data"]["success"] is False
+    assert response["data"]["error"] == "a non-RPC generic error"
+    structured = response["data"]["structuredError"]
+    assert structured["code"] == "UNKNOWN"
+    assert structured["message"] == "a non-RPC generic error"
+    assert structured["data"] == {}
+    # WebSocket error responses should NOT include traceback
+    assert "traceback" not in response["data"]
+
+
+@pytest.mark.anyio
+async def test_http_non_rpc_error_includes_traceback_and_unknown_code(client: Client) -> None:
+    """Non-RpcError exception through HTTP produces UNKNOWN code and includes traceback."""
+    body = await client.request_allow_failure("raise_generic_error", json={})
+    assert body["success"] is False
+    assert body["error"] == "a non-RPC generic error"
+    # HTTP error responses include traceback with the original exception type
+    assert "traceback" in body
+    assert "ValueError" in body["traceback"]
+    structured = body["structuredError"]
+    assert structured["code"] == "UNKNOWN"
+    assert structured["message"] == "a non-RPC generic error"
+    assert structured["data"] == {}
+
+
+@pytest.mark.anyio
+async def test_http_error_has_traceback_ws_does_not(client: Client, server: RpcServer[TestRpcApi]) -> None:
+    """HTTP error responses include traceback; WebSocket error responses do not."""
+    # HTTP path -- should have traceback
+    http_body = await client.request_allow_failure("raise_rpc_error", json={})
+    assert "traceback" in http_body
+    assert isinstance(http_body["traceback"], str)
+    assert len(http_body["traceback"]) > 0
+
+    # WebSocket path -- should NOT have traceback
+    sent_messages: list[str] = []
+
+    class MockWebSocket:
+        async def send_str(self, data: str) -> None:
+            sent_messages.append(data)
+
+    mock_ws = MockWebSocket()
+    payload = json.dumps(
+        {
+            "command": "raise_rpc_error",
+            "data": {},
+            "ack": False,
+            "request_id": "test-ws-tb",
+            "destination": "test",
+            "origin": "test",
+        }
+    )
+
+    await server.safe_handle(mock_ws, payload)  # type: ignore[arg-type]
+
+    assert len(sent_messages) == 1
+    ws_response = json.loads(sent_messages[0])
+    assert "traceback" not in ws_response["data"]
+
+
+@pytest.mark.anyio
+async def test_safe_handle_invalid_json(server: RpcServer[TestRpcApi]) -> None:
+    """safe_handle with unparseable JSON does not crash and sends no response."""
+    sent_messages: list[str] = []
+
+    class MockWebSocket:
+        async def send_str(self, data: str) -> None:
+            sent_messages.append(data)
+
+    mock_ws = MockWebSocket()
+    await server.safe_handle(mock_ws, "not valid json{{{")  # type: ignore[arg-type]
+
+    # When message is None (JSON parse failed), no response is sent
+    assert len(sent_messages) == 0
+
+
+@pytest.mark.anyio
+async def test_get_connections_server_none_raises(server: RpcServer[TestRpcApi]) -> None:
+    """get_connections raises GLOBAL_CONNECTIONS_NOT_SET when service.server is None."""
+    import types
+
+    server.rpc_api.service = types.SimpleNamespace(server=None)
+
+    with pytest.raises(RpcError, match="Global connections is not set"):
+        await server.get_connections({})
