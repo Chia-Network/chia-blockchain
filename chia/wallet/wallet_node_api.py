@@ -204,5 +204,11 @@ class WalletNodeAPI:
         pass
 
     @metadata.request()
+    async def respond_fee_estimates(self, request: wallet_protocol.RespondFeeEstimates) -> None:
+        # This is used by WSChiaConnection.call_api() to map the response type to a request handler
+        # and deserialize the message. The wallet doesn't otherwise process fee estimates here.
+        pass
+
+    @metadata.request()
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         pass

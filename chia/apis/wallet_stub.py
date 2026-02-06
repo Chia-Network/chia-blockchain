@@ -19,6 +19,7 @@ from chia.protocols.wallet_protocol import (
     RespondBlockHeader,
     RespondBlockHeaders,
     RespondChildren,
+    RespondFeeEstimates,
     RespondHeaderBlocks,
     RespondPuzzleSolution,
     RespondRemovals,
@@ -153,6 +154,11 @@ class WalletNodeApiStub(ApiProtocol, Protocol):
     @metadata.request()
     async def respond_ses_hashes(self, request: RespondSESInfo) -> None:
         """Handle SES hashes response from full node."""
+        ...
+
+    @metadata.request()
+    async def respond_fee_estimates(self, request: RespondFeeEstimates) -> None:
+        """Handle fee estimates response from full node."""
         ...
 
     @metadata.request()

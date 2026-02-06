@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 from collections.abc import Callable
+from datetime import datetime, timezone
 from itertools import count
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -189,6 +190,7 @@ from chia.wallet.wallet_request_types import (
     GetCurrentDerivationIndexResponse,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNextAddress,
@@ -578,6 +580,7 @@ class WalletRpcApi:
             "/push_tx": self.push_tx,
             "/push_transactions": self.push_transactions,
             "/get_timestamp_for_height": self.get_timestamp_for_height,
+            "/get_fee_estimate": self.get_fee_estimate,
             "/set_auto_claim": self.set_auto_claim,
             "/get_auto_claim": self.get_auto_claim,
             # Wallet management
@@ -1002,6 +1005,31 @@ class WalletRpcApi:
     @marshal
     async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
         return GetTimestampForHeightResponse(timestamp=await self.service.get_timestamp_for_height(request.height))
+
+    @marshal
+    async def get_fee_estimate(self, request: Empty) -> GetFeeEstimateResponse:
+        """
+        Fetch fee estimates from a connected full node peer via the wallet <-> full node protocol.
+        """
+        # Use an existing full node peer connection (do not initiate a new one).
+        try:
+            peer = self.service.get_full_node_peer()
+        except ValueError as e:
+            raise ValueError("Wallet is not currently connected to any full node peers") from e
+
+        now_utc: int = int(datetime.now(timezone.utc).timestamp())
+        time_targets = [uint64(now_utc)]
+        fee_estimate_group = await self.service.request_fee_estimates(peer, time_targets)
+
+        if fee_estimate_group.error is not None:
+            raise ValueError(fee_estimate_group.error)
+        if len(fee_estimate_group.estimates) == 0:
+            raise ValueError("No fee estimates returned from full node")
+
+        # Fee rates are in mojos per 1 clvm_cost.
+        fee_per_cost: int = int(fee_estimate_group.estimates[0].estimated_fee_rate.mojos_per_clvm_cost)
+
+        return GetFeeEstimateResponse(fee_per_cost=uint64(fee_per_cost))
 
     @marshal
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
