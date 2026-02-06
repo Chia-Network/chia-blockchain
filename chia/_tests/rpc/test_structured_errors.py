@@ -113,6 +113,17 @@ def test_structured_error_from_exception_raw_string_code() -> None:
     assert structured["data"] == {"key": "value"}
 
 
+def test_structured_error_from_exception_non_string_arg() -> None:
+    """Non-RpcError exception with a non-string args[0] (e.g. int) still returns a str error_message."""
+    err = ValueError(42)
+    error_message, structured = structured_error_from_exception(err)
+    assert error_message == "42"
+    assert isinstance(error_message, str)
+    assert structured["code"] == "UNKNOWN"
+    assert structured["originalError"] == "ValueError"
+    assert structured["data"] == {"message": "42"}
+
+
 def test_rpc_error_to_response() -> None:
     """rpc_error_to_response builds the same dict shape as a raised RpcError would produce."""
     err = RpcError(
