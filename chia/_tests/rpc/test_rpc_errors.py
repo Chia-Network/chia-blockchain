@@ -4,6 +4,8 @@ Tests for chia.rpc.rpc_errors: RpcError, structured_error_from_exception, and rp
 
 from __future__ import annotations
 
+import pytest
+
 from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
 
 
@@ -129,3 +131,45 @@ def test_rpc_error_to_response() -> None:
     assert response["structuredError"]["code"] == "CONNECTION_FAILED"
     assert response["structuredError"]["message"] == "Could not connect to target"
     assert response["structuredError"]["data"] == {"target": "127.0.0.1:8444"}
+
+
+@pytest.mark.parametrize("member", RpcErrorCodes)
+def test_rpc_error_codes_values_match_names(member: RpcErrorCodes) -> None:
+    """Every RpcErrorCodes member has value == name (catches typos in the enum)."""
+    assert member.value == member.name
+
+
+def test_structured_error_keys_are_exhaustive() -> None:
+    """Structured error dicts contain exactly {code, message, data} -- no extra or missing keys."""
+    # RpcError path
+    err = RpcError(RpcErrorCodes.BLOCK_NOT_FOUND, "not found", data={"h": "abc"}, structured_message="Block not found")
+    _msg, structured = structured_error_from_exception(err)
+    assert set(structured.keys()) == {"code", "message", "data"}
+
+    # Non-RpcError path
+    err2 = ValueError("oops")
+    _msg2, structured2 = structured_error_from_exception(err2)
+    assert set(structured2.keys()) == {"code", "message", "data"}
+
+
+def test_structured_error_from_exception_empty_string_arg() -> None:
+    """Exception with empty string arg[0] exercises the 'if not error_message' fallback branch."""
+    err = ValueError("")
+    error_message, structured = structured_error_from_exception(err)
+    # str(ValueError("").args[0]) is "", which is falsy, so falls through to str(e) which is also ""
+    assert error_message == ""
+    assert structured["code"] == "UNKNOWN"
+    assert structured["message"] == ""
+
+
+def test_rpc_error_is_exception_subclass() -> None:
+    """RpcError must be catchable as Exception (critical for RPC error handlers)."""
+    err = RpcError.simple(RpcErrorCodes.UNKNOWN, "test")
+    assert isinstance(err, Exception)
+    # Verify it's actually catchable in an except Exception block
+    caught = False
+    try:
+        raise err
+    except Exception:
+        caught = True
+    assert caught
