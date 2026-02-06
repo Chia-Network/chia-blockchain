@@ -4,6 +4,7 @@ import ipaddress
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.seeder.crawler import Crawler
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -62,7 +63,11 @@ class CrawlerRpcApi:
     async def get_ips_after_timestamp(self, _request: dict[str, Any]) -> EndpointResult:
         after = _request.get("after", None)
         if after is None:
-            raise ValueError("`after` is required and must be a unix timestamp")
+            raise RpcError(
+                RpcErrorCodes.AFTER_REQUIRED,
+                "`after` is required and must be a unix timestamp",
+                structured_message="`after` is required and must be a unix timestamp",
+            )
 
         offset = _request.get("offset", 0)
         limit = _request.get("limit", 10000)

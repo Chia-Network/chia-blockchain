@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import json
 import logging
 import ssl
 import sys
@@ -14,6 +15,7 @@ import pytest
 from chia_rs.sized_ints import uint16
 
 from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServer, RpcServiceProtocol
+from chia.rpc.structured_errors import RpcError
 from chia.ssl.create_ssl import create_all_ssl
 from chia.util.config import load_config
 from chia.util.ws_message import WsRpcMessage
@@ -49,7 +51,16 @@ class TestRpcApi:
     def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/log": self.log,
+            "/raise_structured_error": self.raise_structured_error,
         }
+
+    async def raise_structured_error(self, request: dict[str, Any]) -> EndpointResult:
+        raise RpcError(
+            "TEST_ERROR_KEY",
+            "Test message for backwards compatibility, foo is bar",
+            data={"foo": "bar"},
+            structured_message="Test message for backwards compatibility",
+        )
 
     async def log(self, request: dict[str, Any]) -> EndpointResult:
         message = request["message"]
@@ -89,6 +100,20 @@ class Client:
         assert json["success"], json
 
         return json
+
+    async def request_allow_failure(self, endpoint: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        if json is None:
+            json = {}
+
+        async with self.session.post(
+            self.url.rstrip("/") + "/" + endpoint.lstrip("/"),
+            json=json,
+            ssl=self.ssl_context,
+        ) as response:
+            response.raise_for_status()
+            body: dict[str, Any] = await response.json()
+        assert body is not None
+        return body
 
     async def log(self, level: str, message: str) -> None:
         await self.request("log", json={"message": message, "level": level})
@@ -181,3 +206,55 @@ async def test_reset_log_level(
 
     await client.request("reset_log_level")
     assert number_to_name_level_map[root_logger.level] == configured_level
+
+
+@pytest.mark.anyio
+async def test_structured_error_response_shape(client: Client) -> None:
+    """RPC error response includes legacy 'error' and 'structuredError' with expected shape."""
+    body = await client.request_allow_failure("raise_structured_error", json={})
+    assert body["success"] is False
+    assert body["error"] == "Test message for backwards compatibility, foo is bar"
+    assert "structuredError" in body
+    structured = body["structuredError"]
+    assert structured["code"] == "TEST_ERROR_KEY"
+    assert structured["originalError"] == "RpcError"
+    assert structured["structuredMessage"] == "Test message for backwards compatibility"
+    assert structured["data"] == {"foo": "bar"}
+
+
+@pytest.mark.anyio
+async def test_websocket_structured_error_response(server: RpcServer[TestRpcApi]) -> None:
+    """WebSocket error handling includes structuredError in response."""
+    # Create a mock WebSocket that captures sent messages
+    sent_messages: list[str] = []
+
+    class MockWebSocket:
+        async def send_str(self, data: str) -> None:
+            sent_messages.append(data)
+
+    mock_ws = MockWebSocket()
+
+    # Send a payload that will trigger the raise_structured_error endpoint
+    payload = json.dumps(
+        {
+            "command": "raise_structured_error",
+            "data": {},
+            "ack": False,
+            "request_id": "test-ws-123",
+            "destination": "test",
+            "origin": "test",
+        }
+    )
+
+    await server.safe_handle(mock_ws, payload)  # type: ignore[arg-type]
+
+    assert len(sent_messages) == 1
+    response = json.loads(sent_messages[0])
+    assert response["data"]["success"] is False
+    assert response["data"]["error"] == "Test message for backwards compatibility, foo is bar"
+    assert "structuredError" in response["data"]
+    structured = response["data"]["structuredError"]
+    assert structured["code"] == "TEST_ERROR_KEY"
+    assert structured["originalError"] == "RpcError"
+    assert structured["structuredMessage"] == "Test message for backwards compatibility"
+    assert structured["data"] == {"foo": "bar"}

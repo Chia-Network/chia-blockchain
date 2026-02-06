@@ -14,6 +14,7 @@ from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.structured_errors import RpcError, RpcErrorCodes, rpc_error_to_response
 from chia.types.peer_info import PeerInfo
 from chia.util.network import resolve
 from chia.util.paginator import Paginator
@@ -247,7 +248,12 @@ class FarmerRpcApi:
         sp_hash = bytes32.from_hexstr(request["sp_hash"])
         sps = self.service.sps.get(sp_hash)
         if sps is None or len(sps) < 1:
-            raise ValueError(f"Signage point {sp_hash.hex()} not found")
+            raise RpcError(
+                RpcErrorCodes.SIGNAGE_POINT_NOT_FOUND,
+                f"Signage point {sp_hash.hex()} not found",
+                data={"sp_hash": sp_hash.hex()},
+                structured_message="Signage point not found",
+            )
         sp = sps[0]
         assert sp_hash == sp.challenge_chain_sp
         pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
@@ -336,7 +342,12 @@ class FarmerRpcApi:
         restricted_sort_keys: list[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
         # Apply sort_key and reverse if sort_key is not restricted
         if request.sort_key in restricted_sort_keys:
-            raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
+            raise RpcError(
+                RpcErrorCodes.INVALID_SORT_KEY,
+                f"Can't sort by optional attributes: {restricted_sort_keys}",
+                data={"sort_key": request.sort_key, "restricted_keys": restricted_sort_keys},
+                structured_message="Can't sort by optional attributes",
+            )
         # Sort by plot_id also by default since its unique
         plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
         return paginated_plot_request(plot_list, request)
@@ -366,7 +377,12 @@ class FarmerRpcApi:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         login_link: str | None = await self.service.generate_login_link(launcher_id)
         if login_link is None:
-            raise ValueError(f"Failed to generate login link for {launcher_id.hex()}")
+            raise RpcError(
+                RpcErrorCodes.LOGIN_LINK_FAILED,
+                f"Failed to generate login link for {launcher_id.hex()}",
+                data={"launcher_id": launcher_id.hex()},
+                structured_message="Failed to generate login link",
+            )
         return {"login_link": login_link}
 
     async def connect_to_solver(self, request: dict[str, Any]) -> EndpointResult:
@@ -383,4 +399,11 @@ class FarmerRpcApi:
             self.service.log.info(f"Connected to solver at {host}:{port}")
             return {"success": True}
         else:
-            return {"success": False, "error": f"Could not connect to solver at {host}:{port}"}
+            return rpc_error_to_response(
+                RpcError(
+                    RpcErrorCodes.SOLVER_CONNECTION_FAILED,
+                    f"Could not connect to solver at {host}:{port}",
+                    data={"host": host, "port": port},
+                    structured_message="Could not connect to solver",
+                )
+            )

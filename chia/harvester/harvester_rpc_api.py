@@ -6,6 +6,7 @@ from chia_rs.sized_ints import uint32
 
 from chia.harvester.harvester import Harvester
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -70,13 +71,23 @@ class HarvesterRpcApi:
         filename = request["filename"]
         if self.service.delete_plot(filename):
             return {}
-        raise ValueError(f"Not able to delete file {filename}")
+        raise RpcError(
+            RpcErrorCodes.DELETE_PLOT_FAILED,
+            f"Not able to delete file {filename}",
+            data={"filename": filename},
+            structured_message="Not able to delete file",
+        )
 
     async def add_plot_directory(self, request: dict[str, Any]) -> EndpointResult:
         directory_name = request["dirname"]
         if await self.service.add_plot_directory(directory_name):
             return {}
-        raise ValueError(f"Did not add plot directory {directory_name}")
+        raise RpcError(
+            RpcErrorCodes.ADD_PLOT_DIRECTORY_FAILED,
+            f"Did not add plot directory {directory_name}",
+            data={"directory_name": directory_name},
+            structured_message="Did not add plot directory",
+        )
 
     async def get_plot_directories(self, _: dict[str, Any]) -> EndpointResult:
         plot_dirs = await self.service.get_plot_directories()
@@ -86,7 +97,12 @@ class HarvesterRpcApi:
         directory_name = request["dirname"]
         if await self.service.remove_plot_directory(directory_name):
             return {}
-        raise ValueError(f"Did not remove plot directory {directory_name}")
+        raise RpcError(
+            RpcErrorCodes.REMOVE_PLOT_DIRECTORY_FAILED,
+            f"Did not remove plot directory {directory_name}",
+            data={"directory_name": directory_name},
+            structured_message="Did not remove plot directory",
+        )
 
     async def get_harvester_config(self, _: dict[str, Any]) -> EndpointResult:
         harvester_config = await self.service.get_harvester_config()
@@ -127,7 +143,12 @@ class HarvesterRpcApi:
         if "refresh_parameter_interval_seconds" in request:
             refresh_parameter_interval_seconds = uint32(request["refresh_parameter_interval_seconds"])
             if refresh_parameter_interval_seconds < 3:
-                raise ValueError(f"Plot refresh interval seconds({refresh_parameter_interval_seconds}) is too short")
+                raise RpcError(
+                    RpcErrorCodes.REFRESH_INTERVAL_TOO_SHORT,
+                    f"Plot refresh interval seconds({refresh_parameter_interval_seconds}) is too short",
+                    data={"interval_seconds": int(refresh_parameter_interval_seconds)},
+                    structured_message="Plot refresh interval is too short",
+                )
 
         await self.service.update_harvester_config(
             use_gpu_harvesting=use_gpu_harvesting,
