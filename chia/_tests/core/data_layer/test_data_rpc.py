@@ -60,6 +60,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.start_data_layer import create_data_layer_service
+from chia.rpc.structured_errors import RpcError
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -2712,7 +2713,7 @@ async def test_dl_proof_errors(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
-        with pytest.raises(ValueError, match="no root"):
+        with pytest.raises(RpcError, match="no root"):
             await data_rpc_api.get_proof(request={"store_id": fakeroot.hex(), "keys": []})
 
         with pytest.raises(Exception, match="No generations found"):

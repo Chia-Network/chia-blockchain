@@ -33,6 +33,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.rpc.util import marshal as streamable_marshal
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import recurse_jsonify
@@ -70,10 +71,10 @@ def process_change(change: dict[str, Any]) -> dict[str, Any]:
 def process_change_multistore(update: dict[str, Any]) -> dict[str, Any]:
     store_id = update.get("store_id")
     if store_id is None:
-        raise Exception("Each update must specify a store_id")
+        raise RpcError.simple(RpcErrorCodes.STORE_ID_REQUIRED, "Each update must specify a store_id")
     changelist = update.get("changelist")
     if changelist is None:
-        raise Exception("Each update must specify a changelist")
+        raise RpcError.simple(RpcErrorCodes.CHANGELIST_REQUIRED, "Each update must specify a changelist")
     res: dict[str, Any] = {}
     res["store_id"] = bytes32.from_hexstr(store_id)
     res["changelist"] = [process_change(change) for change in changelist]
@@ -142,14 +143,14 @@ class DataLayerRpcApi:
 
     async def wallet_log_in(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         fingerprint = cast(int, request["fingerprint"])
         await self.service.wallet_log_in(fingerprint=fingerprint)
         return {}
 
     async def create_data_store(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         fee = get_fee(self.service.config, request)
         verbose = request.get("verbose", False)
         txs, value = await self.service.create_store(uint64(fee))
@@ -160,7 +161,7 @@ class DataLayerRpcApi:
 
     async def get_owned_stores(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         singleton_records = await self.service.get_owned_stores()
         return {"store_ids": [singleton.launcher_id.hex() for singleton in singleton_records]}
 
@@ -175,7 +176,7 @@ class DataLayerRpcApi:
         else:
             resolved_root_hash = unspecified
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         value = await self.service.get_value(store_id=store_id, key=key, root_hash=resolved_root_hash)
         hex = None
         if value is not None:
@@ -194,7 +195,7 @@ class DataLayerRpcApi:
         else:
             resolved_root_hash = unspecified
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
 
         if page is None:
             keys = await self.service.get_keys(store_id, resolved_root_hash)
@@ -204,7 +205,12 @@ class DataLayerRpcApi:
 
         # NOTE: here we do support zeros as the empty root
         if keys == [] and resolved_root_hash is not unspecified and resolved_root_hash != bytes32.zeros:
-            raise Exception(f"Can't find keys for {resolved_root_hash}")
+            raise RpcError(
+                RpcErrorCodes.CANNOT_FIND_KEYS,
+                f"Can't find keys for {resolved_root_hash}",
+                data={"root_hash": str(resolved_root_hash)},
+                structured_message="Can't find keys for root hash",
+            )
 
         response: EndpointResult = {"keys": [f"0x{key.hex()}" for key in keys]}
 
@@ -231,7 +237,7 @@ class DataLayerRpcApi:
         else:
             resolved_root_hash = unspecified
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
 
         if page is None:
             keys_values = await self.service.get_keys_values(store_id, resolved_root_hash)
@@ -244,7 +250,12 @@ class DataLayerRpcApi:
         json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
         # NOTE: here we do support zeros as the empty root
         if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32.zeros:
-            raise Exception(f"Can't find keys and values for {resolved_root_hash}")
+            raise RpcError(
+                RpcErrorCodes.CANNOT_FIND_KEYS_AND_VALUES,
+                f"Can't find keys and values for {resolved_root_hash}",
+                data={"root_hash": str(resolved_root_hash)},
+                structured_message="Can't find keys and values for root hash",
+            )
 
         response: EndpointResult = {"keys_values": json_nodes}
 
@@ -263,7 +274,7 @@ class DataLayerRpcApi:
         store_id = bytes32.from_hexstr(request["id"])
         node_hash = bytes32.from_hexstr(request["hash"])
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         value = await self.service.get_ancestors(node_hash, store_id)
         return {"ancestors": value}
 
@@ -278,15 +289,23 @@ class DataLayerRpcApi:
         submit_on_chain = request.get("submit_on_chain", True)
         # todo input checks
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee), submit_on_chain)
         if submit_on_chain:
             if transaction_record is None:
-                raise Exception(f"Batch update failed for: {store_id}")
+                raise RpcError(
+                    RpcErrorCodes.BATCH_UPDATE_FAILED,
+                    f"Batch update failed for: {store_id}",
+                    data={"store_id": str(store_id)},
+                    structured_message="Batch update failed",
+                )
             return {"tx_id": transaction_record.name}
         else:
             if transaction_record is not None:
-                raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
+                raise RpcError.simple(
+                    RpcErrorCodes.SUBMIT_ON_CHAIN_FALSE_BUT_SUBMITTED,
+                    "Transaction submitted on chain, but submit_on_chain set to False",
+                )
             return {}
 
     async def multistore_batch_update(self, request: dict[str, Any]) -> EndpointResult:
@@ -294,15 +313,18 @@ class DataLayerRpcApi:
         store_updates = [process_change_multistore(update) for update in request["store_updates"]]
         submit_on_chain = request.get("submit_on_chain", True)
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         transaction_records = await self.service.multistore_batch_update(store_updates, uint64(fee), submit_on_chain)
         if submit_on_chain:
             if transaction_records == []:
-                raise Exception("Batch update failed")
+                raise RpcError.simple(RpcErrorCodes.BATCH_UPDATE_FAILED, "Batch update failed")
             return {"tx_id": [transaction_record.name for transaction_record in transaction_records]}
         else:
             if transaction_records != []:
-                raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
+                raise RpcError.simple(
+                    RpcErrorCodes.SUBMIT_ON_CHAIN_FALSE_BUT_SUBMITTED,
+                    "Transaction submitted on chain, but submit_on_chain set to False",
+                )
             return {}
 
     async def submit_pending_root(self, request: dict[str, Any]) -> EndpointResult:
@@ -327,7 +349,7 @@ class DataLayerRpcApi:
         store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         changelist = [{"action": "insert", "key": key, "value": value}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         assert transaction_record is not None
@@ -343,7 +365,7 @@ class DataLayerRpcApi:
         store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         changelist = [{"action": "delete", "key": key}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         assert transaction_record is not None
@@ -354,10 +376,15 @@ class DataLayerRpcApi:
         store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         rec = await self.service.get_root(store_id)
         if rec is None:
-            raise Exception(f"Failed to get root for {store_id.hex()}")
+            raise RpcError(
+                RpcErrorCodes.NO_ROOT_FOR_STORE,
+                f"Failed to get root for {store_id.hex()}",
+                data={"store_id": store_id.hex()},
+                structured_message="Failed to get root for store",
+            )
         return {"hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp}
 
     async def get_local_root(self, request: dict[str, Any]) -> EndpointResult:
@@ -365,7 +392,7 @@ class DataLayerRpcApi:
         store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         res = await self.service.get_local_root(store_id)
         return {"hash": res}
 
@@ -376,7 +403,7 @@ class DataLayerRpcApi:
         store_ids = request["ids"]
         # todo input checks
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         roots = []
         for id in store_ids:
             id_bytes = bytes32.from_hexstr(id)
@@ -391,10 +418,10 @@ class DataLayerRpcApi:
         """
         store_id = request.get("id")
         if store_id is None:
-            raise Exception("missing store id in request")
+            raise RpcError.simple(RpcErrorCodes.MISSING_STORE_ID, "missing store id in request")
 
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
         urls = request.get("urls", [])
         await self.service.subscribe(store_id=store_id_bytes, urls=urls)
@@ -407,9 +434,9 @@ class DataLayerRpcApi:
         store_id = request.get("id")
         retain_data = request.get("retain", False)
         if store_id is None:
-            raise Exception("missing store id in request")
+            raise RpcError.simple(RpcErrorCodes.MISSING_STORE_ID, "missing store id in request")
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
         await self.service.unsubscribe(store_id_bytes, retain_data)
         return {}
@@ -419,16 +446,16 @@ class DataLayerRpcApi:
         List current subscriptions
         """
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         subscriptions: list[Subscription] = await self.service.get_subscriptions()
         return {"store_ids": [sub.store_id.hex() for sub in subscriptions]}
 
     async def remove_subscriptions(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         store_id = request.get("id")
         if store_id is None:
-            raise Exception("missing store id in request")
+            raise RpcError.simple(RpcErrorCodes.MISSING_STORE_ID, "missing store id in request")
         store_id_bytes = bytes32.from_hexstr(store_id)
         urls = request["urls"]
         await self.service.remove_subscriptions(store_id=store_id_bytes, urls=urls)
@@ -457,7 +484,7 @@ class DataLayerRpcApi:
         get history of state hashes for a store
         """
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         records = await self.service.get_root_history(id_bytes)
@@ -471,7 +498,7 @@ class DataLayerRpcApi:
         get kv diff between two root hashes
         """
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         hash_1 = request["hash_1"]
@@ -574,7 +601,7 @@ class DataLayerRpcApi:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         sync_status = await self.service.get_sync_status(id_bytes)
 
         return {
@@ -588,7 +615,7 @@ class DataLayerRpcApi:
 
     async def check_plugins(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
-            raise Exception("Data layer not created")
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         plugin_status = await self.service.check_plugins()
 
         return plugin_status.marshal()
@@ -603,7 +630,12 @@ class DataLayerRpcApi:
     async def get_proof(self, request: GetProofRequest) -> GetProofResponse:
         root = await self.service.get_root(store_id=request.store_id)
         if root is None:
-            raise ValueError("no root")
+            raise RpcError(
+                RpcErrorCodes.NO_ROOT,
+                "no root",
+                data={"store_id": request.store_id.hex()},
+                structured_message="no root",
+            )
 
         all_proofs: list[HashOnlyProof] = []
         for key in request.keys:
