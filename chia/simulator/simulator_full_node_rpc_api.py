@@ -5,8 +5,8 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.util.bech32m import decode_puzzle_hash

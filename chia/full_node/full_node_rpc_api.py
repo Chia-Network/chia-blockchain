@@ -30,8 +30,8 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
 from chia.full_node.hard_fork_utils import get_flags
 from chia.protocols.outbound_message import NodeType
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus

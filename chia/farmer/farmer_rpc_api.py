@@ -13,8 +13,8 @@ from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
 from chia.protocols.outbound_message import NodeType
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, rpc_error_to_response
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes, rpc_error_to_response
 from chia.types.peer_info import PeerInfo
 from chia.util.network import resolve
 from chia.util.paginator import Paginator

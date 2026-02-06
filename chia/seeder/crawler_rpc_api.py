@@ -3,8 +3,8 @@ from __future__ import annotations
 import ipaddress
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.seeder.crawler import Crawler
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 

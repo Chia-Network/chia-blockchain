@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from chia.rpc.structured_errors import RpcError
+from chia.rpc.rpc_errors import RpcError
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_rpc_api import CrawlerRpcApi
 

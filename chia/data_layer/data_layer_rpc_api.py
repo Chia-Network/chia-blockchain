@@ -32,8 +32,8 @@ from chia.data_layer.data_layer_util import (
     unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.rpc.util import marshal as streamable_marshal
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import recurse_jsonify
