@@ -228,7 +228,9 @@ def structured_error_from_exception(e: Exception) -> tuple[str, StructuredError]
             "data": e.data,
         }
     else:
-        error_message = (e.args[0] if e.args else str(e)) or str(e)
+        error_message = str(e.args[0]) if e.args else str(e)
+        if not error_message:
+            error_message = str(e)
         structured = {
             "code": RpcErrorCodes.UNKNOWN.value,
             "originalError": type(e).__name__,
