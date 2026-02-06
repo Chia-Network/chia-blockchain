@@ -103,6 +103,7 @@ ignore = [
 
 [lint.per-file-ignores]
 "chia/_tests/*" = ["S106"]
+"chia/__init__.py" = ["RUF067"]
 
 [lint.flake8-implicit-str-concat]
 # Found 3279 errors.
