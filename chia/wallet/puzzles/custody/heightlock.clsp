@@ -1,0 +1,21 @@
+; A puzzle that enforces that an ASSERT_HEIGHT_RELATIVE condition with a specific height parameter is present in the condition set
+;
+; Intended for use in validating the output of a delegated puzzle
+(mod
+  (
+    HEIGHTLOCK
+    Conditions
+  )
+
+  (include condition_codes.clib)
+  (include utility_macros.clib)
+
+  (defun check_conditions (HEIGHTLOCK conditions)
+    (if (and (= (f (f conditions)) ASSERT_HEIGHT_RELATIVE) (= (f (r (f conditions))) HEIGHTLOCK))
+        conditions
+        (c (f conditions) (check_conditions HEIGHTLOCK (r conditions)))
+    )
+  )
+
+  (check_conditions HEIGHTLOCK Conditions)
+)
