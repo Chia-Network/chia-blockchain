@@ -11,7 +11,7 @@ from chia_rs.sized_ints import uint64
 
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
 from chia.full_node.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.structured_errors import RpcError
+from chia.rpc.rpc_errors import RpcError
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol

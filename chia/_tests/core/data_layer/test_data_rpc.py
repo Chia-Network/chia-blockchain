@@ -60,7 +60,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.start_data_layer import create_data_layer_service
-from chia.rpc.structured_errors import RpcError
+from chia.rpc.rpc_errors import RpcError
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol

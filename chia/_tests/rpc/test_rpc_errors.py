@@ -1,10 +1,10 @@
 """
-Tests for chia.rpc.structured_errors: RpcError, structured_error_from_exception, and rpc_error_to_response.
+Tests for chia.rpc.rpc_errors: RpcError, structured_error_from_exception, and rpc_error_to_response.
 """
 
 from __future__ import annotations
 
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
 
 
 def test_rpc_error_attributes() -> None:
@@ -36,9 +36,8 @@ def test_rpc_error_simple() -> None:
     assert err.data == {}
     error_message, structured = structured_error_from_exception(err)
     assert error_message == err.message
-    assert structured["structuredMessage"] == err.message
+    assert structured["message"] == err.message
     assert structured["code"] == "CANNOT_SPLIT_NFT"
-    assert structured["originalError"] == "RpcError"
 
 
 def test_rpc_error_simple_with_data() -> None:
@@ -52,7 +51,6 @@ def test_rpc_error_simple_with_data() -> None:
     assert err.data == {"host": "127.0.0.1", "port": 8444}
     _msg, structured = structured_error_from_exception(err)
     assert structured["code"] == "CONNECTION_FAILED"
-    assert structured["originalError"] == "RpcError"
     assert structured["data"] == {"host": "127.0.0.1", "port": 8444}
 
 
@@ -67,8 +65,7 @@ def test_structured_error_from_exception_rpc_error() -> None:
     assert error_message == "Block 0xabc not found"
     assert structured == {
         "code": "BLOCK_NOT_FOUND",
-        "originalError": "RpcError",
-        "structuredMessage": "Block not found",
+        "message": "Block not found",
         "data": {"header_hash": "abc"},
     }
 
@@ -78,9 +75,8 @@ def test_structured_error_from_exception_unknown() -> None:
     error_message, structured = structured_error_from_exception(err)
     assert error_message == "something went wrong"
     assert structured["code"] == "UNKNOWN"
-    assert structured["originalError"] == "ValueError"
-    assert structured["structuredMessage"] == ""
-    assert structured["data"] == {"message": "something went wrong"}
+    assert structured["message"] == "something went wrong"
+    assert structured["data"] == {}
 
 
 def test_structured_error_from_exception_empty_args() -> None:
@@ -88,20 +84,17 @@ def test_structured_error_from_exception_empty_args() -> None:
     error_message, structured = structured_error_from_exception(err)
     assert error_message == ""
     assert structured["code"] == "UNKNOWN"
-    assert structured["originalError"] == "ValueError"
-    assert structured["data"]["message"] == ""
+    assert structured["data"] == {}
 
 
-def test_structured_error_from_exception_uses_kind() -> None:
-    """Non-RpcError exceptions use code='UNKNOWN' and originalError=type name (e.g. Exception, ValueError)."""
+def test_structured_error_from_exception_uses_unknown_code() -> None:
+    """Non-RpcError exceptions use code='UNKNOWN'."""
     err = Exception("generic failure")
     _msg, structured = structured_error_from_exception(err)
     assert structured["code"] == "UNKNOWN"
-    assert structured["originalError"] == "Exception"
     err2 = KeyError("missing_key")
     _msg2, structured2 = structured_error_from_exception(err2)
     assert structured2["code"] == "UNKNOWN"
-    assert structured2["originalError"] == "KeyError"
 
 
 def test_structured_error_from_exception_raw_string_code() -> None:
@@ -109,7 +102,6 @@ def test_structured_error_from_exception_raw_string_code() -> None:
     err = RpcError("CUSTOM_CODE", "custom message", data={"key": "value"})
     _msg, structured = structured_error_from_exception(err)
     assert structured["code"] == "CUSTOM_CODE"
-    assert structured["originalError"] == "RpcError"
     assert structured["data"] == {"key": "value"}
 
 
@@ -120,8 +112,7 @@ def test_structured_error_from_exception_non_string_arg() -> None:
     assert error_message == "42"
     assert isinstance(error_message, str)
     assert structured["code"] == "UNKNOWN"
-    assert structured["originalError"] == "ValueError"
-    assert structured["data"] == {"message": "42"}
+    assert structured["data"] == {}
 
 
 def test_rpc_error_to_response() -> None:
@@ -136,6 +127,5 @@ def test_rpc_error_to_response() -> None:
     assert response["success"] is False
     assert response["error"] == "could not connect to 127.0.0.1:8444"
     assert response["structuredError"]["code"] == "CONNECTION_FAILED"
-    assert response["structuredError"]["originalError"] == "RpcError"
-    assert response["structuredError"]["structuredMessage"] == "Could not connect to target"
+    assert response["structuredError"]["message"] == "Could not connect to target"
     assert response["structuredError"]["data"] == {"target": "127.0.0.1:8444"}

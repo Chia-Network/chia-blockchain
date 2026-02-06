@@ -1,5 +1,5 @@
 """
-Structured RPC errors for the Chia RPC layer.
+RPC errors for the Chia RPC layer.
 
 Exports:
   - RpcError: exception class carrying error code, message, structured message, and data.
@@ -9,8 +9,8 @@ Exports:
   - rpc_error_to_response: builds the full error response dict for returning (not raising) errors.
 
 All RPC error responses include the existing ``error`` string field (unchanged for
-backwards compatibility) plus a ``structuredError`` object with code, originalError,
-structuredMessage, and data.
+backwards compatibility) plus a ``structuredError`` object with code, message,
+and data.
 
 Keys and values in ``data`` must be JSON-serializable so that response encoding
 does not fail.
@@ -30,8 +30,7 @@ class StructuredError(TypedDict):
     """Shape of the structuredError object in RPC error responses."""
 
     code: str
-    originalError: str
-    structuredMessage: str
+    message: str
     data: dict[str, Any]
 
 
@@ -216,16 +215,14 @@ def structured_error_from_exception(e: Exception) -> tuple[str, StructuredError]
     """
     Build (legacy error string, structuredError dict) for an exception.
 
-    If e is RpcError, use its fields (code, originalError="RpcError"). Otherwise use
-    code="UNKNOWN", originalError=type name (e.g. "ValueError", "Exception"), message in data.
+    If e is RpcError, use its fields directly. Otherwise use code="UNKNOWN" and message in data.
     For non-RpcError, the legacy error string falls back to str(e) when args[0] is missing or empty.
     """
     if isinstance(e, RpcError):
         error_message = e.message
         structured: StructuredError = {
             "code": e.error_code,
-            "originalError": "RpcError",
-            "structuredMessage": e.structured_message,
+            "message": e.structured_message,
             "data": e.data,
         }
     else:
@@ -234,9 +231,8 @@ def structured_error_from_exception(e: Exception) -> tuple[str, StructuredError]
             error_message = str(e)
         structured = {
             "code": RpcErrorCodes.UNKNOWN.value,
-            "originalError": type(e).__name__,
-            "structuredMessage": "",
-            "data": {"message": str(e)},
+            "message": error_message,
+            "data": {},
         }
     return error_message, structured
 

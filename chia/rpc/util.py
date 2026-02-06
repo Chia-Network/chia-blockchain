@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, get_type_hints
 
 import aiohttp
 
-from chia.rpc.structured_errors import structured_error_from_exception
+from chia.rpc.rpc_errors import structured_error_from_exception
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
 from chia.wallet.util.blind_signer_tl import BLIND_SIGNER_TRANSLATION

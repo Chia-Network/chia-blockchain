@@ -25,8 +25,8 @@ from chia.pools.pool_wallet_info import (
     initial_pool_state_from_dict,
 )
 from chia.protocols.outbound_message import NodeType
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.types.blockchain_format.program import Program
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash

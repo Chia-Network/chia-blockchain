@@ -25,7 +25,7 @@ from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.structured_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
 from chia.rpc.util import wrap_http_handler
 from chia.server.server import (
     ChiaServer,
