@@ -78,6 +78,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
@@ -2818,7 +2819,14 @@ class FullNode:
             # Now that we validated this transaction, check what fees and
             # costs the peers have advertised for it.
             for peer_id, entry in peers_with_tx.items():
-                if entry.advertised_fee == mempool_item.fee and entry.advertised_cost == mempool_item.cost:
+                # Older nodes (2.4.3 and earlier) compute the cost slightly
+                # differently. They include the byte cost and execution cost of
+                # the quote for the puzzle.
+                tolerated_diff = QUOTE_BYTES * self.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+                if entry.advertised_fee == mempool_item.fee and (
+                    entry.advertised_cost == mempool_item.cost
+                    or entry.advertised_cost == mempool_item.cost + tolerated_diff
+                ):
                     continue
                 self.log.warning(
                     f"Banning peer {peer_id}. Sent us a new tx {spend_name} with mismatch "

@@ -67,6 +67,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -220,11 +221,17 @@ class FullNodeAPI:
         # If already seen, the cost and fee must match, otherwise ban the peer
         mempool_item = self.full_node.mempool_manager.get_mempool_item(transaction.transaction_id, include_pending=True)
         if mempool_item is not None:
-            if mempool_item.cost != transaction.cost or mempool_item.fee != transaction.fees:
+            # Older nodes (2.4.3 and earlier) compute the cost slightly
+            # differently. They include the byte cost and execution cost of
+            # the quote for the puzzle.
+            tolerated_diff = QUOTE_BYTES * self.full_node.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+            if (transaction.cost != mempool_item.cost and transaction.cost != mempool_item.cost + tolerated_diff) or (
+                transaction.fees != mempool_item.fee
+            ):
                 self.log.warning(
-                    f"Banning peer {peer.peer_node_id}. Sent us an already seen tx {transaction.transaction_id} "
-                    f"with mismatch on cost {transaction.cost} vs validation cost {mempool_item.cost} and/or "
-                    f"fee {transaction.fees} vs {mempool_item.fee}."
+                    f"Banning peer {peer.peer_node_id} version {peer.version}. Sent us an already seen tx "
+                    f"{transaction.transaction_id} with mismatch on cost {transaction.cost} vs validation "
+                    f"cost {mempool_item.cost} and/or fee {transaction.fees} vs {mempool_item.fee}."
                 )
                 await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             return None
@@ -246,9 +253,10 @@ class FullNodeAPI:
                 if prev is not None:
                     if prev.advertised_fee != transaction.fees or prev.advertised_cost != transaction.cost:
                         self.log.warning(
-                            f"Banning peer {peer.peer_node_id}. Sent us a new tx {transaction.transaction_id} with "
-                            f"mismatch on cost {transaction.cost} vs previous advertised cost {prev.advertised_cost} "
-                            f"and/or fee {transaction.fees} vs previous advertised fee {prev.advertised_fee}."
+                            f"Banning peer {peer.peer_node_id} version {peer.version}. Sent us a new tx "
+                            f"{transaction.transaction_id} with mismatch on cost {transaction.cost} vs "
+                            f"previous advertised cost {prev.advertised_cost} and/or fee {transaction.fees} "
+                            f"vs previous advertised fee {prev.advertised_fee}."
                         )
                         await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
                     return None

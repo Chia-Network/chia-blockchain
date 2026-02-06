@@ -36,7 +36,7 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
-from chia.types.clvm_cost import CLVMCost
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST, CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.generator_types import NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -138,11 +138,6 @@ class SpendBundleAddInfo:
 class NewPeakInfo:
     spend_bundle_ids: list[bytes32]
     removals: list[MempoolRemoveInfo]
-
-
-# For block overhead cost calculation
-QUOTE_BYTES = 2
-QUOTE_EXECUTION_COST = 20
 
 
 def is_atom_canonical(clvm_buffer: bytes, offset: int) -> tuple[int, bool]:
