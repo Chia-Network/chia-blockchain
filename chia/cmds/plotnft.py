@@ -94,6 +94,15 @@ class CreatePlotNFTCMD:
         required=True,
     )
     dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
+    version: int = option(
+        "-v",
+        "--version",
+        help="Version of Plot NFT: 1 or 2",
+        type=click.Choice([1, 2]),
+        default=1,
+        show_default=True,
+        required=True,
+    )
 
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import create
@@ -111,6 +120,7 @@ class CreatePlotNFTCMD:
                 state="FARMING_TO_POOL" if self.state == "pool" else "SELF_POOLING",
                 fee=self.fee,
                 prompt=not self.dont_prompt,
+                version=self.version,
             )
 
 

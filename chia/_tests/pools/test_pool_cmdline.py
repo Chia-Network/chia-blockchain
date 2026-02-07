@@ -76,11 +76,13 @@ class StateUrlCase:
 )
 @boolean_datacases(name="self_pool", true="local", false="pool")
 @boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
+@pytest.mark.parametrize("version", [1, 2])
 @pytest.mark.anyio
 async def test_plotnft_cli_create(
     wallet_environments: WalletTestFramework,
     self_pool: bool,
     prompt: bool,
+    version: int,
     mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -104,6 +106,7 @@ async def test_plotnft_cli_create(
             "description": "Pool Description",
             "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
             "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+            "pool_memoization": "8568656c6c6f",
             "fee": "0.01",
             "protocol_version": 1,
             "relative_lock_height": 5,
@@ -124,6 +127,7 @@ async def test_plotnft_cli_create(
         state=state,
         dont_prompt=not prompt,
         pool_url=pool_url,
+        version=version,
     ).run()
 
     await wallet_environments.process_pending_states(
@@ -154,7 +158,9 @@ async def test_plotnft_cli_create(
         ]
     )
 
-    summaries_response = await wallet_rpc.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))
+    summaries_response = await wallet_rpc.get_wallets(
+        GetWallets(type=uint16(WalletType.POOLING_WALLET) if version == 1 else uint16(WalletType.PLOTNFT_2))
+    )
     assert len(summaries_response.wallets) == 1
     wallet_id: int = summaries_response.wallets[0].id
 
@@ -964,7 +970,8 @@ async def test_plotnft_cli_get_login_link(
 
 
 @pytest.mark.anyio
-async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
+@pytest.mark.parametrize("version", [1, 2])
+async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode, version: int) -> None:
     from chia.cmds.plotnft_funcs import create
 
     test_rpc_client = TestWalletRpcClient()
@@ -980,6 +987,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="FARMING_TO_POOL",
             fee=uint64(0),
             prompt=False,
+            version=version,
         )
 
     with pytest.raises(ValueError, match="Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state"):
@@ -989,6 +997,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="Invalid State",
             fee=uint64(0),
             prompt=False,
+            version=version,
         )
 
     # Test fall-through raise in create
@@ -1000,6 +1009,7 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             state="SELF_POOLING",
             fee=uint64(0),
             prompt=False,
+            version=version,
         )
 
 

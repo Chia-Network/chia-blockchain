@@ -109,8 +109,12 @@ class PlotNFT2Wallet:
         xch_wallet: Wallet,
         action_scope: WalletActionScope,
         fee: uint64,
+        pool_config: PoolConfig | None = None,
+        pool_url: str | None = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> None:
+    ) -> PlotNFT:
+        if (pool_url is None and pool_config is not None) or (pool_url is not None and pool_config is None):
+            raise ValueError("pool_url and pool_config must be both None or both not None")
         target_puzzle_hash = await action_scope.get_puzzle_hash(wallet_state_manager)
         target_pubkey = G1Element.from_bytes(await wallet_state_manager.get_public_key(target_puzzle_hash))
         origin_coins = await xch_wallet.select_coins(amount=uint64(fee + 1), action_scope=action_scope)
@@ -119,6 +123,8 @@ class PlotNFT2Wallet:
             user_config=UserConfig(synthetic_pubkey=xch_wallet.convert_public_key_to_synthetic(target_pubkey)),
             genesis_challenge=wallet_state_manager.constants.GENESIS_CHALLENGE,
             hint=target_puzzle_hash,
+            pool_config=pool_config,
+            remark=Remark(rest=Program.to(pool_url)) if pool_url is not None else None,
         )
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(WalletSpendBundle(coin_spends, G2Element()))
@@ -131,6 +137,7 @@ class PlotNFT2Wallet:
             extra_conditions=(*announcement_assertions, *extra_conditions),
             origin_id=coin_spends[0].coin.parent_coin_info,
         )
+        return new_plotnft
 
     async def claim_rewards(
         self,
@@ -440,7 +447,9 @@ class PlotNFT2Wallet:
                 state=uint8(singleton_state.value),
                 target_puzzle_hash=rewards_claim_ph,
                 owner_pubkey=plotnft.user_config.synthetic_pubkey,
-                pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(plotnft.launcher_id),
+                pool_url=await self.wallet_state_manager.plotnft2_store.get_latest_remark(plotnft.launcher_id)
+                if plotnft.pool_config is not None
+                else None,
                 relative_lock_height=plotnft.pool_config.heightlock if plotnft.pool_config is not None else uint32(0),
             ),
             target=PoolState(
