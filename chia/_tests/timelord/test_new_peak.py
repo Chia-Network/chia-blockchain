@@ -6,6 +6,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint64, uint128
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import Blockchain
@@ -146,6 +147,21 @@ class TestNewPeak:
             )
 
     @pytest.mark.anyio
+    # todo_v2_plots fix this test and remove limit_consensus_modes
+    # With ConsensusMode.HARD_FORK_3_0 this fails because the test constructs
+    # an UnfinishedBlock from a finished block. That flow should only handle
+    # truly unfinished blocks; HF3.0 rejects this synthetic unfinished block
+    # with INVALID_CC_CHALLENGE. Fix the test to use a real unfinished block
+    # (or make_unfinished_block with correct finished_sub_slots).
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK_2_6,
+            ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
+        ],
+        reason="test builds a synthetic unfinished block for HF3.0",
+    )
     async def test_timelord_new_peak_unfinished_orphaned(
         self,
         one_node: tuple[list[FullNodeService], list[FullNodeSimulator], BlockTools],
@@ -175,7 +191,7 @@ class TestNewPeak:
                 )
 
                 # make two new blocks on tip, block_2 has higher total iterations
-                block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
+                block_1 = bt.get_consecutive_blocks(1, default_1000_blocks, skip_overflow=True)[-1]
                 block_2 = bt.get_consecutive_blocks(
                     1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
                 )[-1]

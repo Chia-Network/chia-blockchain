@@ -130,7 +130,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.module_import_path }}${{ matrix.configuration.file_name_index }}
-      BLOCKS_AND_PLOTS_VERSION: 0.44.0
+      BLOCKS_AND_PLOTS_VERSION: 0.45.3
 
     steps:
       - name: Configure git

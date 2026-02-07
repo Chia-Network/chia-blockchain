@@ -197,7 +197,6 @@ class Cache:
                         else:
                             self._data[Path(path)] = new_entry
                     elif param.strength_v2 is not None:
-                        # TODO: todo_v2_plots validate prover size
                         self._data[Path(path)] = new_entry
 
                 log.info(f"Parsed {len(self._data)} cache entries in {time.time() - start:.2f}s")
