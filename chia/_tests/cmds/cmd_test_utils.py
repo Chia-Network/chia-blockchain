@@ -124,12 +124,14 @@ class TestWalletRpcClient(TestRpcClient):
             w_type = WalletType.POOLING_WALLET
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
-        return GetWalletsResponse([WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")])
+        return GetWalletsResponse(
+            wallets=[WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")]
+        )
 
     async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
         self.add_to_log("get_transaction", (request,))
         return GetTransactionResponse(
-            TransactionRecord(
+            transaction=TransactionRecord(
                 confirmed_at_height=uint32(1),
                 created_at_time=uint64(1234),
                 to_puzzle_hash=bytes32([1] * 32),
@@ -149,12 +151,12 @@ class TestWalletRpcClient(TestRpcClient):
                 memos={bytes32([3] * 32): [bytes([4] * 32)]},
                 valid_times=ConditionValidTimes(),
             ),
-            bytes32([2] * 32),
+            transaction_id=bytes32([2] * 32),
         )
 
     async def get_cat_name(self, request: CATGetName) -> CATGetNameResponse:
         self.add_to_log("get_cat_name", (request.wallet_id,))
-        return CATGetNameResponse(request.wallet_id, "test" + str(request.wallet_id))
+        return CATGetNameResponse(wallet_id=request.wallet_id, name="test" + str(request.wallet_id))
 
     async def sign_message_by_address(self, request: SignMessageByAddress) -> SignMessageByAddressResponse:
         self.add_to_log("sign_message_by_address", (request.address, request.message))
@@ -170,7 +172,7 @@ class TestWalletRpcClient(TestRpcClient):
             )
         )
         signing_mode = SigningMode.CHIP_0002.value
-        return SignMessageByAddressResponse(pubkey, signature, signing_mode)
+        return SignMessageByAddressResponse(pubkey=pubkey, signature=signature, signing_mode=signing_mode)
 
     async def sign_message_by_id(self, request: SignMessageByID) -> SignMessageByIDResponse:
         self.add_to_log("sign_message_by_id", (request.id, request.message))
@@ -186,7 +188,9 @@ class TestWalletRpcClient(TestRpcClient):
             )
         )
         signing_mode = SigningMode.CHIP_0002.value
-        return SignMessageByIDResponse(pubkey, signature, bytes32.zeros, signing_mode)
+        return SignMessageByIDResponse(
+            pubkey=pubkey, signature=signature, latest_coin_id=bytes32.zeros, signing_mode=signing_mode
+        )
 
     async def cat_asset_id_to_name(self, request: CATAssetIDToName) -> CATAssetIDToNameResponse:
         """
@@ -195,7 +199,7 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("cat_asset_id_to_name", (request.asset_id,))
         for i in range(256):
             if request.asset_id == get_bytes32(i):
-                return CATAssetIDToNameResponse(uint32(i + 1), "test" + str(i))
+                return CATAssetIDToNameResponse(wallet_id=uint32(i + 1), name="test" + str(i))
         return CATAssetIDToNameResponse(wallet_id=None, name=None)
 
     async def get_nft_info(self, request: NFTGetInfo) -> NFTGetInfoResponse:
@@ -223,7 +227,7 @@ class TestWalletRpcClient(TestRpcClient):
             supports_did=True,
             p2_address=bytes32([8] * 32),
         )
-        return NFTGetInfoResponse(nft_info)
+        return NFTGetInfoResponse(nft_info=nft_info)
 
     async def nft_calculate_royalties(
         self,
@@ -246,8 +250,8 @@ class TestWalletRpcClient(TestRpcClient):
     ) -> CreateNewWalletResponse:
         self.add_to_log("create_new_wallet", (request, tx_config, extra_conditions, timelock_info))
         return CreateNewWalletResponse(
-            [STD_UTX],
-            [STD_TX],
+            unsigned_transactions=[STD_UTX],
+            transactions=[STD_TX],
             type=(
                 WalletType.NFT if request.wallet_type == CreateNewWalletType.NFT_WALLET else WalletType.DECENTRALIZED_ID
             ).name,

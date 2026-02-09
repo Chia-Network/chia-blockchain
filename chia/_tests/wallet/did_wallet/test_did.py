@@ -302,7 +302,7 @@ async def test_creation_from_backup_file(wallet_environments: WalletTestFramewor
     )
     did_wallet_2 = env_2.wallet_state_manager.get_wallet(id=uint32(2), required_type=DIDWallet)
     current_coin_info_response = await env_0.rpc_client.did_get_current_coin_info(
-        DIDGetCurrentCoinInfo(uint32(env_0.wallet_aliases["did"]))
+        DIDGetCurrentCoinInfo(wallet_id=uint32(env_0.wallet_aliases["did"]))
     )
     assert current_coin_info_response.wallet_id == env_0.wallet_aliases["did"]
 
@@ -370,7 +370,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     assert len(wallet_node_0.wallet_state_manager.wallets) == 1
     # Find lost DID
     assert did_wallet_0.did_info.origin_coin is not None  # mypy
-    await env_0.rpc_client.find_lost_did(DIDFindLostDID(did_wallet_0.did_info.origin_coin.name().hex()))
+    await env_0.rpc_client.find_lost_did(DIDFindLostDID(coin_id=did_wallet_0.did_info.origin_coin.name().hex()))
     did_wallets = list(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
@@ -434,7 +434,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     did_wallet.did_info = dataclasses.replace(did_wallet.did_info, current_inner=new_inner_puzzle)
     # Recovery the coin
     assert did_wallet.did_info.origin_coin is not None  # mypy
-    await env_0.rpc_client.find_lost_did(DIDFindLostDID(did_wallet.did_info.origin_coin.name().hex()))
+    await env_0.rpc_client.find_lost_did(DIDFindLostDID(coin_id=did_wallet.did_info.origin_coin.name().hex()))
     found_coin = await did_wallet.get_coin()
     assert found_coin == coin
     assert did_wallet.did_info.current_inner != new_inner_puzzle
@@ -782,8 +782,8 @@ async def test_get_info(wallet_environments: WalletTestFramework):
     )
     assert did_wallet_1.did_info.origin_coin is not None  # mypy
     coin_id_as_bech32 = encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
-    response = await api_0.get_did_info(DIDGetInfo(did_wallet_1.did_info.origin_coin.name().hex()))
-    response_with_bech32 = await api_0.get_did_info(DIDGetInfo(coin_id_as_bech32))
+    response = await api_0.get_did_info(DIDGetInfo(coin_id=did_wallet_1.did_info.origin_coin.name().hex()))
+    response_with_bech32 = await api_0.get_did_info(DIDGetInfo(coin_id=coin_id_as_bech32))
     assert response == response_with_bech32
     assert response.did_id == coin_id_as_bech32
     assert response.launcher_id == did_wallet_1.did_info.origin_coin.name()
@@ -803,7 +803,7 @@ async def test_get_info(wallet_environments: WalletTestFramework):
     assert coin.amount % 2 == 1
     coin_id = coin.name()
     with pytest.raises(ValueError, match="The coin is not a DID"):
-        await api_0.get_did_info(DIDGetInfo(coin_id.hex()))
+        await api_0.get_did_info(DIDGetInfo(coin_id=coin_id.hex()))
 
     # Test multiple odd coins
     odd_amount = uint64(1)
@@ -857,7 +857,7 @@ async def test_get_info(wallet_environments: WalletTestFramework):
     )
 
     with pytest.raises(ValueError, match=r"This is not a singleton, multiple children coins found."):
-        await api_0.get_did_info(DIDGetInfo(coin_1.name().hex()))
+        await api_0.get_did_info(DIDGetInfo(coin_id=coin_1.name().hex()))
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")

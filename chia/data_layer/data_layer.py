@@ -277,7 +277,7 @@ class DataLayer:
 
     async def wallet_log_in(self, fingerprint: int) -> int:
         try:
-            result = await self.wallet_rpc.log_in(LogIn(uint32(fingerprint)))
+            result = await self.wallet_rpc.log_in(LogIn(fingerprint=uint32(fingerprint)))
         except ValueError as e:
             raise Exception(f"DataLayer wallet RPC log in request failed: {e.args[0]}")
 
@@ -338,9 +338,10 @@ class DataLayer:
             for store_id in store_ids:
                 await self._update_confirmation_status(store_id=store_id)
                 root_hash = await self._get_publishable_root_hash(store_id=store_id)
-                updates.append(LauncherRootPair(store_id, root_hash))
+                updates.append(LauncherRootPair(launcher_id=store_id, new_root=root_hash))
             response = await self.wallet_rpc.dl_update_multiple(
-                DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
+                DLUpdateMultiple(updates=DLUpdateMultipleUpdates(launcher_root_pairs=updates), fee=fee),
+                DEFAULT_TX_CONFIG,
             )
             return response.transactions
         else:
@@ -369,10 +370,11 @@ class DataLayer:
             raise Exception("No pending roots found to submit")
         for pending_root in pending_roots:
             root_hash = pending_root.node_hash if pending_root.node_hash is not None else self.none_bytes
-            updates.append(LauncherRootPair(pending_root.store_id, root_hash))
+            updates.append(LauncherRootPair(launcher_id=pending_root.store_id, new_root=root_hash))
             await self.data_store.change_root_status(pending_root, Status.PENDING)
         response = await self.wallet_rpc.dl_update_multiple(
-            DLUpdateMultiple(updates=DLUpdateMultipleUpdates(updates), fee=fee), DEFAULT_TX_CONFIG
+            DLUpdateMultiple(updates=DLUpdateMultipleUpdates(launcher_root_pairs=updates), fee=fee),
+            DEFAULT_TX_CONFIG,
         )
         return response.transactions
 
@@ -504,7 +506,9 @@ class DataLayer:
         return res
 
     async def get_root(self, store_id: bytes32) -> SingletonRecord | None:
-        latest = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+        latest = (
+            await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+        ).singleton
         if latest is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return latest
@@ -519,7 +523,7 @@ class DataLayer:
         return res.node_hash
 
     async def get_root_history(self, store_id: bytes32) -> list[SingletonRecord]:
-        records = (await self.wallet_rpc.dl_history(DLHistory(store_id))).history
+        records = (await self.wallet_rpc.dl_history(DLHistory(launcher_id=store_id))).history
         if records is None:
             self.log.error(f"Failed to get root history for {store_id.hex()}")
         root_history = []
@@ -536,7 +540,9 @@ class DataLayer:
                 root = await self.data_store.get_tree_root(store_id=store_id)
             except Exception:
                 root = None
-            singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+            singleton_record = (
+                await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+            ).singleton
             if singleton_record is None:
                 return
             if root is None:
@@ -590,7 +596,9 @@ class DataLayer:
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
-        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+        singleton_record = (
+            await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+        ).singleton
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {store_id}.")
             return
@@ -709,7 +717,9 @@ class DataLayer:
         return None
 
     async def clean_old_full_tree_files(self, store_id: bytes32) -> None:
-        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+        singleton_record = (
+            await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+        ).singleton
         if singleton_record is None:
             return
         await self._update_confirmation_status(store_id=store_id)
@@ -727,7 +737,9 @@ class DataLayer:
 
     async def upload_files(self, store_id: bytes32) -> None:
         uploaders = await self.get_uploaders(store_id)
-        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+        singleton_record = (
+            await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+        ).singleton
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {store_id}.")
             return
@@ -794,7 +806,9 @@ class DataLayer:
         root = await self.data_store.get_tree_root(store_id=store_id)
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
-        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+        singleton_record = (
+            await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+        ).singleton
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
@@ -839,7 +853,7 @@ class DataLayer:
     async def subscribe(self, store_id: bytes32, urls: list[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
-        await self.wallet_rpc.dl_track_new(DLTrackNew(subscription.store_id))
+        await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.store_id}")
@@ -891,7 +905,7 @@ class DataLayer:
                     )
 
         # stop tracking first, then unsubscribe from the data store
-        await self.wallet_rpc.dl_stop_tracking(DLStopTracking(store_id))
+        await self.wallet_rpc.dl_stop_tracking(DLStopTracking(launcher_id=store_id))
         await self.data_store.unsubscribe(store_id)
 
         self.log.info(f"Unsubscribed to {store_id}")
@@ -916,11 +930,11 @@ class DataLayer:
         await self.wallet_rpc.dl_delete_mirror(DLDeleteMirror(coin_id=coin_id, fee=fee, push=True), DEFAULT_TX_CONFIG)
 
     async def get_mirrors(self, store_id: bytes32) -> list[Mirror]:
-        mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(store_id))).mirrors
+        mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(launcher_id=store_id))).mirrors
         return [mirror for mirror in mirrors if mirror.urls]
 
     async def update_subscriptions_from_wallet(self, store_id: bytes32) -> None:
-        mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(store_id))).mirrors
+        mirrors: list[Mirror] = (await self.wallet_rpc.dl_get_mirrors(DLGetMirrors(launcher_id=store_id))).mirrors
         urls: list[str] = []
         for mirror in mirrors:
             urls += mirror.urls
@@ -953,7 +967,7 @@ class DataLayer:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
                     for subscription in subscriptions:
-                        await self.wallet_rpc.dl_track_new(DLTrackNew(subscription.store_id))
+                        await self.wallet_rpc.dl_track_new(DLTrackNew(launcher_id=subscription.store_id))
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
@@ -1306,7 +1320,9 @@ class DataLayer:
         if not await self.data_store.store_id_exists(store_id=store_id):
             raise Exception(f"No store id stored in the local database for {store_id}")
         root = await self.data_store.get_tree_root(store_id=store_id)
-        singleton_record = (await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(store_id, True))).singleton
+        singleton_record = (
+            await self.wallet_rpc.dl_latest_singleton(DLLatestSingleton(launcher_id=store_id, only_confirmed=True))
+        ).singleton
         if singleton_record is None:
             raise Exception(f"No singleton found for {store_id}")
 

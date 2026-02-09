@@ -373,7 +373,7 @@ async def test_cat_trades(
     if credential_restricted:
         await client_maker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_maker))
         assert (
-            await client_maker.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root_maker))
+            await client_maker.vc_get_proofs_for_root(VCGetProofsForRoot(root=proof_root_maker))
         ).to_vc_proofs().key_value_pairs == proofs_maker.key_value_pairs
         get_list_reponse = await client_maker.vc_get_list(VCGetList())
         assert len(get_list_reponse.vc_records) == 1
@@ -381,7 +381,7 @@ async def test_cat_trades(
 
         await client_taker.vc_add_proofs(VCAddProofs.from_vc_proofs(proofs_taker))
         assert (
-            await client_taker.vc_get_proofs_for_root(VCGetProofsForRoot(proof_root_taker))
+            await client_taker.vc_get_proofs_for_root(VCGetProofsForRoot(root=proof_root_taker))
         ).to_vc_proofs().key_value_pairs == proofs_taker.key_value_pairs
         get_list_reponse = await client_taker.vc_get_list(VCGetList())
         assert len(get_list_reponse.vc_records) == 1

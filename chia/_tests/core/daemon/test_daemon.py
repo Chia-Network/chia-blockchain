@@ -14,6 +14,7 @@ from aiohttp.web_ws import WebSocketResponse
 from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
+from chia._tests.conftest import ConsensusMode
 from chia._tests.util.misc import Marks, datacases
 from chia._tests.util.time_out_assert import time_out_assert_not_none
 from chia.daemon.client import DaemonProxy, connect_to_daemon
@@ -592,6 +593,7 @@ async def test_get_routes(mock_lonely_daemon):
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="not relevant")
 async def test_get_network_info(daemon_client_with_config_and_keys: DaemonProxy):
     client = daemon_client_with_config_and_keys
     response = await client.get_network_info()
@@ -2100,6 +2102,7 @@ async def test_plotter_stop_plotting(
     ChiaPlottersBladebitArgsCase(case_id="2", plot_type="cudaplot", hybrid_disk_mode=16),
     ChiaPlottersBladebitArgsCase(case_id="3", plot_type="cudaplot", hybrid_disk_mode=128),
 )
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="not relevant")
 def test_run_plotter_bladebit(
     mocker: MockerFixture,
     mock_daemon_with_config_and_keys,

@@ -177,7 +177,7 @@ def check_plots(
                 # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
                 try:
                     quality_start_time = round(monotonic() * 1000)
-                    qualities = pr.get_qualities_for_challenge(challenge, DEFAULT_CONSTANTS.QUALITY_PROOF_SCAN_FILTER)
+                    qualities = pr.get_qualities_for_challenge(challenge)
                     quality_spent_time = round(monotonic() * 1000) - quality_start_time
                     if quality_spent_time > 8000:
                         log.warning(
@@ -213,18 +213,20 @@ def check_plots(
 
                         if isinstance(pr, V1Prover):
                             full_proof = pr.get_full_proof(challenge, index, parallel_read)
-                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         elif isinstance(pr, V2Prover):
                             assert isinstance(quality, V2Quality)
-                            partial_proof = pr.get_partial_proof(quality)
-                            proof_spent_time = round(monotonic() * 1000) - proof_start_time
                             full_proof = solve_proof(
-                                partial_proof, pr.get_id(), pr.get_strength(), DEFAULT_CONSTANTS.PLOT_SIZE_V2
+                                quality.get_partial_proof(),
+                                pr.get_id(),
+                                pr.get_strength(),
+                                DEFAULT_CONSTANTS.PLOT_SIZE_V2,
                             )
 
+                        proof_spent_time = round(monotonic() * 1000) - proof_start_time
                         if proof_spent_time > 15000:
+                            action = "Finding" if isinstance(pr, V1Prover) else "Solving"
                             log.warning(
-                                f"\tFinding proof took: {proof_spent_time} ms. This should be below 15 seconds "
+                                f"\t{action} proof took: {proof_spent_time} ms. This should be below 15 seconds "
                                 f"to minimize risk of losing rewards. Filepath: {plot_path}"
                             )
                         else:

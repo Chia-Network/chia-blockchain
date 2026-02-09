@@ -14,7 +14,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.casts import int_from_bytes, int_to_bytes
 from chia.util.hash import std_hash
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, StreamableFields, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
 
@@ -1432,6 +1432,27 @@ class ConditionValidTimes(ConditionValidTimesAbsolute):
     min_blocks_since_created: uint32 | None = None  # ASSERT_HEIGHT_RELATIVE
     max_secs_after_created: uint64 | None = None  # ASSERT_BEFORE_SECONDS_RELATIVE
     max_blocks_after_created: uint32 | None = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
+
+    @classmethod
+    def streamable_fields(cls) -> StreamableFields:
+        # A hack to serialize the fields in the order before this was inherited
+        order_map = {
+            name: i
+            for i, name in enumerate(
+                [
+                    "min_secs_since_created",
+                    "min_time",
+                    "min_blocks_since_created",
+                    "min_height",
+                    "max_secs_after_created",
+                    "max_time",
+                    "max_blocks_after_created",
+                    "max_height",
+                ]
+            )
+        }
+
+        return tuple(sorted(cls._streamable_fields, key=lambda item: order_map[item.name]))
 
     def to_conditions(self) -> list[Condition]:
         final_condition_list = super().to_conditions()
