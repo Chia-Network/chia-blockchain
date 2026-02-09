@@ -8,7 +8,7 @@ from pathlib import Path
 from threading import Lock
 from time import monotonic, sleep
 
-from chia_rs import G1Element, solve_proof
+from chia_rs import G1Element, solve_proof, validate_proof_v2
 from chia_rs.sized_ints import uint8, uint32
 from chiapos import Verifier
 
@@ -232,7 +232,19 @@ def check_plots(
                         else:
                             log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
 
-                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_param().size_v1, challenge, full_proof)
+                        if isinstance(pr, V1Prover):
+                            ver_quality_str = v.validate_proof(
+                                pr.get_id(), pr.get_param().size_v1, challenge, full_proof
+                            )
+                        elif isinstance(pr, V2Prover):
+                            ver_quality_str = validate_proof_v2(
+                                pr.get_id(),
+                                DEFAULT_CONSTANTS.PLOT_SIZE_V2,
+                                challenge,
+                                pr.get_strength(),
+                                full_proof,
+                            )
+
                         if quality_str == ver_quality_str:
                             total_proofs += 1
                         else:

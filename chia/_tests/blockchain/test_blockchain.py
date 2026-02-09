@@ -3928,11 +3928,6 @@ async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTo
 
 
 @pytest.mark.anyio
-# todo_v2_plots fix this test and remove limit_consensus_modes
-@pytest.mark.limit_consensus_modes(
-    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
-    reason="doesn't work for 3.0 hard fork yet",
-)
 async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3944,6 +3939,7 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
         20,
         farmer_reward_puzzle_hash=coinbase_puzzlehash,
         pool_reward_puzzle_hash=receiver_puzzlehash,
+        guarantee_transaction_block=True,
     )
 
     for block in blocks:

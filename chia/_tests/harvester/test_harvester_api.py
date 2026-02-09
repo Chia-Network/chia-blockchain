@@ -93,7 +93,6 @@ def mock_successful_proof(plot_info: PlotInfo) -> Iterator[None]:
             yield
     elif isinstance(plot_info.prover, V2Prover):
         with patch.object(plot_info.prover, "get_qualities_for_challenge") as mock_get_proof:
-            mock_proof = MagicMock(spec=ProofOfSpace)
             mock_get_proof.return_value = [V2Quality(PartialProof([uint64(1)] * 16), uint8(2))]
             yield
 
