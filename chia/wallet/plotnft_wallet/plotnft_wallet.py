@@ -20,7 +20,7 @@ from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndS
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
@@ -212,7 +212,7 @@ class PlotNFT2Wallet:
                             amount=uint64(1),
                         ),
                     ],
-                    removals=[reward.coin for reward in rewards_to_claim],
+                    removals=[reward.coin for reward in rewards_to_claim] + [plotnft.coin],
                     name=spend_bundle.name(),
                     extra_conditions=extra_conditions,
                 )
@@ -224,10 +224,27 @@ class PlotNFT2Wallet:
         pool_config: PoolConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
+        finish_leaving_fee: uint64 = uint64(0),
         pool_url: str,
         extra_conditions: tuple[Condition, ...] = tuple(),
+        plotnft_override: PlotNFT | None = None,
     ) -> None:
-        plotnft = await self.get_current_plotnft()
+        if plotnft_override is None:
+            plotnft = await self.get_current_plotnft()
+        else:
+            plotnft = plotnft_override
+        if plotnft.pool_config is not None:
+            await self.leave_pool(
+                action_scope=action_scope,
+                fee=fee,
+                finish_leaving_fee=finish_leaving_fee,
+                extra_conditions=extra_conditions,
+                new_pool_url=pool_url,
+                new_pool_config=pool_config,
+            )
+            return
+        elif finish_leaving_fee != uint64(0):
+            raise ValueError("A fee to finish leaving was specified but PlotNFT does not need to leave")
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
         url_remark = Remark(rest=Program.to(pool_url))
         coin_spends = plotnft.join_pool(
@@ -235,11 +252,12 @@ class PlotNFT2Wallet:
             pool_config=pool_config,
             extra_conditions=(*extra_conditions, fee_hook, url_remark),
         )
-        await self.xch_wallet.create_tandem_xch_tx(
-            fee=fee,
-            action_scope=action_scope,
-            extra_conditions=(fee_hook.corresponding_assertion(),),
-        )
+        if fee > 0:
+            await self.xch_wallet.create_tandem_xch_tx(
+                fee=fee,
+                action_scope=action_scope,
+                extra_conditions=(fee_hook.corresponding_assertion(),),
+            )
 
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
 
@@ -271,7 +289,13 @@ class PlotNFT2Wallet:
         fee: uint64 = uint64(0),
         finish_leaving_fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
+        new_pool_url: str | None = None,
+        new_pool_config: PoolConfig | None = None,
     ) -> None:
+        if (new_pool_url is None and new_pool_config is not None) or (
+            new_pool_url is not None and new_pool_config is None
+        ):
+            raise ValueError("Both new_pool_url or new_pool_config must be provided together")
         plotnft = await self.get_current_plotnft()
         next_plotnft = dataclasses.replace(plotnft, exiting=True)
         fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
@@ -284,16 +308,24 @@ class PlotNFT2Wallet:
             solution=Program.to(None),
         )
         coin_spends = plotnft.exit_to_waiting_room(exit_to_waiting_room_dpuz_and_sol)
-        await self.xch_wallet.create_tandem_xch_tx(
-            fee=fee,
-            action_scope=action_scope,
-            extra_conditions=(fee_hook.corresponding_assertion(),),
-        )
+        if fee > 0:
+            await self.xch_wallet.create_tandem_xch_tx(
+                fee=fee,
+                action_scope=action_scope,
+                extra_conditions=(fee_hook.corresponding_assertion(),),
+            )
 
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
 
         async with action_scope.use() as interface:
-            interface.side_effects.plotnft_exiting_info = self.id(), finish_leaving_fee
+            interface.side_effects.plotnft_exiting_info = PlotNFTTargetStateInfo(
+                wallet_id=self.id(),
+                exiting_fee=finish_leaving_fee,
+                next_pool_url=new_pool_url,
+                next_pool_puzzle_hash=new_pool_config.pool_puzzle_hash if new_pool_config is not None else None,
+                next_heightlock=new_pool_config.heightlock if new_pool_config is not None else None,
+                next_pool_memoization=new_pool_config.pool_memoization if new_pool_config is not None else None,
+            )
             interface.side_effects.transactions.append(
                 self.wallet_state_manager.new_outgoing_transaction(
                     wallet_id=self.id(),
@@ -318,7 +350,7 @@ class PlotNFT2Wallet:
         self,
         *,
         action_scope: WalletActionScope,
-        fee: uint64 = uint64(0),
+        exiting_info: PlotNFTTargetStateInfo,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         plotnft = await self.get_current_plotnft()
@@ -332,11 +364,17 @@ class PlotNFT2Wallet:
             solution=Program.to(None),
         )
         coin_spends = plotnft.exit_waiting_room(exit_to_waiting_room_dpuz_and_sol)
-        await self.xch_wallet.create_tandem_xch_tx(
-            fee=fee,
-            action_scope=action_scope,
-            extra_conditions=(fee_hook.corresponding_assertion(),),
+        next_plotnft = PlotNFT.get_next_from_coin_spend(
+            coin_spend=coin_spends[0],
+            genesis_challenge=self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            previous_plotnft_puzzle=plotnft,
         )
+        if exiting_info.exiting_fee > 0:
+            await self.xch_wallet.create_tandem_xch_tx(
+                fee=exiting_info.exiting_fee,
+                action_scope=action_scope,
+                extra_conditions=(fee_hook.corresponding_assertion(),),
+            )
 
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
 
@@ -346,7 +384,7 @@ class PlotNFT2Wallet:
                     wallet_id=self.id(),
                     puzzle_hash=exit_create_coin.puzzle_hash,
                     amount=uint64(1),
-                    fee=fee,
+                    fee=exiting_info.exiting_fee,
                     spend_bundle=spend_bundle,
                     additions=[
                         Coin(
@@ -361,6 +399,14 @@ class PlotNFT2Wallet:
                     name=spend_bundle.name(),
                     extra_conditions=(heightlock,),
                 )
+            )
+        if exiting_info.pool_url_and_config is not None:
+            pool_url, pool_config = exiting_info.pool_url_and_config
+            await self.join_pool(
+                action_scope=action_scope,
+                pool_config=pool_config,
+                pool_url=pool_url,
+                plotnft_override=next_plotnft,
             )
 
     # Syncing
@@ -391,14 +437,14 @@ class PlotNFT2Wallet:
             if await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_id=self.id()) != []:
                 self.log.info(f"Not finishing plotnft from wallet {self.id()} due to unconfirmed transactions")
                 return None
-            finish_fee = await self.wallet_state_manager.plotnft2_store.get_exiting_fee(wallet_id=self.id())
-            if finish_fee is None:
+            finish_info = await self.wallet_state_manager.plotnft2_store.get_exiting_info(wallet_id=self.id())
+            if finish_info is None:
                 self.log.warning(f"Not finishing plotnft from wallet {self.id()}, no finish fee set")
                 return None
             async with self.wallet_state_manager.new_action_scope(
-                self.wallet_state_manager.tx_config, push=True, sign=True
+                self.wallet_state_manager.tx_config, push=True, sign=True, merge_spends=True
             ) as action_scope:
-                await self._finish_leaving_pool(action_scope=action_scope, fee=finish_fee)
+                await self._finish_leaving_pool(action_scope=action_scope, exiting_info=finish_info)
 
     # State
     async def get_current_plotnft(self) -> PlotNFT:

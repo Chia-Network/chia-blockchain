@@ -11,6 +11,7 @@ from chia.pools.plotnft_drivers import PlotNFT, PoolConfig, PoolReward, UserConf
 from chia.types.blockchain_format.program import Program
 from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo
 
 DEFAULT_POOL_REWARDS_PER_CLAIM = 20
 
@@ -73,7 +74,9 @@ class PlotNFTStore:
                 " spent_height int)"
             )
 
-            await conn.execute("CREATE TABLE IF NOT EXISTS finish_exiting_fee (wallet_id int PRIMARY KEY, fee blob)")
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS finish_exiting_info (wallet_id int PRIMARY KEY, exiting_info blob)"
+            )
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS finish_exiting_height (wallet_id int PRIMARY KEY, height int)"
             )
@@ -217,22 +220,25 @@ class PlotNFTStore:
             else:
                 return pool_rewards_selected
 
-    async def add_exiting_fee(self, *, wallet_id: uint32, fee: uint64) -> None:
+    async def add_exiting_info(self, *, exiting_info: PlotNFTTargetStateInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                ("INSERT OR REPLACE INTO finish_exiting_fee (wallet_id, fee) VALUES (?, ?)"),
-                (wallet_id, bytes(fee)),
+                ("INSERT OR REPLACE INTO finish_exiting_info (wallet_id, exiting_info) VALUES (?, ?)"),
+                (exiting_info.wallet_id, bytes(exiting_info)),
             )
 
-    async def get_exiting_fee(self, wallet_id: uint32) -> uint64 | None:
+    async def get_exiting_info(self, *, wallet_id: uint32) -> PlotNFTTargetStateInfo | None:
         async with self.db_wrapper.reader() as conn:
             rows = list(
-                await conn.execute_fetchall(("SELECT fee FROM finish_exiting_fee WHERE wallet_id = ?"), (wallet_id,))
+                await conn.execute_fetchall(
+                    ("SELECT exiting_info FROM finish_exiting_info WHERE wallet_id = ?"),
+                    (wallet_id,),
+                )
             )
             if len(rows) == 0:
                 return None
             else:
-                return uint64.from_bytes(rows[0][0])
+                return PlotNFTTargetStateInfo.from_bytes(rows[0][0])
 
     async def add_exiting_height(self, *, wallet_id: uint32, height: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -255,7 +261,7 @@ class PlotNFTStore:
 
     async def clear_exiting_info(self, wallet_id: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute("DELETE FROM finish_exiting_fee WHERE wallet_id = ?", (wallet_id,))
+            await conn.execute("DELETE FROM finish_exiting_info WHERE wallet_id = ?", (wallet_id,))
             await conn.execute("DELETE FROM finish_exiting_height WHERE wallet_id = ?", (wallet_id,))
 
     async def rollback_to_block(self, *, height: int) -> None:

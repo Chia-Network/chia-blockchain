@@ -16,7 +16,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 from chia_rs import ConsensusConstants, G1Element
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 from pytest_mock import MockerFixture
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -210,7 +210,10 @@ async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_sta
 
 
 async def process_plotnft_create(
-    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState, second_nft: bool = False
+    wallet_test_framework: WalletTestFramework,
+    expected_state: PoolSingletonState,
+    version: int = 1,
+    second_nft: bool = False,
 ) -> int:
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
@@ -255,7 +258,9 @@ async def process_plotnft_create(
         ]
     )
 
-    summaries_response = await wallet_rpc.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))
+    summaries_response = await wallet_rpc.get_wallets(
+        GetWallets(type=uint16(WalletType.POOLING_WALLET) if version == 1 else uint16(WalletType.PLOTNFT_2))
+    )
     assert len(summaries_response.wallets) == 2 if second_nft else 1
     wallet_id: int = summaries_response.wallets[-1].id
 
@@ -264,7 +269,7 @@ async def process_plotnft_create(
 
 
 async def create_new_plotnft(
-    wallet_test_framework: WalletTestFramework, self_pool: bool = False, second_nft: bool = False
+    wallet_test_framework: WalletTestFramework, version: int = 1, self_pool: bool = False, second_nft: bool = False
 ) -> int:
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
@@ -284,6 +289,7 @@ async def create_new_plotnft(
             mode=WalletCreationMode.NEW,
             fee=uint64(0),
             push=True,
+            plotnft_version=uint8(version),
         ),
         wallet_test_framework.tx_config,
     )
@@ -292,6 +298,7 @@ async def create_new_plotnft(
         wallet_test_framework=wallet_test_framework,
         expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
         second_nft=second_nft,
+        version=version,
     )
 
 

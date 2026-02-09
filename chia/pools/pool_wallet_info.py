@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 
 from chia_rs import G1Element
@@ -69,7 +69,7 @@ class NewPoolWalletInitialTargetState(Streamable):
     target_puzzle_hash: bytes32 | None = None
     pool_url: str | None = None
     relative_lock_height: uint32 | None = None
-    pool_memoization: Program | None = None
+    pool_memoization: Program = field(default_factory=lambda: Program.to(None))
 
     def __post_init__(self) -> None:
         if self.state not in {member.name for member in PoolSingletonState}:

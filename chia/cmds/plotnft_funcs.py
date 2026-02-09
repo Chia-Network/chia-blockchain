@@ -97,7 +97,7 @@ async def create(
         pool_url = None
         relative_lock_height = None
         target_puzzle_hash = None  # wallet will fill this in
-        pool_memoization = None
+        pool_memoization = Program.to(None)
     elif state == "FARMING_TO_POOL":
         enforce_https = wallet_info.config["selected_network"] == "mainnet"
         assert pool_url is not None
@@ -228,7 +228,7 @@ async def pprint_all_pool_wallet_state(
     for wallet_info in get_wallets_response:
         pool_wallet_id = wallet_info.id
         typ = WalletType(int(wallet_info.type))
-        if typ == WalletType.POOLING_WALLET:
+        if typ in {WalletType.POOLING_WALLET, WalletType.PLOTNFT_2}:
             pool_wallet_info = (await wallet_client.pw_status(PWStatus(wallet_id=uint32(pool_wallet_id)))).state
             await pprint_pool_wallet_state(
                 wallet_client,
@@ -326,6 +326,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
 
     # absent network errors, this should not fail with an error
     pool_wallets = (await wallet_client.get_wallets(GetWallets(type=uint16(WalletType.POOLING_WALLET)))).wallets
+    pool_wallets.extend((await wallet_client.get_wallets(GetWallets(type=uint16(WalletType.PLOTNFT_2)))).wallets)
 
     if wallet_id is None:
         if len(pool_wallets) == 0:
@@ -396,6 +397,7 @@ async def join_pool(
             target_puzzlehash=bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
             pool_url=pool_url,
             relative_lock_height=json_dict["relative_lock_height"],
+            pool_memoization=Program.fromhex(json_dict["pool_memoization"]),
             fee=fee,
             push=True,
         ),

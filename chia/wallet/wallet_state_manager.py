@@ -129,7 +129,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential, match_revocatio
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
+from chia.wallet.wallet_action_scope import PlotNFTTargetStateInfo, WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, WalletCoinStore
@@ -2311,7 +2311,7 @@ class WalletStateManager:
         additional_signing_responses: list[SigningResponse] | None = None,
         extra_spends: list[WalletSpendBundle] | None = None,
         singleton_records: list[SingletonRecord] = [],
-        plotnft_exiting_info: tuple[uint32, uint64] | None = None,
+        plotnft_exiting_info: PlotNFTTargetStateInfo | None = None,
     ) -> list[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2362,8 +2362,7 @@ class WalletStateManager:
                     await self.dl_store.add_singleton_record(singleton_record)
 
                 if plotnft_exiting_info is not None:
-                    wallet_id, fee = plotnft_exiting_info
-                    await self.plotnft2_store.add_exiting_fee(wallet_id=wallet_id, fee=fee)
+                    await self.plotnft2_store.add_exiting_info(exiting_info=plotnft_exiting_info)
 
             await self.add_interested_coin_ids(all_coins_names)
 

@@ -1252,11 +1252,11 @@ class WalletRpcApi:
                         )
                         if request.initial_target_state is not None
                         and request.initial_target_state.target_puzzle_hash is not None
-                        and request.initial_target_state.pool_memoization is not None
                         and request.initial_target_state.relative_lock_height is not None
                         else None,
                         pool_url=request.initial_target_state.pool_url
                         if request.initial_target_state is not None
+                        and request.initial_target_state.pool_url is not None
                         else None,
                     )
                     return CreateNewWalletResponse(
