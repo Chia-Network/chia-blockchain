@@ -121,7 +121,7 @@ def validate_unfinished_header_block(
         blocks=blocks,
         prev_b_hash=header_block.prev_header_hash,
         sp_index=header_block.reward_chain_block.signage_point_index,
-        first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+        finished_sub_slots=len(header_block.finished_sub_slots),
     )
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: bytes32 | None = None
@@ -772,11 +772,6 @@ def validate_unfinished_header_block(
         assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
         assert header_block.foliage.foliage_block_data.pool_signature is not None
 
-        # v2 plots require pool contract puzzle hash, not pool pk
-        # TODO: todo_v2_plots add test coverage of this check
-        if header_block.reward_chain_block.proof_of_space.param().strength_v2 is not None:
-            return None, ValidationError(Err.INVALID_POOL_TARGET)
-
         if not AugSchemeMPL.verify(
             header_block.reward_chain_block.proof_of_space.pool_public_key,
             bytes(header_block.foliage.foliage_block_data.pool_target),
@@ -1078,7 +1073,7 @@ def validate_finished_header_block(
         blocks=blocks,
         prev_b_hash=header_block.prev_header_hash,
         sp_index=header_block.reward_chain_block.signage_point_index,
-        first_in_sub_slot=len(header_block.finished_sub_slots) > 0,
+        finished_sub_slots=len(header_block.finished_sub_slots),
     )
     if not skip_commitment_validation and pre_sp_tx_height >= constants.HARD_FORK2_HEIGHT:
         sp_index = header_block.reward_chain_block.signage_point_index

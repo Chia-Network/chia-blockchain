@@ -346,10 +346,6 @@ def create_unfinished_block(
 
     cc_sp_hash: bytes32 = slot_cc_challenge
 
-    if proof_of_space.param().strength_v2 is not None:
-        # v2 plots don't support pool public key
-        assert proof_of_space.pool_public_key is None
-
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
     if signage_point.cc_vdf is not None:
         assert signage_point.rc_vdf is not None
@@ -551,7 +547,7 @@ def unfinished_block_to_full_block_with_mmr(
         blocks=blocks,
         prev_b_hash=unfinished_block.prev_header_hash,
         sp_index=unfinished_block.reward_chain_block.signage_point_index,
-        first_in_sub_slot=len(finished_sub_slots) > 0,
+        finished_sub_slots=len(finished_sub_slots),
     ):
         header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
             unfinished_block.prev_header_hash,

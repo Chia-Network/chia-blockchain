@@ -82,7 +82,7 @@ class PartialProofsData(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str
-    partial_proofs: list[PartialProof]  # 16 * k bits blobs instead of 32-byte quality strings
+    partial_proofs: list[PartialProof]
     signage_point_index: uint8
     plot_size: uint8
     strength: uint8

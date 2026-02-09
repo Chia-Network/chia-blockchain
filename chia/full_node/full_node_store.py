@@ -524,7 +524,7 @@ class FullNodeStore:
                     blocks=blocks,
                     prev_b_hash=peak.prev_hash,
                     sp_index=peak.signage_point_index,
-                    first_in_sub_slot=True,
+                    finished_sub_slots=1,
                 )
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     self.constants,

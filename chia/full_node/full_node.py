@@ -287,7 +287,9 @@ class FullNode:
                 single_threaded=single_threaded,
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
-                self._transaction_queue = TransactionQueue(1000, self.log)
+                self._transaction_queue = TransactionQueue(
+                    1000, self.log, max_tx_clvm_cost=uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
+                )
                 self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
 
                 self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
@@ -853,7 +855,7 @@ class FullNode:
                 self.blockchain,
                 prev_b_hash=peak.prev_hash,
                 sp_index=peak.signage_point_index,
-                first_in_sub_slot=peak.first_in_sub_slot,
+                finished_sub_slots=int(peak.first_in_sub_slot),
             )
             ses: SubEpochSummary | None = next_sub_epoch_summary(
                 self.constants,
@@ -2458,7 +2460,7 @@ class FullNode:
             self.blockchain,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
         ses: SubEpochSummary | None = next_sub_epoch_summary(
             self.constants,

@@ -28,6 +28,7 @@ from chia_rs.sized_ints import uint8, uint32, uint64
 from chiabip158 import PyBIP158
 
 from chia._tests.conftest import ConsensusMode
+from chia._tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from chia._tests.util.misc import Marks, datacases, invariant_check_mempool
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, setup_simulators_and_wallets
 from chia.consensus.condition_costs import ConditionCost
@@ -55,6 +56,7 @@ from chia.full_node.mempool_manager import (
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestBlock, RespondBlock
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
@@ -67,7 +69,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem, UnspentLineageInfo
-from chia.types.peer_info import PeerInfo
 from chia.util.casts import int_to_bytes
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err, ValidationError
@@ -1842,9 +1843,13 @@ async def test_identical_spend_aggregation_e2e(
         }
 
     async def send_to_mempool(
-        full_node: FullNodeSimulator, spend_bundle: SpendBundle, *, expecting_conflict: bool = False
+        full_node: FullNodeSimulator,
+        wallet_peer: WSChiaConnection,
+        spend_bundle: SpendBundle,
+        *,
+        expecting_conflict: bool = False,
     ) -> None:
-        res = await full_node.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+        res = await full_node.send_transaction(wallet_protocol.SendTransaction(spend_bundle), wallet_peer)
         assert res is not None and ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
         res_parsed = wallet_protocol.TransactionAck.from_bytes(res.data)
         if expecting_conflict:
@@ -1872,7 +1877,7 @@ async def test_identical_spend_aggregation_e2e(
             await wallet.generate_signed_transaction([uint64(200)] * len(phs), phs, action_scope)
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
-        await send_to_mempool(full_node_api, tx.spend_bundle)
+        await send_to_mempool(full_node_api, wallet_peer, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)
         coins = list(await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1))
         # Two blocks farmed plus 3 transactions
@@ -1881,7 +1886,7 @@ async def test_identical_spend_aggregation_e2e(
 
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     server = full_node_api.full_node.server
-    await wallet_server.start_client(PeerInfo(self_hostname, server.get_port()), None)
+    wallet_peer = await connect_and_get_peer(server, wallet_server, self_hostname)
     wallet, coins, ph = await make_setup_and_coins(full_node_api, wallet_node)
 
     # Make sure spending AB then BC would generate a conflict for the latter
@@ -1896,10 +1901,10 @@ async def test_identical_spend_aggregation_e2e(
     assert tx_b.spend_bundle is not None
     assert tx_c.spend_bundle is not None
     ab_bundle = SpendBundle.aggregate([tx_a.spend_bundle, tx_b.spend_bundle])
-    await send_to_mempool(full_node_api, ab_bundle)
+    await send_to_mempool(full_node_api, wallet_peer, ab_bundle)
     # BC should conflict here (on B)
     bc_bundle = SpendBundle.aggregate([tx_b.spend_bundle, tx_c.spend_bundle])
-    await send_to_mempool(full_node_api, bc_bundle, expecting_conflict=True)
+    await send_to_mempool(full_node_api, wallet_peer, bc_bundle, expecting_conflict=True)
     await farm_a_block(full_node_api, wallet_node, ph)
 
     # Make sure DE and EF would aggregate on E when E is eligible for deduplication
@@ -1913,7 +1918,7 @@ async def test_identical_spend_aggregation_e2e(
         )
     [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
-    await send_to_mempool(full_node_api, tx.spend_bundle)
+    await send_to_mempool(full_node_api, wallet_peer, tx.spend_bundle)
     await farm_a_block(full_node_api, wallet_node, ph)
     # Grab the coin we created and make an eligible coin out of it
     coins_with_identity_ph = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
@@ -1921,7 +1926,7 @@ async def test_identical_spend_aggregation_e2e(
     )
     coin = coins_with_identity_ph[0].coin
     sb = spend_bundle_from_conditions([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount]], coin)
-    await send_to_mempool(full_node_api, sb)
+    await send_to_mempool(full_node_api, wallet_peer, sb)
     await farm_a_block(full_node_api, wallet_node, ph)
     # Grab the eligible coin to spend as E in DE and EF transactions
     e_coin = (await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, IDENTITY_PUZZLE_HASH))[
@@ -1964,10 +1969,10 @@ async def test_identical_spend_aggregation_e2e(
     # Send DE and EF combinations to the mempool
     sb_de = SpendBundle.aggregate([tx_d.spend_bundle, sb_e])
     sb_de_name = sb_de.name()
-    await send_to_mempool(full_node_api, sb_de)
+    await send_to_mempool(full_node_api, wallet_peer, sb_de)
     sb_ef = SpendBundle.aggregate([sb_e, tx_f.spend_bundle])
     sb_ef_name = sb_ef.name()
-    await send_to_mempool(full_node_api, sb_ef)
+    await send_to_mempool(full_node_api, wallet_peer, sb_ef)
     # Send also a transaction EG that spends E differently from DE and EF,
     # to ensure it's rejected by the mempool
     conditions = [
@@ -1987,7 +1992,7 @@ async def test_identical_spend_aggregation_e2e(
     [tx_g] = action_scope.side_effects.transactions
     assert tx_g.spend_bundle is not None
     sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
-    await send_to_mempool(full_node_api, sb_e2g, expecting_conflict=True)
+    await send_to_mempool(full_node_api, wallet_peer, sb_e2g, expecting_conflict=True)
 
     # Make sure our coin IDs to spend bundles mappings are correct
     assert get_sb_names_by_coin_id(full_node_api, coins[4].coin.name()) == {sb_de_name}
@@ -2212,6 +2217,7 @@ async def test_fill_rate_block_validation(
     max_block_clvm_cost: uint64,
     expected_block_items: int,
     expected_block_cost: uint64,
+    self_hostname: str,
 ) -> None:
     """
     This test covers the case where we set the fill rate to 100% and ensure
@@ -2222,8 +2228,10 @@ async def test_fill_rate_block_validation(
         expecting only one of the two test items to get included in the block.
     """
 
-    async def send_to_mempool(full_node: FullNodeSimulator, spend_bundle: SpendBundle) -> None:
-        res = await full_node.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+    async def send_to_mempool(
+        full_node: FullNodeSimulator, dummy_peer: WSChiaConnection, spend_bundle: SpendBundle
+    ) -> None:
+        res = await full_node.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
         assert res is not None and ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
         res_parsed = wallet_protocol.TransactionAck.from_bytes(res.data)
         assert res_parsed.status == MempoolInclusionStatus.SUCCESS.value
@@ -2242,11 +2250,13 @@ async def test_fill_rate_block_validation(
             coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
             coin = next(cr.coin for cr in coin_records if cr.coin.amount == 250_000_000_000)
             coins_and_puzzles.append((coin, puzzle))
+        _, dummy_node_id = await add_dummy_connection(full_node_api.server, self_hostname, 12312)
+        dummy_peer = full_node_api.server.all_connections[dummy_node_id]
         sbs_info = []
         for coin, puzzle in coins_and_puzzles:
             coin_spend = make_spend(coin, puzzle, SerializedProgram.to([]))
             sb = SpendBundle([coin_spend], G2Element())
-            await send_to_mempool(full_node_api, sb)
+            await send_to_mempool(full_node_api, dummy_peer, sb)
             sbs_info.append((coin.name(), puzzle, sb.name()))
         return sbs_info
 
