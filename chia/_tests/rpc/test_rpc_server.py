@@ -215,7 +215,7 @@ async def test_reset_log_level(
 @pytest.mark.anyio
 async def test_structured_error_response_shape(client: Client) -> None:
     """RPC error response includes legacy 'error' and 'structuredError' with expected shape."""
-    body = await client.request_allow_failure("raise_rpc_error", json={})
+    body = await client.request_allow_failure("raise_rpc_error")
     assert body["success"] is False
     assert body["error"] == "Test message for backwards compatibility, foo is bar"
     assert "structuredError" in body
