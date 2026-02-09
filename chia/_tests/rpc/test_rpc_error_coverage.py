@@ -984,24 +984,6 @@ class TestWalletRpcApiErrors:
             await api.get_next_address(request.to_json_dict())
         assert exc_info.value.error_code == RpcErrorCodes.WALLET_TYPE_CANNOT_CREATE_PUZZLE_HASHES.value
 
-    # send_transaction_multi — wallet not synced (inner check)
-    @pytest.mark.anyio
-    async def test_send_transaction_multi_not_synced(self) -> None:
-        from chia.wallet.wallet_rpc_api import WalletRpcApi
-
-        api = self._make_api()
-        api.service.wallet_state_manager.synced = AsyncMock(return_value=False)
-        action_scope = MagicMock()
-
-        # Get the actual inner function
-        inner_fn = (
-            WalletRpcApi.__dict__["send_transaction_multi"].__closure__[0].cell_contents.__closure__[0].cell_contents
-        )
-        request = MagicMock()
-        with pytest.raises(RpcError, match="fully synced") as exc_info:
-            await inner_fn(api, request, action_scope)
-        assert exc_info.value.error_code == RpcErrorCodes.WALLET_NOT_SYNCED_FOR_TX.value
-
     # delete_unconfirmed_transactions — wallet not found
     @pytest.mark.anyio
     async def test_delete_unconfirmed_transactions_wallet_not_found(self) -> None:

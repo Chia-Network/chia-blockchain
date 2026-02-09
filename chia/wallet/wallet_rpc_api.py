@@ -1531,12 +1531,7 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionMultiResponse:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_NOT_SYNCED_FOR_TX,
-                "Wallet needs to be fully synced before sending transactions",
-            )
-
+        # @tx_endpoint will guarantee the wallet is synced.
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
         async with self.service.wallet_state_manager.lock:
