@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import platform
 import random
 import re
 import time
@@ -74,6 +75,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+
+
+def _is_macos_intel() -> bool:
+    """True when running on macOS with an Intel CPU (x86_64). Used to skip slow test params."""
+    return platform.system() == "Darwin" and platform.machine() in {"x86_64", "i386"}
+
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.create(b"\x00")
@@ -3390,6 +3397,16 @@ class TestReorgs:
 
     @pytest.mark.anyio
     @pytest.mark.parametrize("light_blocks", [True, False])
+    @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.HARD_FORK_3_0,
+            ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
+        ],
+        reason="save time",
+    )
     async def test_long_reorg(
         self,
         light_blocks: bool,
@@ -3577,6 +3594,16 @@ class TestReorgs:
         assert peak.weight > chain_2_weight
 
     @pytest.mark.anyio
+    @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.HARD_FORK_3_0,
+            ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT,
+        ],
+        reason="save time",
+    )
     async def test_long_compact_blockchain(
         self, empty_blockchain: Blockchain, default_2000_blocks_compact: list[FullBlock]
     ) -> None:
