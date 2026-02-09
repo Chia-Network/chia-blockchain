@@ -283,13 +283,12 @@ class DataLayerRpcApi:
         id  - the id of the store we are operating on
         changelist - a list of changes to apply on store
         """
+        if self.service is None:
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         fee = get_fee(self.service.config, request)
         changelist = [process_change(change) for change in request["changelist"]]
         store_id = bytes32.from_hexstr(request["id"])
         submit_on_chain = request.get("submit_on_chain", True)
-        # todo input checks
-        if self.service is None:
-            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee), submit_on_chain)
         if submit_on_chain:
             if transaction_record is None:
@@ -309,11 +308,11 @@ class DataLayerRpcApi:
             return {}
 
     async def multistore_batch_update(self, request: dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         fee = get_fee(self.service.config, request)
         store_updates = [process_change_multistore(update) for update in request["store_updates"]]
         submit_on_chain = request.get("submit_on_chain", True)
-        if self.service is None:
-            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         transaction_records = await self.service.multistore_batch_update(store_updates, uint64(fee), submit_on_chain)
         if submit_on_chain:
             if transaction_records == []:
@@ -343,13 +342,12 @@ class DataLayerRpcApi:
         rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
+        if self.service is None:
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         fee = get_fee(self.service.config, request)
         key = hexstr_to_bytes(request["key"])
         value = hexstr_to_bytes(request["value"])
         store_id = bytes32.from_hexstr(request["id"])
-        # todo input checks
-        if self.service is None:
-            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         changelist = [{"action": "insert", "key": key, "value": value}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         assert transaction_record is not None
@@ -360,12 +358,11 @@ class DataLayerRpcApi:
         rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
+        if self.service is None:
+            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         fee = get_fee(self.service.config, request)
         key = hexstr_to_bytes(request["key"])
         store_id = bytes32.from_hexstr(request["id"])
-        # todo input checks
-        if self.service is None:
-            raise RpcError.simple(RpcErrorCodes.DATA_LAYER_NOT_CREATED, "Data layer not created")
         changelist = [{"action": "delete", "key": key}]
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         assert transaction_record is not None
