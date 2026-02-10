@@ -24,13 +24,13 @@ async def DBConnection(
         db_version=db_version,
         foreign_keys=foreign_keys,
         row_factory=row_factory,
-    ) as _db_wrapper:
-        yield _db_wrapper
+    ) as db_wrapper:
+        yield db_wrapper
 
 
 @asynccontextmanager
 async def PathDBConnection(db_version: int) -> AsyncIterator[DBWrapper2]:
     with tempfile.TemporaryDirectory() as directory:
         db_path = Path(directory).joinpath("db.sqlite")
-        async with DBWrapper2.managed(database=db_path, reader_count=4, db_version=db_version) as _db_wrapper:
-            yield _db_wrapper
+        async with DBWrapper2.managed(database=db_path, reader_count=4, db_version=db_version) as db_wrapper:
+            yield db_wrapper

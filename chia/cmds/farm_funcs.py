@@ -57,7 +57,7 @@ async def get_wallets_stats(
     include_pool_rewards: bool,
 ) -> GetFarmedAmountResponse | None:
     async with get_any_service_client(WalletRpcClient, root_path, wallet_rpc_port) as (wallet_client, _):
-        return await wallet_client.get_farmed_amount(GetFarmedAmount(include_pool_rewards))
+        return await wallet_client.get_farmed_amount(GetFarmedAmount(include_pool_rewards=include_pool_rewards))
 
 
 async def get_challenges(root_path: Path, farmer_rpc_port: int | None) -> list[dict[str, Any]] | None:

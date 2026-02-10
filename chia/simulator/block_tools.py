@@ -837,12 +837,6 @@ class BlockTools:
         if num_blocks == 0:
             return block_list
 
-        if block_list[-1].height >= constants.HARD_FORK2_HEIGHT and pool_reward_puzzle_hash is not None:
-            raise ValueError(
-                "block height is past hard fork 2 activation. v2 plots don't "
-                "support pool puzzle hashes, only contract hashes"
-            )
-
         blocks: dict[bytes32, BlockRecord]
         if block_list[-1].header_hash == self._block_cache_header:
             height_to_hash = self._block_cache_height_to_hash
@@ -951,7 +945,7 @@ class BlockTools:
                         blocks=BlockCache(blocks),
                         prev_b_hash=latest_block.header_hash,
                         sp_index=uint8(signage_point_index),
-                        first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
+                        finished_sub_slots=len(finished_sub_slots_at_ip),
                     )
 
                     qualified_proofs: list[tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
@@ -1078,6 +1072,8 @@ class BlockTools:
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+                        # Reset pending_ses when a new block is created
+                        pending_ses = False
 
                         if num_blocks <= 0 and not keep_going_until_tx_block:
                             self._block_cache_header = block_list[-1].header_hash
@@ -1154,7 +1150,7 @@ class BlockTools:
 
                 self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height + 1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
-                pending_ses = False
+                # Don't reset pending_ses to False here - it will be reset when a new block is created
                 ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
@@ -1266,7 +1262,7 @@ class BlockTools:
                         blocks=BlockCache(blocks),
                         prev_b_hash=latest_block.header_hash,
                         sp_index=uint8(signage_point_index),
-                        first_in_sub_slot=len(finished_sub_slots_at_ip) > 0,
+                        finished_sub_slots=len(finished_sub_slots_at_ip),
                     )
 
                     qualified_proofs = self.get_pospaces_for_challenge(
@@ -1385,6 +1381,8 @@ class BlockTools:
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+                        # Reset pending_ses when a new block is created
+                        pending_ses = False
 
                         if num_blocks <= 0 and not keep_going_until_tx_block:
                             self._block_cache_header = block_list[-1].header_hash
@@ -1917,7 +1915,7 @@ def load_block_list(
             blocks=cache,
             prev_b_hash=full_block.prev_header_hash,
             sp_index=full_block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(full_block.finished_sub_slots) > 0,
+            finished_sub_slots=len(full_block.finished_sub_slots),
         )
         required_iters = validate_pospace_and_get_required_iters(
             constants,

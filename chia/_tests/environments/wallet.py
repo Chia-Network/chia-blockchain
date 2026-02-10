@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import operator
-import unittest
+import unittest.mock
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -171,7 +171,7 @@ class WalletEnvironment:
                 ),
             }
             balance_response: dict[str, int] = (
-                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))
+                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id=wallet_id))
             ).wallet_balance.to_json_dict()
 
             if not expected_result.items() <= balance_response.items():
