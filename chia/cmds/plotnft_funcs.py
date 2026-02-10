@@ -132,7 +132,9 @@ async def create(
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
             tx = (
-                await wallet_info.client.get_transaction(GetTransaction(create_response.transaction.name))
+                await wallet_info.client.get_transaction(
+                    GetTransaction(transaction_id=create_response.transaction.name)
+                )
             ).transaction
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
@@ -174,7 +176,9 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances = (await wallet_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))).wallet_balance
+        balances = (
+            await wallet_client.get_wallet_balance(GetWalletBalance(wallet_id=uint32(wallet_id)))
+        ).wallet_balance
         balance = balances.confirmed_wallet_balance
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
@@ -219,7 +223,7 @@ async def pprint_all_pool_wallet_state(
         pool_wallet_id = wallet_info.id
         typ = WalletType(int(wallet_info.type))
         if typ == WalletType.POOLING_WALLET:
-            pool_wallet_info = (await wallet_client.pw_status(PWStatus(uint32(pool_wallet_id)))).state
+            pool_wallet_info = (await wallet_client.pw_status(PWStatus(wallet_id=uint32(pool_wallet_id)))).state
             await pprint_pool_wallet_state(
                 wallet_client,
                 pool_wallet_id,
@@ -252,7 +256,9 @@ async def show(
                 for pool_state_item in pool_state_list
             }
             if wallet_id_passed_in is not None:
-                pool_wallet_info = (await wallet_info.client.pw_status(PWStatus(uint32(wallet_id_passed_in)))).state
+                pool_wallet_info = (
+                    await wallet_info.client.pw_status(PWStatus(wallet_id=uint32(wallet_id_passed_in)))
+                ).state
                 await pprint_pool_wallet_state(
                     wallet_info.client,
                     wallet_id_passed_in,
@@ -298,7 +304,7 @@ async def submit_tx_with_confirmation(
                 continue
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = (await wallet_client.get_transaction(GetTransaction(tx_record.name))).transaction
+                tx = (await wallet_client.get_transaction(GetTransaction(transaction_id=tx_record.name))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
@@ -346,7 +352,7 @@ async def join_pool(
     if not sync_status.synced:
         raise click.ClickException("Wallet must be synced before joining a pool.")
 
-    pool_wallet_info = (await wallet_info.client.pw_status(PWStatus(uint32(selected_wallet_id)))).state
+    pool_wallet_info = (await wallet_info.client.pw_status(PWStatus(wallet_id=uint32(selected_wallet_id)))).state
     if (
         pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
         and pool_wallet_info.current.pool_url == pool_url
@@ -418,7 +424,7 @@ async def self_pool(*, wallet_info: WalletClientInfo, fee: uint64, wallet_id: in
 
 async def inspect_cmd(wallet_info: WalletClientInfo, wallet_id: int | None) -> None:
     selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
-    res = await wallet_info.client.pw_status(PWStatus(uint32(selected_wallet_id)))
+    res = await wallet_info.client.pw_status(PWStatus(wallet_id=uint32(selected_wallet_id)))
     print(
         json.dumps(
             {

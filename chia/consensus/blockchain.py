@@ -296,7 +296,7 @@ class Blockchain:
                 blocks=self,
                 prev_b_hash=block.prev_header_hash,
                 sp_index=block.reward_chain_block.signage_point_index,
-                first_in_sub_slot=len(block.finished_sub_slots) > 0,
+                finished_sub_slots=len(block.finished_sub_slots),
             )
             flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
             additions, removals = additions_and_removals(
@@ -462,7 +462,8 @@ class Blockchain:
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
-                self.mmr_manager.rollback_to_height(state_change_summary.fork_height, self)
+                if self._peak_height is not None and state_change_summary.fork_height < self._peak_height:
+                    self.mmr_manager.rollback_to_height(state_change_summary.fork_height, self)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
@@ -736,7 +737,7 @@ class Blockchain:
             blocks=self,
             prev_b_hash=block.prev_header_hash,
             sp_index=block.reward_chain_block.signage_point_index,
-            first_in_sub_slot=len(block.finished_sub_slots) > 0,
+            finished_sub_slots=len(block.finished_sub_slots),
         )
 
         # With hard fork 2 we ban transactions_generator_ref_list.

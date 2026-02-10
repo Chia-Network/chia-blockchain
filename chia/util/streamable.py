@@ -668,12 +668,12 @@ class Streamable:
     def parse(cls, f: BinaryIO) -> Self:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: Self = object.__new__(cls)
-        for field in cls._streamable_fields:
+        for field in cls.streamable_fields():
             object.__setattr__(obj, field.name, field.parse_function(f))
         return obj
 
     def stream(self, f: BinaryIO) -> None:
-        for field in self._streamable_fields:
+        for field in self.streamable_fields():
             field.stream_function(getattr(self, field.name), f)
 
     def get_hash(self) -> bytes32:

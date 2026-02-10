@@ -128,7 +128,7 @@ def b32(key: str) -> bytes32:
     ),
     ProofOfSpaceCase(
         id="Not passing the plot filter v2",
-        pos_challenge=b32("4cfaacbd2782db64d07cf490ca938534adb07dfbd2f92b0e479e2e5b196178db"),
+        pos_challenge=b32("0cbb408989205e9a94cc012f0d2717e9336795b0853f972965ad0c75c5700ed9"),
         plot_size=PlotParam.make_v2(32),
         pool_contract_puzzle_hash=bytes32(b"1" * 32),
         plot_public_key=g1(
@@ -144,14 +144,6 @@ def b32(key: str) -> bytes32:
         plot_public_key=G1Element(),
         height=uint32(DEFAULT_CONSTANTS.HARD_FORK2_HEIGHT - 1),
         expected_error="v2 proof support has not yet activated",
-    ),
-    ProofOfSpaceCase(
-        id="v2 plot with pool pk",
-        pos_challenge=bytes32(b"1" * 32),
-        plot_size=PlotParam.make_v2(2),
-        plot_public_key=G1Element(),
-        pool_public_key=G1Element(),
-        expected_error="v2 plots require pool_contract_puzzle_hash, pool public key is not supported",
     ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
@@ -180,7 +172,7 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     ProofOfSpaceCase(
         id="not passing the plot filter v2",
         plot_size=PlotParam.make_v2(2),
-        pos_challenge=b32("aefba5c94bc9bbfe2c538b7faaaf03384ac5a6170e40b024657df6b0a27c34a7"),
+        pos_challenge=b32("389f3f2f67d37a63d81a21d0e96898ff4eaa7007e1507630bea6a2608795a418"),
         plot_public_key=g1(
             "afa3aaf09c03885154be49216ee7fb2e4581b9c4a4d7e9cc402e27280bf0cfdbdf1b9ba674e301fd1d1450234b3b1868"
         ),
