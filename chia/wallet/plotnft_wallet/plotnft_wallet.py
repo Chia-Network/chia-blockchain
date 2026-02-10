@@ -487,6 +487,7 @@ class PlotNFT2Wallet:
                 singleton_state = PoolSingletonState.LEAVING_POOL
             else:
                 singleton_state = PoolSingletonState.FARMING_TO_POOL
+        exiting_info = await self.wallet_state_manager.plotnft2_store.get_exiting_info(wallet_id=self.id())
         return PoolWalletInfo(
             current=PoolState(
                 version=uint8(2),
@@ -500,13 +501,19 @@ class PlotNFT2Wallet:
             ),
             target=PoolState(
                 version=uint8(2),
-                state=uint8(PoolSingletonState.FARMING_TO_POOL.value),
-                target_puzzle_hash=self.rewards_claim_puzhash,
+                state=uint8(PoolSingletonState.SELF_POOLING.value)
+                if exiting_info.next_pool_url is None
+                else uint8(PoolSingletonState.FARMING_TO_POOL.value),
+                target_puzzle_hash=self.rewards_claim_puzhash
+                if exiting_info.next_pool_puzzle_hash is None
+                else exiting_info.next_pool_puzzle_hash,
                 owner_pubkey=plotnft.user_config.synthetic_pubkey,
-                pool_url=None,
-                relative_lock_height=uint32(0),
+                pool_url=None if exiting_info.next_pool_url is None else exiting_info.next_pool_url,
+                relative_lock_height=uint32(0)
+                if exiting_info.next_heightlock is None
+                else exiting_info.next_heightlock,
             )
-            if plotnft.exiting
+            if exiting_info is not None
             else None,
             launcher_coin=Coin(bytes32.zeros, bytes32.zeros, uint64(0)),
             launcher_id=plotnft.launcher_id,

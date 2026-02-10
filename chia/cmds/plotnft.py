@@ -94,12 +94,12 @@ class CreatePlotNFTCMD:
         required=True,
     )
     dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
-    version: int = option(
+    version: str = option(
         "-v",
         "--version",
         help="Version of Plot NFT: 1 or 2",
-        type=click.Choice([1, 2]),
-        default=1,
+        type=click.Choice(["1", "2"]),
+        default="1",
         show_default=True,
         required=True,
     )
@@ -120,7 +120,7 @@ class CreatePlotNFTCMD:
                 state="FARMING_TO_POOL" if self.state == "pool" else "SELF_POOLING",
                 fee=self.fee,
                 prompt=not self.dont_prompt,
-                version=self.version,
+                version=int(self.version),
             )
 
 

@@ -127,7 +127,7 @@ async def test_plotnft_cli_create(
         state=state,
         dont_prompt=not prompt,
         pool_url=pool_url,
-        version=version,
+        version=str(version),
     ).run()
 
     await wallet_environments.process_pending_states(
@@ -198,7 +198,7 @@ async def test_plotnft_cli_create_errors(
             state=case.state,
             dont_prompt=True,
             pool_url=case.pool_url,
-            version=version,
+            version=str(version),
         ).run()
 
 

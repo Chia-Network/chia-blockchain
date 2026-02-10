@@ -397,7 +397,7 @@ async def join_pool(
             target_puzzlehash=bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
             pool_url=pool_url,
             relative_lock_height=json_dict["relative_lock_height"],
-            pool_memoization=Program.fromhex(json_dict["pool_memoization"]),
+            pool_memoization=Program.fromhex(json_dict.get("pool_memoization", "80")),
             fee=fee,
             push=True,
         ),
