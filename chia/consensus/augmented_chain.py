@@ -88,7 +88,6 @@ class AugmentedBlockchain:
         return await self._underlying.get_block_record_from_db(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
-        self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
         # now that we're adding the block to the underlying blockchain, we don't
         # need to keep the extra block around anymore
