@@ -462,7 +462,8 @@ class Blockchain:
             # otherwise other tasks may go look for this block before it's available
             if state_change_summary is not None:
                 self.__height_map.rollback(state_change_summary.fork_height)
-                self.mmr_manager.rollback_to_height(state_change_summary.fork_height, self)
+                if self._peak_height is not None and state_change_summary.fork_height < self._peak_height:
+                    self.mmr_manager.rollback_to_height(state_change_summary.fork_height, self)
             for fetched_block_record in records:
                 self.__height_map.update_height(
                     fetched_block_record.height,
