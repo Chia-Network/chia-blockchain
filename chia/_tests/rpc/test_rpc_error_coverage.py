@@ -748,6 +748,79 @@ class TestFullNodeRpcApiErrors:
             await api.push_tx({})
         assert exc_info.value.error_code == RpcErrorCodes.SPEND_BUNDLE_NOT_IN_REQUEST.value
 
+    @pytest.mark.anyio
+    async def test_push_tx_transaction_failed(self) -> None:
+        """push_tx raises TRANSACTION_FAILED when mempool inclusion status is FAILED."""
+        from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+        from chia.util.errors import Err
+
+        api = self._make_api()
+        mock_sb = MagicMock()
+        mock_sb.name.return_value = b"\xaa" * 32
+        api.service.mempool_manager.get_spendbundle.return_value = None
+        api.service.add_transaction = AsyncMock(return_value=(MempoolInclusionStatus.FAILED, Err.UNKNOWN))
+        with patch("chia.full_node.full_node_rpc_api.SpendBundle.from_json_dict", return_value=mock_sb):
+            with pytest.raises(RpcError, match="Failed to include transaction") as exc_info:
+                await api.push_tx({"spend_bundle": {}})
+        assert exc_info.value.error_code == RpcErrorCodes.TRANSACTION_FAILED.value
+
+    # get_puzzle_and_solution
+    @pytest.mark.anyio
+    async def test_get_puzzle_and_solution_invalid_height(self) -> None:
+        """get_puzzle_and_solution raises INVALID_HEIGHT_FOR_COIN when coin_record is None."""
+        api = self._make_api()
+        api.service.coin_store.get_coin_record = AsyncMock(return_value=None)
+        with pytest.raises(RpcError, match="Invalid height") as exc_info:
+            await api.get_puzzle_and_solution({"coin_id": "aa" * 32, "height": 10})
+        assert exc_info.value.error_code == RpcErrorCodes.INVALID_HEIGHT_FOR_COIN.value
+
+    @pytest.mark.anyio
+    async def test_get_puzzle_and_solution_invalid_block_or_generator(self) -> None:
+        """get_puzzle_and_solution raises INVALID_BLOCK_OR_GENERATOR when block is None."""
+        from chia_rs.sized_bytes import bytes32
+
+        api = self._make_api()
+        coin_record = MagicMock()
+        coin_record.spent = True
+        coin_record.spent_block_index = 10
+        api.service.coin_store.get_coin_record = AsyncMock(return_value=coin_record)
+        api.service.blockchain.height_to_hash.return_value = bytes32(b"\xbb" * 32)
+        api.service.block_store.get_full_block = AsyncMock(return_value=None)
+        with pytest.raises(RpcError, match="Invalid block or block generator") as exc_info:
+            await api.get_puzzle_and_solution({"coin_id": "aa" * 32, "height": 10})
+        assert exc_info.value.error_code == RpcErrorCodes.INVALID_BLOCK_OR_GENERATOR.value
+
+    @pytest.mark.anyio
+    async def test_get_puzzle_and_solution_failed(self) -> None:
+        """get_puzzle_and_solution raises PUZZLE_SOLUTION_FAILED on exception."""
+        from chia_rs.sized_bytes import bytes32
+
+        api = self._make_api()
+        coin_record = MagicMock()
+        coin_record.spent = True
+        coin_record.spent_block_index = 10
+        api.service.coin_store.get_coin_record = AsyncMock(return_value=coin_record)
+        api.service.blockchain.height_to_hash.return_value = bytes32(b"\xbb" * 32)
+        mock_block = MagicMock()
+        mock_block.transactions_generator = MagicMock()
+        api.service.block_store.get_full_block = AsyncMock(return_value=mock_block)
+        mock_block_gen = MagicMock()
+        with (
+            patch(
+                "chia.full_node.full_node_rpc_api.get_block_generator",
+                new_callable=AsyncMock,
+                return_value=mock_block_gen,
+            ),
+            patch("chia.full_node.full_node_rpc_api.get_flags", new_callable=AsyncMock, return_value=0),
+            patch(
+                "chia.full_node.full_node_rpc_api.get_puzzle_and_solution_for_coin",
+                side_effect=Exception("clvm error"),
+            ),
+        ):
+            with pytest.raises(RpcError, match="Failed to get puzzle and solution") as exc_info:
+                await api.get_puzzle_and_solution({"coin_id": "aa" * 32, "height": 10})
+        assert exc_info.value.error_code == RpcErrorCodes.PUZZLE_SOLUTION_FAILED.value
+
     # get_additions_and_removals
     @pytest.mark.anyio
     async def test_get_additions_and_removals_no_header_hash(self) -> None:
@@ -763,6 +836,29 @@ class TestFullNodeRpcApiErrors:
         with pytest.raises(RpcError, match="not found") as exc_info:
             await api.get_additions_and_removals({"header_hash": "aa" * 32})
         assert exc_info.value.error_code == RpcErrorCodes.BLOCK_NOT_FOUND.value
+
+    @pytest.mark.anyio
+    async def test_get_additions_and_removals_block_in_fork(self) -> None:
+        """get_additions_and_removals raises BLOCK_IN_FORK when block hash doesn't match."""
+        from contextlib import asynccontextmanager
+
+        from chia_rs.sized_bytes import bytes32
+
+        api = self._make_api()
+        mock_block = MagicMock()
+        mock_block.height = 10
+        api.service.block_store.get_full_block = AsyncMock(return_value=mock_block)
+        # height_to_hash returns a different hash than the request, meaning the block is in a fork
+        api.service.blockchain.height_to_hash.return_value = bytes32(b"\xcc" * 32)
+
+        @asynccontextmanager
+        async def mock_acquire(priority: Any = None) -> Any:
+            yield
+
+        api.service.blockchain.priority_mutex.acquire = mock_acquire
+        with pytest.raises(RpcError, match="no longer in the blockchain") as exc_info:
+            await api.get_additions_and_removals({"header_hash": "aa" * 32})
+        assert exc_info.value.error_code == RpcErrorCodes.BLOCK_IN_FORK.value
 
     # get_mempool_item_by_tx_id
     @pytest.mark.anyio

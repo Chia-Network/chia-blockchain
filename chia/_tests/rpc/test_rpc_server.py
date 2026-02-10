@@ -9,6 +9,7 @@ import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
@@ -381,17 +382,12 @@ async def test_http_error_has_traceback_ws_does_not(client: Client, server: RpcS
 @pytest.mark.anyio
 async def test_safe_handle_invalid_json(server: RpcServer[TestRpcApi]) -> None:
     """safe_handle with unparseable JSON does not crash and sends no response."""
-    sent_messages: list[str] = []
-
-    class MockWebSocket:
-        async def send_str(self, data: str) -> None:
-            sent_messages.append(data)
-
-    mock_ws = MockWebSocket()
-    await server.safe_handle(mock_ws, "not valid json{{{")  # type: ignore[arg-type]
+    mock_ws = MagicMock()
+    mock_ws.send_str = AsyncMock()
+    await server.safe_handle(mock_ws, "not valid json{{{")
 
     # When message is None (JSON parse failed), no response is sent
-    assert len(sent_messages) == 0
+    mock_ws.send_str.assert_not_called()
 
 
 @pytest.mark.anyio
