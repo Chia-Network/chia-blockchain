@@ -171,6 +171,13 @@ fi
 # shellcheck disable=SC2086
 .penv/bin/poetry sync ${EXTRAS}
 
+# On macOS, files/directories can be marked with the "hidden" flag.
+# This clears the flag if it can.
+if [ "$(uname)" = "Darwin" ] && command -v chflags >/dev/null 2>&1; then
+  # Don't fail install if this can't be changed (permissions/FS limitations, etc.)
+  chflags -R nohidden .venv 2>/dev/null || true
+fi
+
 if [ -e venv ]; then
   if [ -d venv ] && [ ! -L venv ]; then
     echo "The 'venv' directory already exists. Please delete it before installing."
