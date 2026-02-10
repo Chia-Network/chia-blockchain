@@ -24,6 +24,7 @@ def get_network_protocol_filename() -> Path:
 
 def encode_data(data: Any) -> bytes:
     data_bytes = bytes(data)
+
     size = uint32(len(data_bytes))
     return size.to_bytes(4, "big") + data_bytes
 
