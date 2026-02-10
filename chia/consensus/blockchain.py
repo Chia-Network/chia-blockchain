@@ -442,6 +442,10 @@ class Blockchain:
                 log.info(f"CMM: Done add_block_record, HH: {header_hash}, height: {block.height}")
 
             log.info(f"CMM: Finished w/ Transaction, HH: {header_hash}, height: {block.height}")
+            # Confirm that it is in fact in the database, otherwise, that's an unexpected state
+            test_block_record = await self.block_store.get_block_record(block_record.header_hash)
+            if test_block_record is None:
+                log.info(f"CMM Added block to cache without it being in the database!")
             # there's a suspension point here, as we leave the async context
             # manager
 
