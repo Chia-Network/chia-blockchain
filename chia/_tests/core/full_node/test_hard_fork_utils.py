@@ -34,7 +34,7 @@ async def test_get_flags_outside_transition_period(bt: BlockTools) -> None:
     )
     _, _, blocks = load_block_list(block_list, bt.constants)
     block = block_list[-1]
-    mock_blocks = MockBlocksProtocol(blocks)
+    mock_blocks = MockBlocksProtocol(blocks, bt.constants.GENESIS_CHALLENGE)
 
     # Before hard fork: block.height < HARD_FORK2_HEIGHT, expects 0
     constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(1000))
@@ -63,7 +63,7 @@ async def test_get_flags_during_transition_period(bt: BlockTools) -> None:
         guarantee_transaction_block=True,
     )
     _, _, blocks = load_block_list(block_list, bt.constants)
-    mock_blocks = MockBlocksProtocol(blocks)
+    mock_blocks = MockBlocksProtocol(blocks, bt.constants.GENESIS_CHALLENGE)
 
     # Configure constants so that the block is in the transition period
     # HARD_FORK2_HEIGHT <= block.height < HARD_FORK2_HEIGHT + SUB_EPOCH_BLOCKS
