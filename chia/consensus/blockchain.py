@@ -431,13 +431,17 @@ class Blockchain:
             # Always add the block to the database
             async with self.block_store.transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
+                log.info(f"CMM: Inside block_store.transaction(), HH: {header_hash}, height: {block.height}")
                 await self.block_store.add_full_block(header_hash, block, block_record)
+                log.info(f"CMM: Done add_full_block, HH: {header_hash}, height: {block.height}")
                 records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
 
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
+                log.info(f"CMM: Done add_block_record, HH: {header_hash}, height: {block.height}")
 
+            log.info(f"CMM: Finished w/ Transaction, HH: {header_hash}, height: {block.height}")
             # there's a suspension point here, as we leave the async context
             # manager
 
@@ -456,6 +460,7 @@ class Blockchain:
                 self._peak_height = block_record.height
 
         except BaseException as e:
+            log.info(f"CMM: In exception handler, HH: {header_hash}, height: {block.height}")
             # depending on exactly when the failure of adding the block
             # happened, we may not have added it to the block record cache
             try:
