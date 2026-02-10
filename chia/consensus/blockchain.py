@@ -443,7 +443,7 @@ class Blockchain:
 
             log.info(f"CMM: Finished w/ Transaction, HH: {header_hash}, height: {block.height}")
             # Confirm that it is in fact in the database, otherwise, that's an unexpected state
-            test_block_record = await self.block_store.get_block_record(block_record.header_hash)
+            test_block_record = await self.block_store.get_block_record_maybe_writer(block_record.header_hash)
             if test_block_record is None:
                 log.info(f"CMM Added block to cache without it being in the database!, HH: {header_hash}, height: {block.height}")
             else:
