@@ -1,10 +1,10 @@
 """
-Tests for chia.rpc.rpc_errors: RpcError, structured_error_from_exception, and rpc_error_to_response.
+Tests for chia.rpc.rpc_errors: RpcError and structured_error_from_exception.
 """
 
 from __future__ import annotations
 
-from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, structured_error_from_exception
 
 
 def test_rpc_error_attributes_and_defaults() -> None:
@@ -33,8 +33,8 @@ def test_rpc_error_simple() -> None:
     assert err.structured_message == err.message
     assert err.data == {}
 
-    err_with_data = RpcError.simple(RpcErrorCodes.CONNECTION_FAILED, "could not connect", data={"host": "127.0.0.1"})
-    assert err_with_data.data == {"host": "127.0.0.1"}
+    err_with_data = RpcError.simple(RpcErrorCodes.BLOCK_NOT_FOUND, "Block not found", data={"header_hash": "abc"})
+    assert err_with_data.data == {"header_hash": "abc"}
 
 
 def test_structured_error_from_exception() -> None:
@@ -57,22 +57,6 @@ def test_structured_error_from_exception() -> None:
     assert generic_msg == "something went wrong"
     assert generic_structured["code"] == "UNKNOWN"
     assert generic_structured["data"] == {}
-
-
-def test_rpc_error_to_response() -> None:
-    """rpc_error_to_response builds a complete error response dict."""
-    err = RpcError(
-        RpcErrorCodes.CONNECTION_FAILED,
-        "could not connect to 127.0.0.1:8444",
-        data={"target": "127.0.0.1:8444"},
-        structured_message="Could not connect to target",
-    )
-    response = rpc_error_to_response(err)
-    assert response["success"] is False
-    assert response["error"] == "could not connect to 127.0.0.1:8444"
-    assert response["structuredError"]["code"] == "CONNECTION_FAILED"
-    assert response["structuredError"]["message"] == "Could not connect to target"
-    assert response["structuredError"]["data"] == {"target": "127.0.0.1:8444"}
 
 
 def test_rpc_error_codes_values_match_names() -> None:
