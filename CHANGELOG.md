@@ -15,7 +15,7 @@ As this is a soft fork release, upgrading is strongly recommended before height 
 ### Added
 
 - Update error message for invalid IP and port format to clarify ipv6
-- PoS2-prover
+- PoS2-prover (Work In Progress - the prover doesn't actually run in 2.6.0)
 - Python 3.13 support
 - Do not advertise a new transaction with zero cost
 
