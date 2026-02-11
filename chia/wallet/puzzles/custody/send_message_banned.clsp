@@ -1,0 +1,19 @@
+; A puzzle that enforces the lack of SEND_MESSAGE conditions in the condition set
+;
+; Intended for use in validating the output of a delegated puzzle
+(mod (Conditions)
+
+  (include condition_codes.clib)
+
+  (defun check_conditions (conditions return)
+    (if conditions
+        (if (= (f (f conditions)) SEND_MESSAGE)
+            (x)
+            (check_conditions (r conditions) return)
+        )
+        return
+    )
+  )
+
+  (check_conditions Conditions Conditions)
+)

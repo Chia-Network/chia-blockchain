@@ -1,4 +1,6 @@
 {
+  "fixed_create_coin_destinations": "9b180c90094b82658705d838a954ad31abeeccf513fcb75b9924caa8d795fd29",
+  "send_message_banned": "74d33c679add06271714c1fa88195e32384c86c2b1ff67f3740c8be0f54298ac",
   "test_generator_deserialize": "52add794fc76e89512e4a063c383418bda084c8a78c74055abe80179e4a7832c",
   "test_multiple_generator_input_arguments": "156dafbddc3e1d3bfe1f2a84e48e5e46b287b8358bf65c3c091c93e855fbfc5b"
 }
