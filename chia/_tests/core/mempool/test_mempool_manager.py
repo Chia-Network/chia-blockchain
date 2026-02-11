@@ -41,8 +41,6 @@ from chia.full_node.eligible_coin_spends import (
 from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
-    QUOTE_BYTES,
-    QUOTE_EXECUTION_COST,
     MempoolManager,
     TimelockConditions,
     can_replace,
@@ -63,7 +61,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.clvm_cost import CLVMCost
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST, CLVMCost
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs

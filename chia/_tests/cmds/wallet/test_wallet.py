@@ -709,8 +709,11 @@ def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients
     assert_list = [
         f"Message: {message.hex()}",
         "Public Key: b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4",
-        "Signature: c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        (
+            "Signature: "
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        ),
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
     run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-a{xch_addr}"], assert_list)
@@ -909,8 +912,10 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     ]
     assert_list = [
         "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)\n  - 100 test4 (100000 mojos)",
-        "REQUESTING:\n  - 10 test2 (10000 mojos)\n"
-        "  - 1 nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft (1 mojos)",
+        (
+            "REQUESTING:\n  - 10 test2 (10000 mojos)\n"
+            "  - 1 nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft (1 mojos)"
+        ),
         "Including Fees: 0.5 XCH, 500000000000 mojos",
         "Created offer with ID 0202020202020202020202020202020202020202020202020202020202020202",
     ]
@@ -1146,18 +1151,24 @@ def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     nft_requested_id_1 = bytes32.from_hexstr("7657b5f1cdee70459052c314f839bb1b76b8c3f444671da71ad7dfcb6c47f243")
     nft_requested_id_2 = bytes32.from_hexstr("5f03cdb94c96325f49f4abf1d4d10cabd5ea583632fbf20f251b7fad73645a14")
     assert_list = [
-        "  OFFERED:\n"
-        f"    - {nft_offered_id.hex()}: 0.001 (1 mojo)\n"
-        f"    - offered cat (Wallet ID: 2): 100.0 (100000 mojos)\n",
-        "  REQUESTED:\n"
-        "    - XCH (Wallet ID: 1): 2.0 (2000000000000 mojos)\n"
-        f"    - {nft_requested_id_1.hex()}: 0.001 (1 mojo)\n"
-        f"    - {nft_requested_id_2.hex()}: 0.001 (1 mojo)\n",
+        (
+            "  OFFERED:\n"
+            f"    - {nft_offered_id.hex()}: 0.001 (1 mojo)\n"
+            f"    - offered cat (Wallet ID: 2): 100.0 (100000 mojos)\n"
+        ),
+        (
+            "  REQUESTED:\n"
+            "    - XCH (Wallet ID: 1): 2.0 (2000000000000 mojos)\n"
+            f"    - {nft_requested_id_1.hex()}: 0.001 (1 mojo)\n"
+            f"    - {nft_requested_id_2.hex()}: 0.001 (1 mojo)\n"
+        ),
         "    - requested cat (Wallet ID: 3): 100.0 (100000 mojos)\n",
-        "Royalties Summary:\n"
-        f"  - For {encode_puzzle_hash(nft_offered_id, 'nft')}:\n"
-        "    - 0.2 XCH (200000000000 mojos) to xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2\n"
-        "    - 10 requested cat (10000 mojos) to xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2\n",
+        (
+            "Royalties Summary:\n"
+            f"  - For {encode_puzzle_hash(nft_offered_id, 'nft')}:\n"
+            "    - 0.2 XCH (200000000000 mojos) to xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2\n"
+            "    - 10 requested cat (10000 mojos) to xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2\n"
+        ),
         "Total Amounts Requested:\n",
         "  - 2.2 XCH (2200000000000 mojos)\n  - 110 requested cat (110000 mojos)\n",
         "Accepted offer with ID 71fd6de245d896c691b0115cdb9b47904cb60858ae87b86bfd648b23208b6cc1",

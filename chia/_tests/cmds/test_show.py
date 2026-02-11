@@ -43,7 +43,7 @@ class ShowFullNodeRpcClient(TestFullNodeRpcClient):
         self.add_to_log("get_block", (header_hash,))
         height = hash_to_height(header_hash)
         foliage = None
-        for foliage in get_foliage():
+        for foliage in get_foliage(0):
             break
         assert foliage is not None
         r_chain_block = None

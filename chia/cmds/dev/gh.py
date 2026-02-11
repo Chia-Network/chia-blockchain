@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
-import urllib
+import urllib.parse
 import uuid
 import webbrowser
 from collections.abc import Callable, Sequence
