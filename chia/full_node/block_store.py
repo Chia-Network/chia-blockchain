@@ -441,19 +441,6 @@ class BlockStore:
 
         return block_record
 
-    async def get_block_record_maybe_writer(self, header_hash: bytes32) -> BlockRecord | None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            async with conn.execute(
-                    "SELECT block_record FROM full_blocks WHERE header_hash=?",
-                    (header_hash,),
-            ) as cursor:
-                row = await cursor.fetchone()
-        if row is None:
-            return None
-        block_record = BlockRecord.from_bytes(row[0])
-
-        return block_record
-
     async def get_block_records_in_range(
         self,
         start: int,
