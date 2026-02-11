@@ -96,6 +96,7 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -3407,6 +3408,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
 @pytest.mark.parametrize("mismatch_fee", [True, False])
 @pytest.mark.parametrize("tx_already_seen", [True, False])
 @pytest.mark.parametrize("mismatch_on_reannounce", [True, False])
+@pytest.mark.parametrize("tolerated_quote_cost_diff", [True, False])
 async def test_ban_for_mismatched_tx_cost_fee(
     three_nodes: list[FullNodeAPI],
     bt: BlockTools,
@@ -3415,6 +3417,7 @@ async def test_ban_for_mismatched_tx_cost_fee(
     mismatch_fee: bool,
     tx_already_seen: bool,
     mismatch_on_reannounce: bool,
+    tolerated_quote_cost_diff: bool,
 ) -> None:
     """
     Tests that a peer gets banned if it sends a `NewTransaction` message with a
@@ -3425,6 +3428,8 @@ async def test_ban_for_mismatched_tx_cost_fee(
     the ones specified in the `NewTransaction` message.
     With `mismatch_on_reannounce` we control whether the peer sent us the same
     transaction twice with different cost and fee.
+    With `tolerated_quote_cost_diff` we cover older nodes with a specific cost
+    mismatch due to the byte size cost and execution cost of the wrapper quote.
     """
     full_node_1, full_node_2, full_node_3 = three_nodes
     server_1 = full_node_1.full_node.server
@@ -3458,7 +3463,9 @@ async def test_ban_for_mismatched_tx_cost_fee(
     assert mempool_item is not None
     # Now send a NewTransaction with a cost and/or fee mismatch from the second
     # full node.
-    cost = uint64(mempool_item.cost + 1) if mismatch_cost else mempool_item.cost
+    quote_cost = QUOTE_BYTES * node.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+    cost_diff = quote_cost if tolerated_quote_cost_diff else 0
+    cost = uint64(mempool_item.cost + 1) if mismatch_cost else uint64(mempool_item.cost + cost_diff)
     fee = uint64(mempool_item.fee + 1) if mismatch_fee else mempool_item.fee
     msg = make_msg(ProtocolMessageTypes.new_transaction, NewTransaction(mempool_item.name, cost, fee))
     # We won't ban localhost, so let's set a different ip address for the
