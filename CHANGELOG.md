@@ -54,13 +54,6 @@ As this is a soft fork release, upgrading is strongly recommended before height 
 * Change GetTransactions to use uint32 to support wallets with very large numbers of transactions
 * Fix measurement of harvester lookup times for logging
 
-## New Contributors
-
-* @deepdring made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/19980
-* @joemicky made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/20068
-* @wanziforever made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/20160
-* @rocksload made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/20197
-
 ## 2.5.7 Chia blockchain 2025-11-12
 
 ## What's Changed
