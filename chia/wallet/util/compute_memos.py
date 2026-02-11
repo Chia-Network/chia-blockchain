@@ -21,7 +21,7 @@ def compute_memos_for_spend(coin_spend: CoinSpend) -> dict[bytes32, list[bytes]]
             if type(condition[3]) is not list:
                 # If it's not a list, it's not the correct format
                 continue
-            memos[coin_added.name()] = condition[3]
+            memos[coin_added.name()] = [mem for mem in condition[3] if isinstance(mem, bytes)]
     return memos
 
 

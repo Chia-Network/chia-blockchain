@@ -633,6 +633,8 @@ wallet:
 
   auto_sign_txs: True
 
+  plotnft2_claim_address: null
+
 solver:
   # The solver server will run on this port
   port: 8666
