@@ -43,6 +43,7 @@ As this is a soft fork release, upgrading is strongly recommended before height 
 - Advertise requested mempool transactions instead of sending them
 - In TransactionQueue, prioritize peer queue transactions by fee per cost
 - Eliminate rate limits and bans for exempt peer networks
+- Updated GUI translations
 
 ### Fixed
 
@@ -53,6 +54,8 @@ As this is a soft fork release, upgrading is strongly recommended before height 
 - Fix typo for Timelord.\_check_for_new_sp comments by @wanziforever
 - Change GetTransactions to use uint32 to support wallets with very large numbers of transactions
 - Fix measurement of harvester lookup times for logging
+- Fixed NFT minting RPC parameter
+- Fixed CAT names on overview
 
 ## 2.5.7 Chia blockchain 2025-11-12
 
