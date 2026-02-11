@@ -25,7 +25,7 @@ from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.rpc_errors import RpcError, RpcErrorCodes, rpc_error_to_response, structured_error_from_exception
+from chia.rpc.rpc_errors import structured_error_from_exception
 from chia.rpc.util import wrap_http_handler
 from chia.server.server import (
     ChiaServer,
@@ -285,7 +285,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
         if self.rpc_api.service.server is None:
-            raise RpcError.simple(RpcErrorCodes.GLOBAL_CONNECTIONS_NOT_SET, "Global connections is not set")
+            raise ValueError("Global connections is not set")
         con_info: list[dict[str, Any]]
         con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
         return {"connections": con_info}
@@ -298,14 +298,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
         if not await self.rpc_api.service.server.start_client(target_node, on_connect):
-            return rpc_error_to_response(
-                RpcError(
-                    RpcErrorCodes.CONNECTION_FAILED,
-                    f"could not connect to {target_node}",
-                    data={"target": str(target_node)},
-                    structured_message="Could not connect to target",
-                )
-            )
+            return {"success": False, "error": f"could not connect to {target_node}"}
         return {"success": True}
 
     async def close_connection(self, request: dict[str, Any]) -> EndpointResult:
@@ -314,12 +307,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             raise web.HTTPInternalServerError
         connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
-            raise RpcError(
-                RpcErrorCodes.CONNECTION_NOT_FOUND,
-                f"Connection with node_id {node_id.hex()} does not exist",
-                data={"node_id": node_id.hex()},
-                structured_message="Connection does not exist",
-            )
+            raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
             await connection.close()
         return {}
@@ -396,12 +384,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if f_rpc_api is not None:
             return await f_rpc_api(data)
 
-        raise RpcError(
-            RpcErrorCodes.UNKNOWN_COMMAND,
-            f"unknown_command {command}",
-            data={"command": command},
-            structured_message="Unknown command",
-        )
+        raise ValueError(f"unknown_command {command}")
 
     async def safe_handle(self, websocket: ClientWebSocketResponse, payload: str) -> None:
         message = None

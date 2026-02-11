@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from chia.rpc.rpc_errors import RpcError
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_rpc_api import CrawlerRpcApi
 
@@ -12,8 +11,8 @@ async def test_get_ips_after_timestamp(bt):
     crawler = Crawler(bt.config.get("seeder", {}), bt.root_path, constants=bt.constants)
     crawler_rpc_api = CrawlerRpcApi(crawler)
 
-    # Should raise RpcError when `after` is not supplied
-    with pytest.raises(RpcError):
+    # Should raise ValueError when `after` is not supplied
+    with pytest.raises(ValueError):
         await crawler_rpc_api.get_ips_after_timestamp({})
 
     # Crawler isn't actually crawling, so this should return zero IPs

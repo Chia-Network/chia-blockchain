@@ -25,7 +25,6 @@ from chia.pools.pool_wallet_info import (
     initial_pool_state_from_dict,
 )
 from chia.protocols.outbound_message import NodeType
-from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import ALL_TRANSLATION_LAYERS, RpcEndpoint, marshal
 from chia.types.blockchain_format.program import Program
@@ -330,10 +329,7 @@ def tx_endpoint(
             self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
         ) -> EndpointResult:
             if await self.service.wallet_state_manager.synced() is False:
-                raise RpcError.simple(
-                    RpcErrorCodes.WALLET_NOT_SYNCED,
-                    "Wallet needs to be fully synced before making transactions.",
-                )
+                raise ValueError("Wallet needs to be fully synced before making transactions.")
 
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
@@ -374,10 +370,7 @@ def tx_endpoint(
                 or valid_times.max_blocks_after_created is not None
                 or valid_times.min_blocks_since_created is not None
             ):
-                raise RpcError.simple(
-                    RpcErrorCodes.RELATIVE_TIMELOCKS_UNSUPPORTED,
-                    "Relative timelocks are not currently supported in the RPC",
-                )
+                raise ValueError("Relative timelocks are not currently supported in the RPC")
 
             if "action_scope_override" in kwargs:
                 response: EndpointResult = await func(
@@ -753,12 +746,7 @@ class WalletRpcApi:
         if started is True:
             return LogInResponse(fingerprint=request.fingerprint)
 
-        raise RpcError(
-            RpcErrorCodes.FINGERPRINT_NOT_FOUND,
-            f"fingerprint {request.fingerprint} not found in keychain or keychain is empty",
-            data={"fingerprint": request.fingerprint},
-            structured_message="Fingerprint not found in keychain or keychain is empty",
-        )
+        raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
     @marshal
     async def get_logged_in_fingerprint(self, request: Empty) -> GetLoggedInFingerprintResponse:
@@ -771,16 +759,9 @@ class WalletRpcApi:
         except KeychainIsLocked:
             return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
-            original_error = f"{type(e).__name__}: {e}"
-            msg = (
+            raise Exception(
                 "Error while getting keys.  If the issue persists, restart all services."
-                f"  Original error: {original_error}"
-            )
-            raise RpcError(
-                RpcErrorCodes.FAILED_TO_GET_KEYS,
-                msg,
-                data={"original_error": original_error},
-                structured_message="Error while getting keys. If the issue persists, restart all services.",
+                f"  Original error: {type(e).__name__}: {e}"
             ) from e
         else:
             return GetPublicKeysResponse(keyring_is_locked=False, public_key_fingerprints=fingerprints)
@@ -811,12 +792,7 @@ class WalletRpcApi:
                 )
             )
 
-        raise RpcError(
-            RpcErrorCodes.PRIVATE_KEY_NOT_FOUND,
-            f"Could not get a private key for fingerprint {request.fingerprint}",
-            data={"fingerprint": request.fingerprint},
-            structured_message="Could not get a private key for fingerprint",
-        )
+        raise ValueError(f"Could not get a private key for fingerprint {request.fingerprint}")
 
     @marshal
     async def generate_mnemonic(self, request: Empty) -> GenerateMnemonicResponse:
@@ -828,12 +804,7 @@ class WalletRpcApi:
         try:
             sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic), label=request.label)
         except KeyError as e:
-            raise RpcError(
-                RpcErrorCodes.MNEMONIC_WORD_INCORRECT,
-                f"The word '{e.args[0]}' is incorrect.",
-                data={"word": e.args[0]},
-                structured_message="The word is incorrect",
-            )
+            raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
         fingerprint = uint32(sk.get_g1().get_fingerprint())
         await self._stop_wallet()
@@ -847,7 +818,7 @@ class WalletRpcApi:
         started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
             return AddKeyResponse(fingerprint=fingerprint)
-        raise RpcError.simple(RpcErrorCodes.FAILED_TO_START, "Failed to start")
+        raise ValueError("Failed to start")
 
     @marshal
     async def delete_key(self, request: DeleteKey) -> Empty:
@@ -974,13 +945,8 @@ class WalletRpcApi:
         :param request: optionally pass in `enable` as bool to enable/disable resync
         :return:
         """
-        fingerprint = self.service.logged_in_fingerprint
-        if fingerprint is None:
-            raise RpcError.simple(
-                RpcErrorCodes.LOGIN_REQUIRED,
-                "You need to login into wallet to use this RPC call",
-            )
-        self.service.set_resync_on_startup(fingerprint, request.enable)
+        assert self.service.logged_in_fingerprint is not None
+        self.service.set_resync_on_startup(self.service.logged_in_fingerprint, request.enable)
         return Empty()
 
     @marshal
@@ -1001,10 +967,7 @@ class WalletRpcApi:
     async def push_tx(self, request: PushTX) -> Empty:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
-            raise RpcError.simple(
-                RpcErrorCodes.NO_FULL_NODE_PEERS,
-                "Wallet is not currently connected to any full node peers",
-            )
+            raise ValueError("Wallet is not currently connected to any full node peers")
         await self.service.push_tx(request.spend_bundle)
         return Empty()
 
@@ -1017,10 +980,7 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> PushTransactionsResponse:
         if not action_scope.config.push:
-            raise RpcError.simple(
-                RpcErrorCodes.CANNOT_PUSH_IF_FALSE,
-                "Cannot push transactions if push is False",
-            )
+            raise ValueError("Cannot push transactions if push is False")
         tx_removals = [c for tx in request.transactions for c in tx.removals]
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(request.transactions)
@@ -1035,10 +995,7 @@ class WalletRpcApi:
                 ),
             )
         elif extra_conditions != tuple():
-            raise RpcError.simple(
-                RpcErrorCodes.CONDITIONS_REQUIRE_FEE_SPEND,
-                "Cannot add conditions to a transaction if no new fee spend is being added",
-            )
+            raise ValueError("Cannot add conditions to a transaction if no new fee spend is being added")
 
         return PushTransactionsResponse(unsigned_transactions=[], transactions=[])  # tx_endpoint takes care of this
 
@@ -1121,10 +1078,7 @@ class WalletRpcApi:
         if request.wallet_type == CreateNewWalletType.CAT_WALLET:
             if request.mode == WalletCreationMode.NEW:
                 if not action_scope.config.push:
-                    raise RpcError.simple(
-                        RpcErrorCodes.TEST_CAT_MUST_PUSH,
-                        "Test CAT minting must be pushed automatically",  # pragma: no cover
-                    )
+                    raise ValueError("Test CAT minting must be pushed automatically")  # pragma: no cover
                 async with self.service.wallet_state_manager.lock:
                     cat_wallet = await CATWallet.create_new_cat_wallet(
                         wallet_state_manager,
@@ -1321,12 +1275,7 @@ class WalletRpcApi:
     async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
         tr: TransactionRecord | None = await self.service.wallet_state_manager.get_transaction(request.transaction_id)
         if tr is None:
-            raise RpcError(
-                RpcErrorCodes.TRANSACTION_NOT_FOUND,
-                f"Transaction 0x{request.transaction_id.hex()} not found",
-                data={"transaction_id": request.transaction_id.hex()},
-                structured_message="Transaction not found",
-            )
+            raise ValueError(f"Transaction 0x{request.transaction_id.hex()} not found")
 
         return GetTransactionResponse(
             transaction=await self._convert_tx_puzzle_hash(tr),
@@ -1338,12 +1287,7 @@ class WalletRpcApi:
         transaction_id: bytes32 = request.transaction_id
         tr: TransactionRecord | None = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
-            raise RpcError(
-                RpcErrorCodes.TRANSACTION_NOT_FOUND,
-                f"Transaction 0x{transaction_id.hex()} not found",
-                data={"transaction_id": transaction_id.hex()},
-                structured_message="Transaction not found",
-            )
+            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
         if tr.spend_bundle is None or len(tr.spend_bundle.coin_spends) == 0:
             if tr.type == uint32(TransactionType.INCOMING_TX.value):
                 # Fetch incoming tx coin spend
@@ -1356,12 +1300,7 @@ class WalletRpcApi:
                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
                 spend_bundle = WalletSpendBundle([coin_spend], G2Element())
             else:
-                raise RpcError(
-                    RpcErrorCodes.TRANSACTION_NO_COIN_SPEND,
-                    f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.",
-                    data={"transaction_id": transaction_id.hex()},
-                    structured_message="Transaction doesn't have any coin spend",
-                )
+                raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
         else:
             spend_bundle = tr.spend_bundle
         return GetTransactionMemoResponse(transaction_memos={transaction_id: compute_memos(spend_bundle)})
@@ -1471,12 +1410,7 @@ class WalletRpcApi:
                 )
             address = self.service.wallet_state_manager.encode_puzzle_hash(raw_puzzle_hash)
         else:
-            raise RpcError(
-                RpcErrorCodes.WALLET_TYPE_CANNOT_CREATE_PUZZLE_HASHES,
-                f"Wallet type {wallet.type()} cannot create puzzle hashes",
-                data={"wallet_type": str(wallet.type())},
-                structured_message="Wallet type cannot create puzzle hashes",
-            )
+            raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
 
         return GetNextAddressResponse(
             wallet_id=request.wallet_id,
@@ -1531,7 +1465,9 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> SendTransactionMultiResponse:
-        # @tx_endpoint will guarantee the wallet is synced.
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before sending transactions")
+
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
         async with self.service.wallet_state_manager.lock:
@@ -1611,14 +1547,9 @@ class WalletRpcApi:
     @marshal
     async def delete_unconfirmed_transactions(self, request: DeleteUnconfirmedTransactions) -> Empty:
         if request.wallet_id not in self.service.wallet_state_manager.wallets:
-            raise RpcError(
-                RpcErrorCodes.WALLET_NOT_FOUND,
-                f"Wallet id {request.wallet_id} does not exist",
-                data={"wallet_id": request.wallet_id},
-                structured_message="Wallet does not exist",
-            )
+            raise ValueError(f"Wallet id {request.wallet_id} does not exist")
         if await self.service.wallet_state_manager.synced() is False:
-            raise RpcError.simple(RpcErrorCodes.WALLET_NOT_SYNCED, "Wallet needs to be fully synced.")
+            raise ValueError("Wallet needs to be fully synced.")
 
         async with self.service.wallet_state_manager.db_wrapper.writer():
             await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(request.wallet_id)
@@ -1657,10 +1588,7 @@ class WalletRpcApi:
         )
 
         if await self.service.wallet_state_manager.synced() is False:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_NOT_SYNCED_FOR_COINS,
-                "Wallet needs to be fully synced before selecting coins",
-            )
+            raise ValueError("Wallet needs to be fully synced before selecting coins")
 
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
@@ -1671,10 +1599,7 @@ class WalletRpcApi:
     @marshal
     async def get_spendable_coins(self, request: GetSpendableCoins) -> GetSpendableCoinsResponse:
         if await self.service.wallet_state_manager.synced() is False:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_NOT_SYNCED_FOR_SPENDABLE,
-                "Wallet needs to be fully synced before getting all coins",
-            )
+            raise ValueError("Wallet needs to be fully synced before getting all coins")
 
         state_mgr = self.service.wallet_state_manager
         async with state_mgr.lock:
@@ -1719,10 +1644,7 @@ class WalletRpcApi:
     @marshal
     async def get_coin_records_by_names(self, request: GetCoinRecordsByNames) -> GetCoinRecordsByNamesResponse:
         if await self.service.wallet_state_manager.synced() is False:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_NOT_SYNCED_FOR_COIN_INFO,
-                "Wallet needs to be fully synced before finding coin information",
-            )
+            raise ValueError("Wallet needs to be fully synced before finding coin information")
 
         kwargs: dict[str, Any] = {
             "coin_id_filter": HashFilter.include(request.names),
@@ -1747,12 +1669,7 @@ class WalletRpcApi:
                 "0x" + c_id.hex() for c_id in request.names if c_id not in [cr.name for cr in coin_records]
             ]
             if missed_coins:
-                raise RpcError(
-                    RpcErrorCodes.COIN_IDS_NOT_FOUND,
-                    f"Coin ID's: {missed_coins} not found.",
-                    data={"missed_coins": [str(c) for c in missed_coins]},
-                    structured_message="Coin IDs not found",
-                )
+                raise ValueError(f"Coin ID's: {missed_coins} not found.")
 
         return GetCoinRecordsByNamesResponse(coin_records=coin_records)
 
@@ -1771,36 +1688,22 @@ class WalletRpcApi:
         # Require that the wallet is fully synced
         synced = await self.service.wallet_state_manager.synced()
         if synced is False:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_NOT_SYNCED_FOR_DERIVATION,
-                "Wallet needs to be fully synced before extending derivation index",
-            )
+            raise ValueError("Wallet needs to be fully synced before extending derivation index")
 
         current: uint32 | None = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
         # Additional sanity check that the wallet is synced
         if current is None:
-            raise RpcError.simple(
-                RpcErrorCodes.NO_DERIVATION_RECORD,
-                "No current derivation record found, unable to extend index",
-            )
+            raise ValueError("No current derivation record found, unable to extend index")
 
         # Require that the new index is greater than the current index
         if request.index <= current:
-            raise RpcError(
-                RpcErrorCodes.DERIVATION_INDEX_TOO_LOW,
-                f"New derivation index must be greater than current index: {current}",
-                data={"current": current},
-                structured_message="New derivation index must be greater than current index",
-            )
+            raise ValueError(f"New derivation index must be greater than current index: {current}")
 
         if request.index - current > MAX_DERIVATION_INDEX_DELTA:
-            raise RpcError(
-                RpcErrorCodes.TOO_MANY_DERIVATIONS,
+            raise ValueError(
                 "Too many derivations requested. "
-                f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}",
-                data={"current": current, "max_index": current + MAX_DERIVATION_INDEX_DELTA + 1},
-                structured_message="Too many derivations requested",
+                f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}"
             )
 
         # Since we've bumping the derivation index without having found any new puzzles, we want
@@ -1902,12 +1805,7 @@ class WalletRpcApi:
                         did_wallet = wallet
                         break
             if did_wallet is None:
-                raise RpcError(
-                    RpcErrorCodes.DID_NOT_FOUND,
-                    f"DID for {entity_id.hex()} doesn't exist.",
-                    data={"entity_id": entity_id.hex()},
-                    structured_message="DID doesn't exist",
-                )
+                raise ValueError(f"DID for {entity_id.hex()} doesn't exist.")
             synthetic_secret_key = self.service.wallet_state_manager.main_wallet.convert_secret_key_to_synthetic(
                 await self.service.wallet_state_manager.get_private_key(await did_wallet.current_p2_puzzle_hash())
             )
@@ -1935,12 +1833,7 @@ class WalletRpcApi:
                         target_nft = nft
                         break
             if nft_wallet is None or target_nft is None:
-                raise RpcError(
-                    RpcErrorCodes.NFT_NOT_FOUND,
-                    f"NFT for {entity_id.hex()} doesn't exist.",
-                    data={"entity_id": entity_id.hex()},
-                    structured_message="NFT doesn't exist",
-                )
+                raise ValueError(f"NFT for {entity_id.hex()} doesn't exist.")
 
             assert isinstance(nft_wallet, NFTWallet)
             synthetic_secret_key = self.service.wallet_state_manager.main_wallet.convert_secret_key_to_synthetic(
@@ -1961,12 +1854,7 @@ class WalletRpcApi:
                 latest_coin_id=latest_coin_id,
             )
         else:
-            raise RpcError(
-                RpcErrorCodes.UNKNOWN_ID_TYPE,
-                f"Unknown ID type, {request.id}",
-                data={"id": str(request.id)},
-                structured_message="Unknown ID type",
-            )
+            raise ValueError(f"Unknown ID type, {request.id}")
 
     ##########################################################################################
     # CATs and Trading
@@ -2083,7 +1971,7 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> CreateOfferForIDsResponse:
         if action_scope.config.push:
-            raise RpcError.simple(RpcErrorCodes.CANNOT_PUSH_INCOMPLETE_SPEND, "Cannot push an incomplete spend")
+            raise ValueError("Cannot push an incomplete spend")
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: dict[bytes32, PuzzleInfo] = {}
@@ -2214,12 +2102,7 @@ class WalletRpcApi:
             request.trade_id
         )
         if trade_record is None:
-            raise RpcError(
-                RpcErrorCodes.TRADE_NOT_FOUND,
-                f"No trade with trade id: {request.trade_id.hex()}",
-                data={"trade_id": request.trade_id.hex()},
-                structured_message="Trade not found",
-            )
+            raise ValueError(f"No trade with trade id: {request.trade_id.hex()}")
 
         offer_to_return: bytes = trade_record.offer if trade_record.taken_offer is None else trade_record.taken_offer
         offer: str | None = Offer.from_bytes(offer_to_return).to_bech32() if request.file_contents else None
@@ -2535,10 +2418,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_percentage == 10000:
-            raise RpcError.simple(
-                RpcErrorCodes.ROYALTY_PERCENTAGE_INVALID,
-                "Royalty percentage cannot be 100%",
-            )
+            raise ValueError("Royalty percentage cannot be 100%")
         if request.royalty_address is not None:
             royalty_puzhash = decode_puzzle_hash(request.royalty_address)
         else:
@@ -2634,11 +2514,7 @@ class WalletRpcApi:
         if not (
             await nft_puzzle_utils.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
-            raise RpcError(
-                RpcErrorCodes.NFT_NO_DID_SUPPORT,
-                "The NFT doesn't support setting a DID.",
-                structured_message="The NFT doesn't support setting a DID",
-            )
+            raise ValueError("The NFT doesn't support setting a DID.")
 
         await nft_wallet.set_nft_did(
             nft_coin_info,
@@ -2673,12 +2549,7 @@ class WalletRpcApi:
         :return:
         """
         if len(request.nft_coin_list) > MAX_NFT_CHUNK_SIZE:
-            raise RpcError(
-                RpcErrorCodes.NFT_CHUNK_LIMIT_SET,
-                f"You can only set {MAX_NFT_CHUNK_SIZE} NFTs at once",
-                data={"max_chunk_size": MAX_NFT_CHUNK_SIZE},
-                structured_message="NFT chunk limit exceeded for set",
-            )
+            raise ValueError(f"You can only set {MAX_NFT_CHUNK_SIZE} NFTs at once")
 
         if request.did_id is not None:
             did_id: bytes = decode_puzzle_hash(request.did_id)
@@ -2751,12 +2622,7 @@ class WalletRpcApi:
         :return:
         """
         if len(request.nft_coin_list) > MAX_NFT_CHUNK_SIZE:
-            raise RpcError(
-                RpcErrorCodes.NFT_CHUNK_LIMIT_TRANSFER,
-                f"You can only transfer {MAX_NFT_CHUNK_SIZE} NFTs at once",
-                data={"max_chunk_size": MAX_NFT_CHUNK_SIZE},
-                structured_message="NFT chunk limit exceeded for transfer",
-            )
+            raise ValueError(f"You can only transfer {MAX_NFT_CHUNK_SIZE} NFTs at once")
         address = request.target_address
         puzzle_hash = decode_puzzle_hash(address)
         nft_dict: dict[uint32, list[NFTCoinInfo]] = {}
@@ -2811,12 +2677,7 @@ class WalletRpcApi:
         for wallet in self.service.wallet_state_manager.wallets.values():
             if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
                 return NFTGetByDIDResponse(wallet_id=uint32(wallet.wallet_id))
-        raise RpcError(
-            RpcErrorCodes.NFT_WALLET_DID_NOT_FOUND,
-            f"Cannot find a NFT wallet DID = {did_id}",
-            data={"did_id": str(did_id)},
-            structured_message="Cannot find NFT wallet for DID",
-        )
+        raise ValueError(f"Cannot find a NFT wallet DID = {did_id}")
 
     @marshal
     async def nft_get_wallet_did(self, request: NFTGetWalletDID) -> NFTGetWalletDIDResponse:
@@ -2961,10 +2822,7 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> NFTMintBulkResponse:
         if action_scope.config.push:
-            raise RpcError.simple(  # pragma: no cover
-                RpcErrorCodes.NFT_MINT_PUSH_UNAVAILABLE,
-                "Automatic pushing of nft minting transactions not yet available",
-            )
+            raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=NFTWallet)
         if request.royalty_address in {None, ""}:
             royalty_puzhash = await action_scope.get_puzzle_hash(self.service.wallet_state_manager)
@@ -3051,12 +2909,7 @@ class WalletRpcApi:
         parsed_request = GetCoinRecords.from_json_dict(request)
 
         if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
-            raise RpcError(
-                RpcErrorCodes.COIN_RECORDS_LIMIT_EXCEEDED,
-                f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}",
-                data={"limit": parsed_request.limit, "max_limit": self.max_get_coin_records_limit},
-                structured_message="Coin records limit exceeded",
-            )
+            raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
 
         for filter_name, filter in {
             "coin_id_filter": parsed_request.coin_id_filter,
@@ -3067,15 +2920,8 @@ class WalletRpcApi:
             if filter is None:
                 continue
             if len(filter.values) > self.max_get_coin_records_filter_items:
-                raise RpcError(
-                    RpcErrorCodes.FILTER_ITEMS_EXCEEDED,
-                    f"{filter_name} max items {self.max_get_coin_records_filter_items} exceeded: {len(filter.values)}",
-                    data={
-                        "filter_name": filter_name,
-                        "count": len(filter.values),
-                        "max_items": self.max_get_coin_records_filter_items,
-                    },
-                    structured_message="Filter items exceeded",
+                raise ValueError(
+                    f"{filter_name} max items {self.max_get_coin_records_filter_items} exceeded: {len(filter.values)}"
                 )
 
         result = await self.service.wallet_state_manager.coin_store.get_coin_records(
@@ -3169,21 +3015,13 @@ class WalletRpcApi:
         )
 
         if len(request.additions) < 1:
-            raise RpcError.simple(
-                RpcErrorCodes.ADDITIONS_LIST_REQUIRED,
-                "Specify additions list",
-            )
+            raise ValueError("Specify additions list")
 
         amount_0: uint64 = uint64(request.additions[0].amount)
         assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
         puzzle_hash_0 = request.additions[0].puzzle_hash
         if len(puzzle_hash_0) != 32:
-            raise RpcError(
-                RpcErrorCodes.ADDRESS_INVALID_LENGTH,
-                f"Address must be 32 bytes. {puzzle_hash_0.hex()}",
-                data={"puzzle_hash": puzzle_hash_0.hex()},
-                structured_message="Address must be 32 bytes",
-            )
+            raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
         memos_0 = (
             [] if request.additions[0].memos is None else [mem.encode("utf-8") for mem in request.additions[0].memos]
@@ -3192,12 +3030,7 @@ class WalletRpcApi:
         additional_outputs: list[CreateCoin] = []
         for addition in request.additions[1:]:
             if addition.amount > self.service.constants.MAX_COIN_AMOUNT:
-                raise RpcError(
-                    RpcErrorCodes.COIN_AMOUNT_EXCEEDS_MAX,
-                    f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}",
-                    data={"max_amount": self.service.constants.MAX_COIN_AMOUNT},
-                    structured_message="Coin amount cannot exceed maximum",
-                )
+                raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if addition.memos is None else [mem.encode("utf-8") for mem in addition.memos]
             additional_outputs.append(CreateCoin(addition.puzzle_hash, addition.amount, memos))
 
@@ -3248,12 +3081,7 @@ class WalletRpcApi:
             pool_wallet_info.current.state == FARMING_TO_POOL.value
             and pool_wallet_info.current.pool_url == request.pool_url
         ):
-            raise RpcError(
-                RpcErrorCodes.ALREADY_FARMING_TO_POOL,
-                f"Already farming to pool {pool_wallet_info.current.pool_url}",
-                data={"pool_url": pool_wallet_info.current.pool_url},
-                structured_message="Already farming to pool",
-            )
+            raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
 
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,
@@ -3345,10 +3173,7 @@ class WalletRpcApi:
     ) -> CreateNewDLResponse:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = await self.service.wallet_state_manager.get_dl_wallet(create_if_not_found=True)
 
@@ -3367,10 +3192,7 @@ class WalletRpcApi:
     async def dl_track_new(self, request: DLTrackNew) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         await (await self.service.wallet_state_manager.get_dl_wallet(create_if_not_found=True)).track_new_launcher_id(
             request.launcher_id
@@ -3382,10 +3204,7 @@ class WalletRpcApi:
     async def dl_stop_tracking(self, request: DLStopTracking) -> Empty:
         """Initialize the DataLayer Wallet (only one can exist)"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = await self.service.wallet_state_manager.get_dl_wallet()
         await dl_wallet.stop_tracking_singleton(request.launcher_id)
@@ -3395,10 +3214,7 @@ class WalletRpcApi:
     async def dl_latest_singleton(self, request: DLLatestSingleton) -> DLLatestSingletonResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         record = await wallet.get_latest_singleton(request.launcher_id, request.only_confirmed)
@@ -3408,10 +3224,7 @@ class WalletRpcApi:
     async def dl_singletons_by_root(self, request: DLSingletonsByRoot) -> DLSingletonsByRootResponse:
         """Get the singleton records that contain the specified root"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         records = await wallet.get_singletons_by_root(request.launcher_id, request.root)
@@ -3427,10 +3240,7 @@ class WalletRpcApi:
     ) -> DLUpdateRootResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
@@ -3455,7 +3265,7 @@ class WalletRpcApi:
     ) -> DLUpdateMultipleResponse:
         """Update multiple singletons with new merkle roots"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED, "Wallet service not initialized")
+            raise RuntimeError("not initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
@@ -3479,10 +3289,7 @@ class WalletRpcApi:
     async def dl_history(self, request: DLHistory) -> DLHistoryResponse:
         """Get the singleton record for the latest singleton of a launcher ID"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         additional_kwargs = {}
@@ -3501,10 +3308,7 @@ class WalletRpcApi:
     async def dl_owned_singletons(self, request: Empty) -> DLOwnedSingletonsResponse:
         """Get all owned singleton records"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         singletons = await wallet.get_owned_singletons()
@@ -3515,10 +3319,7 @@ class WalletRpcApi:
     async def dl_get_mirrors(self, request: DLGetMirrors) -> DLGetMirrorsResponse:
         """Get all of the mirrors for a specific singleton"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         wallet = await self.service.wallet_state_manager.get_dl_wallet()
         return DLGetMirrorsResponse(mirrors=await wallet.get_mirrors_for_launcher(request.launcher_id))
@@ -3533,10 +3334,7 @@ class WalletRpcApi:
     ) -> DLNewMirrorResponse:
         """Add a new on chain message for a specific singleton"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = await self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
@@ -3562,10 +3360,7 @@ class WalletRpcApi:
     ) -> DLDeleteMirrorResponse:
         """Remove an existing mirror for a specific singleton"""
         if self.service.wallet_state_manager is None:
-            raise RpcError.simple(
-                RpcErrorCodes.WALLET_SERVICE_NOT_INITIALIZED,
-                "The wallet service is not currently initialized",
-            )
+            raise ValueError("The wallet service is not currently initialized")
 
         dl_wallet = await self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
@@ -3718,9 +3513,7 @@ class WalletRpcApi:
 
         vc_proofs: VCProofs | None = await vc_wallet.store.get_proofs_for_root(request.root)
         if vc_proofs is None:
-            raise RpcError.simple(  # pragma: no cover
-                RpcErrorCodes.NO_PROOFS_FOR_ROOT, "no proofs found for specified root"
-            )
+            raise ValueError("no proofs found for specified root")  # pragma: no cover
         return VCGetProofsForRootResponse.from_vc_proofs(vc_proofs)
 
     @tx_endpoint(push=True)

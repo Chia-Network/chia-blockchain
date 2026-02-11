@@ -5,7 +5,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
 from chia.full_node.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
@@ -77,7 +76,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         all_blocks = bool(_request.get("delete_all_blocks", False))  # revert all blocks
         height = self.service.blockchain.get_peak_height()
         if height is None:
-            raise RpcError.simple(RpcErrorCodes.NO_BLOCKS_TO_REVERT, "No blocks to revert")
+            raise ValueError("No blocks to revert")
         new_height = (height - blocks) if not all_blocks else 1
         assert new_height >= 1
         await self.simulator_api.revert_block_height(uint32(new_height))
@@ -91,7 +90,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         random_seed = bytes32.secret() if use_random_seed else None
         cur_height = self.service.blockchain.get_peak_height()
         if cur_height is None:
-            raise RpcError.simple(RpcErrorCodes.NO_BLOCKS_TO_REVERT, "No blocks to revert")
+            raise ValueError("No blocks to revert")
         fork_height = (cur_height - fork_blocks) if not all_blocks else 1
         new_height = cur_height + new_blocks  # any number works as long as its not 0
         assert fork_height >= 1 and new_height - 1 >= cur_height
