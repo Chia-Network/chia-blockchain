@@ -15,7 +15,7 @@ import aiohttp
 import pytest
 from chia_rs.sized_ints import uint16
 
-from chia.rpc.rpc_errors import RpcError
+from chia.rpc.rpc_errors import RpcError, RpcErrorCodes
 from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcServer, RpcServiceProtocol
 from chia.ssl.create_ssl import create_all_ssl
 from chia.util.config import load_config
@@ -58,7 +58,7 @@ class TestRpcApi:
 
     async def raise_rpc_error(self, request: dict[str, Any]) -> EndpointResult:
         raise RpcError(
-            "TEST_ERROR_KEY",
+            RpcErrorCodes.UNKNOWN,
             "Test message for backwards compatibility, foo is bar",
             data={"foo": "bar"},
             structured_message="Test message for backwards compatibility",
@@ -221,7 +221,7 @@ async def test_structured_error_response_shape(client: Client) -> None:
     assert body["error"] == "Test message for backwards compatibility, foo is bar"
     assert "structuredError" in body
     structured = body["structuredError"]
-    assert structured["code"] == "TEST_ERROR_KEY"
+    assert structured["code"] == "UNKNOWN"
     assert structured["message"] == "Test message for backwards compatibility"
     assert structured["data"] == {"foo": "bar"}
 
@@ -258,7 +258,7 @@ async def test_websocket_structured_error_response(server: RpcServer[TestRpcApi]
     assert response["data"]["error"] == "Test message for backwards compatibility, foo is bar"
     assert "structuredError" in response["data"]
     structured = response["data"]["structuredError"]
-    assert structured["code"] == "TEST_ERROR_KEY"
+    assert structured["code"] == "UNKNOWN"
     assert structured["message"] == "Test message for backwards compatibility"
     assert structured["data"] == {"foo": "bar"}
 

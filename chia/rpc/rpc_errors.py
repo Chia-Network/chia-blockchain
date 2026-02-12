@@ -59,13 +59,13 @@ class RpcError(Exception):
 
     def __init__(
         self,
-        error_code: RpcErrorCodes | str,
+        error_code: RpcErrorCodes,
         message: str,
         data: dict[str, Any] | None = None,
         structured_message: str | None = None,
     ) -> None:
         super().__init__(message)
-        self.error_code = error_code.value if isinstance(error_code, RpcErrorCodes) else error_code
+        self.error_code = error_code.value
         self.message = message
         self.data = data if data is not None else {}
         self.structured_message = structured_message if structured_message is not None else ""
@@ -73,7 +73,7 @@ class RpcError(Exception):
     @classmethod
     def simple(
         cls,
-        error_code: RpcErrorCodes | str,
+        error_code: RpcErrorCodes,
         message: str,
         data: dict[str, Any] | None = None,
     ) -> RpcError:
