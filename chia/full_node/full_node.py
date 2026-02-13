@@ -3125,12 +3125,8 @@ class FullNode:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
         self.log.info(f"Replaced compact proof at height {request.height}")
-        msg = make_msg(
-            ProtocolMessageTypes.new_compact_vdf,
-            full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
-        )
-        if self._server is not None:
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+        # Temporary: disable compact VDF gossip during bulk proof ingestion.
+        self.log.debug("Skipping new_compact_vdf rebroadcast for height %s", request.height)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
         peak = self.blockchain.get_peak()
@@ -3211,12 +3207,8 @@ class FullNode:
         if not replaced:
             self.log.error(f"Could not replace compact proof: {request.height}")
             return None
-        msg = make_msg(
-            ProtocolMessageTypes.new_compact_vdf,
-            full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
-        )
-        if self._server is not None:
-            await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+        # Temporary: disable compact VDF gossip during bulk proof ingestion.
+        self.log.debug("Skipping new_compact_vdf rebroadcast for height %s", request.height)
 
     def in_bad_peak_cache(self, wp: WeightProof) -> bool:
         for block in wp.recent_chain_data:
