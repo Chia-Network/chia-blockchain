@@ -447,11 +447,48 @@ class Blockchain:
                 self.add_block_record(block_record)
                 log.info(f"CMM: Done add_block_record, HH: {header_hash}, height: {block.height}")
 
-            log.info(f"CMM: Finished w/ Transaction, HH: {header_hash}, height: {block.height}")
+            # RELEASE has completed. Check if we're still in a transaction.
+            # Safe to read without the lock: asyncio.Lock.release() is synchronous,
+            # and .in_transaction is a synchronous C-level property read. No await
+            # between lock release and here, so no other task can interleave.
+            still_in_txn = self.block_store.db_wrapper._write_connection.in_transaction
+            log.info(f"CMM: Finished w/ Transaction, HH: {header_hash}, height: {block.height}, "
+                     f"still_in_transaction: {still_in_txn}")
+            if still_in_txn:
+                log.error(f"CMM: RELEASE did not commit! Parent transaction exists. "
+                          f"HH: {header_hash}, height: {block.height}")
             # Confirm that it is in fact in the database, otherwise, that's an unexpected state
             test_block_record = await self.block_store.get_block_record(block_record.header_hash)
             if test_block_record is None:
-                log.info(f"CMM Added block to cache without it being in the database!, HH: {header_hash}, height: {block.height}")
+                log.error(f"CMM Added block to cache without it being in the database! (reader check), HH: {header_hash}, height: {block.height}")
+                log.error(f"CMM: write_conn.in_transaction: "
+                          f"{self.block_store.db_wrapper._write_connection.in_transaction}")
+
+                # Query the writer connection directly (bypasses reader pool)
+                try:
+                    async with self.block_store.db_wrapper._write_connection.execute(
+                        "SELECT COUNT(*) FROM full_blocks WHERE header_hash=?",
+                        (header_hash,),
+                    ) as cursor:
+                        row = await cursor.fetchone()
+                        writer_has_it = row[0] > 0
+                        log.error(f"CMM: Block exists on writer connection: {writer_has_it}, HH: {header_hash}, height: {block.height}")
+
+                    if writer_has_it:
+                        log.error("CMM: DATA IS IN UNCOMMITTED TRANSACTION - writer sees it, reader doesn't!")
+                    else:
+                        # Writer doesn't have it either. Check if ANY blocks exist at this height
+                        # on the writer (could reveal if a different block exists, or table is empty here).
+                        async with self.block_store.db_wrapper._write_connection.execute(
+                            "SELECT COUNT(*), GROUP_CONCAT(HEX(header_hash)) FROM full_blocks WHERE height=?",
+                            (block.height,),
+                        ) as cursor2:
+                            row2 = await cursor2.fetchone()
+                            log.error(f"CMM: Writer has {row2[0]} block(s) at height {block.height}, "
+                                      f"hashes: {row2[1]}")
+                        log.error("CMM: Block not on writer either - INSERT OR IGNORE was a no-op or data vanished!")
+                except Exception as e:
+                    log.error(f"CMM: Failed to query writer connection: {e}")
             else:
                 log.info(f"CMM block confirmed in database, HH: {header_hash}, height: {block.height}")
             # there's a suspension point here, as we leave the async context
