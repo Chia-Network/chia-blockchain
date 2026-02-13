@@ -428,6 +428,8 @@ class Blockchain:
         prev_fork_peak = (fork_info.peak_height, fork_info.peak_hash)
 
         try:
+            log.info(f"CMM: write_conn.in_transaction BEFORE savepoint: "
+                     f"{self.block_store.db_wrapper._write_connection.in_transaction}")
             # Always add the block to the database
             async with self.block_store.transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
