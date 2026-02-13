@@ -635,6 +635,9 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
+        if ProtocolMessageTypes(message.type) == ProtocolMessageTypes.new_compact_vdf:
+            create_referenced_task(self._wait_and_retry(message), known_unreferenced=True)
+            return None
         limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
             message, self.local_capabilities, self.peer_capabilities
         )
