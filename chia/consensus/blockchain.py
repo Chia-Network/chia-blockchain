@@ -428,8 +428,12 @@ class Blockchain:
         prev_fork_peak = (fork_info.peak_height, fork_info.peak_hash)
 
         try:
-            log.info(f"CMM: write_conn.in_transaction BEFORE savepoint: "
-                     f"{self.block_store.db_wrapper._write_connection.in_transaction}")
+            current_task = asyncio.current_task()
+            same_task_writer = current_task is not None and self.block_store.db_wrapper._current_writer == current_task
+            in_transaction_same_task = same_task_writer and self.block_store.db_wrapper._write_connection.in_transaction
+            log.info(f"CMM: write_conn.in_transaction BEFORE savepoint (same task only): {in_transaction_same_task}")
+            if in_transaction_same_task:
+                log.info("CMM: call stack for same-task nested transaction:\n%s", "".join(traceback.format_stack()))
             # Always add the block to the database
             async with self.block_store.transaction():
                 # Perform the DB operations to update the state, and rollback if something goes wrong
