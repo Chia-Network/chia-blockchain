@@ -275,16 +275,24 @@ class DBWrapper2:
     @contextlib.asynccontextmanager
     async def _savepoint_ctx(self) -> AsyncIterator[None]:
         name = self._next_savepoint()
-        await self._write_connection.execute(f"SAVEPOINT {name}")
+        # Shield all savepoint operations from task cancellation to prevent
+        # orphan SAVEPOINTs. An orphan SAVEPOINT (created but never released)
+        # causes all subsequent SAVEPOINTs to nest inside it, making every
+        # RELEASE a merge instead of a commit — trapping data in an
+        # uncommitted transaction invisible to reader connections.
+        with anyio.CancelScope(shield=True):
+            await self._write_connection.execute(f"SAVEPOINT {name}")
         try:
             yield
         except:
-            await self._write_connection.execute(f"ROLLBACK TO {name}")
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"ROLLBACK TO {name}")
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
             # just rolls back the state. We need to cancel it regardless
-            await self._write_connection.execute(f"RELEASE {name}")
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
     async def writer(
