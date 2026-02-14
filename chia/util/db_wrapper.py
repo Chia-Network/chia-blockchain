@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import logging
 import secrets
 import sqlite3
 import sys
@@ -17,6 +18,8 @@ from typing import Any, TextIO
 import aiosqlite
 import anyio
 from typing_extensions import final
+
+log = logging.getLogger(__name__)
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
     SQLITE_MAX_VARIABLE_NUMBER = 900
@@ -167,6 +170,8 @@ def _suppress_task_cancellation() -> Iterator[None]:
         while task.cancelling() > 0:
             task.uncancel()
             saved += 1
+    if saved > 0:
+        log.warning("Suppressed %d pending task cancellation(s) — would have orphaned a shielded await", saved)
     try:
         yield
     finally:
