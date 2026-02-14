@@ -3388,7 +3388,7 @@ class FullNode:
                 )
                 if total > 0:
                     self.log.info(
-                        f"Compact VDF retry queue: {total} messages stuck "
+                        f"CMM: Compact VDF retry queue: {total} messages stuck "
                         f"across {len(self._server.all_connections)} connections"
                     )
 
