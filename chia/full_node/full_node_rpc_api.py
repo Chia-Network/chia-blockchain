@@ -137,6 +137,8 @@ class FullNodeRpcApi:
             "/create_block_generator": self.create_block_generator,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
+            # Debug / testing
+            "/release_compact_vdf_retries": self.release_compact_vdf_retries,
         }
 
     async def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> list[WsRpcMessage]:
@@ -1049,4 +1051,28 @@ class FullNodeRpcApi:
             "fees_last_block": last_tx_block_fees,
             "fee_rate_last_block": fee_rate_last_block,
             "last_tx_block_height": last_tx_block_height,
+        }
+
+    async def release_compact_vdf_retries(self, request: dict[str, Any]) -> EndpointResult:
+        count = request.get("count", 1000)
+        remaining = count
+        total_released = 0
+
+        if self.service.server is not None:
+            for conn in self.service.server.all_connections.values():
+                if remaining <= 0:
+                    break
+                to_release = min(remaining, conn.compact_vdf_retry_count)
+                conn.compact_vdf_drop_remaining += to_release
+                remaining -= to_release
+                total_released += to_release
+
+        total_in_retry = sum(
+            conn.compact_vdf_retry_count
+            for conn in self.service.server.all_connections.values()
+        ) if self.service.server else 0
+
+        return {
+            "released": total_released,
+            "remaining_in_retry": total_in_retry - total_released,
         }

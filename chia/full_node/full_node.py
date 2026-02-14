@@ -352,6 +352,8 @@ class FullNode:
                 if self.wallet_sync_task is None or self.wallet_sync_task.done():
                     self.wallet_sync_task = create_referenced_task(self._wallets_sync_task_handler())
 
+                create_referenced_task(self._log_compact_vdf_retry_stats(), known_unreferenced=True)
+
                 self.initialized = True
 
                 try:
@@ -3375,6 +3377,20 @@ class FullNode:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception in broadcast_uncompact_blocks: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
+
+    async def _log_compact_vdf_retry_stats(self) -> None:
+        while True:
+            await asyncio.sleep(30)
+            if self._server is not None:
+                total = sum(
+                    conn.compact_vdf_retry_count
+                    for conn in self._server.all_connections.values()
+                )
+                if total > 0:
+                    self.log.info(
+                        f"Compact VDF retry queue: {total} messages stuck "
+                        f"across {len(self._server.all_connections)} connections"
+                    )
 
 
 async def node_next_block_check(

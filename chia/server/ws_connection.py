@@ -131,6 +131,11 @@ class WSChiaConnection:
         repr=False,
     )
 
+    # Compact VDF retry tracking (for testing/debugging)
+    compact_vdf_retry_count: int = 0
+    compact_vdf_drop_remaining: int = 0
+    _compact_vdf_seen_ids: set[int] = field(default_factory=set, repr=False)
+
     @classmethod
     def create(
         cls,
@@ -636,6 +641,16 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         if ProtocolMessageTypes(message.type) == ProtocolMessageTypes.new_compact_vdf:
+            msg_obj_id = id(message)
+            is_new = msg_obj_id not in self._compact_vdf_seen_ids
+            if is_new:
+                self._compact_vdf_seen_ids.add(msg_obj_id)
+                self.compact_vdf_retry_count += 1
+            if self.compact_vdf_drop_remaining > 0:
+                self.compact_vdf_drop_remaining -= 1
+                self.compact_vdf_retry_count -= 1
+                self._compact_vdf_seen_ids.discard(msg_obj_id)
+                return None
             create_referenced_task(self._wait_and_retry(message), known_unreferenced=True)
             return None
         limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
