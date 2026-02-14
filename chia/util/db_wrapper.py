@@ -171,7 +171,7 @@ def _suppress_task_cancellation() -> Iterator[None]:
             task.uncancel()
             saved += 1
     if saved > 0:
-        log.warning("Suppressed %d pending task cancellation(s) — would have orphaned a shielded await", saved)
+        log.warning("CMM: Suppressed %d pending task cancellation(s) — would have orphaned a shielded await", saved)
     try:
         yield
     finally:
