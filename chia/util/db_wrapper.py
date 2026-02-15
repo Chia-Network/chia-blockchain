@@ -274,17 +274,21 @@ class DBWrapper2:
 
     @contextlib.asynccontextmanager
     async def _savepoint_ctx(self) -> AsyncIterator[None]:
+        savepointOK = False
         name = self._next_savepoint()
         try:
             await self._write_connection.execute(f"SAVEPOINT {name}")
+            savepointOK = True
             yield
         except:
-            await self._write_connection.execute(f"ROLLBACK TO {name}")
+            if savepointOK:
+                await self._write_connection.execute(f"ROLLBACK TO {name}")
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
             # just rolls back the state. We need to cancel it regardless
-            await self._write_connection.execute(f"RELEASE {name}")
+            if savepointOK:
+                await self._write_connection.execute(f"RELEASE {name}")
 
     @contextlib.asynccontextmanager
     async def writer(
