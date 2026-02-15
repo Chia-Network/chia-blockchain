@@ -339,22 +339,37 @@ class DBWrapper2:
         # _restart_cancellation_in_parent() re-calls task.cancel() when
         # each shield exits, re-arming _must_cancel before the next
         # shielded await can start.
-        with anyio.CancelScope(shield=True):
-            with _suppress_task_cancellation():
-                await self._write_connection.execute(f"SAVEPOINT {name}")
+        #
+        # The SAVEPOINT creation is inside the try block so that if all
+        # shielding layers fail, the except/finally still runs and can
+        # clean up the SAVEPOINT (which may have been created on the
+        # aiosqlite background thread even though our await was cancelled).
         try:
-            yield
-        except:
             with anyio.CancelScope(shield=True):
                 with _suppress_task_cancellation():
-                    await self._write_connection.execute(f"ROLLBACK TO {name}")
+                    await self._write_connection.execute(f"SAVEPOINT {name}")
+            yield
+        except:
+            try:
+                with anyio.CancelScope(shield=True):
+                    with _suppress_task_cancellation():
+                        await self._write_connection.execute(f"ROLLBACK TO {name}")
+            except Exception:
+                # ROLLBACK may fail if the SAVEPOINT was never created (e.g.
+                # CancelledError interrupted execute before aiosqlite ran it).
+                # Log and continue so we don't mask the original exception.
+                log.warning("CMM: ROLLBACK TO %s failed (savepoint may not exist)", name, exc_info=True)
             raise
         finally:
             # rollback to a savepoint doesn't cancel the transaction, it
             # just rolls back the state. We need to cancel it regardless
-            with anyio.CancelScope(shield=True):
-                with _suppress_task_cancellation():
-                    await self._write_connection.execute(f"RELEASE {name}")
+            try:
+                with anyio.CancelScope(shield=True):
+                    with _suppress_task_cancellation():
+                        await self._write_connection.execute(f"RELEASE {name}")
+            except Exception:
+                # RELEASE may fail if the SAVEPOINT was never created.
+                log.warning("CMM: RELEASE %s failed (savepoint may not exist)", name, exc_info=True)
 
     @contextlib.asynccontextmanager
     async def writer(
