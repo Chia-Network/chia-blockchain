@@ -275,8 +275,8 @@ class DBWrapper2:
     @contextlib.asynccontextmanager
     async def _savepoint_ctx(self) -> AsyncIterator[None]:
         name = self._next_savepoint()
-        await self._write_connection.execute(f"SAVEPOINT {name}")
         try:
+            await self._write_connection.execute(f"SAVEPOINT {name}")
             yield
         except:
             await self._write_connection.execute(f"ROLLBACK TO {name}")
