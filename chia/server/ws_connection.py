@@ -382,6 +382,7 @@ class WSChiaConnection:
         for task_id, task in self.api_tasks.copy().items():
             if task_id in self.execute_tasks:
                 continue
+            self.log.warning("CMM: cancel_tasks() cancelling api task %s (task=%s)", task_id.hex()[:8], task.get_name())
             task.cancel()
 
     async def outbound_handler(self) -> None:
@@ -456,6 +457,7 @@ class WSChiaConnection:
                     result = await coroutine
                     return result
                 except asyncio.CancelledError:
+                    self.log.warning("CMM: CancelledError in wrapped_coroutine for %s", message_type)
                     pass
                 except ApiError as api_error:
                     self.log.warning(f"ApiError: {api_error} from {self.peer_node_id}, {self.peer_info}")
@@ -491,7 +493,7 @@ class WSChiaConnection:
             #     response_message = Message(uint8(ProtocolMessageTypes.none_response.value), full_message.id, b"")
             #     await self.send_message(response_message)
         except TimeoutError:
-            self.log.error(f"Timeout error for: {message_type}")
+            self.log.error(f"CMM: Timeout error (asyncio.wait_for cancelled task after {timeout}s) for: {message_type}")
         except TimestampError:
             self.log.info("Received block with timestamp too far into the future")
         except Exception as e:
