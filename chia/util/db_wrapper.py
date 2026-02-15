@@ -277,8 +277,9 @@ class DBWrapper2:
         savepointOK = False
         name = self._next_savepoint()
         try:
-            await self._write_connection.execute(f"SAVEPOINT {name}")
-            savepointOK = True
+            with anyio.CancelScope(shield=True):
+                await self._write_connection.execute(f"SAVEPOINT {name}")
+                savepointOK = True
             yield
         except:
             if savepointOK:
