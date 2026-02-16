@@ -9,52 +9,31 @@ from typing import Optional
 
 from chia_rs import (
     BlockRecord,
-    ChallengeChainSubSlot,
     ConsensusConstants,
-    EndOfSubSlotBundle,
     HeaderBlock,
-    RewardChainSubSlot,
     SubEpochChallengeSegment,
     SubEpochData,
-    SubEpochSegments,
     SubEpochSummary,
     SubSlotData,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint32, uint64
 
-from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.deficit import calculate_deficit
-from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.consensus.get_block_challenge import prev_tx_block
-from chia.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_sp_iters,
-    is_overflow_block,
-    validate_pospace_and_get_required_iters,
-)
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
-from chia.types.validation_state import ValidationState
-from chia.types.weight_proof import (
-    RecentChainData,
-    WeightProof,
-)
-from chia.util.batches import to_batches
-from chia.util.block_cache import BlockCache
-from chia.util.hash import std_hash
-from chia.util.setproctitle import getproctitle, setproctitle
-from chia.util.task_referencer import create_referenced_task
 from chia.full_node.weight_proof_utils import (
-    C,
     LAMBDA_L,
     MAX_SAMPLES,
+    C,
+    _challenge_block_vdfs,
     _create_shutdown_file,
     _create_sub_epoch_data,
     _get_weights_for_sampling,
+    _map_sub_epoch_summaries,
     _sample_sub_epoch,
+    _validate_sub_epoch_segments,
+    _validate_sub_epoch_summaries,
+    _validate_summaries_weight,
     blue_boxed_end_of_slot,
     handle_end_of_slot,
     handle_finished_slots,
@@ -62,11 +41,22 @@ from chia.full_node.weight_proof_utils import (
     validate_sub_epoch_sampling,
     validate_weight_proof_inner,
     vars_to_bytes,
-    _validate_sub_epoch_segments,
-    _validate_sub_epoch_summaries,
 )
+from chia.types.blockchain_format.vdf import VDFInfo
+from chia.types.weight_proof import (
+    WeightProof,
+)
+from chia.util.block_cache import BlockCache
+from chia.util.setproctitle import getproctitle, setproctitle
+from chia.util.task_referencer import create_referenced_task
 
 log = logging.getLogger(__name__)
+
+__all__ = [
+    "WeightProofHandler",
+    "_map_sub_epoch_summaries",
+    "_validate_summaries_weight",
+]
 
 
 class WeightProofHandler:
@@ -666,5 +656,3 @@ class WeightProofHandler:
             return uint32(0), 0
 
         return ses_heights[fork_point_index - 2], fork_point_index
-
-
