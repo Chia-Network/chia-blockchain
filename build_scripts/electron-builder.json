@@ -67,6 +67,13 @@
     }
   },
   "linux": {
+    "desktop": {
+      "desktopActions": {
+        "NewWindow": {
+          "Name": "Chia Blockchain"
+        }
+      }
+    },
     "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
     "icon": "src/assets/img/chia.icns"
   },
