@@ -1868,7 +1868,6 @@ class FullNodeAPI:
             if request.previous_height is not None
             else self.full_node.blockchain.constants.GENESIS_CHALLENGE
         )
-        assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
             rejection = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
@@ -1940,7 +1939,6 @@ class FullNodeAPI:
             if request.previous_height is not None
             else self.full_node.blockchain.constants.GENESIS_CHALLENGE
         )
-        assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
             rejection = wallet_protocol.RejectCoinState(uint8(wallet_protocol.RejectStateReason.REORG))
