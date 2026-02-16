@@ -69,7 +69,7 @@
   "linux": {
     "desktop": {
       "entry": {
-          "Name": "Chia Blockchain"
+        "Name": "Chia Blockchain"
       }
     },
     "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
