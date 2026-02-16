@@ -300,6 +300,14 @@ class WalletNode:
                 save_config(self.root_path, "config.yaml", config)
         return auto_claim_config.to_json_dict()
 
+    async def set_coin_interest(self, coin_ids: list[bytes32], wallet_ids: list[int] | None = None) -> None:
+        """
+        Add coin ids to the wallet's "interested" set and subscribe to their state updates.
+
+        If wallet_ids is provided, it is forwarded to the wallet_state_manager's coin interest cache.
+        """
+        await self.wallet_state_manager.add_interested_coin_ids(coin_ids, wallet_ids or [])
+
     async def reset_sync_db(self, db_path: Path | str, fingerprint: int) -> bool:
         conn: aiosqlite.Connection
         # are not part of core wallet tables, but might appear later

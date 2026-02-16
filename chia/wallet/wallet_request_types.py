@@ -210,6 +210,13 @@ class GetTimestampForHeightResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class SetCoinInterest(Streamable):
+    coin_ids: list[bytes32]
+    wallet_ids: list[uint32] | None = None
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class GetWallets(Streamable):
     type: uint16 | None = None
     include_data: bool = True

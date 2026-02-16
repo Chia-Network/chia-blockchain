@@ -210,6 +210,7 @@ from chia.wallet.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    SetCoinInterest,
     GetTransaction,
     GetTransactionCount,
     GetTransactionCountResponse,
@@ -580,6 +581,7 @@ class WalletRpcApi:
             "/get_timestamp_for_height": self.get_timestamp_for_height,
             "/set_auto_claim": self.set_auto_claim,
             "/get_auto_claim": self.get_auto_claim,
+            "/set_coin_interest": self.set_coin_interest,
             # Wallet management
             "/get_wallets": self.get_wallets,
             "/create_new_wallet": self.create_new_wallet,
@@ -1020,6 +1022,18 @@ class WalletRpcApi:
         :return:
         """
         return AutoClaimSettings.from_json_dict(self.service.wallet_state_manager.config.get("auto_claim", {}))
+
+    @marshal
+    async def set_coin_interest(self, request: SetCoinInterest) -> Empty:
+        """
+        Add coin ids to the wallet's "interested" set and subscribe to their state updates.
+
+        :param request: Example {"coin_ids": ["<coin_id_hex>", ...], "wallet_ids": [1, 2]}
+        :return: {}
+        """
+        wallet_ids: list[int] | None = None if request.wallet_ids is None else [int(w) for w in request.wallet_ids]
+        await self.service.set_coin_interest(request.coin_ids, wallet_ids)
+        return Empty()
 
     ##########################################################################################
     # Wallet Management
