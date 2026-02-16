@@ -14,6 +14,7 @@ from chia.wallet.wallet_node import WalletNode
 
 
 @pytest.mark.anyio
+@pytest.mark.filterwarnings("ignore:unclosed:ResourceWarning")
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 @pytest.mark.parametrize(argnames="guarantee_transaction_blocks", argvalues=[False, True])
 async def test_simulation_farm_blocks_to_puzzlehash(
@@ -170,7 +171,7 @@ async def test_process_transaction_records(
             )
 
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-        assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
+        assert await full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 
 @pytest.mark.anyio

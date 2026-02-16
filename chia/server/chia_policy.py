@@ -348,15 +348,29 @@ if sys.platform == "win32":
             self._proactor.disable_connections()
 
 
-class ChiaPolicy(asyncio.DefaultEventLoopPolicy):
-    def new_event_loop(self) -> asyncio.AbstractEventLoop:
-        # overriding https://github.com/python/cpython/blob/v3.11.0/Lib/asyncio/events.py#L689-L695
-        if sys.platform == "win32":
-            loop_factory = ChiaProactorEventLoop
-        else:
-            loop_factory = ChiaSelectorEventLoop
+if sys.version_info >= (3, 14):
+    # DefaultEventLoopPolicy is deprecated in 3.14 and will be removed in 3.16
+    # Need to inherit from _BaseDefaultEventLoopPolicy instead
+    class ChiaPolicy(asyncio.events._BaseDefaultEventLoopPolicy):
+        def new_event_loop(self) -> asyncio.AbstractEventLoop:
+            # overriding https://github.com/python/cpython/blob/v3.14.0/Lib/asyncio/events.py#L726-L732
+            if sys.platform == "win32":
+                loop_factory = ChiaProactorEventLoop
+            else:
+                loop_factory = ChiaSelectorEventLoop
 
-        return loop_factory()
+            return loop_factory()
+else:
+
+    class ChiaPolicy(asyncio.DefaultEventLoopPolicy):
+        def new_event_loop(self) -> asyncio.AbstractEventLoop:
+            # overriding https://github.com/python/cpython/blob/v3.11.0/Lib/asyncio/events.py#L689-L695
+            if sys.platform == "win32":
+                loop_factory = ChiaProactorEventLoop
+            else:
+                loop_factory = ChiaSelectorEventLoop
+
+            return loop_factory()
 
 
 def set_chia_policy(connection_limit: int) -> None:

@@ -3404,6 +3404,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.parametrize("mismatch_cost", [True, False])
 @pytest.mark.parametrize("mismatch_fee", [True, False])
 @pytest.mark.parametrize("tx_already_seen", [True, False])

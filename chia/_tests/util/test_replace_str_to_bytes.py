@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 from chia_rs import ConsensusConstants
 from chia_rs.sized_bytes import bytes32
@@ -139,7 +141,11 @@ def test_replace_str_to_bytes_deprecated_field(caplog: pytest.LogCaptureFixture)
 
 def test_replace_str_to_bytes_invalid_value() -> None:
     # invalid value
-    with pytest.raises(ValueError, match="non-hexadecimal number found in"):
+    if sys.version_info >= (3, 14):
+        matchstr = "arg must contain an even number of hexadecimal digits"
+    else:
+        matchstr = "non-hexadecimal number found in"
+    with pytest.raises(ValueError, match=matchstr):
         replace_str_to_bytes(
             test_constants,
             GENESIS_PRE_FARM_FARMER_PUZZLE_HASH="fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
