@@ -108,6 +108,7 @@ def _sample_sub_epoch(
 
 # wp creation methods
 
+
 def _create_sub_epoch_data(
     sub_epoch_summary: SubEpochSummary,
 ) -> SubEpochData:
@@ -232,6 +233,7 @@ def handle_end_of_slot(
 
 
 # wp validation methods
+
 
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
