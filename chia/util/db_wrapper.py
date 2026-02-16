@@ -107,7 +107,8 @@ async def manage_connection(
         yield connection
     finally:
         with anyio.CancelScope(shield=True):
-            await connection.close()
+            with _suppress_task_cancellation():
+                await connection.close()
 
 
 def sql_trace_callback(req: str, file: TextIO, name: str | None = None) -> None:
@@ -253,9 +254,10 @@ class DBWrapper2:
                 yield self
             finally:
                 with anyio.CancelScope(shield=True):
-                    while self._num_read_connections > 0:
-                        await self._read_connections.get()
-                        self._num_read_connections -= 1
+                    with _suppress_task_cancellation():
+                        while self._num_read_connections > 0:
+                            await self._read_connections.get()
+                            self._num_read_connections -= 1
 
     @classmethod
     async def create(
@@ -344,12 +346,14 @@ class DBWrapper2:
         # aiosqlite background thread even though our await was cancelled).
         try:
             with anyio.CancelScope(shield=True):
-                await self._write_connection.execute(f"SAVEPOINT {name}")
+                with _suppress_task_cancellation():
+                    await self._write_connection.execute(f"SAVEPOINT {name}")
             yield
         except:
             try:
                 with anyio.CancelScope(shield=True):
-                    await self._write_connection.execute(f"ROLLBACK TO {name}")
+                    with _suppress_task_cancellation():
+                        await self._write_connection.execute(f"ROLLBACK TO {name}")
             except Exception:
                 # ROLLBACK may fail if the SAVEPOINT was never created (e.g.
                 # CancelledError interrupted execute before aiosqlite ran it).
@@ -361,7 +365,8 @@ class DBWrapper2:
             # just rolls back the state. We need to cancel it regardless
             try:
                 with anyio.CancelScope(shield=True):
-                    await self._write_connection.execute(f"RELEASE {name}")
+                    with _suppress_task_cancellation():
+                        await self._write_connection.execute(f"RELEASE {name}")
             except Exception:
                 # RELEASE may fail if the SAVEPOINT was never created.
                 log.warning("CMM: RELEASE %s failed (savepoint may not exist)", name, exc_info=True)
@@ -434,7 +439,8 @@ class DBWrapper2:
             yield
         finally:
             with anyio.CancelScope(shield=True):
-                await self._write_connection.execute(f"PRAGMA foreign_keys={original_value}")
+                with _suppress_task_cancellation():
+                    await self._write_connection.execute(f"PRAGMA foreign_keys={original_value}")
 
     async def _check_foreign_keys(self) -> None:
         async with self._write_connection.execute("PRAGMA foreign_key_check") as cursor:
