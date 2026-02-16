@@ -1574,6 +1574,9 @@ class FullNodeAPI:
         blocks: list[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
         header_blocks = []
         for block in blocks:
+            if not block.is_transaction_block():
+                header_blocks.append(get_block_header(block))
+                continue
             added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(block.height)
             removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(block.height)
             added_coins_records, removed_coins_records = await asyncio.gather(

@@ -67,7 +67,7 @@ from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
-from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
+from chia.protocols.wallet_protocol import RespondHeaderBlocks, SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.node_discovery import FullNodePeers
 from chia.server.server import ChiaServer
@@ -3586,3 +3586,22 @@ async def test_send_transaction_peer_tx_queue_full(
     response = wallet_protocol.TransactionAck.from_bytes(response_msg.data)
     assert MempoolInclusionStatus(response.status) == MempoolInclusionStatus.FAILED
     assert response.error == "Transaction queue full"
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_request_header_blocks_non_tx_block(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """
+    Tests handling of non transaction blocks in `request_header_blocks`.
+    """
+    full_node_api, _, bt = one_node_one_block
+    # Farm a non transaction block
+    blocks = bt.get_consecutive_blocks(1, await full_node_api.get_all_full_blocks())
+    assert blocks[-1].is_transaction_block() is False
+    await full_node_api.full_node.add_block(blocks[-1])
+    msg = await full_node_api.request_header_blocks(wallet_protocol.RequestHeaderBlocks(uint32(0), uint32(1)))
+    assert msg is not None
+    response = RespondHeaderBlocks.from_bytes(msg.data)
+    assert len(response.header_blocks) == 2
