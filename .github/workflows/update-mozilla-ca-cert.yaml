@@ -32,7 +32,7 @@ jobs:
           passphrase: ${{ secrets.CHIA_AUTOMATION_PRIVATE_GPG_PASSPHRASE }}
 
       - name: Create Pull Request if cacert.pem changed
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           base: main
           commit-message: "Update cacert.pem from Mozilla CA bundle"
