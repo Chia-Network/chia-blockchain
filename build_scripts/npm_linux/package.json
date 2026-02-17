@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^26.0.0"
   }
 }
