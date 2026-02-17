@@ -58,7 +58,6 @@ class GamingWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name=name, wallet_type=WalletType.GAMING.value, data=info_as_string
         )
-        self.wallet_id: uint32 = self.wallet_info.id
 
         await self.wallet_state_manager.add_new_wallet(self)
 
@@ -73,7 +72,6 @@ class GamingWallet:
         self.wallet_state_manager = wallet_state_manager
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
-        self.wallet_id = wallet_info.id
         self.log = logging.getLogger(__name__)
 
         try:
@@ -90,7 +88,7 @@ class GamingWallet:
         return WalletType.GAMING
 
     def id(self) -> uint32:
-        return self.wallet_id
+        return self.wallet_info.id
 
     def get_name(self) -> str:
         return self.wallet_info.name
@@ -114,7 +112,7 @@ class GamingWallet:
     async def register_game_coin(self, coin_id: bytes32) -> None:
         if coin_id not in self.gaming_info.game_coin_ids:
             self.gaming_info = replace(self.gaming_info, game_coin_ids=[*self.gaming_info.game_coin_ids, coin_id])
-        await self.wallet_state_manager.add_interested_coin_ids([coin_id], [self.wallet_id])
+        await self.wallet_state_manager.add_interested_coin_ids([coin_id], [self.wallet_info.id])
         await self.save_info(self.gaming_info)
 
     async def save_info(self, gaming_info: GamingInfo) -> None:
