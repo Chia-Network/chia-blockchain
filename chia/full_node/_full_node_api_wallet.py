@@ -4,8 +4,9 @@ import asyncio
 import logging
 import time
 from collections.abc import Collection
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import anyio
 from chia_rs import (
@@ -43,6 +44,7 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
 )
 from chia.server.api_protocol import ApiMetadata
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -50,6 +52,9 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
 
 # Shared ApiMetadata instance used by both _FullNodeApiWalletMixin and FullNodeAPI.
 # This must be a single instance so that @metadata.request() decorators in both
@@ -65,7 +70,14 @@ class _FullNodeApiWalletMixin:
     ``full_node``, ``log``, ``executor``, and ``server`` attributes.
     """
 
+    full_node: FullNode
+    log: logging.Logger
+    executor: ThreadPoolExecutor
     metadata: ClassVar[ApiMetadata] = full_node_metadata
+
+    @property
+    def server(self) -> ChiaServer:
+        raise NotImplementedError
 
     # WALLET PROTOCOL
     @metadata.request()
