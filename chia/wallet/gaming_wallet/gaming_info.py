@@ -16,6 +16,7 @@ class GamingInfo(Streamable):
     # Coin IDs that the gaming wallet is tracking.
     game_coin_ids: list[bytes32]
 
+
 @streamable
 @dataclass(frozen=True)
 class GamingCoinData(Streamable):

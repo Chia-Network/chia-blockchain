@@ -18,6 +18,8 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
+
+
 # The purpose of the gaming wallet is to allow the WSM to get notifications about the game coins
 # this wallet will differ from usual wallets in that is controlled predominantly by the Wallet RPC
 # Furthermore the wallet will act mainly as a sentinel for CoinRecords that are related to the gaming wallet
@@ -31,7 +33,6 @@ class GamingWallet:
     gaming_info: GamingInfo
     standard_wallet: Wallet
     wallet_info_type: ClassVar[type[GamingInfo]] = GamingInfo
-
 
     @staticmethod
     async def create_new_gaming_wallet(
@@ -52,9 +53,7 @@ class GamingWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
-        self.gaming_info = GamingInfo(
-            game_coin_ids=[]
-        )
+        self.gaming_info = GamingInfo(game_coin_ids=[])
         info_as_string = json.dumps(self.gaming_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name=name, wallet_type=WalletType.GAMING.value, data=info_as_string
@@ -123,7 +122,7 @@ class GamingWallet:
         data_str = json.dumps(gaming_info.to_json_dict())
         self.wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
-    
+
     # The following functions are expected to exist by WSM, but are just stubs for our uses
     async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
         return uint128(0)

@@ -72,13 +72,13 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.gaming_wallet.gaming_wallet import GamingWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
     did_program_to_metadata,
     match_did_puzzle,
     metadata_to_program,
 )
+from chia.wallet.gaming_wallet.gaming_wallet import GamingWallet
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
