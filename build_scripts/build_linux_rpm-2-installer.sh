@@ -104,12 +104,12 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
-echo "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
+echo "USE_SYSTEM_FPM=true ${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" \
   --config.rpm.packageName="chia-blockchain" \
   --config ../../../build_scripts/electron-builder.json
-"${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
+USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" \
   --config.rpm.packageName="chia-blockchain" \
