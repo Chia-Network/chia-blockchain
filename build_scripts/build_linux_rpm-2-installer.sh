@@ -83,6 +83,8 @@ fpm -s dir -t rpm \
   --rpm-tag 'Requires(pre): findutils' \
   --rpm-compression xzmt \
   --rpm-compression-level 6 \
+  --debug \
+  --verbose \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
