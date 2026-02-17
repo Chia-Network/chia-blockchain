@@ -54,6 +54,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.gaming_wallet.gaming_wallet import GamingWallet
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -266,6 +267,7 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
+    RegisterGameCoin,
     SelectCoins,
     SelectCoinsResponse,
     SendNotification,
@@ -657,6 +659,8 @@ class WalletRpcApi:
             "/nft_mint_bulk": self.nft_mint_bulk,
             "/nft_set_did_bulk": self.nft_set_did_bulk,
             "/nft_transfer_bulk": self.nft_transfer_bulk,
+            # Gaming Wallet
+            "/register_game_coin": self.register_game_coin,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -2904,6 +2908,11 @@ class WalletRpcApi:
             spend_bundle=WalletSpendBundle([], G2Element()),
             nft_id_list=nft_id_list,
         )
+
+    async def register_game_coin(self, request: RegisterGameCoin) -> Empty:
+        gaming_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=GamingWallet)
+        await gaming_wallet.register_game_coin(request.coin_id)
+        return Empty()
 
     async def get_coin_records(self, request: dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)

@@ -1830,6 +1830,11 @@ class NFTMintBulk(TransactionEndpointRequest):
     did_lineage_parent: bytes32 | None = None
     mint_from_did: bool = False
 
+@streamable
+@dataclass(kw_only=True, frozen=True)
+class RegisterGameCoin(TransactionEndpointRequest):
+    wallet_id: uint32
+    coin_id: bytes32
 
 @streamable
 @dataclass(kw_only=True, frozen=True)

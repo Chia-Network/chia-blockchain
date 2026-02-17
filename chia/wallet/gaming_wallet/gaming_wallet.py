@@ -4,6 +4,10 @@ import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, cast
+
+from chia_rs import G1Element
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint128
 from chia.types.blockchain_format.program import Program
 from chia.wallet.gaming_wallet.gaming_info import GamingCoinData, GamingInfo
 from chia.wallet.util.wallet_types import WalletType
@@ -36,7 +40,7 @@ class GamingWallet:
         name: str | None = None,
     ):
         """
-        Create a brand new DID wallet
+        Create a brand new Gaming wallet
         This must be called under the wallet state manager lock
         :return: Gaming wallet
         """
@@ -61,8 +65,10 @@ class GamingWallet:
 
         await self.wallet_state_manager.add_new_wallet(self)
 
-        return self
+        # This just allows us to cycle through puzzle hashes
+        self.puzzle_counter = 0
 
+        return self
 
     def generate_wallet_name(self) -> str:
         """
@@ -76,3 +82,30 @@ class GamingWallet:
                 if matched and int(matched.group(1)) > max_num:
                     max_num = int(matched.group(1))
         return f"Gaming Wallet #{max_num + 1}"
+
+    async def register_game_coin(self, coin_id: bytes32) -> None:
+        self.gaming_info.game_coins.append(coin_id)
+        await self.wallet_state_manager.add_interested_coin_ids([coin_id], [self.wallet_id])
+        await self.save_info(self.gaming_info)
+
+    async def save_info(self, gaming_info: GamingInfo):
+        self.gaming_info = gaming_info
+        current_info = self.wallet_info
+        data_str = json.dumps(gaming_info.to_json_dict())
+        wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
+        self.wallet_info = wallet_info
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+    
+    # The following functions are expected to exist by WSM, but are just stubs for our uses
+    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+        return uint128(0)
+
+    # This might not be neccessary
+    # def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    #     return Program.to(0)
+
+    # This will populate the coin record store with the stored puzzle hashes.
+    # This is a hack. Oh well.
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        self.puzzle_counter += 1
+        return self.gaming_info.game_coins[self.puzzle_counter % len(self.gaming_info.game_coins)].puzzle_hash

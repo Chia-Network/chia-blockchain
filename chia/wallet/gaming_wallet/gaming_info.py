@@ -11,6 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 @streamable
 @dataclass(frozen=True)
 class GamingInfo(Streamable):
+    # this is the active game sessions
     game_coins: [Coin]
 
 @streamable
