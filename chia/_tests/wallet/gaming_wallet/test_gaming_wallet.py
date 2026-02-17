@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint64, uint32
+from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -13,11 +13,12 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import RegisterGameCoin
 
+
 async def has_gaming_coin_record(wallet_node: WalletNode, coin_id: bytes32, gaming_wallet_id: uint32) -> bool:
-        record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
-        if record is None:
-            return False
-        return record.wallet_type == WalletType.GAMING and record.wallet_id == int(gaming_wallet_id)
+    record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
+    if record is None:
+        return False
+    return record.wallet_type == WalletType.GAMING and record.wallet_id == int(gaming_wallet_id)
 
 
 @pytest.mark.parametrize(
@@ -111,4 +112,3 @@ async def test_interested_coin_not_persisted_without_gaming_wallet(wallet_enviro
     # Give the wallet node a moment to process subscription/updates, then assert nothing was stored.
     record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
     assert record is None
-
