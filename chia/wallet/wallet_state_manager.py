@@ -72,6 +72,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, did_recovery_is_nil
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.gaming_wallet.gaming_wallet import GamingWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
     did_program_to_metadata,
@@ -339,6 +340,12 @@ class WalletStateManager:
                 )
             elif wallet_type == WalletType.RCAT:
                 wallet = await RCATWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            elif wallet_type == WalletType.GAMING:
+                wallet = await GamingWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -1705,7 +1712,13 @@ class WalletStateManager:
                         await self.trade_manager.coins_of_interest_farmed(coin_state, fork_height, peer)
                     if wallet_identifier is not None:
                         self.log.debug(f"Found existing wallet_identifier: {wallet_identifier}, coin: {coin_name}")
-                    elif local_record is not None:
+                    elif (
+                        local_record is not None
+                        and uint32(local_record.wallet_id) in self.wallets
+                        and local_record.wallet_type != WalletType.GAMING
+                    ):
+                        # If we have an existing coin record tied to a real wallet, we can use it as a fallback.
+                        # We intentionally exclude GAMING since those are "interest-only" records.
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
@@ -1720,7 +1733,66 @@ class WalletStateManager:
                             ):
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
+                    # If this coin was previously only stored as an "interest-only" record (wallet_id=0 or GAMING),
+                    # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific
+                    # logic runs and the record can be replaced with the real wallet identifier.
+                    if (
+                        wallet_identifier is not None
+                        and local_record is not None
+                        and local_record.wallet_type == WalletType.GAMING
+                    ):
+                        local_record = None
+
                     if wallet_identifier is None:
+                        # If we subscribed to this coin id (interested coin ids) but it doesn't map to a known wallet,
+                        # persist it in the coin_store under the most appropriate interested wallet-id (e.g. GAMING)
+                        # so it can be queried later without conflicting with real wallets' coin ownership rules.
+                        if coin_name in self.interested_coin_cache:
+                            interested_wallet_ids = [
+                                uint32(w) for w in self.interested_coin_cache[coin_name] if uint32(w) in self.wallets
+                            ]
+                            gaming_wallet_ids = [
+                                w
+                                for w in interested_wallet_ids
+                                if WalletType(self.wallets[w].type()) == WalletType.GAMING
+                            ]
+                            # Only persist interest-only coins if a GamingWallet exists to associate them with.
+                            # If no GamingWallet exists, treat these coins as we did previously (do not store them).
+                            if len(gaming_wallet_ids) == 0:
+                                interested_wallet_ids = []
+                            else:
+                                target_wallet_id: int = int(min(gaming_wallet_ids))
+                                target_wallet_type = WalletType.GAMING
+
+                            if len(gaming_wallet_ids) > 0:
+                                if coin_state.created_height is None:
+                                    # Reorged out / removed from chain: delete the interest-only record if present.
+                                    if local_record is not None and local_record.wallet_type == WalletType.GAMING:
+                                        await self.coin_store.delete_coin_record(coin_name)
+                                    self.log.debug("Interested coin state removed (no created height): %s", coin_state)
+                                    continue
+
+                                confirmed_height = uint32(coin_state.created_height)
+                                spent_height = (
+                                    uint32(coin_state.spent_height)
+                                    if coin_state.spent_height is not None
+                                    else uint32(0)
+                                )
+                                coinbase = self.is_farmer_reward(
+                                    confirmed_height, coin_state.coin
+                                ) or self.is_pool_reward(confirmed_height, coin_state.coin)
+                                interested_record = WalletCoinRecord(
+                                    coin_state.coin,
+                                    confirmed_height,
+                                    spent_height,
+                                    spent_height != 0,
+                                    coinbase,
+                                    target_wallet_type,
+                                    target_wallet_id,
+                                )
+                                await self.coin_store.add_coin_record(interested_record)
+                                continue
+
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         if coin_state.created_height is not None and coin_state.spent_height is not None:
                             all_unconfirmed = await self.tx_store.get_all_unconfirmed()

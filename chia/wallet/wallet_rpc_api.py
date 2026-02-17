@@ -2909,6 +2909,7 @@ class WalletRpcApi:
             nft_id_list=nft_id_list,
         )
 
+    @marshal
     async def register_game_coin(self, request: RegisterGameCoin) -> Empty:
         gaming_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=GamingWallet)
         await gaming_wallet.register_game_coin(request.coin_id)
