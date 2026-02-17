@@ -119,8 +119,7 @@ async def add_block_batch(
     if agg_state_change_summary is not None:
         self._state_changed("new_peak")
         self.log.debug(
-            f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, "
-            f"advanced: True"
+            f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, advanced: True"
         )
     return err is None, agg_state_change_summary
 
@@ -380,9 +379,7 @@ async def signage_point_post_processing(
         # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
         assert ip_sub_slot is not None
         if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
-            sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(
-                peak.header_hash, True
-            )
+            sub_slot_iters, difficulty = self.blockchain.get_next_sub_slot_iters_and_difficulty(peak.header_hash, True)
     else:
         difficulty = self.constants.DIFFICULTY_STARTING
         sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
@@ -473,10 +470,7 @@ async def peak_post_processing(
     if fns_peak_result.new_signage_points is not None and peer is not None:
         for index, sp in fns_peak_result.new_signage_points:
             assert (
-                sp.cc_vdf is not None
-                and sp.cc_proof is not None
-                and sp.rc_vdf is not None
-                and sp.rc_proof is not None
+                sp.cc_vdf is not None and sp.cc_proof is not None and sp.rc_vdf is not None and sp.rc_proof is not None
             )
             # Collect the data for networking outside the mutex
             signage_points.append(
@@ -660,15 +654,11 @@ async def add_block(
                 FullNodeAPI.request_block, full_node_protocol.RequestBlock(block.height, True)
             )
             if block_response is None or not isinstance(block_response, full_node_protocol.RespondBlock):
-                self.log.warning(
-                    f"Was not able to fetch the correct block for height {block.height} {block_response}"
-                )
+                self.log.warning(f"Was not able to fetch the correct block for height {block.height} {block_response}")
                 return None
             new_block: FullBlock = block_response.block
             if new_block.foliage_transaction_block != block.foliage_transaction_block:
-                self.log.warning(
-                    f"Received the wrong block for height {block.height} {new_block.header_hash.hex()}"
-                )
+                self.log.warning(f"Received the wrong block for height {block.height} {new_block.header_hash.hex()}")
                 return None
             assert new_block.transactions_generator is not None
 
@@ -1022,12 +1012,8 @@ async def add_unfinished_block(
     )
 
     self.full_node_store.add_unfinished_block(height, block, validate_result)
-    pre_validation_log = (
-        f"pre_validation time {pre_validation_time:0.4f}, " if pre_validation_time is not None else ""
-    )
-    block_duration_in_seconds = (
-        receive_time - self.signage_point_times[block.reward_chain_block.signage_point_index]
-    )
+    pre_validation_log = f"pre_validation time {pre_validation_time:0.4f}, " if pre_validation_time is not None else ""
+    block_duration_in_seconds = receive_time - self.signage_point_times[block.reward_chain_block.signage_point_index]
     if farmed_block is True:
         self.log.info(
             f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}, "
@@ -1124,14 +1110,10 @@ async def new_infusion_point_vdf(
     self: FullNode, request: timelord_protocol.NewInfusionPointVDF, timelord_peer: WSChiaConnection | None = None
 ) -> Message | None:
     # Lookup unfinished blocks
-    unfinished_block: UnfinishedBlock | None = self.full_node_store.get_unfinished_block(
-        request.unfinished_reward_hash
-    )
+    unfinished_block: UnfinishedBlock | None = self.full_node_store.get_unfinished_block(request.unfinished_reward_hash)
 
     if unfinished_block is None:
-        self.log.warning(
-            f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
-        )
+        self.log.warning(f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish.")
         return None
 
     prev_b: BlockRecord | None = None
@@ -1162,9 +1144,7 @@ async def new_infusion_point_vdf(
         # If not found, cache keyed on prev block
         if prev_b is None:
             self.full_node_store.add_to_future_ip(request)
-            self.log.warning(
-                f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge.hex()}"
-            )
+            self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge.hex()}")
             return None
 
     finished_sub_slots: list[EndOfSubSlotBundle] | None = self.full_node_store.get_finished_sub_slots(

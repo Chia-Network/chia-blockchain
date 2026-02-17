@@ -189,9 +189,7 @@ async def add_compact_proof_of_time(self: FullNode, request: timelord_protocol.R
         await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
 
-async def new_compact_vdf(
-    self: FullNode, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection
-) -> None:
+async def new_compact_vdf(self: FullNode, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
     peak = self.blockchain.get_peak()
     if peak is None or peak.height - request.height < 5:
         self.log.info(f"Ignoring new_compact_vdf, height {request.height} too recent.")

@@ -163,9 +163,7 @@ async def broadcast_added_tx(
         if peer is None:
             continue
 
-        msg = make_msg(
-            ProtocolMessageTypes.mempool_items_added, wallet_protocol.MempoolItemsAdded([mempool_item.name])
-        )
+        msg = make_msg(ProtocolMessageTypes.mempool_items_added, wallet_protocol.MempoolItemsAdded([mempool_item.name]))
         await peer.send_message(msg)
 
     total_time = time.monotonic() - start_time
@@ -242,6 +240,5 @@ async def broadcast_removed_tx(self: FullNode, mempool_removals: list[MempoolRem
 
     self.log.log(
         logging.DEBUG if total_time < 0.5 else logging.WARNING,
-        f"Broadcasting {total_removals} removed transactions "
-        f"to {len(removals_to_send)} peers took {total_time:.4f}s",
+        f"Broadcasting {total_removals} removed transactions to {len(removals_to_send)} peers took {total_time:.4f}s",
     )

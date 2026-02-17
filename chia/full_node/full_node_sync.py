@@ -34,9 +34,7 @@ if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
 
 
-async def short_sync_batch(
-    self: FullNode, peer: WSChiaConnection, start_height: uint32, target_height: uint32
-) -> bool:
+async def short_sync_batch(self: FullNode, peer: WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
     """
     Tries to sync to a chain which is not too far in the future, by downloading batches of blocks. If the first
     block that we download is not connected to our chain, we return False and do an expensive long sync instead.
@@ -105,9 +103,7 @@ async def short_sync_batch(
                     prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
                     assert prev_b is not None
                 new_slot = len(response.blocks[0].finished_sub_slots) > 0
-                ssi, diff = get_next_sub_slot_iters_and_difficulty(
-                    self.constants, new_slot, prev_b, self.blockchain
-                )
+                ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
                 vs = ValidationState(ssi, diff, None)
                 success, state_change_summary = await self.add_block_batch(
                     response.blocks, peer_info, fork_info, vs, blockchain
@@ -417,9 +413,7 @@ async def request_validate_wp(
     if peers_with_peak_len == 0:
         raise RuntimeError(f"Not performing sync, no peers with peak {peak_height}")
     weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
-    self.log.info(
-        f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}"
-    )
+    self.log.info(f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}")
     cur_peak: BlockRecord | None = self.blockchain.get_peak()
     if cur_peak is not None and peak_weight <= cur_peak.weight:
         raise ValueError("Not performing sync, already caught up.")
@@ -446,9 +440,7 @@ async def request_validate_wp(
     current_peak = self.blockchain.get_peak()
     if current_peak is not None:
         if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
-            raise RuntimeError(
-                f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}"
-            )
+            raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}")
     try:
         validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
     except Exception as e:
@@ -606,8 +598,7 @@ async def sync_from_fork_point(
                         end = time.monotonic()
                         if end - start > 1:
                             self.log.info(
-                                f"sync pipeline back-pressure. stalled {end - start:0.2f} "
-                                "seconds on prevalidate block"
+                                f"sync pipeline back-pressure. stalled {end - start:0.2f} seconds on prevalidate block"
                             )
                         fetched = True
                         break
@@ -723,8 +714,7 @@ async def sync_from_fork_point(
                 block_rate_height = end_height
 
             self.log.info(
-                f"Added blocks {start_height} to {end_height} "
-                f"({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
+                f"Added blocks {start_height} to {end_height} ({block_rate:.3g} blocks/s) (from: {peer.peer_info.ip})"
             )
             peak: BlockRecord | None = self.blockchain.get_peak()
             if state_change_summary is not None:

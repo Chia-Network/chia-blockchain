@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, TextIO, cast, final
 from chia_rs import (
     BlockRecord,
     BLSCache,
+    CoinState,
     ConsensusConstants,
     FullBlock,
     SubEpochSummary,
@@ -680,7 +681,7 @@ class FullNode:
         self.log.debug(
             f"update_wallets - fork_height: {wallet_update.fork_height}, peak_height: {wallet_update.peak.height}"
         )
-        changes_for_peer: dict[bytes32, set] = {}
+        changes_for_peer: dict[bytes32, set[CoinState]] = {}
         for coin_record in wallet_update.coin_records:
             coin_id = coin_record.name
             subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
