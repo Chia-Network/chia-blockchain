@@ -32,8 +32,8 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 # Import extracted modules
 from chia.full_node import full_node_block_processing as _fn_blocks
 from chia.full_node import full_node_compact_vdf as _fn_compact_vdf
+from chia.full_node import full_node_mempool_protocol as _fn_tx
 from chia.full_node import full_node_sync as _fn_sync
-from chia.full_node import full_node_transactions as _fn_tx
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 
@@ -741,7 +741,7 @@ class FullNode:
     new_infusion_point_vdf = _fn_blocks.new_infusion_point_vdf
     add_end_of_sub_slot = _fn_blocks.add_end_of_sub_slot
 
-    # ===== Methods from full_node_transactions.py =====
+    # ===== Methods from full_node_mempool_protocol.py =====
     add_transaction = _fn_tx.add_transaction
     broadcast_added_tx = _fn_tx.broadcast_added_tx
     broadcast_removed_tx = _fn_tx.broadcast_removed_tx
