@@ -21,21 +21,32 @@ from chia_rs import (
     SubEpochSummary,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint32, uint64
 
 from chia.consensus.block_height_map import BlockHeightMap
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority, StateChangeSummary
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+
+# Import extracted modules
+from chia.full_node import full_node_block_processing as _fn_blocks
+from chia.full_node import full_node_compact_vdf as _fn_compact_vdf
+from chia.full_node import full_node_sync as _fn_sync
+from chia.full_node import full_node_transactions as _fn_tx
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.full_node_api import FullNodeAPI
+
+# Re-export these for backward compatibility (they were originally defined here)
+from chia.full_node.full_node_block_processing import (
+    PeakPostProcessingResult as PeakPostProcessingResult,  # noqa: PLC0414
+)
+from chia.full_node.full_node_block_processing import WalletUpdate as WalletUpdate  # noqa: PLC0414
 from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.full_node_sync import node_next_block_check as node_next_block_check  # noqa: PLC0414
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.subscriptions import PeerSubscriptions
-from chia.full_node.sync_store import Peak, SyncStore
+from chia.full_node.sync_store import SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue, TransactionQueueEntry
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
@@ -57,17 +68,6 @@ from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.task_referencer import create_referenced_task
-
-# Import extracted modules
-from chia.full_node import full_node_block_processing as _fn_blocks
-from chia.full_node import full_node_compact_vdf as _fn_compact_vdf
-from chia.full_node import full_node_sync as _fn_sync
-from chia.full_node import full_node_transactions as _fn_tx
-
-# Re-export these for backward compatibility (they were originally defined here)
-from chia.full_node.full_node_block_processing import PeakPostProcessingResult as PeakPostProcessingResult  # noqa: F401
-from chia.full_node.full_node_block_processing import WalletUpdate as WalletUpdate  # noqa: F401
-from chia.full_node.full_node_sync import node_next_block_check as node_next_block_check  # noqa: F401
 
 
 @final

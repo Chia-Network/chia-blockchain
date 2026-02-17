@@ -41,12 +41,11 @@ from chia.full_node.full_node_store import FullNodeStorePeakResult
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.mempool import MempoolRemoveInfo
 from chia.full_node.sync_store import Peak
-from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
+from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
 from chia.protocols.full_node_protocol import RespondSignagePoint
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import CoinStateUpdate
 from chia.types.validation_state import ValidationState
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import ConsensusError, Err, TimestampError
@@ -1325,5 +1324,3 @@ async def add_end_of_sub_slot(
                 f"{end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge.hex()}"
             )
     return None, False
-
-

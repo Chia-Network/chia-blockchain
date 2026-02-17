@@ -22,8 +22,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks
-from chia.protocols.outbound_message import NodeType, make_msg
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.outbound_message import NodeType
 from chia.protocols.protocol_timing import CONSENSUS_ERROR_BAN_SECONDS
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.validation_state import ValidationState

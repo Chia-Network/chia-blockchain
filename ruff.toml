@@ -104,6 +104,8 @@ ignore = [
 [lint.per-file-ignores]
 "chia/_tests/*" = ["S106"]
 "chia/__init__.py" = ["RUF067"]
+# Method assignments from extracted modules are expected unannotated class attributes
+"chia/full_node/full_node.py" = ["RUF045"]
 
 [lint.flake8-implicit-str-concat]
 # Found 3279 errors.
