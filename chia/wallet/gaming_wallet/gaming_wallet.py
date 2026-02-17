@@ -25,7 +25,7 @@ class GamingWallet:
     if TYPE_CHECKING:
         _protocol_check: ClassVar[WalletProtocol[GamingCoinData]] = cast("GamingWallet", None)
 
-    wallet_state_manager: WalletStateManager
+    wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
     gaming_info: GamingInfo
