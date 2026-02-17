@@ -91,24 +91,24 @@ if [ "$PLATFORM" = "arm64" ]; then
   # https://github.com/Chia-Network/build-images/blob/7c74d2f20739543c486c2522032cf09d96396d24/ubuntu-22.04/Dockerfile#L48-L61
   echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
   echo "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.productName="$PRODUCT_NAME" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
