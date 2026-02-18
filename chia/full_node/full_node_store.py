@@ -20,7 +20,7 @@ from chia.protocols import timelord_protocol
 from chia.protocols.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
-from chia.util.lru_cache import LRUCache
+from chia.util.lru_cache import LRUCache, LRUSet
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class FullNodeStore:
     # effectively a set[bytes32] but in order to evict the oldest items first,
     # we use a Dict that preserves insertion order, and remove from the
     # beginning
-    seen_unfinished_blocks: dict[bytes32, None]
+    seen_unfinished_blocks: LRUSet[bytes32]
 
     # Unfinished blocks, keyed from reward hash
     # There may be multiple different unfinished blocks with the same partial
@@ -139,12 +139,10 @@ class FullNodeStore:
     serialized_wp_message: Message | None
     serialized_wp_message_tip: bytes32 | None
 
-    max_seen_unfinished_blocks: int
-
     def __init__(self, constants: ConsensusConstants):
         self.candidate_blocks = {}
         self.candidate_backup_blocks = {}
-        self.seen_unfinished_blocks = {}
+        self.seen_unfinished_blocks = LRUSet(1000)
         self._unfinished_blocks = {}
         self.finished_sub_slots = []
         self.future_eos_cache = {}
@@ -161,7 +159,6 @@ class FullNodeStore:
         self.tx_fetch_tasks = {}
         self.serialized_wp_message = None
         self.serialized_wp_message_tip = None
-        self.max_seen_unfinished_blocks = 1000
 
     def is_requesting_unfinished_block(
         self, reward_block_hash: bytes32, foliage_hash: bytes32 | None
@@ -240,11 +237,7 @@ class FullNodeStore:
     def seen_unfinished_block(self, object_hash: bytes32) -> bool:
         if object_hash in self.seen_unfinished_blocks:
             return True
-        self.seen_unfinished_blocks[object_hash] = None
-        if len(self.seen_unfinished_blocks) > self.max_seen_unfinished_blocks:
-            # remove the least recently added hash
-            to_remove = next(iter(self.seen_unfinished_blocks))
-            del self.seen_unfinished_blocks[to_remove]
+        self.seen_unfinished_blocks.put(object_hash)
         return False
 
     def add_unfinished_block(

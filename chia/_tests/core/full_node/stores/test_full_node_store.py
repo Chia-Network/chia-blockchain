@@ -208,7 +208,7 @@ async def test_basic_store(
     assert not store.seen_unfinished_block(h_hash_1)
     assert store.seen_unfinished_block(h_hash_1)
     # this will crowd out h_hash_1
-    for _ in range(store.max_seen_unfinished_blocks):
+    for _ in range(store.seen_unfinished_blocks.get_capacity()):
         store.seen_unfinished_block(bytes32.random(seeded_random))
     assert not store.seen_unfinished_block(h_hash_1)
 
