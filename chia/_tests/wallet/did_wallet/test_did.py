@@ -373,7 +373,7 @@ async def test_did_find_lost_did(wallet_environments: WalletTestFramework):
     await env_0.rpc_client.find_lost_did(DIDFindLostDID(coin_id=did_wallet_0.did_info.origin_coin.name().hex()))
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -546,7 +546,7 @@ async def test_did_transfer(wallet_environments: WalletTestFramework):
     # Get the new DID wallet
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -634,7 +634,7 @@ async def test_did_auto_transfer_limit(
     # Get the new DID wallets
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -673,7 +673,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -683,7 +683,7 @@ async def test_did_auto_transfer_limit(
     await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
@@ -707,7 +707,7 @@ async def test_did_auto_transfer_limit(
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            lambda w: w.type == WalletType.DECENTRALIZED_ID,
             await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
