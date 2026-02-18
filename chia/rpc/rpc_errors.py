@@ -13,16 +13,19 @@ class StructuredError(TypedDict):
 
 
 class RpcErrorCodes(str, Enum):
+    API_ERROR = "API_ERROR"
     BLOCK_DOES_NOT_EXIST = "BLOCK_DOES_NOT_EXIST"
     BLOCK_HASH_NOT_FOUND = "BLOCK_HASH_NOT_FOUND"
     BLOCK_HEIGHT_NOT_FOUND = "BLOCK_HEIGHT_NOT_FOUND"
     BLOCK_IN_FORK = "BLOCK_IN_FORK"
     BLOCK_NOT_FOUND = "BLOCK_NOT_FOUND"
     COIN_RECORD_NOT_FOUND = "COIN_RECORD_NOT_FOUND"
+    CONSENSUS_ERROR = "CONSENSUS_ERROR"
     EOS_NOT_IN_CACHE = "EOS_NOT_IN_CACHE"
     HEADER_HASH_NOT_IN_REQUEST = "HEADER_HASH_NOT_IN_REQUEST"
     HEIGHT_NOT_IN_BLOCKCHAIN = "HEIGHT_NOT_IN_BLOCKCHAIN"
     HINT_NOT_IN_REQUEST = "HINT_NOT_IN_REQUEST"
+    INTERNAL_ERROR = "INTERNAL_ERROR"
     INVALID_BLOCK_OR_GENERATOR = "INVALID_BLOCK_OR_GENERATOR"
     INVALID_COST = "INVALID_COST"
     INVALID_HEIGHT_FOR_COIN = "INVALID_HEIGHT_FOR_COIN"
@@ -41,6 +44,7 @@ class RpcErrorCodes(str, Enum):
     OLDER_BLOCK_NOT_FOUND = "OLDER_BLOCK_NOT_FOUND"
     PARENT_IDS_NOT_IN_REQUEST = "PARENT_IDS_NOT_IN_REQUEST"
     PEAK_IS_NONE = "PEAK_IS_NONE"
+    PROTOCOL_ERROR = "PROTOCOL_ERROR"
     PUZZLE_HASH_NOT_IN_REQUEST = "PUZZLE_HASH_NOT_IN_REQUEST"
     PUZZLE_HASHES_NOT_IN_REQUEST = "PUZZLE_HASHES_NOT_IN_REQUEST"
     PUZZLE_SOLUTION_FAILED = "PUZZLE_SOLUTION_FAILED"
@@ -49,9 +53,11 @@ class RpcErrorCodes(str, Enum):
     SPEND_BUNDLE_NOT_IN_REQUEST = "SPEND_BUNDLE_NOT_IN_REQUEST"
     TARGET_TIMES_NON_NEGATIVE = "TARGET_TIMES_NON_NEGATIVE"
     TARGET_TIMES_REQUIRED = "TARGET_TIMES_REQUIRED"
+    TIMESTAMP_ERROR = "TIMESTAMP_ERROR"
     TRANSACTION_FAILED = "TRANSACTION_FAILED"
     TX_NOT_IN_MEMPOOL = "TX_NOT_IN_MEMPOOL"
     UNKNOWN = "UNKNOWN"
+    VALIDATION_ERROR = "VALIDATION_ERROR"
 
 
 class RpcError(Exception):
@@ -83,6 +89,9 @@ class RpcError(Exception):
 
 def structured_error_from_exception(e: Exception) -> tuple[str, StructuredError]:
     """Return (legacy error string, StructuredError) for any exception."""
+    from chia.util.errors import ApiError as UtilApiError
+    from chia.util.errors import ConsensusError, ProtocolError, TimestampError, ValidationError
+
     if isinstance(e, RpcError):
         error_message = e.message
         structured: StructuredError = {
@@ -94,9 +103,38 @@ def structured_error_from_exception(e: Exception) -> tuple[str, StructuredError]
         error_message = str(e.args[0]) if e.args else str(e)
         if not error_message:
             error_message = str(e)
+
+        if isinstance(e, ValidationError):
+            code = RpcErrorCodes.VALIDATION_ERROR.value
+            data: dict[str, Any] = {"error_code": e.code.value}
+            if e.error_msg:
+                data["error_msg"] = e.error_msg
+        elif isinstance(e, TimestampError):
+            code = RpcErrorCodes.TIMESTAMP_ERROR.value
+            data = {"error_code": e.code.value}
+        elif isinstance(e, ConsensusError):
+            code = RpcErrorCodes.CONSENSUS_ERROR.value
+            data = {"error_code": e.code.value}
+            if e.errors:
+                data["errors"] = [str(x) for x in e.errors]
+        elif isinstance(e, ProtocolError):
+            code = RpcErrorCodes.PROTOCOL_ERROR.value
+            data = {"error_code": e.code.value}
+            if e.errors:
+                data["errors"] = [str(x) for x in e.errors]
+        elif isinstance(e, UtilApiError):
+            code = RpcErrorCodes.API_ERROR.value
+            data = {"error_code": e.code.value}
+        elif isinstance(e, AssertionError):
+            code = RpcErrorCodes.INTERNAL_ERROR.value
+            data = {}
+        else:
+            code = RpcErrorCodes.UNKNOWN.value
+            data = {}
+
         structured = {
-            "code": RpcErrorCodes.UNKNOWN.value,
+            "code": code,
             "message": error_message,
-            "data": {},
+            "data": data,
         }
     return error_message, structured
