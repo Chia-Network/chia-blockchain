@@ -4,8 +4,9 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey, create_v2_plot
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint16
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -13,6 +14,7 @@ from chia.plotting.util import Params, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import (
     calculate_plot_id_ph,
     calculate_plot_id_pk,
+    calculate_plot_id_v2,
     generate_plot_public_key,
 )
 from chia.util.bech32m import decode_puzzle_hash
@@ -268,6 +270,85 @@ async def create_plots(
             args.tmp2_dir.rmdir()
         except Exception:
             log.info(f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty.")
+
+    log.info(f"Created a total of {len(created_plots)} new plots")
+    for created_path in created_plots.values():
+        log.info(created_path.name)
+
+    return created_plots, existing_plots
+
+
+async def create_v2_plots(
+    final_dir: Path,
+    keys: PlotKeys,
+    *,
+    size: int = 28,
+    strength: int = 2,
+    num: int = 1,
+    test_private_keys: list[PrivateKey] | None = None,
+) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
+    assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
+    if keys.pool_public_key is not None:
+        log.info(
+            f"Creating {num} v2 plots of size {size}, strength: {strength}, pool public key:  "
+            f"{bytes(keys.pool_public_key).hex()} farmer public key: {bytes(keys.farmer_public_key).hex()}"
+        )
+    else:
+        assert keys.pool_contract_puzzle_hash is not None
+        log.info(
+            f"Creating {num} v2 plots of size {size}, strength: {strength}, pool contract address:  "
+            f"{keys.pool_contract_address} farmer public key: {bytes(keys.farmer_public_key).hex()}"
+        )
+
+    final_dir.mkdir(parents=True, exist_ok=True)
+
+    created_plots: dict[bytes32, Path] = {}
+    existing_plots: dict[bytes32, Path] = {}
+    for i in range(num):
+        # Generate a random master secret key
+        if test_private_keys is not None:
+            assert len(test_private_keys) == num
+            sk: PrivateKey = test_private_keys[i]
+        else:
+            sk = AugSchemeMPL.key_gen(bytes32.secret())
+
+        # The plot public key is the combination of the harvester and farmer keys
+        # New plots will also include a taproot of the keys, for extensibility
+        include_taproot: bool = keys.pool_contract_puzzle_hash is not None
+        plot_public_key = generate_plot_public_key(
+            master_sk_to_local_sk(sk).get_g1(), keys.farmer_public_key, include_taproot
+        )
+
+        # TODO: todo_v2_plots index and meta_group should be hooked up to
+        # something, maybe i or maybe be passed in as a paramter
+        plot_index = uint16(0)
+        meta_group = uint8(0)
+
+        # The plot id is based on the harvester, farmer, pool contract puzzle
+        # hash and strength
+        pool_ph_or_pk: G1Element | bytes32
+        if keys.pool_public_key is not None:
+            pool_ph_or_pk = keys.pool_public_key
+        elif keys.pool_contract_puzzle_hash is not None:
+            pool_ph_or_pk = keys.pool_contract_puzzle_hash
+        else:  # pragma: no cover
+            assert False, "one of pool_contract_puzzle_hash and pool_public_key must be set"
+
+        plot_id = calculate_plot_id_v2(
+            uint8(size), plot_index, meta_group, pool_ph_or_pk, plot_public_key, uint8(strength)
+        )
+
+        filename = f"plot-k{size}-{plot_id}.plot2"
+        full_path: Path = final_dir / filename
+
+        if not full_path.exists():
+            log.info(f"Starting plot {i + 1}/{num}")
+            plot_memo = bytes(pool_ph_or_pk) + bytes(keys.farmer_public_key) + bytes(sk)
+            create_v2_plot(str(full_path.absolute()), size, strength, plot_id, plot_index, meta_group, plot_memo)
+            created_plots[plot_id] = full_path
+        else:
+            log.info(f"Plot {filename} already exists")
+            existing_plots[plot_id] = full_path
 
     log.info(f"Created a total of {len(created_plots)} new plots")
     for created_path in created_plots.values():

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
-from chia_rs import PartialProof, PlotParam, Prover, QualityProof
+from chia_rs import PartialProof, PlotParam, Prover
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8
 from chiapos import DiskProver
@@ -33,9 +33,7 @@ class ProverProtocol(Protocol):
     def get_version(self) -> PlotVersion: ...
     def __bytes__(self) -> bytes: ...
     def get_id(self) -> bytes32: ...
-    def get_qualities_for_challenge(
-        self, challenge: bytes32, proof_fragment_filter: uint8
-    ) -> list[QualityProtocol]: ...
+    def get_qualities_for_challenge(self, challenge: bytes32) -> list[QualityProtocol]: ...
 
     @classmethod
     def from_bytes(cls, data: bytes) -> ProverProtocol: ...
@@ -43,10 +41,14 @@ class ProverProtocol(Protocol):
 
 @dataclass(frozen=True)
 class V2Quality(QualityProtocol):
-    _quality_proof: QualityProof
+    _partial_proof: PartialProof
+    _strength: uint8
 
     def get_string(self) -> bytes32:
-        return self._quality_proof.serialize()
+        return self._partial_proof.get_string(self._strength)
+
+    def get_partial_proof(self) -> PartialProof:
+        return self._partial_proof
 
 
 class V2Prover:
@@ -93,11 +95,8 @@ class V2Prover:
     def get_id(self) -> bytes32:
         return self._prover.plot_id()
 
-    def get_qualities_for_challenge(self, challenge: bytes32, proof_fragment_filter: uint8) -> list[QualityProtocol]:
-        return [V2Quality(q) for q in self._prover.get_qualities_for_challenge(challenge, proof_fragment_filter)]
-
-    def get_partial_proof(self, quality: V2Quality) -> PartialProof:
-        return self._prover.get_partial_proof(quality._quality_proof)[0]
+    def get_qualities_for_challenge(self, challenge: bytes32) -> list[QualityProtocol]:
+        return [V2Quality(q, self.get_strength()) for q in self._prover.get_qualities_for_challenge(challenge)]
 
 
 @dataclass(frozen=True)
@@ -141,7 +140,7 @@ class V1Prover:
     def get_id(self) -> bytes32:
         return bytes32(self._disk_prover.get_id())
 
-    def get_qualities_for_challenge(self, challenge: bytes32, proof_fragment_filter: uint8) -> list[QualityProtocol]:
+    def get_qualities_for_challenge(self, challenge: bytes32) -> list[QualityProtocol]:
         return [V1Quality(bytes32(quality)) for quality in self._disk_prover.get_qualities_for_challenge(challenge)]
 
     def get_full_proof(self, challenge: bytes32, index: int, parallel_read: bool = True) -> bytes:

@@ -2143,11 +2143,20 @@ async def test_compact_protocol_invalid_messages(
     assert peak.height == 1
     # (wrong_vdf_info, wrong_vdf_proof) pair verifies, but it's not present in the blockchain at all.
     block = blocks_2[2]
+    # Try the challenge_chain_ip_vdf first
+    wrong_challenge = block.reward_chain_block.challenge_chain_ip_vdf.challenge
+    wrong_iters = block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations
+
+    # If iterations is 1 the proof  may collide Use cc_sp_vdf instead if available.
+    if wrong_iters <= 1 and block.reward_chain_block.challenge_chain_sp_vdf is not None:
+        wrong_challenge = block.reward_chain_block.challenge_chain_sp_vdf.challenge
+        wrong_iters = block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
+
     wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        wrong_challenge,
+        wrong_iters,
         True,
     )
     timelord_protocol_invalid_messages: list[timelord_protocol.RespondCompactProofOfTime] = []
@@ -3047,6 +3056,9 @@ async def test_declare_proof_of_space_overflow(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0], reason="after hard fork 2 we no longer allow block references"
+)
 async def test_add_unfinished_block_with_generator_refs(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
