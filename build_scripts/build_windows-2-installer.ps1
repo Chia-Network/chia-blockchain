@@ -9,9 +9,11 @@ git submodule
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
+  $env:CHIA_SEMVER_VERSION = '0.0.0'
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
 }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
+Write-Output "Chia Semver Version is: $env:CHIA_SEMVER_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -62,7 +64,7 @@ Write-Output "   ---"
 Write-Output "fix version in package.json"
 choco install jq
 cp package.json package.json.orig
-jq --arg VER "$env:CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json
+jq --arg VER "$env:CHIA_SEMVER_VERSION" '.version=$VER' package.json > temp.json
 rm package.json
 mv temp.json package.json
 Write-Output "   ---"
