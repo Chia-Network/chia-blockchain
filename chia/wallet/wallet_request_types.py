@@ -1833,7 +1833,7 @@ class NFTMintBulk(TransactionEndpointRequest):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
-class RegisterGameCoin(Streamable):
+class RegisterRemoteCoin(Streamable):
     wallet_id: uint32
     coin_id: bytes32
 

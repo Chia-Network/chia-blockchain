@@ -12,14 +12,14 @@ from chia.util.streamable import Streamable, streamable
 
 @streamable
 @dataclass(frozen=True)
-class GamingInfo(Streamable):
-    # Coin IDs that the gaming wallet is tracking.
-    game_coin_ids: list[bytes32]
+class RemoteInfo(Streamable):
+    # Coin IDs that the remote wallet is tracking.
+    remote_coin_ids: list[bytes32]
 
 
 @streamable
 @dataclass(frozen=True)
-class GamingCoinData(Streamable):
+class RemoteCoinData(Streamable):
     p2_puzzle: Program
     recovery_list_hash: bytes32 | None
     num_verification: uint16
@@ -27,3 +27,4 @@ class GamingCoinData(Streamable):
     metadata: Program
     inner_puzzle: Program | None
     coin_state: CoinState
+

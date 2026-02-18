@@ -78,7 +78,7 @@ from chia.wallet.did_wallet.did_wallet_puzzles import (
     match_did_puzzle,
     metadata_to_program,
 )
-from chia.wallet.gaming_wallet.gaming_wallet import GamingWallet
+from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -344,8 +344,8 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.GAMING:
-                wallet = await GamingWallet.create(
+            elif wallet_type == WalletType.REMOTE:
+                wallet = await RemoteWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -1715,10 +1715,10 @@ class WalletStateManager:
                     elif (
                         local_record is not None
                         and uint32(local_record.wallet_id) in self.wallets
-                        and local_record.wallet_type != WalletType.GAMING
+                        and local_record.wallet_type != WalletType.REMOTE
                     ):
                         # If we have an existing coin record tied to a real wallet, we can use it as a fallback.
-                        # We intentionally exclude GAMING since those are "interest-only" records.
+                        # We intentionally exclude REMOTE since those are "interest-only" records.
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
@@ -1733,41 +1733,41 @@ class WalletStateManager:
                             ):
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
-                    # If this coin was previously only stored as an "interest-only" record (wallet_id=0 or GAMING),
+                    # If this coin was previously only stored as an "interest-only" record (wallet_id=0 or REMOTE),
                     # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific
                     # logic runs and the record can be replaced with the real wallet identifier.
                     if (
                         wallet_identifier is not None
                         and local_record is not None
-                        and local_record.wallet_type == WalletType.GAMING
+                        and local_record.wallet_type == WalletType.REMOTE
                     ):
                         local_record = None
 
                     if wallet_identifier is None:
                         # If we subscribed to this coin id (interested coin ids) but it doesn't map to a known wallet,
-                        # persist it in the coin_store under the most appropriate interested wallet-id (e.g. GAMING)
+                        # persist it in the coin_store under the most appropriate interested wallet-id (e.g. REMOTE)
                         # so it can be queried later without conflicting with real wallets' coin ownership rules.
                         if coin_name in self.interested_coin_cache:
                             interested_wallet_ids = [
                                 uint32(w) for w in self.interested_coin_cache[coin_name] if uint32(w) in self.wallets
                             ]
-                            gaming_wallet_ids = [
+                            remote_wallet_ids = [
                                 w
                                 for w in interested_wallet_ids
-                                if WalletType(self.wallets[w].type()) == WalletType.GAMING
+                                if WalletType(self.wallets[w].type()) == WalletType.REMOTE
                             ]
-                            # Only persist interest-only coins if a GamingWallet exists to associate them with.
-                            # If no GamingWallet exists, treat these coins as we did previously (do not store them).
-                            if len(gaming_wallet_ids) == 0:
+                            # Only persist interest-only coins if a RemoteWallet exists to associate them with.
+                            # If no RemoteWallet exists, treat these coins as we did previously (do not store them).
+                            if len(remote_wallet_ids) == 0:
                                 interested_wallet_ids = []
                             else:
-                                target_wallet_id: int = int(min(gaming_wallet_ids))
-                                target_wallet_type = WalletType.GAMING
+                                target_wallet_id: int = int(min(remote_wallet_ids))
+                                target_wallet_type = WalletType.REMOTE
 
-                            if len(gaming_wallet_ids) > 0:
+                            if len(remote_wallet_ids) > 0:
                                 if coin_state.created_height is None:
                                     # Reorged out / removed from chain: delete the interest-only record if present.
-                                    if local_record is not None and local_record.wallet_type == WalletType.GAMING:
+                                    if local_record is not None and local_record.wallet_type == WalletType.REMOTE:
                                         await self.coin_store.delete_coin_record(coin_name)
                                     self.log.debug("Interested coin state removed (no created height): %s", coin_state)
                                     continue
