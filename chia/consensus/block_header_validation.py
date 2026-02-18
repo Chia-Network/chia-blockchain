@@ -872,6 +872,15 @@ def validate_finished_header_block(
     if validate_unfinished_err is not None:
         return None, validate_unfinished_err
 
+    # hard fork 2 activates when the previous transaction block has reached
+    # HARD_FORK2_HEIGHT. We don't necessarily know exactly when that is, but
+    # if *this* block hasn't exceeded it, it has definitely not activated
+    if (
+        header_block.height <= constants.HARD_FORK2_HEIGHT
+        and header_block.reward_chain_block.header_mmr_root is not None
+    ):
+        return None, ValidationError(Err.INVALID_MMR_ROOT)
+
     assert required_iters is not None
 
     if header_block.height == 0:
