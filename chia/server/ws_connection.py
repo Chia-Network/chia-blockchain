@@ -669,6 +669,13 @@ class WSChiaConnection:
                     f"peer: {self.peer_info.host}"
                 )
 
+        if ProtocolMessageTypes(message.type) == ProtocolMessageTypes.new_compact_vdf:
+            self.log.info(
+                f"CMM: Simulated send (skipped) {ProtocolMessageTypes(message.type).name} "
+                f"to peer {self.peer_info.host} {self.peer_node_id}"
+            )
+            return None
+
         await self.ws.send_bytes(encoded)
         self.log.debug(
             f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_info.host} {self.peer_node_id}"
