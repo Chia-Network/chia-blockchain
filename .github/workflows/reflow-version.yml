@@ -13,6 +13,8 @@ on:
         value: ${{ jobs.version.outputs.chia-dev-version }}
       chia-installer-version:
         value: ${{ jobs.version.outputs.chia-installer-version }}
+      chia-semver-version:
+        value: ${{ jobs.version.outputs.chia-semver-version }}
       tag-type:
         value: ${{ jobs.version.outputs.tag-type }}
 
@@ -24,7 +26,7 @@ jobs:
     outputs:
       chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
       chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
-      tag-type: ${{ steps.tag-type.outputs.tag-type }}
+      chia-semver-version: ${{ steps.version-number.outputs.chia-semver-version }}
 
     steps:
       - name: Checkout Code
