@@ -129,9 +129,9 @@ format-jinja = """
         {%- endif -%}
     {%- else -%}
         {%- if stage is none -%}
-            {{ base }}-dev{{ distance }}
+            {{ base }}+dev{{ distance }}
         {%- else -%}
-            {{ base }}-{{stage}}{{revision}}-dev{{ distance }}
+            {{ base }}-{{stage}}{{revision}}+dev{{ distance }}
         {%- endif -%}
     {%- endif -%}
 """
