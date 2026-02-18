@@ -4,9 +4,7 @@ from dataclasses import dataclass
 
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint16
 
-from chia.types.blockchain_format.program import Program
 from chia.util.streamable import Streamable, streamable
 
 
@@ -21,4 +19,3 @@ class RemoteInfo(Streamable):
 @dataclass(frozen=True)
 class RemoteCoinData(Streamable):
     coin_state: CoinState
-

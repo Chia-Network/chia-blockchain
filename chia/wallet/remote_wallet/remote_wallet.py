@@ -104,9 +104,7 @@ class RemoteWallet:
 
     async def register_remote_coin(self, coin_id: bytes32) -> None:
         if coin_id not in self.remote_info.remote_coin_ids:
-            self.remote_info = replace(
-                self.remote_info, remote_coin_ids=[*self.remote_info.remote_coin_ids, coin_id]
-            )
+            self.remote_info = replace(self.remote_info, remote_coin_ids=[*self.remote_info.remote_coin_ids, coin_id])
         await self.wallet_state_manager.add_interested_coin_ids([coin_id], [self.wallet_info.id])
         await self.save_info(self.remote_info)
 
@@ -157,4 +155,3 @@ class RemoteWallet:
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise RuntimeError("RemoteWallet does not derive puzzle hashes")
-
