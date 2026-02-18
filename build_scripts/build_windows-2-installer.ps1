@@ -9,9 +9,13 @@ git submodule
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
-  $env:CHIA_SEMVER_VERSION = '0.0.0'
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
 }
+if (-not (Test-Path env:CHIA_SEMVER_VERSION)) {
+  $env:CHIA_SEMVER_VERSION = $env:CHIA_INSTALLER_VERSION
+  Write-Output "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $env:CHIA_INSTALLER_VERSION"
+}
+
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
 Write-Output "Chia Semver Version is: $env:CHIA_SEMVER_VERSION"
 Write-Output "   ---"

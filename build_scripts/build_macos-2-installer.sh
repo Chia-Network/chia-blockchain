@@ -11,8 +11,12 @@ git submodule
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
   echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
   CHIA_INSTALLER_VERSION="0.0.0"
-  CHIA_SEMVER_VERSION="0.0.0"
 fi
+if [ ! "$CHIA_SEMVER_VERSION" ]; then
+  echo "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $CHIA_INSTALLER_VERSION."
+  CHIA_SEMVER_VERSION="$CHIA_INSTALLER_VERSION"
+fi
+
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Chia Semver Version is: $CHIA_SEMVER_VERSION"
 
