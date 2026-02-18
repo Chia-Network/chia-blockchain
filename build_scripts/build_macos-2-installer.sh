@@ -12,7 +12,13 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
   echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
   CHIA_INSTALLER_VERSION="0.0.0"
 fi
+if [ ! "$CHIA_SEMVER_VERSION" ]; then
+  echo "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $CHIA_INSTALLER_VERSION."
+  CHIA_SEMVER_VERSION="$CHIA_INSTALLER_VERSION"
+fi
+
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+echo "Chia Semver Version is: $CHIA_SEMVER_VERSION"
 
 echo "Installing npm utilities"
 cd npm_macos || exit 1
@@ -49,7 +55,7 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 # sets the version for chia-blockchain in package.json
 brew install jq
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building macOS Electron app"
 OPT_ARCH="--x64"
