@@ -20,11 +20,5 @@ class RemoteInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RemoteCoinData(Streamable):
-    p2_puzzle: Program
-    recovery_list_hash: bytes32 | None
-    num_verification: uint16
-    singleton_struct: Program
-    metadata: Program
-    inner_puzzle: Program | None
     coin_state: CoinState
 
