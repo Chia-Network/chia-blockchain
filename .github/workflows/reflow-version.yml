@@ -27,6 +27,7 @@ jobs:
       chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
       chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
       chia-semver-version: ${{ steps.version-number.outputs.chia-semver-version }}
+      tag-type: ${{ steps.tag-type.outputs.tag-type }}
 
     steps:
       - name: Checkout Code
