@@ -28,7 +28,9 @@ async def has_remote_coin_record(wallet_node: WalletNode, coin_id: bytes32, remo
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_remote_wallet_register_remote_coin_persists_coin_record(wallet_environments: WalletTestFramework) -> None:
+async def test_remote_wallet_register_remote_coin_persists_coin_record(
+    wallet_environments: WalletTestFramework,
+) -> None:
     env = wallet_environments.environments[0]
     wallet: Wallet = env.xch_wallet
     wallet_node: WalletNode = env.node
@@ -112,4 +114,3 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     # Give the wallet node a moment to process subscription/updates, then assert nothing was stored.
     record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
     assert record is None
-
