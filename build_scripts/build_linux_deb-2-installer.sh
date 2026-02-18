@@ -81,7 +81,7 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_DEB_CONTROL_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
 PRODUCT_NAME="chia"
