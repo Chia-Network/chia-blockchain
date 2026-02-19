@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
-from unittest.mock import AsyncMock, Mock
 
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
