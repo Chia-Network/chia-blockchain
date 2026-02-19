@@ -44,6 +44,9 @@ from chia.util.task_referencer import create_referenced_task
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
 
+# Max length of peer version string in bytes (UTF-8)
+MAX_VERSION_STRING_BYTES: int = 128
+
 WebSocket = WebSocketResponse | ClientWebSocketResponse
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 
@@ -217,64 +220,47 @@ class WSChiaConnection:
                 ),
             )
             await self._send_message(outbound_handshake)
-            inbound_handshake_msg = await self._read_one_message()
-            if inbound_handshake_msg is None:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
-            # Handle case of invalid ProtocolMessageType
-            try:
-                message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+        try:
+            message = await self._read_one_message()
+        except Exception:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if message_type != ProtocolMessageTypes.handshake:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+        if message is None:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if inbound_handshake.network_id != network_id:
-                raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-
-            if (
-                local_type in {NodeType.FARMER, NodeType.HARVESTER}
-                and inbound_handshake.protocol_version != protocol_version[local_type]
-            ):
-                self.log.warning(
-                    f"protocol version mismatch: "
-                    f"local_type={local_type} "
-                    f"incoming={inbound_handshake.protocol_version} "
-                    f"our={protocol_version[local_type]}"
-                )
-
-            self.version = inbound_handshake.software_version
-            self.protocol_version = Version(inbound_handshake.protocol_version)
-            self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
-            # "1" means capability is enabled
-            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
-        else:
-            try:
-                message = await self._read_one_message()
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            if message is None:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            # Handle case of invalid ProtocolMessageType
-            try:
-                message_type = ProtocolMessageTypes(message.type)
-            except Exception:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
-            if message_type != ProtocolMessageTypes.handshake:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
-
+        # Handle case of invalid ProtocolMessageType
+        try:
             inbound_handshake = Handshake.from_bytes(message.data)
-            if inbound_handshake.network_id != network_id:
-                raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+            message_type = ProtocolMessageTypes(message.type)
+        except Exception:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            remote_node_type = NodeType(inbound_handshake.node_type)
+        if message_type != ProtocolMessageTypes.handshake:
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
 
+        if inbound_handshake.network_id != network_id:
+            raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+        if (
+            self.is_outbound
+            and local_type in {NodeType.FARMER, NodeType.HARVESTER}
+            and inbound_handshake.protocol_version != protocol_version[local_type]
+        ):
+            self.log.warning(
+                f"protocol version mismatch: "
+                f"local_type={local_type} "
+                f"incoming={inbound_handshake.protocol_version} "
+                f"our={protocol_version[local_type]}"
+            )
+
+        remote_node_type = NodeType(inbound_handshake.node_type)
+
+        if len(inbound_handshake.software_version.encode("utf-8")) > MAX_VERSION_STRING_BYTES:
+            self.log.debug("version string too long")
+            raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+        if not self.is_outbound:
             if (
                 remote_node_type in {NodeType.FARMER, NodeType.HARVESTER}
                 and inbound_handshake.protocol_version != protocol_version[remote_node_type]
@@ -298,12 +284,13 @@ class WSChiaConnection:
                 ),
             )
             await self._send_message(outbound_handshake)
-            self.version = inbound_handshake.software_version
-            self.protocol_version = Version(inbound_handshake.protocol_version)
-            self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = remote_node_type
-            # "1" means capability is enabled
-            self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
+
+        self.version = inbound_handshake.software_version
+        self.protocol_version = Version(inbound_handshake.protocol_version)
+        self.peer_server_port = inbound_handshake.server_port
+        self.connection_type = remote_node_type
+        # "1" means capability is enabled
+        self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
         self.outbound_task = create_referenced_task(self.outbound_handler())
         self.inbound_task = create_referenced_task(self.inbound_handler())

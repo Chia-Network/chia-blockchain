@@ -12,12 +12,15 @@ from chia_rs.sized_ints import uint8, uint16, uint64
 import chia.server.server
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import full_node_protocol
-from chia.protocols.outbound_message import Message, make_msg
+from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.shared_protocol import Capability, Handshake, protocol_version
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
-from chia.server.ws_connection import WSChiaConnection
+from chia.server.ws_connection import (
+    MAX_VERSION_STRING_BYTES,
+    WSChiaConnection,
+)
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
@@ -37,6 +40,32 @@ class FakeRateLimiter:
         self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
     ) -> str | None:
         return None
+
+
+async def send_handshake_and_assert_protocol_error(
+    server_1: ChiaServer,
+    server_2: ChiaServer,
+    self_hostname: str,
+    payload: Handshake | bytes,
+    message_type: int = ProtocolMessageTypes.handshake.value,
+) -> WSMessage:
+    server_1.invalid_protocol_ban_seconds = 10
+    timeout = ClientTimeout(total=5)
+    async with ClientSession(timeout=timeout) as session:
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+        async with session.ws_connect(
+            url,
+            autoclose=True,
+            autoping=True,
+            ssl=server_2.ssl_client_context,
+            max_msg_size=50 * 1024 * 1024,
+        ) as ws:
+            msg = Message(uint8(message_type), None, bytes(payload))
+            await ws.send_bytes(bytes(msg))
+            response = await ws.receive()
+            assert response.type == WSMsgType.CLOSE
+            assert response.data == WSCloseCode.PROTOCOL_ERROR
+            return response
 
 
 class TestDos:
@@ -141,31 +170,73 @@ class TestDos:
         nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
-
-        server_1.invalid_protocol_ban_seconds = 10
-        # Use the server_2 ssl information to connect to server_1
-        timeout = ClientTimeout(total=10)
-        session = ClientSession(timeout=timeout)
-        url = f"wss://{self_hostname}:{server_1._port}/ws"
-
-        ssl_context = server_2.ssl_client_context
-        ws = await session.ws_connect(
-            url, autoclose=True, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+        handshake = Handshake("test", "0.0.32", "1.0.0.0", uint16(3456), uint8(1), [(uint16(1), "1")])
+        response = await send_handshake_and_assert_protocol_error(
+            server_1, server_2, self_hostname, handshake, message_type=2
         )
-
-        # Construct an otherwise valid handshake message
-        handshake: Handshake = Handshake("test", "0.0.32", "1.0.0.0", uint16(3456), uint8(1), [(uint16(1), "1")])
-        outbound_handshake: Message = Message(uint8(2), None, bytes(handshake))  # 2 is an invalid ProtocolType
-        await ws.send_bytes(bytes(outbound_handshake))
-
-        response: WSMessage = await ws.receive()
-        print(response)
-        assert response.type == WSMsgType.CLOSE
-        assert response.data == WSCloseCode.PROTOCOL_ERROR
         assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))  # We want INVALID_HANDSHAKE and not UNKNOWN
-        await ws.close()
-        await session.close()
-        await asyncio.sleep(1)  # give some time for cleanup to work
+
+    @pytest.mark.anyio
+    async def test_handshake_version_too_long_disconnect(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        long_version = "x" * (MAX_VERSION_STRING_BYTES + 1)
+        handshake = Handshake(
+            server_1._network_id,
+            protocol_version[NodeType.FULL_NODE],
+            long_version,
+            uint16(3456),
+            uint8(NodeType.FULL_NODE.value),
+            [(uint16(1), "1")],
+        )
+        await send_handshake_and_assert_protocol_error(server_1, server_2, self_hostname, handshake)
+
+    @pytest.mark.anyio
+    async def test_wrong_message_type_handshake(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        handshake = Handshake(
+            server_1._network_id,
+            protocol_version[NodeType.FULL_NODE],
+            "2.6.0",
+            uint16(3456),
+            uint8(NodeType.FULL_NODE.value),
+            [(uint16(1), "1")],
+        )
+        response = await send_handshake_and_assert_protocol_error(
+            server_1, server_2, self_hostname, handshake, message_type=ProtocolMessageTypes.new_peak.value
+        )
+        assert response.extra == str(int(Err.INVALID_HANDSHAKE.value))
+
+    @pytest.mark.anyio
+    async def test_wrong_network_id_handshake(
+        self,
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
+        nodes, _, _ = setup_two_nodes_fixture
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        handshake = Handshake(
+            "wrong-network-id",
+            protocol_version[NodeType.FULL_NODE],
+            "2.6.0",
+            uint16(3456),
+            uint8(NodeType.FULL_NODE.value),
+            [(uint16(1), "1")],
+        )
+        response = await send_handshake_and_assert_protocol_error(server_1, server_2, self_hostname, handshake)
+        assert response.extra == str(int(Err.INCOMPATIBLE_NETWORK_ID.value))
 
     @pytest.mark.anyio
     async def test_spam_tx(
