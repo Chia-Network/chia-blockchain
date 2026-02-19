@@ -39,24 +39,24 @@ class LRUSet(Generic[K]):
     """A bounded set that preserves insertion order and evicts the oldest entry when full."""
 
     def __init__(self, capacity: int) -> None:
-        self.capacity = capacity
-        self.cache: dict[K, None] = {}
+        self._capacity = capacity
+        self._cache: dict[K, None] = {}
 
     def put(self, key: K) -> None:
-        if key in self.cache:
+        if key in self._cache:
             return
-        if len(self.cache) >= self.capacity:
-            self.cache.pop(next(iter(self.cache)))
-        self.cache[key] = None
+        if len(self._cache) >= self._capacity:
+            self._cache.pop(next(iter(self._cache)))
+        self._cache[key] = None
 
     def remove(self, key: K) -> None:
-        self.cache.pop(key, None)
+        self._cache.pop(key, None)
 
     def get_capacity(self) -> int:
-        return self.capacity
+        return self._capacity
 
     def __contains__(self, key: K) -> bool:
-        return key in self.cache
+        return key in self._cache
 
     def __len__(self) -> int:
-        return len(self.cache)
+        return len(self._cache)

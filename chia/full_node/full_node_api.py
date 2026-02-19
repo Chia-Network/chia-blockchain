@@ -76,7 +76,6 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
-from chia.util.network import is_localhost
 from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
@@ -1660,7 +1659,7 @@ class FullNodeAPI:
             request.height, request.header_hash, request.field_vdf, request.vdf_info
         ).get_hash()
         if request_key not in peer.pending_compact_vdfs:
-            if not self.is_trusted(peer) and not is_localhost(peer.peer_info.host):
+            if not self.is_trusted(peer):
                 await peer.ban_peer_bad_protocol("Received unsolicited RespondCompactVDF")
                 return None
         else:
