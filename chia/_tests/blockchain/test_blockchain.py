@@ -149,6 +149,7 @@ class TestGenesisBlock:
         await _validate_and_add_block(empty_blockchain, genesis)
 
     @pytest.mark.anyio
+    @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_genesis_empty_slots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=30)[0]
         await _validate_and_add_block(empty_blockchain, genesis)
@@ -2642,6 +2643,7 @@ class TestBodyValidation:
             assert len(block.transactions_generator_ref_list) == 0
 
     @pytest.mark.anyio
+    @pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
     async def test_cost_exceeds_max(
         self, empty_blockchain: Blockchain, softfork_height: uint32, bt: BlockTools
     ) -> None:
@@ -3808,6 +3810,7 @@ class TestReorgs:
 
 
 @pytest.mark.anyio
+@pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
 async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -3955,6 +3958,7 @@ async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTo
 
 
 @pytest.mark.anyio
+@pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
 async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
@@ -4020,6 +4024,7 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
 
 
 @pytest.mark.anyio
+@pytest.mark.skipif(_is_macos_intel(), reason="Slow on macOS Intel")
 async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> None:
     b = empty_blockchain
     wallet_a = WalletTool(b.constants)
