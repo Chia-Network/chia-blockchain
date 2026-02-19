@@ -3605,3 +3605,36 @@ async def test_request_header_blocks_non_tx_block(
     assert msg is not None
     response = RespondHeaderBlocks.from_bytes(msg.data)
     assert len(response.header_blocks) == 2
+
+
+@pytest.mark.parametrize(
+    "post_hardfork, has_capability, staying_connected",
+    [
+        (False, False, True),
+        (False, True, True),
+        (True, False, False),
+        (True, True, True),
+    ],
+)
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_hard_fork_version_enforcement(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    post_hardfork: bool,
+    has_capability: bool,
+    staying_connected: bool,
+) -> None:
+    """
+    Covers the case where peers connecting to a full node after the hard fork
+    without advertising the HARD_FORK_2 capability get disconnected.
+    """
+    full_node_api, server, _ = one_node_one_block
+    if post_hardfork:
+        full_node_api.full_node.constants = full_node_api.full_node.constants.replace(HARD_FORK2_HEIGHT=uint32(0))
+    additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")] if has_capability else []
+    _, peer_id = await add_dummy_connection_wsc(
+        server, self_hostname, 42, NodeType.FULL_NODE, additional_capabilities=additional_capabilities
+    )
+    assert len(server.all_connections) == (1 if staying_connected else 0)
+    assert (peer_id in server.all_connections) is staying_connected
