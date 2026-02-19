@@ -41,7 +41,7 @@ def get_mozilla_ca_crt() -> str:
     return str(mozilla_path)
 
 
-def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes, overwrite: bool = True):
+def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes, overwrite: bool = True) -> None:
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 
     for path, data, mode in [
@@ -58,14 +58,14 @@ def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, ke
             f.write(data)  # lgtm [py/clear-text-storage-sensitive-data]
 
 
-def ensure_ssl_dirs(dirs: list[Path]):
+def ensure_ssl_dirs(dirs: list[Path]) -> None:
     """Create SSL dirs with a default 755 mode if necessary"""
     for dir in dirs:
         if not dir.exists():
             dir.mkdir(mode=0o755, parents=True)
 
 
-def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
+def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path) -> None:
     one_day = datetime.timedelta(1, 0, 0)
     root_cert = x509.load_pem_x509_certificate(ca_crt, default_backend())
     root_key = load_pem_private_key(ca_key, None, default_backend())
@@ -104,7 +104,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     write_ssl_cert_and_key(cert_out, cert_pem, key_out, key_pem)
 
 
-def make_ca_cert(cert_path: Path, key_path: Path):
+def make_ca_cert(cert_path: Path, key_path: Path) -> None:
     root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     subject = issuer = x509.Name(
         [
@@ -143,7 +143,7 @@ def create_all_ssl(
     private_node_names: list[str] = _all_private_node_names,
     public_node_names: list[str] = _all_public_node_names,
     overwrite: bool = True,
-):
+) -> None:
     # remove old key and crt
     config_dir = root_path / "config"
     old_key_path = config_dir / "trusted.key"
@@ -223,7 +223,7 @@ def generate_ssl_for_nodes(
     nodes: list[str],
     overwrite: bool = True,
     node_certs_and_keys: dict[str, dict] | None = None,
-):
+) -> None:
     for node_name in nodes:
         node_dir = ssl_dir / node_name
         ensure_ssl_dirs([node_dir])
@@ -242,8 +242,8 @@ def generate_ssl_for_nodes(
         generate_ca_signed_cert(ca_crt, ca_key, crt_path, key_path)
 
 
-def main():
-    return make_ca_cert(Path("./chia_ca.crt"), Path("./chia_ca.key"))
+def main() -> None:
+    make_ca_cert(Path("./chia_ca.crt"), Path("./chia_ca.key"))
 
 
 if __name__ == "__main__":
