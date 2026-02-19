@@ -59,6 +59,7 @@ jobs:
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      CHIA_SEMVER_VERSION: ${{ needs.version.outputs.chia-semver-version }}
       POETRY_DYNAMIC_VERSIONING_OVERRIDE: "chia-blockchain=${{ needs.version.outputs.chia-installer-version }}"
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 

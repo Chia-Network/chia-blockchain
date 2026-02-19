@@ -109,7 +109,7 @@ class FarmerAPI:
                 prev_transaction_block_height=sp.last_tx_height,
             )
             if computed_quality_string is None:
-                plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
+                plotid: bytes32 = get_plot_id(self.farmer.constants, new_proof_of_space.proof)
                 self.farmer.log.error(f"Invalid proof of space: {plotid.hex()} proof: {new_proof_of_space.proof}")
                 return None
 
@@ -522,11 +522,11 @@ class FarmerAPI:
                 # send solve request to all solver connections
                 msg = make_msg(ProtocolMessageTypes.solve, solver_info)
                 await self.farmer.server.send_to_all([msg], NodeType.SOLVER)
-                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.proof_fragments[:5]}...")
+                self.farmer.log.debug(f"Sent solve request for partial proof {partial_proof.fragments[:5]}...")
 
             except Exception as e:
                 self.farmer.log.error(
-                    f"Failed to call solver service for partial proof {partial_proof.proof_fragments[:5]}...: {e}"
+                    f"Failed to call solver service for partial proof {partial_proof.fragments[:5]}...: {e}"
                 )
                 # clean up pending request
                 if key in self.farmer.pending_solver_requests:
@@ -545,7 +545,7 @@ class FarmerAPI:
         key = bytes(response.partial_proof)
         if key not in self.farmer.pending_solver_requests:
             self.farmer.log.warning(
-                f"Received solver response for unknown partial proof {response.partial_proof.proof_fragments[:5]}"
+                f"Received solver response for unknown partial proof {response.partial_proof.fragments[:5]}"
             )
             return
 
@@ -558,9 +558,7 @@ class FarmerAPI:
         # create the proof of space with the solver's proof
         proof_bytes = response.proof
         if proof_bytes is None or len(proof_bytes) == 0:
-            self.farmer.log.warning(
-                f"Received empty proof from solver for proof {partial_proof.proof_fragments[:5]}..."
-            )
+            self.farmer.log.warning(f"Received empty proof from solver for proof {partial_proof.fragments[:5]}...")
             return
 
         sp_challenge_hash = proof_data.challenge_hash

@@ -22,8 +22,15 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
   echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
   CHIA_INSTALLER_VERSION="0.0.0"
 fi
+if [ ! "$CHIA_SEMVER_VERSION" ]; then
+  echo "WARNING: No environment variable CHIA_SEMVER_VERSION set. Using $CHIA_INSTALLER_VERSION."
+  CHIA_SEMVER_VERSION="$CHIA_INSTALLER_VERSION"
+fi
+
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+echo "Chia Semver Version is: $CHIA_SEMVER_VERSION"
 export CHIA_INSTALLER_VERSION
+export CHIA_SEMVER_VERSION
 
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
@@ -49,22 +56,13 @@ echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
 
-# Builds CLI only .deb
-# need j2 for templating the control file
-format_deb_version_string() {
-  version_str=$1
-  # Use sed to conform to expected apt versioning conventions:
-  # - conditionally insert a hyphen before 'rc' or 'beta' if not already present
-  # - replace '.dev' with '-dev'
-  echo "$version_str" | sed -E 's/([0-9])(rc|beta)/\1-\2/g; s/\.dev/-dev/g'
-}
 pip install jinjanator
 CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 mkdir -p "dist/$CLI_DEB_BASE/etc/systemd/system"
-CHIA_DEB_CONTROL_VERSION=$(format_deb_version_string "$CHIA_INSTALLER_VERSION")
+CHIA_DEB_CONTROL_VERSION=$CHIA_SEMVER_VERSION
 export CHIA_DEB_CONTROL_VERSION
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
 cp assets/systemd/*.service "dist/$CLI_DEB_BASE/etc/systemd/system/"
@@ -81,7 +79,7 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
 PRODUCT_NAME="chia"

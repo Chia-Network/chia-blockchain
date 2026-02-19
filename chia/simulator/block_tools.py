@@ -70,7 +70,7 @@ from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.plotting.cache import cached_master_sk_to_local_sk
-from chia.plotting.create_plots import PlotKeys, create_plots
+from chia.plotting.create_plots import PlotKeys, create_plots, create_v2_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.prover import PlotVersion, QualityProtocol, V1Prover, V2Prover, V2Quality
 from chia.plotting.util import (
@@ -156,6 +156,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
     NUMBER_ZERO_BITS_PLOT_FILTER_V1=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER_V2=uint8(1),
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
@@ -332,6 +333,7 @@ class BlockTools:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: dict[bytes32, Path] = {}
         self.created_plots: int = 0
+        self.created_plots2: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
@@ -537,10 +539,23 @@ class BlockTools:
         num_og_plots: int = 15,
         num_pool_plots: int = 5,
         num_non_keychain_plots: int = 3,
+        num_v2_plots: int = 150,
         plot_size: int = 20,
         bitfield: bool = True,
         testrun_uid: str | None = None,
     ) -> bool:
+        # we have 20 v1 plots, each about 16.6 MB
+        # in order to balance that out with v2 plots, we need approximately the
+        # same size on disk. A v2 k-18 plot is expected to be about 630 kB, so we
+        # need about 26 times more v2 plots, i.e. 527. That's a bit much, so we
+        # go for 150 plots instead, it might make it a bit more expensive to
+        # generate the test chains, but we lower the difficulty level for the
+        # pure v2 chains.
+        print(
+            f"setup_plots({num_og_plots}, {num_pool_plots}, "
+            f"{num_non_keychain_plots}, {num_v2_plots}) "
+            f"plot-dir: {self.plot_dir}"
+        )
         if testrun_uid is None:
             lock_file_name = self.plot_dir / ".lockfile"
         else:
@@ -549,6 +564,7 @@ class BlockTools:
         with FileLock(lock_file_name):
             self.add_plot_directory(self.plot_dir)
             assert self.created_plots == 0
+            assert self.created_plots2 == 0
             existing_plots: bool = True
             # OG Plots
             for i in range(num_og_plots):
@@ -571,6 +587,15 @@ class BlockTools:
                 )
                 if plot.new_plot:
                     existing_plots = False
+            # v2 plots
+            for i in range(num_v2_plots):
+                plot = await self.new_plot2(plot_size=18, strength=2 + (i % 3))
+                if plot.new_plot:
+                    existing_plots = False
+            for i in range(num_pool_plots):
+                plot = await self.new_plot2(self.pool_ph, plot_size=18, strength=2)
+                if plot.new_plot:
+                    existing_plots = False
             await self.refresh_plots()
             assert len(self.plot_manager.plots) == len(self.expected_plots)
             return existing_plots
@@ -580,6 +605,7 @@ class BlockTools:
         pool_contract_puzzle_hash: bytes32 | None = None,
         path: Path | None = None,
         tmp_dir: Path | None = None,
+        *,
         plot_keys: PlotKeys | None = None,
         exclude_plots: bool = False,
         plot_size: int = 20,
@@ -649,6 +675,61 @@ class BlockTools:
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
+
+    async def new_plot2(
+        self,
+        pool_contract_puzzle_hash: bytes32 | None = None,
+        *,
+        path: Path | None = None,
+        plot_keys: PlotKeys | None = None,
+        exclude_plots: bool = False,
+        plot_size: int = 18,
+        strength: int = 2,
+    ) -> BlockToolsNewPlotResult:
+        final_dir = self.plot_dir
+        if path is not None:
+            final_dir = path
+            final_dir.mkdir(parents=True, exist_ok=True)
+
+        if plot_keys is None:
+            pool_pk: G1Element | None = None
+            pool_address: str | None = None
+            if pool_contract_puzzle_hash is None:
+                pool_pk = self.pool_pk
+            else:
+                pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
+
+            plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
+
+        # No datetime in the filename, to get deterministic filenames and not re-plot
+        created, existed = await create_v2_plots(
+            Path(final_dir),
+            plot_keys,
+            size=plot_size,
+            strength=strength,
+            test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots2.to_bytes(2, "big")))],
+        )
+        self.created_plots2 += 1
+
+        plot_id_new: bytes32 | None = None
+        path_new: Path | None = None
+        new_plot: bool = True
+
+        if len(created):
+            assert len(existed) == 0
+            plot_id_new, path_new = next(iter(created.items()))
+
+        if len(existed):
+            assert len(created) == 0
+            plot_id_new, path_new = next(iter(existed.items()))
+            new_plot = False
+        assert plot_id_new is not None
+        assert path_new is not None
+
+        if not exclude_plots:
+            self.expected_plots[plot_id_new] = path_new
+
+        return BlockToolsNewPlotResult(plot_id_new, new_plot)
 
     async def refresh_plots(self) -> None:
         self.plot_manager.refresh_parameter = replace(
@@ -1635,9 +1716,7 @@ class BlockTools:
 
             new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
 
-            qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(
-                new_challenge, constants.QUALITY_PROOF_SCAN_FILTER
-            )
+            qualities: Sequence[QualityProtocol] = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
             for idx, quality in enumerate(qualities):
                 required_iters = calculate_iterations_quality(
@@ -1657,9 +1736,9 @@ class BlockTools:
                         continue
                 elif isinstance(plot_info.prover, V2Prover):
                     assert isinstance(quality, V2Quality)
-                    partial_proof = plot_info.prover.get_partial_proof(quality)
                     strength = plot_info.prover.get_strength()
-                    proof = solve_proof(partial_proof, plot_id, strength, constants.PLOT_SIZE_V2)
+                    proof = solve_proof(quality.get_partial_proof(), plot_id, strength, constants.PLOT_SIZE_V2)
+                    assert proof != b""
 
                 # Look up local_sk from plot to save locked memory
                 (
@@ -2190,6 +2269,7 @@ async def create_block_tools_async(
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
+    num_v2_plots: int = 150,
     testrun_uid: str | None = None,
 ) -> AsyncIterator[BlockTools]:
     global create_block_tools_async_count
@@ -2202,6 +2282,7 @@ async def create_block_tools_async(
             num_og_plots=num_og_plots,
             num_pool_plots=num_pool_plots,
             num_non_keychain_plots=num_non_keychain_plots,
+            num_v2_plots=num_v2_plots,
             testrun_uid=testrun_uid,
         )
 
