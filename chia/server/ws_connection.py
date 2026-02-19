@@ -254,15 +254,9 @@ class WSChiaConnection:
                 f"our={protocol_version[local_type]}"
             )
 
-        self.version = inbound_handshake.software_version
-        self.protocol_version = Version(inbound_handshake.protocol_version)
-        self.peer_server_port = inbound_handshake.server_port
         remote_node_type = NodeType(inbound_handshake.node_type)
-        self.connection_type = remote_node_type
-        # "1" means capability is enabled
-        self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
-        if len(self.version.encode("utf-8")) > MAX_VERSION_STRING_BYTES:
+        if len(inbound_handshake.software_version.encode("utf-8")) > MAX_VERSION_STRING_BYTES:
             self.log.debug("version string too long")
             raise ProtocolError(Err.INVALID_HANDSHAKE)
 
@@ -290,6 +284,13 @@ class WSChiaConnection:
                 ),
             )
             await self._send_message(outbound_handshake)
+
+        self.version = inbound_handshake.software_version
+        self.protocol_version = Version(inbound_handshake.protocol_version)
+        self.peer_server_port = inbound_handshake.server_port
+        self.connection_type = remote_node_type
+        # "1" means capability is enabled
+        self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
         self.outbound_task = create_referenced_task(self.outbound_handler())
         self.inbound_task = create_referenced_task(self.inbound_handler())
