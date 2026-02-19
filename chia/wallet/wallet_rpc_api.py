@@ -661,7 +661,6 @@ class WalletRpcApi:
             "/nft_transfer_bulk": self.nft_transfer_bulk,
             # Remote Wallet
             "/register_remote_coins": self.register_remote_coins,
-            "/register_remote_coin": self.register_remote_coin,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
