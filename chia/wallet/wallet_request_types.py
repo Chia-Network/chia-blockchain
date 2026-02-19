@@ -1833,9 +1833,9 @@ class NFTMintBulk(TransactionEndpointRequest):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
-class RegisterRemoteCoin(Streamable):
+class RegisterRemoteCoins(Streamable):
     wallet_id: uint32
-    coin_id: bytes32
+    coin_ids: list[bytes32]
 
 
 @streamable

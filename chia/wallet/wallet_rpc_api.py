@@ -267,7 +267,7 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
-    RegisterRemoteCoin,
+    RegisterRemoteCoins,
     SelectCoins,
     SelectCoinsResponse,
     SendNotification,
@@ -660,6 +660,7 @@ class WalletRpcApi:
             "/nft_set_did_bulk": self.nft_set_did_bulk,
             "/nft_transfer_bulk": self.nft_transfer_bulk,
             # Remote Wallet
+            "/register_remote_coins": self.register_remote_coins,
             "/register_remote_coin": self.register_remote_coin,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
@@ -2910,9 +2911,9 @@ class WalletRpcApi:
         )
 
     @marshal
-    async def register_remote_coin(self, request: RegisterRemoteCoin) -> Empty:
+    async def register_remote_coins(self, request: RegisterRemoteCoins) -> Empty:
         remote_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=RemoteWallet)
-        await remote_wallet.register_remote_coin(request.coin_id)
+        await remote_wallet.register_remote_coins(request.coin_ids)
         return Empty()
 
     async def get_coin_records(self, request: dict[str, Any]) -> EndpointResult:

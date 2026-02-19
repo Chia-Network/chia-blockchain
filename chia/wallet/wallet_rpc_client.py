@@ -181,6 +181,7 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
+    RegisterRemoteCoins,
     SelectCoins,
     SelectCoinsResponse,
     SendNotification,
@@ -301,6 +302,10 @@ class WalletRpcClient(RpcClient):
 
     async def get_auto_claim(self) -> AutoClaimSettings:
         return AutoClaimSettings.from_json_dict(await self.fetch("get_auto_claim", {}))
+
+    # Remote Wallet APIs
+    async def register_remote_coins(self, request: RegisterRemoteCoins) -> None:
+        await self.fetch("register_remote_coins", request.to_json_dict())
 
     # Wallet Management APIs
     async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
