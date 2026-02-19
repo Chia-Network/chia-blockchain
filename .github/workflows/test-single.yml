@@ -133,10 +133,6 @@ jobs:
       BLOCKS_AND_PLOTS_VERSION: 0.45.3
 
     steps:
-      - name: Configure git
-        run: |
-          git config --global core.autocrlf false
-
       - name: Checkout code
         uses: actions/checkout@v6
         with:
