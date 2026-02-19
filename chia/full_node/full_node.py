@@ -715,45 +715,45 @@ class FullNode:
         )
         await self.server.send_to_all([new_peak_message], NodeType.WALLET)
 
-    # ===== Methods from full_node_sync.py =====
-    short_sync_batch = _fn_sync.short_sync_batch
-    short_sync_backtrack = _fn_sync.short_sync_backtrack
+    # Methods from full_node_sync.py
+    short_sync_batch = _fn_sync.short_sync_batch  # noqa: RUF045
+    short_sync_backtrack = _fn_sync.short_sync_backtrack  # noqa: RUF045
     _refresh_ui_connections = _fn_sync._refresh_ui_connections
-    new_peak = _fn_sync.new_peak
+    new_peak = _fn_sync.new_peak  # noqa: RUF045
     _sync = _fn_sync._sync
-    request_validate_wp = _fn_sync.request_validate_wp
-    sync_from_fork_point = _fn_sync.sync_from_fork_point
-    get_peers_with_peak = _fn_sync.get_peers_with_peak
+    request_validate_wp = _fn_sync.request_validate_wp  # noqa: RUF045
+    sync_from_fork_point = _fn_sync.sync_from_fork_point  # noqa: RUF045
+    get_peers_with_peak = _fn_sync.get_peers_with_peak  # noqa: RUF045
     _finish_sync = _fn_sync._finish_sync
 
-    # ===== Methods from full_node_block_processing.py =====
-    add_block_batch = _fn_blocks.add_block_batch
-    skip_blocks = _fn_blocks.skip_blocks
-    prevalidate_blocks = _fn_blocks.prevalidate_blocks
-    add_prevalidated_blocks = _fn_blocks.add_prevalidated_blocks
-    get_sub_slot_iters_difficulty_ses_block = _fn_blocks.get_sub_slot_iters_difficulty_ses_block
-    has_valid_pool_sig = _fn_blocks.has_valid_pool_sig
-    signage_point_post_processing = _fn_blocks.signage_point_post_processing
-    peak_post_processing = _fn_blocks.peak_post_processing
-    peak_post_processing_2 = _fn_blocks.peak_post_processing_2
-    add_block = _fn_blocks.add_block
-    add_unfinished_block = _fn_blocks.add_unfinished_block
-    new_infusion_point_vdf = _fn_blocks.new_infusion_point_vdf
-    add_end_of_sub_slot = _fn_blocks.add_end_of_sub_slot
+    # Methods from full_node_block_processing.py
+    add_block_batch = _fn_blocks.add_block_batch  # noqa: RUF045
+    skip_blocks = _fn_blocks.skip_blocks  # noqa: RUF045
+    prevalidate_blocks = _fn_blocks.prevalidate_blocks  # noqa: RUF045
+    add_prevalidated_blocks = _fn_blocks.add_prevalidated_blocks  # noqa: RUF045
+    get_sub_slot_iters_difficulty_ses_block = _fn_blocks.get_sub_slot_iters_difficulty_ses_block  # noqa: RUF045
+    has_valid_pool_sig = _fn_blocks.has_valid_pool_sig  # noqa: RUF045
+    signage_point_post_processing = _fn_blocks.signage_point_post_processing  # noqa: RUF045
+    peak_post_processing = _fn_blocks.peak_post_processing  # noqa: RUF045
+    peak_post_processing_2 = _fn_blocks.peak_post_processing_2  # noqa: RUF045
+    add_block = _fn_blocks.add_block  # noqa: RUF045
+    add_unfinished_block = _fn_blocks.add_unfinished_block  # noqa: RUF045
+    new_infusion_point_vdf = _fn_blocks.new_infusion_point_vdf  # noqa: RUF045
+    add_end_of_sub_slot = _fn_blocks.add_end_of_sub_slot  # noqa: RUF045
 
-    # ===== Methods from full_node_mempool_protocol.py =====
-    add_transaction = _fn_tx.add_transaction
-    broadcast_added_tx = _fn_tx.broadcast_added_tx
-    broadcast_removed_tx = _fn_tx.broadcast_removed_tx
+    # Methods from full_node_mempool_protocol.py
+    add_transaction = _fn_tx.add_transaction  # noqa: RUF045
+    broadcast_added_tx = _fn_tx.broadcast_added_tx  # noqa: RUF045
+    broadcast_removed_tx = _fn_tx.broadcast_removed_tx  # noqa: RUF045
 
-    # ===== Methods from full_node_compact_vdf.py =====
+    # Methods from full_node_compact_vdf.py
     _needs_compact_proof = _fn_compact_vdf._needs_compact_proof
     _can_accept_compact_proof = _fn_compact_vdf._can_accept_compact_proof
     _replace_proof = _fn_compact_vdf._replace_proof
-    add_compact_proof_of_time = _fn_compact_vdf.add_compact_proof_of_time
-    new_compact_vdf = _fn_compact_vdf.new_compact_vdf
-    request_compact_vdf = _fn_compact_vdf.request_compact_vdf
-    add_compact_vdf = _fn_compact_vdf.add_compact_vdf
-    in_bad_peak_cache = _fn_compact_vdf.in_bad_peak_cache
-    add_to_bad_peak_cache = _fn_compact_vdf.add_to_bad_peak_cache
-    broadcast_uncompact_blocks = _fn_compact_vdf.broadcast_uncompact_blocks
+    add_compact_proof_of_time = _fn_compact_vdf.add_compact_proof_of_time  # noqa: RUF045
+    new_compact_vdf = _fn_compact_vdf.new_compact_vdf  # noqa: RUF045
+    request_compact_vdf = _fn_compact_vdf.request_compact_vdf  # noqa: RUF045
+    add_compact_vdf = _fn_compact_vdf.add_compact_vdf  # noqa: RUF045
+    in_bad_peak_cache = _fn_compact_vdf.in_bad_peak_cache  # noqa: RUF045
+    add_to_bad_peak_cache = _fn_compact_vdf.add_to_bad_peak_cache  # noqa: RUF045
+    broadcast_uncompact_blocks = _fn_compact_vdf.broadcast_uncompact_blocks  # noqa: RUF045
