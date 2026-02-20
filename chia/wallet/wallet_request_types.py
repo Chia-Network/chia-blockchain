@@ -1833,6 +1833,13 @@ class NFTMintBulk(TransactionEndpointRequest):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class RegisterRemoteCoins(Streamable):
+    wallet_id: uint32
+    coin_ids: list[bytes32]
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class NFTMintBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
     nft_id_list: list[str]
@@ -2278,6 +2285,7 @@ class CreateNewWalletType(Enum):
     DID_WALLET = "did_wallet"
     NFT_WALLET = "nft_wallet"
     POOL_WALLET = "pool_wallet"
+    REMOTE_WALLET = "remote_wallet"
 
 
 @streamable_enum(str)
