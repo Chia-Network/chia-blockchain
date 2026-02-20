@@ -322,6 +322,17 @@ jobs:
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
+      - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_APPLE_SECRET
+
+          if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
+          echo HAS_APPLE_SECRET=${HAS_APPLE_SECRET} >> "$GITHUB_OUTPUT"
+        env:
+          APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+
       - name: Download packages
         uses: actions/download-artifact@v7
         id: download
@@ -344,6 +355,11 @@ jobs:
         if: matrix.arch.name == 'ARM64'
         run: |
           ! otool -l "/Volumes/Chia "*/Chia.app/Contents/Resources/app.asar.unpacked/daemon/_internal/lib-dynload/_ssl.*darwin.so | grep /opt/homebrew/lib
+
+      - name: Disable signing checks if running without secrets
+        if: steps.check_secrets.outputs.HAS_APPLE_SECRET != 'true'
+        run: |
+          sudo spctl --master-disable
 
       - name: Run chia dev installers test
         run: |
