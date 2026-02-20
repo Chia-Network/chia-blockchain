@@ -41,7 +41,13 @@ def get_mozilla_ca_crt() -> str:
     return str(mozilla_path)
 
 
-def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes, overwrite: bool = True) -> None:
+def write_ssl_cert_and_key(
+    cert_path: Path,
+    cert_data: bytes,
+    key_path: Path,
+    key_data: bytes,
+    overwrite: bool = True,
+) -> None:
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 
     for path, data, mode in [
