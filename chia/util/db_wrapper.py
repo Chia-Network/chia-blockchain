@@ -341,9 +341,10 @@ class DBWrapper2:
             try:
                 with _suppress_task_cancellation():
                     await self._write_connection.execute(f"ROLLBACK TO {name}")
-            except Exception:
-                # ROLLBACK may fail if the SAVEPOINT was never created (e.g.
-                # CancelledError interrupted execute before aiosqlite ran it).
+            except sqlite3.OperationalError:
+                # Catches "no such savepoint" when the SAVEPOINT was never
+                # created (e.g. CancelledError interrupted execute before
+                # aiosqlite ran it). All other errors are propagated.
                 pass
             raise
         finally:
@@ -352,8 +353,9 @@ class DBWrapper2:
             try:
                 with _suppress_task_cancellation():
                     await self._write_connection.execute(f"RELEASE {name}")
-            except Exception:
-                # RELEASE may fail if the SAVEPOINT was never created.
+            except sqlite3.OperationalError:
+                # Catches "no such savepoint" when the SAVEPOINT was never
+                # created. All other errors are propagated.
                 pass
 
     @contextlib.asynccontextmanager
