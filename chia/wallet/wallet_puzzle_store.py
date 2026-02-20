@@ -153,7 +153,7 @@ class WalletPuzzleStore:
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
+            await conn.execute(
                 "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
                 (index,),
             )
