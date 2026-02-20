@@ -88,6 +88,22 @@ def initialize_logging(
         log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format))
         handlers.append(log_syslog_handler)
 
+    if logging_config.get("log_systemd", False):
+        try:
+            from systemd.journal import JournalHandler  # type: ignore
+
+            # Prefix service name with "chia." for better filtering in journal
+            # e.g. "chia.full_node", "chia.farmer"
+            identifier = f"chia.{service_name}" if not service_name.startswith("chia.") else service_name
+            log_systemd_handler = JournalHandler(SYSLOG_IDENTIFIER=identifier)
+            log_systemd_handler.setFormatter(logging.Formatter(fmt="%(message)s"))
+            handlers.append(log_systemd_handler)
+        except ImportError:
+            logging.warning(
+                f"{service_name}: log_systemd enabled but systemd-python not installed. "
+                "Install with: pip install systemd-python"
+            )
+
     if beta_root_path is not None:
         handlers.append(get_file_log_handler(file_log_formatter, beta_root_path, get_beta_logging_config()))
 
