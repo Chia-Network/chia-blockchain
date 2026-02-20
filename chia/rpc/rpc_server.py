@@ -25,6 +25,7 @@ from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import NodeType
+from chia.rpc.rpc_errors import structured_error_from_exception
 from chia.rpc.util import wrap_http_handler
 from chia.server.server import (
     ChiaServer,
@@ -404,8 +405,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             tb = traceback.format_exc()
             log.warning(f"Error while handling message: {tb}")
             if message is not None:
-                error = e.args[0] if e.args else e
-                res = {"success": False, "error": f"{error}"}
+                error_message, structured = structured_error_from_exception(e)
+                res = {"success": False, "error": error_message, "structuredError": structured}
                 await websocket.send_str(format_response(message, res))
 
     async def connection(self, ws: ClientWebSocketResponse) -> None:
