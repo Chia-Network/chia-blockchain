@@ -23,8 +23,10 @@ import anyio
 from chia_puzzles_py.programs import CHIALISP_DESERIALISATION, ROM_BOOTSTRAP_GENERATOR
 from chia_rs import (
     AugSchemeMPL,
+    BlockBuilder,
     BlockRecord,
     ChallengeChainSubSlot,
+    Coin,
     ConsensusConstants,
     EndOfSubSlotBundle,
     FullBlock,
@@ -95,7 +97,6 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.ssl.create_ssl import create_all_ssl
 from chia.ssl.ssl_check import fix_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import DEFAULT_FLAGS, INFINITE_COST, Program, _run, run_with_cost
 from chia.types.blockchain_format.proof_of_space import (
     calculate_pos_challenge,
@@ -227,7 +228,7 @@ def compute_block_cost(
     return uint64(clvm_cost + size_cost + condition_cost)
 
 
-def make_spend_bundle(coins: list[Coin], wallet: WalletTool, rng: Random) -> tuple[SpendBundle, list[Coin]]:
+def make_rand_spend(coins: list[Coin], wallet: WalletTool, rng: Random) -> tuple[SpendBundle, list[Coin]]:
     """
     makes a new spend bundle (block generator) spending some of the coins in the
     list of coins. The list will be updated to have spent coins removed and new
@@ -245,6 +246,15 @@ def make_spend_bundle(coins: list[Coin], wallet: WalletTool, rng: Random) -> tup
     return SpendBundle.aggregate(spend_bundles), new_coins
 
 
+def make_sb(wallet: WalletTool, selected_coin: Coin) -> tuple[SpendBundle, list[Coin]]:
+    """
+    Using wallet and coin, return spend bundle and additions
+    """
+    target_ph = wallet.get_new_puzzlehash()
+    bundle = wallet.generate_signed_transaction(uint64(selected_coin.amount // 2), target_ph, selected_coin)
+    return bundle, bundle.additions()
+
+
 class BlockTools:
     """
     Tools to generate blocks for testing.
@@ -254,6 +264,7 @@ class BlockTools:
     _block_cache_height_to_hash: dict[uint32, bytes32]
     _block_cache_difficulty: uint64
     _block_cache: dict[bytes32, BlockRecord]
+    _new_gen_cache: NewBlockGenerator | None = None
 
     def __init__(
         self,
@@ -335,6 +346,10 @@ class BlockTools:
         self.created_plots: int = 0
         self.created_plots2: int = 0
         self.total_result = PlotRefreshResult()
+        self.available_coins: list[Coin] = []
+        self.prev_num_spends: int = 0
+        self.prev_num_additions: int = 0
+        self._internal_wallet: WalletTool | None = None
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
             assert update_result.duration < 120
@@ -408,13 +423,17 @@ class BlockTools:
         *,
         prev_tx_height: uint32,
         dummy_block_references: bool,
-        include_transactions: bool,
+        include_transactions: int,
         block_generator: NewBlockGenerator | None,
         block_refs: list[uint32],
+        use_cache: bool = False,
     ) -> NewBlockGenerator | None:
         if prev_tx_height >= self.constants.HARD_FORK2_HEIGHT:
             assert block_refs == [], "block references are not allowed after hard fork 2"
             dummy_block_references = False
+
+        if self._new_gen_cache is not None and use_cache:
+            return self._new_gen_cache
 
         # we don't know if the new block will be a transaction
         # block or not, so even though we prepare a block
@@ -438,17 +457,21 @@ class BlockTools:
             assert not dummy_block_references, "(dummy) block references cannot be combined with block_generator"
             return block_generator
 
-        if include_transactions:
+        if include_transactions == 1:  # some transactions mode
             # if the caller did not pass in specific
             # transactions, this parameter means we just want
             # some transactions
             assert wallet is not None
             assert rng is not None
-            bundle, additions = make_spend_bundle(available_coins, wallet, rng)
+            bundle, additions = make_rand_spend(available_coins, wallet, rng)
             removals = bundle.removals()
-            program = simple_solution_generator(bundle).program
+            backwards_compatibility = True
+            if curr.height >= self.constants.HARD_FORK_HEIGHT and not backwards_compatibility:
+                program = simple_solution_generator_backrefs(bundle).program
+            else:
+                program = simple_solution_generator(bundle).program
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
-            return NewBlockGenerator(
+            self._new_gen_cache = NewBlockGenerator(
                 program,
                 [],
                 block_refs + dummy_refs,
@@ -457,12 +480,94 @@ class BlockTools:
                 removals,
                 cost,
             )
+            return self._new_gen_cache
+        elif include_transactions == 2:  # block fill mode
+            # we also use BlockBuilder to compress these transactions as well.
+            assert wallet is not None
+            assert rng is not None
+            if not available_coins:
+                print("Warning: No coins being used on mode 2.")
+            assert block_refs == [], "block references cannot be combined with block_generator"
+            assert curr.height >= self.constants.HARD_FORK_HEIGHT  # we need new compression for BlockBuilder
+            # function constants
+            adjusted_max_cost: uint64 = uint64(self.constants.MAX_BLOCK_COST_CLVM)
+            # The following constants are empirical estimates used only in simulator "block fill" mode.
+            # - static_cost (4_839_648) approximates the fixed CLVM condition + execution cost per spend
+            #   bundle incurred by the wrapper/driver code when passed through BlockBuilder.
+            # - 7_684_000 is the measured average CLVM cost of a "typical" spend bundle payload used for
+            #   block-filling in tests/simulation (excluding the static wrapper overhead above).
+            # These values were derived from profiling generator costs on representative blocks and may
+            # need to be retuned if transaction structure or consensus constants change.
+            static_cost: uint64 = uint64(4839648)  # cond + exec cost per spend bundle (wrapper overhead)
+            cost_per_sb: uint64 = uint64(7684000 + static_cost)
+
+            # start building the block
+            avail_coins: list[Coin] = available_coins.copy()  # don't modify the original set
+            builder: BlockBuilder = BlockBuilder()
+            block_full = False
+            total_cost: uint64 = uint64(0)
+            additions = []
+            removals = []
+
+            batch_bundles: list[SpendBundle] = []
+            batch_removals: list[Coin] = []
+            batch_additions: list[Coin] = []
+            while len(avail_coins) > 0:
+                if len(batch_bundles) * cost_per_sb + total_cost > adjusted_max_cost:
+                    # max batch size used to allow the cost to better match reality
+                    added, block_full = builder.add_spend_bundles(
+                        batch_bundles, uint64(static_cost * len(batch_bundles)), self.constants
+                    )
+                    total_cost = builder.cost()
+                    if added:
+                        removals.extend(batch_removals)
+                        additions.extend(batch_additions)
+                    else:
+                        # if it wasn't added, we put the coin back
+                        avail_coins.extend(batch_removals)
+                    batch_bundles = []
+                    batch_removals = []
+                    batch_additions = []
+                    if block_full or total_cost > adjusted_max_cost:
+                        break
+                new_selection = avail_coins.pop()  # this is what we would also add to removals
+                new_spend, new_additions = make_sb(wallet, new_selection)
+                batch_removals.append(new_selection)
+                batch_additions.extend(new_additions)
+                batch_bundles.append(new_spend)
+
+            if len(batch_bundles) > 0 and not block_full:
+                added, _ = builder.add_spend_bundles(
+                    batch_bundles, uint64(static_cost * len(batch_bundles)), self.constants
+                )
+                if added:
+                    removals.extend(batch_removals)
+                    additions.extend(batch_additions)
+                else:
+                    # If the final batch cannot be added, restore the coins and log a warning
+                    logging.getLogger(__name__).warning(
+                        "Failed to add final spend bundle batch (size=%d). Restoring coins to available set.",
+                        len(batch_bundles),
+                    )
+                    avail_coins.extend(batch_removals)
+
+            block_program, signature, final_cost = builder.finalize(self.constants)
+            self._new_gen_cache = NewBlockGenerator(
+                SerializedProgram.from_bytes(block_program),
+                [],
+                [],
+                signature,
+                additions,
+                removals,
+                final_cost,
+            )
+            return self._new_gen_cache
 
         if dummy_block_references:
             program = SerializedProgram.from_bytes(solution_generator([]))
             cost = compute_block_cost(program, self.constants, uint32(curr.height + 1), prev_tx_height)
-            return NewBlockGenerator(program, [], block_refs + dummy_refs, G2Element(), [], [], cost)
-
+            self._new_gen_cache = NewBlockGenerator(program, [], block_refs + dummy_refs, G2Element(), [], [], cost)
+            return self._new_gen_cache
         return None
 
     async def setup_keys(self, fingerprint: int | None = None, reward_ph: bytes32 | None = None) -> None:
@@ -517,6 +622,7 @@ class BlockTools:
                 raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
             self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+            self._internal_wallet = self.get_farmer_wallet_tool()  # so that we can find transactions we made
         finally:
             if keychain_proxy is not None:
                 await keychain_proxy.close()  # close the keychain proxy
@@ -838,17 +944,20 @@ class BlockTools:
         genesis_timestamp: uint64 | None = None,
         force_plot_id: bytes32 | None = None,
         dummy_block_references: bool = False,
-        include_transactions: bool = False,
+        include_transactions: int = 0,
         skip_overflow: bool = False,
         min_signage_point: int = -1,
     ) -> list[FullBlock]:
         # make a copy to not have different invocations affect each other
-        block_refs = block_refs[:]
+        block_refs = block_refs.copy()
+        if include_transactions and transaction_data is not None:
+            raise ValueError("Cannot specify transaction_data when include_transactions is set")
         assert num_blocks > 0
         if block_list_input is not None:
             block_list = block_list_input.copy()
         else:
             block_list = []
+        self._new_gen_cache = None
 
         # these are heights of blocks that have transactions generators. Note
         # that there may be transactions blocks without generators. These are
@@ -863,38 +972,57 @@ class BlockTools:
                     generator_block_heights.append(b.height)
 
         constants = self.constants
-
         if time_per_block is None:
             time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
 
-        available_coins: list[Coin] = []
+        if farmer_reward_puzzle_hash is None:
+            farmer_reward_puzzle_hash = self.farmer_ph
+
         # award coins aren't available to spend until the transaction block
         # after the one they were created by, so we "stage" them here to move
         # them into available_coins at the next transaction block
         pending_rewards: list[Coin] = []
         wallet: WalletTool | None = None
         rng: Random | None = None
+        self.prev_num_spends = 0  # reset the number of spends in the previous block
+        self.prev_num_additions = 0  # reset the number of additions in the previous block
         if include_transactions:
             # when we generate transactions in the chain, the caller cannot also
             # have ownership of the rewards and control the transactions
-            assert farmer_reward_puzzle_hash is None
-            assert pool_reward_puzzle_hash is None
+            # these lists allow the tests to send all of the rewards to the farmer ph
+            # this is especially important for benchmarks.
+            assert farmer_reward_puzzle_hash in {self.farmer_ph, self.pool_ph}
+            if pool_reward_puzzle_hash is None:
+                target_list = {self.farmer_ph}
+            else:
+                assert pool_reward_puzzle_hash in {self.farmer_ph, self.pool_ph}
+                target_list = {self.farmer_ph, self.pool_ph}
             assert transaction_data is None
 
-            for b in block_list:
-                for coin in b.get_included_reward_coins():
-                    if coin.puzzle_hash == self.farmer_ph:
-                        available_coins.append(coin)
+            if include_transactions != 2:
+                self.available_coins.clear()
+                wallet = self.get_farmer_wallet_tool()
+            else:
+                if self._internal_wallet is None:
+                    raise RuntimeError(
+                        "include_transactions=True requires setup_keys() to be called first to initialize the wallet"
+                    )
+                wallet = self._internal_wallet
+
+            if len(self.available_coins) == 0:
+                for b in block_list:
+                    for coin in b.get_included_reward_coins():
+                        if coin.puzzle_hash in target_list:
+                            self.available_coins.append(coin)  # duplicates will be discarded as its a set
             print(
-                f"found {len(available_coins)} reward coins in existing chain."
-                "for simplicity, we assume the rewards are all unspent in the original chain"
+                f"found {len(self.available_coins)} reward coins in existing chain."
+                " for simplicity, we assume the rewards are all unspent in the original chain"
             )
-            wallet = self.get_farmer_wallet_tool()
             rng = Random()
             rng.seed(seed)
-
-        if farmer_reward_puzzle_hash is None:
-            farmer_reward_puzzle_hash = self.farmer_ph
+        else:
+            # make sure we don't have anything in available_coins
+            self.available_coins.clear()
 
         if len(block_list) == 0:
             if force_plot_id is not None:
@@ -1069,12 +1197,13 @@ class BlockTools:
                             curr,
                             wallet,
                             rng,
-                            available_coins,
+                            self.available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
                             block_generator=block_generator,
                             include_transactions=include_transactions,
                             block_refs=block_refs,
+                            use_cache=True,
                         )
 
                         (
@@ -1130,18 +1259,22 @@ class BlockTools:
                         )
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
+                        self._new_gen_cache = None
 
                         if include_transactions:
                             for coin in full_block.get_included_reward_coins():
-                                if coin.puzzle_hash == self.farmer_ph:
+                                if coin.puzzle_hash in target_list:
                                     pending_rewards.append(coin)
                             if full_block.is_transaction_block():
-                                available_coins.extend(pending_rewards)
+                                self.available_coins.extend(pending_rewards)
+                                self.prev_num_additions += len(pending_rewards)
                                 pending_rewards = []
                                 if new_gen is not None:
-                                    for rem in new_gen.removals:
-                                        available_coins.remove(rem)
-                                    available_coins.extend(new_gen.additions)
+                                    for coin in new_gen.removals:
+                                        self.available_coins.remove(coin)
+                                    self.available_coins.extend(new_gen.additions)
+                                    self.prev_num_spends += len(new_gen.removals)
+                                    self.prev_num_additions += len(new_gen.additions)
 
                         if full_block.transactions_generator is not None:
                             generator_block_heights.append(full_block.height)
@@ -1377,14 +1510,14 @@ class BlockTools:
                             curr,
                             wallet,
                             rng,
-                            available_coins,
+                            self.available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
                             block_generator=block_generator,
                             include_transactions=include_transactions,
                             block_refs=block_refs,
+                            use_cache=True,
                         )
-
                         (
                             full_block,
                             block_record,
@@ -1439,18 +1572,22 @@ class BlockTools:
                         )
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
+                        self._new_gen_cache = None
 
                         if include_transactions:
                             for coin in full_block.get_included_reward_coins():
-                                if coin.puzzle_hash == self.farmer_ph:
+                                if coin.puzzle_hash in target_list:
                                     pending_rewards.append(coin)
                             if full_block.is_transaction_block():
-                                available_coins.extend(pending_rewards)
+                                self.available_coins.extend(pending_rewards)
+                                self.prev_num_additions += len(pending_rewards)
                                 pending_rewards = []
                                 if new_gen is not None:
-                                    for rem in new_gen.removals:
-                                        available_coins.remove(rem)
-                                    available_coins.extend(new_gen.additions)
+                                    for coin in new_gen.removals:
+                                        self.available_coins.remove(coin)
+                                    self.available_coins.extend(new_gen.additions)
+                                    self.prev_num_spends += len(new_gen.removals)
+                                    self.prev_num_additions += len(new_gen.additions)
 
                         if full_block.transactions_generator is not None:
                             generator_block_heights.append(full_block.height)
