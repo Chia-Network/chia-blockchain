@@ -664,7 +664,7 @@ class FullNode:
                                 state_change_summary,
                                 peer,
                             )
-                        except Exception:
+                        except (asyncio.CancelledError, Exception):
                             # Still do post processing after cancel (or exception)
                             peak_fb = await self.blockchain.get_full_peak()
                             assert peak_fb is not None
