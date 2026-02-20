@@ -1655,6 +1655,16 @@ class FullNodeAPI:
 
     @metadata.request(peer_required=True)
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
+        request_key = full_node_protocol.RequestCompactVDF(
+            request.height, request.header_hash, request.field_vdf, request.vdf_info
+        ).get_hash()
+        if request_key not in peer.pending_compact_vdfs:
+            if not self.is_trusted(peer):
+                await peer.ban_peer_bad_protocol("Received unsolicited RespondCompactVDF")
+                return None
+        else:
+            peer.pending_compact_vdfs.remove(request_key)
+
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.add_compact_vdf(request, peer)

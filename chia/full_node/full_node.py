@@ -3150,8 +3150,14 @@ class FullNode:
             peer_request = full_node_protocol.RequestCompactVDF(
                 request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
+            vdf_req_key = peer_request.get_hash()
+            peer.pending_compact_vdfs.put(vdf_req_key)
             response = await peer.call_api(FullNodeAPI.request_compact_vdf, peer_request, timeout=10)
             if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
+                # if we fail to receive a response within 10 seconds, we give up
+                # here, but it's stil possible it will arrive later. We leave it
+                # in pending_compact_vdfs
+                peer.pending_compact_vdfs.remove(vdf_req_key)
                 await self.add_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:

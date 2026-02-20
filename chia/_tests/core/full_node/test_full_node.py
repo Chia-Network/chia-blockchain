@@ -28,6 +28,7 @@ from chia_rs import (
     SpendBundleConditions,
     TransactionsInfo,
     UnfinishedBlock,
+    VDFInfo,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -2366,6 +2367,43 @@ async def test_compact_protocol_invalid_messages(
         if block.challenge_chain_sp_proof is not None:
             assert not block.challenge_chain_sp_proof.normalized_to_identity
         assert not block.challenge_chain_ip_proof.normalized_to_identity
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("trusted", [True, False])
+async def test_unsolicited_compact_vdf(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+    trusted: bool,
+) -> None:
+    [full_node_1, full_node_2], _, _ = setup_two_nodes_fixture
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+
+    # localhost peers are exempt from banning, so use a fake IP
+    fake_ip = "1.2.3.4"
+    ws_con_1.peer_info = PeerInfo(fake_ip, ws_con_1.peer_info.port)
+
+    if trusted:
+        full_node_1.full_node.config["trusted_peers"] = {ws_con_1.peer_node_id.hex(): ""}
+
+    vdf_info = VDFInfo(bytes32.random(), uint64(1000), ClassgroupElement.get_default_element())
+    vdf_proof = VDFProof(uint8(0), b"0" * 100, False)
+    unsolicited_msg = make_msg(
+        ProtocolMessageTypes.respond_compact_vdf,
+        fnp.RespondCompactVDF(uint32(1), bytes32.random(), uint8(CompressibleVDFField.CC_EOS_VDF), vdf_info, vdf_proof),
+    )
+    await ws_con_2.send_message(unsolicited_msg)
+
+    if trusted:
+        await asyncio.sleep(3)
+        assert fake_ip not in server_1.banned_peers
+        assert ws_con_1.peer_node_id in server_1.all_connections
+    else:
+        await time_out_assert(5, lambda: fake_ip in server_1.banned_peers)
 
 
 @pytest.mark.anyio

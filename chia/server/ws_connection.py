@@ -35,11 +35,14 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.log_exceptions import log_exceptions
+from chia.util.lru_cache import LRUSet
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import is_in_network, is_localhost
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
+
+MAX_PENDING_COMPACT_VDFS = 100
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
@@ -128,6 +131,10 @@ class WSChiaConnection:
         default_factory=create_default_last_message_time_dict,
         repr=False,
     )
+
+    # Tracks compact VDF requests we've sent to this peer (hashed RequestCompactVDF).
+    # Used to reject unsolicited RespondCompactVDF messages.
+    pending_compact_vdfs: LRUSet[bytes32] = field(default_factory=lambda: LRUSet(MAX_PENDING_COMPACT_VDFS), repr=False)
 
     exempt_peer_networks: list[IPv4Network | IPv6Network] = field(
         default_factory=list,
