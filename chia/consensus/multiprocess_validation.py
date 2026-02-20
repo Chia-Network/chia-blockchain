@@ -49,6 +49,7 @@ class PreValidationResult(Streamable):
     required_iters: uint64 | None  # Iff error is None
     conds: SpendBundleConditions | None  # Iff error is None and block is a transaction block
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
+    extra_string: str = ""
 
     @property
     def validated_signature(self) -> bool:
@@ -158,7 +159,9 @@ def _pre_validate_block(
         error_stack = traceback.format_exc()
         log.error(f"Exception: {error_stack}")
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, uint32(validation_time * 1000))
+        return PreValidationResult(
+            uint16(Err.UNKNOWN.value), None, None, uint32(validation_time * 1000), extra_string=error_stack
+        )
 
 
 async def pre_validate_block(
