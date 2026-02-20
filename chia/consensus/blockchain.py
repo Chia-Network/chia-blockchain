@@ -500,14 +500,19 @@ class Blockchain:
         rolled_back_state: dict[bytes32, CoinRecord] = {}
 
         if genesis and peak is not None:
+            log.error(f"WJB genesis and peak is not None")
             return [], None
 
         if peak is not None:
             if block_record.weight < peak.weight:
                 # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+                log.error(f"WJB {block_record.weight} < {peak.weight}")
                 return [], None
             if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
                 # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
+                log.error(
+                    f"WJB {block_record.weight} == {peak.weight} and {peak.total_iters} <= {block_record.total_iters}"
+                )
                 return [], None
             if block_record.weight == peak.weight:
                 log.info(
@@ -580,6 +585,7 @@ class Blockchain:
                 coin_id for coin_id, fork_rem in fork_info.removals_since_fork.items() if fork_rem.height == height
             ]
             assert fetched_block_record.timestamp is not None
+            log.error(f"WJB tx_additions {tx_additions} WJB tx_removals {tx_removals}")
             await self.coin_store.new_block(
                 height,
                 fetched_block_record.timestamp,
