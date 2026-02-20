@@ -243,7 +243,7 @@ async def test_remote_wallet_stub_methods_and_errors() -> None:
     assert await wallet.get_spendable_balance() == uint128(0)
     assert await wallet.get_pending_change_balance() == uint64(0)
     assert await wallet.get_max_send_amount() == uint128(0)
-    assert await wallet.coin_added(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), uint32(1), None, None) is None
+    await wallet.coin_added(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), uint32(1), None, None)
     assert await wallet.match_hinted_coin(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), bytes32.zeros) is False
 
     with pytest.raises(ValueError, match="RemoteWallet cannot select coins"):
