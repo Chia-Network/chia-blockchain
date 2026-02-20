@@ -1239,6 +1239,15 @@ class WalletRpcApi:
                         type=WalletType.POOLING_WALLET.name,
                         wallet_id=uint32(0),
                     )
+        elif request.wallet_type == CreateNewWalletType.REMOTE_WALLET:
+            async with self.service.wallet_state_manager.lock:
+                remote_wallet = await RemoteWallet.create_new_remote_wallet(wallet_state_manager, main_wallet, request.name)
+            return CreateNewWalletResponse(
+                unsigned_transactions=[],
+                transactions=[],
+                type=remote_wallet.type().name,
+                wallet_id=remote_wallet.id(),
+            )
 
     ##########################################################################################
     # Wallet

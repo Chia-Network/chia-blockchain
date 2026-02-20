@@ -2285,6 +2285,7 @@ class CreateNewWalletType(Enum):
     DID_WALLET = "did_wallet"
     NFT_WALLET = "nft_wallet"
     POOL_WALLET = "pool_wallet"
+    REMOTE_WALLET = "remote_wallet"
 
 
 @streamable_enum(str)
