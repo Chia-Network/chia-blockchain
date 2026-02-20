@@ -1,0 +1,34 @@
+name: "Install chia-blockchain"
+
+description: "Check if dev deps should be allowed."
+
+inputs:
+  fail-on-result:
+    description: "Fail if the output is equal to this."
+    required: false
+    default: ""
+outputs:
+  allow:
+    description: ""
+    value: ${{ steps.check-allow-dev-deps.allow }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check allow dev deps
+      id: check-allow-dev-deps
+      shell: bash
+      run: |
+        if grep 'git =' pyproject.toml &> /dev/null
+        then
+          ALLOW="${{ startsWith(github.ref, 'refs/heads/long_lived/') || startsWith(github.event.pull_request.base.ref, 'refs/heads/long_lived/') || contains( github.event.pull_request.labels.*.name, 'allow-dev-deps') }}"
+        else
+          ALLOW="false"
+        fi
+        echo "allow=${ALLOW}" >> "$GITHUB_OUTPUT"
+
+    - name: maybe fail
+      if: inputs.fail-on-result == steps.check-allow-dev-deps.outputs.allow
+      shell: bash
+      run: |
+        false
