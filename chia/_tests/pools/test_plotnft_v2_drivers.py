@@ -1,0 +1,514 @@
+from __future__ import annotations
+
+import re
+from typing import Literal
+
+import pytest
+from chia_rs import Coin, CoinSpend, G2Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32, uint64
+
+from chia._tests.clvm.test_puzzles import secret_exponent_for_index
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia.pools.plotnft_drivers import (
+    GetNextPlotNFTError,
+    PlotNFT,
+    PlotNFTPuzzle,
+    PoolConfig,
+    PoolReward,
+    RewardPuzzle,
+    SingletonPuzzles,
+    SingletonStruct,
+    UserConfig,
+)
+from chia.types.blockchain_format.program import Program, run
+from chia.types.coin_spend import make_spend
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.errors import Err
+from chia.wallet.conditions import (
+    AggSigMe,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    MessageParticipant,
+    Remark,
+    SendMessage,
+    parse_conditions_non_consensus,
+)
+from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, PuzzleWithRestrictions
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+user_sk = calculate_synthetic_secret_key(
+    PrivateKey.from_bytes(
+        secret_exponent_for_index(1).to_bytes(32, "big"),
+    ),
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+)
+ACS = Program.to(1)
+ACS_PH = ACS.get_tree_hash()
+POOL_PUZZLE = Program.to("I'm a pool :)")
+POOL_PUZZLE_HASH = POOL_PUZZLE.get_tree_hash()
+
+
+def sign_spend(coin_spends: list[CoinSpend], additional_data: bytes32) -> G2Element:
+    for spend in coin_spends:
+        for condition in parse_conditions_non_consensus(
+            run(spend.puzzle_reveal, spend.solution).as_iter(), abstractions=False
+        ):
+            if isinstance(condition, AggSigMe):
+                return user_sk.sign(condition.msg + spend.coin.name() + additional_data)
+    return G2Element()  # pragma: no cover
+
+
+async def mint_plotnft(
+    *, sim: SpendSim, sim_client: SimClient, desired_state: Literal["self_custody", "pooling", "waiting_room"]
+) -> PlotNFT:
+    await sim.farm_block(ACS_PH)
+
+    fund_coin, _ = await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False)
+
+    conditions, spends, plotnft = PlotNFT.launch(
+        origin_coins=[fund_coin.coin],
+        user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+        pool_config=None
+        if desired_state == "self_custody"
+        else PoolConfig(pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])),
+        genesis_challenge=sim.defaults.GENESIS_CHALLENGE,
+        hint=bytes32.zeros,
+        exiting=desired_state == "waiting_room",
+    )
+
+    result = await sim_client.push_tx(
+        WalletSpendBundle(
+            [
+                *spends,
+                make_spend(
+                    coin=fund_coin.coin,
+                    puzzle_reveal=ACS,
+                    solution=Program.to(
+                        [condition.to_program() for condition in conditions]
+                        + [
+                            CreateCoin(
+                                puzzle_hash=plotnft.singleton_struct.singleton_puzzles.singleton_launcher_hash,
+                                amount=uint64(1),
+                            ).to_program()
+                        ]
+                    ),
+                ),
+            ],
+            G2Element(),
+        )
+    )
+    assert result == (MempoolInclusionStatus.SUCCESS, None)
+    await sim.farm_block()
+
+    # Test syncing from launcher
+    assert (
+        PlotNFT.get_next_from_coin_spend(coin_spend=spends[1], genesis_challenge=sim.defaults.GENESIS_CHALLENGE)
+        == plotnft
+    )
+    return plotnft
+
+
+# PlotNFT goes from self custody -> pooling -> waiting_room -> self custody
+@pytest.mark.anyio
+async def test_plotnft_transitions(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, sim_client):
+        plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state="self_custody")
+
+        with pytest.raises(ValueError, match=re.escape("Cannot exit to waiting room while self pooling.")):
+            plotnft.exit_to_waiting_room(
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                    puzzle=Program.to(None), solution=Program.to(None)
+                )
+            )
+
+        with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while self pooling.")):
+            plotnft.exit_waiting_room(
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                    puzzle=Program.to(None), solution=Program.to(None)
+                )
+            )
+
+        # Join a pool
+        fee_hook = CreateCoinAnnouncement(msg=b"", coin_id=plotnft.coin.name())
+        url_remark = Remark(rest=Program.to("url"))
+        coin_spends = plotnft.join_pool(
+            user_config=plotnft.user_config,
+            pool_config=PoolConfig(
+                pool_puzzle_hash=POOL_PUZZLE_HASH, heightlock=uint32(5), pool_memoization=Program.to(["pool"])
+            ),
+            extra_conditions=(fee_hook, url_remark),
+        )
+        fee_coin = next(iter(await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))).coin
+        result = await sim_client.push_tx(
+            cost_logger.add_cost(
+                "Self Custody -> Pooling",
+                WalletSpendBundle(
+                    [
+                        *coin_spends,
+                        make_spend(fee_coin, ACS, Program.to([fee_hook.corresponding_assertion().to_program()])),
+                    ],
+                    sign_spend(coin_spends, sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        plotnft = PlotNFT.get_next_from_coin_spend(
+            coin_spend=coin_spends[0], genesis_challenge=sim.defaults.GENESIS_CHALLENGE
+        )
+        assert plotnft.remarks == [url_remark]
+
+        with pytest.raises(ValueError, match=re.escape("Cannot exit waiting room while not in it")):
+            plotnft.exit_waiting_room(
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                    puzzle=Program.to(None), solution=Program.to(None)
+                )
+            )
+
+        # Attempt to leave without waiting room
+        quick_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
+        )
+        singing_info = plotnft.modify_delegated_puzzle_and_solution(quick_exit_dpuz_and_solution)
+        coin_spends = plotnft.exit_to_waiting_room(quick_exit_dpuz_and_solution)
+        result = await sim_client.push_tx(
+            WalletSpendBundle(
+                coin_spends,
+                user_sk.sign(
+                    singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # # Attempt to make a message while leaving
+        message_dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=ACS,
+            solution=Program.to(
+                [
+                    plotnft.exit_to_waiting_room_condition().to_program(),
+                    SendMessage(
+                        bytes32.zeros,
+                        sender=MessageParticipant(parent_id_committed=bytes32.zeros),
+                        receiver=MessageParticipant(parent_id_committed=bytes32.zeros),
+                    ).to_program(),
+                ]
+            ),
+        )
+        singing_info = plotnft.modify_delegated_puzzle_and_solution(message_dpuz_and_solution)
+        coin_spends = plotnft.exit_to_waiting_room(message_dpuz_and_solution)
+        result = await sim_client.push_tx(
+            WalletSpendBundle(
+                coin_spends,
+                user_sk.sign(
+                    singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # Leave honestly
+        honest_exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=ACS,
+            solution=Program.to([plotnft.exit_to_waiting_room_condition().to_program()]),
+        )
+        singing_info = plotnft.modify_delegated_puzzle_and_solution(honest_exit_dpuz_and_solution)
+        coin_spends = plotnft.exit_to_waiting_room(honest_exit_dpuz_and_solution)
+        result = await sim_client.push_tx(
+            cost_logger.add_cost(
+                "Pooling -> Waiting Room",
+                WalletSpendBundle(
+                    coin_spends,
+                    user_sk.sign(
+                        singing_info.puzzle.get_tree_hash()
+                        + plotnft.coin.name()
+                        + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+                    ),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+
+        with pytest.raises(ValueError, match=re.escape("Already exiting to waiting room, cannot exit again")):
+            plotnft.exit_to_waiting_room(
+                delegated_puzzle_and_solution=DelegatedPuzzleAndSolution(
+                    puzzle=Program.to(None), solution=Program.to(None)
+                )
+            )
+
+        # Return to self-pooling
+        exit_dpuz_and_solution = DelegatedPuzzleAndSolution(
+            puzzle=ACS,
+            solution=Program.to([cond.to_program() for cond in plotnft.exit_from_waiting_room_conditions()]),
+        )
+        singing_info = plotnft.modify_delegated_puzzle_and_solution(exit_dpuz_and_solution)
+        coin_spends = plotnft.exit_waiting_room(exit_dpuz_and_solution)
+        timelocked_spend = WalletSpendBundle(
+            coin_spends,
+            user_sk.sign(
+                singing_info.puzzle.get_tree_hash() + plotnft.coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA
+            ),
+        )
+        result = await sim_client.push_tx(timelocked_spend)
+        assert result == (MempoolInclusionStatus.PENDING, Err.ASSERT_HEIGHT_RELATIVE_FAILED)
+        for _ in range(plotnft.guaranteed_pool_config.heightlock):
+            await sim.farm_block()
+        result = await sim_client.push_tx(cost_logger.add_cost("Waiting Room -> Self Custody", timelocked_spend))
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+
+        # Check that it's there
+        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+        assert await sim_client.get_coin_record_by_name(plotnft.coin.name()) is not None
+
+
+async def mint_reward(sim: SpendSim, sim_client: SimClient, singleton_id: bytes32) -> PoolReward:
+    reward_puzzle = RewardPuzzle(singleton_id=singleton_id)
+    await sim.farm_block(reward_puzzle.puzzle_hash())
+    coin_1, coin_2 = await sim_client.get_coin_records_by_puzzle_hash(reward_puzzle.puzzle_hash())
+    return PoolReward(
+        coin=coin_1.coin if coin_1.coin.amount > coin_2.coin.amount else coin_2.coin,
+        height=sim.block_height,
+        singleton_id=singleton_id,
+    )
+
+
+# PlotNFT claims pooling rewards while self custody
+@pytest.mark.anyio
+async def test_plotnft_self_custody_claim(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, sim_client):
+        plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state="self_custody")
+        reward = await mint_reward(sim=sim, sim_client=sim_client, singleton_id=plotnft.singleton_struct.launcher_id)
+
+        with pytest.raises(
+            ValueError, match=re.escape("Cannot forward pool reward while self pooling. Try `claim_pool_rewards`")
+        ):
+            plotnft.forward_pool_reward(reward=reward)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Number of rewards and delegated puzzles and solutions must match"),
+        ):
+            plotnft.claim_pool_rewards(rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[])
+
+        reward_dpuz_and_sol = DelegatedPuzzleAndSolution(
+            puzzle=ACS, solution=Program.to([CreateCoin(bytes32.zeros, uint64(1)).to_program()])
+        )
+        coin_spends = plotnft.claim_pool_rewards(
+            rewards_to_claim=[reward], reward_delegated_puzzles_and_solutions=[reward_dpuz_and_sol]
+        )
+        result = await sim_client.push_tx(
+            cost_logger.add_cost(
+                "Claim Pool Reward",
+                WalletSpendBundle(
+                    coin_spends,
+                    sign_spend(coin_spends, sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+
+        # Make sure the pooling reward did what it was supposed to
+        assert len(await sim_client.get_coin_records_by_puzzle_hash(bytes32.zeros)) == 1
+
+        # Make sure we can find the plotnft
+        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+
+
+# PlotNFT claims pooling rewards while pooling
+@pytest.mark.parametrize("desired_state", ["waiting_room", "pooling"])
+@pytest.mark.anyio
+async def test_plotnft_pooling_claim(
+    cost_logger: CostLogger, desired_state: Literal["waiting_room", "pooling"]
+) -> None:
+    async with sim_and_client() as (sim, sim_client):
+        plotnft = await mint_plotnft(sim=sim, sim_client=sim_client, desired_state=desired_state)
+        reward = await mint_reward(sim=sim, sim_client=sim_client, singleton_id=plotnft.singleton_struct.launcher_id)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Cannot claim rewards while pooling. If you're a pool, try `forward_pool_rewards`"),
+        ):
+            plotnft.claim_pool_rewards(
+                rewards_to_claim=[reward],
+                reward_delegated_puzzles_and_solutions=[
+                    DelegatedPuzzleAndSolution(puzzle=Program.to(None), solution=Program.to(None))
+                ],
+            )
+
+        coin_spends = plotnft.forward_pool_reward(reward=reward)
+        result = await sim_client.push_tx(
+            cost_logger.add_cost(
+                f"Forward Pool Reward ({desired_state})",
+                WalletSpendBundle(
+                    coin_spends,
+                    G2Element(),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+
+        # Make sure the pooling reward did what it was supposed to
+        assert (
+            len(await sim_client.get_coin_records_by_puzzle_hash(plotnft.guaranteed_pool_config.pool_puzzle_hash)) == 1
+        )
+
+        # Make sure we can find the plotnft
+        plotnft = PlotNFT.get_next_from_coin_spend(coin_spend=coin_spends[0], previous_plotnft_puzzle=plotnft)
+
+
+def test_plotnft_errors() -> None:
+    with pytest.raises(
+        ValueError, match=re.escape("Cannot initialize a PlotNFTPuzzle with an empty pool config and exiting=True")
+    ):
+        PlotNFTPuzzle(
+            launcher_id=bytes32.zeros,
+            genesis_challenge=bytes32.zeros,
+            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+            exiting=True,
+        )
+
+    with pytest.raises(ValueError, match=re.escape("Plot NFT is not pooling, cannot retrieve pool config")):
+        PlotNFTPuzzle(
+            launcher_id=bytes32.zeros,
+            genesis_challenge=bytes32.zeros,
+            user_config=UserConfig(synthetic_pubkey=user_sk.get_g1()),
+            exiting=False,
+        ).guaranteed_pool_config
+
+    default_coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
+
+    with pytest.raises(
+        GetNextPlotNFTError, match=re.escape("Either genesis_challenge or previous_plotnft_puzzle must be provided")
+    ):
+        PlotNFT.get_next_from_coin_spend(coin_spend=make_spend(default_coin, Program.to(None), Program.to(None)))
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton mod for next PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=make_spend(default_coin, Program.to(None), Program.to(None)), genesis_challenge=bytes32.zeros
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid singleton launcher for next PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=make_spend(
+                default_coin,
+                Program.to(PlotNFT.singleton_puzzles.singleton_mod).curry(
+                    SingletonStruct(
+                        launcher_id=bytes32.zeros,
+                        singleton_puzzles=SingletonPuzzles(
+                            singleton_launcher=Program.to("not the launcher"), singleton_launcher_hash_pre_computed=None
+                        ),
+                    ).to_program()
+                ),
+                Program.to(None),
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+    def wrap_inner_puz(inner_puz: Program) -> UncurriedPuzzle:
+        return UncurriedPuzzle(
+            mod=PlotNFT.singleton_puzzles.singleton_mod,
+            args=Program.to([SingletonStruct(launcher_id=bytes32.zeros).to_program(), inner_puz]),
+        )
+
+    FAUX_SPEND = make_spend(default_coin, Program.to(None), Program.to([None, None, None]))
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("PlotNFTs must make exactly one new coin")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program(),
+                            CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(2)).to_program(),
+                        ],
+                    )
+                )
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to((1, [CreateCoin(puzzle_hash=bytes32.zeros, amount=uint64(1)).to_program()]))
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(
+                                puzzle_hash=bytes32.zeros,
+                                amount=uint64(1),
+                                memo_blob=Program.to(
+                                    (
+                                        bytes32.zeros,
+                                        ("not the namespace", [None, [[None, bytes32.zeros, None]], None, None]),
+                                    )
+                                ),
+                            ).to_program()
+                        ],
+                    )
+                )
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+    with pytest.raises(GetNextPlotNFTError, match=re.escape("Invalid memoization of PlotNFT")):
+        PlotNFT.get_next_from_coin_spend(
+            coin_spend=FAUX_SPEND,
+            pre_uncurry=wrap_inner_puz(
+                Program.to(
+                    (
+                        1,
+                        [
+                            CreateCoin(
+                                puzzle_hash=bytes32.zeros,
+                                amount=uint64(1),
+                                memo_blob=Program.to(
+                                    (
+                                        bytes32.zeros,
+                                        (
+                                            PuzzleWithRestrictions.spec_namespace,
+                                            [None, [[None, bytes32.zeros, None]], None, [bytes32.zeros, None]],
+                                        ),
+                                    )
+                                ),
+                            ).to_program()
+                        ],
+                    )
+                )
+            ),
+            genesis_challenge=bytes32.zeros,
+        )
+
+
+def test_singleton_constructs() -> None:
+    assert (
+        SingletonPuzzles(singleton_mod_hash_pre_computed=None).singleton_mod_hash
+        == SingletonPuzzles().singleton_mod_hash
+    )
+    assert (
+        SingletonPuzzles(singleton_launcher_hash_pre_computed=None).singleton_launcher_hash
+        == SingletonPuzzles().singleton_launcher_hash
+    )
