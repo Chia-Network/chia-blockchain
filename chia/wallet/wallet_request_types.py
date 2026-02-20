@@ -181,6 +181,12 @@ class GetHeightInfoResponse(Streamable):
 
 @streamable
 @dataclass(kw_only=True, frozen=True)
+class GetFeeEstimateResponse(Streamable):
+    fee_per_cost: uint64
+
+
+@streamable
+@dataclass(kw_only=True, frozen=True)
 class PushTX(Streamable):
     spend_bundle: WalletSpendBundle
 

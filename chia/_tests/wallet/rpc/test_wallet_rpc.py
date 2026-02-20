@@ -132,6 +132,7 @@ from chia.wallet.wallet_request_types import (
     GetCoinRecordsByNames,
     GetFarmedAmount,
     GetFarmedAmountResponse,
+    GetFeeEstimateResponse,
     GetNextAddress,
     GetNotifications,
     GetOffer,
@@ -532,6 +533,27 @@ async def test_get_timestamp_for_height(wallet_environments: WalletTestFramework
 
     # This tests that the client returns successfully, rather than raising or returning something unexpected
     await client.get_timestamp_for_height(GetTimestampForHeight(height=uint32(1)))
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_get_fee_estimate(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    client: WalletRpcClient = env.rpc_client
+
+    # Success path
+    result: GetFeeEstimateResponse = await client.get_fee_estimate()
+    assert int(result.fee_per_cost) >= 0
+
+    # Failure path: no connected full node peer
+    with patch.object(env.node, "get_full_node_peer", side_effect=ValueError("No peer connected")):
+        with pytest.raises(ResponseFailureError, match="Wallet is not currently connected to any full node peers"):
+            await client.get_fee_estimate()
 
 
 @pytest.mark.parametrize(
