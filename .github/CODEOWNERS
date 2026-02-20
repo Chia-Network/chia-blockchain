@@ -1,5 +1,5 @@
 *	@Chia-Network/required-reviewers
 /.github/**/* @Chia-Network/actions-reviewers
-/PRETTY_GOOD_PRACTICES.md	@altendky @Chia-Network/required-reviewers
-/tests/ether.py @altendky @Chia-Network/required-reviewers
-/pyproject.toml @altendky @Chia-Network/required-reviewers
+/PRETTY_GOOD_PRACTICES.md	@Chia-Network/required-reviewers
+/tests/ether.py @Chia-Network/required-reviewers
+/pyproject.toml @Chia-Network/required-reviewers
