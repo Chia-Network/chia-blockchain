@@ -407,6 +407,7 @@ class ChiaServer:
         target_node: PeerInfo,
         on_connect: ConnectionCallback | None = None,
         is_feeler: bool = False,
+        server_hostname: str | None = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -438,6 +439,8 @@ class ChiaServer:
                     heartbeat=60,
                     ssl=self.ssl_client_context,
                     max_msg_size=max_message_size,
+                    server_hostname=server_hostname,
+                    headers={"Host": server_hostname} if server_hostname else None,
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
