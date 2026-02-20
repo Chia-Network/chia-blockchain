@@ -45,6 +45,9 @@ class Capability(IntEnum):
     # This is between a full node and receiving wallet
     MEMPOOL_UPDATES = 5
 
+    # Signals support for Hard Fork 2
+    HARD_FORK_2 = 6
+
 
 # These are the default capabilities used in all outgoing handshakes.
 # "1" means the capability is supported and enabled.
