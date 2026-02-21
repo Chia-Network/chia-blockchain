@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from chia.plotting.create_plots import create_plots, resolve_plot_keys
-from chia.plotting.util import Params, add_plot_directory, validate_plot_size
+from chia.plotting.util import Params, validate_plot_size
+from chia.util.harvester_config import add_plot_directory
 
 log = logging.getLogger(__name__)
 

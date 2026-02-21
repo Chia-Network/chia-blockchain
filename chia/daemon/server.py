@@ -30,7 +30,6 @@ from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphr
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
-from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.bech32m import encode_puzzle_hash
@@ -38,6 +37,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
+from chia.util.harvester_config import add_plot_directory
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
