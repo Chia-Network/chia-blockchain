@@ -7,19 +7,20 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from chia.util.config import load_config, lock_and_load_config, save_config
 
 log = logging.getLogger(__name__)
 
 
-def get_plot_directories(root_path: Path, config: dict | None = None) -> list[str]:
+def get_plot_directories(root_path: Path, config: dict[str, Any] | None = None) -> list[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
     return config["harvester"]["plot_directories"] or []
 
 
-def add_plot_directory(root_path: Path, str_path: str) -> dict:
+def add_plot_directory(root_path: Path, str_path: str) -> dict[str, Any]:
     path: Path = Path(str_path).resolve()
     if not path.exists():
         raise ValueError(f"Path doesn't exist: {path}")
