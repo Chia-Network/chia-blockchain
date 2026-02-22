@@ -1845,6 +1845,7 @@ class PWJoinPool(TransactionEndpointRequest):
     pool_url: str
     target_puzzlehash: bytes32
     relative_lock_height: uint32
+    pool_memoization: Program | None = None
 
 
 @streamable
@@ -1859,6 +1860,7 @@ class PWJoinPoolResponse(TransactionEndpointResponse):
 @dataclass(kw_only=True, frozen=True)
 class PWSelfPool(TransactionEndpointRequest):
     wallet_id: uint32
+    finish_leaving_fee: uint64 | None = None
 
 
 @streamable
@@ -2322,6 +2324,7 @@ class CreateNewWallet(TransactionEndpointRequest):
     initial_target_state: NewPoolWalletInitialTargetState | None = None  # required
     p2_singleton_delayed_ph: bytes32 | None = None
     p2_singleton_delay_time: uint64 | None = None
+    plotnft_version: uint8 = uint8(1)
 
     def __post_init__(self) -> None:
         if self.wallet_type == CreateNewWalletType.CAT_WALLET:
@@ -2389,6 +2392,8 @@ class CreateNewWallet(TransactionEndpointRequest):
         if self.wallet_type == CreateNewWalletType.POOL_WALLET:
             if self.initial_target_state is None:
                 raise ValueError('"initial_target_state" is required for new pool wallets')
+            if self.plotnft_version < 1 or self.plotnft_version > 2:
+                raise ValueError('Invalid "plotnft_version" specified')
         else:
             if self.initial_target_state is not None:
                 raise ValueError('"initial_target_state" is only a valid argument for pool wallets')
@@ -2472,7 +2477,7 @@ class CreateNewWalletResponse(TransactionEndpointResponse):
                 raise ValueError("Must specify all recovery options or none of them")
             else:
                 field_names |= tx_endpoint_field_names
-        elif wallet_type == WalletType.POOLING_WALLET:
+        elif wallet_type in {WalletType.POOLING_WALLET, WalletType.PLOTNFT_2}:
             if not (
                 (
                     self.total_fee is None

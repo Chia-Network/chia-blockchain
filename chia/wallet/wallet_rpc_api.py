@@ -16,6 +16,7 @@ from clvm_tools.binutils import assemble
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse, dl_verify_proof
 from chia.data_layer.data_layer_wallet import Mirror
+from chia.pools.plotnft_drivers import PoolConfig, RewardPuzzle
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import (
     FARMING_TO_POOL,
@@ -58,6 +59,7 @@ from chia.wallet.nft_wallet import nft_puzzle_utils
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.plotnft_wallet.plotnft_wallet import PlotNFT2Wallet
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.signer_protocol import SigningResponse
@@ -1204,37 +1206,72 @@ class WalletRpcApi:
             )
         elif request.wallet_type == CreateNewWalletType.POOL_WALLET:
             if request.mode == WalletCreationMode.NEW:
-                async with self.service.wallet_state_manager.lock:
-                    assert request.initial_target_state is not None  # mypy doesn't know about our __post_init__
-                    initial_target_state = initial_pool_state_from_dict(
-                        request.initial_target_state,
-                        self.service.wallet_state_manager.new_pool_wallet_pubkey(),
-                        await action_scope.get_puzzle_hash(self.service.wallet_state_manager),
-                    )
-                    assert initial_target_state is not None
+                if request.plotnft_version == 1:
+                    async with self.service.wallet_state_manager.lock:
+                        assert request.initial_target_state is not None  # mypy doesn't know about our __post_init__
+                        initial_target_state = initial_pool_state_from_dict(
+                            request.initial_target_state,
+                            self.service.wallet_state_manager.new_pool_wallet_pubkey(),
+                            await action_scope.get_puzzle_hash(self.service.wallet_state_manager),
+                        )
+                        assert initial_target_state is not None
 
-                    p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
-                        wallet_state_manager,
-                        main_wallet,
-                        initial_target_state,
-                        action_scope,
-                        request.fee,
-                        request.p2_singleton_delay_time,
-                        request.p2_singleton_delayed_ph,
+                        p2_singleton_puzzle_hash, launcher_id = await PoolWallet.create_new_pool_wallet_transaction(
+                            wallet_state_manager,
+                            main_wallet,
+                            initial_target_state,
+                            action_scope,
+                            request.fee,
+                            request.p2_singleton_delay_time,
+                            request.p2_singleton_delayed_ph,
+                            extra_conditions=extra_conditions,
+                        )
+
+                        return CreateNewWalletResponse(
+                            unsigned_transactions=[],
+                            transactions=[],
+                            transaction=REPLACEABLE_TRANSACTION_RECORD,
+                            total_fee=uint64(request.fee * 2),
+                            launcher_id=launcher_id,
+                            p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+                            # irrelevant, will be replaced in serialization
+                            type=WalletType.POOLING_WALLET.name,
+                            wallet_id=uint32(0),
+                        )
+                elif request.plotnft_version == 2:
+                    plotnft = await PlotNFT2Wallet.create_new(
+                        wallet_state_manager=self.service.wallet_state_manager,
+                        xch_wallet=self.service.wallet_state_manager.main_wallet,
+                        action_scope=action_scope,
+                        fee=request.fee,
                         extra_conditions=extra_conditions,
+                        pool_config=PoolConfig(
+                            pool_puzzle_hash=request.initial_target_state.target_puzzle_hash,
+                            pool_memoization=request.initial_target_state.pool_memoization,
+                            heightlock=request.initial_target_state.relative_lock_height,
+                        )
+                        if request.initial_target_state is not None
+                        and request.initial_target_state.target_puzzle_hash is not None
+                        and request.initial_target_state.relative_lock_height is not None
+                        else None,
+                        pool_url=request.initial_target_state.pool_url
+                        if request.initial_target_state is not None
+                        and request.initial_target_state.pool_url is not None
+                        else None,
                     )
-
                     return CreateNewWalletResponse(
                         unsigned_transactions=[],
                         transactions=[],
                         transaction=REPLACEABLE_TRANSACTION_RECORD,
-                        total_fee=uint64(request.fee * 2),
-                        launcher_id=launcher_id,
-                        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
-                        # irrelevant, will be replaced in serialization
-                        type=WalletType.POOLING_WALLET.name,
+                        total_fee=uint64(request.fee),
+                        launcher_id=plotnft.launcher_id,
+                        p2_singleton_puzzle_hash=RewardPuzzle(singleton_id=plotnft.launcher_id).puzzle_hash(),
+                        # irrelevant, will be replace in serialization
+                        type=WalletType.PLOTNFT_2.name,
                         wallet_id=uint32(0),
                     )
+                else:
+                    raise ValueError("__post_init__ should block this")  # pragma: no cover
 
     ##########################################################################################
     # Wallet
@@ -3074,24 +3111,42 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> PWJoinPoolResponse:
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
-        pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
-        if (
-            pool_wallet_info.current.state == FARMING_TO_POOL.value
-            and pool_wallet_info.current.pool_url == request.pool_url
-        ):
-            raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
+        if isinstance(wallet, PoolWallet):
+            pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+            if (
+                pool_wallet_info.current.state == FARMING_TO_POOL.value
+                and pool_wallet_info.current.pool_url == request.pool_url
+            ):
+                raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
 
-        new_target_state: PoolState = create_pool_state(
-            FARMING_TO_POOL,
-            request.target_puzzlehash,
-            pool_wallet_info.current.owner_pubkey,
-            request.pool_url,
-            request.relative_lock_height,
-        )
+            new_target_state: PoolState = create_pool_state(
+                FARMING_TO_POOL,
+                request.target_puzzlehash,
+                pool_wallet_info.current.owner_pubkey,
+                request.pool_url,
+                request.relative_lock_height,
+            )
 
-        total_fee = await wallet.join_pool(new_target_state, request.fee, action_scope)
+            total_fee = await wallet.join_pool(new_target_state, request.fee, action_scope)
+        elif isinstance(wallet, PlotNFT2Wallet):
+            if request.pool_memoization is None:
+                raise ValueError("Pool memoization is required for PlotNFT2Wallet")
+            await wallet.join_pool(
+                pool_config=PoolConfig(
+                    pool_puzzle_hash=request.target_puzzlehash,
+                    heightlock=request.relative_lock_height,
+                    pool_memoization=request.pool_memoization,
+                ),
+                pool_url=request.pool_url,
+                action_scope=action_scope,
+                fee=request.fee,
+                extra_conditions=extra_conditions,
+            )
+            total_fee = request.fee
+        else:
+            raise ValueError("`pw_join_pool` called on a non-pooling wallet")
         # tx_endpoint will take care of filling in these default values
         return PWJoinPoolResponse(
             unsigned_transactions=[],
@@ -3112,9 +3167,22 @@ class WalletRpcApi:
         # Leaving a pool requires two state transitions.
         # First we transition to PoolSingletonState.LEAVING_POOL
         # Then we transition to FARMING_TO_POOL or SELF_POOLING
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
-        total_fee = await wallet.self_pool(request.fee, action_scope)
+        if isinstance(wallet, PoolWallet):
+            total_fee = await wallet.self_pool(request.fee, action_scope)
+        elif isinstance(wallet, PlotNFT2Wallet):
+            finish_leaving_fee = request.finish_leaving_fee if request.finish_leaving_fee is not None else request.fee
+            await wallet.leave_pool(
+                action_scope=action_scope,
+                fee=request.fee,
+                finish_leaving_fee=finish_leaving_fee,
+                extra_conditions=extra_conditions,
+            )
+            total_fee = uint64(request.fee + finish_leaving_fee)
+        else:
+            raise ValueError("`pw_self_pool` called on a non-pooling wallet")
+
         # tx_endpoint will take care of filling in these default values
         return PWSelfPoolResponse(
             unsigned_transactions=[],
@@ -3133,28 +3201,38 @@ class WalletRpcApi:
         extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> PWAbsorbRewardsResponse:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
-        assert isinstance(wallet, PoolWallet)
-        async with self.service.wallet_state_manager.lock:
-            await wallet.claim_pool_rewards(request.fee, request.max_spends_in_tx, action_scope)
-            state: PoolWalletInfo = await wallet.get_current_state()
-            return PWAbsorbRewardsResponse(
-                unsigned_transactions=[],
-                transactions=[],
-                state=state,
-                transaction=REPLACEABLE_TRANSACTION_RECORD,
-                fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
-            )
+        if isinstance(wallet, PoolWallet):
+            async with self.service.wallet_state_manager.lock:
+                await wallet.claim_pool_rewards(request.fee, request.max_spends_in_tx, action_scope)
+                state: PoolWalletInfo = await wallet.get_current_state()
+        elif isinstance(wallet, PlotNFT2Wallet):
+            await wallet.claim_rewards(action_scope=action_scope, fee=request.fee, extra_conditions=extra_conditions)
+            state = await wallet.get_current_state()
+        else:
+            raise ValueError("`pw_absorb_rewards` called on a non-pooling wallet")
+
+        return PWAbsorbRewardsResponse(
+            unsigned_transactions=[],
+            transactions=[],
+            state=state,
+            transaction=REPLACEABLE_TRANSACTION_RECORD,
+            fee_transaction=REPLACEABLE_TRANSACTION_RECORD,
+        )
 
     @marshal
     async def pw_status(self, request: PWStatus) -> PWStatusResponse:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""
-        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=PoolWallet)
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
 
-        assert isinstance(wallet, PoolWallet)
+        if not isinstance(wallet, (PoolWallet, PlotNFT2Wallet)):
+            raise ValueError("`pw_status` called on a non-pooling wallet")
+
         state: PoolWalletInfo = await wallet.get_current_state()
-        unconfirmed_transactions: list[TransactionRecord] = await wallet.get_unconfirmed_transactions()
+        unconfirmed_transactions: list[
+            TransactionRecord
+        ] = await self.service.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(request.wallet_id)
         return PWStatusResponse(
             state=state,
             unconfirmed_transactions=unconfirmed_transactions,
