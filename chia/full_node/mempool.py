@@ -735,28 +735,28 @@ class Mempool:
                 # if adding item would make us exceed the block cost, commit the
                 # batch we've built up first, to see if more space may be freed
                 # up by the compression
-                if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
-                    added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
+                # if block_cost + item.conds.cost - cost_saving > constants.MAX_BLOCK_COST_CLVM:
+                added, done = builder.add_spend_bundles(batch_transactions, uint64(batch_cost), constants)
 
-                    block_cost = builder.cost()
-                    if added:
-                        added_spends += batch_spends
-                        additions.extend(batch_additions)
-                        removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
-                        log.info(
-                            f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
-                            f"cost: {batch_cost} total cost: {block_cost}"
-                        )
-                    else:
-                        log.info(f"Skipping transaction batch cumulative cost: {block_cost} batch cost: {batch_cost}")
-                        skipped_items += 1
+                block_cost = builder.cost()
+                if added:
+                    added_spends += batch_spends
+                    additions.extend(batch_additions)
+                    removals.extend([cs.coin for sb in batch_transactions for cs in sb.coin_spends])
+                    log.info(
+                        f"adding TX batch, additions: {len(batch_additions)} removals: {batch_spends} "
+                        f"cost: {batch_cost} total cost: {block_cost}"
+                    )
+                else:
+                    log.info(f"Skipping transaction batch cumulative cost: {block_cost} batch cost: {batch_cost}")
+                    skipped_items += 1
 
-                    batch_cost = 0
-                    batch_transactions = []
-                    batch_additions = []
-                    batch_spends = 0
-                    if done:
-                        break
+                batch_cost = 0
+                batch_transactions = []
+                batch_additions = []
+                batch_spends = 0
+                if done:
+                    break
 
                 batch_cost += cost - cost_saving
                 batch_transactions.append(SpendBundle(unique_coin_spends, item.aggregated_signature))
