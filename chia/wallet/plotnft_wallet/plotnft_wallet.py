@@ -66,7 +66,7 @@ class PlotNFT2Wallet:
         async with wallet_state_manager.new_action_scope(
             tx_config=wallet_state_manager.tx_config, push=True
         ) as action_scope:
-            if wallet_state_manager.config["plotnft2_claim_address"] is None:
+            if wallet_state_manager.config.get("plotnft2_claim_address", None) is None:
                 claim_address = encode_puzzle_hash(
                     await action_scope.get_puzzle_hash(wallet_state_manager),
                     AddressType.XCH.hrp(wallet_state_manager.config),
