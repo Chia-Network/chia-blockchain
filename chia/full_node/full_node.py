@@ -49,7 +49,13 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import post_hard_fork2
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
+from chia.consensus.multiprocess_validation import (
+    PreparedPreValidationTask,
+    PreValidationResult,
+    pre_validate_block,
+    prepare_pre_validate_block,
+    schedule_pre_validate_block,
+)
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
@@ -1607,19 +1613,38 @@ class FullNode:
         # We have to copy the ValidationState object to preserve it for the add_block()
         # call below. pre_validate_block() will update the
         # object we pass in.
-        ret: list[Awaitable[PreValidationResult]] = []
+        prepared_batch: list[PreparedPreValidationTask | Awaitable[PreValidationResult]] = []
         for block in blocks_to_validate:
-            ret.append(
-                await pre_validate_block(
+            prepared_batch.append(
+                await prepare_pre_validate_block(
                     self.constants,
                     blockchain,
                     block,
-                    self.blockchain.pool,
                     None,
                     vs,
                     wp_summaries=wp_summaries,
                 )
             )
+
+        reader_snapshot: AugmentedBlockchain | None = None
+        if any(isinstance(task, PreparedPreValidationTask) for task in prepared_batch):
+            reader_snapshot = blockchain.copy_for_reader()
+
+        ret: list[Awaitable[PreValidationResult]] = []
+        for task in prepared_batch:
+            if isinstance(task, PreparedPreValidationTask):
+                assert reader_snapshot is not None
+                ret.append(
+                    schedule_pre_validate_block(
+                        self.constants,
+                        reader_snapshot,
+                        self.blockchain.pool,
+                        task,
+                    )
+                )
+            else:
+                ret.append(task)
+
         return ret
 
     async def add_prevalidated_blocks(
