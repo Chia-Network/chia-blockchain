@@ -78,6 +78,11 @@ class RemoteWallet:
             # Be resilient to older/invalid data while developing.
             self.remote_info = RemoteInfo(remote_coin_ids=[])
 
+        if len(self.remote_info.remote_coin_ids) > 0:
+            # Restore interested coin wallet-id mapping on startup so remote coin updates
+            # continue to be associated with this remote wallet after restart.
+            await self.wallet_state_manager.add_interested_coin_ids(self.remote_info.remote_coin_ids, [self.wallet_info.id])
+
         return self
 
     @classmethod
@@ -107,13 +112,13 @@ class RemoteWallet:
             return
 
         # Preserve insertion order while de-duping.
-        new_unique = [coin_id for coin_id in dict.fromkeys(coin_ids) if coin_id not in self.remote_info.remote_coin_ids]
+        unique_coin_ids = list(dict.fromkeys(coin_ids))
+        new_unique = [coin_id for coin_id in unique_coin_ids if coin_id not in self.remote_info.remote_coin_ids]
         if len(new_unique) > 0:
             remote_info = replace(self.remote_info, remote_coin_ids=[*self.remote_info.remote_coin_ids, *new_unique])
-            await self.wallet_state_manager.add_interested_coin_ids(
-                list(dict.fromkeys(coin_ids)), [self.wallet_info.id]
-            )
             await self.save_info(remote_info)
+
+        await self.wallet_state_manager.add_interested_coin_ids(unique_coin_ids, [self.wallet_info.id])
 
     async def save_info(self, remote_info: RemoteInfo) -> None:
         self.remote_info = remote_info
