@@ -223,6 +223,25 @@ async def test_remote_wallet_create_and_save_info_paths() -> None:
 
 
 @pytest.mark.anyio
+async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids() -> None:
+    coin_id_1 = bytes32(bytes([1] * 32))
+    coin_id_2 = bytes32(bytes([2] * 32))
+    wallet_info = WalletInfo(
+        uint32(9),
+        "Remote Wallet #9",
+        uint8(WalletType.REMOTE.value),
+        RemoteInfo(remote_coin_ids=[coin_id_1, coin_id_2]).to_json_str(),
+    )
+    wsm = Mock()
+    wsm.add_interested_coin_ids = AsyncMock()
+
+    wallet = await RemoteWallet.create(wsm, Mock(spec=Wallet), wallet_info)
+
+    assert wallet.remote_info.remote_coin_ids == [coin_id_1, coin_id_2]
+    wsm.add_interested_coin_ids.assert_awaited_once_with([coin_id_1, coin_id_2], [wallet_info.id])
+
+
+@pytest.mark.anyio
 async def test_remote_wallet_create_with_invalid_data_falls_back_to_empty_info() -> None:
     wallet_info = WalletInfo(uint32(5), "Remote Wallet #5", uint8(WalletType.REMOTE.value), "{bad_json")
     wallet = await RemoteWallet.create(Mock(), Mock(spec=Wallet), wallet_info)
@@ -254,3 +273,22 @@ async def test_remote_wallet_stub_methods_and_errors() -> None:
 
     with pytest.raises(RuntimeError, match="RemoteWallet does not derive puzzle hashes"):
         wallet.puzzle_hash_for_pk(Mock())
+
+
+@pytest.mark.anyio
+async def test_register_remote_coins_with_existing_ids_still_subscribes() -> None:
+    coin_id_1 = bytes32(bytes([1] * 32))
+    wallet = RemoteWallet()
+    wallet.wallet_info = WalletInfo(
+        uint32(7), "Remote Wallet #7", uint8(WalletType.REMOTE.value), '{"remote_coin_ids":[]}'
+    )
+    wallet.remote_info = RemoteInfo(remote_coin_ids=[coin_id_1])
+    wallet.wallet_state_manager = Mock()
+    wallet.wallet_state_manager.add_interested_coin_ids = AsyncMock()
+    wallet.wallet_state_manager.user_store = Mock()
+    wallet.wallet_state_manager.user_store.update_wallet = AsyncMock()
+
+    await wallet.register_remote_coins([coin_id_1, coin_id_1])
+
+    wallet.wallet_state_manager.add_interested_coin_ids.assert_awaited_once_with([coin_id_1], [wallet.wallet_info.id])
+    wallet.wallet_state_manager.user_store.update_wallet.assert_not_awaited()
