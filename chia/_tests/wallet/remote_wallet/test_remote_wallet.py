@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -230,7 +231,7 @@ async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids() -> N
         uint32(9),
         "Remote Wallet #9",
         uint8(WalletType.REMOTE.value),
-        RemoteInfo(remote_coin_ids=[coin_id_1, coin_id_2]).to_json_str(),
+        json.dumps(RemoteInfo(remote_coin_ids=[coin_id_1, coin_id_2]).to_json_dict()),
     )
     wsm = Mock()
     wsm.add_interested_coin_ids = AsyncMock()
