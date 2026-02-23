@@ -110,7 +110,9 @@ class RemoteWallet:
         new_unique = [coin_id for coin_id in dict.fromkeys(coin_ids) if coin_id not in self.remote_info.remote_coin_ids]
         if len(new_unique) > 0:
             remote_info = replace(self.remote_info, remote_coin_ids=[*self.remote_info.remote_coin_ids, *new_unique])
-            await self.wallet_state_manager.add_interested_coin_ids(list(dict.fromkeys(coin_ids)), [self.wallet_info.id])
+            await self.wallet_state_manager.add_interested_coin_ids(
+                list(dict.fromkeys(coin_ids)), [self.wallet_info.id]
+            )
             await self.save_info(remote_info)
 
     async def save_info(self, remote_info: RemoteInfo) -> None:
