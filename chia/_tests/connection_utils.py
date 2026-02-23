@@ -66,8 +66,7 @@ async def add_dummy_connection_wsc(
 
     ca_crt_path: Path
     ca_key_path: Path
-    authenticated_client_types: set[NodeType] = {NodeType.HARVESTER}
-    if type in authenticated_client_types:
+    if server._local_type == NodeType.FARMER and type == NodeType.HARVESTER:
         private_ca_crt_path, private_ca_key_path = private_ssl_ca_paths(server.root_path, config)
         ca_crt_path = private_ca_crt_path
         ca_key_path = private_ca_key_path
