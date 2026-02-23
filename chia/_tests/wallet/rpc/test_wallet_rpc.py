@@ -4316,6 +4316,37 @@ async def test_create_remote_wallet_via_create_new_wallet(wallet_environments: W
     assert created.get_name() == "Remote Wallet #1"
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    first_response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+    second_response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #2", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    assert first_response.type == WalletType.REMOTE.name
+    assert second_response.type == WalletType.REMOTE.name
+    assert second_response.wallet_id == first_response.wallet_id
+
+    remote_wallets = [
+        wallet for wallet in env.node.wallet_state_manager.wallets.values() if wallet.type() == WalletType.REMOTE
+    ]
+    assert len(remote_wallets) == 1
+    assert remote_wallets[0].id() == first_response.wallet_id
+    assert remote_wallets[0].get_name() == "Remote Wallet #1"
+
+
 def test_create_new_wallet_post_init() -> None:
     with pytest.raises(
         ValueError,

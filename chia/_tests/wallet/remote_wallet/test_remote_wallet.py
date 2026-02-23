@@ -183,14 +183,13 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
 async def test_remote_wallet_create_new_without_name_uses_generated_name() -> None:
     wsm = Mock()
     wsm.wallets = {
-        uint32(2): Mock(type=Mock(return_value=WalletType.REMOTE), get_name=Mock(return_value="Remote Wallet #2")),
         uint32(3): Mock(type=Mock(return_value=WalletType.STANDARD_WALLET), get_name=Mock(return_value="Main Wallet")),
     }
     wsm.user_store = Mock()
     wsm.user_store.create_wallet = AsyncMock(
         return_value=WalletInfo(
             uint32(7),
-            "Remote Wallet #3",
+            "Remote Wallet #1",
             uint8(WalletType.REMOTE.value),
             '{"remote_coin_ids":[]}',
         )
@@ -199,10 +198,28 @@ async def test_remote_wallet_create_new_without_name_uses_generated_name() -> No
 
     remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, Mock(spec=Wallet))
 
-    assert remote_wallet.get_name() == "Remote Wallet #3"
+    assert remote_wallet.get_name() == "Remote Wallet #1"
     wsm.user_store.create_wallet.assert_awaited_once()
-    assert wsm.user_store.create_wallet.await_args.kwargs["name"] == "Remote Wallet #3"
+    assert wsm.user_store.create_wallet.await_args.kwargs["name"] == "Remote Wallet #1"
     wsm.add_new_wallet.assert_awaited_once_with(remote_wallet)
+
+
+@pytest.mark.anyio
+async def test_remote_wallet_create_new_rejects_second_remote_wallet() -> None:
+    wsm = Mock()
+    wsm.wallets = {
+        uint32(2): Mock(type=Mock(return_value=WalletType.REMOTE), get_name=Mock(return_value="Remote Wallet #1")),
+        uint32(3): Mock(type=Mock(return_value=WalletType.STANDARD_WALLET), get_name=Mock(return_value="Main Wallet")),
+    }
+    wsm.user_store = Mock()
+    wsm.user_store.create_wallet = AsyncMock()
+    wsm.add_new_wallet = AsyncMock()
+
+    with pytest.raises(ValueError, match="Only one RemoteWallet instance is supported"):
+        await RemoteWallet.create_new_remote_wallet(wsm, Mock(spec=Wallet))
+
+    wsm.user_store.create_wallet.assert_not_awaited()
+    wsm.add_new_wallet.assert_not_awaited()
 
 
 @pytest.mark.anyio
