@@ -122,6 +122,20 @@ class AugmentedBlockchain:
         assert current.height == height
         return current.header_hash
 
+    def copy_for_reader(self) -> AugmentedBlockchain:
+        """
+        Create an immutable-by-convention snapshot for worker-thread reads.
+
+        The returned instance shares the underlying blockchain reference but owns
+        independent overlay maps and MMR manager state copied at this instant.
+        """
+        snapshot = AugmentedBlockchain(self._underlying)
+        snapshot._extra_blocks = self._extra_blocks.copy()
+        snapshot._height_to_hash = self._height_to_hash.copy()
+        snapshot._overlay_floor = self._overlay_floor
+        snapshot.mmr_manager = self.mmr_manager.copy()
+        return snapshot
+
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         if block.header_hash != block_record.header_hash:
             raise AugmentedBlockchainValidationError(

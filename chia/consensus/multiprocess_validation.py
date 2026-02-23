@@ -57,6 +57,126 @@ class PreValidationResult(Streamable):
         return self.conds.validated_signature
 
 
+@dataclass(frozen=True)
+class PreparedPreValidationTask:
+    block: FullBlock
+    previous_generators: list[bytes] | None
+    conds: SpendBundleConditions | None
+    expected_vs: ValidationState
+
+
+async def _return_pre_validation_result(result: PreValidationResult) -> PreValidationResult:
+    return result
+
+
+def _pre_validation_error_awaitable(error_code: Err) -> Awaitable[PreValidationResult]:
+    return _return_pre_validation_result(PreValidationResult(uint16(error_code.value), None, None, uint32(0)))
+
+
+def schedule_pre_validate_block(
+    constants: ConsensusConstants,
+    blockchain: BlockRecordsProtocol,
+    pool: Executor,
+    prepared_task: PreparedPreValidationTask,
+    *,
+    skip_commitment_validation: bool = False,
+) -> Awaitable[PreValidationResult]:
+    return asyncio.get_running_loop().run_in_executor(
+        pool,
+        _pre_validate_block,
+        constants,
+        blockchain,
+        prepared_task.block,
+        prepared_task.previous_generators,
+        prepared_task.conds,
+        prepared_task.expected_vs,
+        skip_commitment_validation,
+    )
+
+
+async def prepare_pre_validate_block(
+    constants: ConsensusConstants,
+    blockchain: AugmentedBlockchain,
+    block: FullBlock,
+    conds: SpendBundleConditions | None,
+    vs: ValidationState,
+    *,
+    wp_summaries: list[SubEpochSummary] | None = None,
+) -> PreparedPreValidationTask | Awaitable[PreValidationResult]:
+    prev_b: BlockRecord | None = None
+    if block.height > 0:
+        curr = blockchain.try_block_record(block.prev_header_hash)
+        if curr is None:
+            return _pre_validation_error_awaitable(Err.INVALID_PREV_BLOCK_HASH)
+        prev_b = curr
+
+    assert isinstance(block, FullBlock)
+    if len(block.finished_sub_slots) > 0:
+        if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+            vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+        if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+            vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+    challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
+    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+        cc_sp_hash: bytes32 = challenge
+    else:
+        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+
+    required_iters = validate_pospace_and_get_required_iters(
+        constants,
+        block.reward_chain_block.proof_of_space,
+        challenge,
+        cc_sp_hash,
+        block.height,
+        vs.difficulty,
+        pre_sp_tx_block_height(
+            constants=constants,
+            blocks=blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        ),
+    )
+    if required_iters is None:
+        return _pre_validation_error_awaitable(Err.INVALID_POSPACE)
+
+    try:
+        block_rec = block_to_block_record(
+            constants,
+            blockchain,
+            required_iters,
+            block,
+            sub_slot_iters=vs.ssi,
+            prev_ses_block=vs.prev_ses_block,
+        )
+    except ValueError:
+        log.exception("block_to_block_record()")
+        return _pre_validation_error_awaitable(Err.INVALID_SUB_EPOCH_SUMMARY)
+
+    if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
+        next_ses = wp_summaries[int(block.height / constants.SUB_EPOCH_BLOCKS) - 1]
+        if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
+            log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
+            return _pre_validation_error_awaitable(Err.INVALID_SUB_EPOCH_SUMMARY)
+
+    blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
+
+    previous_generators: list[bytes] | None = None
+    try:
+        block_generator: BlockGenerator | None = await get_block_generator(blockchain.lookup_block_generators, block)
+        if block_generator is not None:
+            previous_generators = block_generator.generator_refs
+    except ValueError:
+        return _pre_validation_error_awaitable(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
+
+    expected_vs = copy.copy(vs)
+    if block_rec.sub_epoch_summary_included is not None:
+        vs.prev_ses_block = block_rec
+
+    return PreparedPreValidationTask(block, previous_generators, conds, expected_vs)
+
+
 # this layer of abstraction is here to let wallet tests monkeypatch it
 def _run_block(
     block: FullBlock, prev_generators: list[bytes], prev_tx_height: uint32, constants: ConsensusConstants
@@ -200,92 +320,22 @@ async def pre_validate_block(
         wp_summaries:
         validate_signatures:
     """
-    prev_b: BlockRecord | None = None
-
-    async def return_error(error_code: Err) -> PreValidationResult:
-        return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
-
-    if block.height > 0:
-        curr = blockchain.try_block_record(block.prev_header_hash)
-        if curr is None:
-            return return_error(Err.INVALID_PREV_BLOCK_HASH)
-        prev_b = curr
-
-    assert isinstance(block, FullBlock)
-    if len(block.finished_sub_slots) > 0:
-        if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-            vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
-        if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-            vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-    overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-    challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
-    if block.reward_chain_block.challenge_chain_sp_vdf is None:
-        cc_sp_hash: bytes32 = challenge
-    else:
-        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-
-    required_iters = validate_pospace_and_get_required_iters(
-        constants,
-        block.reward_chain_block.proof_of_space,
-        challenge,
-        cc_sp_hash,
-        block.height,
-        vs.difficulty,
-        pre_sp_tx_block_height(
-            constants=constants,
-            blocks=blockchain,
-            prev_b_hash=block.prev_header_hash,
-            sp_index=block.reward_chain_block.signage_point_index,
-            finished_sub_slots=len(block.finished_sub_slots),
-        ),
-    )
-    if required_iters is None:
-        return return_error(Err.INVALID_POSPACE)
-
-    try:
-        block_rec = block_to_block_record(
-            constants,
-            blockchain,
-            required_iters,
-            block,
-            sub_slot_iters=vs.ssi,
-            prev_ses_block=vs.prev_ses_block,
-        )
-    except ValueError:
-        log.exception("block_to_block_record()")
-        return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
-
-    if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
-        next_ses = wp_summaries[int(block.height / constants.SUB_EPOCH_BLOCKS) - 1]
-        if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
-            log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-            return return_error(Err.INVALID_SUB_EPOCH_SUMMARY)
-
-    blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
-    prev_b = block_rec
-
-    previous_generators: list[bytes] | None = None
-
-    try:
-        block_generator: BlockGenerator | None = await get_block_generator(blockchain.lookup_block_generators, block)
-        if block_generator is not None:
-            previous_generators = block_generator.generator_refs
-    except ValueError:
-        return return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)
-
-    future = asyncio.get_running_loop().run_in_executor(
-        pool,
-        _pre_validate_block,
+    prepared_task_or_error = await prepare_pre_validate_block(
         constants,
         blockchain,
         block,
-        previous_generators,
         conds,
-        copy.copy(vs),
-        skip_commitment_validation,
+        vs,
+        wp_summaries=wp_summaries,
     )
 
-    if block_rec.sub_epoch_summary_included is not None:
-        vs.prev_ses_block = block_rec
+    if isinstance(prepared_task_or_error, PreparedPreValidationTask):
+        return schedule_pre_validate_block(
+            constants,
+            blockchain,
+            pool,
+            prepared_task_or_error,
+            skip_commitment_validation=skip_commitment_validation,
+        )
 
-    return future
+    return prepared_task_or_error
