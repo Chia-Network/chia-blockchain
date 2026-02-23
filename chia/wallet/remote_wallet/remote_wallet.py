@@ -81,7 +81,9 @@ class RemoteWallet:
         if len(self.remote_info.remote_coin_ids) > 0:
             # Restore interested coin wallet-id mapping on startup so remote coin updates
             # continue to be associated with this remote wallet after restart.
-            await self.wallet_state_manager.add_interested_coin_ids(self.remote_info.remote_coin_ids, [self.wallet_info.id])
+            await self.wallet_state_manager.add_interested_coin_ids(
+                self.remote_info.remote_coin_ids, [self.wallet_info.id]
+            )
 
         return self
 
