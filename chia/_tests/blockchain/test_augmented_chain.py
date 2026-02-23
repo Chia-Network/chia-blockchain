@@ -58,6 +58,14 @@ class NullBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
 
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+    ) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+
     async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
 

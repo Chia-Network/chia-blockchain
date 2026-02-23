@@ -46,16 +46,74 @@ class AugmentedBlockchain:
             return None
         return eb[1]
 
+    def _min_overlay_entry(self) -> tuple[uint32, bytes32] | None:
+        """
+        Snapshot and return the minimum overlay height/hash pair.
+
+        Taking a snapshot avoids iterating a dictionary while it may be mutated
+        concurrently by the event loop.
+        """
+        overlay_height_to_hash = self._height_to_hash.copy()
+        if not overlay_height_to_hash:
+            return None
+
+        min_overlay_height = min(overlay_height_to_hash)
+        return min_overlay_height, overlay_height_to_hash[min_overlay_height]
+
     def _get_fork_height(self) -> uint32 | None:
         """
-        Compute the fork point (last common block height) from augmented height_to_hash.
+        Find the fork point by walking backward from the lowest overlay block
+        until we find a hash matching the underlying chain's height_to_hash.
         """
-        if not self._height_to_hash:
+        min_overlay = self._min_overlay_entry()
+        if min_overlay is None:
             return None
-        min_height = min(self._height_to_hash.keys())
-        if min_height == 0:
-            return None  # no common blocks
-        return uint32(min_height - 1)
+
+        _, overlay_hash = min_overlay
+        br = self.try_block_record(overlay_hash)
+        assert br is not None
+
+        while br.height > 0:
+            prev_height = uint32(br.height - 1)
+            if self._underlying.height_to_hash(prev_height) == br.prev_hash:
+                return prev_height
+
+            # All fork ancestors should be in cache (recently validated orphans)
+            br = self._underlying.try_block_record(br.prev_hash)
+            assert br is not None
+
+        # No common ancestor — genesis-level fork or batch starting from genesis
+        return None
+
+    def _overlay_hash_from_closest_height(self, height: uint32) -> bytes32 | None:
+        """
+        Resolve a hash for ``height`` by walking backward from the minimum
+        overlay height.
+
+        This fills gaps where intermediate fork blocks are present as orphan
+        block records but not explicitly materialized in ``_height_to_hash``.
+        """
+        if not self._extra_blocks:
+            return None
+
+        min_overlay = self._min_overlay_entry()
+        if min_overlay is None:
+            return None
+
+        min_overlay_height, current_hash = min_overlay
+        if height >= min_overlay_height:
+            return None
+
+        current = self.try_block_record(current_hash)
+        assert current is not None
+
+        while current.height > height:
+            parent = self._underlying.try_block_record(current.prev_hash)
+            assert parent is not None
+            current = parent
+
+        assert current.height == height
+        return current.header_hash
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         if block.header_hash != block_record.header_hash:
@@ -159,6 +217,11 @@ class AugmentedBlockchain:
         ret = self._height_to_hash.get(height)
         if ret is not None:
             return ret
+
+        ret = self._overlay_hash_from_closest_height(height)
+        if ret is not None:
+            return ret
+
         return self._underlying.height_to_hash(height)
 
     def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
