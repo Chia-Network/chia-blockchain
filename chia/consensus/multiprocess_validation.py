@@ -332,7 +332,7 @@ async def pre_validate_block(
     if isinstance(prepared_task_or_error, PreparedPreValidationTask):
         return schedule_pre_validate_block(
             constants,
-            blockchain,
+            blockchain.copy_for_reader(),
             pool,
             prepared_task_or_error,
             skip_commitment_validation=skip_commitment_validation,
