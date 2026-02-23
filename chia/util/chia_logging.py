@@ -51,7 +51,7 @@ def initialize_logging(
     log_backcompat = logging_config.get("log_backcompat", False)
     log_level = logging_config.get("log_level", default_log_level)
     file_name_length = 33 - len(service_name)
-    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    log_date_format = "%Y-%m-%dT%H:%M:%S%z"
     file_log_formatter = logging.Formatter(
         fmt=(
             f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s"
