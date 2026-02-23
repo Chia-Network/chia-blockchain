@@ -83,6 +83,9 @@ if TYPE_CHECKING:
 else:
     FullNode = object
 
+MAX_COIN_HASHES_PER_REQUEST = 50
+MAX_COINS_MAP_SIZE = 100
+
 
 async def tx_request_and_timeout(full_node: FullNode, transaction_id: bytes32, task_id: bytes32) -> None:
     """
@@ -1303,18 +1306,31 @@ class FullNodeAPI:
 
     @metadata.request()
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Message | None:
+        if request.puzzle_hashes is not None and len(request.puzzle_hashes) > MAX_COIN_HASHES_PER_REQUEST:
+            reject = wallet_protocol.RejectAdditionsRequest(
+                request.height, request.header_hash if request.header_hash is not None else bytes32.zeros
+            )
+            return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
+
         if request.header_hash is None:
             header_hash: bytes32 | None = self.full_node.blockchain.height_to_hash(request.height)
         else:
             header_hash = request.header_hash
         if header_hash is None:
-            raise ValueError(f"Block at height {request.height} not found")
-
-        # Note: this might return bad data if there is a reorg in this time
-        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, bytes32.zeros)
+            return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
 
         if self.full_node.blockchain.height_to_hash(request.height) != header_hash:
-            raise ValueError(f"Block {header_hash} no longer in chain, or invalid header_hash")
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
+            return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
+
+        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
+
+        # Note: this might return bad data if there is a reorg while waiting for
+        # the DB. So check the height-to-hash again
+        if self.full_node.blockchain.height_to_hash(request.height) != header_hash:
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
+            return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
 
         puzzlehash_coins_map: dict[bytes32, list[Coin]] = {}
         for coin_record in additions:
@@ -1327,6 +1343,9 @@ class FullNodeAPI:
         proofs_map: list[tuple[bytes32, bytes, bytes | None]] = []
 
         if request.puzzle_hashes is None:
+            if len(puzzlehash_coins_map) > MAX_COINS_MAP_SIZE:
+                reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
+                return make_msg(ProtocolMessageTypes.reject_additions_request, reject)
             for puzzle_hash, coins in puzzlehash_coins_map.items():
                 coins_map.append((puzzle_hash, coins))
             response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
@@ -1360,6 +1379,10 @@ class FullNodeAPI:
 
     @metadata.request()
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Message | None:
+        if request.coin_names is not None and len(request.coin_names) > MAX_COIN_HASHES_PER_REQUEST:
+            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+            return make_msg(ProtocolMessageTypes.reject_removals_request, reject)
+
         block: FullBlock | None = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
@@ -1377,11 +1400,14 @@ class FullNodeAPI:
 
         assert block is not None and block.foliage_transaction_block is not None
 
-        # Note: this might return bad data if there is a reorg in this time
         all_removals: list[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
 
+        # Note: this might return bad data if there is a reorg while waiting for
+        # the DB. So check the height-to-hash again
         if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
-            raise ValueError(f"Block {block.header_hash} no longer in chain")
+            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+            msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
+            return msg
 
         all_removals_dict: dict[bytes32, Coin] = {}
         for coin_record in all_removals:

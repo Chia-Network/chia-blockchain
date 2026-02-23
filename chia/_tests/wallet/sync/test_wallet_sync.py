@@ -40,14 +40,17 @@ from chia.consensus.augmented_chain import AugmentedBlockchain
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.full_node_api import MAX_COIN_HASHES_PER_REQUEST, FullNodeAPI
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.outbound_message import Message, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
+    RejectAdditionsRequest,
+    RejectRemovalsRequest,
     RequestAdditions,
+    RequestRemovals,
     RespondAdditions,
     RespondBlockHeader,
     RespondBlockHeaders,
@@ -635,13 +638,41 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     last_block: BlockRecord | None = full_node_api.full_node.blockchain.get_peak()
     assert last_block is not None
 
-    # Invalid height
-    with pytest.raises(ValueError):
-        await full_node_api.request_additions(RequestAdditions(uint32(100), last_block.header_hash, [ph]))
+    # Invalid height (with header_hash specified)
+    res = await full_node_api.request_additions(RequestAdditions(uint32(100), last_block.header_hash, [ph]))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == 100
+    assert reject.header_hash == last_block.header_hash
+
+    # Invalid height (no header_hash, returns zeros)
+    res = await full_node_api.request_additions(RequestAdditions(uint32(100), None, [ph]))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == 100
+    assert reject.header_hash == bytes32.zeros
 
     # Invalid header hash
-    with pytest.raises(ValueError):
-        await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
+    res = await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == last_block.height
+    assert reject.header_hash == std_hash(b"")
+
+    # Too many puzzle hashes
+    too_many = [std_hash(i.to_bytes(4, "big")) for i in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
+    res = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, too_many))
+    assert res is not None
+    reject = RejectAdditionsRequest.from_bytes(res.data)
+    assert reject.height == last_block.height
+    assert reject.header_hash == last_block.header_hash
+
+    # Exactly at the limit is allowed
+    at_limit = [std_hash(i.to_bytes(4, "big")) for i in range(MAX_COIN_HASHES_PER_REQUEST)]
+    res = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, at_limit))
+    assert res is not None
+    response = RespondAdditions.from_bytes(res.data)
+    assert response.height == last_block.height
 
     # No results
     fake_coin = std_hash(b"")
@@ -761,6 +792,35 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
     response = RespondAdditions.from_bytes(res4.data)
     assert response.proofs == []
     assert len(response.coins) == 0
+
+
+@pytest.mark.anyio
+async def test_request_removals_too_many_coin_names(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str
+) -> None:
+    full_nodes, wallets, _ = simulator_and_wallet
+    wallet_node, wallet_server = wallets[0]
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        ph = await action_scope.get_puzzle_hash(wallet.wallet_state_manager)
+
+    full_node_api = full_nodes[0]
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.full_node.server.get_port()), None)
+
+    for _ in range(2):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    last_block = full_node_api.full_node.blockchain.get_peak()
+    assert last_block is not None
+
+    too_many = [std_hash(i.to_bytes(4, "big")) for i in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
+    res = await full_node_api.request_removals(RequestRemovals(last_block.height, last_block.header_hash, too_many))
+    assert res is not None
+    reject = RejectRemovalsRequest.from_bytes(res.data)
+    assert reject.height == last_block.height
+    assert reject.header_hash == last_block.header_hash
 
 
 @pytest.mark.anyio
