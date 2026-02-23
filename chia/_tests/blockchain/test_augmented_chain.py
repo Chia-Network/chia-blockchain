@@ -386,3 +386,11 @@ async def test_overlay_gap_resolution_when_floor_moves(default_10000_blocks: lis
     assert abc._overlay_floor == (uint32(3), blocks[3].header_hash)
 
     assert abc.height_to_hash(uint32(1)) == blocks[1].header_hash
+
+
+def test_copy_for_reader_mmr_manager_is_read_only() -> None:
+    abc = AugmentedBlockchain(NullBlockchain())
+    reader_snapshot = abc.copy_for_reader()
+
+    with pytest.raises(RuntimeError, match="read-only MMR manager"):
+        reader_snapshot.mmr_manager.add_block_to_mmr(bytes32.zeros, bytes32.zeros, uint32(0))

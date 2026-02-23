@@ -6,12 +6,49 @@ from chia_rs import BlockRecord, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32
 
-from chia.consensus.blockchain_interface import BlocksProtocol, MMRManagerProtocol
+from chia.consensus.blockchain_interface import BlockRecordsProtocol, BlocksProtocol, MMRManagerProtocol
 from chia.util.errors import Err
 
 
 class AugmentedBlockchainValidationError(AssertionError):
     pass
+
+
+class _ReadOnlyMMRManager:
+    if TYPE_CHECKING:
+        _protocol_check: ClassVar[MMRManagerProtocol] = cast("_ReadOnlyMMRManager", None)
+
+    _wrapped: MMRManagerProtocol
+
+    def __init__(self, wrapped: MMRManagerProtocol) -> None:
+        self._wrapped = wrapped
+
+    def get_mmr_root_for_block(
+        self,
+        prev_header_hash: bytes32,
+        new_sp_index: int,
+        starts_new_slot: bool,
+        blocks: BlockRecordsProtocol,
+        fork_height: uint32 | None = None,
+    ) -> bytes32 | None:
+        return self._wrapped.get_mmr_root_for_block(
+            prev_header_hash, new_sp_index, starts_new_slot, blocks, fork_height
+        )
+
+    def get_current_mmr_root(self) -> bytes32 | None:
+        return self._wrapped.get_current_mmr_root()
+
+    def add_block_to_mmr(self, header_hash: bytes32, prev_hash: bytes32, height: uint32) -> None:
+        raise RuntimeError("read-only MMR manager does not allow mutation")
+
+    def rollback_to_height(self, target_height: int, blocks: BlockRecordsProtocol) -> None:
+        raise RuntimeError("read-only MMR manager does not allow mutation")
+
+    def get_aggrtegate_from(self) -> uint32:
+        return self._wrapped.get_aggrtegate_from()
+
+    def copy(self) -> MMRManagerProtocol:
+        return _ReadOnlyMMRManager(self._wrapped)
 
 
 class AugmentedBlockchain:
@@ -126,14 +163,14 @@ class AugmentedBlockchain:
         """
         Create an immutable-by-convention snapshot for worker-thread reads.
 
-        The returned instance shares the underlying blockchain reference but owns
-        independent overlay maps and MMR manager state copied at this instant.
+        The returned instance shares the underlying blockchain reference, owns
+        independent overlay maps, and uses a shared read-only MMR manager view.
         """
         snapshot = AugmentedBlockchain(self._underlying)
         snapshot._extra_blocks = self._extra_blocks.copy()
         snapshot._height_to_hash = self._height_to_hash.copy()
         snapshot._overlay_floor = self._overlay_floor
-        snapshot.mmr_manager = self.mmr_manager.copy()
+        snapshot.mmr_manager = _ReadOnlyMMRManager(self.mmr_manager)
         return snapshot
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
