@@ -71,6 +71,43 @@ class NullBlockchain:
 
 
 @dataclass
+class OverlayFloorBlockchain(NullBlockchain):
+    records: dict[bytes32, BlockRecord] = field(default_factory=dict)
+
+    async def get_block_record_from_db(self, header_hash: bytes32) -> BlockRecord | None:
+        return self.records.get(header_hash)
+
+    def add_block_record(self, block_record: BlockRecord) -> None:
+        self.added_blocks.add(block_record.header_hash)
+        self.records[block_record.header_hash] = block_record
+        self.heights[block_record.height] = block_record.header_hash
+
+    def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
+        return self.records.get(header_hash)
+
+    def block_record(self, header_hash: bytes32) -> BlockRecord:
+        return self.records[header_hash]
+
+    def height_to_block_record(self, height: uint32) -> BlockRecord:
+        hh = self.heights.get(height)
+        if hh is None:
+            raise ValueError("Height is not in blockchain")
+        return self.records[hh]
+
+    def contains_block(self, header_hash: bytes32, height: uint32) -> bool:
+        return self.heights.get(height) == header_hash
+
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
+        ret: list[bytes32] = []
+        for hh in header_hashes:
+            br = self.records.get(hh)
+            if br is None:
+                raise KeyError("no block records in OverlayFloorBlockchain")
+            ret.append(br.prev_hash)
+        return ret
+
+
+@dataclass
 class FakeBlockRecord:
     height: uint32
     header_hash: bytes32
@@ -273,3 +310,79 @@ async def test_augmented_chain_validation_first_block_prev_hash(
         )
         abc2.add_extra_block(blocks[10], correct_block)  # type: ignore[arg-type]
         assert len(abc2._height_to_hash) == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_overlay_floor_insert_and_non_floor_remove(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = OverlayFloorBlockchain()
+    underlying.add_block_record(BR(blocks[1]))
+    abc = AugmentedBlockchain(underlying)
+
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+    assert abc._overlay_floor == (uint32(2), blocks[2].header_hash)
+
+    br5 = FakeBlockRecord(height=uint32(5), header_hash=blocks[5].header_hash, prev_hash=blocks[2].header_hash)
+    abc.add_extra_block(blocks[5], br5)  # type: ignore[arg-type]
+
+    br7 = FakeBlockRecord(height=uint32(7), header_hash=blocks[7].header_hash, prev_hash=blocks[5].header_hash)
+    abc.add_extra_block(blocks[7], br7)  # type: ignore[arg-type]
+
+    abc.add_block_record(BR(blocks[0]))
+    assert abc._overlay_floor == (uint32(0), blocks[0].header_hash)
+
+    underlying.heights[uint32(2)] = blocks[2].header_hash
+    underlying.heights[uint32(5)] = blocks[5].header_hash
+    underlying.heights[uint32(7)] = blocks[7].header_hash
+
+    abc.remove_extra_block(blocks[5].header_hash)
+
+    assert abc._overlay_floor == (uint32(0), blocks[0].header_hash)
+    assert uint32(5) not in abc._height_to_hash
+    assert uint32(7) in abc._height_to_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_overlay_floor_recompute_on_floor_remove(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = OverlayFloorBlockchain()
+    underlying.add_block_record(BR(blocks[1]))
+    abc = AugmentedBlockchain(underlying)
+
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+    br5 = FakeBlockRecord(height=uint32(5), header_hash=blocks[5].header_hash, prev_hash=blocks[2].header_hash)
+    abc.add_extra_block(blocks[5], br5)  # type: ignore[arg-type]
+    assert abc._overlay_floor == (uint32(2), blocks[2].header_hash)
+
+    underlying.heights[uint32(2)] = blocks[2].header_hash
+    underlying.heights[uint32(5)] = blocks[5].header_hash
+
+    abc.remove_extra_block(blocks[2].header_hash)
+
+    assert abc._overlay_floor == (uint32(5), blocks[5].header_hash)
+    assert uint32(2) not in abc._height_to_hash
+    assert uint32(5) in abc._height_to_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="save time")
+async def test_overlay_gap_resolution_when_floor_moves(default_10000_blocks: list[FullBlock]) -> None:
+    blocks = default_10000_blocks
+    underlying = OverlayFloorBlockchain()
+    for block in blocks[:4]:
+        underlying.add_block_record(BR(block))
+
+    abc = AugmentedBlockchain(underlying)
+    abc.add_extra_block(blocks[2], BR(blocks[2]))
+    abc.add_extra_block(blocks[3], BR(blocks[3]))
+    assert abc._overlay_floor == (uint32(2), blocks[2].header_hash)
+
+    # Underlying height lookup disagrees with records to verify gap resolution path.
+    underlying.heights[uint32(1)] = bytes32(b"\xff" * 32)
+
+    abc.remove_extra_block(blocks[2].header_hash)
+    assert abc._overlay_floor == (uint32(3), blocks[3].header_hash)
+
+    assert abc.height_to_hash(uint32(1)) == blocks[1].header_hash

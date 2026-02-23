@@ -32,12 +32,14 @@ class AugmentedBlockchain:
     _underlying: BlocksProtocol
     _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
     _height_to_hash: dict[uint32, bytes32]
+    _overlay_floor: tuple[uint32, bytes32] | None
     mmr_manager: MMRManagerProtocol
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._overlay_floor = None
         self.mmr_manager = underlying.mmr_manager.copy()
 
     def _get_block_record(self, header_hash: bytes32) -> BlockRecord | None:
@@ -46,19 +48,24 @@ class AugmentedBlockchain:
             return None
         return eb[1]
 
+    def _recompute_overlay_floor_from_map(self) -> None:
+        if not self._height_to_hash:
+            self._overlay_floor = None
+            return
+
+        min_overlay_height = min(self._height_to_hash)
+        self._overlay_floor = (min_overlay_height, self._height_to_hash[min_overlay_height])
+
+    def _update_overlay_floor_on_insert(self, height: uint32, header_hash: bytes32) -> None:
+        floor = self._overlay_floor
+        if floor is None or height <= floor[0]:
+            self._overlay_floor = (height, header_hash)
+
     def _min_overlay_entry(self) -> tuple[uint32, bytes32] | None:
         """
-        Snapshot and return the minimum overlay height/hash pair.
-
-        Taking a snapshot avoids iterating a dictionary while it may be mutated
-        concurrently by the event loop.
+        Return the cached minimum overlay height/hash pair.
         """
-        overlay_height_to_hash = self._height_to_hash.copy()
-        if not overlay_height_to_hash:
-            return None
-
-        min_overlay_height = min(overlay_height_to_hash)
-        return min_overlay_height, overlay_height_to_hash[min_overlay_height]
+        return self._overlay_floor
 
     def _get_fork_height(self) -> uint32 | None:
         """
@@ -139,18 +146,28 @@ class AugmentedBlockchain:
 
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._update_overlay_floor_on_insert(block_record.height, block_record.header_hash)
 
     def remove_extra_block(self, hh: bytes32) -> None:
         if hh not in self._extra_blocks:
             return
 
         block_record = self._extra_blocks.pop(hh)[1]
+        floor = self._overlay_floor
+        floor_height = None if floor is None else floor[0]
+        removed_floor = False
         if self._underlying.contains_block(block_record.header_hash, block_record.height):
             height_to_remove = block_record.height
             for h in range(height_to_remove, -1, -1):
-                if h not in self._height_to_hash:
+                h_uint32 = uint32(h)
+                if h_uint32 not in self._height_to_hash:
                     break
-                del self._height_to_hash[uint32(h)]
+                del self._height_to_hash[h_uint32]
+                if floor_height is not None and h_uint32 == floor_height:
+                    removed_floor = True
+
+        if removed_floor:
+            self._recompute_overlay_floor_from_map()
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
@@ -185,6 +202,7 @@ class AugmentedBlockchain:
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._underlying.add_block_record(block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
+        self._update_overlay_floor_on_insert(block_record.height, block_record.header_hash)
         # now that we're adding the block to the underlying blockchain, we don't
         # need to keep the extra block around anymore
         hh = block_record.header_hash
