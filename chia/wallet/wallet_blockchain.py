@@ -210,6 +210,11 @@ class WalletBlockchain:
     def height_to_hash(self, height: uint32) -> bytes32:
         return self._height_to_hash[height]
 
+    def get_mmr_root_for_block(
+        self, prev_header_hash: bytes32, new_sp_index: int, starts_new_slot: bool
+    ) -> bytes32 | None:
+        return self.mmr_manager.get_mmr_root_for_block(prev_header_hash, new_sp_index, starts_new_slot, self)
+
     def try_block_record(self, header_hash: bytes32) -> BlockRecord | None:
         return self._block_records.get(header_hash)
 

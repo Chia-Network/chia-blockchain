@@ -549,11 +549,10 @@ def unfinished_block_to_full_block_with_mmr(
         sp_index=unfinished_block.reward_chain_block.signage_point_index,
         finished_sub_slots=len(finished_sub_slots),
     ):
-        header_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
+        header_mmr_root = blocks.get_mmr_root_for_block(
             unfinished_block.prev_header_hash,
             unfinished_block.reward_chain_block.signage_point_index,
             len(finished_sub_slots) > 0,
-            blocks,
         )
 
     return unfinished_block_to_full_block(

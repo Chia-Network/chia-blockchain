@@ -1079,11 +1079,10 @@ def validate_finished_header_block(
         sp_index = header_block.reward_chain_block.signage_point_index
         starts_new_slot = len(header_block.finished_sub_slots) > 0
 
-        expected_mmr_root = blocks.mmr_manager.get_mmr_root_for_block(
+        expected_mmr_root = blocks.get_mmr_root_for_block(
             header_block.foliage.prev_block_hash,
             sp_index,
             starts_new_slot,
-            blocks,
         )
         mmr_root = header_block.reward_chain_block.header_mmr_root
 
