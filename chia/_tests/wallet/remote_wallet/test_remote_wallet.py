@@ -1,0 +1,256 @@
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, Mock
+
+import pytest
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+
+from chia._tests.environments.wallet import WalletTestFramework
+from chia._tests.util.time_out_assert import time_out_assert
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.types.blockchain_format.coin import Coin
+from chia.wallet.remote_wallet.remote_info import RemoteInfo
+from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_request_types import RegisterRemoteCoins
+
+
+async def has_remote_coin_record(wallet_node: WalletNode, coin_id: bytes32, remote_wallet_id: uint32) -> bool:
+    record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
+    if record is None:
+        return False
+    return record.wallet_type == WalletType.REMOTE and record.wallet_id == int(remote_wallet_id)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_remote_wallet_register_remote_coin_persists_coin_record(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node: FullNodeSimulator = wallet_environments.full_node
+
+    # Create a coin that no wallet owns by sending to a puzzle hash we don't own.
+    target_ph = bytes32.secret()
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            amounts=[uint64(1)],
+            puzzle_hashes=[target_ph],
+            action_scope=action_scope,
+        )
+    [tx] = action_scope.side_effects.transactions
+
+    await full_node.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+    await full_node.check_transactions_confirmed(wallet_node.wallet_state_manager, [tx])
+
+    created_coin = next(coin for coin in tx.additions if coin.puzzle_hash == target_ph and coin.amount == uint64(1))
+    coin_id = created_coin.name()
+
+    # Create a remote wallet and register the coin id.
+    async with wallet_node.wallet_state_manager.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(
+            wallet_node.wallet_state_manager, wallet, name="Remote Wallet #1"
+        )
+
+    # check for CoinRecord before we register interest in the coin
+    await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id, remote_wallet.id())
+
+    await env.rpc_client.fetch(
+        "register_remote_coins", RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id]).to_json_dict()
+    )
+
+    # Trigger/allow subscription processing and coin updates.
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    await time_out_assert(20, has_remote_coin_record, True, wallet_node, coin_id, remote_wallet.id())
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_remote_wallet_register_remote_coins_persists_coin_records(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node: FullNodeSimulator = wallet_environments.full_node
+
+    # Create multiple coins that no wallet owns by sending to puzzle hashes we don't own.
+    target_ph_1 = bytes32.secret()
+    target_ph_2 = bytes32.secret()
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            amounts=[uint64(1), uint64(2)],
+            puzzle_hashes=[target_ph_1, target_ph_2],
+            action_scope=action_scope,
+        )
+    [tx] = action_scope.side_effects.transactions
+
+    await full_node.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+    await full_node.check_transactions_confirmed(wallet_node.wallet_state_manager, [tx])
+
+    created_coin_1 = next(coin for coin in tx.additions if coin.puzzle_hash == target_ph_1 and coin.amount == uint64(1))
+    created_coin_2 = next(coin for coin in tx.additions if coin.puzzle_hash == target_ph_2 and coin.amount == uint64(2))
+    coin_id_1 = created_coin_1.name()
+    coin_id_2 = created_coin_2.name()
+
+    async with wallet_node.wallet_state_manager.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(
+            wallet_node.wallet_state_manager, wallet, name="Remote Wallet #1"
+        )
+
+    await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id_1, remote_wallet.id())
+    await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id_2, remote_wallet.id())
+
+    await env.rpc_client.fetch(
+        "register_remote_coins",
+        RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id_1, coin_id_2]).to_json_dict(),
+    )
+
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    await time_out_assert(20, has_remote_coin_record, True, wallet_node, coin_id_1, remote_wallet.id())
+    await time_out_assert(20, has_remote_coin_record, True, wallet_node, coin_id_2, remote_wallet.id())
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_interested_coin_not_persisted_without_remote_wallet(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wallet_node: WalletNode = env.node
+    full_node: FullNodeSimulator = wallet_environments.full_node
+
+    # Create an "external" coin by sending to a puzzle hash we don't own.
+    target_ph = bytes32.secret()
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            amounts=[uint64(1)],
+            puzzle_hashes=[target_ph],
+            action_scope=action_scope,
+        )
+    [tx] = action_scope.side_effects.transactions
+
+    await full_node.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+    await full_node.check_transactions_confirmed(wallet_node.wallet_state_manager, [tx])
+
+    created_coin = next(coin for coin in tx.additions if coin.puzzle_hash == target_ph and coin.amount == uint64(1))
+    coin_id = created_coin.name()
+
+    # Register interest without associating it to any RemoteWallet id.
+    await wallet_node.wallet_state_manager.add_interested_coin_ids([coin_id])
+
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+    await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    # Give the wallet node a moment to process subscription/updates, then assert nothing was stored.
+    record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
+    assert record is None
+
+
+@pytest.mark.anyio
+async def test_remote_wallet_create_new_without_name_uses_generated_name() -> None:
+    wsm = Mock()
+    wsm.wallets = {
+        uint32(2): Mock(type=Mock(return_value=WalletType.REMOTE), get_name=Mock(return_value="Remote Wallet #2")),
+        uint32(3): Mock(type=Mock(return_value=WalletType.STANDARD_WALLET), get_name=Mock(return_value="Main Wallet")),
+    }
+    wsm.user_store = Mock()
+    wsm.user_store.create_wallet = AsyncMock(
+        return_value=WalletInfo(
+            uint32(7),
+            "Remote Wallet #3",
+            uint8(WalletType.REMOTE.value),
+            '{"remote_coin_ids":[]}',
+        )
+    )
+    wsm.add_new_wallet = AsyncMock()
+
+    remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, Mock(spec=Wallet))
+
+    assert remote_wallet.get_name() == "Remote Wallet #3"
+    wsm.user_store.create_wallet.assert_awaited_once()
+    assert wsm.user_store.create_wallet.await_args.kwargs["name"] == "Remote Wallet #3"
+    wsm.add_new_wallet.assert_awaited_once_with(remote_wallet)
+
+
+@pytest.mark.anyio
+async def test_remote_wallet_create_and_save_info_paths() -> None:
+    wallet_info = WalletInfo(uint32(9), "Remote Wallet #9", uint8(WalletType.REMOTE.value), '{"remote_coin_ids":[]}')
+    wsm = Mock()
+    wsm.user_store = Mock()
+    wsm.user_store.update_wallet = AsyncMock()
+
+    wallet = await RemoteWallet.create(wsm, Mock(spec=Wallet), wallet_info)
+    assert wallet.id() == uint32(9)
+    assert wallet.get_name() == "Remote Wallet #9"
+    assert wallet.type() == WalletType.REMOTE
+    assert wallet.require_derivation_paths() is False
+
+    await wallet.save_info(RemoteInfo(remote_coin_ids=[bytes32.zeros]))
+    wsm.user_store.update_wallet.assert_awaited_once()
+    assert bytes32.zeros in wallet.remote_info.remote_coin_ids
+
+
+@pytest.mark.anyio
+async def test_remote_wallet_create_with_invalid_data_falls_back_to_empty_info() -> None:
+    wallet_info = WalletInfo(uint32(5), "Remote Wallet #5", uint8(WalletType.REMOTE.value), "{bad_json")
+    wallet = await RemoteWallet.create(Mock(), Mock(spec=Wallet), wallet_info)
+    assert wallet.remote_info.remote_coin_ids == []
+
+
+@pytest.mark.anyio
+async def test_remote_wallet_stub_methods_and_errors() -> None:
+    wallet = RemoteWallet()
+    wallet.wallet_info = WalletInfo(uint32(1), "Remote Wallet #1", uint8(WalletType.REMOTE.value), "{}")
+    wallet.wallet_state_manager = Mock(wallets={})
+    wallet.remote_info = RemoteInfo(remote_coin_ids=[])
+    wallet.standard_wallet = Mock(spec=Wallet)
+    wallet.log = Mock()
+
+    assert await wallet.get_confirmed_balance() == uint128(0)
+    assert await wallet.get_unconfirmed_balance() == uint128(0)
+    assert await wallet.get_spendable_balance() == uint128(0)
+    assert await wallet.get_pending_change_balance() == uint64(0)
+    assert await wallet.get_max_send_amount() == uint128(0)
+    await wallet.coin_added(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), uint32(1), None, None)
+    assert await wallet.match_hinted_coin(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), bytes32.zeros) is False
+
+    with pytest.raises(ValueError, match="RemoteWallet cannot select coins"):
+        await wallet.select_coins(uint64(1), Mock(spec=WalletActionScope))
+
+    with pytest.raises(ValueError, match="RemoteWallet cannot generate transactions"):
+        await wallet.generate_signed_transaction([uint64(1)], [bytes32.zeros], Mock(spec=WalletActionScope))
+
+    with pytest.raises(RuntimeError, match="RemoteWallet does not derive puzzle hashes"):
+        wallet.puzzle_hash_for_pk(Mock())

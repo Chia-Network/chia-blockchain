@@ -60,6 +60,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
+from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
@@ -266,6 +267,7 @@ from chia.wallet.wallet_request_types import (
     PWSelfPoolResponse,
     PWStatus,
     PWStatusResponse,
+    RegisterRemoteCoins,
     SelectCoins,
     SelectCoinsResponse,
     SendNotification,
@@ -657,6 +659,8 @@ class WalletRpcApi:
             "/nft_mint_bulk": self.nft_mint_bulk,
             "/nft_set_did_bulk": self.nft_set_did_bulk,
             "/nft_transfer_bulk": self.nft_transfer_bulk,
+            # Remote Wallet
+            "/register_remote_coins": self.register_remote_coins,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -1235,6 +1239,17 @@ class WalletRpcApi:
                         type=WalletType.POOLING_WALLET.name,
                         wallet_id=uint32(0),
                     )
+        elif request.wallet_type == CreateNewWalletType.REMOTE_WALLET:
+            async with self.service.wallet_state_manager.lock:
+                remote_wallet = await RemoteWallet.create_new_remote_wallet(
+                    wallet_state_manager, main_wallet, request.name
+                )
+            return CreateNewWalletResponse(
+                unsigned_transactions=[],
+                transactions=[],
+                type=remote_wallet.type().name,
+                wallet_id=remote_wallet.id(),
+            )
 
     ##########################################################################################
     # Wallet
@@ -2904,6 +2919,12 @@ class WalletRpcApi:
             spend_bundle=WalletSpendBundle([], G2Element()),
             nft_id_list=nft_id_list,
         )
+
+    @marshal
+    async def register_remote_coins(self, request: RegisterRemoteCoins) -> Empty:
+        remote_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=RemoteWallet)
+        await remote_wallet.register_remote_coins(request.coin_ids)
+        return Empty()
 
     async def get_coin_records(self, request: dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)

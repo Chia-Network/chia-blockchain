@@ -4297,6 +4297,25 @@ def test_send_transaction_multi_post_init() -> None:
         ).convert_to_proxy(VCSpend)
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_create_remote_wallet_via_create_new_wallet(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    assert response.type == WalletType.REMOTE.name
+    created = env.node.wallet_state_manager.wallets[response.wallet_id]
+    assert created.type() == WalletType.REMOTE
+    assert created.get_name() == "Remote Wallet #1"
+
+
 def test_create_new_wallet_post_init() -> None:
     with pytest.raises(
         ValueError,
@@ -4519,3 +4538,6 @@ def test_create_new_wallet_post_init() -> None:
         match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, p2_singleton_delay_time=uint64(0))
+
+    # Creating a Remote wallet via create_new_wallet() should require no extra fields.
+    CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET)
