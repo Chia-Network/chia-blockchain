@@ -70,8 +70,8 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import RespondHeaderBlocks, SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
-from chia.server.node_discovery import FullNodePeers
 from chia.server.config_defaults import INBOUND_LIMIT_DEFAULTS
+from chia.server.node_discovery import FullNodePeers
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
