@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import platform
 import random
 import sqlite3
 import time
@@ -27,6 +28,7 @@ from chia_rs import (
     SpendBundleConditions,
     TransactionsInfo,
     UnfinishedBlock,
+    VDFInfo,
     additions_and_removals,
     get_flags_for_height_and_constants,
 )
@@ -36,7 +38,7 @@ from packaging.version import Version
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.conftest import ConsensusMode
-from chia._tests.connection_utils import add_dummy_connection, connect_and_get_peer
+from chia._tests.connection_utils import add_dummy_connection, add_dummy_connection_wsc, connect_and_get_peer
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
@@ -66,7 +68,7 @@ from chia.protocols.full_node_protocol import NewTransaction, RespondTransaction
 from chia.protocols.outbound_message import Message, NodeType, make_msg
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
-from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
+from chia.protocols.wallet_protocol import RespondHeaderBlocks, SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.node_discovery import FullNodePeers
 from chia.server.server import ChiaServer
@@ -95,6 +97,7 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -113,6 +116,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+
+def _is_macos_intel() -> bool:
+    """True when running on macOS with an Intel CPU (x86_64). Used to skip slow test params."""
+    return platform.system() == "Darwin" and platform.machine() in {"x86_64", "i386"}
 
 
 def find_reward_coin(b: FullBlock, puzzle_hash: bytes32) -> Coin:
@@ -1032,7 +1040,7 @@ async def test_new_transaction_and_mempool(
         assert estimate_fees(spend_bundle) == fee
         respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
-        await full_node_1.send_transaction(respond_transaction)
+        await full_node_1.send_transaction(respond_transaction, fake_peer)
 
         request = fnp.RequestTransaction(spend_bundle.get_hash())
         req = await full_node_1.request_transaction(request)
@@ -1083,7 +1091,7 @@ async def test_new_transaction_and_mempool(
     assert err is None
 
     # Resubmission through wallet is also fine
-    response_msg = await full_node_1.send_transaction(SendTransaction(successful_bundle), test=True)
+    response_msg = await full_node_1.send_transaction(SendTransaction(successful_bundle), fake_peer, test=True)
     assert response_msg is not None
     assert TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
 
@@ -2136,11 +2144,20 @@ async def test_compact_protocol_invalid_messages(
     assert peak.height == 1
     # (wrong_vdf_info, wrong_vdf_proof) pair verifies, but it's not present in the blockchain at all.
     block = blocks_2[2]
+    # Try the challenge_chain_ip_vdf first
+    wrong_challenge = block.reward_chain_block.challenge_chain_ip_vdf.challenge
+    wrong_iters = block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations
+
+    # If iterations is 1 the proof  may collide Use cc_sp_vdf instead if available.
+    if wrong_iters <= 1 and block.reward_chain_block.challenge_chain_sp_vdf is not None:
+        wrong_challenge = block.reward_chain_block.challenge_chain_sp_vdf.challenge
+        wrong_iters = block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
+
     wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
         bt.constants,
         ClassgroupElement.get_default_element(),
-        block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-        block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+        wrong_challenge,
+        wrong_iters,
         True,
     )
     timelord_protocol_invalid_messages: list[timelord_protocol.RespondCompactProofOfTime] = []
@@ -2350,6 +2367,43 @@ async def test_compact_protocol_invalid_messages(
         if block.challenge_chain_sp_proof is not None:
             assert not block.challenge_chain_sp_proof.normalized_to_identity
         assert not block.challenge_chain_ip_proof.normalized_to_identity
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("trusted", [True, False])
+async def test_unsolicited_compact_vdf(
+    setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
+    self_hostname: str,
+    trusted: bool,
+) -> None:
+    [full_node_1, full_node_2], _, _ = setup_two_nodes_fixture
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+    ws_con_1 = next(iter(server_1.all_connections.values()))
+    ws_con_2 = next(iter(server_2.all_connections.values()))
+
+    # localhost peers are exempt from banning, so use a fake IP
+    fake_ip = "1.2.3.4"
+    ws_con_1.peer_info = PeerInfo(fake_ip, ws_con_1.peer_info.port)
+
+    if trusted:
+        full_node_1.full_node.config["trusted_peers"] = {ws_con_1.peer_node_id.hex(): ""}
+
+    vdf_info = VDFInfo(bytes32.random(), uint64(1000), ClassgroupElement.get_default_element())
+    vdf_proof = VDFProof(uint8(0), b"0" * 100, False)
+    unsolicited_msg = make_msg(
+        ProtocolMessageTypes.respond_compact_vdf,
+        fnp.RespondCompactVDF(uint32(1), bytes32.random(), uint8(CompressibleVDFField.CC_EOS_VDF), vdf_info, vdf_proof),
+    )
+    await ws_con_2.send_message(unsolicited_msg)
+
+    if trusted:
+        await asyncio.sleep(3)
+        assert fake_ip not in server_1.banned_peers
+        assert ws_con_1.peer_node_id in server_1.all_connections
+    else:
+        await time_out_assert(5, lambda: fake_ip in server_1.banned_peers)
 
 
 @pytest.mark.anyio
@@ -2571,6 +2625,7 @@ async def validate_coin_set(coin_store: CoinStoreProtocol, blocks: list[FullBloc
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.skipif(_is_macos_intel(), reason="Very slow on macOS Intel (1500-block reorg)")
 async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
@@ -2649,7 +2704,19 @@ async def test_long_reorg(
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.parametrize("chain_length", [0, 100])
-@pytest.mark.parametrize("fork_point", [500, 1500])
+@pytest.mark.parametrize(
+    "fork_point",
+    [
+        500,
+        pytest.param(
+            1500,
+            marks=pytest.mark.skipif(
+                _is_macos_intel(),
+                reason="fork_point=1500 is very slow on macOS Intel; run with fork_point=500",
+            ),
+        ),
+    ],
+)
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
 async def test_long_reorg_nodes(
     light_blocks: bool,
@@ -2950,7 +3017,13 @@ async def test_declare_proof_of_space_no_overflow(
         assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
         for i in range(10, 100):
             sb = await add_tx_to_mempool(
-                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+                full_node_api,
+                dummy_peer,
+                wallet,
+                blocks[-8],
+                coinbase_puzzlehash,
+                bytes32(i.to_bytes(32, "big")),
+                uint64(i),
             )
             blocks = bt.get_consecutive_blocks(
                 block_list_input=blocks,
@@ -2994,7 +3067,13 @@ async def test_declare_proof_of_space_overflow(
         assert full_node_api.full_node.blockchain.get_peak_height() == blocks[-1].height
         for i in range(10, 100):
             sb = await add_tx_to_mempool(
-                full_node_api, wallet, blocks[-8], coinbase_puzzlehash, bytes32(i.to_bytes(32, "big")), uint64(i)
+                full_node_api,
+                dummy_peer,
+                wallet,
+                blocks[-8],
+                coinbase_puzzlehash,
+                bytes32(i.to_bytes(32, "big")),
+                uint64(i),
             )
 
             blocks = bt.get_consecutive_blocks(
@@ -3015,6 +3094,9 @@ async def test_declare_proof_of_space_overflow(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_2_0], reason="after hard fork 2 we no longer allow block references"
+)
 async def test_add_unfinished_block_with_generator_refs(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
@@ -3254,6 +3336,7 @@ async def declare_pos_unfinished_block(
 
 async def add_tx_to_mempool(
     full_node_api: FullNodeAPI,
+    dummy_peer: WSChiaConnection,
     wallet: WalletTool,
     spend_block: FullBlock,
     coinbase_puzzlehash: bytes32,
@@ -3269,7 +3352,7 @@ async def add_tx_to_mempool(
     assert spend_coin is not None
     spend_bundle = wallet.generate_signed_transaction(amount, receiver_puzzlehash, spend_coin)
     assert spend_bundle is not None
-    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
     assert (
         response_msg is not None
         and TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
@@ -3312,7 +3395,11 @@ def compare_unfinished_blocks(block1: UnfinishedBlock, block2: UnfinishedBlock) 
     ],
 )
 async def test_pending_tx_cache_retry_on_new_peak(
-    condition: ConditionOpcode, error: str, blockchain_constants: ConsensusConstants, caplog: pytest.LogCaptureFixture
+    condition: ConditionOpcode,
+    error: str,
+    blockchain_constants: ConsensusConstants,
+    caplog: pytest.LogCaptureFixture,
+    self_hostname: str,
 ) -> None:
     """
     Covers PendingTXCache items that are placed there due to unmet relative or
@@ -3344,7 +3431,9 @@ async def test_pending_tx_cache_retry_on_new_peak(
         sb = wallet.generate_signed_transaction(uint64(42), ph, coin, condition_dic)
         sb_name = sb.name()
         # Send the transaction
-        res = await full_node_api.send_transaction(SendTransaction(sb))
+        _, dummy_node_id = await add_dummy_connection(full_node_api.server, self_hostname, 12312)
+        dummy_peer = full_node_api.server.all_connections[dummy_node_id]
+        res = await full_node_api.send_transaction(SendTransaction(sb), dummy_peer)
         assert res is not None
         assert ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
         transaction_ack = TransactionAck.from_bytes(res.data)
@@ -3369,6 +3458,7 @@ async def test_pending_tx_cache_retry_on_new_peak(
 @pytest.mark.parametrize("mismatch_fee", [True, False])
 @pytest.mark.parametrize("tx_already_seen", [True, False])
 @pytest.mark.parametrize("mismatch_on_reannounce", [True, False])
+@pytest.mark.parametrize("tolerated_quote_cost_diff", [True, False])
 async def test_ban_for_mismatched_tx_cost_fee(
     three_nodes: list[FullNodeAPI],
     bt: BlockTools,
@@ -3377,6 +3467,7 @@ async def test_ban_for_mismatched_tx_cost_fee(
     mismatch_fee: bool,
     tx_already_seen: bool,
     mismatch_on_reannounce: bool,
+    tolerated_quote_cost_diff: bool,
 ) -> None:
     """
     Tests that a peer gets banned if it sends a `NewTransaction` message with a
@@ -3387,6 +3478,8 @@ async def test_ban_for_mismatched_tx_cost_fee(
     the ones specified in the `NewTransaction` message.
     With `mismatch_on_reannounce` we control whether the peer sent us the same
     transaction twice with different cost and fee.
+    With `tolerated_quote_cost_diff` we cover older nodes with a specific cost
+    mismatch due to the byte size cost and execution cost of the wrapper quote.
     """
     full_node_1, full_node_2, full_node_3 = three_nodes
     server_1 = full_node_1.full_node.server
@@ -3420,7 +3513,9 @@ async def test_ban_for_mismatched_tx_cost_fee(
     assert mempool_item is not None
     # Now send a NewTransaction with a cost and/or fee mismatch from the second
     # full node.
-    cost = uint64(mempool_item.cost + 1) if mismatch_cost else mempool_item.cost
+    quote_cost = QUOTE_BYTES * node.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+    cost_diff = quote_cost if tolerated_quote_cost_diff else 0
+    cost = uint64(mempool_item.cost + 1) if mismatch_cost else uint64(mempool_item.cost + cost_diff)
     fee = uint64(mempool_item.fee + 1) if mismatch_fee else mempool_item.fee
     msg = make_msg(ProtocolMessageTypes.new_transaction, NewTransaction(mempool_item.name, cost, fee))
     # We won't ban localhost, so let's set a different ip address for the
@@ -3520,3 +3615,43 @@ async def test_corrupt_blockchain(bt: BlockTools, default_400_blocks: list[FullB
         # but there are coins in the coin store
         async with full_node.manage():
             pass  # pragma: no cover
+
+
+@pytest.mark.anyio
+async def test_send_transaction_peer_tx_queue_full(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    """
+    Covers the case where a peer's transaction queue is full and it sends a
+    `SendTransaction` message. The full node should send the proper
+    `TransactionAck` response with a correct error.
+    """
+    full_node_api, server, _ = one_node_one_block
+    # Set limit to 0 to trigger queue full exception
+    full_node_api.full_node.transaction_queue.peer_size_limit = 0
+    spend_bundle = SpendBundle([], G2Element())
+    dummy_peer, _ = await add_dummy_connection_wsc(server, self_hostname, 1337, NodeType.WALLET)
+    response_msg = await full_node_api.send_transaction(wallet_protocol.SendTransaction(spend_bundle), dummy_peer)
+    assert response_msg is not None
+    response = wallet_protocol.TransactionAck.from_bytes(response_msg.data)
+    assert MempoolInclusionStatus(response.status) == MempoolInclusionStatus.FAILED
+    assert response.error == "Transaction queue full"
+
+
+@pytest.mark.limit_consensus_modes(reason="save time")
+@pytest.mark.anyio
+async def test_request_header_blocks_non_tx_block(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+) -> None:
+    """
+    Tests handling of non transaction blocks in `request_header_blocks`.
+    """
+    full_node_api, _, bt = one_node_one_block
+    # Farm a non transaction block
+    blocks = bt.get_consecutive_blocks(1, await full_node_api.get_all_full_blocks())
+    assert blocks[-1].is_transaction_block() is False
+    await full_node_api.full_node.add_block(blocks[-1])
+    msg = await full_node_api.request_header_blocks(wallet_protocol.RequestHeaderBlocks(uint32(0), uint32(1)))
+    assert msg is not None
+    response = RespondHeaderBlocks.from_bytes(msg.data)
+    assert len(response.header_blocks) == 2

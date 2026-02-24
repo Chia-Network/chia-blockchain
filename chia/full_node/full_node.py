@@ -79,6 +79,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
@@ -287,7 +288,9 @@ class FullNode:
                 single_threaded=single_threaded,
             ) as self._mempool_manager:
                 # Transactions go into this queue from the server, and get sent to respond_transaction
-                self._transaction_queue = TransactionQueue(1000, self.log)
+                self._transaction_queue = TransactionQueue(
+                    1000, self.log, max_tx_clvm_cost=uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
+                )
                 self._transaction_queue_task: asyncio.Task[None] = create_referenced_task(self._handle_transactions())
 
                 self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
@@ -2842,7 +2845,14 @@ class FullNode:
             # Now that we validated this transaction, check what fees and
             # costs the peers have advertised for it.
             for peer_id, entry in peers_with_tx.items():
-                if entry.advertised_fee == mempool_item.fee and entry.advertised_cost == mempool_item.cost:
+                # Older nodes (2.4.3 and earlier) compute the cost slightly
+                # differently. They include the byte cost and execution cost of
+                # the quote for the puzzle.
+                tolerated_diff = QUOTE_BYTES * self.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+                if entry.advertised_fee == mempool_item.fee and (
+                    entry.advertised_cost == mempool_item.cost
+                    or entry.advertised_cost == mempool_item.cost + tolerated_diff
+                ):
                     continue
                 self.log.warning(
                     f"Banning peer {peer_id}. Sent us a new tx {spend_name} with mismatch "
@@ -3166,8 +3176,14 @@ class FullNode:
             peer_request = full_node_protocol.RequestCompactVDF(
                 request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
+            vdf_req_key = peer_request.get_hash()
+            peer.pending_compact_vdfs.put(vdf_req_key)
             response = await peer.call_api(FullNodeAPI.request_compact_vdf, peer_request, timeout=10)
             if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
+                # if we fail to receive a response within 10 seconds, we give up
+                # here, but it's stil possible it will arrive later. We leave it
+                # in pending_compact_vdfs
+                peer.pending_compact_vdfs.remove(vdf_req_key)
                 await self.add_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
@@ -3202,7 +3218,7 @@ class FullNode:
         ):
             vdf_proof = header_block.challenge_chain_ip_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
-            self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
+            self.log.info(f"{peer.peer_node_id} requested compact vdf we don't have, height: {request.height}.")
             return None
         compact_vdf = full_node_protocol.RespondCompactVDF(
             request.height,

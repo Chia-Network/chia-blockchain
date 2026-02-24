@@ -447,6 +447,11 @@ async def test_sync_none_wp_response_backward_comp(
 
 
 @pytest.mark.anyio
+# todo_v2_plots fix this test and remove limit_consensus_modes
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    reason="farming v2 plots is too inefficient still. Enable these tests once it's fast",
+)
 async def test_bad_peak_cache_invalidation(
     two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     default_1000_blocks: list[FullBlock],

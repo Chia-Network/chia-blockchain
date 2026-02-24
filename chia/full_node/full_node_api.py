@@ -38,13 +38,13 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.generator_tools import get_block_header
-from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_block_utils import get_height_and_tx_status_from_block, header_block_from_block
+from chia.full_node.hard_fork_utils import get_flags
 from chia.full_node.tx_processing_queue import PeerWithTx, TransactionQueueEntry, TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -67,6 +67,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -220,11 +221,17 @@ class FullNodeAPI:
         # If already seen, the cost and fee must match, otherwise ban the peer
         mempool_item = self.full_node.mempool_manager.get_mempool_item(transaction.transaction_id, include_pending=True)
         if mempool_item is not None:
-            if mempool_item.cost != transaction.cost or mempool_item.fee != transaction.fees:
+            # Older nodes (2.4.3 and earlier) compute the cost slightly
+            # differently. They include the byte cost and execution cost of
+            # the quote for the puzzle.
+            tolerated_diff = QUOTE_BYTES * self.full_node.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+            if (transaction.cost != mempool_item.cost and transaction.cost != mempool_item.cost + tolerated_diff) or (
+                transaction.fees != mempool_item.fee
+            ):
                 self.log.warning(
-                    f"Banning peer {peer.peer_node_id}. Sent us an already seen tx {transaction.transaction_id} "
-                    f"with mismatch on cost {transaction.cost} vs validation cost {mempool_item.cost} and/or "
-                    f"fee {transaction.fees} vs {mempool_item.fee}."
+                    f"Banning peer {peer.peer_node_id} version {peer.version}. Sent us an already seen tx "
+                    f"{transaction.transaction_id} with mismatch on cost {transaction.cost} vs validation "
+                    f"cost {mempool_item.cost} and/or fee {transaction.fees} vs {mempool_item.fee}."
                 )
                 await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
             return None
@@ -246,9 +253,10 @@ class FullNodeAPI:
                 if prev is not None:
                     if prev.advertised_fee != transaction.fees or prev.advertised_cost != transaction.cost:
                         self.log.warning(
-                            f"Banning peer {peer.peer_node_id}. Sent us a new tx {transaction.transaction_id} with "
-                            f"mismatch on cost {transaction.cost} vs previous advertised cost {prev.advertised_cost} "
-                            f"and/or fee {transaction.fees} vs previous advertised fee {prev.advertised_fee}."
+                            f"Banning peer {peer.peer_node_id} version {peer.version}. Sent us a new tx "
+                            f"{transaction.transaction_id} with mismatch on cost {transaction.cost} vs "
+                            f"previous advertised cost {prev.advertised_cost} and/or fee {transaction.fees} "
+                            f"vs previous advertised fee {prev.advertised_fee}."
                         )
                         await peer.close(CONSENSUS_ERROR_BAN_SECONDS)
                     return None
@@ -1270,15 +1278,7 @@ class FullNodeAPI:
             # in this case we've already made sure `block` does have a
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
-
-            prev_tx_height = pre_sp_tx_block_height(
-                constants=self.full_node.constants,
-                blocks=self.full_node.blockchain,
-                prev_b_hash=block.prev_header_hash,
-                sp_index=block.reward_chain_block.signage_point_index,
-                first_in_sub_slot=len(block.finished_sub_slots) > 0,
-            )
-            flags = get_flags_for_height_and_constants(prev_tx_height, self.full_node.constants)
+            flags = await get_flags(constants=self.full_node.constants, blocks=self.full_node.blockchain, block=block)
             additions, removals = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
                 additions_and_removals,
@@ -1424,16 +1424,26 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_removals, response)
         return msg
 
-    @metadata.request()
-    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test: bool = False) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def send_transaction(
+        self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
+    ) -> Message | None:
         spend_name = request.transaction.name()
         if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
             self.full_node.mempool_manager.remove_seen(spend_name)
             response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
-
+        high_priority = self.is_trusted(peer)
         queue_entry = TransactionQueueEntry(request.transaction, None, spend_name, None, test)
-        self.full_node.transaction_queue.put(queue_entry, peer_id=None, high_priority=True)
+        try:
+            self.full_node.transaction_queue.put(queue_entry, peer_id=peer.peer_node_id, high_priority=high_priority)
+        except TransactionQueueFull:
+            return make_msg(
+                ProtocolMessageTypes.transaction_ack,
+                wallet_protocol.TransactionAck(
+                    spend_name, uint8(MempoolInclusionStatus.FAILED), "Transaction queue full"
+                ),
+            )
         try:
             with anyio.fail_after(delay=45):
                 status, error = await queue_entry.done.wait()
@@ -1564,6 +1574,9 @@ class FullNodeAPI:
         blocks: list[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
         header_blocks = []
         for block in blocks:
+            if not block.is_transaction_block():
+                header_blocks.append(get_block_header(block))
+                continue
             added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(block.height)
             removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(block.height)
             added_coins_records, removed_coins_records = await asyncio.gather(
@@ -1642,6 +1655,16 @@ class FullNodeAPI:
 
     @metadata.request(peer_required=True)
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
+        request_key = full_node_protocol.RequestCompactVDF(
+            request.height, request.header_hash, request.field_vdf, request.vdf_info
+        ).get_hash()
+        if request_key not in peer.pending_compact_vdfs:
+            if not self.is_trusted(peer):
+                await peer.ban_peer_bad_protocol("Received unsolicited RespondCompactVDF")
+                return None
+        else:
+            peer.pending_compact_vdfs.remove(request_key)
+
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.add_compact_vdf(request, peer)
@@ -1855,7 +1878,6 @@ class FullNodeAPI:
             if request.previous_height is not None
             else self.full_node.blockchain.constants.GENESIS_CHALLENGE
         )
-        assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
             rejection = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
@@ -1927,7 +1949,6 @@ class FullNodeAPI:
             if request.previous_height is not None
             else self.full_node.blockchain.constants.GENESIS_CHALLENGE
         )
-        assert previous_header_hash is not None
 
         if request.header_hash != previous_header_hash:
             rejection = wallet_protocol.RejectCoinState(uint8(wallet_protocol.RejectStateReason.REORG))

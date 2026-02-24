@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from chia_rs import FullBlock
+from chia_rs import ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 
@@ -32,11 +32,14 @@ from chia.util.keychain import Keychain
     argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)]
 )
 def test_filter_prefix_bits_on_blocks(
-    default_10000_blocks: list[FullBlock], filter_prefix_bits: uint8, should_pass: int
+    default_10000_blocks: list[FullBlock],
+    filter_prefix_bits: uint8,
+    should_pass: int,
+    blockchain_constants: ConsensusConstants,
 ) -> None:
     passed = 0
     for block in default_10000_blocks:
-        plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
+        plot_id = get_plot_id(blockchain_constants, block.reward_chain_block.proof_of_space)
         original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             assert block.reward_chain_block.signage_point_index == 0

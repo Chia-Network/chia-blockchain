@@ -6,7 +6,7 @@ from typing import cast
 from bitstring import BitArray
 from chia_rs import AugSchemeMPL, ConsensusConstants, G1Element, PlotParam, PrivateKey, ProofOfSpace, validate_proof_v2
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32
+from chia_rs.sized_ints import uint8, uint16, uint32
 from chiapos import Verifier
 
 from chia.util.hash import std_hash
@@ -42,17 +42,32 @@ def make_pos(
     )
 
 
-def get_plot_id(pos: ProofOfSpace) -> bytes32:
+def get_plot_id(constants: ConsensusConstants, pos: ProofOfSpace) -> bytes32:
     plot_param = pos.param()
-    if plot_param.strength_v2 is not None:
-        assert pos.pool_contract_puzzle_hash is not None
-        return calculate_plot_id_v2(pos.pool_contract_puzzle_hash, pos.plot_public_key, uint8(plot_param.strength_v2))
-
-    assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
     if pos.pool_public_key is None:
         assert pos.pool_contract_puzzle_hash is not None
-        return calculate_plot_id_ph(pos.pool_contract_puzzle_hash, pos.plot_public_key)
-    return calculate_plot_id_pk(pos.pool_public_key, pos.plot_public_key)
+        pool_pk_or_contract_ph: G1Element | bytes32 = pos.pool_contract_puzzle_hash
+    else:
+        assert pos.pool_contract_puzzle_hash is None
+        pool_pk_or_contract_ph = pos.pool_public_key
+    # V2 plots
+    if plot_param.strength_v2 is not None:
+        # TODO: todo_v2_plots index and meta_group need to be added to ProofOfSpace
+        plot_index = uint16(0)
+        meta_group = uint8(0)
+        return calculate_plot_id_v2(
+            constants.PLOT_SIZE_V2,
+            plot_index,
+            meta_group,
+            pool_pk_or_contract_ph,
+            pos.plot_public_key,
+            uint8(plot_param.strength_v2),
+        )
+    # V1 plots
+    if isinstance(pool_pk_or_contract_ph, G1Element):
+        return calculate_plot_id_pk(pool_pk_or_contract_ph, pos.plot_public_key)
+    else:
+        return calculate_plot_id_ph(pool_pk_or_contract_ph, pos.plot_public_key)
 
 
 def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
@@ -145,10 +160,6 @@ def verify_and_get_quality_string(
             return None
 
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
-    # Except v2 plots, they only support pool contract puzzle hash
-    if plot_param.strength_v2 is not None and pos.pool_contract_puzzle_hash is None:
-        log.error("v2 plots require pool_contract_puzzle_hash, pool public key is not supported")
-        return None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")
         return None
@@ -159,7 +170,7 @@ def verify_and_get_quality_string(
     if not check_plot_param(constants, plot_param):
         return None
 
-    plot_id: bytes32 = get_plot_id(pos)
+    plot_id: bytes32 = get_plot_id(constants, pos)
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
@@ -189,7 +200,6 @@ def verify_and_get_quality_string(
             constants.PLOT_SIZE_V2,
             pos.challenge,
             plot_param.strength_v2,
-            constants.QUALITY_PROOF_SCAN_FILTER,
             pos.proof,
         )
 
@@ -244,11 +254,23 @@ def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_p
 
 
 def calculate_plot_id_v2(
-    pool_contract_puzzle_hash: bytes32,
+    k: uint8,
+    index: uint16,
+    meta_group: uint8,
+    pool_pk_or_ph: G1Element | bytes32,
     plot_public_key: G1Element,
     strength: uint8,
 ) -> bytes32:
-    return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key) + bytes(strength))
+    version = uint8(2)
+    plot_group_id = std_hash(
+        k.stream_to_bytes()
+        + version.stream_to_bytes()
+        + strength.stream_to_bytes()
+        + bytes(plot_public_key)
+        + bytes(pool_pk_or_ph)
+    )
+    plot_id = std_hash(plot_group_id + index.stream_to_bytes() + meta_group.stream_to_bytes())
+    return plot_id
 
 
 def calculate_plot_id_pk(

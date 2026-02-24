@@ -425,7 +425,7 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
             (0,),
         )
     with pytest.raises(ValueError):
-        await rpc_client.extend_derivation_index(ExtendDerivationIndex(uint32(0)))
+        await rpc_client.extend_derivation_index(ExtendDerivationIndex(index=uint32(0)))
 
     # Reset to a normal state
     await wsm.puzzle_store.delete_wallet(wsm.main_wallet.id())
@@ -436,17 +436,17 @@ async def test_puzzle_hash_requests(wallet_environments: WalletTestFramework) ->
 
     # Test an index already created
     with pytest.raises(ValueError):
-        await rpc_client.extend_derivation_index(ExtendDerivationIndex(uint32(0)))
+        await rpc_client.extend_derivation_index(ExtendDerivationIndex(index=uint32(0)))
 
     # Test an index too far in the future
     with pytest.raises(ValueError):
         await rpc_client.extend_derivation_index(
-            ExtendDerivationIndex(uint32(MAX_DERIVATION_INDEX_DELTA + expected_state.highest_index + 1))
+            ExtendDerivationIndex(index=uint32(MAX_DERIVATION_INDEX_DELTA + expected_state.highest_index + 1))
         )
 
     # Test the actual functionality
     assert (
-        await rpc_client.extend_derivation_index(ExtendDerivationIndex(uint32(expected_state.highest_index + 5)))
+        await rpc_client.extend_derivation_index(ExtendDerivationIndex(index=uint32(expected_state.highest_index + 5)))
     ).index == expected_state.highest_index + 5
     expected_state = PuzzleHashState(expected_state.highest_index + 5, expected_state.used_up_to_index)
     assert await get_puzzle_hash_state() == expected_state

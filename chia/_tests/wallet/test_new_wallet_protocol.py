@@ -833,7 +833,7 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     for coin, hint in new_coins:
         solution = Program.to([[]])
         bundle = SpendBundle([CoinSpend(coin, puzzle, solution)], AugSchemeMPL.aggregate([]))
-        tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
+        tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle), peer)
         assert tx_resp is not None
 
         ack = wallet_protocol.TransactionAck.from_bytes(tx_resp.data)
@@ -891,11 +891,13 @@ async def subscribe_puzzle(
     assert len(response.coin_states) == existing_coin_states
 
 
-async def spend_coin(simulator: FullNodeSimulator, coin: Coin, solution: Program | None = None) -> bytes32:
+async def spend_coin(
+    simulator: FullNodeSimulator, peer: WSChiaConnection, coin: Coin, solution: Program | None = None
+) -> bytes32:
     bundle = SpendBundle(
         [CoinSpend(coin, IDENTITY_PUZZLE, Program.to([]) if solution is None else solution)], AugSchemeMPL.aggregate([])
     )
-    tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
+    tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle), peer)
     assert tx_resp is not None
 
     ack = wallet_protocol.TransactionAck.from_bytes(tx_resp.data)
@@ -915,7 +917,7 @@ async def test_spent_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     # Make a coin and spend it
     coin, _ = await make_coin(simulator.full_node)
     await subscribe_coin(simulator, coin.name(), peer)
-    transaction_id = await spend_coin(simulator, coin)
+    transaction_id = await spend_coin(simulator, peer, coin)
 
     # We should have gotten a mempool update for this transaction
     await assert_mempool_added(queue, {transaction_id})
@@ -942,7 +944,7 @@ async def test_spent_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     # Make a coin and spend it
     coin, _ = await make_coin(simulator.full_node)
     await subscribe_puzzle(simulator, coin.puzzle_hash, peer)
-    transaction_id = await spend_coin(simulator, coin)
+    transaction_id = await spend_coin(simulator, peer, coin)
 
     # We should have gotten a mempool update for this transaction
     await assert_mempool_added(queue, {transaction_id})
@@ -969,7 +971,7 @@ async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
     # Make a coin and spend it
     coin, hint = await make_coin(simulator.full_node)
     await subscribe_puzzle(simulator, hint, peer)
-    transaction_id = await spend_coin(simulator, coin)
+    transaction_id = await spend_coin(simulator, peer, coin)
 
     # We should have gotten a mempool update for this transaction
     await assert_mempool_added(queue, {transaction_id})
@@ -998,7 +1000,7 @@ async def test_created_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
     await subscribe_coin(simulator, child_coin.name(), peer, existing_coin_states=0)
     transaction_id = await spend_coin(
-        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
+        simulator, peer, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
     )
 
     # We should have gotten a mempool update for this transaction
@@ -1028,7 +1030,7 @@ async def test_created_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
     await subscribe_puzzle(simulator, child_coin.puzzle_hash, peer, existing_coin_states=0)
     transaction_id = await spend_coin(
-        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
+        simulator, peer, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
     )
 
     # We should have gotten a mempool update for this transaction
@@ -1059,7 +1061,7 @@ async def test_created_hint_mempool_update(mpu_setup: Mpu) -> None:
     hint = std_hash(b"new hint")
     await subscribe_puzzle(simulator, hint, peer, existing_coin_states=0)
     transaction_id = await spend_coin(
-        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount, [hint]]])
+        simulator, peer, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount, [hint]]])
     )
 
     # We should have gotten a mempool update for this transaction
@@ -1087,7 +1089,7 @@ async def test_missing_capability_coin_id(mpu_setup_no_capability: Mpu) -> None:
     # Make a coin and spend it
     coin, _ = await make_coin(simulator.full_node)
     await subscribe_coin(simulator, coin.name(), peer)
-    transaction_id = await spend_coin(simulator, coin)
+    transaction_id = await spend_coin(simulator, peer, coin)
 
     # There is no mempool update for this transaction since the peer doesn't have the capability
     assert queue.empty()
@@ -1112,7 +1114,7 @@ async def test_missing_capability_puzzle_hash(mpu_setup_no_capability: Mpu) -> N
     # Make a coin and spend it
     coin, _ = await make_coin(simulator.full_node)
     await subscribe_puzzle(simulator, coin.puzzle_hash, peer)
-    transaction_id = await spend_coin(simulator, coin)
+    transaction_id = await spend_coin(simulator, peer, coin)
 
     # There is no mempool update for this transaction since the peer doesn't have the capability
     assert queue.empty()
@@ -1137,7 +1139,7 @@ async def test_missing_capability_hint(mpu_setup_no_capability: Mpu) -> None:
     # Make a coin and spend it
     coin, hint = await make_coin(simulator.full_node)
     await subscribe_puzzle(simulator, hint, peer)
-    transaction_id = await spend_coin(simulator, coin)
+    transaction_id = await spend_coin(simulator, peer, coin)
 
     # There is no mempool update for this transaction since the peer doesn't have the capability
     assert queue.empty()

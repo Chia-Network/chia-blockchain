@@ -77,6 +77,5 @@ chia._tests.pools.test_wallet_pool_store
 chia._tests.simulation.test_simulation
 chia._tests.tools.test_run_block
 chia._tests.util.benchmark_cost
-chia._tests.util.test_full_block_utils
 chia._tests.util.test_misc
 chia._tests.wallet.did_wallet.test_did

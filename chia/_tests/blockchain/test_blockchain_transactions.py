@@ -8,6 +8,7 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia._tests.connection_utils import add_dummy_connection
 from chia._tests.util.generator_tools_testing import run_and_get_removals_and_additions
 from chia.consensus.blockchain import AddBlockResult
 from chia.full_node.full_node_api import FullNodeAPI
@@ -34,7 +35,7 @@ log = logging.getLogger(__name__)
 class TestBlockchainTransactions:
     @pytest.mark.anyio
     async def test_basic_blockchain_tx(
-        self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
+        self, two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
     ) -> None:
         num_blocks = 10
         wallet_a = WALLET_A
@@ -60,7 +61,9 @@ class TestBlockchainTransactions:
         assert spend_bundle is not None
         tx: wallet_protocol.SendTransaction = wallet_protocol.SendTransaction(spend_bundle)
 
-        await full_node_api_1.send_transaction(tx)
+        _, dummy_node_id = await add_dummy_connection(full_node_api_1.server, self_hostname, 12312)
+        dummy_peer = full_node_api_1.server.all_connections[dummy_node_id]
+        await full_node_api_1.send_transaction(tx, dummy_peer)
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb == spend_bundle

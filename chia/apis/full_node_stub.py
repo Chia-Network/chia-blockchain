@@ -285,8 +285,10 @@ class FullNodeApiStub(ApiProtocol, Protocol):
         """Handle removals request from wallet."""
         ...
 
-    @metadata.request()
-    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test: bool = False) -> Message | None:
+    @metadata.request(peer_required=True)
+    async def send_transaction(
+        self, request: wallet_protocol.SendTransaction, peer: WSChiaConnection, *, test: bool = False
+    ) -> Message | None:
         """Handle transaction send from wallet."""
         ...
 

@@ -395,15 +395,17 @@ co = ConditionOpcode
 mis = MempoolInclusionStatus
 
 
-async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Message | None:
+async def send_sb(node: FullNodeAPI, dummy_peer: WSChiaConnection, sb: SpendBundle) -> Message | None:
     tx = wallet_protocol.SendTransaction(sb)
-    return await node.send_transaction(tx, test=True)
+    return await node.send_transaction(tx, dummy_peer, test=True)
 
 
-async def gen_and_send_sb(node: FullNodeAPI, wallet: WalletTool, coin: Coin, fee: uint64 = uint64(0)) -> SpendBundle:
+async def gen_and_send_sb(
+    node: FullNodeAPI, dummy_peer: WSChiaConnection, wallet: WalletTool, coin: Coin, fee: uint64 = uint64(0)
+) -> SpendBundle:
     sb = generate_test_spend_bundle(wallet=wallet, coin=coin, fee=fee)
     assert sb is not None
-    await send_sb(node, sb)
+    await send_sb(node, dummy_peer, sb)
     return sb
 
 
@@ -611,7 +613,10 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_double_spend_with_higher_fee(
-        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
+        self,
+        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+        wallet_a: WalletTool,
+        self_hostname: str,
     ) -> None:
         full_node_1, _, bt = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
@@ -633,15 +638,17 @@ class TestMempoolManager:
         coins = iter(blocks[-2].get_included_reward_coins())
         coin3, coin4 = next(coins), next(coins)
 
-        sb1_1 = await gen_and_send_sb(full_node_1, wallet_a, coin1)
-        sb1_2 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=uint64(1))
+        _, dummy_node_id = await add_dummy_connection(full_node_1.server, self_hostname, 12312)
+        dummy_peer = full_node_1.server.all_connections[dummy_node_id]
+        sb1_1 = await gen_and_send_sb(full_node_1, dummy_peer, wallet_a, coin1)
+        sb1_2 = await gen_and_send_sb(full_node_1, dummy_peer, wallet_a, coin1, fee=uint64(1))
 
         # Fee increase is insufficient, the old spendbundle must stay
         assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1_1)
         assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_2)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        sb1_3 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
+        sb1_3 = await gen_and_send_sb(full_node_1, dummy_peer, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
 
         # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
         assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_1)
@@ -650,7 +657,7 @@ class TestMempoolManager:
 
         sb2 = generate_test_spend_bundle(wallet_a, coin2, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb12 = SpendBundle.aggregate([sb2, sb1_3])
-        await send_sb(full_node_1, sb12)
+        await send_sb(full_node_1, dummy_peer, sb12)
 
         # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
         # of coins spent in sb1_3
@@ -660,7 +667,7 @@ class TestMempoolManager:
 
         sb3 = generate_test_spend_bundle(wallet_a, coin3, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb23 = SpendBundle.aggregate([sb2, sb3])
-        await send_sb(full_node_1, sb23)
+        await send_sb(full_node_1, dummy_peer, sb23)
 
         # sb23 must not replace existing sb12 as the former does not spend all
         # coins that are spent in the latter (specifically, coin1)
@@ -668,21 +675,21 @@ class TestMempoolManager:
         assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb23)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        await send_sb(full_node_1, sb3)
+        await send_sb(full_node_1, dummy_peer, sb3)
         # Adding non-conflicting sb3 should succeed
         assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
-        await send_sb(full_node_1, sb1234_1)
+        await send_sb(full_node_1, dummy_peer, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
         assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1234_1)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb1234_2 = SpendBundle.aggregate([sb12, sb3, sb4_2])
-        await send_sb(full_node_1, sb1234_2)
+        await send_sb(full_node_1, dummy_peer, sb1234_2)
         # sb1234_2 has a higher fee per cost than its conflicts and should get
         # into mempool
         assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1234_2)
@@ -692,7 +699,10 @@ class TestMempoolManager:
 
     @pytest.mark.anyio
     async def test_invalid_signature(
-        self, one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
+        self,
+        one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+        wallet_a: WalletTool,
+        self_hostname: str,
     ) -> None:
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -714,7 +724,9 @@ class TestMempoolManager:
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = sb.replace(aggregated_signature=G2Element.generator())
-        res: Message | None = await send_sb(full_node_1, sb)
+        _, dummy_node_id = await add_dummy_connection(full_node_1.server, self_hostname, 12312)
+        dummy_peer = full_node_1.server.all_connections[dummy_node_id]
+        res: Message | None = await send_sb(full_node_1, dummy_peer, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
         assert ack.status == MempoolInclusionStatus.FAILED.value

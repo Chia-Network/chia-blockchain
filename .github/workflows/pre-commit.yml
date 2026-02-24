@@ -62,10 +62,6 @@ jobs:
 
       - uses: Chia-Network/actions/git-mark-workspace-safe@main
 
-      - name: disable git autocrlf
-        run: |
-          git config --global core.autocrlf false
-
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0

@@ -37,6 +37,7 @@ class WalletNodeAPI:
     async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
         pass
 
+    @metadata.request(peer_required=True)
     async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
         """
         The full node has rejected our request for removals.

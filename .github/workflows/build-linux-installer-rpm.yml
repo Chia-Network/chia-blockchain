@@ -59,6 +59,7 @@ jobs:
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      CHIA_SEMVER_VERSION: ${{ needs.version.outputs.chia-semver-version }}
       POETRY_DYNAMIC_VERSIONING_OVERRIDE: "chia-blockchain=${{ needs.version.outputs.chia-installer-version }}"
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
@@ -152,7 +153,7 @@ jobs:
           rm -rf ./chia-blockchain-gui
 
       - name: Cache GUI
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache-gui
         with:
           path: ./chia-blockchain-gui
@@ -172,7 +173,7 @@ jobs:
           bash build_linux_rpm-2-installer.sh amd64
 
       - name: Upload fpm-generated rpm spec files
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           if-no-files-found: error
           name: spec
@@ -181,7 +182,7 @@ jobs:
             build_scripts/dist/gui.spec
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: chia-installers-linux-rpm-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
@@ -312,7 +313,7 @@ jobs:
           sed -i -e 's|^mirrorlist=|#mirrorlist=|' -e 's|^#baseurl=http://dl\.rockylinux\.org/|baseurl=https://dl.rockylinux.org/|' /etc/yum.repos.d/rocky-*.repo
 
       - name: Download packages
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         id: download
         with:
           name: chia-installers-linux-rpm-intel

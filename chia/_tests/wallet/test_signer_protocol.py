@@ -178,7 +178,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     assert utx.signing_instructions.targets[0].message == message
 
     signing_responses: list[SigningResponse] = (
-        await wallet_rpc.execute_signing_instructions(ExecuteSigningInstructions(utx.signing_instructions))
+        await wallet_rpc.execute_signing_instructions(
+            ExecuteSigningInstructions(signing_instructions=utx.signing_instructions)
+        )
     ).signing_responses
     assert len(signing_responses) == 1
     assert signing_responses[0].hook == utx.signing_instructions.targets[0].hook
@@ -288,7 +290,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 
     # And test that we can get compressed versions if we want
     request = GatherSigningInfo(
-        [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
+        spends=[Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
     ).to_json_dict()
     response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-0029", **request})
     response: GatherSigningInfoResponse = json_deserialize_with_clvm_streamable(

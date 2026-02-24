@@ -139,7 +139,15 @@ def skip_reward_chain_block(buf: memoryview) -> memoryview:
     buf = skip_optional(buf, skip_vdf_info)  # reward_chain_sp_vdf
     buf = skip_g2_element(buf)  # reward_chain_sp_signature
     buf = skip_vdf_info(buf)  # reward_chain_ip_vdf
-    buf = skip_optional(buf, skip_vdf_info)  # infused_challenge_chain_ip_vdf
+
+    discriminant = buf[0]
+    buf = buf[1:]
+    has_vdf_info = (discriminant & 1) != 0
+    has_mmr_root = (discriminant & 2) != 0
+    if has_vdf_info:
+        buf = skip_vdf_info(buf)  # infused_challenge_chain_ip_vdf
+    if has_mmr_root:
+        buf = skip_bytes32(buf)  # header_mmr_root
     return skip_bool(buf)  # is_transaction_block
 
 
@@ -157,13 +165,14 @@ def skip_foliage_block_data(buf: memoryview) -> memoryview:
     return skip_bytes32(buf)  # extension_data
 
 
-def skip_foliage(buf: memoryview) -> memoryview:
+def skip_foliage(buf: memoryview) -> tuple[memoryview, bool]:
     buf = skip_bytes32(buf)  # prev_block_hash
     buf = skip_bytes32(buf)  # reward_block_hash
     buf = skip_foliage_block_data(buf)  # foliage_block_data
     buf = skip_g2_element(buf)  # foliage_block_data_signature
+    is_tx_block = buf[0] != 0
     buf = skip_optional(buf, skip_bytes32)  # foliage_transaction_block_hash
-    return skip_optional(buf, skip_g2_element)  # foliage_transaction_block_signature
+    return (skip_optional(buf, skip_g2_element), is_tx_block)  # foliage_transaction_block_signature
 
 
 def prev_hash_from_foliage(buf: memoryview) -> tuple[memoryview, bytes32]:
@@ -211,7 +220,7 @@ def generator_from_block(buf: memoryview) -> bytes | None:
     buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
     buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
     buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
-    buf = skip_foliage(buf)  # foliage
+    buf, _ = skip_foliage(buf)  # foliage
     buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
     buf = skip_optional(buf, skip_transactions_info)  # transactions_info
 
@@ -268,6 +277,10 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
 def header_block_from_block(
     buf: memoryview, request_filter: bool = True, tx_addition_coins: list[Coin] = [], removal_names: list[bytes32] = []
 ) -> bytes:
+    """
+    if request_filter is True it will generate the BIP158 filter based on the
+    additions and removals passed into the function
+    """
     buf2 = buf[:]
     buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf2 = skip_reward_chain_block(buf2)  # reward_chain_block
@@ -276,27 +289,21 @@ def header_block_from_block(
     buf2 = skip_optional(buf2, skip_vdf_proof)  # reward_chain_sp_proof
     buf2 = skip_vdf_proof(buf2)  # reward_chain_ip_proof
     buf2 = skip_optional(buf2, skip_vdf_proof)  # infused_challenge_chain_ip_proof
-    buf2 = skip_foliage(buf2)  # foliage
-    if buf2[0] == 0:
-        is_transaction_block = False
-    else:
-        is_transaction_block = True
-
+    buf2, is_transaction_block = skip_foliage(buf2)  # foliage
     buf2 = skip_optional(buf2, skip_foliage_transaction_block)  # foliage_transaction_block
 
     transactions_info: TransactionsInfo | None = None
-    # we make it optional even if it's not by default
-    # if request_filter is True it will read extra bytes and populate it properly
     transactions_info_optional: bytes = bytes([0])
     encoded_filter = b"\x00"
 
+    # this is the transactions_info optional
+    if buf2[0] == 0:
+        transactions_info_optional = bytes([0])
+    else:
+        transactions_info_optional = bytes([1])
+        transactions_info, _advance = TransactionsInfo.parse_rust(buf2[1:])
+
     if request_filter:
-        # this is the transactions_info optional
-        if buf2[0] == 0:
-            transactions_info_optional = bytes([0])
-        else:
-            transactions_info_optional = bytes([1])
-            transactions_info, _advance = TransactionsInfo.parse_rust(buf2[1:])
         byte_array_tx: list[bytearray] = []
         if is_transaction_block and transactions_info:
             addition_coins = tx_addition_coins + list(transactions_info.reward_claims_incorporated)
@@ -336,9 +343,6 @@ def get_height_and_tx_status_from_block(buf: memoryview) -> tuple[uint32, bool]:
     buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
     buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
     buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
-    buf = skip_foliage(buf)  # foliage
+    buf, is_tx_block = skip_foliage(buf)  # foliage
     buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
-    # We're at the transactions_info optional.
-    # If it's not None, consider this a transaction block.
-    is_tx_block = buf[0] != 0
     return height, is_tx_block
