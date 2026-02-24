@@ -660,7 +660,7 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     assert reject.header_hash == std_hash(b"")
 
     # Too many puzzle hashes
-    too_many = [std_hash(i.to_bytes(4, "big")) for i in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
+    too_many = [bytes32.random() for _ in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
     res = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, too_many))
     assert res is not None
     reject = RejectAdditionsRequest.from_bytes(res.data)
@@ -668,14 +668,14 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     assert reject.header_hash == last_block.header_hash
 
     # Exactly at the limit is allowed
-    at_limit = [std_hash(i.to_bytes(4, "big")) for i in range(MAX_COIN_HASHES_PER_REQUEST)]
+    at_limit = [bytes32.random() for _i in range(MAX_COIN_HASHES_PER_REQUEST)]
     res = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, at_limit))
     assert res is not None
     response = RespondAdditions.from_bytes(res.data)
     assert response.height == last_block.height
 
     # No results
-    fake_coin = std_hash(b"")
+    fake_coin = bytes32.random()
     assert ph != fake_coin
     res1 = await full_node_api.request_additions(
         RequestAdditions(last_block.height, last_block.header_hash, [fake_coin])
@@ -698,7 +698,7 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     # all coin names are concatenated and hashed into one entry in the merkle set for proof_2
     # the response contains the list of coins so you can check the proof_2
 
-    assert response.proofs[0][0] == std_hash(b"")
+    assert response.proofs[0][0] == fake_coin
     assert response.proofs[0][1] is not None
     assert response.proofs[0][2] is None
 
@@ -815,7 +815,7 @@ async def test_request_removals_too_many_coin_names(
     last_block = full_node_api.full_node.blockchain.get_peak()
     assert last_block is not None
 
-    too_many = [std_hash(i.to_bytes(4, "big")) for i in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
+    too_many = [bytes32.random() for _ in range(MAX_COIN_HASHES_PER_REQUEST + 1)]
     res = await full_node_api.request_removals(RequestRemovals(last_block.height, last_block.header_hash, too_many))
     assert res is not None
     reject = RejectRemovalsRequest.from_bytes(res.data)
