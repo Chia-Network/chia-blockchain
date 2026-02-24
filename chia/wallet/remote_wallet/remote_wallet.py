@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
@@ -57,7 +56,8 @@ class RemoteWallet:
         self = RemoteWallet()
         self.wallet_state_manager = wallet_state_manager
         if name is None:
-            name = self.generate_wallet_name()
+            # We can make this more complex if we choose to support multiple remote wallets later
+            name = "Remote Wallet #1"
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
 
@@ -109,15 +109,6 @@ class RemoteWallet:
 
     def require_derivation_paths(self) -> bool:
         return False
-
-    def generate_wallet_name(self) -> str:
-        max_num = 0
-        for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.REMOTE:
-                matched = re.search(r"^Remote Wallet #(\d+)$", wallet.get_name())
-                if matched and int(matched.group(1)) > max_num:
-                    max_num = int(matched.group(1))
-        return f"Remote Wallet #{max_num + 1}"
 
     async def register_remote_coins(self, coin_ids: list[bytes32]) -> None:
         if len(coin_ids) == 0:
