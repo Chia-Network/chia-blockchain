@@ -1767,28 +1767,28 @@ class WalletStateManager:
                                     if local_record is not None and local_record.wallet_type == WalletType.REMOTE:
                                         await self.coin_store.delete_coin_record(coin_name)
                                     self.log.debug("Interested coin state removed (no created height): %s", coin_state)
-                                    continue
-
-                                confirmed_height = uint32(coin_state.created_height)
-                                spent_height = (
-                                    uint32(coin_state.spent_height)
-                                    if coin_state.spent_height is not None
-                                    else uint32(0)
-                                )
-                                coinbase = self.is_farmer_reward(
-                                    confirmed_height, coin_state.coin
-                                ) or self.is_pool_reward(confirmed_height, coin_state.coin)
-                                interested_record = WalletCoinRecord(
-                                    coin_state.coin,
-                                    confirmed_height,
-                                    spent_height,
-                                    spent_height != 0,
-                                    coinbase,
-                                    target_wallet_type,
-                                    target_wallet_id,
-                                )
-                                await self.coin_store.add_coin_record(interested_record)
-                                continue
+                                    # Don't early-continue: still run the tx confirmation fallback below.
+                                else:
+                                    confirmed_height = uint32(coin_state.created_height)
+                                    spent_height = (
+                                        uint32(coin_state.spent_height)
+                                        if coin_state.spent_height is not None
+                                        else uint32(0)
+                                    )
+                                    coinbase = self.is_farmer_reward(
+                                        confirmed_height, coin_state.coin
+                                    ) or self.is_pool_reward(confirmed_height, coin_state.coin)
+                                    interested_record = WalletCoinRecord(
+                                        coin_state.coin,
+                                        confirmed_height,
+                                        spent_height,
+                                        spent_height != 0,
+                                        coinbase,
+                                        target_wallet_type,
+                                        target_wallet_id,
+                                    )
+                                    await self.coin_store.add_coin_record(interested_record)
+                                    # Don't early-continue: still run the tx confirmation fallback below.
 
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         if coin_state.created_height is not None and coin_state.spent_height is not None:
