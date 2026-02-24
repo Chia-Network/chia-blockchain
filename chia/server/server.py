@@ -32,6 +32,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
+from chia.server.config_defaults import INBOUND_LIMIT_DEFAULTS
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
@@ -131,6 +132,9 @@ class ChiaServer:
     received_message_callback: ConnectionCallback | None = None
     banned_peers: dict[str, float] = field(default_factory=dict)
     invalid_protocol_ban_seconds: int = INVALID_PROTOCOL_BAN_SECONDS
+    inbound_limit_defaults: dict[NodeType, tuple[str, int]] = field(
+        default_factory=lambda: dict(INBOUND_LIMIT_DEFAULTS)
+    )
 
     @classmethod
     def create(
@@ -719,13 +723,9 @@ class ChiaServer:
             return inbound_count < cast(int, self.config.get("target_peer_count", 40)) - cast(
                 int, self.config.get("target_outbound_peer_count", 8)
             )
-        if node_type == NodeType.WALLET:
-            return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))
-        if node_type == NodeType.FARMER:
-            return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
-        if node_type == NodeType.TIMELORD:
-            return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
-        return True
+        config_key, default_limit = self.inbound_limit_defaults[node_type]
+        limit: int = self.config.get(config_key, default_limit)
+        return inbound_count < limit
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: dict[str, Any]) -> bool:
         return is_trusted_peer(
