@@ -201,15 +201,16 @@ async def new_wallet_action_scope(
 
         yield self
 
-    self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
-        self.side_effects.transactions,
-        push=push,
-        merge_spends=merge_spends,
-        sign=sign,
-        additional_signing_responses=self.side_effects.signing_responses,
-        extra_spends=self.side_effects.extra_spends,
-        singleton_records=self.side_effects.singleton_records,
-        plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
-    )
+    if self.side_effects.transactions != []:
+        self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
+            self.side_effects.transactions,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=self.side_effects.signing_responses,
+            extra_spends=self.side_effects.extra_spends,
+            singleton_records=self.side_effects.singleton_records,
+            plotnft_exiting_info=self.side_effects.plotnft_exiting_info,
+        )
     if push and self.side_effects.get_unused_derivation_record_result is not None:
         await self.side_effects.get_unused_derivation_record_result.to_standard().commit(wallet_state_manager)
