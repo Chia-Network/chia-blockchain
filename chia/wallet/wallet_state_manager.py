@@ -1758,13 +1758,10 @@ class WalletStateManager:
                             ]
                             # Only persist interest-only coins if a RemoteWallet exists to associate them with.
                             # If no RemoteWallet exists, treat these coins as we did previously (do not store them).
-                            if len(remote_wallet_ids) == 0:
-                                interested_wallet_ids = []
-                            else:
+                            if len(remote_wallet_ids) > 0:
                                 target_wallet_id: int = int(min(remote_wallet_ids))
                                 target_wallet_type = WalletType.REMOTE
 
-                            if len(remote_wallet_ids) > 0:
                                 if coin_state.created_height is None:
                                     # Reorged out / removed from chain: delete the interest-only record if present.
                                     if local_record is not None and local_record.wallet_type == WalletType.REMOTE:
