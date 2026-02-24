@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -29,10 +28,14 @@ from chia.util.errors import Err
 from chia.util.path import path_from_root
 
 if TYPE_CHECKING:
+    from chia.consensus.blockchain import Blockchain
+    from chia.full_node.hint_store import HintStore
+    from chia.full_node.mempool_manager import MempoolManager
     from chia.full_node.sync_store import SyncStore
+    from chia.server.server import ChiaServer
 
 
-class MempoolProtocolMixin(ABC):
+class MempoolProtocolMixin:
     # Attribute stubs - provided by the class that uses this mixin (e.g. FullNode).
     # Do NOT declare: server, blockchain, mempool_manager, hint_store (properties on FullNode).
     _bls_cache: BLSCache
@@ -44,8 +47,24 @@ class MempoolProtocolMixin(ABC):
     subscriptions: PeerSubscriptions
     sync_store: SyncStore
 
-    @abstractmethod
-    async def synced(self, block_is_current_at: uint64 | None = None) -> bool: ...
+    @property
+    def blockchain(self) -> Blockchain:
+        raise NotImplementedError
+
+    @property
+    def server(self) -> ChiaServer:
+        raise NotImplementedError
+
+    @property
+    def mempool_manager(self) -> MempoolManager:
+        raise NotImplementedError
+
+    @property
+    def hint_store(self) -> HintStore:
+        raise NotImplementedError
+
+    async def synced(self, block_is_current_at: uint64 | None = None) -> bool:
+        raise NotImplementedError
 
     async def add_transaction(
         self,

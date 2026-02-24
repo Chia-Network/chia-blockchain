@@ -19,8 +19,11 @@ from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFP
 from chia.types.weight_proof import WeightProof
 
 if TYPE_CHECKING:
+    from chia.consensus.blockchain import Blockchain
+    from chia.full_node.block_store import BlockStore
     from chia.full_node.sync_store import SyncStore
     from chia.server.server import ChiaServer
+    from chia.util.db_wrapper import DBWrapper2
 
 
 class CompactVdfMixin:
@@ -33,6 +36,22 @@ class CompactVdfMixin:
     _server: ChiaServer | None
     _shut_down: bool
     sync_store: SyncStore
+
+    @property
+    def blockchain(self) -> Blockchain:
+        raise NotImplementedError
+
+    @property
+    def server(self) -> ChiaServer:
+        raise NotImplementedError
+
+    @property
+    def block_store(self) -> BlockStore:
+        raise NotImplementedError
+
+    @property
+    def db_wrapper(self) -> DBWrapper2:
+        raise NotImplementedError
 
     async def _needs_compact_proof(
         self, vdf_info: VDFInfo, header_block: HeaderBlock, field_vdf: CompressibleVDFField
@@ -214,14 +233,8 @@ class CompactVdfMixin:
             peer_request = full_node_protocol.RequestCompactVDF(
                 request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
-            vdf_req_key = peer_request.get_hash()
-            peer.pending_compact_vdfs.put(vdf_req_key)
             response = await peer.call_api(FullNodeAPI.request_compact_vdf, peer_request, timeout=10)
             if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
-                # if we fail to receive a response within 10 seconds, we give up
-                # here, but it's stil possible it will arrive later. We leave it
-                # in pending_compact_vdfs
-                peer.pending_compact_vdfs.remove(vdf_req_key)
                 await self.add_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:

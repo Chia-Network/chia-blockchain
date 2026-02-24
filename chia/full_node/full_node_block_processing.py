@@ -7,7 +7,7 @@ import logging
 import time
 from collections.abc import Awaitable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from chia_rs import (
     AugSchemeMPL,
@@ -57,6 +57,15 @@ from chia.util.path import path_from_root
 from chia.util.profiler import enable_profiler
 from chia.util.task_referencer import create_referenced_task
 
+if TYPE_CHECKING:
+    from chia.consensus.blockchain import Blockchain
+    from chia.consensus.coin_store_protocol import CoinStoreProtocol
+    from chia.full_node.hint_store import HintStore
+    from chia.full_node.mempool_manager import MempoolManager
+    from chia.server.server import ChiaServer
+    from chia.server.ws_connection import WSChiaConnection
+    from chia.types.peer_info import PeerInfo
+
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
@@ -95,7 +104,33 @@ class BlockProcessingMixin(MempoolProtocolMixin):
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
     weight_proof_handler: Any | None  # WeightProofHandler | None
 
-    def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None: ...
+    def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None:
+        raise NotImplementedError
+
+    @property
+    def blockchain(self) -> Blockchain:
+        raise NotImplementedError
+
+    @property
+    def server(self) -> ChiaServer:
+        raise NotImplementedError
+
+    @property
+    def mempool_manager(self) -> MempoolManager:
+        raise NotImplementedError
+
+    @property
+    def hint_store(self) -> HintStore:
+        raise NotImplementedError
+
+    @property
+    def coin_store(self) -> CoinStoreProtocol:
+        raise NotImplementedError
+
+    @property
+    def timelord_lock(self) -> asyncio.Lock:
+        raise NotImplementedError
+
     async def send_peak_to_timelords(
         self, peak_block: FullBlock | None = None, peer: WSChiaConnection | None = None
     ) -> None: ...

@@ -34,7 +34,10 @@ from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
+    from chia.consensus.blockchain import Blockchain
+    from chia.full_node.hint_store import HintStore
     from chia.full_node.sync_store import SyncStore
+    from chia.server.server import ChiaServer
 
 
 class SyncMixin(BlockProcessingMixin, CompactVdfMixin):
@@ -52,7 +55,20 @@ class SyncMixin(BlockProcessingMixin, CompactVdfMixin):
     _ui_tasks: set[Any]
     weight_proof_handler: Any
 
-    def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None: ...
+    def _state_changed(self, change: str, change_data: dict[str, Any] | None = None) -> None:
+        raise NotImplementedError
+
+    @property
+    def blockchain(self) -> Blockchain:
+        raise NotImplementedError
+
+    @property
+    def server(self) -> ChiaServer:
+        raise NotImplementedError
+
+    @property
+    def hint_store(self) -> HintStore:
+        raise NotImplementedError
 
     async def short_sync_batch(self, peer: WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
         """
