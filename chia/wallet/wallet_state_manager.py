@@ -976,11 +976,10 @@ class WalletStateManager:
             tx_config_loader = tx_config_loader.override(
                 min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
             )
-        assert self.wallet_node.logged_in_fingerprint is not None
         return tx_config_loader.autofill(
             constants=self.constants,
             config=self.config,
-            logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
+            logged_in_fingerprint=self.root_pubkey.get_fingerprint(),
         )
 
     async def auto_claim_coins(self) -> None:
