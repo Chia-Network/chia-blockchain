@@ -70,6 +70,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import RespondHeaderBlocks, SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
+from chia.server.config_defaults import INBOUND_LIMIT_DEFAULTS
 from chia.server.node_discovery import FullNodePeers
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -3655,3 +3656,20 @@ async def test_request_header_blocks_non_tx_block(
     assert msg is not None
     response = RespondHeaderBlocks.from_bytes(msg.data)
     assert len(response.header_blocks) == 2
+
+
+def test_inbound_limit_defaults_covers_all_non_full_node_types() -> None:
+    assert set(INBOUND_LIMIT_DEFAULTS) == set(NodeType) - {NodeType.FULL_NODE}
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+async def test_node_types_inbound_connections_limit(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    _, server, _ = one_node_one_block
+    for node_type, (config_key, _) in INBOUND_LIMIT_DEFAULTS.items():
+        assert server.accept_inbound_connections(node_type) is True
+        server.config[config_key] = 1
+        await add_dummy_connection(server, self_hostname, 1337, node_type)
+        assert server.accept_inbound_connections(node_type) is False
