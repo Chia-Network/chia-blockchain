@@ -574,7 +574,7 @@ class FarmerAPI:
                 proof_data.plot_index,
                 proof_data.meta_group,
                 proof_data.strength,
-                proof_data.plot_size,
+                uint8(0),  # size is unused for v2 proofs
                 proof_bytes,
             ),
             proof_data.signage_point_index,

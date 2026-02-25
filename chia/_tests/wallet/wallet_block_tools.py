@@ -45,8 +45,8 @@ DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
     uint8(0),  # version 1
     uint16(0),  # plot_index
     uint8(0),  # group_id
-    uint8(2),  # strength
-    uint8(20),
+    uint8(0),  # strength
+    uint8(20),  # size
     bytes(32 * 5),
 )
 DEFAULT_VDF_INFO = VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros))

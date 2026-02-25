@@ -144,4 +144,4 @@ def test_expected_plot_size_v2() -> None:
         for plot_index in [2, 300, 400, 500, 600, 700]:
             for group_id in [2, 3, 4, 5, 6, 7]:
                 plot_size = _expected_plot_size(PlotParam.make_v2(plot_index, group_id, strength), test_constants)
-        assert plot_size == 988_513_566
+                assert plot_size == 988_513_566
