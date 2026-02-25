@@ -166,12 +166,9 @@ class FullNodeSimulator(FullNodeAPI):
                 raise ValueError("Cannot revert to a height less than 1.")
             block_record: BlockRecord = self.full_node.blockchain.height_to_block_record(new_height)
             # remove enough data to allow a bunch of blocks to be wiped.
-            async with self.full_node.block_store.transaction():
-                # set coinstore
-                await self.full_node.coin_store.rollback_to_block(new_height)
-                # set blockstore to new height
-                await self.full_node.block_store.rollback(new_height)
-                await self.full_node.block_store.set_peak(block_record.header_hash)
+            async with self.full_node.consensus_store.writer() as w:
+                await w.rollback_to_fork(new_height)
+                await w.block_store.set_peak(block_record.header_hash)
                 self.full_node.blockchain._peak_height = new_height
         # reload mempool
         await self.full_node.mempool_manager.new_peak(block_record, None)

@@ -71,8 +71,6 @@ from chia.types.clvm_cost import QUOTE_BYTES, QUOTE_EXECUTION_COST
 from chia.types.generator_types import BlockGenerator, NewBlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.batches import to_batches
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
@@ -2014,25 +2012,15 @@ class FullNodeAPI:
 
         start_time = time.monotonic()
 
-        async with self.full_node.db_wrapper.reader() as conn:
-            transaction_ids = set(
-                self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
-            )
+        transaction_ids = set(
+            self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
+        )
 
-            hinted_coin_ids: set[bytes32] = set()
+        hinted_coin_ids = await self.full_node.hint_store.get_coin_ids_multi(
+            cast(set[bytes], puzzle_hashes),
+        )
 
-            for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
-                hints_db: tuple[bytes, ...] = tuple(batch.entries)
-                cursor = await conn.execute(
-                    f"SELECT coin_id from hints INDEXED BY hint_index "
-                    f"WHERE hint IN ({'?,' * (len(batch.entries) - 1)}?)",
-                    hints_db,
-                )
-                for row in await cursor.fetchall():
-                    hinted_coin_ids.add(bytes32(row[0]))
-                await cursor.close()
-
-            transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
+        transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(set(hinted_coin_ids)))
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))

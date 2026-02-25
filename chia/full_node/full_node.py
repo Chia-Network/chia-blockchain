@@ -7,13 +7,12 @@ import dataclasses
 import logging
 import multiprocessing
 import random
-import sqlite3
 import time
 import traceback
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TextIO, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, cast, final
 
 from chia_rs import (
     AugSchemeMPL,
@@ -86,8 +85,6 @@ from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version, set_db_version_async
-from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.network import is_localhost
@@ -156,7 +153,7 @@ class FullNode:
     _compact_vdf_sem: LimitedSemaphore | None = None
     _new_peak_sem: LimitedSemaphore | None = None
     _add_transaction_semaphore: asyncio.Semaphore | None = None
-    _db_wrapper: DBWrapper2 | None = None
+    _consensus_store: ConsensusStoreSQLite3 | None = None
     _hint_store: HintStore | None = None
     _block_store: BlockStore | None = None
     _coin_store: CoinStoreProtocol | None = None
@@ -216,54 +213,23 @@ class FullNode:
         self._add_transaction_semaphore = asyncio.Semaphore(200)
 
         sql_log_path: Path | None = None
-        with contextlib.ExitStack() as exit_stack:
-            sql_log_file: TextIO | None = None
-            if self.config.get("log_sqlite_cmds", False):
-                sql_log_path = path_from_root(self.root_path, "log/sql.log")
-                self.log.info(f"logging SQL commands to {sql_log_path}")
-                sql_log_file = exit_stack.enter_context(sql_log_path.open("a", encoding="utf-8"))
-
-            # create the store (db) and full node instance
-            # TODO: is this standardized and thus able to be handled by DBWrapper2?
-            async with manage_connection(self.db_path, log_file=sql_log_file, name="version_check") as db_connection:
-                db_version = await lookup_db_version(db_connection)
-
-        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
 
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
 
-        async with DBWrapper2.managed(
+        selected_network = self.config.get("selected_network")
+        async with ConsensusStoreSQLite3.managed(
             self.db_path,
-            db_version=db_version,
+            blockchain_dir=self.db_path.parent,
+            selected_network=selected_network,
             reader_count=self.config.get("db_readers", 4),
             log_path=sql_log_path,
             synchronous=db_sync,
-        ) as self._db_wrapper:
-            if self.db_wrapper.db_version != 2:
-                async with self.db_wrapper.reader_no_transaction() as conn:
-                    async with conn.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
-                    ) as cur:
-                        if len(list(await cur.fetchall())) == 0:
-                            try:
-                                # this is a new DB file. Make it v2
-                                async with self.db_wrapper.writer_maybe_transaction() as w_conn:
-                                    await set_db_version_async(w_conn, 2)
-                                    self.db_wrapper.db_version = 2
-                                    self.log.info("blockchain database is empty, configuring as v2")
-                            except sqlite3.OperationalError:
-                                # it could be a database created with "chia init", which is
-                                # empty except it has the database_version table
-                                pass
-
-            self._hint_store = await HintStore.create(self.db_wrapper)
-            selected_network = self.config.get("selected_network")
-            self._consensus_store = await ConsensusStoreSQLite3.create(
-                self.db_wrapper,
-                blockchain_dir=self.db_path.parent,
-                selected_network=selected_network,
-            )
+        ) as self._consensus_store:
+            self._hint_store = self._consensus_store.hint_store
             self._block_store = self._consensus_store.block_store
             self._coin_store = self._consensus_store.coin_store
             self.log.info("Initializing blockchain from disk")
@@ -437,9 +403,9 @@ class FullNode:
         return self._transaction_queue
 
     @property
-    def db_wrapper(self) -> DBWrapper2:
-        assert self._db_wrapper is not None
-        return self._db_wrapper
+    def consensus_store(self) -> ConsensusStoreSQLite3:
+        assert self._consensus_store is not None
+        return self._consensus_store
 
     @property
     def hint_store(self) -> HintStore:
@@ -3098,9 +3064,9 @@ class FullNode:
                 new_block = block.replace(challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
-        async with self.db_wrapper.writer():
+        async with self.consensus_store.writer() as w:
             try:
-                await self.block_store.replace_proof(header_hash, new_block)
+                await w.block_store.replace_proof(header_hash, new_block)
                 return True
             except BaseException as e:
                 self.log.error(
