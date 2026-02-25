@@ -12,7 +12,7 @@ from packaging.version import Version
 
 from chia import __version__
 from chia._tests.conftest import ConsensusMode
-from chia._tests.connection_utils import connect_and_get_peer
+from chia._tests.connection_utils import add_dummy_connection_wsc, connect_and_get_peer
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node_api import FullNodeAPI
@@ -132,16 +132,19 @@ async def test_error_response(
     await wallet_node.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
-    wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
-    full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
     test_version = Version(version)
-    wallet_connection.protocol_version = test_version
     request = RequestTransaction(bytes32(32 * b"1"))
     error_message = f"Some error message: {request.transaction_id}"
+    dummy_wsc, dummy_peer_id = await add_dummy_connection_wsc(full_node.server, self_hostname, 1337)
+    dummy_full_node_connection = full_node.server.all_connections[dummy_peer_id]
+    dummy_full_node_connection.protocol_version = test_version
     with caplog.at_level(logging.DEBUG):
-        response = await full_node_connection.call_api(TestAPI.request_transaction, request, timeout=5)
+        response = await dummy_wsc.call_api(TestAPI.request_transaction, request, timeout=5)
         error = ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, error_message)
-        assert f"ApiError: {error} from {wallet_connection.peer_node_id}, {wallet_connection.peer_info}" in caplog.text
+        assert (
+            f"ApiError: {error} from {dummy_full_node_connection.peer_node_id}, {dummy_full_node_connection.peer_info}"
+            in caplog.text
+        )
         if test_version >= error_response_version:
             assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, b"ab")
             assert "Request timeout:" not in caplog.text

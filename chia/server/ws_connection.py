@@ -20,6 +20,7 @@ from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.protocols.outbound_message import Message, NodeType, make_msg
+from chia.protocols.protocol_message_type_to_node_type import ProtocolMessageTypeToNodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -422,6 +423,16 @@ class WSChiaConnection:
 
             if metadata is None:
                 self.log.error(f"Peer trying to call non api function {message_type}")
+                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
+
+            assert self.connection_type is not None
+            allowed_senders = ProtocolMessageTypeToNodeType.get(bare_message_type)
+            if allowed_senders is None or self.connection_type not in allowed_senders:
+                self.log.error(
+                    f"API call type mismatch: {self.get_peer_logging()} of "
+                    f"type {self.connection_type.name} and version {self.version} "
+                    f"is calling {message_type}"
+                )
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request
