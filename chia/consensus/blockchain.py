@@ -27,8 +27,10 @@ from chia_rs.sized_ints import uint16, uint32, uint64, uint128
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
-from chia.consensus.block_height_map import BlockHeightMap
+from chia.consensus.block_height_map_protocol import BlockHeightMapProtocol
+from chia.consensus.block_store_protocol import BlockStoreProtocol
 from chia.consensus.coin_store_protocol import CoinStoreProtocol
+from chia.consensus.consensus_store import ConsensusStoreProtocol, ConsensusStoreWriter
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import lookup_fork_chain
@@ -37,7 +39,6 @@ from chia.consensus.generator_tools import get_block_header
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
-from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.generator_types import BlockGenerator
@@ -101,11 +102,13 @@ class Blockchain:
     __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
-    __height_map: BlockHeightMap
-    # Unspent Store
+    __height_map: BlockHeightMapProtocol
+    # Unified consensus store wrapping block, coin, and height map stores
+    _consensus_store: ConsensusStoreProtocol
+    # Unspent Store (convenience reference into _consensus_store)
     coin_store: CoinStoreProtocol
-    # Store
-    block_store: BlockStore
+    # Block Store (convenience reference into _consensus_store)
+    block_store: BlockStoreProtocol
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
@@ -122,9 +125,7 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStoreProtocol,
-        block_store: BlockStore,
-        height_map: BlockHeightMap,
+        consensus_store: ConsensusStoreProtocol,
         consensus_constants: ConsensusConstants,
         reserved_cores: int,
         *,
@@ -154,10 +155,11 @@ class Blockchain:
             log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
-        self.coin_store = coin_store
-        self.block_store = block_store
+        self._consensus_store = consensus_store
+        self.coin_store = consensus_store.coin_store
+        self.block_store = consensus_store.block_store
         self._shut_down = False
-        await self._load_chain_from_store(height_map)
+        await self._load_chain_from_store()
         self._seen_compact_proofs = set()
         return self
 
@@ -165,11 +167,11 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, height_map: BlockHeightMap) -> None:
+    async def _load_chain_from_store(self) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__height_map = height_map
+        self.__height_map = self._consensus_store.height_map
         self.__block_records = {}
         self.__heights_in_cache = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
@@ -429,10 +431,10 @@ class Blockchain:
 
         try:
             # Always add the block to the database
-            async with self.block_store.transaction():
+            async with self._consensus_store.writer() as w:
                 # Perform the DB operations to update the state, and rollback if something goes wrong
-                await self.block_store.add_full_block(header_hash, block, block_record)
-                records, state_change_summary = await self._reconsider_peak(block_record, genesis, fork_info)
+                await w.block_store.add_full_block(header_hash, block, block_record)
+                records, state_change_summary = await self._reconsider_peak(w, block_record, genesis, fork_info)
 
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
                 # This is done after all async/DB operations, so there is a decreased chance of failure.
@@ -485,6 +487,7 @@ class Blockchain:
     # under deep reorgs this can cause OOM
     async def _reconsider_peak(
         self,
+        writer: ConsensusStoreWriter,
         block_record: BlockRecord,
         genesis: bool,
         fork_info: ForkInfo,
@@ -517,30 +520,33 @@ class Blockchain:
                     f"peak-hash: {peak.header_hash}"
                 )
 
-            if block_record.prev_hash != peak.header_hash:
-                rolled_back_state = await self.coin_store.rollback_to_block(fork_info.fork_height)
-                if self._log_coins and len(rolled_back_state) > 0:
-                    log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
-                    log.info(
-                        "removed: %s",
-                        ",".join(
-                            [
-                                name.hex()[0:6]
-                                for name, state in rolled_back_state.items()
-                                if state.confirmed_block_index == 0
-                            ]
-                        ),
-                    )
-                    log.info(
-                        "unspent: %s",
-                        ",".join(
-                            [
-                                name.hex()[0:6]
-                                for name, state in rolled_back_state.items()
-                                if state.confirmed_block_index != 0
-                            ]
-                        ),
-                    )
+        # Unified rollback: rolls back coins and marks blocks above the fork
+        # height as out of the main chain. For simple chain extensions (no
+        # reorg) this is a no-op since there are no coins or in_main_chain
+        # flags to revert above the fork height.
+        rolled_back_state = await writer.rollback_to_fork(fork_info.fork_height)
+        if self._log_coins and len(rolled_back_state) > 0:
+            log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
+            log.info(
+                "removed: %s",
+                ",".join(
+                    [
+                        name.hex()[0:6]
+                        for name, state in rolled_back_state.items()
+                        if state.confirmed_block_index == 0
+                    ]
+                ),
+            )
+            log.info(
+                "unspent: %s",
+                ",".join(
+                    [
+                        name.hex()[0:6]
+                        for name, state in rolled_back_state.items()
+                        if state.confirmed_block_index != 0
+                    ]
+                ),
+            )
 
         # Collects all blocks from fork point to new peak
         records_to_add: list[BlockRecord] = []
@@ -580,7 +586,7 @@ class Blockchain:
                 coin_id for coin_id, fork_rem in fork_info.removals_since_fork.items() if fork_rem.height == height
             ]
             assert fetched_block_record.timestamp is not None
-            await self.coin_store.new_block(
+            await writer.coin_store.new_block(
                 height,
                 fetched_block_record.timestamp,
                 included_reward_coins,
@@ -598,12 +604,10 @@ class Blockchain:
                 log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
         # we made it to the end successfully
-        # Rollback sub_epoch_summaries
-        await self.block_store.rollback(fork_info.fork_height)
-        await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
+        await writer.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
         # Changes the peak to be the new peak
-        await self.block_store.set_peak(block_record.header_hash)
+        await writer.block_store.set_peak(block_record.header_hash)
 
         return records_to_add, StateChangeSummary(
             block_record,
