@@ -520,25 +520,30 @@ class Blockchain:
                     f"peak-hash: {peak.header_hash}"
                 )
 
-        # Unified rollback: rolls back coins and marks blocks above the fork
-        # height as out of the main chain. For simple chain extensions (no
-        # reorg) this is a no-op since there are no coins or in_main_chain
-        # flags to revert above the fork height.
-        rolled_back_state = await writer.rollback_to_fork(fork_info.fork_height)
-        if self._log_coins and len(rolled_back_state) > 0:
-            log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
-            log.info(
-                "removed: %s",
-                ",".join(
-                    [name.hex()[0:6] for name, state in rolled_back_state.items() if state.confirmed_block_index == 0]
-                ),
-            )
-            log.info(
-                "unspent: %s",
-                ",".join(
-                    [name.hex()[0:6] for name, state in rolled_back_state.items() if state.confirmed_block_index != 0]
-                ),
-            )
+            if block_record.prev_hash != peak.header_hash:
+                rolled_back_state = await writer.rollback_to_fork(fork_info.fork_height)
+                if self._log_coins and len(rolled_back_state) > 0:
+                    log.info(f"rolled back {len(rolled_back_state)} coins, to fork height {fork_info.fork_height}")
+                    log.info(
+                        "removed: %s",
+                        ",".join(
+                            [
+                                name.hex()[0:6]
+                                for name, state in rolled_back_state.items()
+                                if state.confirmed_block_index == 0
+                            ]
+                        ),
+                    )
+                    log.info(
+                        "unspent: %s",
+                        ",".join(
+                            [
+                                name.hex()[0:6]
+                                for name, state in rolled_back_state.items()
+                                if state.confirmed_block_index != 0
+                            ]
+                        ),
+                    )
 
         # Collects all blocks from fork point to new peak
         records_to_add: list[BlockRecord] = []
@@ -596,6 +601,7 @@ class Blockchain:
                 log.info("removals: %s", ",".join([f"{rem}"[0:6] for rem in tx_removals]))
 
         # we made it to the end successfully
+        await writer.block_store.rollback(fork_info.fork_height)
         await writer.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
         # Changes the peak to be the new peak
