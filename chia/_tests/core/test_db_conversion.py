@@ -11,6 +11,8 @@ from chia.cmds.db_upgrade_func import convert_v1_to_v2
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.full_node.hint_store import HintStore
 from chia.simulator.block_tools import test_constants

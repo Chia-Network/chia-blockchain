@@ -52,7 +52,6 @@ from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.consensus.signage_point import SignagePoint
 from chia.full_node.block_store import BlockStore
 from chia.full_node.check_fork_next_block import check_fork_next_block
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.consensus_store_sqlite3 import ConsensusStoreSQLite3
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
