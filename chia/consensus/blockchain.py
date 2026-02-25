@@ -530,21 +530,13 @@ class Blockchain:
             log.info(
                 "removed: %s",
                 ",".join(
-                    [
-                        name.hex()[0:6]
-                        for name, state in rolled_back_state.items()
-                        if state.confirmed_block_index == 0
-                    ]
+                    [name.hex()[0:6] for name, state in rolled_back_state.items() if state.confirmed_block_index == 0]
                 ),
             )
             log.info(
                 "unspent: %s",
                 ",".join(
-                    [
-                        name.hex()[0:6]
-                        for name, state in rolled_back_state.items()
-                        if state.confirmed_block_index != 0
-                    ]
+                    [name.hex()[0:6] for name, state in rolled_back_state.items() if state.confirmed_block_index != 0]
                 ),
             )
 
