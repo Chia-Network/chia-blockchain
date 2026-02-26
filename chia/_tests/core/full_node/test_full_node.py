@@ -3665,6 +3665,7 @@ async def test_node_type_message_typechecking(
 ) -> None:
     _, server, _ = one_node_one_block
     wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
     await wsc._send_message(make_msg(ProtocolMessageTypes.request_peers, b""))
     type_mismatch = node_type not in {NodeType.WALLET, NodeType.FULL_NODE}
