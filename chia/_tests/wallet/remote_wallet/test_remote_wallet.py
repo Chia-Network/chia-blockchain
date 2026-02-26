@@ -8,7 +8,6 @@ from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
 from chia._tests.environments.wallet import WalletTestFramework
-from chia._tests.util.time_out_assert import time_out_assert
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.remote_wallet.remote_info import RemoteInfo
@@ -19,13 +18,6 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import RegisterRemoteCoins
-
-
-async def has_remote_coin_record(wallet_node: WalletNode, coin_id: bytes32, remote_wallet_id: uint32) -> bool:
-    record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
-    if record is None:
-        return False
-    return record.wallet_type == WalletType.REMOTE and record.wallet_id == int(remote_wallet_id)
 
 
 @pytest.mark.parametrize(
@@ -67,8 +59,8 @@ async def test_remote_wallet_register_remote_coin_persists_coin_record(
             wallet_node.wallet_state_manager, wallet, name="Remote Wallet #1"
         )
 
-    # check for CoinRecord before we register interest in the coin
-    await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id, remote_wallet.id())
+    # Check for CoinRecord before we register interest in the coin.
+    assert await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id) is None
 
     await env.rpc_client.register_remote_coins(RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id]))
 
@@ -76,7 +68,10 @@ async def test_remote_wallet_register_remote_coin_persists_coin_record(
     await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    await time_out_assert(20, has_remote_coin_record, True, wallet_node, coin_id, remote_wallet.id())
+    record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
+    assert record is not None
+    assert record.wallet_type == WalletType.REMOTE
+    assert record.wallet_id == int(remote_wallet.id())
 
 
 @pytest.mark.parametrize(
@@ -120,8 +115,8 @@ async def test_remote_wallet_register_remote_coins_persists_coin_records(
             wallet_node.wallet_state_manager, wallet, name="Remote Wallet #1"
         )
 
-    await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id_1, remote_wallet.id())
-    await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id_2, remote_wallet.id())
+    assert await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id_1) is None
+    assert await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id_2) is None
 
     await env.rpc_client.register_remote_coins(
         RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id_1, coin_id_2])
@@ -130,8 +125,14 @@ async def test_remote_wallet_register_remote_coins_persists_coin_records(
     await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    await time_out_assert(20, has_remote_coin_record, True, wallet_node, coin_id_1, remote_wallet.id())
-    await time_out_assert(20, has_remote_coin_record, True, wallet_node, coin_id_2, remote_wallet.id())
+    record_1 = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id_1)
+    record_2 = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id_2)
+    assert record_1 is not None
+    assert record_2 is not None
+    assert record_1.wallet_type == WalletType.REMOTE
+    assert record_2.wallet_type == WalletType.REMOTE
+    assert record_1.wallet_id == int(remote_wallet.id())
+    assert record_2.wallet_id == int(remote_wallet.id())
 
 
 @pytest.mark.parametrize(
