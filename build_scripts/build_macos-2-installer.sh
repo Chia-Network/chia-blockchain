@@ -72,9 +72,11 @@ else
   export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
 echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
+  --config.productName="Chia" \
   --config ../../../build_scripts/electron-builder.json \
   --publish always
 "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
+  --config.productName="Chia" \
   --config ../../../build_scripts/electron-builder.json \
   --publish always
 LAST_EXIT_CODE=$?

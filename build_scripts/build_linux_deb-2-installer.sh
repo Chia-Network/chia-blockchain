@@ -82,7 +82,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
-PRODUCT_NAME="Chia"
+PRODUCT_NAME="chia"
 if [ "$PLATFORM" = "arm64" ]; then
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # workaround for above now implemented in the image build at

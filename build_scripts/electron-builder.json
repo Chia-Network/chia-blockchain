@@ -1,5 +1,5 @@
 {
-  "productName": "Chia",
+  "productName": "chia",
   "appId": "net.chia.blockchain",
   "asar": true,
   "asarUnpack": "**/daemon/**",
