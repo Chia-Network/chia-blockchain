@@ -73,13 +73,8 @@ class RemoteWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.log = logging.getLogger(__name__)
-
-        try:
-            data = json.loads(wallet_info.data) if wallet_info.data else {}
-            self.remote_info = RemoteInfo.from_json_dict(data)
-        except Exception:
-            # Be resilient to older/invalid data while developing.
-            self.remote_info = RemoteInfo(remote_coin_ids=[])
+        data = json.loads(wallet_info.data) if wallet_info.data else {}
+        self.remote_info = RemoteInfo.from_json_dict(data)
 
         if len(self.remote_info.remote_coin_ids) > 0:
             # Restore interested coin wallet-id mapping on startup so remote coin updates
