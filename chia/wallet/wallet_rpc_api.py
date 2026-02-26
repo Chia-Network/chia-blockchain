@@ -1241,7 +1241,7 @@ class WalletRpcApi:
                     )
         elif request.wallet_type == CreateNewWalletType.REMOTE_WALLET:
             async with self.service.wallet_state_manager.lock:
-                remote_wallet = RemoteWallet.get_existing_remote_wallet(wallet_state_manager)
+                remote_wallet = wallet_state_manager.get_existing_remote_wallet()
                 if remote_wallet is None:
                     remote_wallet = await RemoteWallet.create_new_remote_wallet(
                         wallet_state_manager, main_wallet, request.name

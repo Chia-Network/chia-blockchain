@@ -395,6 +395,12 @@ class WalletStateManager:
 
         return wallet
 
+    def get_existing_remote_wallet(self) -> RemoteWallet | None:
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.REMOTE:
+                return cast(RemoteWallet, wallet)
+        return None
+
     @asynccontextmanager
     async def puzzle_hash_db_writer(self) -> AsyncIterator[None]:
         async with self.db_wrapper.writer():

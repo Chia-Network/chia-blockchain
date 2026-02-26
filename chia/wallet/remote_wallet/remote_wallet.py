@@ -34,13 +34,6 @@ class RemoteWallet:
     wallet_info_type: ClassVar[type[RemoteInfo]] = RemoteInfo
 
     @staticmethod
-    def get_existing_remote_wallet(wallet_state_manager: Any) -> RemoteWallet | None:
-        for wallet in wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.REMOTE:
-                return cast(RemoteWallet, wallet)
-        return None
-
-    @staticmethod
     async def create_new_remote_wallet(
         wallet_state_manager: Any,
         wallet: Wallet,
@@ -50,7 +43,7 @@ class RemoteWallet:
         Create a brand new Remote wallet.
         This must be called under the wallet state manager lock.
         """
-        if RemoteWallet.get_existing_remote_wallet(wallet_state_manager) is not None:
+        if wallet_state_manager.get_existing_remote_wallet() is not None:
             raise ValueError("Only one RemoteWallet instance is supported")
 
         self = RemoteWallet()
