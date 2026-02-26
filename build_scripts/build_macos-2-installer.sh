@@ -48,7 +48,7 @@ bash ./build_license_directory.sh
 # appears sometimes m-series chips (prefer bundled from @loader_path/..)
 bash ./remove_brew_rpaths.sh
 
-cp -r dist/daemon ../chia-blockchain-gui/packages/gui
+cp -a dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 
