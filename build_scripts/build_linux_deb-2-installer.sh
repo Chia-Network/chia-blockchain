@@ -82,32 +82,20 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
-PRODUCT_NAME="chia"
+PRODUCT_NAME="Chia"
 if [ "$PLATFORM" = "arm64" ]; then
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # workaround for above now implemented in the image build at
   # https://github.com/Chia-Network/build-images/blob/7c74d2f20739543c486c2522032cf09d96396d24/ubuntu-22.04/Dockerfile#L48-L61
   echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
-    --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" \
-    --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
-    --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" \
-    --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
   echo "${NPM_PATH}/electron-builder" build --linux deb --x64 \
-    --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" \
-    --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   "${NPM_PATH}/electron-builder" build --linux deb --x64 \
-    --config.extraMetadata.name=chia-blockchain \
-    --config.productName="$PRODUCT_NAME" \
-    --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 fi

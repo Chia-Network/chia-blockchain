@@ -62,7 +62,6 @@ OPT_ARCH="--x64"
 if [ "$(arch)" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
-PRODUCT_NAME="Chia"
 if [ "$NOTARIZE" == true ]; then
   echo "Setting credentials for signing"
   export CSC_LINK=$APPLE_DEV_ID_APP
@@ -74,15 +73,11 @@ else
   export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
 echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
-  --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="13" \
   --config ../../../build_scripts/electron-builder.json
 "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
-  --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="13" \
   --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
-ls -l dist/mac*/chia.app/Contents/Resources/app.asar
+ls -l dist/mac*/Chia.app/Contents/Resources/app.asar
 
 # reset the package.json to the original
 mv package.json.orig package.json
@@ -96,11 +91,10 @@ mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit 1
 
 mkdir final_installer
-ORIGINAL_DMG_NAME="chia-${CHIA_INSTALLER_VERSION}.dmg"
+ORIGINAL_DMG_NAME="Chia-${CHIA_INSTALLER_VERSION}.dmg"
 if [ "$(arch)" = "arm64" ]; then
   DMG_NAME=Chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
 else
-  # NOTE: when coded, this changes the case to Chia
   DMG_NAME=Chia-${CHIA_INSTALLER_VERSION}.dmg
 fi
 mv dist/"$ORIGINAL_DMG_NAME" final_installer/"$DMG_NAME"
