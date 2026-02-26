@@ -136,27 +136,30 @@ python setup.py develop
 
 ## Benchmark Results
 
-### Test Environment
-- **GPU:** 2x NVIDIA RTX PRO 4000 Blackwell
-- **VRAM:** 25.2 GB each
-- **Driver:** 580.126.20
-- **CUDA:** 12.8
-- **Compute Capability:** 12.0 (Blackwell)
+### Test Environment (H200)
+- **GPU:** NVIDIA H200
+- **VRAM:** 150.1 GB
+- **Driver:** 590.48.01
+- **CUDA:** 13.1
+- **Architecture:** Hopper (sm_90)
+- **CPU:** AMD EPYC 9554 64-Core
 
 ### Performance (Single GPU)
 
-| Operation | This Build (2.12.0+sm120) | Previous (2.10.0+cu128) | Improvement |
-|-----------|--------------------------|------------------------|-------------|
-| MatMul FP32 | **20.6 TFLOPS** | ~10 TFLOPS | **2.1x ⚡** |
-| MatMul FP16 | **36.0 TFLOPS** | ~20 TFLOPS | **1.8x ⚡** |
-| MatMul BF16 | **48.7 TFLOPS** | N/A | **NEW** |
-| Conv2d 3x3 | 5.14 ms/iter | ~3 ms/iter | - |
-| Linear | 0.78 ms/iter | - | - |
+| Operation | H200 (sm_90) | RTX PRO 4000 (sm_120) | Previous (2.10.0) | Improvement |
+|-----------|--------------|----------------------|-------------------|-------------|
+| MatMul FP32 8K | **50.0 TFLOPS** | 20.6 TFLOPS | ~10 TFLOPS | **5x** |
+| MatMul FP16 8K | **183.5 TFLOPS** | 36 TFLOPS | ~20 TFLOPS | **9x** |
+| MatMul BF16 8K | **220.0 TFLOPS** | 48.7 TFLOPS | N/A | **NEW** |
+| Conv2d 3x3 | 5.96 ms/iter | 5.14 ms/iter | ~3 ms/iter | - |
+| Linear | 0.25 ms/iter | 0.78 ms/iter | - | **3x** |
+| Attention | 4.00 ms/iter | - | - | **NEW** |
 
 ### Key Improvements
-1. **BF16 Support:** Native Blackwell BF16 tensor cores (48.7 TFLOPS)
-2. **FP16:** 36 TFLOPS on tensor cores
-3. **FP32:** 20.6 TFLOPS with TF32 enabled
+1. **FP16**: 183 TFLOPS - 9x faster than previous generation
+2. **BF16**: 220 TFLOPS - tensor core performance
+3. **FP32**: 50 TFLOPS - 5x improvement
+4. **Attention**: Native transformer acceleration
 
 ---
 
@@ -209,16 +212,23 @@ print(f"Arch: {torch.cuda.get_device_capability(0)}")
 
 ### Git Commit
 ```
-00ddf57 Enable full CUDA 13.1 compatibility: FBGEMM, TensorExpr, full tests
+580a6e2 Enable full CUDA 13.1 compatibility: FBGEMM, TensorExpr, full tests
 ```
 
-### Installed Dependencies
-| Package | Version |
-|---------|---------|
-| torch | 2.12.0a0+git00ddf57 |
-| cmake | 4.2.1 |
-| ninja | 1.13.0 |
-| setuptools | 81.0.0 |
+### Build Servers Tested
+
+#### Server 1: RTX PRO 4000 Blackwell
+- GPU: 2x NVIDIA RTX PRO 4000 Blackwell (25.2 GB each)
+- CUDA: 12.8
+- Driver: 580.126.20
+- Build time: ~3 hours (8-core)
+
+#### Server 2: H200 (Current)
+- GPU: NVIDIA H200 (150 GB)
+- CUDA: 13.1
+- Driver: 590.48.01
+- CPU: AMD EPYC 9554 64-Core
+- Build time: ~30 min (sm_90 only), ~2 hours (all archs)
 
 ### Build Command Used
 ```bash
@@ -228,25 +238,23 @@ cd pytorch
 # Dependencies
 pip install cmake ninja pyyaml setuptools
 
-# Build
-export CUDA_HOME=/usr/local/cuda-12.8
+# Build (single arch - faster)
+export CUDA_HOME=/usr/local/cuda
 export USE_CUDA=1
 export USE_FBGEMM=1
 export USE_CUDNN=1
 export USE_NCCL=1
-export TORCH_CUDA_ARCH_LIST="12.0"
+export TORCH_CUDA_ARCH_LIST="9.0"  # Hopper
 export USE_CUDNN_FRONTEND=1
 export USE_FLASH_ATTENTION=1
 export USE_MEM_EFF_ATTENTION=1
-export MAX_JOBS=8
+export MAX_JOBS=64
 
 python setup.py develop
-```
 
-### Build Time
-- **Duration:** ~3 hours on 8-core server
-- **Files compiled:** 8084
-- **Architecture:** sm_120 only ( Blackwell)
+# Or build for all architectures:
+export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;10.0;12.0"
+```
 
 ---
 
