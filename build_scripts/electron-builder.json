@@ -43,8 +43,7 @@
     "provisioningProfile": "chiablockchain.provisionprofile",
     "darkModeSupport": true,
     "hardenedRuntime": true,
-    "gatekeeperAssess": false,
-    "signIgnore": ["Python.framework"]
+    "gatekeeperAssess": false
   },
   "dmg": {
     "background": "../../../build_scripts/assets/dmg/background.tiff",
