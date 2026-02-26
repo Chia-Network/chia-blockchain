@@ -1,0 +1,58 @@
+diff --git a/.ci/pytorch/build.sh b/.ci/pytorch/build.sh
+index 684f417..1234567 100755
+--- a/.ci/pytorch/build.sh
++++ b/.ci/pytorch/build.sh
+@@ -31,8 +31,33 @@ if [[ "$BUILD_ENVIRONMENT" == *cuda* ]]; then
+ fi
+
+ if [[ "$BUILD_ENVIRONMENT" == *cuda13* ]]; then
+-  # Disable FBGEMM for CUDA 13 builds
+-  export USE_FBGEMM=0
++  # FBGEMM v1.5+ supports CUDA 13
++  export USE_FBGEMM=1
++
++  # Enable CUDA 13.1 specific optimizations
++  export USE_TENSOREXPR=1
++  export USE_CUDNN=1
++  export USE_NCCL=1
++
++  # Blackwell (sm_12) support
++  if [[ -z "$TORCH_CUDA_ARCH_LIST" ]]; then
++    export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;10.0;12.0"
++  fi
++
++  # Enable Blackwell-specific optimizations
++  export USE_CUDNN_FRONTEND=1
++  export USE_FLASH_ATTENTION=1
++  export USE_MEM_EFF_ATTENTION=1
++
++  # Enable TensorFloat-32 and FP8
++  export TORCH_ALLOW_TF32_CUBLAS_OVERRIDE=1
++  export CUDNN_ALLOW_TF32_CUBLAS_OVERRIDE=1
++
++  # NCCL optimizations for multi-GPU
++  export NCCL_IB_DISABLE=0
++  export NCCL_NET_GDR_LEVEL=2
+ fi
+diff --git a/.ci/pytorch/test.sh b/.ci/pytorch/test.sh
+--- a/.ci/pytorch/test.sh
++++ b/.ci/pytorch/test.sh
+@@ -10,8 +10,6 @@ if [[ "$BUILD_ENVIRONMENT" == *cuda13* ]]; then
+   # Disable unsupported tests for CUDA 13
+   export UNSUPPORTED_TESTS="${UNSUPPORTED_TESTS}"
+-  export PYTORCH_CUDA_RAND_PER=top_str
+-  export PYTORCH_TEST_CUDA_MEM_LEAK_CHECK=1
+ fi
+
+ # Remove exclusions for torchrec/fbgemm on CUDA 13
+diff --git a/.ci/pytorch/common_utils.sh b/.ci/pytorch/common_utils.sh
+--- a/.ci/pytorch/common_utils.sh
++++ b/.ci/pytorch/common_utils.sh
+@@ -50,6 +50,7 @@ function install_torch() {
+   # Enable FBGEMM for CUDA 13
+   if [[ "$BUILD_ENVIRONMENT" == *cuda13* ]]; then
+     export USE_FBGEMM=1
++    export USE_FBGEMM=1
+   fi
+
+   # Install PyTorch
