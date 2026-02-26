@@ -36,7 +36,7 @@ async def test_remote_wallet_register_remote_coin_persists_coin_record(
     full_node: FullNodeSimulator = wallet_environments.full_node
 
     # Create a coin that no wallet owns by sending to a puzzle hash we don't own.
-    target_ph = bytes32.secret()
+    target_ph = bytes32(bytes([11] * 32))
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await wallet.generate_signed_transaction(
             amounts=[uint64(1)],
@@ -90,8 +90,8 @@ async def test_remote_wallet_register_remote_coins_persists_coin_records(
     full_node: FullNodeSimulator = wallet_environments.full_node
 
     # Create multiple coins that no wallet owns by sending to puzzle hashes we don't own.
-    target_ph_1 = bytes32.secret()
-    target_ph_2 = bytes32.secret()
+    target_ph_1 = bytes32(bytes([21] * 32))
+    target_ph_2 = bytes32(bytes([22] * 32))
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await wallet.generate_signed_transaction(
             amounts=[uint64(1), uint64(2)],
@@ -149,7 +149,7 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     full_node: FullNodeSimulator = wallet_environments.full_node
 
     # Create an "external" coin by sending to a puzzle hash we don't own.
-    target_ph = bytes32.secret()
+    target_ph = bytes32(bytes([31] * 32))
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await wallet.generate_signed_transaction(
             amounts=[uint64(1)],
