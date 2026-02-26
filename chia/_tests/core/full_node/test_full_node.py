@@ -3655,3 +3655,18 @@ async def test_request_header_blocks_non_tx_block(
     assert msg is not None
     response = RespondHeaderBlocks.from_bytes(msg.data)
     assert len(response.header_blocks) == 2
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.parametrize("node_type", NodeType)
+async def test_node_type_message_typechecking(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str, node_type: NodeType
+) -> None:
+    _, server, _ = one_node_one_block
+    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type)
+    server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
+    await wsc._send_message(make_msg(ProtocolMessageTypes.request_peers, b""))
+    type_mismatch = node_type not in {NodeType.WALLET, NodeType.FULL_NODE}
+    await time_out_assert(5, lambda: wsc.closed, type_mismatch)
+    await time_out_assert(5, lambda: "1.3.3.7" in server.banned_peers, type_mismatch)
