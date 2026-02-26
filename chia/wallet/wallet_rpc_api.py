@@ -2926,7 +2926,9 @@ class WalletRpcApi:
 
     @marshal
     async def register_remote_coins(self, request: RegisterRemoteCoins) -> Empty:
-        remote_wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=RemoteWallet)
+        remote_wallet = self.service.wallet_state_manager.get_existing_remote_wallet()
+        if remote_wallet is None:
+            raise ValueError("No remote wallet found")
         await remote_wallet.register_remote_coins(request.coin_ids)
         return Empty()
 
