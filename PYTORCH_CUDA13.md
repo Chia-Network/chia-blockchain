@@ -143,17 +143,18 @@ python setup.py develop
 - **CUDA:** 13.1
 - **Architecture:** Hopper (sm_90)
 - **CPU:** AMD EPYC 9554 64-Core
+- **Architectures Compiled:** sm_80, sm_86, sm_89, sm_90, sm_100, sm_120
 
 ### Performance (Single GPU)
 
-| Operation | H200 (sm_90) | RTX PRO 4000 (sm_120) | Previous (2.10.0) | Improvement |
-|-----------|--------------|----------------------|-------------------|-------------|
-| MatMul FP32 8K | **50.0 TFLOPS** | 20.6 TFLOPS | ~10 TFLOPS | **5x** |
-| MatMul FP16 8K | **183.5 TFLOPS** | 36 TFLOPS | ~20 TFLOPS | **9x** |
-| MatMul BF16 8K | **220.0 TFLOPS** | 48.7 TFLOPS | N/A | **NEW** |
-| Conv2d 3x3 | 5.96 ms/iter | 5.14 ms/iter | ~3 ms/iter | - |
-| Linear | 0.25 ms/iter | 0.78 ms/iter | - | **3x** |
-| Attention | 4.00 ms/iter | - | - | **NEW** |
+| Operation | H200 (sm_90) Full Build | H200 (sm_90) Single Arch | RTX PRO 4000 (sm_120) |
+|-----------|------------------------|-------------------------|----------------------|
+| MatMul FP32 8K | **51.3 TFLOPS** | 50.0 TFLOPS | 20.6 TFLOPS |
+| MatMul FP16 8K | **461.3 TFLOPS** | 183.5 TFLOPS | 36 TFLOPS |
+| MatMul BF16 8K | **508.3 TFLOPS** | 220.0 TFLOPS | 48.7 TFLOPS |
+| Conv2d 3x3 | - | 5.96 ms/iter | 5.14 ms/iter |
+| Linear | - | 0.25 ms/iter | 0.78 ms/iter |
+| Attention | - | 4.00 ms/iter | - |
 
 ### Key Improvements
 1. **FP16**: 183 TFLOPS - 9x faster than previous generation
