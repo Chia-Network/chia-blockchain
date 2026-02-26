@@ -70,9 +70,7 @@ async def test_remote_wallet_register_remote_coin_persists_coin_record(
     # check for CoinRecord before we register interest in the coin
     await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id, remote_wallet.id())
 
-    await env.rpc_client.fetch(
-        "register_remote_coins", RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id]).to_json_dict()
-    )
+    await env.rpc_client.register_remote_coins(RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id]))
 
     # Trigger/allow subscription processing and coin updates.
     await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
@@ -125,9 +123,8 @@ async def test_remote_wallet_register_remote_coins_persists_coin_records(
     await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id_1, remote_wallet.id())
     await time_out_assert(20, has_remote_coin_record, False, wallet_node, coin_id_2, remote_wallet.id())
 
-    await env.rpc_client.fetch(
-        "register_remote_coins",
-        RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id_1, coin_id_2]).to_json_dict(),
+    await env.rpc_client.register_remote_coins(
+        RegisterRemoteCoins(wallet_id=remote_wallet.id(), coin_ids=[coin_id_1, coin_id_2])
     )
 
     await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
