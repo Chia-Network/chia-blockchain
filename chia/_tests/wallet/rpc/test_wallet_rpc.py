@@ -154,6 +154,7 @@ from chia.wallet.wallet_request_types import (
     NFTTransferNFT,
     PushTransactions,
     PushTX,
+    RegisterRemoteCoins,
     RoyaltyAsset,
     SelectCoins,
     SendNotification,
@@ -4345,6 +4346,32 @@ async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
     assert len(remote_wallets) == 1
     assert remote_wallets[0].id() == first_response.wallet_id
     assert remote_wallets[0].get_name() == "Remote Wallet #1"
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_register_remote_coins_validates_wallet_id(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    response = await env.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+
+    # Main wallet id exists but is not a RemoteWallet.
+    with pytest.raises(ValueError, match="type RemoteWallet is required"):
+        await env.rpc_client.register_remote_coins(
+            RegisterRemoteCoins(wallet_id=uint32(1), coin_ids=[bytes32.zeros])
+        )
+
+    # Unknown wallet ids should fail rather than silently using the existing remote wallet.
+    with pytest.raises(ValueError, match="does not exist"):
+        await env.rpc_client.register_remote_coins(
+            RegisterRemoteCoins(wallet_id=response.wallet_id + 1000, coin_ids=[bytes32.zeros])
+        )
 
 
 def test_create_new_wallet_post_init() -> None:
