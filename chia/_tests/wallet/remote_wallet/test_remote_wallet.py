@@ -21,7 +21,10 @@ from chia.wallet.wallet_request_types import RegisterRemoteCoins
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    [
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True},
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": False},
+    ],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
@@ -90,7 +93,10 @@ async def test_remote_wallet_register_remote_coin_persists_coin_record(
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    [
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True},
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": False},
+    ],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
@@ -166,7 +172,10 @@ async def test_remote_wallet_register_remote_coins_persists_coin_records(
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True}],
+    [
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True},
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": False},
+    ],
     indirect=True,
 )
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
@@ -210,60 +219,76 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     assert record is None
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1], "trusted": True},
+        {"num_environments": 1, "blocks_needed": [1], "trusted": False},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_remote_wallet_create_new_rejects_second_remote_wallet() -> None:
-    wsm = Mock()
-    wsm.wallets = {
-        uint32(2): Mock(type=Mock(return_value=WalletType.REMOTE), get_name=Mock(return_value="Remote Wallet #1")),
-        uint32(3): Mock(type=Mock(return_value=WalletType.STANDARD_WALLET), get_name=Mock(return_value="Main Wallet")),
-    }
-    wsm.user_store = Mock()
-    wsm.user_store.create_wallet = AsyncMock()
-    wsm.add_new_wallet = AsyncMock()
-    wsm.get_existing_remote_wallet = Mock(return_value=Mock(spec=RemoteWallet))
+async def test_remote_wallet_create_and_save_info_paths(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wsm = env.wallet_state_manager
 
-    with pytest.raises(ValueError, match="Only one RemoteWallet instance is supported"):
-        await RemoteWallet.create_new_remote_wallet(wsm, Mock(spec=Wallet))
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
 
-    wsm.user_store.create_wallet.assert_not_awaited()
-    wsm.add_new_wallet.assert_not_awaited()
+    assert remote_wallet.id() > 0
+    assert remote_wallet.get_name() == "Remote Wallet #1"
+    assert remote_wallet.type() == WalletType.REMOTE
+    assert remote_wallet.require_derivation_paths() is False
+
+    await remote_wallet.save_info(RemoteInfo(remote_coin_ids=[bytes32.zeros]))
+    assert bytes32.zeros in remote_wallet.remote_info.remote_coin_ids
+    saved_wallet_info = await wsm.user_store.get_wallet_by_id(int(remote_wallet.id()))
+    assert saved_wallet_info is not None
+    saved_remote_info = RemoteInfo.from_json_dict(json.loads(saved_wallet_info.data))
+    assert bytes32.zeros in saved_remote_info.remote_coin_ids
+
+    # If a remote wallet already exists, creation is rejected.
+    async with wsm.lock:
+        with pytest.raises(ValueError, match="Only one RemoteWallet instance is supported"):
+            await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #2")
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1], "trusted": True},
+        {"num_environments": 1, "blocks_needed": [1], "trusted": False},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_remote_wallet_create_and_save_info_paths() -> None:
-    wallet_info = WalletInfo(uint32(9), "Remote Wallet #9", uint8(WalletType.REMOTE.value), '{"remote_coin_ids":[]}')
-    wsm = Mock()
-    wsm.user_store = Mock()
-    wsm.user_store.update_wallet = AsyncMock()
+async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wsm = env.wallet_state_manager
 
-    wallet = await RemoteWallet.create(wsm, Mock(spec=Wallet), wallet_info)
-    assert wallet.id() == uint32(9)
-    assert wallet.get_name() == "Remote Wallet #9"
-    assert wallet.type() == WalletType.REMOTE
-    assert wallet.require_derivation_paths() is False
-
-    await wallet.save_info(RemoteInfo(remote_coin_ids=[bytes32.zeros]))
-    wsm.user_store.update_wallet.assert_awaited_once()
-    assert bytes32.zeros in wallet.remote_info.remote_coin_ids
-
-
-@pytest.mark.anyio
-async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids() -> None:
     coin_id_1 = bytes32(bytes([1] * 32))
     coin_id_2 = bytes32(bytes([2] * 32))
-    wallet_info = WalletInfo(
-        uint32(9),
-        "Remote Wallet #9",
-        uint8(WalletType.REMOTE.value),
-        json.dumps(RemoteInfo(remote_coin_ids=[coin_id_1, coin_id_2]).to_json_dict()),
-    )
-    wsm = Mock()
-    wsm.add_interested_coin_ids = AsyncMock()
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
 
-    wallet = await RemoteWallet.create(wsm, Mock(spec=Wallet), wallet_info)
+    await remote_wallet.save_info(RemoteInfo(remote_coin_ids=[coin_id_1, coin_id_2]))
 
-    assert wallet.remote_info.remote_coin_ids == [coin_id_1, coin_id_2]
-    wsm.add_interested_coin_ids.assert_awaited_once_with([coin_id_1, coin_id_2], [wallet_info.id])
+    wsm.interested_coin_cache.pop(coin_id_1, None)
+    wsm.interested_coin_cache.pop(coin_id_2, None)
+
+    reloaded_wallet = await RemoteWallet.create(wsm, wallet, remote_wallet.wallet_info)
+
+    assert reloaded_wallet.remote_info.remote_coin_ids == [coin_id_1, coin_id_2]
+    assert coin_id_1 in wsm.interested_coin_cache
+    assert coin_id_2 in wsm.interested_coin_cache
+    assert remote_wallet.id() in wsm.interested_coin_cache[coin_id_1]
+    assert remote_wallet.id() in wsm.interested_coin_cache[coin_id_2]
 
 
 @pytest.mark.anyio
