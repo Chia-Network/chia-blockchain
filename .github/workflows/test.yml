@@ -141,7 +141,7 @@ jobs:
       concurrency-name: macos-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-14
+      runs-on: macos-15
       arch: arm
       arch-emoji: 💪
       collect-junit: false
