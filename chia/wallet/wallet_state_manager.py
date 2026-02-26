@@ -1739,7 +1739,7 @@ class WalletStateManager:
                             ):
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
-                    # If this coin was previously only stored as an "interest-only" record (wallet_id=0 or REMOTE),
+                    # If this coin was previously only stored as an "interest-only" record (REMOTE),
                     # but we now recognize it as belonging to a real wallet, treat it as a new coin so wallet-specific
                     # logic runs and the record can be replaced with the real wallet identifier.
                     if (
@@ -1751,21 +1751,17 @@ class WalletStateManager:
 
                     if wallet_identifier is None:
                         # If we subscribed to this coin id (interested coin ids) but it doesn't map to a known wallet,
-                        # persist it in the coin_store under the most appropriate interested wallet-id (e.g. REMOTE)
-                        # so it can be queried later without conflicting with real wallets' coin ownership rules.
+                        # persist it in the coin_store under the remote wallet id so it can be queried later without
+                        # conflicting with real wallets' coin ownership rules.
                         if coin_name in self.interested_coin_cache:
                             interested_wallet_ids = [
                                 uint32(w) for w in self.interested_coin_cache[coin_name] if uint32(w) in self.wallets
                             ]
-                            remote_wallet_ids = [
-                                w
-                                for w in interested_wallet_ids
-                                if WalletType(self.wallets[w].type()) == WalletType.REMOTE
-                            ]
-                            # Only persist interest-only coins if a RemoteWallet exists to associate them with.
-                            # If no RemoteWallet exists, treat these coins as we did previously (do not store them).
-                            if len(remote_wallet_ids) > 0:
-                                target_wallet_id: int = int(min(remote_wallet_ids))
+                            remote_wallet = self.get_existing_remote_wallet()
+                            # Only persist interest-only coins if the singleton RemoteWallet exists and this coin
+                            # is subscribed for that wallet id.
+                            if remote_wallet is not None and remote_wallet.id() in interested_wallet_ids:
+                                target_wallet_id: int = int(remote_wallet.id())
                                 target_wallet_type = WalletType.REMOTE
 
                                 if coin_state.created_height is None:
