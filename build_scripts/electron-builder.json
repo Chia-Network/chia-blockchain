@@ -1,9 +1,6 @@
 {
   "productName": "Chia",
   "appId": "net.chia.blockchain",
-  "extraMetadata": {
-    "name": "chia-blockchain"
-  },
   "asar": true,
   "asarUnpack": "**/daemon/**",
   "npmRebuild": false,

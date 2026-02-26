@@ -109,9 +109,13 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
 fi
 PRODUCT_NAME="Chia"
 echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
-  --config ../../../build_scripts/electron-builder.json
+  --config.extraMetadata.name=chia-blockchain \
+  --config ../../../build_scripts/electron-builder.json \
+  --publish always
 USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
-  --config ../../../build_scripts/electron-builder.json
+  --config.extraMetadata.name=chia-blockchain \
+  --config ../../../build_scripts/electron-builder.json \
+  --publish always
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 

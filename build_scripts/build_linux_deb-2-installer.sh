@@ -88,15 +88,21 @@ if [ "$PLATFORM" = "arm64" ]; then
   # workaround for above now implemented in the image build at
   # https://github.com/Chia-Network/build-images/blob/7c74d2f20739543c486c2522032cf09d96396d24/ubuntu-22.04/Dockerfile#L48-L61
   echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
+    --config.extraMetadata.name=chia-blockchain \
     --config ../../../build_scripts/electron-builder.json
   USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
-    --config ../../../build_scripts/electron-builder.json
+    --config.extraMetadata.name=chia-blockchain \
+    --config ../../../build_scripts/electron-builder.json \
+    --publish always
   LAST_EXIT_CODE=$?
 else
   echo "${NPM_PATH}/electron-builder" build --linux deb --x64 \
+    --config.extraMetadata.name=chia-blockchain \
     --config ../../../build_scripts/electron-builder.json
   "${NPM_PATH}/electron-builder" build --linux deb --x64 \
-    --config ../../../build_scripts/electron-builder.json
+    --config.extraMetadata.name=chia-blockchain \
+    --config ../../../build_scripts/electron-builder.json \
+    --publish always
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources
