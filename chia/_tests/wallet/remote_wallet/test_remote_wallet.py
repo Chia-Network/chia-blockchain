@@ -286,6 +286,39 @@ async def test_remote_wallet_create_resubscribes_existing_remote_coin_ids(
     assert remote_wallet.id() in wsm.interested_coin_cache[coin_id_2]
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1]},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_wallet_state_manager_loads_remote_wallet_on_restart(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env = wallet_environments.environments[0]
+    wsm = env.wallet_state_manager
+    coin_id = bytes32(bytes([9] * 32))
+
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, env.xch_wallet, name="Remote Wallet #1")
+    await remote_wallet.save_info(RemoteInfo(remote_coin_ids=[coin_id]))
+
+    env.node._close()
+    await env.node._await_closed()
+    await env.node._start()
+
+    restarted_wsm = env.node.wallet_state_manager
+    loaded_remote_wallet = restarted_wsm.get_existing_remote_wallet()
+    assert loaded_remote_wallet is not None
+    assert isinstance(loaded_remote_wallet, RemoteWallet)
+    assert loaded_remote_wallet.id() == remote_wallet.id()
+    assert coin_id in restarted_wsm.interested_coin_cache
+    assert loaded_remote_wallet.id() in restarted_wsm.interested_coin_cache[coin_id]
+
+
 @pytest.mark.anyio
 async def test_remote_wallet_create_with_invalid_data_raises_error() -> None:
     wallet_info = WalletInfo(uint32(5), "Remote Wallet #5", uint8(WalletType.REMOTE.value), "{bad_json")
