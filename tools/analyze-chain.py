@@ -21,6 +21,7 @@ from chia_rs import (
     G2Element,
     SpendBundleConditions,
     run_block_generator,
+    run_block_generator2,
 )
 from chia_rs.sized_bytes import bytes32
 
@@ -35,19 +36,31 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 # exactly one of those will hold a value and the number of seconds it took to
 # run
 def run_gen(
-    generator_program: SerializedProgram, block_program_args: list[bytes], flags: int
+    generator_program: SerializedProgram, block_program_args: list[bytes], flags: int, height: int
 ) -> tuple[int | None, SpendBundleConditions | None, float]:
     try:
         start_time = time()
-        err, result = run_block_generator(
-            bytes(generator_program),
-            block_program_args,
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-            flags | DONT_VALIDATE_SIGNATURE,
-            G2Element(),
-            None,
-            DEFAULT_CONSTANTS,
-        )
+        # Use run_block_generator2 for blocks at or after the hard fork height
+        if height >= DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+            err, result = run_block_generator2(
+                bytes(generator_program),
+                block_program_args,
+                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                flags | DONT_VALIDATE_SIGNATURE,
+                G2Element(),
+                None,
+                DEFAULT_CONSTANTS,
+            )
+        else:
+            err, result = run_block_generator(
+                bytes(generator_program),
+                block_program_args,
+                DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+                flags | DONT_VALIDATE_SIGNATURE,
+                G2Element(),
+                None,
+                DEFAULT_CONSTANTS,
+            )
         run_time = time() - start_time
         return err, result, run_time
     except Exception as e:
@@ -140,7 +153,7 @@ def default_call(
 
     # add the block program arguments
     assert block.transactions_generator is not None
-    err, result, run_time = run_gen(block.transactions_generator, generator_blobs, flags)
+    err, result, run_time = run_gen(block.transactions_generator, generator_blobs, flags, height)
     if err is not None:
         sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
         return
