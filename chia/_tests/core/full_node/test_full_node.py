@@ -3659,14 +3659,51 @@ async def test_request_header_blocks_non_tx_block(
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
-@pytest.mark.parametrize("node_type", NodeType)
+@pytest.mark.parametrize(
+    "node_type",
+    [NodeType.FULL_NODE, NodeType.WALLET, NodeType.FARMER, NodeType.TIMELORD],
+)
 async def test_node_type_message_typechecking(
     one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools], self_hostname: str, node_type: NodeType
 ) -> None:
     _, server, _ = one_node_one_block
     wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, 1337, node_type)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
     server.all_connections[peer_id].peer_info = PeerInfo("1.3.3.7", 42)
     await wsc._send_message(make_msg(ProtocolMessageTypes.request_peers, b""))
     type_mismatch = node_type not in {NodeType.WALLET, NodeType.FULL_NODE}
     await time_out_assert(5, lambda: wsc.closed, type_mismatch)
     await time_out_assert(5, lambda: "1.3.3.7" in server.banned_peers, type_mismatch)
+
+
+@pytest.mark.parametrize(
+    "node_type, config_key",
+    [
+        (NodeType.HARVESTER, None),
+        (NodeType.FARMER, "max_inbound_farmer"),
+        (NodeType.TIMELORD, "max_inbound_timelord"),
+        (NodeType.INTRODUCER, None),
+        (NodeType.WALLET, "max_inbound_wallet"),
+        (NodeType.DATA_LAYER, None),
+        (NodeType.SOLVER, None),
+    ],
+)
+@pytest.mark.anyio
+async def test_node_types_inbound_connections_limit(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    node_type: NodeType,
+    config_key: str | None,
+) -> None:
+    _, server, _ = one_node_one_block
+    if config_key is None:
+        assert server.accept_inbound_connections(node_type) is False
+        return
+    # Establish a reference base
+    assert server.accept_inbound_connections(node_type) is True
+    # Set a low limit for this test and reach it with a dummy connection
+    server.config[config_key] = 1
+    _, peer_id = await add_dummy_connection(server, self_hostname, 1337, node_type)
+    await time_out_assert(5, lambda: peer_id in server.all_connections)
+    # New inbound connections should be refused
+    assert server.accept_inbound_connections(node_type) is False

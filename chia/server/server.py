@@ -340,7 +340,8 @@ class ChiaServer:
                 connection.peer_info.host, self.exempt_peer_networks
             ):
                 self.log.info(
-                    f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
+                    f"Not accepting inbound connection: {connection.get_peer_logging()} "
+                    f"of type {connection.connection_type.name}. Inbound limit reached."
                 )
                 await connection.close()
             else:
@@ -725,7 +726,7 @@ class ChiaServer:
             return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
         if node_type == NodeType.TIMELORD:
             return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
-        return True
+        return False
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: dict[str, Any]) -> bool:
         return is_trusted_peer(
