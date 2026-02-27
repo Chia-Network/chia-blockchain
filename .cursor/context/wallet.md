@@ -6,28 +6,28 @@
 
 | File                             | Lines | Role                                                  |
 | -------------------------------- | ----- | ----------------------------------------------------- |
-| `wallet_state_manager.py`        | ~167K | `WalletStateManager`: all wallet state, coin tracking |
-| `wallet_rpc_api.py`              | ~158K | `WalletRpcApi`: full wallet RPC surface               |
-| `wallet_rpc_client.py`           | ~41K  | RPC client for CLI/tests                              |
-| `wallet_node.py`                 | ~85K  | `WalletNode`: SPV sync, peer communication            |
-| `wallet_node_api.py`             | ~9K   | P2P message handlers                                  |
-| `wallet.py`                      | ~30K  | `Wallet`: standard XCH wallet logic                   |
-| `wallet_blockchain.py`           | ~12K  | Lightweight chain tracking for wallet                 |
-| `conditions.py`                  | ~53K  | Condition parsing and construction                    |
-| `coin_selection.py`              | ~8.5K | Coin selection algorithm                              |
-| `trade_manager.py`               | ~51K  | Offer/trade management                                |
-| `wallet_request_types.py`        | ~76K  | RPC request type definitions                          |
-| `wallet_coin_store.py`           | ~16K  | Wallet-side coin persistence                          |
-| `wallet_transaction_store.py`    | ~22K  | Transaction record persistence                        |
-| `wallet_puzzle_store.py`         | ~16K  | Derivation/puzzle hash store                          |
-| `wallet_weight_proof_handler.py` | ~5K   | Weight proof handling for wallet                      |
-| `notification_manager.py`        | ~5K   | Notification handling                                 |
-| `wallet_action_scope.py`         | ~7K   | Action scope for atomic operations                    |
-| `derive_keys.py`                 | ~5K   | Key derivation                                        |
-| `singleton.py`                   | ~4K   | Singleton utilities                                   |
-| `wallet_coin_record.py`          | ~3K   | `WalletCoinRecord` type                               |
-| `transaction_record.py`          | ~4K   | `TransactionRecord` type                              |
-| `start_wallet.py`                | ~4K   | Service startup                                       |
+| `wallet_state_manager.py`        | ~3330 | `WalletStateManager`: all wallet state, coin tracking |
+| `wallet_rpc_api.py`              | ~3610 | `WalletRpcApi`: full wallet RPC surface               |
+| `wallet_rpc_client.py`           | ~1030 | RPC client for CLI/tests                              |
+| `wallet_node.py`                 | ~1750 | `WalletNode`: SPV sync, peer communication            |
+| `wallet_node_api.py`             | ~210  | P2P message handlers                                  |
+| `wallet.py`                      | ~670  | `Wallet`: standard XCH wallet logic                   |
+| `wallet_blockchain.py`           | ~250  | Lightweight chain tracking for wallet                 |
+| `conditions.py`                  | ~1550 | Condition parsing and construction                    |
+| `coin_selection.py`              | ~190  | Coin selection algorithm                              |
+| `trade_manager.py`               | ~1060 | Offer/trade management                                |
+| `wallet_request_types.py`        | ~2550 | RPC request type definitions                          |
+| `wallet_coin_store.py`           | ~350  | Wallet-side coin persistence                          |
+| `wallet_transaction_store.py`    | ~500  | Transaction record persistence                        |
+| `wallet_puzzle_store.py`         | ~390  | Derivation/puzzle hash store                          |
+| `wallet_weight_proof_handler.py` | ~130  | Weight proof handling for wallet                      |
+| `notification_manager.py`        | ~120  | Notification handling                                 |
+| `wallet_action_scope.py`         | ~170  | Action scope for atomic operations                    |
+| `derive_keys.py`                 | ~140  | Key derivation                                        |
+| `singleton.py`                   | ~110  | Singleton utilities                                   |
+| `wallet_coin_record.py`          | ~80   | `WalletCoinRecord` type                               |
+| `transaction_record.py`          | ~120  | `TransactionRecord` type                              |
+| `start_wallet.py`                | ~120  | Service startup                                       |
 
 ## Sub-wallet modules
 
@@ -53,9 +53,12 @@
 1. **Filter**: Remove unconfirmed removals, excluded coin IDs/amounts,
    coins outside min/max amount bounds
 2. **Max coins**: 500 per selection
-3. **Insufficiency check**: If filtered coins sum < amount → raise ValueError
-4. **Algorithm**: Greedy selection from largest to smallest, with
-   randomization to avoid deterministic patterns
+3. **Sort + exact checks**: Exact single-coin match first, then exact sum of
+   all smaller coins if feasible
+4. **Selection strategy**:
+   - If smaller coins are insufficient: select smallest coin over target
+   - Otherwise: run randomized knapsack search, then fallback to
+     `sum_largest_coins()`, then smallest over target
 
 ### `CoinSelectionConfig` fields
 
@@ -78,10 +81,11 @@
 5. Receive `coin_state_update` pushes for subscribed items
 6. Process coin state changes → update local wallet DB
 
-### Mempool tracking (if capability supported)
+### Mempool tracking
 
-- Receive `mempool_items_added` / `mempool_items_removed`
-- Track pending transactions in mempool
+- Wallet send path tracks acceptance via `transaction_ack`
+- Protocol supports `mempool_items_added` / `mempool_items_removed`, but the
+  reference wallet node API does not currently process those message types
 
 ### Trust model
 
@@ -148,7 +152,7 @@ all changes can be rolled back.
 
 **Location**: `wallet/wallet_rpc_api.py`
 
-The wallet RPC is the largest single file in the codebase (~158K).
+`wallet_rpc_api.py` is one of the larger wallet modules (~3610 lines).
 Key endpoint categories:
 
 - **Key management**: `log_in`, `get_public_keys`, `generate_mnemonic`
@@ -157,7 +161,7 @@ Key endpoint categories:
 - **Coin management**: `get_spendable_coins`, `select_coins`, `get_coin_records_by_names`
 - **CAT**: `cat_spend`, `cat_get_asset_id`, `create_new_cat_wallet`
 - **NFT**: `nft_mint_nft`, `nft_transfer_nft`, `nft_get_nfts`
-- **DID**: `did_create_attest`, `did_update_recovery_ids`
+- **DID**: `did_get_info`, `did_update_metadata`, `did_transfer_did`
 - **Offers**: `create_offer_for_ids`, `take_offer`, `get_all_offers`
 - **DataLayer**: `dl_*` endpoints
 - **Fee estimation**: `get_fee_estimate`

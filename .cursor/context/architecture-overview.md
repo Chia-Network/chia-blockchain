@@ -72,12 +72,12 @@ validation is Rust.
 ### Wallet
 
 - **P2P**: `WalletNodeAPI` in `wallet_node_api.py` — coin state updates
-- **RPC**: `WalletRpcApi` in `wallet_rpc_api.py` (~158K) — full wallet surface
-- **State**: `WalletStateManager` in `wallet_state_manager.py` (~167K)
+- **RPC**: `WalletRpcApi` in `wallet_rpc_api.py` (~3600 lines) — full wallet surface
+- **State**: `WalletStateManager` in `wallet_state_manager.py` (~3300 lines)
 
 ## Wire protocol overview
 
-147 message types in `ProtocolMessageTypes` enum. Key flows:
+109 message types in `ProtocolMessageTypes` enum. Key flows:
 
 - **Full Node ↔ Full Node**: `new_peak`, `new_transaction`, `request_block(s)`,
   `new_signage_point_or_end_of_sub_slot`, `request_compact_vdf`

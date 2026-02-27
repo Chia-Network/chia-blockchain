@@ -158,10 +158,10 @@
 ### Block building (`create_block_generator2()`)
 
 1. Query items ordered by `fee_per_cost DESC, seq ASC`
-2. Skip items whose `assert_height > peak + 1`
-3. Process FF/DEDUP items (with `PRIORITY_TX_THRESHOLD` cutoff)
-4. Aggregate into block generator program
-5. Stop when block cost would exceed limit or `MAX_SKIPPED_ITEMS` reached
+2. Process FF/DEDUP info and build transaction batches
+3. Try batches through `BlockBuilder.add_spend_bundles()` to account for real compression cost
+4. Keep accepted batches and skip non-fitting batches
+5. Stop on timeout, or when `BlockBuilder` reports the block is full
 
 ---
 

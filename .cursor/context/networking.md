@@ -30,7 +30,7 @@
 
 | File                                    | Lines | Role                                                |
 | --------------------------------------- | ----- | --------------------------------------------------- |
-| `protocol_message_types.py`             | ~147  | `ProtocolMessageTypes` enum (all 147 message types) |
+| `protocol_message_types.py`             | ~147  | `ProtocolMessageTypes` enum (109 message types)      |
 | `protocol_state_machine.py`             | ~88   | Valid request→response map, import-time check       |
 | `protocol_message_type_to_node_type.py` | ~230  | Message type → allowed node type mapping            |
 | `outbound_message.py`                   | ~25   | `Message`, `NodeType`, `make_msg()`                 |
@@ -77,10 +77,11 @@
 
 ### Error handling & banning
 
-- `ConsensusError` → ban for `CONSENSUS_ERROR_BAN_SECONDS`
-- `ApiError` → ban for `API_EXCEPTION_BAN_SECONDS`
-- Rate limit exceeded → ban for `RATE_LIMITER_BAN_SECONDS`
-- `ProtocolError` → ban for `INTERNAL_PROTOCOL_ERROR_BAN_SECONDS`
+- `ApiError` from handlers is converted to an `error` response (not an automatic ban)
+- `ConsensusError` from handlers → close + ban for `CONSENSUS_ERROR_BAN_SECONDS`
+- Other unhandled handler exceptions → close + ban for `API_EXCEPTION_BAN_SECONDS`
+- Rate limit exceeded (for full node inbound peers) → close + ban for `RATE_LIMITER_BAN_SECONDS`
+- Protocol response mismatch (`message_response_ok` failure) → `ban_peer_bad_protocol()` using `INTERNAL_PROTOCOL_ERROR_BAN_SECONDS`
 
 ### Protocol state machine validation
 
@@ -193,7 +194,8 @@ The `@metadata.request()` decorator:
 
 **Location**: `server/chia_policy.py`
 
-- `global_max_concurrent_connections = 250`
+- Default `global_max_concurrent_connections = 250`
+- `set_chia_policy(connection_limit)` sets effective limit to `connection_limit + 100`
 - Custom event loop policy (`ChiaProactorEventLoop` on Windows,
   selector-based on Unix) enforces connection limits at the socket level
 
@@ -239,4 +241,4 @@ send `new_peak` which is a full-node-only message).
 ### `Capability` enum
 
 Key capabilities: `BASE`, `BLOCK_HEADERS`, `RATE_LIMITS_V2`,
-`NONE_RESPONSE`, `MEMPOOL_UPDATES`, and more. Used for feature negotiation.
+`NONE_RESPONSE`, `MEMPOOL_UPDATES`. Used for feature negotiation.

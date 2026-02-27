@@ -29,10 +29,10 @@ Every mempool item's cost ≤ `MAX_BLOCK_COST_CLVM / 2`.
 
 ### 5. Timestamp ordering
 
-Block timestamps must be:
+For transaction blocks, timestamps must be:
 
-- Greater than median of previous `NUMBER_OF_TIMESTAMPS` (11) blocks
-- Less than `now + MAX_FUTURE_TIME2` (120 seconds)
+- Strictly greater than the previous transaction block timestamp
+- At most `now + MAX_FUTURE_TIME2` (120 seconds)
 
 ### 6. Difficulty bounds
 
@@ -194,7 +194,7 @@ must be called in exact sequence. Assertion-heavy (crashes on inconsistency).
 Multiple code paths for singleton chaining with subtle conflict resolution
 rules.
 
-### 4. Weight proof validation (~72K)
+### 4. Weight proof validation (~1740 lines)
 
 Dense validation of compressed chain proofs. Many edge cases around
 sub-epoch boundaries, VDF segment matching, and difficulty transitions.

@@ -32,13 +32,13 @@
 | File                                        | Lines | Role                              |
 | ------------------------------------------- | ----- | --------------------------------- |
 | `chia/full_node/full_node.py`               | ~3400 | Main orchestrator                 |
-| `chia/wallet/wallet_state_manager.py`       | ~167K | Wallet state                      |
-| `chia/wallet/wallet_rpc_api.py`             | ~158K | Wallet RPC surface                |
+| `chia/wallet/wallet_state_manager.py`       | ~3330 | Wallet state                      |
+| `chia/wallet/wallet_rpc_api.py`             | ~3610 | Wallet RPC surface                |
 | `chia/full_node/full_node_api.py`           | ~2080 | P2P message handlers              |
 | `chia/full_node/full_node_rpc_api.py`       | ~1170 | Full node RPC                     |
 | `chia/consensus/blockchain.py`              | ~1090 | Chain state + add_block           |
 | `chia/consensus/block_header_validation.py` | ~1060 | Header checks                     |
-| `chia/full_node/weight_proof.py`            | ~72K  | Weight proof validation           |
+| `chia/full_node/weight_proof.py`            | ~1740 | Weight proof validation           |
 | `chia/full_node/mempool_manager.py`         | ~1160 | Mempool admission                 |
 | `chia/full_node/mempool.py`                 | ~810  | Mempool data structure            |
 | `chia/consensus/block_body_validation.py`   | ~580  | Body checks                       |
