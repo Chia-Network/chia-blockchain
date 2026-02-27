@@ -2360,6 +2360,12 @@ class CreateNewWallet(TransactionEndpointRequest):
             if self.mode is not None and self.mode != WalletCreationMode.NEW:
                 raise ValueError('"mode": "existing" is only valid for CAT wallets')
 
+        if self.wallet_type == CreateNewWalletType.REMOTE_WALLET:
+            if self.mode is not None:
+                raise ValueError('"mode" is not a valid argument for remote wallets')
+            if self.amount is not None:
+                raise ValueError('"amount" is not a valid argument for remote wallets')
+
         if self.wallet_type == CreateNewWalletType.DID_WALLET:
             if self.did_type is None:
                 raise ValueError('Must specify "did_type": "new/recovery"')

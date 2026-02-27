@@ -4595,5 +4595,86 @@ def test_create_new_wallet_post_init() -> None:
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.NFT_WALLET, p2_singleton_delay_time=uint64(0))
 
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"amount" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, amount=uint64(100))
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"mode" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, mode=WalletCreationMode.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"test" mode is not supported except for new CAT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, test=True)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, asset_id=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_type" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, did_type=DIDType.NEW)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_dids" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, backup_dids=["foo"])
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"metadata" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, metadata={"foo": "bar"})
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"wallet_name" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, wallet_name="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"backup_data" is only a valid argument for DID wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, backup_data="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"did_id" is only a valid argument for NFT wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, did_id="foo")
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"initial_target_state" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(
+            wallet_type=CreateNewWalletType.REMOTE_WALLET,
+            initial_target_state=NewPoolWalletInitialTargetState("SELF_POOLING"),
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delayed_ph" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, p2_singleton_delayed_ph=bytes32.zeros)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape('"p2_singleton_delay_time" is only a valid argument for pool wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, p2_singleton_delay_time=uint64(0))
+
     # Creating a Remote wallet via create_new_wallet() should require no extra fields.
     CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET)
