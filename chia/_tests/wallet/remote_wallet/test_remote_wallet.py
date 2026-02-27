@@ -4,6 +4,7 @@ import json
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -214,6 +215,36 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
     # Give the wallet node a moment to process subscription/updates, then assert nothing was stored.
     record = await wallet_node.wallet_state_manager.coin_store.get_coin_record(coin_id)
     assert record is None
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True},
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_reorged_interested_remote_coin_state_does_not_crash(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet: Wallet = env.xch_wallet
+    wsm = env.wallet_state_manager
+
+    async with wsm.lock:
+        remote_wallet = await RemoteWallet.create_new_remote_wallet(wsm, wallet, name="Remote Wallet #1")
+
+    coin = Coin(bytes32(bytes([41] * 32)), bytes32(bytes([42] * 32)), uint64(1))
+    coin_id = coin.name()
+    await remote_wallet.register_remote_coins([coin_id])
+
+    peer = Mock()
+    peer.closed = False
+
+    # A reorged-out coin state has created_height=None.
+    await wsm._add_coin_states([CoinState(coin, None, None)], peer, None)
+
+    assert await wsm.coin_store.get_coin_record(coin_id) is None
 
 
 @pytest.mark.parametrize(
