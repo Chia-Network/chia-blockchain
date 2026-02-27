@@ -1637,70 +1637,66 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(b, blocks[0])
             while True:
                 blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-                if blocks[-1].foliage_transaction_block is not None:
-                    assert blocks[0].foliage_transaction_block is not None
-                    block_bad: FullBlock = recursive_replace(
-                        blocks[-1],
-                        "foliage_transaction_block.timestamp",
-                        blocks[0].foliage_transaction_block.timestamp - 10,
-                    )
-                    assert block_bad.foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        block_bad,
-                        "foliage.foliage_transaction_block_hash",
-                        block_bad.foliage_transaction_block.get_hash(),
-                    )
-                    new_m = block_bad.foliage.foliage_transaction_block_hash
-                    assert new_m is not None
-                    new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
-                    )
-                    block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-                    await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
+                if blocks[-1].foliage_transaction_block is None:
+                    await _validate_and_add_block(b, blocks[-1])
+                    continue
 
-                    assert blocks[0].foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        blocks[-1],
-                        "foliage_transaction_block.timestamp",
-                        blocks[0].foliage_transaction_block.timestamp,
-                    )
-                    assert block_bad.foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        block_bad,
-                        "foliage.foliage_transaction_block_hash",
-                        block_bad.foliage_transaction_block.get_hash(),
-                    )
-                    new_m = block_bad.foliage.foliage_transaction_block_hash
-                    assert new_m is not None
-                    new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
-                    )
-                    block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-                    await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
+                assert blocks[0].foliage_transaction_block is not None
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    blocks[0].foliage_transaction_block.timestamp - 10,
+                )
+                assert block_bad.foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                assert new_m is not None
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
 
-                    # since tests can run slow sometimes, and since we're using
-                    # the system clock, add some extra slack
-                    slack = 30
-                    block_bad = recursive_replace(
-                        blocks[-1],
-                        "foliage_transaction_block.timestamp",
-                        blocks[0].foliage_transaction_block.timestamp + time_delta + slack,
-                    )
-                    assert block_bad.foliage_transaction_block is not None
-                    block_bad = recursive_replace(
-                        block_bad,
-                        "foliage.foliage_transaction_block_hash",
-                        block_bad.foliage_transaction_block.get_hash(),
-                    )
-                    new_m = block_bad.foliage.foliage_transaction_block_hash
-                    assert new_m is not None
-                    new_fbh_sig = bt.get_plot_signature(
-                        new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key
-                    )
-                    block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
-                    await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
-                    return None
-                await _validate_and_add_block(b, blocks[-1])
+                assert blocks[0].foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    blocks[0].foliage_transaction_block.timestamp,
+                )
+                assert block_bad.foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                assert new_m is not None
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_PAST)
+
+                # Set the timestamp on the block to be too far out in the
+                # future from now
+                slack = 5
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    uint64(time.time()) + time_delta + slack,
+                )
+                assert block_bad.foliage_transaction_block is not None
+                block_bad = recursive_replace(
+                    block_bad,
+                    "foliage.foliage_transaction_block_hash",
+                    block_bad.foliage_transaction_block.get_hash(),
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                assert new_m is not None
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                await _validate_and_add_block(b, block_bad, expected_error=Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
+                return None
 
     @pytest.mark.anyio
     async def test_height(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
