@@ -74,11 +74,11 @@ fi
 echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
   --config.productName="Chia" \
   --config ../../../build_scripts/electron-builder.json \
-  --publish always
+  --publish never
 "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
   --config.productName="Chia" \
   --config ../../../build_scripts/electron-builder.json \
-  --publish always
+  --publish never
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/Chia.app/Contents/Resources/app.asar
 

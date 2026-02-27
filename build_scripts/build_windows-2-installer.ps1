@@ -96,7 +96,7 @@ If ($env:HAS_SIGNING_SECRET) {
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
-& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json --publish always
+& "$NPM_PATH/electron-builder.ps1" build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked" --config ../../../build_scripts/electron-builder.json --publish never
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {

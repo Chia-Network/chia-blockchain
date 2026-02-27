@@ -82,7 +82,6 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_SEMVER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
-PRODUCT_NAME="chia"
 if [ "$PLATFORM" = "arm64" ]; then
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # workaround for above now implemented in the image build at
@@ -90,21 +89,21 @@ if [ "$PLATFORM" = "arm64" ]; then
   echo USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config ../../../build_scripts/electron-builder.json \
-    --publish always
+    --publish never
   USE_SYSTEM_FPM=true "${NPM_PATH}/electron-builder" build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config ../../../build_scripts/electron-builder.json \
-    --publish always
+    --publish never
   LAST_EXIT_CODE=$?
 else
   echo "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config ../../../build_scripts/electron-builder.json \
-    --publish always
+    --publish never
   "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config ../../../build_scripts/electron-builder.json \
-    --publish always
+    --publish never
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources
@@ -118,7 +117,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 GUI_DEB_NAME=chia-blockchain_${CHIA_INSTALLER_VERSION}_${PLATFORM}.deb
-mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.deb" "../../../build_scripts/dist/${GUI_DEB_NAME}"
+mv "dist/chia-${CHIA_INSTALLER_VERSION}.deb" "../../../build_scripts/dist/${GUI_DEB_NAME}"
 cd ../../../build_scripts || exit 1
 
 echo "Create final installer"
