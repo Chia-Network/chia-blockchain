@@ -22,8 +22,7 @@ from chia.wallet.wallet_request_types import RegisterRemoteCoins
 @pytest.mark.parametrize(
     "wallet_environments",
     [
-        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True},
-        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": False},
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True},
     ],
     indirect=True,
 )
@@ -94,8 +93,7 @@ async def test_remote_wallet_register_remote_coin_persists_coin_record(
 @pytest.mark.parametrize(
     "wallet_environments",
     [
-        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True},
-        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": False},
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True},
     ],
     indirect=True,
 )
@@ -173,8 +171,7 @@ async def test_remote_wallet_register_remote_coins_persists_coin_records(
 @pytest.mark.parametrize(
     "wallet_environments",
     [
-        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": True},
-        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True, "trusted": False},
+        {"num_environments": 1, "blocks_needed": [2], "reuse_puzhash": True},
     ],
     indirect=True,
 )
@@ -222,8 +219,7 @@ async def test_interested_coin_not_persisted_without_remote_wallet(wallet_enviro
 @pytest.mark.parametrize(
     "wallet_environments",
     [
-        {"num_environments": 1, "blocks_needed": [1], "trusted": True},
-        {"num_environments": 1, "blocks_needed": [1], "trusted": False},
+        {"num_environments": 1, "blocks_needed": [1]},
     ],
     indirect=True,
 )
@@ -258,8 +254,7 @@ async def test_remote_wallet_create_and_save_info_paths(wallet_environments: Wal
 @pytest.mark.parametrize(
     "wallet_environments",
     [
-        {"num_environments": 1, "blocks_needed": [1], "trusted": True},
-        {"num_environments": 1, "blocks_needed": [1], "trusted": False},
+        {"num_environments": 1, "blocks_needed": [1]},
     ],
     indirect=True,
 )
