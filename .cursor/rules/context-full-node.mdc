@@ -1,0 +1,21 @@
+---
+description: Auto-attach full node context when working in full node code
+globs:
+  - chia/full_node/full_node.py
+  - chia/full_node/full_node_api.py
+  - chia/full_node/full_node_rpc_api.py
+  - chia/full_node/full_node_store.py
+  - chia/full_node/coin_store.py
+  - chia/full_node/block_store.py
+  - chia/full_node/sync_store.py
+  - chia/full_node/weight_proof.py
+  - chia/full_node/subscriptions.py
+  - chia/full_node/tx_processing_queue.py
+---
+
+# Full Node Context Available
+
+Deep context for this subsystem exists at `.cursor/context/full-node.md`.
+Read it before exploring code — it documents the block processing pipeline,
+sync logic, `FullNodeStore` state, `FullNodeAPI` handlers, `CoinStore` schema,
+`BlockStore` operations, and the `PeakPostProcessingResult` workflow.

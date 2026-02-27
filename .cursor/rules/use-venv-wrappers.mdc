@@ -1,0 +1,13 @@
+---
+description: Force repo venv wrappers for Python commands
+alwaysApply: true
+---
+
+# Python Venv Guardrail
+
+In this workspace, always execute Python tooling via repository wrappers:
+
+- Use `tools/py` for Python and pip/module commands.
+- Use `tools/pytest` for tests.
+
+Do not use bare `python`, `python3`, `pip`, or `pytest`.

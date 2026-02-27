@@ -47,6 +47,13 @@ venv*/
 venv*
 activate
 
+# Cursor rules and context (shared via git)
+!.cursor/
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/context/
+!.cursor/context/**
+
 # Editors
 .vscode
 .idea

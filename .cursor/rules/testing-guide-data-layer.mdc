@@ -1,0 +1,132 @@
+---
+description: Data layer test patterns — DataStore logic, wallet-backed RPC flows, singleton lifecycle
+globs:
+  - chia/_tests/core/data_layer/**
+---
+
+# Data Layer Tests
+
+## Scope
+
+Use this for data layer behavior across both local store logic and chain-backed updates:
+
+- `DataStore` tree/node/key behavior
+- data layer RPC behavior (`create_data_store`, `batch_update`, root/value/proof endpoints)
+- wallet-confirmed singleton/update lifecycle
+- offer/integrity and sync-related data layer flows
+
+Primary references:
+
+- `chia/_tests/core/data_layer/conftest.py`
+- `chia/_tests/core/data_layer/test_data_store.py`
+- `chia/_tests/core/data_layer/test_data_rpc.py`
+
+## Two Distinct Test Tracks
+
+### Track A: Pure Store Logic (No full node topology needed)
+
+Use fixtures from `core/data_layer/conftest.py`:
+
+- `raw_data_store`
+- `data_store`
+- `store_id`
+- `create_example`
+
+This is ideal for:
+
+- insert/upsert/delete semantics
+- generation and schema behavior
+- node/tree traversal and validation
+- deterministic error behavior (`KeyNotFoundError`, invalid operations)
+
+### Track B: Wallet-Backed Data Layer RPC (Chain-confirmed lifecycle)
+
+Use simulator + wallet service setup:
+
+- `one_wallet_and_one_simulator_services`
+- helper flow from `test_data_rpc.py`:
+  - `init_wallet_and_node(...)`
+  - `init_data_layer(...)` / `init_data_layer_service(...)`
+
+This is ideal for:
+
+- singleton creation confirmation
+- mempool-to-block update confirmation
+- RPC/client/CLI parity checks
+
+## Chain-Backed Update Flow (Canonical Pattern)
+
+1. Start wallet/full-node and farm prefund blocks.
+2. Create data layer service and API client.
+3. `create_data_store`.
+4. Farm until singleton confirmed.
+5. `batch_update` with changelist.
+6. Farm tx block and wait for tx confirmation.
+7. Assert value/root/local-root consistency.
+
+Reusable assertion helpers in practice:
+
+- `check_mempool_spend_count(...)`
+- `check_singleton_confirmed(...)`
+- `farm_block_check_singleton(...)`
+- `farm_block_with_spend(...)`
+
+## How To Assert Steps Happened
+
+Layer assertions in this order:
+
+1. RPC response success and expected ids/tx ids exist.
+2. Mempool contains expected spend count before farming.
+3. Singleton/update tx confirmed after farming.
+4. Wallet sync complete (`wait_for_wallet_synced` / wallet sync checks).
+5. Data correctness (`get_value`, roots, proof validation where relevant).
+
+## CLI/Func/Client Parity Pattern
+
+`test_data_rpc.py` validates multiple interface layers (direct API, client, functions, CLI).
+When adding behavior, prefer adding one parity test that confirms the same operation through at least two interfaces.
+
+## Anti-Flake Guidance
+
+- Prefer `time_out_assert` and sync helpers over fixed sleeps.
+- Explicitly farm the include block for pending updates before asserting roots.
+- Keep test-local db paths (`tmp_path`) isolated per test.
+- For heavy scenarios, keep operations grouped and avoid unnecessary service restarts.
+
+## Quick Checklist
+
+- Chosen track (store-only vs chain-backed) matches the behavior under test.
+- Chain-backed flow includes both mempool and confirmation assertions.
+- Wallet sync is explicitly awaited before balance/state checks.
+- Root/value checks are done after final confirmation, not before.
+
+## Starter Template (Track A — Pure Store)
+
+```python
+from __future__ import annotations
+
+import pytest
+from chia_rs.sized_bytes import bytes32
+
+from chia.data_layer.data_layer_errors import KeyNotFoundError
+from chia.data_layer.data_layer_util import OperationType, Status
+from chia.data_layer.data_store import DataStore
+
+pytestmark = pytest.mark.data_layer
+
+
+@pytest.mark.anyio
+async def test_example(data_store: DataStore, store_id: bytes32) -> None:
+    key = b"\x01" * 32
+    value = b"\x02" * 32
+    await data_store.autoinsert(
+        key=key,
+        value=value,
+        store_id=store_id,
+        status=Status.COMMITTED,
+    )
+    result = await data_store.get_node_by_key(store_id=store_id, key=key)
+    assert result.value == value
+```
+
+Fixtures `data_store` and `store_id` come from `chia/_tests/core/data_layer/conftest.py`.
