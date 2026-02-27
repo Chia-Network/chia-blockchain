@@ -149,16 +149,16 @@ Key conditions (from CLVM spend output):
 
 ### Timelock conditions
 
-| Opcode | Name                             | Effect                           |
-| ------ | -------------------------------- | -------------------------------- |
-| 80     | `ASSERT_SECONDS_RELATIVE`        | Min seconds since confirmation   |
-| 81     | `ASSERT_SECONDS_ABSOLUTE`        | Min timestamp                    |
-| 82     | `ASSERT_HEIGHT_RELATIVE`         | Min blocks since confirmation    |
-| 83     | `ASSERT_HEIGHT_ABSOLUTE`         | Min block height                 |
-| 84     | `ASSERT_BEFORE_SECONDS_RELATIVE` | Max seconds since confirmation   |
-| 85     | `ASSERT_BEFORE_SECONDS_ABSOLUTE` | Max timestamp                    |
-| 86     | `ASSERT_BEFORE_HEIGHT_RELATIVE`  | Max blocks since confirmation    |
-| 87     | `ASSERT_BEFORE_HEIGHT_ABSOLUTE`  | Max block height                 |
+| Opcode | Name                             | Effect                         |
+| ------ | -------------------------------- | ------------------------------ |
+| 80     | `ASSERT_SECONDS_RELATIVE`        | Min seconds since confirmation |
+| 81     | `ASSERT_SECONDS_ABSOLUTE`        | Min timestamp                  |
+| 82     | `ASSERT_HEIGHT_RELATIVE`         | Min blocks since confirmation  |
+| 83     | `ASSERT_HEIGHT_ABSOLUTE`         | Min block height               |
+| 84     | `ASSERT_BEFORE_SECONDS_RELATIVE` | Max seconds since confirmation |
+| 85     | `ASSERT_BEFORE_SECONDS_ABSOLUTE` | Max timestamp                  |
+| 86     | `ASSERT_BEFORE_HEIGHT_RELATIVE`  | Max blocks since confirmation  |
+| 87     | `ASSERT_BEFORE_HEIGHT_ABSOLUTE`  | Max block height               |
 
 ---
 

@@ -28,23 +28,23 @@
 
 ### `chia/protocols/`
 
-| File                                    | Lines | Role                                                |
-| --------------------------------------- | ----- | --------------------------------------------------- |
-| `protocol_message_types.py`             | ~147  | `ProtocolMessageTypes` enum (109 message types)      |
-| `protocol_state_machine.py`             | ~88   | Valid request→response map, import-time check       |
-| `protocol_message_type_to_node_type.py` | ~230  | Message type → allowed node type mapping            |
-| `outbound_message.py`                   | ~25   | `Message`, `NodeType`, `make_msg()`                 |
-| `protocol_timing.py`                    | ~10   | Ban duration constants                              |
-| `shared_protocol.py`                    | ~80   | `Handshake`, `Capability`, `protocol_version`       |
-| `full_node_protocol.py`                 | ~217  | Full node ↔ full node message types                |
-| `wallet_protocol.py`                    | ~400  | Wallet ↔ full node message types                   |
-| `farmer_protocol.py`                    | ~75   | Farmer ↔ full node message types                   |
-| `harvester_protocol.py`                 | ~190  | Farmer ↔ harvester message types                   |
-| `timelord_protocol.py`                  | ~80   | Full node ↔ timelord message types                 |
-| `solver_protocol.py`                    | ~15   | Solver protocol                                     |
-| `pool_protocol.py`                      | ~110  | Pool protocol messages                              |
-| `introducer_protocol.py`                | ~15   | Introducer protocol                                 |
-| `fee_estimate.py`                       | ~50   | Fee estimate messages                               |
+| File                                    | Lines | Role                                            |
+| --------------------------------------- | ----- | ----------------------------------------------- |
+| `protocol_message_types.py`             | ~147  | `ProtocolMessageTypes` enum (109 message types) |
+| `protocol_state_machine.py`             | ~88   | Valid request→response map, import-time check   |
+| `protocol_message_type_to_node_type.py` | ~230  | Message type → allowed node type mapping        |
+| `outbound_message.py`                   | ~25   | `Message`, `NodeType`, `make_msg()`             |
+| `protocol_timing.py`                    | ~10   | Ban duration constants                          |
+| `shared_protocol.py`                    | ~80   | `Handshake`, `Capability`, `protocol_version`   |
+| `full_node_protocol.py`                 | ~217  | Full node ↔ full node message types            |
+| `wallet_protocol.py`                    | ~400  | Wallet ↔ full node message types               |
+| `farmer_protocol.py`                    | ~75   | Farmer ↔ full node message types               |
+| `harvester_protocol.py`                 | ~190  | Farmer ↔ harvester message types               |
+| `timelord_protocol.py`                  | ~80   | Full node ↔ timelord message types             |
+| `solver_protocol.py`                    | ~15   | Solver protocol                                 |
+| `pool_protocol.py`                      | ~110  | Pool protocol messages                          |
+| `introducer_protocol.py`                | ~15   | Introducer protocol                             |
+| `fee_estimate.py`                       | ~50   | Fee estimate messages                           |
 
 ---
 
