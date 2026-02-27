@@ -202,7 +202,7 @@ transactions are not processed (mempool frozen).
 coin_record(
     coin_name BLOB PRIMARY KEY,
     confirmed_index BIGINT,
-    spent_index BIGINT,   -- 0 = unspent
+    spent_index BIGINT,   -- >0 spent at that height; 0 = normal unspent; -1 = FF lineage unspent
     coinbase INT,
     puzzle_hash BLOB,
     coin_parent BLOB,

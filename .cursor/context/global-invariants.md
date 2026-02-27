@@ -213,14 +213,14 @@ block types (transaction vs non-transaction).
 
 ## Hard fork boundaries
 
-| Fork                     | Height     | What changed                                  |
-| ------------------------ | ---------- | --------------------------------------------- |
-| `HARD_FORK_HEIGHT`       | 5 496 000  | June 2024 — condition set changes, CLVM flags |
-| `HARD_FORK2_HEIGHT`      | 0xFFFFFFFA | v2 plots (TODO: not finalized)                |
-| `SOFT_FORK8_HEIGHT`      | 8 655 000  | Soft fork conditions                          |
-| `PLOT_FILTER_128_HEIGHT` | 10 542 000 | June 2027 — plot filter reduction             |
-| `PLOT_FILTER_64_HEIGHT`  | 15 592 000 | June 2030                                     |
-| `PLOT_FILTER_32_HEIGHT`  | 20 643 000 | June 2033                                     |
+| Fork                     | Height     | What changed                                                       |
+| ------------------------ | ---------- | ------------------------------------------------------------------ |
+| `HARD_FORK_HEIGHT`       | 5 496 000  | June 2024 — condition set changes, CLVM flags                      |
+| `HARD_FORK2_HEIGHT`      | 0xFFFFFFFA | Placeholder sentinel for v2 plots; real height is network-specific |
+| `SOFT_FORK8_HEIGHT`      | 8 655 000  | Soft fork conditions                                               |
+| `PLOT_FILTER_128_HEIGHT` | 10 542 000 | June 2027 — plot filter reduction                                  |
+| `PLOT_FILTER_64_HEIGHT`  | 15 592 000 | June 2030                                                          |
+| `PLOT_FILTER_32_HEIGHT`  | 20 643 000 | June 2033                                                          |
 
 Heights are checked via `get_flags_for_height_and_constants()` which returns
 the appropriate flag set for CLVM execution at a given height.

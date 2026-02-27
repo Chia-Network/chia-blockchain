@@ -49,6 +49,10 @@ validation is Rust.
 
 ## Actors
 
+Node roles are defined by `NodeType` in `chia/protocols/outbound_message.py`:
+`FULL_NODE`, `HARVESTER`, `FARMER`, `TIMELORD`, `INTRODUCER`, `WALLET`,
+`DATA_LAYER`, `SOLVER`.
+
 ### Full Node (central)
 
 - **P2P API**: `FullNodeAPI` in `full_node_api.py` (~2080 lines)
@@ -74,6 +78,21 @@ validation is Rust.
 - **P2P**: `WalletNodeAPI` in `wallet_node_api.py` — coin state updates
 - **RPC**: `WalletRpcApi` in `wallet_rpc_api.py` (~3600 lines) — full wallet surface
 - **State**: `WalletStateManager` in `wallet_state_manager.py` (~3300 lines)
+
+### Introducer
+
+- **Service**: `Introducer` in `introducer.py` — bootstrap peer discovery
+- **API**: `IntroducerAPI` in `introducer_api.py` — serves vetted peer lists
+
+### Data Layer
+
+- **Service**: `DataLayer` in `data_layer.py` — singleton-based data store service
+- **RPC**: `DataLayerRpcApi` in `data_layer_rpc_api.py` — DataLayer control surface
+
+### Solver
+
+- **Service**: `Solver` in `solver.py` — handles puzzle-solution requests from farmer flows
+- **API**: `SolverAPI` in `solver_api.py` — protocol endpoint for solver responses
 
 ## Wire protocol overview
 

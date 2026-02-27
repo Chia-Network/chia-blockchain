@@ -57,6 +57,9 @@ Mempool items → solution_generator_backrefs() [Rust] → generator program
 
 - Combines spend bundles into a single block generator
 - Uses back-references for compression
+- Legacy path: `create_block_generator()` serializes with `solution_generator_backrefs()`
+- Alternative path: `create_block_generator2()` uses Rust `BlockBuilder`; opt-in today via
+  `full_node.config["block_creation"] = 1` (see TODO in `full_node_api.py` to make it default)
 
 ---
 
