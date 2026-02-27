@@ -4363,14 +4363,12 @@ async def test_register_remote_coins_validates_wallet_id(wallet_environments: Wa
 
     # Main wallet id exists but is not a RemoteWallet.
     with pytest.raises(ValueError, match="type RemoteWallet is required"):
-        await env.rpc_client.register_remote_coins(
-            RegisterRemoteCoins(wallet_id=uint32(1), coin_ids=[bytes32.zeros])
-        )
+        await env.rpc_client.register_remote_coins(RegisterRemoteCoins(wallet_id=uint32(1), coin_ids=[bytes32.zeros]))
 
     # Unknown wallet ids should fail rather than silently using the existing remote wallet.
     with pytest.raises(ValueError, match="does not exist"):
         await env.rpc_client.register_remote_coins(
-            RegisterRemoteCoins(wallet_id=response.wallet_id + 1000, coin_ids=[bytes32.zeros])
+            RegisterRemoteCoins(wallet_id=uint32(response.wallet_id + 1000), coin_ids=[bytes32.zeros])
         )
 
 
