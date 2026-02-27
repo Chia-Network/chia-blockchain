@@ -53,11 +53,11 @@ jobs:
       matrix:
         python-version: ["3.12"]
         os:
-          - runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
+          - runs-on: "macos-15-intel"
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
             arch-artifact-name: intel
-          - runs-on: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-arm64' || 'macos-15' }}
+          - runs-on: "macos-15"
             name: m1
             bladebit-suffix: macos-arm64.tar.gz
             arch-artifact-name: arm
@@ -86,7 +86,7 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MACOSX_DEPLOYMENT_TARGET: 13
+          MACOSX_DEPLOYMENT_TARGET: 15
 
       - name: Test for secrets access
         id: check_secrets
@@ -294,14 +294,11 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: 13
-            matrix: 13
+          - name: 15
+            matrix: 15
             runs-on:
-              intel: ${{ github.repository_owner == 'Chia-Network' && 'macos-13-intel' || 'macos-15-intel' }}
-          - name: 14
-            matrix: 14
-            runs-on:
-              arm: macos-14
+              intel: "macos-15-intel"
+              arm: "macos-15"
         arch:
           - name: ARM64
             matrix: arm
@@ -309,15 +306,6 @@ jobs:
           - name: Intel
             matrix: intel
             artifact-name: intel
-        exclude:
-          - os:
-              matrix: 13
-            arch:
-              matrix: arm
-          - os:
-              matrix: 14
-            arch:
-              matrix: intel
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main

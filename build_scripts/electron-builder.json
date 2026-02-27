@@ -38,7 +38,7 @@
     "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
     "category": "public.app-category.finance",
     "target": "dmg",
-    "minimumSystemVersion": "13",
+    "minimumSystemVersion": "15",
     "icon": "src/assets/img/chia.icns",
     "entitlements": "entitlements.mac.plist",
     "provisioningProfile": "chiablockchain.provisionprofile",
