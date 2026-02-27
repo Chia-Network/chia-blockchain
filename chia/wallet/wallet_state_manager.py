@@ -1703,7 +1703,9 @@ class WalletStateManager:
 
                     wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
                     coin_data: Streamable | None = None
-                    # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
+                    # If we already have this coin, & it was spent & confirmed at the same heights, then return (done).
+                    # Exception: if this record is REMOTE and we now can map the puzzle hash to a real wallet,
+                    # we must continue processing so ownership can transition away from interest-only storage.
                     if local_record is not None:
                         local_spent = None
                         if local_record.spent_block_height != 0:
@@ -1711,6 +1713,11 @@ class WalletStateManager:
                         if (
                             local_spent == coin_state.spent_height
                             and local_record.confirmed_block_height == coin_state.created_height
+                            and not (
+                                local_record.wallet_type == WalletType.REMOTE
+                                and wallet_identifier is not None
+                                and wallet_identifier.type != WalletType.REMOTE
+                            )
                         ):
                             continue
 
