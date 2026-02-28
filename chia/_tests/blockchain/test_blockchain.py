@@ -4383,7 +4383,7 @@ async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchai
     transactions filter, on a non transaction block.
     """
     b = empty_blockchain
-    blocks = bt.get_consecutive_blocks(2)
+    blocks = bt.get_consecutive_blocks(10)
     for block in blocks:
         await _validate_and_add_block(b, block)
     non_tx_block = next(block for block in blocks if not block.is_transaction_block())
