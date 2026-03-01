@@ -320,7 +320,7 @@ full_node:
   #    are added. Use the new, optimized, compression function. This produces
   #    blocks that fill up the allowed block cost.
 
-  # block_creation: 0
+  # block_creation: 1
 
   # If we spend more than this many seconds forming the new transactions block
   # generator, stop and just go with what we have so far. This is a safety
