@@ -48,6 +48,7 @@ venv*
 activate
 
 # Cursor rules and context (shared via git)
+.cursor/*
 !.cursor/
 !.cursor/rules/
 !.cursor/rules/**
