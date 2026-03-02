@@ -13,14 +13,14 @@ def test_prev_tx_block_none() -> None:
     # If prev_b is None, should return 0
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}),
+        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(0),
         finished_sub_slots=0,
     ) == uint32(0)
     assert pre_sp_tx_block_height(
         constants=test_constants,
-        blocks=BlockCache({}),
+        blocks=BlockCache({}, test_constants.GENESIS_CHALLENGE),
         prev_b_hash=test_constants.GENESIS_CHALLENGE,
         sp_index=uint8(1),
         finished_sub_slots=1,
