@@ -177,7 +177,7 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.anyio
-    # TODO: todo_v2_plots this test stalls for HARD_FORK_3_0. possibly because
+    # TODO: todo_v2_plots this test fails for HARD_FORK_3_0. possibly because
     # of force_overflow=True. Investigate, fix and remove this limit_consensus_modes()
     @pytest.mark.limit_consensus_modes(
         allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],

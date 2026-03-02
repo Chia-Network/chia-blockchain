@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from chia_rs import G1Element, PartialProof
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.split_managers import split_async_manager
@@ -345,6 +345,8 @@ async def test_v2_partial_proofs_new_sp_hash(
         partial_proofs=[test_partial_proof],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
         strength=uint8(5),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         pool_public_key=None,
@@ -376,6 +378,8 @@ async def test_v2_partial_proofs_missing_sp_hash(
         partial_proofs=[test_partial_proof],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         strength=uint8(5),
         pool_public_key=None,
@@ -423,6 +427,8 @@ async def test_v2_partial_proofs_with_existing_sp(
         ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
         plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         strength=uint8(5),
         pool_public_key=G1Element(),
@@ -457,8 +463,10 @@ async def test_solution_response_handler(
         partial_proofs=[test_partial_proof],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
         strength=uint8(5),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -544,8 +552,10 @@ async def test_solution_response_empty_proof(
         ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
         strength=uint8(5),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),
@@ -612,8 +622,10 @@ async def test_v2_partial_proofs_solver_exception(
         ],
         signage_point_index=uint8(0),
         plot_size=uint8(32),
-        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
+        plot_index=uint16(0),
+        meta_group=uint8(0),
         strength=uint8(5),
+        plot_id=bytes32.fromhex("abababababababababababababababababababababababababababababababab"),
         pool_public_key=G1Element(),
         pool_contract_puzzle_hash=bytes32(b"4" * 32),
         plot_public_key=G1Element(),

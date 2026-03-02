@@ -87,7 +87,7 @@ async def test_farmer_get_harvesters_and_summary(
         res = await harvester_rpc_client.get_plots()
         nonlocal harvester_plots
         harvester_plots = res["plots"]
-        return len(harvester_plots) == 175
+        return len(harvester_plots) == 65
 
     await time_out_assert(10, non_zero_plots)
 
@@ -333,14 +333,14 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
 @pytest.mark.parametrize(
     "endpoint, filtering, sort_key, reverse, expected_plot_count",
     [
-        (FarmerRpcClient.get_harvester_plots_valid, [], "filename", False, 175),
-        (FarmerRpcClient.get_harvester_plots_valid, [], "size", True, 175),
+        (FarmerRpcClient.get_harvester_plots_valid, [], "filename", False, 65),
+        (FarmerRpcClient.get_harvester_plots_valid, [], "size", True, 65),
         (
             FarmerRpcClient.get_harvester_plots_valid,
             [FilterItem("pool_contract_puzzle_hash", None)],
             "file_size",
             True,
-            165,
+            55,
         ),
         (
             FarmerRpcClient.get_harvester_plots_valid,
@@ -354,7 +354,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
             [FilterItem("size", "130")],  # 127 means v2 plot, 2 means strength
             "size",
             True,
-            55,
+            23,
         ),
         (
             FarmerRpcClient.get_harvester_plots_valid,

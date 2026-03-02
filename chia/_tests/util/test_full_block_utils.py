@@ -25,7 +25,7 @@ from chia_rs import (
     TransactionsInfo,
 )
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
 
 from chia._tests.util.benchmarks import rand_g1, rand_g2, rand_hash, rand_vdf, rand_vdf_proof, rewards
 from chia.consensus.generator_tools import get_block_header
@@ -71,17 +71,31 @@ def vdf_proof() -> VDFProof:
 
 
 def get_proof_of_space() -> Iterator[ProofOfSpace]:
-    for pool_pk in [g1(), None]:
-        for plot_hash in [hsh(), None]:
-            for pos_version in [0, 0x80]:
-                yield ProofOfSpace(
-                    hsh(),  # challenge
-                    pool_pk,
-                    plot_hash,
-                    g1(),  # plot_public_key
-                    uint8(pos_version | 32),  # this is version and k-size
-                    random.randbytes(8 * 32),
-                )
+    for pool_pk, plot_hash in [(g1(), None), (None, hsh())]:
+        yield ProofOfSpace(
+            hsh(),  # challenge
+            pool_pk,
+            plot_hash,
+            g1(),  # plot_public_key
+            uint8(0),  # version
+            uint16(0),  # plot_index (not used for v1)
+            uint8(0),  # group_id (not used for v1)
+            uint8(0),  # strength (not used for v1)
+            uint8(32),  # this is k-size
+            random.randbytes(8 * 32),
+        )
+        yield ProofOfSpace(
+            hsh(),  # challenge
+            pool_pk,
+            plot_hash,
+            g1(),  # plot_public_key
+            uint8(1),  # version
+            uint16(123),  # plot_index
+            uint8(21),  # group_id
+            uint8(4),  # strength
+            uint8(0),  # not used for v2
+            random.randbytes(8 * 32),
+        )
 
 
 def get_reward_chain_block(height: uint32) -> Iterator[RewardChainBlock]:

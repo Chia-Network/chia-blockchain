@@ -93,9 +93,9 @@ class TestPotIterations:
             PlotParam.make_v1(34): 100,
             PlotParam.make_v1(35): 100,
             PlotParam.make_v1(36): 100,
-            PlotParam.make_v2(2): 200,
-            PlotParam.make_v2(3): 200,
-            PlotParam.make_v2(4): 200,
+            PlotParam.make_v2(0, 0, 2): 200,
+            PlotParam.make_v2(0, 0, 3): 200,
+            PlotParam.make_v2(0, 0, 4): 200,
         }
         farmer_space = {k: _expected_plot_size(k, test_constants) * count for k, count in farmer_ks.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
@@ -141,5 +141,7 @@ def test_expected_plot_size_v1() -> None:
 
 def test_expected_plot_size_v2() -> None:
     for strength in [2, 3, 4, 5, 6, 7]:
-        plot_size = _expected_plot_size(PlotParam.make_v2(strength), test_constants)
-        assert plot_size == 988_513_566
+        for plot_index in [2, 300, 400, 500, 600, 700]:
+            for group_id in [2, 3, 4, 5, 6, 7]:
+                plot_size = _expected_plot_size(PlotParam.make_v2(plot_index, group_id, strength), test_constants)
+                assert plot_size == 988_513_566

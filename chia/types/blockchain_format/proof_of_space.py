@@ -19,55 +19,36 @@ def make_pos(
     pool_public_key: G1Element | None,
     pool_contract_puzzle_hash: bytes32 | None,
     plot_public_key: G1Element,
-    version_and_size: PlotParam,
+    params: PlotParam,
     proof: bytes,
 ) -> ProofOfSpace:
     k: int
-    if version_and_size.size_v1 is not None:
-        k = version_and_size.size_v1
+    if params.size_v1 is not None:
+        version = 0
+        plot_index = 0
+        meta_group = 0
+        strength = 0
+        k = params.size_v1
     else:
-        assert version_and_size.strength_v2 is not None
-        k = version_and_size.strength_v2
-        assert k is not None
-        assert k <= 0x3F
-        k |= 0x80
+        version = 1
+        assert params.strength_v2 is not None
+        plot_index = params.plot_index
+        meta_group = params.meta_group
+        strength = params.strength_v2
+        k = 0
 
     return ProofOfSpace(
         challenge,
         pool_public_key,
         pool_contract_puzzle_hash,
         plot_public_key,
+        uint8(version),
+        uint16(plot_index),
+        uint8(meta_group),
+        uint8(strength),
         uint8(k),
         proof,
     )
-
-
-def get_plot_id(constants: ConsensusConstants, pos: ProofOfSpace) -> bytes32:
-    plot_param = pos.param()
-    if pos.pool_public_key is None:
-        assert pos.pool_contract_puzzle_hash is not None
-        pool_pk_or_contract_ph: G1Element | bytes32 = pos.pool_contract_puzzle_hash
-    else:
-        assert pos.pool_contract_puzzle_hash is None
-        pool_pk_or_contract_ph = pos.pool_public_key
-    # V2 plots
-    if plot_param.strength_v2 is not None:
-        # TODO: todo_v2_plots index and meta_group need to be added to ProofOfSpace
-        plot_index = uint16(0)
-        meta_group = uint8(0)
-        return calculate_plot_id_v2(
-            constants.PLOT_SIZE_V2,
-            plot_index,
-            meta_group,
-            pool_pk_or_contract_ph,
-            pos.plot_public_key,
-            uint8(plot_param.strength_v2),
-        )
-    # V1 plots
-    if isinstance(pool_pk_or_contract_ph, G1Element):
-        return calculate_plot_id_pk(pool_pk_or_contract_ph, pos.plot_public_key)
-    else:
-        return calculate_plot_id_ph(pool_pk_or_contract_ph, pos.plot_public_key)
 
 
 def check_plot_param(constants: ConsensusConstants, ps: PlotParam) -> bool:
@@ -170,7 +151,7 @@ def verify_and_get_quality_string(
     if not check_plot_param(constants, plot_param):
         return None
 
-    plot_id: bytes32 = get_plot_id(constants, pos)
+    plot_id: bytes32 = pos.compute_plot_id()
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
@@ -251,26 +232,6 @@ def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signa
 
 def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
     return std_hash(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
-
-
-def calculate_plot_id_v2(
-    k: uint8,
-    index: uint16,
-    meta_group: uint8,
-    pool_pk_or_ph: G1Element | bytes32,
-    plot_public_key: G1Element,
-    strength: uint8,
-) -> bytes32:
-    version = uint8(2)
-    plot_group_id = std_hash(
-        k.stream_to_bytes()
-        + version.stream_to_bytes()
-        + strength.stream_to_bytes()
-        + bytes(plot_public_key)
-        + bytes(pool_pk_or_ph)
-    )
-    plot_id = std_hash(plot_group_id + index.stream_to_bytes() + meta_group.stream_to_bytes())
-    return plot_id
 
 
 def calculate_plot_id_pk(

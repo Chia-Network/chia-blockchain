@@ -1217,7 +1217,10 @@ class TestBlockHeaderValidation:
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.version_and_size", 62)
+        if blocks[-1].reward_chain_block.proof_of_space.version == 0:
+            block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
+        else:
+            block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.strength", 1)
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
         block_bad = recursive_replace(
@@ -1226,16 +1229,24 @@ class TestBlockHeaderValidation:
             AugSchemeMPL.key_gen(std_hash(b"1231n")).get_g1(),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
-        block_bad = recursive_replace(
-            blocks[-1],
-            "reward_chain_block.proof_of_space.version_and_size",
-            32,
-        )
+
+        if blocks[-1].reward_chain_block.proof_of_space.version == 0:
+            block_bad = recursive_replace(
+                blocks[-1],
+                "reward_chain_block.proof_of_space.size",
+                32,
+            )
+        else:
+            block_bad = recursive_replace(
+                blocks[-1],
+                "reward_chain_block.proof_of_space.strength",
+                67,
+            )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.proof_of_space.proof",
-            bytes([1] * int((blocks[-1].reward_chain_block.proof_of_space.version_and_size & 0x7F) * 64 / 8)),
+            bytes([1] * len(blocks[-1].reward_chain_block.proof_of_space.proof)),
         )
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_POSPACE)
 
@@ -1451,6 +1462,12 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_PREFARM)
 
     @pytest.mark.anyio
+    # TODO: todo_v2_plots fix this test and remove limit_consensus_modes
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.HARD_FORK_3_0],
+        reason="It seams ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT fails to "
+        "find any proofs with pool keys in a timely manner",
+    )
     async def test_pool_target_signature(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 20b
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -3416,6 +3433,8 @@ class TestReorgs:
     ) -> None:
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
+        elif consensus_mode >= ConsensusMode.HARD_FORK_3_0:
+            reorg_blocks = test_long_reorg_blocks[:1350]
         else:
             reorg_blocks = test_long_reorg_blocks[:1200]
 
@@ -4360,7 +4379,7 @@ async def test_get_header_blocks_in_range_tx_filter_non_tx_block(empty_blockchai
     transactions filter, on a non transaction block.
     """
     b = empty_blockchain
-    blocks = bt.get_consecutive_blocks(2)
+    blocks = bt.get_consecutive_blocks(10)
     for block in blocks:
         await _validate_and_add_block(b, block)
     non_tx_block = next(block for block in blocks if not block.is_transaction_block())

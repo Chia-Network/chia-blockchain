@@ -138,7 +138,7 @@ GENERATOR_MOD: SerializedProgram = SerializedProgram.from_bytes(ROM_BOOTSTRAP_GE
 
 test_constants = DEFAULT_CONSTANTS.replace(
     MIN_PLOT_SIZE_V1=uint8(18),
-    PLOT_SIZE_V2=uint8(18),
+    PLOT_SIZE_V2=uint8(20),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**10),
     DISCRIMINANT_SIZE_BITS=uint16(16),
@@ -539,18 +539,11 @@ class BlockTools:
         num_og_plots: int = 15,
         num_pool_plots: int = 5,
         num_non_keychain_plots: int = 3,
-        num_v2_plots: int = 150,
+        num_v2_plots: int = 40,
         plot_size: int = 20,
         bitfield: bool = True,
         testrun_uid: str | None = None,
     ) -> bool:
-        # we have 20 v1 plots, each about 16.6 MB
-        # in order to balance that out with v2 plots, we need approximately the
-        # same size on disk. A v2 k-18 plot is expected to be about 630 kB, so we
-        # need about 26 times more v2 plots, i.e. 527. That's a bit much, so we
-        # go for 150 plots instead, it might make it a bit more expensive to
-        # generate the test chains, but we lower the difficulty level for the
-        # pure v2 chains.
         print(
             f"setup_plots({num_og_plots}, {num_pool_plots}, "
             f"{num_non_keychain_plots}, {num_v2_plots}) "
@@ -589,11 +582,11 @@ class BlockTools:
                     existing_plots = False
             # v2 plots
             for i in range(num_v2_plots):
-                plot = await self.new_plot2(plot_size=18, strength=2 + (i % 3))
+                plot = await self.new_plot2(plot_size=20, strength=2 + (i % 2))
                 if plot.new_plot:
                     existing_plots = False
             for i in range(num_pool_plots):
-                plot = await self.new_plot2(self.pool_ph, plot_size=18, strength=2)
+                plot = await self.new_plot2(self.pool_ph, plot_size=20, strength=2 + (i % 2))
                 if plot.new_plot:
                     existing_plots = False
             await self.refresh_plots()
@@ -683,7 +676,7 @@ class BlockTools:
         path: Path | None = None,
         plot_keys: PlotKeys | None = None,
         exclude_plots: bool = False,
-        plot_size: int = 18,
+        plot_size: int = 20,
         strength: int = 2,
     ) -> BlockToolsNewPlotResult:
         final_dir = self.plot_dir
@@ -2269,7 +2262,7 @@ async def create_block_tools_async(
     num_og_plots: int = 15,
     num_pool_plots: int = 5,
     num_non_keychain_plots: int = 3,
-    num_v2_plots: int = 150,
+    num_v2_plots: int = 40,
     testrun_uid: str | None = None,
 ) -> AsyncIterator[BlockTools]:
     global create_block_tools_async_count
