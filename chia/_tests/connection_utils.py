@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.apis import StubMetadataRegistry
 from chia.protocols.outbound_message import NodeType
-from chia.protocols.shared_protocol import default_capabilities
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
@@ -44,8 +44,10 @@ async def add_dummy_connection(
     dummy_port: int,
     type: NodeType = NodeType.FULL_NODE,
     *,
-    additional_capabilities: list[tuple[uint16, str]] = [],
+    additional_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> tuple[asyncio.Queue, bytes32]:
+    if additional_capabilities is None:
+        additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
     wsc, peer_id = await add_dummy_connection_wsc(
         server, self_hostname, dummy_port, type, additional_capabilities=additional_capabilities
     )
@@ -58,8 +60,10 @@ async def add_dummy_connection_wsc(
     self_hostname: str,
     dummy_port: int,
     type: NodeType = NodeType.FULL_NODE,
-    additional_capabilities: list[tuple[uint16, str]] = [],
+    additional_capabilities: list[tuple[uint16, str]] | None = None,
 ) -> tuple[WSChiaConnection, bytes32]:
+    if additional_capabilities is None:
+        additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")]
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     config = load_config(server.root_path, "config.yaml")

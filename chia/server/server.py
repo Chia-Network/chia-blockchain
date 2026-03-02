@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -31,6 +31,7 @@ from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
+from chia.protocols.shared_protocol import Capability
 from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -41,6 +42,11 @@ from chia.util.errors import Err, ProtocolError
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.streamable import Streamable
 from chia.util.task_referencer import create_referenced_task
+
+if TYPE_CHECKING:
+    from chia.full_node.full_node import FullNode
+else:
+    FullNode = object
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -334,6 +340,22 @@ class ChiaServer:
             )
             await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
+
+            # Full nodes should only accept peers, post hard fork 2, that
+            # signal support for it.
+            if self._local_type == NodeType.FULL_NODE:
+                full_node: FullNode = self.node
+                peak_height = full_node.blockchain.get_peak_height()
+                if (
+                    peak_height is not None
+                    and peak_height >= full_node.constants.HARD_FORK2_HEIGHT
+                    and Capability.HARD_FORK_2 not in connection.peer_capabilities
+                ):
+                    self.log.info(
+                        f"Disconnecting peer {connection.peer_node_id} with version "
+                        f"{connection.version} not supporting the 3.0 hard fork."
+                    )
+                    raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
