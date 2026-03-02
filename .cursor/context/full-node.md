@@ -18,7 +18,7 @@
 | `block_store.py`           | ~700  | `BlockStore`: SQLite full block persistence              |
 | `coin_store.py`            | ~680  | `CoinStore`: UTXO database                               |
 | `sync_store.py`            | ~140  | `SyncStore`: sync state tracking                         |
-| `weight_proof.py`          | ~1900 | `WeightProofHandler`: weight proof creation/validation   |
+| `weight_proof.py`          | ~1740 | `WeightProofHandler`: weight proof creation/validation   |
 | `subscriptions.py`         | ~240  | `PeerSubscriptions`: wallet coin/puzzle subscriptions    |
 | `hint_store.py`            | ~100  | `HintStore`: hint persistence                            |
 | `hint_management.py`       | ~60   | Hint processing from conditions                          |
@@ -55,6 +55,7 @@ After a new peak is accepted:
 - `fns_peak_result` — signage points and infusion points
 - `hints` — new hints for wallet notifications
 - `lookup_coin_ids` — coins to look up for wallet updates
+- `signage_points` — signage points to forward to farmers after new peak
 
 ---
 

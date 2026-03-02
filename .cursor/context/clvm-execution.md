@@ -98,7 +98,7 @@ that can be referenced.
 
 ## Canonical serialization
 
-**Location**: `mempool_manager.py:143`
+**Location**: `mempool_manager.py:185`
 
 ### `is_clvm_canonical(clvm_buffer)`
 
@@ -127,28 +127,34 @@ length has a minimum atom size threshold.
 
 Key conditions (from CLVM spend output):
 
-| Opcode | Name                         | Effect                             |
-| ------ | ---------------------------- | ---------------------------------- |
-| 43     | `AGG_SIG_PARENT`             | Require signature with parent data |
-| 50     | `AGG_SIG_ME`                 | Require signature with coin data   |
-| 51     | `CREATE_COIN`                | Create a new coin                  |
-| 52     | `RESERVE_FEE`                | Declare minimum fee                |
-| 60     | `CREATE_COIN_ANNOUNCEMENT`   | Create announcement                |
-| 61     | `ASSERT_COIN_ANNOUNCEMENT`   | Assert announcement exists         |
-| 62     | `CREATE_PUZZLE_ANNOUNCEMENT` | Create puzzle announcement         |
-| 63     | `ASSERT_PUZZLE_ANNOUNCEMENT` | Assert puzzle announcement         |
-| 64     | `ASSERT_CONCURRENT_SPEND`    | Assert another coin is spent       |
-| 65     | `ASSERT_CONCURRENT_PUZZLE`   | Assert puzzle hash is spent        |
-| 66     | `SEND_MESSAGE`               | Cross-coin messaging               |
-| 67     | `RECEIVE_MESSAGE`            | Cross-coin messaging               |
-| 70     | `ASSERT_MY_COIN_ID`          | Assert own coin ID                 |
-| 71     | `ASSERT_MY_PARENT_ID`        | Assert parent coin ID              |
-| 72     | `ASSERT_MY_PUZZLEHASH`       | Assert own puzzle hash             |
-| 73     | `ASSERT_MY_AMOUNT`           | Assert own amount                  |
-| 74     | `ASSERT_MY_BIRTH_SECONDS`    | Assert creation timestamp          |
-| 75     | `ASSERT_MY_BIRTH_HEIGHT`     | Assert creation height             |
-| 76     | `ASSERT_EPHEMERAL`           | Assert coin is ephemeral           |
-| 90     | `SOFTFORK`                   | Future-proof softfork condition    |
+| Opcode | Name                         | Effect                                    |
+| ------ | ---------------------------- | ----------------------------------------- |
+| 43     | `AGG_SIG_PARENT`             | Require signature with parent data        |
+| 44     | `AGG_SIG_PUZZLE`             | Require signature with puzzle hash data   |
+| 45     | `AGG_SIG_AMOUNT`             | Require signature with amount data        |
+| 46     | `AGG_SIG_PUZZLE_AMOUNT`      | Require signature with puzzle+amount data |
+| 47     | `AGG_SIG_PARENT_AMOUNT`      | Require signature with parent+amount data |
+| 48     | `AGG_SIG_PARENT_PUZZLE`      | Require signature with parent+puzzle data |
+| 49     | `AGG_SIG_UNSAFE`             | Require signature (no domain separation)  |
+| 50     | `AGG_SIG_ME`                 | Require signature with coin data          |
+| 51     | `CREATE_COIN`                | Create a new coin                         |
+| 52     | `RESERVE_FEE`                | Declare minimum fee                       |
+| 60     | `CREATE_COIN_ANNOUNCEMENT`   | Create announcement                       |
+| 61     | `ASSERT_COIN_ANNOUNCEMENT`   | Assert announcement exists                |
+| 62     | `CREATE_PUZZLE_ANNOUNCEMENT` | Create puzzle announcement                |
+| 63     | `ASSERT_PUZZLE_ANNOUNCEMENT` | Assert puzzle announcement                |
+| 64     | `ASSERT_CONCURRENT_SPEND`    | Assert another coin is spent              |
+| 65     | `ASSERT_CONCURRENT_PUZZLE`   | Assert puzzle hash is spent               |
+| 66     | `SEND_MESSAGE`               | Cross-coin messaging                      |
+| 67     | `RECEIVE_MESSAGE`            | Cross-coin messaging                      |
+| 70     | `ASSERT_MY_COIN_ID`          | Assert own coin ID                        |
+| 71     | `ASSERT_MY_PARENT_ID`        | Assert parent coin ID                     |
+| 72     | `ASSERT_MY_PUZZLEHASH`       | Assert own puzzle hash                    |
+| 73     | `ASSERT_MY_AMOUNT`           | Assert own amount                         |
+| 74     | `ASSERT_MY_BIRTH_SECONDS`    | Assert creation timestamp                 |
+| 75     | `ASSERT_MY_BIRTH_HEIGHT`     | Assert creation height                    |
+| 76     | `ASSERT_EPHEMERAL`           | Assert coin is ephemeral                  |
+| 90     | `SOFTFORK`                   | Future-proof softfork condition           |
 
 ### Timelock conditions
 

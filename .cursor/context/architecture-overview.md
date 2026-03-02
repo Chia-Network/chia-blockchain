@@ -5,9 +5,26 @@
 
 ## Project shape
 
-Python PoST blockchain. Core runtime is `chia/`, with `chia_rs` (Rust FFI)
-handling performance-critical consensus, BLS signatures, CLVM execution, and
-serialization.
+Python PoST blockchain. **Not a monorepo** — this repository (`chia-blockchain`)
+is the Python node implementation. It depends on several external packages from
+the Chia-Network GitHub org for Rust-accelerated cryptography, proofs, and
+puzzle compilation.
+
+## External Chia dependencies
+
+| Package           | Repo                                                                            | Role                                                                                                                                                        | Used by                                                                    |
+| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `chia_rs`         | [Chia-Network/chia_rs](https://github.com/Chia-Network/chia_rs)                 | Core Rust FFI: consensus types, BLS signatures, CLVM execution, serialization, condition validation, spend bundle validation, merkle sets, V2 proof solving | Nearly everything — consensus, mempool, wallet, types, solver              |
+| `chiapos`         | [Chia-Network/chiapos](https://github.com/Chia-Network/chiapos)                 | Proof of Space: plot creation, proof verification, quality computation                                                                                      | `chia/plotting/`, `chia/types/blockchain_format/proof_of_space.py`         |
+| `chiavdf`         | [Chia-Network/chiavdf](https://github.com/Chia-Network/chiavdf)                 | VDF computation and proof verification                                                                                                                      | `chia/timelord/`, `chia/types/blockchain_format/vdf.py`, `chia/simulator/` |
+| `clvm`            | [Chia-Network/clvm](https://github.com/Chia-Network/clvm)                       | Python CLVM interpreter (used in tooling, not consensus-hot path)                                                                                           | `chia/types/blockchain_format/program.py`, wallet puzzle drivers           |
+| `clvm_tools`      | [Chia-Network/clvm_tools](https://github.com/Chia-Network/clvm_tools)           | CLVM utilities: currying, `Program.to()`, disassembly                                                                                                       | Wallet puzzle construction, tests, debugging                               |
+| `chialisp`        | [Chia-Network/chialisp](https://github.com/Chia-Network/chialisp)               | Rust ChiaLisp compiler — compiles `.clsp` puzzle source to CLVM bytecode                                                                                    | `chia/wallet/puzzles/load_clvm.py`, puzzle compilation tooling             |
+| `chia-puzzles-py` | [Chia-Network/chia-puzzles-py](https://github.com/Chia-Network/chia-puzzles-py) | Pre-compiled standard puzzle bytecode (singletons, CATs, DIDs, NFTs, etc.)                                                                                  | Wallet puzzle drivers, pool puzzles, data layer                            |
+| `chiabip158`      | [Chia-Network/chiabip158](https://github.com/Chia-Network/chiabip158)           | BIP-158 compact block filters for lightweight wallet sync                                                                                                   | Block body validation, mempool manager, wallet sync                        |
+
+**Version pinning**: `chia_rs` is pinned to a minor range (`>=0.37.0, <0.38`).
+Other Chia packages use minimum-version pins. See `pyproject.toml` for current values.
 
 ## Module map
 
@@ -27,25 +44,27 @@ serialization.
 | `chia/data_layer/` | DataLayer (data-storage singleton)                                   | Medium       |
 | `chia/cmds/`       | CLI command handlers                                                 | Low          |
 
-## `chia_rs` boundary
+## `chia_rs` boundary (largest external dependency)
 
-Nearly all core consensus types live in Rust:
+Nearly all core consensus types live in Rust via `chia_rs`:
 
 **Types**: `BlockRecord`, `FullBlock`, `ConsensusConstants`, `SpendBundleConditions`,
 `CoinRecord`, `SpendBundle`, `EndOfSubSlotBundle`, `HeaderBlock`, `UnfinishedBlock`,
 `SubEpochSummary`, `SubEpochChallengeSegment`, `Coin`, `CoinSpend`, `G1Element`,
-`G2Element`, `AugSchemeMPL`, `BLSCache`.
+`G2Element`, `AugSchemeMPL`, `BLSCache`, `PartialProof`.
 
 **Functions**: `validate_clvm_and_signature`, `run_block_generator`,
 `run_block_generator2`, `additions_and_removals`, `check_time_locks`,
 `compute_merkle_set_root`, `fast_forward_singleton`, `supports_fast_forward`,
 `get_flags_for_height_and_constants`, `solution_generator_backrefs`,
 `get_puzzle_and_solution_for_coin2`, `is_canonical_serialization`,
-`get_conditions_from_spendbundle`, `get_spends_for_trusted_block`.
+`get_conditions_from_spendbundle`, `get_spends_for_trusted_block`,
+`solve_proof` (V2 plot solving).
 
 **Rule of thumb**: Consensus-critical _math_ (VDF iteration calculation, difficulty
 adjustment, quality computation) is Python. Signature/CLVM/serialization
-validation is Rust.
+validation is Rust. VDF proofs are computed by `chiavdf`, PoS proofs by
+`chiapos`. Puzzle bytecode comes pre-compiled from `chia-puzzles-py`.
 
 ## Actors
 
@@ -91,8 +110,8 @@ Node roles are defined by `NodeType` in `chia/protocols/outbound_message.py`:
 
 ### Solver
 
-- **Service**: `Solver` in `solver.py` — handles puzzle-solution requests from farmer flows
-- **API**: `SolverAPI` in `solver_api.py` — protocol endpoint for solver responses
+- **Service**: `Solver` in `solver.py` — solves V2 plot partial proofs into full proofs of space
+- **API**: `SolverAPI` in `solver_api.py` — receives `SolverInfo` (partial proof, plot_id, k-size) from farmer, returns full proof via `SolverResponse`
 
 ## Wire protocol overview
 
