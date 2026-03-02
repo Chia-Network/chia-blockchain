@@ -916,9 +916,7 @@ class FullNodeAPI:
                     while not curr_l_tb.is_transaction_block:
                         curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
-                        # TODO: once we're confident in the new block creation,
-                        # make it default to 1
-                        block_version = self.full_node.config.get("block_creation", 0)
+                        block_version = self.full_node.config.get("block_creation", 1)
                         block_timeout = self.full_node.config.get("block_creation_timeout", 2.0)
                         if block_version == 0:
                             create_block = self.full_node.mempool_manager.create_block_generator
