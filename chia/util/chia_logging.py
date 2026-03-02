@@ -37,7 +37,11 @@ class JournalSocketHandler(logging.Handler):
         self._socket = self._create_socket()
 
     def _create_socket(self) -> socket.socket:
-        journal_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        family = getattr(socket, "AF_UNIX", None)
+        if family is None:
+            raise OSError("AF_UNIX not supported on this platform")
+
+        journal_socket = socket.socket(family, socket.SOCK_DGRAM)
         try:
             journal_socket.connect(self.address)
         except Exception:
