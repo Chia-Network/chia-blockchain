@@ -63,10 +63,10 @@ class JournalSocketHandler(logging.Handler):
                 _encode_journal_field("SYSLOG_IDENTIFIER", self.identifier),
                 _encode_journal_field("SYSLOG_PID", str(record.process if record.process is not None else os.getpid())),
                 _encode_journal_field("LOGGER", record.name),
-                _encode_journal_field("THREAD_NAME", record.threadName),
+                _encode_journal_field("THREAD_NAME", record.threadName or ""),
                 _encode_journal_field("CODE_FILE", record.pathname),
                 _encode_journal_field("CODE_LINE", str(record.lineno)),
-                _encode_journal_field("CODE_FUNC", record.funcName),
+                _encode_journal_field("CODE_FUNC", record.funcName or ""),
             ]
             self._send(b"".join(fields))
         except Exception:

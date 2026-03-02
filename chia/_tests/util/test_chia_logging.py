@@ -93,7 +93,7 @@ def test_journal_socket_handler_emits_native_entry() -> None:
     record = logging.LogRecord(
         name="test.logger",
         level=logging.ERROR,
-        pathname="/tmp/test.py",
+        pathname="/fake/path/test.py",
         lineno=123,
         msg="systemd works",
         args=(),
@@ -109,7 +109,7 @@ def test_journal_socket_handler_emits_native_entry() -> None:
     assert b"PRIORITY=3\n" in payload
     assert b"SYSLOG_IDENTIFIER=chia.test_service\n" in payload
     assert b"LOGGER=test.logger\n" in payload
-    assert b"CODE_FILE=/tmp/test.py\n" in payload
+    assert b"CODE_FILE=/fake/path/test.py\n" in payload
     assert b"CODE_LINE=123\n" in payload
     assert b"CODE_FUNC=test_emit\n" in payload
 
