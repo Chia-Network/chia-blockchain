@@ -1794,6 +1794,7 @@ class WalletStateManager:
                                         target_wallet_id,
                                     )
                                     await self.coin_store.add_coin_record(interested_record)
+                                    self.state_changed("coin_added", target_wallet_id)
                                 # Don't early-continue: still run the tx confirmation fallback below.
 
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
@@ -1854,6 +1855,7 @@ class WalletStateManager:
                             and local_record is not None
                         ):
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
+                            self.state_changed("coin_removed", wallet_identifier.id)
                             continue
 
                         children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
