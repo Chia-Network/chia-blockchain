@@ -86,8 +86,9 @@ def test_systemd_logging_disabled(tmp_path: Path) -> None:
 def test_journal_socket_handler_emits_native_entry() -> None:
     mock_socket = MagicMock()
 
-    with patch("chia.util.chia_logging.socket.socket", return_value=mock_socket):
-        handler = JournalSocketHandler(identifier="chia.test_service")
+    with patch("chia.util.chia_logging.socket.AF_UNIX", 1, create=True):
+        with patch("chia.util.chia_logging.socket.socket", return_value=mock_socket):
+            handler = JournalSocketHandler(identifier="chia.test_service")
 
     handler.setFormatter(logging.Formatter("%(message)s"))
     record = logging.LogRecord(
