@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -77,7 +78,7 @@ async def test_create_new_did_wallet_insufficient_balance_no_orphan(wallet_envir
     and must not leave an orphaned wallet record in the DB.
     """
     wallet_state_manager = wallet_environments.environments[0].wallet_state_manager
-    initial_wallet_count = len(wallet_state_manager.wallets)
+    initial_wallet_count = len(await wallet_state_manager.user_store.get_all_wallet_info_entries())
     standard_wallet = wallet_state_manager.main_wallet
 
     with pytest.raises(ValueError, match="Not enough balance"):
@@ -99,7 +100,7 @@ async def test_create_new_did_wallet_insufficient_balance_no_orphan(wallet_envir
 async def test_create_new_did_wallet_even_amount_no_orphan(wallet_environments: WalletTestFramework):
     """Even amounts must be rejected before any DB writes."""
     wallet_state_manager = wallet_environments.environments[0].wallet_state_manager
-    initial_wallet_count = len(wallet_state_manager.wallets)
+    initial_wallet_count = len(await wallet_state_manager.user_store.get_all_wallet_info_entries())
     standard_wallet = wallet_state_manager.main_wallet
 
     with pytest.raises(ValueError, match="DID amount must be odd number"):
@@ -112,6 +113,32 @@ async def test_create_new_did_wallet_even_amount_no_orphan(wallet_environments: 
             )
 
     # No wallet record should have been created
+    wallets_after = await wallet_state_manager.user_store.get_all_wallet_info_entries()
+    assert len(wallets_after) == initial_wallet_count
+
+
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
+@pytest.mark.anyio
+async def test_create_new_did_wallet_generate_failure_no_orphan(wallet_environments: WalletTestFramework):
+    """Failures after wallet row creation must clean up and avoid DB orphans."""
+    wallet_state_manager = wallet_environments.environments[0].wallet_state_manager
+    initial_wallet_count = len(await wallet_state_manager.user_store.get_all_wallet_info_entries())
+    standard_wallet = wallet_state_manager.main_wallet
+    error_message = "mocked generate failure"
+
+    with patch.object(
+        DIDWallet, "generate_new_decentralised_id", new=AsyncMock(side_effect=RuntimeError(error_message))
+    ) as mock_generate:
+        with pytest.raises(RuntimeError, match=error_message):
+            async with wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                await DIDWallet.create_new_did_wallet(
+                    wallet_state_manager=wallet_state_manager,
+                    wallet=standard_wallet,
+                    amount=uint64(1),  # valid odd amount so wallet row creation is attempted
+                    action_scope=action_scope,
+                )
+        assert mock_generate.await_count == 1
+
     wallets_after = await wallet_state_manager.user_store.get_all_wallet_info_entries()
     assert len(wallets_after) == initial_wallet_count
 
