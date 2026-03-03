@@ -18,7 +18,7 @@ class RemoteCoinStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS remote_coins(coin_id text PRIMARY KEY, wallet_id integer NOT NULL)"
+                "CREATE TABLE IF NOT EXISTS remote_coins(coin_id blob PRIMARY KEY, wallet_id integer NOT NULL)"
             )
             await conn.execute("CREATE INDEX IF NOT EXISTS remote_coins_wallet_id ON remote_coins(wallet_id)")
 
@@ -34,7 +34,7 @@ class RemoteCoinStore:
             for coin_id in coin_ids:
                 result = await conn.execute(
                     "INSERT OR IGNORE INTO remote_coins (coin_id, wallet_id) VALUES (?, ?)",
-                    (coin_id.hex(), int(wallet_id)),
+                    (bytes(coin_id), int(wallet_id)),
                 )
                 added += result.rowcount
         return added
@@ -47,4 +47,4 @@ class RemoteCoinStore:
                 (int(wallet_id),),
             )
             rows = await cursor.fetchall()
-        return [bytes32(bytes.fromhex(row[0])) for row in rows]
+        return [bytes32(row[0]) for row in rows]
