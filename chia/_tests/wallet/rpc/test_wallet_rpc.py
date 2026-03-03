@@ -4609,6 +4609,12 @@ def test_create_new_wallet_post_init() -> None:
 
     with pytest.raises(
         ValueError,
+        match=re.escape('"mode" is not a valid argument for remote wallets'),
+    ):
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, mode=WalletCreationMode.EXISTING)
+
+    with pytest.raises(
+        ValueError,
         match=re.escape('"test" mode is not supported except for new CAT wallets'),
     ):
         CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, test=True)

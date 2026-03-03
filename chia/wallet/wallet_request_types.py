@@ -2357,7 +2357,11 @@ class CreateNewWallet(TransactionEndpointRequest):
                 raise ValueError(
                     '"asset_id" is not a valid argument. Maybe you meant to create an existing CAT wallet?'
                 )
-            if self.mode is not None and self.mode != WalletCreationMode.NEW:
+            if (
+                self.wallet_type != CreateNewWalletType.REMOTE_WALLET
+                and self.mode is not None
+                and self.mode != WalletCreationMode.NEW
+            ):
                 raise ValueError('"mode": "existing" is only valid for CAT wallets')
 
         if self.wallet_type == CreateNewWalletType.REMOTE_WALLET:
