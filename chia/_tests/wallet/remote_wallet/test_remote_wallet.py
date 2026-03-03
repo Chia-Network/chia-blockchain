@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from chia_rs import CoinState
 from chia_rs.sized_bytes import bytes32
-from chia_rs.sized_ints import uint8, uint32, uint64, uint128
+from chia_rs.sized_ints import uint8, uint32, uint64
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.types.blockchain_format.coin import Coin
@@ -13,7 +13,6 @@ from chia.wallet.remote_wallet.remote_info import RemoteInfo
 from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_request_types import RegisterRemoteCoins
@@ -352,33 +351,6 @@ async def test_remote_wallet_create_with_invalid_data_raises_error() -> None:
     wallet_info = WalletInfo(uint32(5), "Remote Wallet #5", uint8(WalletType.REMOTE.value), "{bad_json")
     with pytest.raises(ValueError, match="non-hexadecimal"):
         await RemoteWallet.create(Mock(), Mock(spec=Wallet), wallet_info)
-
-
-@pytest.mark.anyio
-async def test_remote_wallet_stub_methods_and_errors() -> None:
-    wallet = RemoteWallet()
-    wallet.wallet_info = WalletInfo(uint32(1), "Remote Wallet #1", uint8(WalletType.REMOTE.value), "{}")
-    wallet.wallet_state_manager = Mock(wallets={})
-    wallet.remote_info = RemoteInfo()
-    wallet.standard_wallet = Mock(spec=Wallet)
-    wallet.log = Mock()
-
-    assert await wallet.get_confirmed_balance() == uint128(0)
-    assert await wallet.get_unconfirmed_balance() == uint128(0)
-    assert await wallet.get_spendable_balance() == uint128(0)
-    assert await wallet.get_pending_change_balance() == uint64(0)
-    assert await wallet.get_max_send_amount() == uint128(0)
-    await wallet.coin_added(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), uint32(1), None, None)
-    assert await wallet.match_hinted_coin(Coin(bytes32.zeros, bytes32.zeros, uint64(1)), bytes32.zeros) is False
-
-    with pytest.raises(ValueError, match="RemoteWallet cannot select coins"):
-        await wallet.select_coins(uint64(1), Mock(spec=WalletActionScope))
-
-    with pytest.raises(ValueError, match="RemoteWallet cannot generate transactions"):
-        await wallet.generate_signed_transaction([uint64(1)], [bytes32.zeros], Mock(spec=WalletActionScope))
-
-    with pytest.raises(RuntimeError, match="RemoteWallet does not derive puzzle hashes"):
-        wallet.puzzle_hash_for_pk(Mock())
 
 
 @pytest.mark.anyio

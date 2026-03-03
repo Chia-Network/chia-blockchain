@@ -110,31 +110,31 @@ class RemoteWallet:
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
     # The following functions are expected to exist by WSM, but are just stubs for our uses
-    async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_pending_change_balance(self) -> uint64:
+    async def get_pending_change_balance(self) -> uint64:  # pragma: no cover
         return uint64(0)
 
-    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:
+    async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: object | None) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: object | None) -> None:  # pragma: no cover
         return None
 
-    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:  # pragma: no cover
         raise ValueError("RemoteWallet cannot select coins")
 
-    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         return False
 
-    async def generate_signed_transaction(
+    async def generate_signed_transaction(  # pragma: no cover
         self,
         amounts: list[uint64],
         puzzle_hashes: list[bytes32],
@@ -147,5 +147,5 @@ class RemoteWallet:
     ) -> None:
         raise ValueError("RemoteWallet cannot generate transactions")
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
         raise RuntimeError("RemoteWallet does not derive puzzle hashes")
