@@ -79,15 +79,15 @@ class TestWalletPoolStore:
                     assert await store.get_spends_for_wallet(0) == []
                     assert await store.get_spends_for_wallet(1) == []
 
-                    await store.add_spend(1, solution_1, 100)
+                    await store.add_spend(1, solution_1, uint32(100))
                     assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
                     # Idempotent
-                    await store.add_spend(1, solution_1, 100)
+                    await store.add_spend(1, solution_1, uint32(100))
                     assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
                     with pytest.raises(ValueError):
-                        await store.add_spend(1, solution_1, 101)
+                        await store.add_spend(1, solution_1, uint32(101))
 
                     # Rebuild cache, no longer present
                     raise RuntimeError("abandon transaction")
@@ -96,26 +96,26 @@ class TestWalletPoolStore:
 
             assert await store.get_spends_for_wallet(1) == []
 
-            await store.add_spend(1, solution_1, 100)
+            await store.add_spend(1, solution_1, uint32(100))
             assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
             solution_1_alt: CoinSpend = make_child_solution(solution_0_alt, new_coin=None, seeded_random=seeded_random)
 
             with pytest.raises(ValueError):
-                await store.add_spend(1, solution_1_alt, 100)
+                await store.add_spend(1, solution_1_alt, uint32(100))
 
             assert await store.get_spends_for_wallet(1) == [(100, solution_1)]
 
             solution_2: CoinSpend = make_child_solution(solution_1, new_coin=None, seeded_random=seeded_random)
-            await store.add_spend(1, solution_2, 100)
+            await store.add_spend(1, solution_2, uint32(100))
             solution_3: CoinSpend = make_child_solution(solution_2, new_coin=None, seeded_random=seeded_random)
-            await store.add_spend(1, solution_3, 100)
+            await store.add_spend(1, solution_3, uint32(100))
             solution_4: CoinSpend = make_child_solution(solution_3, new_coin=None, seeded_random=seeded_random)
 
             with pytest.raises(ValueError):
-                await store.add_spend(1, solution_4, 99)
+                await store.add_spend(1, solution_4, uint32(99))
 
-            await store.add_spend(1, solution_4, 101)
+            await store.add_spend(1, solution_4, uint32(101))
             await store.rollback(101, 1)
             assert await store.get_spends_for_wallet(1) == [
                 (100, solution_1),
@@ -130,11 +130,11 @@ class TestWalletPoolStore:
                 (100, solution_3),
             ]
             with pytest.raises(ValueError):
-                await store.add_spend(1, solution_1, 105)
+                await store.add_spend(1, solution_1, uint32(105))
 
-            await store.add_spend(1, solution_4, 105)
+            await store.add_spend(1, solution_4, uint32(105))
             solution_5: CoinSpend = make_child_solution(solution_4, new_coin=None, seeded_random=seeded_random)
-            await store.add_spend(1, solution_5, 105)
+            await store.add_spend(1, solution_5, uint32(105))
             await store.rollback(99, 1)
             assert await store.get_spends_for_wallet(1) == []
 
@@ -155,5 +155,5 @@ async def test_delete_wallet(seeded_random: random.Random) -> None:
         for wallet_id, spends in dummy_spends.spends_per_wallet.items():
             # Assert the existence again here to make sure the previous removals did not affect other wallet_ids
             await assert_db_spends(store, wallet_id, spends)
-            await store.delete_wallet(wallet_id)
+            await store.delete_wallet(uint32(wallet_id))
             await assert_db_spends(store, wallet_id, [])

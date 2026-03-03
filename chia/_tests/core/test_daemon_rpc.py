@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from chia import __version__
@@ -7,7 +9,7 @@ from chia.daemon.client import connect_to_daemon
 
 
 @pytest.mark.anyio
-async def test_get_version_rpc(get_daemon, bt):
+async def test_get_version_rpc(get_daemon: Any, bt: Any) -> None:
     ws_server = get_daemon
     config = bt.config
     client = await connect_to_daemon(
