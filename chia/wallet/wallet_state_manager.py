@@ -1856,6 +1856,11 @@ class WalletStateManager:
                         ):
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                             self.state_changed("coin_removed", wallet_identifier.id)
+                            for out_tx_record in all_unconfirmed:
+                                if coin_state.coin in out_tx_record.removals:
+                                    await self.tx_store.set_confirmed(
+                                        out_tx_record.name, uint32(coin_state.spent_height)
+                                    )
                             continue
 
                         children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
