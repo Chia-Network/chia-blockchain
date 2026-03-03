@@ -110,13 +110,19 @@ class RemoteWallet:
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
     # The following functions are expected to exist by WSM, but are just stubs for our uses
-    async def get_confirmed_balance(self, record_list: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
+    async def get_confirmed_balance(
+        self, record_list: set[WalletCoinRecord] | None = None
+    ) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
+    async def get_unconfirmed_balance(
+        self, unspent_records: set[WalletCoinRecord] | None = None
+    ) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def get_spendable_balance(self, unspent_records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
+    async def get_spendable_balance(
+        self, unspent_records: set[WalletCoinRecord] | None = None
+    ) -> uint128:  # pragma: no cover
         return uint128(0)
 
     async def get_pending_change_balance(self) -> uint64:  # pragma: no cover
@@ -125,7 +131,9 @@ class RemoteWallet:
     async def get_max_send_amount(self, records: set[WalletCoinRecord] | None = None) -> uint128:  # pragma: no cover
         return uint128(0)
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: Any, coin_data: object | None) -> None:  # pragma: no cover
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: Any, coin_data: object | None
+    ) -> None:  # pragma: no cover
         return None
 
     async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:  # pragma: no cover
