@@ -18,9 +18,7 @@ class RemoteCoinStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS remote_coins("
-                "coin_id text PRIMARY KEY,"
-                " wallet_id integer NOT NULL)"
+                "CREATE TABLE IF NOT EXISTS remote_coins(coin_id text PRIMARY KEY, wallet_id integer NOT NULL)"
             )
             await conn.execute("CREATE INDEX IF NOT EXISTS remote_coins_wallet_id ON remote_coins(wallet_id)")
 
