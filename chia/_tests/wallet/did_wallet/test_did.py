@@ -70,9 +70,7 @@ async def make_did_wallet(
 
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_create_new_did_wallet_insufficient_balance_no_orphan(
-    wallet_environments: WalletTestFramework
-):
+async def test_create_new_did_wallet_insufficient_balance_no_orphan(wallet_environments: WalletTestFramework):
     """
     Regression test for https://github.com/Chia-Network/chia-blockchain/pull/20575
     If balance is insufficient, create_new_did_wallet should raise ValueError
@@ -88,7 +86,7 @@ async def test_create_new_did_wallet_insufficient_balance_no_orphan(
                 wallet_state_manager=wallet_state_manager,
                 wallet=standard_wallet,
                 amount=uint64(2_000_000_000_001),  # more than default mojo 2_000_000_000_000
-                action_scope=action_scope
+                action_scope=action_scope,
             )
 
     # No wallet record should have been created
@@ -98,9 +96,7 @@ async def test_create_new_did_wallet_insufficient_balance_no_orphan(
 
 @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_create_new_did_wallet_even_amount_no_orphan(
-    wallet_environments: WalletTestFramework
-):
+async def test_create_new_did_wallet_even_amount_no_orphan(wallet_environments: WalletTestFramework):
     """Even amounts must be rejected before any DB writes."""
     wallet_state_manager = wallet_environments.environments[0].wallet_state_manager
     initial_wallet_count = len(wallet_state_manager.wallets)
@@ -112,7 +108,7 @@ async def test_create_new_did_wallet_even_amount_no_orphan(
                 wallet_state_manager=wallet_state_manager,
                 wallet=standard_wallet,
                 amount=uint64(2),  # even, invalid
-                action_scope=action_scope
+                action_scope=action_scope,
             )
 
     # No wallet record should have been created
