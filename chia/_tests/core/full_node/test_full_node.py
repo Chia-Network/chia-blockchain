@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import os
 import platform
 import random
 import sqlite3
@@ -3706,3 +3707,37 @@ async def test_node_types_inbound_connections_limit(
     await time_out_assert(5, lambda: peer_id in server.all_connections)
     # New inbound connections should be refused
     assert server.accept_inbound_connections(node_type) is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("has_hard_fork2_capability", [True, False])
+async def test_hard_fork_version_enforcement(
+    one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools],
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
+    has_hard_fork2_capability: bool,
+) -> None:
+    """
+    Covers the case where peers connecting to a full node after the hard fork
+    without advertising the HARD_FORK_2 capability get disconnected.
+    """
+    _, server, _ = one_node_one_block
+    additional_capabilities = [(uint16(Capability.HARD_FORK_2.value), "1")] if has_hard_fork2_capability else []
+    wsc, peer_id = await add_dummy_connection_wsc(
+        server, self_hostname, 42, NodeType.FULL_NODE, additional_capabilities=additional_capabilities
+    )
+    staying_connected = consensus_mode < ConsensusMode.HARD_FORK_3_0 or has_hard_fork2_capability
+    if staying_connected:
+        await asyncio.sleep(2)
+        assert peer_id in server.all_connections
+    else:
+        await time_out_assert(5, lambda: wsc.closed)
+        await time_out_assert(5, lambda: peer_id not in server.all_connections)
+
+
+# TODO: Remove the test once we enable this capability
+def test_hard_fork2_capability_on_release_branch() -> None:
+    branch = os.environ.get("GITHUB_REF_NAME")
+    if branch is not None and branch.startswith("release/3."):
+        for capabilities in default_capabilities.values():
+            assert (uint16(Capability.HARD_FORK_2.value), "1") in capabilities
