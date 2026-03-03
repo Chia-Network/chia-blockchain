@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from chia import __version__
 from chia.daemon.client import connect_to_daemon
+from chia.daemon.server import WebSocketServer
+from chia.simulator.block_tools import BlockTools
 
 
 @pytest.mark.anyio
-async def test_get_version_rpc(get_daemon: Any, bt: Any) -> None:
+async def test_get_version_rpc(get_daemon: WebSocketServer, bt: BlockTools) -> None:
     ws_server = get_daemon
     config = bt.config
     client = await connect_to_daemon(
@@ -23,4 +23,4 @@ async def test_get_version_rpc(get_daemon: Any, bt: Any) -> None:
 
     assert response["data"]["success"]
     assert response["data"]["version"] == __version__
-    ws_server.stop()
+    await ws_server.stop()
