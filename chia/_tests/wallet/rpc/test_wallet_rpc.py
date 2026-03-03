@@ -4304,25 +4304,6 @@ def test_send_transaction_multi_post_init() -> None:
     indirect=True,
 )
 @pytest.mark.anyio
-async def test_create_remote_wallet_via_create_new_wallet(wallet_environments: WalletTestFramework) -> None:
-    env = wallet_environments.environments[0]
-    response = await env.rpc_client.create_new_wallet(
-        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
-        tx_config=wallet_environments.tx_config,
-    )
-
-    assert response.type == WalletType.REMOTE.name
-    created = env.node.wallet_state_manager.wallets[response.wallet_id]
-    assert created.type() == WalletType.REMOTE
-    assert created.get_name() == "Remote Wallet #1"
-
-
-@pytest.mark.parametrize(
-    "wallet_environments",
-    [{"num_environments": 1, "blocks_needed": [1], "trusted": True}],
-    indirect=True,
-)
-@pytest.mark.anyio
 async def test_create_remote_wallet_via_create_new_wallet_is_singleton(
     wallet_environments: WalletTestFramework,
 ) -> None:

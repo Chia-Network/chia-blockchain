@@ -23,7 +23,13 @@ from chia.wallet.remote_wallet.remote_wallet import RemoteWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_request_types import ExtendDerivationIndex, GetWalletBalance, PushTransactions
+from chia.wallet.wallet_request_types import (
+    CreateNewWallet,
+    CreateNewWalletType,
+    ExtendDerivationIndex,
+    GetWalletBalance,
+    PushTransactions,
+)
 from chia.wallet.wallet_rpc_api import MAX_DERIVATION_INDEX_DELTA
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -301,12 +307,14 @@ async def test_confirming_txs_not_ours_with_remote_interest_coin(wallet_environm
     [removed_coin] = tx.removals
 
     # Register interest in the removal coin to force the REMOTE interest-only branch.
-    async with env_2.wallet_state_manager.lock:
-        remote_wallet = await RemoteWallet.create_new_remote_wallet(
-            env_2.wallet_state_manager,
-            env_2.wallet_state_manager.main_wallet,
-            name="Remote Wallet #1",
-        )
+    # Creating via RPC also covers the create_new_wallet endpoint for REMOTE_WALLET.
+    response = await env_2.rpc_client.create_new_wallet(
+        CreateNewWallet(wallet_type=CreateNewWalletType.REMOTE_WALLET, name="Remote Wallet #1", push=True),
+        tx_config=wallet_environments.tx_config,
+    )
+    assert response.type == WalletType.REMOTE.name
+    remote_wallet = env_2.wallet_state_manager.wallets[response.wallet_id]
+    assert isinstance(remote_wallet, RemoteWallet)
     removed_coin_id = removed_coin.name()
     await remote_wallet.register_remote_coins([removed_coin_id])
 
