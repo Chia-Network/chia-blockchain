@@ -41,9 +41,10 @@ class RemoteWallet:
     ) -> RemoteWallet:
         """
         Create a brand new Remote wallet.
-        This must be called under the wallet state manager lock.
+        This wallet can only be created once.
         """
         if wallet_state_manager.get_existing_remote_wallet() is not None:
+            # Maybe this should be idempotent with a warning instead?
             raise ValueError("Only one RemoteWallet instance is supported")
 
         self = RemoteWallet()
