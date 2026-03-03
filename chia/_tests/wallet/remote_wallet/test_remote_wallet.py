@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -273,7 +272,7 @@ async def test_remote_wallet_create_and_save_info_paths(wallet_environments: Wal
     assert bytes32.zeros in remote_wallet.remote_info.remote_coin_ids
     saved_wallet_info = await wsm.user_store.get_wallet_by_id(int(remote_wallet.id()))
     assert saved_wallet_info is not None
-    saved_remote_info = RemoteInfo.from_json_dict(json.loads(saved_wallet_info.data))
+    saved_remote_info = RemoteInfo.from_bytes(bytes.fromhex(saved_wallet_info.data))
     assert bytes32.zeros in saved_remote_info.remote_coin_ids
 
     # If a remote wallet already exists, creation is rejected.
@@ -353,7 +352,7 @@ async def test_wallet_state_manager_loads_remote_wallet_on_restart(
 @pytest.mark.anyio
 async def test_remote_wallet_create_with_invalid_data_raises_error() -> None:
     wallet_info = WalletInfo(uint32(5), "Remote Wallet #5", uint8(WalletType.REMOTE.value), "{bad_json")
-    with pytest.raises(json.JSONDecodeError):
+    with pytest.raises(ValueError, match="non-hexadecimal"):
         await RemoteWallet.create(Mock(), Mock(spec=Wallet), wallet_info)
 
 

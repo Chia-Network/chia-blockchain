@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, cast
@@ -56,7 +55,7 @@ class RemoteWallet:
         self.log = logging.getLogger(__name__)
 
         self.remote_info = RemoteInfo(remote_coin_ids=[])
-        info_as_string = json.dumps(self.remote_info.to_json_dict())
+        info_as_string = bytes(self.remote_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name=name, wallet_type=WalletType.REMOTE.value, data=info_as_string
         )
@@ -74,7 +73,7 @@ class RemoteWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.log = logging.getLogger(__name__)
-        self.remote_info = RemoteInfo.from_json_dict(json.loads(wallet_info.data))
+        self.remote_info = RemoteInfo.from_bytes(bytes.fromhex(wallet_info.data))
 
         if len(self.remote_info.remote_coin_ids) > 0:
             # Restore interested coin wallet-id mapping on startup so remote coin updates
@@ -113,7 +112,7 @@ class RemoteWallet:
 
     async def save_info(self, remote_info: RemoteInfo) -> None:
         self.remote_info = remote_info
-        data_str = json.dumps(remote_info.to_json_dict())
+        data_str = bytes(remote_info).hex()
         self.wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
